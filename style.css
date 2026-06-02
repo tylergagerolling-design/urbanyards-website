@@ -316,7 +316,7 @@ input:focus, select:focus, textarea:focus { border-color: var(--forest); outline
   }
   .primary-nav.is-open { max-height: 340px; padding: 17px 22px 22px; border-bottom-color: var(--line); opacity: 1; pointer-events: auto; transform: none; }
   .primary-nav .button { width: max-content; }
-  .container { width: min(100% - 32px, 620px); }
+  .container { width: min(calc(100% - 32px), 620px); }
   .section { padding: 64px 0; }
   .hero { padding: 52px 0 94px; }
   .hero-grid, .quote-layout { grid-template-columns: 1fr; gap: 28px; }

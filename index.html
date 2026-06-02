@@ -33,6 +33,7 @@
           </div>
           <div class="placeholder placeholder-hero"><span>Hero Image</span><small>Landscape illustration or property photography</small></div>
         </div>
+        <div class="hill-divider" aria-hidden="true"><i></i><i></i><i></i></div>
       </section>
       <section id="services" class="section services">
         <div class="container">
@@ -43,6 +44,9 @@
             <article class="card service-card"><div class="placeholder placeholder-card"><span>Service Illustration</span></div><div class="card-body"><h3>Property Support</h3><ul><li>Day Porter Services</li><li>Trash Area Maintenance</li><li>Property Maintenance</li></ul></div></article>
             <article class="card service-card"><div class="placeholder placeholder-card"><span>Service Illustration</span></div><div class="card-body"><h3>Ecological Enhancements</h3><ul><li>Native Plantings</li><li>Pollinator Habitat</li><li>Low Water Landscapes</li><li>Urban Greening</li></ul></div></article>
           </div>
+          <div class="property-types" aria-label="Property types served">
+            <span>Apartment Communities</span><span>Commercial Properties</span><span>HOAs</span><span>Schools &amp; Institutions</span>
+          </div>
         </div>
       </section>
       <section id="projects" class="section project-section">
@@ -50,11 +54,14 @@
           <div class="project-copy">
             <p class="eyebrow">Featured Project</p><h2>The Kennedy Apartments</h2><p class="meta">Portland, Oregon</p>
             <p>Complete landscape renovation including planting, mulch, irrigation improvements, and ongoing maintenance.</p>
+            <div class="tag-list"><span>Native Planting</span><span>Irrigation Updates</span><span>Ongoing Care</span></div>
             <a class="button button-small" href="#quote">View Project</a>
           </div>
-          <div class="project-images">
-            <div class="placeholder placeholder-project"><span>Before Photo</span></div>
-            <div class="placeholder placeholder-project"><span>After Photo</span></div>
+          <div class="comparison" data-comparison>
+            <div class="placeholder comparison-layer comparison-before"><span>Before Photo</span></div>
+            <div class="comparison-after" data-comparison-after><div class="placeholder comparison-layer"><span>After Photo</span></div></div>
+            <span class="comparison-label label-before">Before</span><span class="comparison-label label-after">After</span>
+            <button class="comparison-handle" type="button" aria-label="Drag to compare before and after project images" data-comparison-handle><b></b></button>
           </div>
         </div>
       </section>
@@ -81,6 +88,7 @@
             <label class="wide">What do you need help with?<select name="service" required><option value="">Select a service</option><option>Groundskeeping</option><option>Landscape Improvements</option><option>Property Support</option><option>Ecological Enhancements</option><option>Monthly Maintenance</option><option>One-Time Cleanup</option><option>Other</option></select></label>
             <label class="wide">Message<textarea name="message" rows="4"></textarea></label>
             <button class="button" type="submit">Request a Quote</button>
+            <p class="quote-helper">No scheduling. We will follow up with a custom estimate.</p>
             <p id="form-success" class="form-success wide" role="status" tabindex="-1">Thank you. Your quote request has been received.</p>
           </form>
         </div>
@@ -99,5 +107,6 @@
         <div class="footer-details"><p>Portland, OR &amp; Surrounding Areas</p><p>Licensed &bull; Insured</p><p>CCB #233512</p><p>Social Links</p></div>
       </div>
     </footer>
+    <a class="mobile-quote-bar" href="#quote">Request a Quote</a>
   </body>
 </html>

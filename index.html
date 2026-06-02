@@ -12,7 +12,9 @@
     <meta name="theme-color" content="#123f31">
     <title>Urban Yards Groundskeeping | Portland Property Care</title>
     <link rel="icon" href="images/favicon-placeholder.svg" type="image/svg+xml">
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
     <link rel="stylesheet" href="style.css">
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" defer></script>
     <script src="script.js" defer></script>
   </head>
   <body>
@@ -111,9 +113,9 @@
           <article class="card lower-card">
             <div><p class="eyebrow">Service Area</p><h2>Portland Metro Area</h2><p>Serving Portland, Oregon and surrounding communities.</p><a class="text-link" href="#quote">Contact Urban Yards <span aria-hidden="true">&rarr;</span></a></div>
             <div class="map-embed">
-              <img src="images/service-area-map.svg" width="600" height="600" loading="lazy" alt="Illustrated Portland metro service area map showing Portland, Beaverton, Tigard, Lake Oswego, Milwaukie, Gresham, and Vancouver">
+              <div id="service-area-map" class="leaflet-service-map" aria-label="Interactive Portland metro service area map"></div>
               <span class="map-label">Portland Metro</span>
-              <div class="map-actions"><button class="map-expand" type="button" aria-haspopup="dialog">Expand Map</button><a class="map-link" href="https://www.google.com/maps/search/?api=1&amp;query=Portland%2C+Oregon" target="_blank" rel="noopener">Google Maps</a></div>
+              <div class="map-actions"><button class="map-expand" type="button" aria-haspopup="dialog">Expand Map</button><a class="map-link" href="https://www.google.com/maps/search/?api=1&amp;query=Portland+Metro+Area%2C+Oregon" target="_blank" rel="noopener">Google Maps</a></div>
             </div>
           </article>
           <article class="card lower-card payments-card">
@@ -129,8 +131,8 @@
     </aside>
     <dialog class="map-dialog" aria-labelledby="map-dialog-title">
       <div class="map-dialog-header"><div><p class="eyebrow">Service Area</p><h2 id="map-dialog-title">Portland Metro Area</h2></div><button class="map-close" type="button" aria-label="Close expanded map">&times;</button></div>
-      <img src="images/service-area-map.svg" width="600" height="600" alt="Expanded illustrated Portland metro service area map showing Portland, Beaverton, Tigard, Lake Oswego, Milwaukie, Gresham, and Vancouver">
-      <div class="map-dialog-footer"><p>Serving Portland and surrounding communities.</p><a class="button button-small" href="https://www.google.com/maps/search/?api=1&amp;query=Portland%2C+Oregon" target="_blank" rel="noopener">Open in Google Maps</a></div>
+      <div id="expanded-service-area-map" class="leaflet-service-map leaflet-service-map-expanded" aria-label="Expanded interactive Portland metro service area map"></div>
+      <div class="map-dialog-footer"><p>Serving Portland and surrounding communities.</p><a class="button button-small" href="https://www.google.com/maps/search/?api=1&amp;query=Portland+Metro+Area%2C+Oregon" target="_blank" rel="noopener">Open Area in Google Maps</a></div>
     </dialog>
     <footer id="contact" class="site-footer">
       <div class="footer-landscape" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i></div>

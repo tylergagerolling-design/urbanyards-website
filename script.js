@@ -12,6 +12,9 @@ const heroPlaceholder = document.querySelector(".placeholder-hero");
 const navIndicator = document.querySelector(".nav-indicator");
 const serviceCards = [...document.querySelectorAll(".service-card")];
 const serviceToggles = [...document.querySelectorAll(".service-toggle")];
+const mapDialog = document.querySelector(".map-dialog");
+const mapExpand = document.querySelector(".map-expand");
+const mapClose = document.querySelector(".map-close");
 const navLinks = [...primaryNav.querySelectorAll('a[href^="#"]:not(.button)')];
 const sectionLinks = navLinks
   .map((link) => ({ link, section: document.querySelector(link.getAttribute("href")) }))
@@ -159,5 +162,11 @@ serviceToggles.forEach((toggle) => {
   });
 });
 syncServiceAccordions();
+
+mapExpand.addEventListener("click", () => mapDialog.showModal());
+mapClose.addEventListener("click", () => mapDialog.close());
+mapDialog.addEventListener("click", (event) => {
+  if (event.target === mapDialog) mapDialog.close();
+});
 
 document.querySelector("#copyright-year").textContent = new Date().getFullYear();

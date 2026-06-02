@@ -1,12 +1,11 @@
 const menuToggle = document.querySelector(".menu-toggle");
 const primaryNav = document.querySelector(".primary-nav");
-const quoteForm = document.querySelector("#quote-form");
-const successMessage = document.querySelector("#form-success");
+const form = document.querySelector("#quote-form");
+const success = document.querySelector("#form-success");
 
-// Keep the compact navigation accessible on smaller screens.
 menuToggle.addEventListener("click", () => {
-  const isOpen = primaryNav.classList.toggle("is-open");
-  menuToggle.setAttribute("aria-expanded", String(isOpen));
+  const open = primaryNav.classList.toggle("is-open");
+  menuToggle.setAttribute("aria-expanded", String(open));
 });
 
 primaryNav.querySelectorAll("a").forEach((link) => {
@@ -16,32 +15,13 @@ primaryNav.querySelectorAll("a").forEach((link) => {
   });
 });
 
-// Replace missing future artwork with intentional illustrated placeholders.
-document.querySelectorAll(".media-shell img").forEach((image) => {
-  image.addEventListener("error", () => {
-    image.closest(".media-shell").classList.add("is-missing");
-  });
-});
-
-document.querySelectorAll(".brand img").forEach((image) => {
-  image.addEventListener("error", () => {
-    image.closest(".brand").classList.add("is-missing");
-    image.remove();
-  });
-});
-
-// Validate locally and show confirmation without sending customer data.
-quoteForm.addEventListener("submit", (event) => {
+form.addEventListener("submit", (event) => {
   event.preventDefault();
-
-  if (!quoteForm.checkValidity()) {
-    quoteForm.reportValidity();
+  if (!form.checkValidity()) {
+    form.reportValidity();
     return;
   }
-
-  successMessage.classList.add("is-visible");
-  successMessage.focus();
-  quoteForm.reset();
+  success.classList.add("is-visible");
+  success.focus();
+  form.reset();
 });
-
-document.querySelector("#year").textContent = new Date().getFullYear();

@@ -89,7 +89,19 @@ a:focus-visible, button:focus-visible, input:focus-visible, select:focus-visible
 }
 .site-header.is-compact { min-height: 62px; box-shadow: 0 6px 18px rgba(18, 63, 49, .06); }
 .brand { display: flex; align-items: center; gap: 10px; color: var(--deep); text-decoration: none; }
-.brand img { width: 46px; height: 49px; object-fit: contain; }
+.logo-placeholder {
+  display: grid;
+  width: 46px;
+  height: 46px;
+  border: 1px dashed var(--sage);
+  border-radius: 9px;
+  place-items: center;
+  color: var(--sage);
+  font-size: .58rem;
+  font-weight: bold;
+  letter-spacing: .09em;
+  text-transform: uppercase;
+}
 .brand strong { display: block; font-size: 1rem; letter-spacing: .1em; text-transform: uppercase; }
 .brand small { display: block; color: var(--muted); font-size: .59rem; font-weight: bold; letter-spacing: .18em; text-transform: uppercase; }
 .primary-nav { display: flex; align-items: center; gap: 24px; }
@@ -270,6 +282,7 @@ input:focus, select:focus, textarea:focus { border-color: var(--forest); outline
 .site-footer { padding: 42px 0 18px; background: var(--deep); color: #e8eedf; }
 .footer-grid { display: grid; grid-template-columns: 1.12fr .88fr .9fr; gap: 34px; }
 .footer-brand { color: #fff; }
+.footer-brand .logo-placeholder { border-color: #9ab293; color: #b6c9b0; }
 .footer-grid h2 { margin-bottom: 12px; color: #fff5dd; font-size: 1.48rem; letter-spacing: -.02em; }
 .footer-grid p { margin-bottom: 7px; font-size: .84rem; }
 .contact-placeholder { color: #bdcdbf; font-style: italic; }

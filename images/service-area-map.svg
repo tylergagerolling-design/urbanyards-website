@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 520 270" role="img" aria-label="Illustrated map of the Portland metro area">
+  <rect width="520" height="270" fill="#e8ead5"/>
+  <path fill="#cfdbbb" d="M0 0h155l42 59-61 53 52 55-53 103H0zm330 0h190v91l-70 54 70 65v60H342l-55-83 60-60-48-72z"/>
+  <path fill="#b9cda7" d="M151 0h132l20 60-53 48 45 49-37 113H141l46-102-53-56 61-53z"/>
+  <path fill="none" stroke="#9bc9d7" stroke-width="35" d="M283-20c-17 65-5 100-36 148-24 38-34 70-39 162"/>
+  <path fill="none" stroke="#fffdf5" stroke-width="4" opacity=".9" d="M15 77l475 95M51 220L414 18M125 4l339 257M13 147l493-42"/>
+  <path fill="#0a3f2e" d="M260 107c-13 0-23 10-23 23 0 18 23 46 23 46s23-28 23-46c0-13-10-23-23-23zm0 32a9 9 0 1 1 0-18 9 9 0 0 1 0 18z"/>
+  <text x="290" y="147" fill="#0a3f2e" font-family="Arial, sans-serif" font-size="28" font-weight="700">Portland</text>
+</svg>

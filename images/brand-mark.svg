@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 86 92" role="img" aria-label="Urban Yards tree and city mark">
+  <path fill="#fffdf5" stroke="#e5a500" stroke-width="4" d="M5 83V29L43 4l38 25v54z"/>
+  <path fill="#dce7ca" d="M11 77h64V35L43 14 11 35z"/>
+  <path fill="#174e39" d="M35 74V30h16v44zm20 0V39h11v35z"/>
+  <path fill="#0a3f2e" d="M40 74V22h8v52zm20 0V32h5v42z"/>
+  <path fill="#0a3f2e" d="M20 75V55h3v20zm7 0V50h3v25z"/>
+  <circle cx="21.5" cy="52" r="7" fill="#5f8c51"/>
+  <circle cx="28.5" cy="47" r="6" fill="#769263"/>
+  <path fill="#b9ca9f" d="M11 75h64v6H11z"/>
+</svg>

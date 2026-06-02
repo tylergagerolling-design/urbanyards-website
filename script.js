@@ -173,12 +173,6 @@ const updateScrollEffects = () => {
   const scrollableHeight = document.documentElement.scrollHeight - window.innerHeight;
   const scrollProgress = scrollableHeight > 0 ? (window.scrollY / scrollableHeight) * 100 : 0;
   document.documentElement.style.setProperty("--scroll-progress", `${Math.min(scrollProgress, 100)}%`);
-  if (!reduceMotion) {
-    const hillShift = Math.min(window.scrollY * 0.045, 22);
-    document.documentElement.style.setProperty("--hill-shift", `${hillShift}px`);
-    document.documentElement.style.setProperty("--hill-shift-back", `${hillShift * -0.7}px`);
-    document.documentElement.style.setProperty("--hill-shift-front", `${hillShift * 0.45}px`);
-  }
 };
 window.addEventListener("scroll", updateScrollEffects, { passive: true });
 window.addEventListener("resize", () => {

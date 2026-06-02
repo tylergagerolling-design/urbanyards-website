@@ -234,7 +234,10 @@ syncServiceAccordions();
 
 mapExpand.addEventListener("click", () => {
   mapDialog.showModal();
-  window.setTimeout(() => expandedServiceMap.invalidateSize(), 0);
+  window.setTimeout(() => {
+    expandedServiceMap.invalidateSize();
+    expandedServiceMap.fitBounds(serviceArea, { padding: [28, 28] });
+  }, 0);
 });
 mapClose.addEventListener("click", () => mapDialog.close());
 mapDialog.addEventListener("click", (event) => {

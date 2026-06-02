@@ -392,22 +392,6 @@ input:focus, select:focus, textarea:focus { border-color: var(--forest); outline
   background: #fffdf7;
   content: "";
 }
-.map-label {
-  position: absolute;
-  bottom: 13px;
-  left: 13px;
-  z-index: 1;
-  padding: 7px 9px;
-  border: 1px solid rgba(18, 63, 49, .18);
-  border-radius: 999px;
-  background: rgba(255, 253, 247, .92);
-  color: var(--forest);
-  font-size: .63rem;
-  font-weight: bold;
-  letter-spacing: .08em;
-  pointer-events: none;
-  text-transform: uppercase;
-}
 .map-actions {
   position: absolute;
   right: 10px;
@@ -632,7 +616,6 @@ input:focus, select:focus, textarea:focus { border-color: var(--forest); outline
   .placeholder-lower { min-height: 165px; border-top: 1px dashed rgba(18, 63, 49, .2); border-left: 0; }
   .map-embed { min-height: 230px; border-top: 1px solid var(--line); border-left: 0; }
   .leaflet-service-map { min-height: 230px; }
-  .map-label { top: 10px; bottom: auto; }
   .map-actions { right: 8px; bottom: 8px; left: 8px; justify-content: flex-end; }
   .map-link, .map-expand { padding: 6px 8px; font-size: .55rem; }
   .map-dialog { padding: 13px; }

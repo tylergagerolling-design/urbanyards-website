@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" role="img" aria-labelledby="title">
+  <title id="title">The Feral Grounds icon</title>
+  <rect width="128" height="128" fill="#050603"/>
+  <path d="M22 108c24-24 48-24 72-2" fill="none" stroke="#475c32" stroke-width="5" stroke-linecap="round"/>
+  <path d="M65 109V33" fill="none" stroke="#475c32" stroke-width="5" stroke-linecap="round"/>
+  <path d="M65 37c-23 20-25 44-2 63 25-17 29-45 2-63Z" fill="none" stroke="#9e3438" stroke-width="5" stroke-linejoin="round"/>
+  <path d="M65 37c23 20 25 44 2 63-25-17-29-45-2-63Z" fill="none" stroke="#9e3438" stroke-width="5" stroke-linejoin="round"/>
+  <path d="M65 21c-15 14-16 29-2 42 16-12 19-30 2-42Z" fill="none" stroke="#9e3438" stroke-width="5" stroke-linejoin="round"/>
+  <path d="M65 21c15 14 16 29 2 42-16-12-19-30-2-42Z" fill="none" stroke="#9e3438" stroke-width="5" stroke-linejoin="round"/>
+  <text x="64" y="116" fill="#6f906e" font-family="Arial Black, Impact, sans-serif" font-size="24" text-anchor="middle" letter-spacing="1">FG</text>
+</svg>

@@ -23,13 +23,21 @@ const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").match
 let quoteInView = false;
 
 const serviceArea = [
-  [45.487, -122.803],
-  [45.5152, -122.6784],
-  [45.638, -122.661],
+  [45.68, -122.85],
+  [45.69, -122.58],
+  [45.61, -122.39],
+  [45.47, -122.39],
+  [45.38, -122.53],
+  [45.39, -122.79],
+  [45.49, -122.91],
+  [45.61, -122.91],
 ];
 const serviceCities = [
   { name: "Beaverton", coords: [45.487, -122.803] },
-  { name: "Portland", coords: [45.5152, -122.6784] },
+  { name: "Tigard", coords: [45.431, -122.771] },
+  { name: "Lake Oswego", coords: [45.421, -122.67] },
+  { name: "Milwaukie", coords: [45.446, -122.639] },
+  { name: "Gresham", coords: [45.5, -122.431] },
   { name: "Vancouver", coords: [45.638, -122.661] },
 ];
 
@@ -47,10 +55,10 @@ const buildServiceMap = (elementId, expanded = false) => {
   }).addTo(map);
   const boundary = L.polygon(serviceArea, {
     color: "#123f31",
-    dashArray: "",
-    fillColor: "#e2aa21",
-    fillOpacity: 0.46,
-    weight: expanded ? 5 : 4,
+    dashArray: "7 7",
+    fillColor: "#78956f",
+    fillOpacity: 0.25,
+    weight: expanded ? 3 : 2,
   }).addTo(map);
   const portlandIcon = L.divIcon({
     className: "",
@@ -58,15 +66,12 @@ const buildServiceMap = (elementId, expanded = false) => {
     iconAnchor: [15, 31],
     iconSize: [31, 31],
   });
+  L.marker([45.5152, -122.6784], { icon: portlandIcon }).addTo(map).bindTooltip("Portland", {
+    direction: "right",
+    offset: [8, -16],
+    permanent: true,
+  });
   serviceCities.forEach(({ name, coords }) => {
-    if (name === "Portland") {
-      L.marker(coords, { icon: portlandIcon }).addTo(map).bindTooltip(name, {
-        direction: "right",
-        offset: [8, -16],
-        permanent: true,
-      });
-      return;
-    }
     L.circleMarker(coords, {
       color: "#123f31",
       fillColor: "#e2aa21",
@@ -76,10 +81,10 @@ const buildServiceMap = (elementId, expanded = false) => {
     }).addTo(map).bindTooltip(name, {
       direction: "top",
       offset: [0, -5],
-      permanent: true,
+      permanent: expanded,
     });
   });
-  map.fitBounds(boundary.getBounds(), { padding: expanded ? [36, 36] : [20, 20] });
+  map.fitBounds(boundary.getBounds(), { padding: expanded ? [28, 28] : [12, 12] });
   return map;
 };
 
@@ -225,7 +230,7 @@ mapExpand.addEventListener("click", () => {
   mapDialog.showModal();
   window.setTimeout(() => {
     expandedServiceMap.invalidateSize();
-    expandedServiceMap.fitBounds(serviceArea, { padding: [36, 36] });
+    expandedServiceMap.fitBounds(serviceArea, { padding: [28, 28] });
   }, 0);
 });
 mapClose.addEventListener("click", () => mapDialog.close());

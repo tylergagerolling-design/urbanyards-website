@@ -456,7 +456,6 @@ input:focus, select:focus, textarea:focus { outline: 0; }
 .footer-brand .logo-placeholder { border-color: #9ab293; color: #b6c9b0; }
 .footer-grid h2 { margin-bottom: 12px; color: #fff5dd; font-size: 1.48rem; letter-spacing: -.02em; }
 .footer-grid p { margin-bottom: 7px; font-size: .84rem; }
-.contact-placeholder { color: #bdcdbf; font-style: italic; }
 .footer-quote-panel {
   padding: 18px;
   border: 1px solid rgba(255, 245, 221, .18);
@@ -466,16 +465,6 @@ input:focus, select:focus, textarea:focus { outline: 0; }
 .footer-quote-panel .eyebrow { margin-bottom: 7px; color: #d9a716; }
 .footer-quote-panel h2 { margin-bottom: 8px; }
 .footer-quote-panel .button { margin: 7px 0 12px; }
-.footer-contact-links { display: flex; flex-wrap: wrap; gap: 7px; margin-bottom: 10px; }
-.footer-contact-links span {
-  padding: 6px 9px;
-  border: 1px solid rgba(255, 245, 221, .18);
-  border-radius: 999px;
-  color: #d4dfd0;
-  font-size: .62rem;
-  letter-spacing: .04em;
-  text-transform: uppercase;
-}
 .footer-bottom { margin-top: 24px; padding-top: 15px; border-top: 1px solid rgba(255, 255, 255, .13); }
 .footer-bottom p { margin: 0; font-size: .75rem; }
 .mobile-quote-bar { display: none; }
@@ -580,7 +569,7 @@ input:focus, select:focus, textarea:focus { outline: 0; }
   .footer-grid { grid-template-columns: 1fr; gap: 23px; }
   .mobile-contact-strip {
     display: grid;
-    grid-template-columns: 1fr 1fr auto;
+    grid-template-columns: auto;
     align-items: center;
     gap: 8px;
     padding: 11px 16px;
@@ -652,7 +641,7 @@ input:focus, select:focus, textarea:focus { outline: 0; }
   .portfolio-image { min-height: 205px; }
   .portfolio-cta-inner { display: block; }
   .portfolio-cta .button { margin-top: 18px; }
-  .mobile-contact-strip { grid-template-columns: 1fr; gap: 3px; }
+  .mobile-contact-strip { grid-template-columns: auto; gap: 3px; }
 }
 @media (prefers-reduced-motion: reduce) {
   *, *:before, *:after { scroll-behavior: auto !important; animation-duration: .01ms !important; animation-iteration-count: 1 !important; transition-duration: .01ms !important; }

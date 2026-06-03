@@ -13,9 +13,9 @@
     <title>Urban Yards Groundskeeping | Beaverton, Portland & Vancouver Property Care</title>
     <link rel="icon" href="images/favicon-placeholder.svg" type="image/svg+xml">
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
-    <link rel="stylesheet" href="style.css?v=20260602-11">
+    <link rel="stylesheet" href="style.css?v=20260602-12">
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" defer></script>
-    <script src="script.js?v=20260602-14" defer></script>
+    <script src="script.js?v=20260602-15" defer></script>
   </head>
   <body>
     <a class="skip-link" href="#main-content">Skip to content</a>
@@ -29,7 +29,7 @@
       </button>
       <nav id="primary-nav" class="primary-nav" aria-label="Primary navigation">
         <a href="#home">Home</a><a href="#services">Services</a><a href="portfolio.html">Portfolio</a><a href="#about">About</a><a href="#contact">Contact</a>
-        <a class="button button-small" href="#quote">Request a Quote</a>
+        <a class="button button-small" href="#quote">Start My Quote</a>
         <i class="nav-indicator" aria-hidden="true"></i>
       </nav>
       <span class="scroll-progress" aria-hidden="true"></span>
@@ -41,7 +41,7 @@
             <p class="eyebrow">Beaverton, Portland &amp; Vancouver</p>
             <h1 id="hero-title">First Impressions <span>Start Here</span></h1>
             <p class="hero-text">Dependable groundskeeping, landscape improvements, and ecological property care for Beaverton, Portland, and Vancouver communities and commercial properties.</p>
-            <a class="button" href="#quote">Request a Quote</a>
+            <a class="button" href="#quote">Start My Quote</a>
             <a class="text-link" href="#services">Explore our services <span aria-hidden="true">&darr;</span></a>
           </div>
           <div class="placeholder placeholder-hero aspect-hero" aria-label="Reserved hero image area">
@@ -87,8 +87,13 @@
         <div class="container quote-layout">
           <div class="quote-copy">
             <p class="eyebrow">Request a Quote</p>
-            <h2 id="quote-title">Let's improve your property.</h2>
+            <h2 id="quote-title">Get a fast yard care quote.</h2>
             <p>Tell us about your property and the support you need. We will follow up with clear next steps and a custom estimate.</p>
+            <div class="quote-trust-list" aria-label="Quote request details">
+              <span>Most replies within 1 business day</span>
+              <span>Beaverton, Portland, and Vancouver</span>
+              <span>Digital estimates available</span>
+            </div>
             <div class="placeholder placeholder-detail aspect-detail" aria-label="Reserved supporting illustration area"><span>Supporting Illustration</span></div>
           </div>
           <form id="quote-form" class="quote-form card" novalidate>
@@ -100,8 +105,13 @@
             <label class="wide">Property Address <span aria-hidden="true">*</span><input name="address" autocomplete="street-address" required></label>
             <label class="wide">What do you need help with? <span aria-hidden="true">*</span><select name="service" required><option value="">Select a service</option><option>Groundskeeping</option><option>Landscape Improvements</option><option>Property Support</option><option>Ecological Enhancements</option><option>Monthly Maintenance</option><option>One-Time Cleanup</option><option>Other</option></select></label>
             <label class="wide">Message<textarea name="message" rows="4"></textarea></label>
-            <button class="button submit-button" type="submit"><span>Request a Quote</span></button>
-            <p class="quote-helper">No scheduling required. We will follow up with a custom estimate.</p>
+            <button class="button submit-button" type="submit"><span>Start My Quote</span></button>
+            <p class="quote-helper">Most replies within 1 business day. No scheduling required.</p>
+            <div class="quote-contact-options wide" aria-label="Quick contact options">
+              <a href="#quote">Start online</a>
+              <span>Email coming soon</span>
+              <span>Phone coming soon</span>
+            </div>
             <p class="privacy-note wide">Your details are used only to respond to your quote request.</p>
             <p id="form-success" class="form-success wide" role="status" tabindex="-1">Thank you. Your quote request has been received.</p>
           </form>
@@ -125,7 +135,7 @@
       </section>
     </main>
     <aside class="mobile-contact-strip" aria-label="Contact Urban Yards">
-      <span>Email coming soon</span><span>Phone coming soon</span><a href="#quote">Request a Quote</a>
+      <span>Email coming soon</span><span>Phone coming soon</span><a href="#quote">Start My Quote</a>
     </aside>
     <dialog class="map-dialog" aria-labelledby="map-dialog-title">
       <div class="map-dialog-header"><div><p class="eyebrow">Service Area</p><h2 id="map-dialog-title">Beaverton, Portland &amp; Vancouver</h2></div><button class="map-close" type="button" aria-label="Close expanded map">&times;</button></div>
@@ -147,14 +157,20 @@
           <p class="contact-placeholder">Email address coming soon</p>
           <p class="contact-placeholder">Phone number coming soon</p>
         </div>
-        <div>
-          <h2>Ready to get started?</h2>
-          <a class="button button-small" href="#quote">Request a Quote</a>
-          <p>Licensed &bull; Insured<br>CCB #233512</p>
+        <div class="footer-quote-panel">
+          <p class="eyebrow">Quick Quote</p>
+          <h2>Get a fast yard care quote.</h2>
+          <p>Most replies within 1 business day for Beaverton, Portland, and Vancouver properties.</p>
+          <a class="button button-small" href="#quote">Start My Quote</a>
+          <div class="footer-contact-links" aria-label="Quick contact options">
+            <span>Email coming soon</span>
+            <span>Phone coming soon</span>
+          </div>
+          <p class="license-line">Licensed &bull; Insured<br>CCB #233512</p>
         </div>
       </div>
       <div class="container footer-bottom"><p>&copy; <span id="copyright-year"></span> Urban Yards Groundskeeping. All rights reserved.</p></div>
     </footer>
-    <a class="mobile-quote-bar is-hidden" href="#quote">Request a Quote</a>
+    <a class="mobile-quote-bar is-hidden" href="#quote">Start My Quote</a>
   </body>
 </html>

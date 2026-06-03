@@ -87,18 +87,21 @@ a:focus-visible, button:focus-visible, input:focus-visible, select:focus-visible
 }
 @media (min-width: 761px) { .scroll-progress { display: none; } }
 .brand { display: flex; align-items: center; gap: 10px; color: var(--deep); text-decoration: none; }
-.logo-placeholder {
-  display: grid;
-  width: 46px;
-  height: 46px;
-  border: 1px dashed var(--sage);
-  border-radius: 9px;
-  place-items: center;
-  color: var(--sage);
-  font-size: .58rem;
-  font-weight: bold;
-  letter-spacing: .09em;
-  text-transform: uppercase;
+.brand-mark {
+  display: block;
+  width: 50px;
+  height: 44px;
+  flex: 0 0 auto;
+  overflow: hidden;
+  border: 1px solid rgba(18, 63, 49, .12);
+  border-radius: 8px;
+  background: #b1a46a;
+}
+.brand-mark img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
 }
 .brand strong { display: block; font-size: 1rem; letter-spacing: .1em; text-transform: uppercase; }
 .brand small { display: block; color: var(--muted); font-size: .59rem; font-weight: bold; letter-spacing: .18em; text-transform: uppercase; }
@@ -476,7 +479,7 @@ input:focus, select:focus, textarea:focus { outline: 0; }
 .site-footer { position: relative; overflow: hidden; padding: 40px 0 18px; background: var(--deep); color: #e8eedf; }
 .footer-grid { display: grid; grid-template-columns: 1.12fr .88fr .9fr; gap: 34px; }
 .footer-brand { color: #fff; }
-.footer-brand .logo-placeholder { border-color: #9ab293; color: #b6c9b0; }
+.footer-brand .brand-mark { border-color: rgba(255, 245, 221, .18); }
 .footer-grid h2 { margin-bottom: 12px; color: #fff5dd; font-size: 1.48rem; letter-spacing: -.02em; }
 .footer-grid p { margin-bottom: 7px; font-size: .84rem; }
 .footer-project-link {

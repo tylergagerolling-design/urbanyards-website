@@ -325,16 +325,16 @@ a:focus-visible, button:focus-visible, input:focus-visible, select:focus-visible
 .quote-form-heading h3 { margin: 0; color: var(--forest); font-size: 1.22rem; letter-spacing: 0; }
 .quote-form label {
   display: grid;
-  gap: 4px;
+  gap: 2px;
   min-width: 0;
-  padding: 9px 10px;
+  padding: 6px 8px;
   border: 1px solid rgba(18, 63, 49, .1);
-  border-radius: 8px;
+  border-radius: 6px;
   background: #fffef9;
   color: var(--forest);
-  font-size: .68rem;
+  font-size: .62rem;
   font-weight: bold;
-  letter-spacing: .06em;
+  letter-spacing: .045em;
   text-transform: uppercase;
   transition: border-color .18s ease, box-shadow .18s ease, transform .18s ease;
 }
@@ -343,7 +343,7 @@ a:focus-visible, button:focus-visible, input:focus-visible, select:focus-visible
   box-shadow: 0 10px 24px rgba(18, 63, 49, .08);
   transform: translateY(-1px);
 }
-.quote-form label small { color: var(--muted); font-size: .69rem; font-weight: normal; letter-spacing: 0; text-transform: none; }
+.quote-form label small { color: var(--muted); font-size: .63rem; font-weight: normal; letter-spacing: 0; text-transform: none; }
 .wide { grid-column: 1 / -1; }
 .required-note, .privacy-note, .quote-helper { margin: 0; color: var(--muted); font-size: .72rem; line-height: 1.45; }
 .required-note {
@@ -388,15 +388,15 @@ a:focus-visible, button:focus-visible, input:focus-visible, select:focus-visible
 .quote-contact-options span { color: var(--muted); font-weight: normal; }
 input, select, textarea {
   width: 100%;
-  padding: 6px 0 0;
+  padding: 3px 0 0;
   border: 0;
   border-radius: 6px;
   background: transparent;
   color: var(--charcoal);
   font: inherit;
 }
-select { padding-top: 5px; }
-textarea { min-height: 86px; resize: vertical; }
+select { padding-top: 3px; }
+textarea { min-height: 68px; resize: vertical; }
 input:focus, select:focus, textarea:focus { outline: 0; }
 .submit-button.is-success { border-color: var(--forest); background: var(--forest); color: #fff; animation: success-pulse .5s ease; }
 .form-success { display: none; margin: 0; padding: 11px; border-radius: 6px; background: #edf4e8; color: var(--forest); font-weight: bold; }
@@ -686,7 +686,7 @@ input:focus, select:focus, textarea:focus { outline: 0; }
   .trust-strip article { min-height: auto; }
   .quote-form { grid-template-columns: 1fr; }
   .quote-form label, .wide { grid-column: 1; }
-  .quote-form label { padding: 9px; }
+  .quote-form label { padding: 6px 8px; }
   .quote-submit-row .submit-button { width: 100%; }
   .quote-submit-row .quote-helper { max-width: none; }
   .lower-card { grid-template-columns: 1fr; }

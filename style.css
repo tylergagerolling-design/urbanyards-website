@@ -89,19 +89,17 @@ a:focus-visible, button:focus-visible, input:focus-visible, select:focus-visible
 .brand { display: flex; align-items: center; gap: 10px; color: var(--deep); text-decoration: none; }
 .brand-mark {
   display: block;
-  width: 50px;
-  height: 44px;
+  width: 56px;
+  height: 46px;
   flex: 0 0 auto;
   overflow: hidden;
-  border: 1px solid rgba(18, 63, 49, .12);
-  border-radius: 8px;
-  background: #b1a46a;
+  border-radius: 3px;
 }
 .brand-mark img {
   display: block;
   width: 100%;
   height: 100%;
-  object-fit: cover;
+  object-fit: contain;
 }
 .brand strong { display: block; font-size: 1rem; letter-spacing: .1em; text-transform: uppercase; }
 .brand small { display: block; color: var(--muted); font-size: .59rem; font-weight: bold; letter-spacing: .18em; text-transform: uppercase; }

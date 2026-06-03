@@ -22,23 +22,50 @@ const sectionLinks = navLinks
 const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 let quoteInView = false;
 
-const serviceArea = [
-  [45.68, -122.85],
-  [45.69, -122.58],
-  [45.61, -122.39],
-  [45.47, -122.39],
-  [45.38, -122.53],
-  [45.39, -122.79],
-  [45.49, -122.91],
-  [45.61, -122.91],
-];
-const serviceCities = [
-  { name: "Beaverton", coords: [45.487, -122.803] },
-  { name: "Tigard", coords: [45.431, -122.771] },
-  { name: "Lake Oswego", coords: [45.421, -122.67] },
-  { name: "Milwaukie", coords: [45.446, -122.639] },
-  { name: "Gresham", coords: [45.5, -122.431] },
-  { name: "Vancouver", coords: [45.638, -122.661] },
+const serviceAreaOutlines = [
+  {
+    name: "Beaverton",
+    coords: [45.487, -122.803],
+    outline: [
+      [45.538, -122.875],
+      [45.535, -122.804],
+      [45.522, -122.765],
+      [45.493, -122.755],
+      [45.459, -122.772],
+      [45.447, -122.826],
+      [45.463, -122.875],
+      [45.505, -122.889],
+    ],
+  },
+  {
+    name: "Portland",
+    coords: [45.5152, -122.6784],
+    outline: [
+      [45.652, -122.785],
+      [45.633, -122.655],
+      [45.642, -122.555],
+      [45.602, -122.472],
+      [45.528, -122.472],
+      [45.484, -122.515],
+      [45.434, -122.607],
+      [45.455, -122.735],
+      [45.503, -122.838],
+      [45.592, -122.837],
+    ],
+  },
+  {
+    name: "Vancouver",
+    coords: [45.638, -122.661],
+    outline: [
+      [45.735, -122.737],
+      [45.729, -122.596],
+      [45.693, -122.507],
+      [45.617, -122.485],
+      [45.585, -122.56],
+      [45.59, -122.704],
+      [45.646, -122.758],
+    ],
+  },
 ];
 
 const buildServiceMap = (elementId, expanded = false) => {
@@ -53,25 +80,37 @@ const buildServiceMap = (elementId, expanded = false) => {
     attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>',
     maxZoom: 19,
   }).addTo(map);
-  const boundary = L.polygon(serviceArea, {
-    color: "#123f31",
-    dashArray: "7 7",
-    fillColor: "#78956f",
-    fillOpacity: 0.25,
-    weight: expanded ? 3 : 2,
-  }).addTo(map);
   const portlandIcon = L.divIcon({
     className: "",
     html: '<span class="map-portland-pin"></span>',
     iconAnchor: [15, 31],
     iconSize: [31, 31],
   });
-  L.marker([45.5152, -122.6784], { icon: portlandIcon }).addTo(map).bindTooltip("Portland", {
-    direction: "right",
-    offset: [8, -16],
-    permanent: true,
-  });
-  serviceCities.forEach(({ name, coords }) => {
+  const outlineLayers = serviceAreaOutlines.map(({ name, outline }) => (
+    L.polygon(outline, {
+      color: "#123f31",
+      fillColor: "#78956f",
+      fillOpacity: 0.08,
+      lineJoin: "round",
+      weight: expanded ? 4 : 3,
+    }).addTo(map).bindTooltip(name, {
+      direction: "center",
+      permanent: expanded,
+      sticky: true,
+    })
+  ));
+  const outlineGroup = L.featureGroup(outlineLayers);
+  map.serviceBounds = outlineGroup.getBounds();
+
+  serviceAreaOutlines.forEach(({ name, coords }) => {
+    if (name === "Portland") {
+      L.marker(coords, { icon: portlandIcon }).addTo(map).bindTooltip(name, {
+        direction: "right",
+        offset: [8, -16],
+        permanent: true,
+      });
+      return;
+    }
     L.circleMarker(coords, {
       color: "#123f31",
       fillColor: "#e2aa21",
@@ -81,10 +120,10 @@ const buildServiceMap = (elementId, expanded = false) => {
     }).addTo(map).bindTooltip(name, {
       direction: "top",
       offset: [0, -5],
-      permanent: expanded,
+      permanent: true,
     });
   });
-  map.fitBounds(boundary.getBounds(), { padding: expanded ? [28, 28] : [12, 12] });
+  map.fitBounds(map.serviceBounds, { padding: expanded ? [28, 28] : [12, 12] });
   return map;
 };
 
@@ -230,7 +269,7 @@ mapExpand.addEventListener("click", () => {
   mapDialog.showModal();
   window.setTimeout(() => {
     expandedServiceMap.invalidateSize();
-    expandedServiceMap.fitBounds(serviceArea, { padding: [28, 28] });
+    expandedServiceMap.fitBounds(expandedServiceMap.serviceBounds, { padding: [28, 28] });
   }, 0);
 });
 mapClose.addEventListener("click", () => mapDialog.close());

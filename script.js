@@ -22,59 +22,25 @@ const sectionLinks = navLinks
 const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 let quoteInView = false;
 
-const serviceAreaOutlines = [
-  {
-    name: "Beaverton",
-    coords: [45.487, -122.803],
-    color: "#617f52",
-    fillColor: "#dce7d4",
-    outline: [
-      [45.541, -122.879],
-      [45.536, -122.818],
-      [45.523, -122.762],
-      [45.494, -122.752],
-      [45.462, -122.766],
-      [45.444, -122.807],
-      [45.451, -122.856],
-      [45.479, -122.89],
-      [45.514, -122.89],
-    ],
-  },
-  {
-    name: "Portland",
-    coords: [45.5152, -122.6784],
-    color: "#0f3f32",
-    fillColor: "#cfdcc9",
-    outline: [
-      [45.653, -122.799],
-      [45.635, -122.693],
-      [45.647, -122.578],
-      [45.604, -122.471],
-      [45.533, -122.459],
-      [45.474, -122.507],
-      [45.432, -122.604],
-      [45.447, -122.723],
-      [45.501, -122.838],
-      [45.586, -122.848],
-      [45.632, -122.827],
-    ],
-  },
-  {
-    name: "Vancouver",
-    coords: [45.638, -122.661],
-    color: "#9b7220",
-    fillColor: "#efe3ba",
-    outline: [
-      [45.737, -122.744],
-      [45.731, -122.612],
-      [45.695, -122.506],
-      [45.634, -122.484],
-      [45.59, -122.546],
-      [45.584, -122.661],
-      [45.618, -122.746],
-      [45.677, -122.765],
-    ],
-  },
+const serviceAreaOutline = [
+  [45.736, -122.744],
+  [45.729, -122.611],
+  [45.697, -122.505],
+  [45.635, -122.48],
+  [45.591, -122.535],
+  [45.646, -122.575],
+  [45.604, -122.471],
+  [45.533, -122.459],
+  [45.474, -122.507],
+  [45.432, -122.604],
+  [45.444, -122.807],
+  [45.451, -122.856],
+  [45.479, -122.89],
+  [45.514, -122.89],
+  [45.541, -122.879],
+  [45.586, -122.848],
+  [45.632, -122.827],
+  [45.677, -122.765],
 ];
 
 const buildServiceMap = (elementId, expanded = false) => {
@@ -89,19 +55,17 @@ const buildServiceMap = (elementId, expanded = false) => {
     attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>',
     maxZoom: 19,
   }).addTo(map);
-  const outlineLayers = serviceAreaOutlines.map(({ outline, color, fillColor }) => (
-    L.polygon(outline, {
-      color,
-      fillColor,
-      fillOpacity: 0.32,
-      lineJoin: "round",
-      opacity: 0.9,
-      smoothFactor: 1.8,
-      weight: expanded ? 3.5 : 2.25,
-    }).addTo(map)
-  ));
-  const outlineGroup = L.featureGroup(outlineLayers);
-  map.serviceBounds = outlineGroup.getBounds();
+  const outline = L.polygon(serviceAreaOutline, {
+    color: "#123f31",
+    fillColor: "#dce7d4",
+    fillOpacity: 0.34,
+    lineCap: "round",
+    lineJoin: "round",
+    opacity: 0.92,
+    smoothFactor: 2,
+    weight: expanded ? 4 : 2.5,
+  }).addTo(map);
+  map.serviceBounds = outline.getBounds();
   map.fitBounds(map.serviceBounds, { padding: expanded ? [28, 28] : [12, 12] });
   return map;
 };

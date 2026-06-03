@@ -26,6 +26,8 @@ const serviceAreaOutlines = [
   {
     name: "Beaverton",
     coords: [45.487, -122.803],
+    color: "#7d965f",
+    fillColor: "#dfe8d3",
     outline: [
       [45.538, -122.875],
       [45.535, -122.804],
@@ -40,6 +42,8 @@ const serviceAreaOutlines = [
   {
     name: "Portland",
     coords: [45.5152, -122.6784],
+    color: "#123f31",
+    fillColor: "#cddcc8",
     outline: [
       [45.652, -122.785],
       [45.633, -122.655],
@@ -56,6 +60,8 @@ const serviceAreaOutlines = [
   {
     name: "Vancouver",
     coords: [45.638, -122.661],
+    color: "#9b7220",
+    fillColor: "#efe4bf",
     outline: [
       [45.735, -122.737],
       [45.729, -122.596],
@@ -86,42 +92,33 @@ const buildServiceMap = (elementId, expanded = false) => {
     iconAnchor: [15, 31],
     iconSize: [31, 31],
   });
-  const outlineLayers = serviceAreaOutlines.map(({ name, outline }) => (
+  const outlineLayers = serviceAreaOutlines.map(({ outline, color, fillColor }) => (
     L.polygon(outline, {
-      color: "#123f31",
-      fillColor: "#78956f",
-      fillOpacity: 0.08,
+      color,
+      dashArray: "1 7",
+      fillColor,
+      fillOpacity: 0.36,
       lineJoin: "round",
-      weight: expanded ? 4 : 3,
-    }).addTo(map).bindTooltip(name, {
-      direction: "center",
-      permanent: expanded,
-      sticky: true,
-    })
+      opacity: 0.95,
+      smoothFactor: 1.4,
+      weight: expanded ? 4 : 2.5,
+    }).addTo(map)
   ));
   const outlineGroup = L.featureGroup(outlineLayers);
   map.serviceBounds = outlineGroup.getBounds();
 
   serviceAreaOutlines.forEach(({ name, coords }) => {
     if (name === "Portland") {
-      L.marker(coords, { icon: portlandIcon }).addTo(map).bindTooltip(name, {
-        direction: "right",
-        offset: [8, -16],
-        permanent: true,
-      });
+      L.marker(coords, { icon: portlandIcon }).addTo(map);
       return;
     }
     L.circleMarker(coords, {
       color: "#123f31",
       fillColor: "#e2aa21",
       fillOpacity: 1,
-      radius: expanded ? 5 : 4,
+      radius: expanded ? 4 : 3,
       weight: 2,
-    }).addTo(map).bindTooltip(name, {
-      direction: "top",
-      offset: [0, -5],
-      permanent: true,
-    });
+    }).addTo(map);
   });
   map.fitBounds(map.serviceBounds, { padding: expanded ? [28, 28] : [12, 12] });
   return map;

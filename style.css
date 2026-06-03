@@ -590,19 +590,22 @@ input:focus, select:focus, textarea:focus { outline: 0; }
 }
 .feral-brand small { color: var(--feral-red-soft); letter-spacing: .16em; }
 .feral-mark {
-  display: block;
+  display: grid;
   width: 64px;
   height: 46px;
   flex: 0 0 auto;
   overflow: hidden;
   border: 1px solid rgba(111, 144, 110, .32);
   background: #050603;
+  place-items: center;
 }
-.feral-mark img {
-  display: block;
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
+.feral-mark:before {
+  color: rgba(208, 196, 147, .48);
+  content: "Logo";
+  font-size: .57rem;
+  font-weight: bold;
+  letter-spacing: .12em;
+  text-transform: uppercase;
 }
 .feral-hero {
   position: relative;
@@ -619,13 +622,9 @@ input:focus, select:focus, textarea:focus { outline: 0; }
   align-items: center;
   gap: 58px;
 }
-.feral-hero-logo {
-  display: block;
-  width: min(720px, 100%);
-  margin: 2px 0 22px -10px;
-  filter: drop-shadow(0 22px 32px rgba(0, 0, 0, .48));
-}
+.feral-hero h1 { max-width: 760px; font-size: clamp(4rem, 8vw, 7.5rem); }
 .feral-hero-panel {
+  display: grid;
   position: relative;
   min-height: 440px;
   overflow: hidden;
@@ -637,54 +636,13 @@ input:focus, select:focus, textarea:focus { outline: 0; }
     #070905;
   background-size: 19px 19px, 19px 19px, auto, auto;
   box-shadow: inset 0 0 0 1px rgba(208, 196, 147, .06), 0 24px 45px rgba(0, 0, 0, .28);
+  color: rgba(208, 196, 147, .5);
+  font-size: .72rem;
+  font-weight: bold;
+  letter-spacing: .16em;
+  place-items: center;
+  text-transform: uppercase;
 }
-.feral-hero-panel:before,
-.feral-hero-panel:after,
-.feral-hero-panel span {
-  position: absolute;
-  bottom: 22px;
-  display: block;
-  width: 110px;
-  height: 250px;
-  border-bottom: 3px solid var(--feral-sage-dim);
-  content: "";
-  transform-origin: bottom center;
-}
-.feral-hero-panel:before {
-  left: 18%;
-  border-left: 4px solid var(--feral-sage-dim);
-  transform: rotate(-19deg);
-}
-.feral-hero-panel:after {
-  right: 18%;
-  border-left: 4px solid var(--feral-sage-dim);
-  transform: rotate(15deg);
-}
-.feral-hero-panel span {
-  left: 46%;
-  border-left: 4px solid var(--feral-sage-dim);
-  transform: rotate(4deg);
-}
-.feral-hero-panel span:before,
-.feral-hero-panel span:after,
-.feral-hero-panel:before,
-.feral-hero-panel:after {
-  border-radius: 1px;
-}
-.feral-hero-panel span:before,
-.feral-hero-panel span:after {
-  position: absolute;
-  left: -31px;
-  width: 64px;
-  height: 98px;
-  border: 3px solid var(--feral-red);
-  border-radius: 52% 48% 56% 44%;
-  content: "";
-}
-.feral-hero-panel span:before { top: -18px; transform: rotate(-13deg); }
-.feral-hero-panel span:after { top: 42px; transform: rotate(16deg); }
-.feral-hero-panel span:nth-child(2) { left: 72%; height: 210px; transform: rotate(14deg); }
-.feral-hero-panel span:nth-child(3) { left: 16%; height: 185px; transform: rotate(-24deg); }
 .feral-section {
   border-top: 1px solid rgba(111, 144, 110, .18);
   border-bottom: 1px solid rgba(111, 144, 110, .12);
@@ -794,7 +752,6 @@ input:focus, select:focus, textarea:focus { outline: 0; }
   }
   .feral-hero-grid, .feral-split { grid-template-columns: 1fr; gap: 28px; }
   .feral-hero { padding: 70px 0 64px; }
-  .feral-hero-logo { margin-left: 0; }
   .feral-hero-panel { min-height: 300px; }
   .feral-card-grid { grid-template-columns: 1fr; }
   h1 { font-size: clamp(3.15rem, 13vw, 4.8rem); }

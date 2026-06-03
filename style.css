@@ -396,7 +396,7 @@ input, select, textarea {
   font: inherit;
 }
 select { padding-top: 3px; }
-textarea { min-height: 68px; resize: vertical; }
+textarea { min-height: 68px; resize: none; }
 input:focus, select:focus, textarea:focus { outline: 0; }
 .submit-button.is-success { border-color: var(--forest); background: var(--forest); color: #fff; animation: success-pulse .5s ease; }
 .form-success { display: none; margin: 0; padding: 11px; border-radius: 6px; background: #edf4e8; color: var(--forest); font-weight: bold; }

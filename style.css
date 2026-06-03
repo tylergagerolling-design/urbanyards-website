@@ -90,8 +90,8 @@ a:focus-visible, button:focus-visible, input:focus-visible, select:focus-visible
 .brand > span:last-child {
   display: flex;
   flex-direction: column;
-  justify-content: center;
-  transform: translateY(1px);
+  justify-content: flex-end;
+  min-height: 46px;
 }
 .brand-mark {
   display: block;

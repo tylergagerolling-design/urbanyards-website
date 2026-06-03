@@ -87,6 +87,12 @@ a:focus-visible, button:focus-visible, input:focus-visible, select:focus-visible
 }
 @media (min-width: 761px) { .scroll-progress { display: none; } }
 .brand { display: flex; align-items: center; gap: 10px; color: var(--deep); text-decoration: none; }
+.brand > span:last-child {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  transform: translateY(1px);
+}
 .brand-mark {
   display: block;
   width: 56px;
@@ -101,8 +107,8 @@ a:focus-visible, button:focus-visible, input:focus-visible, select:focus-visible
   height: 100%;
   object-fit: contain;
 }
-.brand strong { display: block; font-size: 1rem; letter-spacing: .1em; text-transform: uppercase; }
-.brand small { display: block; color: var(--muted); font-size: .59rem; font-weight: bold; letter-spacing: .18em; text-transform: uppercase; }
+.brand strong { display: block; font-size: 1rem; line-height: 1.05; letter-spacing: .1em; text-transform: uppercase; }
+.brand small { display: block; color: var(--muted); font-size: .59rem; font-weight: bold; line-height: 1.2; letter-spacing: .18em; text-transform: uppercase; }
 .primary-nav { position: relative; display: flex; align-items: center; gap: 24px; }
 .primary-nav a {
   position: relative;

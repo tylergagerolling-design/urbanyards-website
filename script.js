@@ -90,7 +90,7 @@ form.addEventListener("submit", (event) => {
 
   window.setTimeout(() => {
     submitButton.classList.remove("is-success");
-    submitButton.querySelector("span").textContent = "Start My Quote";
+    submitButton.querySelector("span").textContent = "Request a Quote";
   }, 2600);
 });
 

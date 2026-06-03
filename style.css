@@ -317,6 +317,10 @@ a:focus-visible, button:focus-visible, input:focus-visible, select:focus-visible
   transform: translateY(-1px);
 }
 .quote-form label small { color: var(--muted); font-size: .63rem; font-weight: normal; letter-spacing: 0; text-transform: none; }
+.photo-upload {
+  border-style: dashed;
+  background: rgba(227, 234, 219, .38);
+}
 .wide { grid-column: 1 / -1; }
 .required-note, .privacy-note, .quote-helper { margin: 0; color: var(--muted); font-size: .72rem; line-height: 1.45; }
 .required-note {
@@ -343,6 +347,25 @@ input, select, textarea {
   background: transparent;
   color: var(--charcoal);
   font: inherit;
+}
+input[type="file"] {
+  padding-top: 5px;
+  color: var(--muted);
+  font-size: .74rem;
+}
+input[type="file"]::file-selector-button {
+  margin-right: 10px;
+  padding: 6px 9px;
+  border: 1px solid rgba(18, 63, 49, .18);
+  border-radius: 999px;
+  background: #fffdf7;
+  color: var(--forest);
+  cursor: pointer;
+  font: inherit;
+  font-size: .66rem;
+  font-weight: bold;
+  letter-spacing: .045em;
+  text-transform: uppercase;
 }
 select { padding-top: 3px; }
 textarea { min-height: 68px; resize: none; }

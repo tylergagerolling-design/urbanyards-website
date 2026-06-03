@@ -13,7 +13,7 @@
     <title>Urban Yards Groundskeeping | Beaverton, Portland & Vancouver Property Care</title>
     <link rel="icon" href="images/favicon-placeholder.svg" type="image/svg+xml">
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
-    <link rel="stylesheet" href="style.css?v=20260602-16">
+    <link rel="stylesheet" href="style.css?v=20260602-17">
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" defer></script>
     <script src="script.js?v=20260602-15" defer></script>
   </head>
@@ -89,11 +89,7 @@
             <p class="eyebrow">Request a Quote</p>
             <h2 id="quote-title">Get a fast yard care quote.</h2>
             <p>Tell us about your property and the support you need. We will follow up with clear next steps and a custom estimate.</p>
-            <div class="quote-trust-list" aria-label="Quote request details">
-              <span>Most replies within 1 business day</span>
-              <span>Beaverton, Portland, and Vancouver</span>
-              <span>Digital estimates available</span>
-            </div>
+            <p class="quote-meta">Most replies within 1 business day. Serving Beaverton, Portland, and Vancouver.</p>
             <div class="placeholder placeholder-detail aspect-detail" aria-label="Reserved supporting illustration area"><span>Supporting Illustration</span></div>
           </div>
           <form id="quote-form" class="quote-form card" novalidate>
@@ -102,7 +98,7 @@
                 <p class="eyebrow">Quote Details</p>
                 <h3>Tell us what you need.</h3>
               </div>
-              <p class="required-note">Required fields</p>
+              <p class="required-note">All fields required except message</p>
             </div>
             <label>Name<input name="name" autocomplete="name" required></label>
             <label>Property / Company<input name="company" autocomplete="organization" required></label>
@@ -115,12 +111,7 @@
               <button class="button submit-button" type="submit"><span>Start My Quote</span></button>
               <p class="quote-helper">Most replies within 1 business day. No scheduling required.</p>
             </div>
-            <div class="quote-contact-options wide" aria-label="Quick contact options">
-              <a href="#quote">Start online</a>
-              <span>Email coming soon</span>
-              <span>Phone coming soon</span>
-            </div>
-            <p class="privacy-note wide">Your details are used only to respond to your quote request.</p>
+            <p class="privacy-note wide">Your details are only used to respond to your quote request. Email and phone options coming soon.</p>
             <p id="form-success" class="form-success wide" role="status" tabindex="-1">Thank you. Your quote request has been received.</p>
           </form>
         </div>

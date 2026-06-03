@@ -26,50 +26,53 @@ const serviceAreaOutlines = [
   {
     name: "Beaverton",
     coords: [45.487, -122.803],
-    color: "#7d965f",
-    fillColor: "#dfe8d3",
+    color: "#617f52",
+    fillColor: "#dce7d4",
     outline: [
-      [45.538, -122.875],
-      [45.535, -122.804],
-      [45.522, -122.765],
-      [45.493, -122.755],
-      [45.459, -122.772],
-      [45.447, -122.826],
-      [45.463, -122.875],
-      [45.505, -122.889],
+      [45.541, -122.879],
+      [45.536, -122.818],
+      [45.523, -122.762],
+      [45.494, -122.752],
+      [45.462, -122.766],
+      [45.444, -122.807],
+      [45.451, -122.856],
+      [45.479, -122.89],
+      [45.514, -122.89],
     ],
   },
   {
     name: "Portland",
     coords: [45.5152, -122.6784],
-    color: "#123f31",
-    fillColor: "#cddcc8",
+    color: "#0f3f32",
+    fillColor: "#cfdcc9",
     outline: [
-      [45.652, -122.785],
-      [45.633, -122.655],
-      [45.642, -122.555],
-      [45.602, -122.472],
-      [45.528, -122.472],
-      [45.484, -122.515],
-      [45.434, -122.607],
-      [45.455, -122.735],
-      [45.503, -122.838],
-      [45.592, -122.837],
+      [45.653, -122.799],
+      [45.635, -122.693],
+      [45.647, -122.578],
+      [45.604, -122.471],
+      [45.533, -122.459],
+      [45.474, -122.507],
+      [45.432, -122.604],
+      [45.447, -122.723],
+      [45.501, -122.838],
+      [45.586, -122.848],
+      [45.632, -122.827],
     ],
   },
   {
     name: "Vancouver",
     coords: [45.638, -122.661],
     color: "#9b7220",
-    fillColor: "#efe4bf",
+    fillColor: "#efe3ba",
     outline: [
-      [45.735, -122.737],
-      [45.729, -122.596],
-      [45.693, -122.507],
-      [45.617, -122.485],
-      [45.585, -122.56],
-      [45.59, -122.704],
-      [45.646, -122.758],
+      [45.737, -122.744],
+      [45.731, -122.612],
+      [45.695, -122.506],
+      [45.634, -122.484],
+      [45.59, -122.546],
+      [45.584, -122.661],
+      [45.618, -122.746],
+      [45.677, -122.765],
     ],
   },
 ];
@@ -86,40 +89,19 @@ const buildServiceMap = (elementId, expanded = false) => {
     attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>',
     maxZoom: 19,
   }).addTo(map);
-  const portlandIcon = L.divIcon({
-    className: "",
-    html: '<span class="map-portland-pin"></span>',
-    iconAnchor: [15, 31],
-    iconSize: [31, 31],
-  });
   const outlineLayers = serviceAreaOutlines.map(({ outline, color, fillColor }) => (
     L.polygon(outline, {
       color,
-      dashArray: "1 7",
       fillColor,
-      fillOpacity: 0.36,
+      fillOpacity: 0.32,
       lineJoin: "round",
-      opacity: 0.95,
-      smoothFactor: 1.4,
-      weight: expanded ? 4 : 2.5,
+      opacity: 0.9,
+      smoothFactor: 1.8,
+      weight: expanded ? 3.5 : 2.25,
     }).addTo(map)
   ));
   const outlineGroup = L.featureGroup(outlineLayers);
   map.serviceBounds = outlineGroup.getBounds();
-
-  serviceAreaOutlines.forEach(({ name, coords }) => {
-    if (name === "Portland") {
-      L.marker(coords, { icon: portlandIcon }).addTo(map);
-      return;
-    }
-    L.circleMarker(coords, {
-      color: "#123f31",
-      fillColor: "#e2aa21",
-      fillOpacity: 1,
-      radius: expanded ? 4 : 3,
-      weight: 2,
-    }).addTo(map);
-  });
   map.fitBounds(map.serviceBounds, { padding: expanded ? [28, 28] : [12, 12] });
   return map;
 };

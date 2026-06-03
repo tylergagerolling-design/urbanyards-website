@@ -13,7 +13,7 @@
     <title>Urban Yards Groundskeeping | Beaverton, Portland & Vancouver Property Care</title>
     <link rel="icon" href="images/favicon-placeholder.svg" type="image/svg+xml">
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
-    <link rel="stylesheet" href="style.css?v=20260602-12">
+    <link rel="stylesheet" href="style.css?v=20260602-13">
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" defer></script>
     <script src="script.js?v=20260602-15" defer></script>
   </head>
@@ -97,7 +97,13 @@
             <div class="placeholder placeholder-detail aspect-detail" aria-label="Reserved supporting illustration area"><span>Supporting Illustration</span></div>
           </div>
           <form id="quote-form" class="quote-form card" novalidate>
-            <p class="required-note wide"><span aria-hidden="true">*</span> Required fields</p>
+            <div class="quote-form-heading wide">
+              <div>
+                <p class="eyebrow">Quote Details</p>
+                <h3>Tell us what you need.</h3>
+              </div>
+              <p class="required-note"><span aria-hidden="true">*</span> Required fields</p>
+            </div>
             <label>Name <span aria-hidden="true">*</span><input name="name" autocomplete="name" required></label>
             <label>Property / Company <span aria-hidden="true">*</span><input name="company" autocomplete="organization" required></label>
             <label>Email <span aria-hidden="true">*</span><input name="email" type="email" autocomplete="email" required></label>
@@ -105,8 +111,10 @@
             <label class="wide">Property Address <span aria-hidden="true">*</span><input name="address" autocomplete="street-address" required></label>
             <label class="wide">What do you need help with? <span aria-hidden="true">*</span><select name="service" required><option value="">Select a service</option><option>Groundskeeping</option><option>Landscape Improvements</option><option>Property Support</option><option>Ecological Enhancements</option><option>Monthly Maintenance</option><option>One-Time Cleanup</option><option>Other</option></select></label>
             <label class="wide">Message<textarea name="message" rows="4"></textarea></label>
-            <button class="button submit-button" type="submit"><span>Start My Quote</span></button>
-            <p class="quote-helper">Most replies within 1 business day. No scheduling required.</p>
+            <div class="quote-submit-row wide">
+              <button class="button submit-button" type="submit"><span>Start My Quote</span></button>
+              <p class="quote-helper">Most replies within 1 business day. No scheduling required.</p>
+            </div>
             <div class="quote-contact-options wide" aria-label="Quick contact options">
               <a href="#quote">Start online</a>
               <span>Email coming soon</span>

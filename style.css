@@ -632,10 +632,21 @@ input:focus, select:focus, textarea:focus { outline: 0; }
   order: 2;
   text-align: right;
 }
+.feral-page .feral-hero-copy {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  text-align: right;
+}
 .feral-hero-grid > div:first-child .eyebrow,
 .feral-hero-grid > div:first-child .hero-text {
   margin-left: auto;
   margin-right: 0;
+  text-align: right;
+}
+.feral-page .feral-hero-copy .eyebrow,
+.feral-page .feral-hero-copy h1,
+.feral-page .feral-hero-copy .hero-text {
   text-align: right;
 }
 .feral-hero-grid > div:last-child { order: 1; }
@@ -795,6 +806,7 @@ input:focus, select:focus, textarea:focus { outline: 0; }
   .feral-hero-grid > div:first-child .eyebrow,
   .feral-hero-grid > div:first-child .hero-text,
   .feral-hero h1 { text-align: right; }
+  .feral-page .feral-hero-copy { align-items: flex-end; }
   .feral-hero { padding: 70px 0 64px; }
   .feral-hero-panel { min-height: 300px; }
   .feral-card-grid { grid-template-columns: 1fr; }

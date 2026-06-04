@@ -647,7 +647,8 @@ input:focus, select:focus, textarea:focus { outline: 0; }
 .feral-page .feral-hero-copy .eyebrow,
 .feral-page .feral-hero-copy h1,
 .feral-page .feral-hero-copy .hero-text {
-  text-align: right;
+  align-self: flex-end;
+  text-align: right !important;
 }
 .feral-hero-grid > div:last-child { order: 1; }
 .feral-hero h1 {

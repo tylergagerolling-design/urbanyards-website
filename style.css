@@ -583,7 +583,12 @@ input:focus, select:focus, textarea:focus { outline: 0; }
 }
 .feral-header .primary-nav { gap: 20px; }
 .feral-header .primary-nav a { color: #a9b58a; }
-.feral-brand { color: var(--feral-sage); }
+.feral-brand {
+  flex-direction: row-reverse;
+  color: var(--feral-sage);
+  text-align: right;
+}
+.feral-brand > span:last-child { align-items: flex-end; }
 .feral-brand strong {
   color: var(--feral-sage);
   font-size: 1rem;
@@ -751,10 +756,7 @@ input:focus, select:focus, textarea:focus { outline: 0; }
   .portfolio-toolbar { display: block; }
   .portfolio-filters { justify-content: flex-start; margin-top: 20px; }
   .feral-header { display: grid; gap: 14px; justify-content: stretch; }
-  .feral-header .feral-brand {
-    justify-self: end;
-    text-align: right;
-  }
+  .feral-header .feral-brand { justify-self: end; }
   .feral-header .primary-nav {
     position: static;
     display: flex;

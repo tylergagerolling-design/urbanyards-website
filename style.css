@@ -268,7 +268,8 @@ a:focus-visible, button:focus-visible, input:focus-visible, select:focus-visible
     linear-gradient(135deg, rgba(255, 253, 247, .86), rgba(227, 234, 219, .82)),
     var(--paper);
 }
-.calendar-layout { display: grid; gap: 25px; }
+.calendar-layout { display: grid; gap: 12px; }
+.calendar-section .section-heading { margin-bottom: 4px; }
 .calendar-panel {
   display: grid;
   gap: 20px;

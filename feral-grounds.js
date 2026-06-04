@@ -22,7 +22,14 @@ if (mapElement && window.L) {
 
   const updateCard = ({ label, title, detail }) => {
     if (!card) return;
+    window.clearTimeout(card.hideTimer);
+    card.classList.remove("is-hidden");
     card.innerHTML = `<p class="eyebrow">${label}</p><h2>${title}</h2><p>${detail}</p>`;
+  };
+  const hideCardSoon = () => {
+    if (!card || dropMode) return;
+    window.clearTimeout(card.hideTimer);
+    card.hideTimer = window.setTimeout(() => card.classList.add("is-hidden"), 2000);
   };
 
   const layers = {
@@ -47,60 +54,68 @@ if (mapElement && window.L) {
       label: "Canopy",
       title: "North Portland Canopy Thread",
       detail: "Street-edge tree pockets could connect shade, cooling, and bird movement between neighborhood corridors.",
-      points: [[45.583, -122.72], [45.579, -122.63], [45.545, -122.612], [45.533, -122.69]],
+      center: [45.558, -122.667],
+      radius: 4300,
     },
     {
       layer: "pollinator",
       label: "Pollinator",
       title: "Inner Eastside Nectar Route",
       detail: "Small flowering patches can act as stepping stones for pollinators across tight urban blocks.",
-      points: [[45.535, -122.69], [45.535, -122.625], [45.501, -122.61], [45.49, -122.67]],
+      center: [45.513, -122.648],
+      radius: 3600,
     },
     {
       layer: "soil",
       label: "Soil",
       title: "South Portland Soil Repair",
       detail: "Compacted margins and leftover parcels could become test plots for mulch, fungi, and native understory recovery.",
-      points: [[45.49, -122.715], [45.488, -122.64], [45.455, -122.63], [45.452, -122.705]],
+      center: [45.472, -122.673],
+      radius: 3900,
     },
     {
       layer: "water",
       label: "Water",
       title: "Columbia Slough Edge",
       detail: "Moisture-loving habitat can strengthen drainage edges while supporting birds and amphibians.",
-      points: [[45.603, -122.75], [45.612, -122.62], [45.583, -122.58], [45.57, -122.72]],
+      center: [45.588, -122.666],
+      radius: 4800,
     },
     {
       layer: "community",
       label: "Community",
       title: "Neighborhood Planting Commons",
       detail: "Highly visible planting days could turn underused corners into shared stewardship sites.",
-      points: [[45.535, -122.735], [45.535, -122.685], [45.505, -122.675], [45.497, -122.728]],
+      center: [45.518, -122.713],
+      radius: 3300,
     },
   ];
 
   zoneData.forEach((zone) => {
     const colors = layerStyles[zone.layer];
-    const polygon = L.polygon(zone.points, {
+    const circle = L.circle(zone.center, {
       color: colors.color,
       fillColor: colors.fillColor,
       fillOpacity: 0.16,
       opacity: 0.78,
-      smoothFactor: 1,
+      radius: zone.radius,
       weight: 2,
     });
-    polygon.bindTooltip(zone.label, {
+    circle.bindTooltip(zone.label, {
       className: "feral-zone-label",
       direction: "center",
       permanent: false,
     });
-    polygon.on("mouseover", () => {
-      polygon.setStyle({ fillOpacity: 0.32, opacity: 1, weight: 3 });
+    circle.on("mouseover", () => {
+      circle.setStyle({ fillOpacity: 0.32, opacity: 1, weight: 3 });
       updateCard(zone);
     });
-    polygon.on("mouseout", () => polygon.setStyle({ fillOpacity: 0.16, opacity: 0.78, weight: 2 }));
-    polygon.on("click", () => updateCard(zone));
-    polygon.addTo(layers[zone.layer]);
+    circle.on("mouseout", () => {
+      circle.setStyle({ fillOpacity: 0.16, opacity: 0.78, weight: 2 });
+      hideCardSoon();
+    });
+    circle.on("click", () => updateCard(zone));
+    circle.addTo(layers[zone.layer]);
   });
 
   Object.values(layers).forEach((layer) => layer.addTo(map));

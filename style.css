@@ -619,6 +619,7 @@ input:focus, select:focus, textarea:focus { outline: 0; }
   padding: 92px 0 76px;
   background:
     linear-gradient(90deg, rgba(23, 26, 22, .98), rgba(23, 26, 22, .88)),
+    url("images/feral-grounds-botanical.png?v=20260603-1") right bottom / min(62vw, 980px) auto no-repeat,
     radial-gradient(circle at 82% 31%, rgba(158, 52, 56, .2), transparent 28%),
     #171a16;
 }
@@ -682,6 +683,12 @@ input:focus, select:focus, textarea:focus { outline: 0; }
   letter-spacing: .16em;
   place-items: center;
   text-transform: uppercase;
+}
+.feral-botanical-panel {
+  min-height: 500px;
+  background:
+    linear-gradient(90deg, rgba(32, 36, 29, .08), rgba(23, 26, 22, .36)),
+    url("images/feral-grounds-botanical.png?v=20260603-1") center / cover no-repeat;
 }
 .feral-section {
   border-top: 1px solid rgba(111, 144, 110, .18);

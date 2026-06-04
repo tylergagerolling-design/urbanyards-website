@@ -558,7 +558,10 @@ input:focus, select:focus, textarea:focus { outline: 0; }
   --feral-red-soft: #a85d5e;
   --feral-lichen: #9a9366;
   --feral-paper: #d0c493;
-  background: var(--feral-black);
+  background:
+    linear-gradient(90deg, rgba(23, 26, 22, .95), rgba(23, 26, 22, .74)),
+    url("images/feral-grounds-botanical.png?v=20260603-1") right top / min(76vw, 1180px) auto no-repeat fixed,
+    var(--feral-black);
   color: #c0b994;
 }
 .feral-page:before {
@@ -579,7 +582,9 @@ input:focus, select:focus, textarea:focus { outline: 0; }
 .feral-header {
   flex-direction: row-reverse;
   border-bottom-color: rgba(111, 144, 110, .22);
-  background: rgba(23, 26, 22, .9);
+  background:
+    linear-gradient(90deg, rgba(23, 26, 22, .94), rgba(23, 26, 22, .7)),
+    url("images/feral-grounds-botanical.png?v=20260603-1") right top / min(76vw, 1180px) auto no-repeat;
 }
 .feral-header .primary-nav { gap: 20px; }
 .feral-header .primary-nav a { color: #a9b58a; }
@@ -618,8 +623,8 @@ input:focus, select:focus, textarea:focus { outline: 0; }
   overflow: hidden;
   padding: 92px 0 76px;
   background:
-    linear-gradient(90deg, rgba(23, 26, 22, .98), rgba(23, 26, 22, .88)),
-    url("images/feral-grounds-botanical.png?v=20260603-1") right bottom / min(62vw, 980px) auto no-repeat,
+    linear-gradient(90deg, rgba(23, 26, 22, .96), rgba(23, 26, 22, .72)),
+    url("images/feral-grounds-botanical.png?v=20260603-1") right top / min(76vw, 1180px) auto no-repeat,
     radial-gradient(circle at 82% 31%, rgba(158, 52, 56, .2), transparent 28%),
     #171a16;
 }
@@ -683,12 +688,6 @@ input:focus, select:focus, textarea:focus { outline: 0; }
   letter-spacing: .16em;
   place-items: center;
   text-transform: uppercase;
-}
-.feral-botanical-panel {
-  min-height: 500px;
-  background:
-    linear-gradient(90deg, rgba(32, 36, 29, .08), rgba(23, 26, 22, .36)),
-    url("images/feral-grounds-botanical.png?v=20260603-1") center / cover no-repeat;
 }
 .feral-section {
   border-top: 1px solid rgba(111, 144, 110, .18);

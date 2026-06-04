@@ -635,12 +635,16 @@ input:focus, select:focus, textarea:focus { outline: 0; }
 .feral-hero-grid > div:first-child .eyebrow,
 .feral-hero-grid > div:first-child .hero-text {
   margin-left: auto;
+  margin-right: 0;
+  text-align: right;
 }
 .feral-hero-grid > div:last-child { order: 1; }
 .feral-hero h1 {
   max-width: 760px;
   margin-left: auto;
+  margin-right: 0;
   font-size: clamp(4rem, 8vw, 7.5rem);
+  text-align: right;
 }
 .feral-hero-panel {
   display: grid;
@@ -787,6 +791,10 @@ input:focus, select:focus, textarea:focus { outline: 0; }
     order: initial;
     text-align: left;
   }
+  .feral-hero-grid > div:first-child,
+  .feral-hero-grid > div:first-child .eyebrow,
+  .feral-hero-grid > div:first-child .hero-text,
+  .feral-hero h1 { text-align: right; }
   .feral-hero { padding: 70px 0 64px; }
   .feral-hero-panel { min-height: 300px; }
   .feral-card-grid { grid-template-columns: 1fr; }

@@ -696,7 +696,7 @@ input:focus, select:focus, textarea:focus { outline: 0; }
 }
 .feral-split > div:first-child {
   order: 2;
-  text-align: right;
+  text-align: left;
 }
 .feral-split > p:last-child { order: 1; }
 .feral-split p:last-child {

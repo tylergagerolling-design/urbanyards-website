@@ -13,9 +13,9 @@
     <title>The Feral Grounds | Native Urban Habitat</title>
     <link rel="icon" href="images/favicon-placeholder.svg" type="image/svg+xml">
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
-    <link rel="stylesheet" href="style.css?v=20260603-37">
+    <link rel="stylesheet" href="style.css?v=20260603-38">
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" defer></script>
-    <script src="feral-grounds.js?v=20260603-2" defer></script>
+    <script src="feral-grounds.js?v=20260603-3" defer></script>
   </head>
   <body class="feral-page">
     <a class="skip-link" href="#main-content">Skip to content</a>
@@ -38,6 +38,19 @@
           </div>
           <div class="feral-hero-panel feral-map-panel">
             <div id="feral-habitat-map" class="feral-habitat-map" aria-label="Interactive map of future habitat corridors and planting sites in Portland, Oregon"></div>
+            <div class="feral-map-tools" aria-label="Map layer controls">
+              <button class="feral-layer-toggle is-active" type="button" data-layer="canopy">Canopy</button>
+              <button class="feral-layer-toggle is-active" type="button" data-layer="pollinator">Pollinator</button>
+              <button class="feral-layer-toggle is-active" type="button" data-layer="soil">Soil</button>
+              <button class="feral-layer-toggle is-active" type="button" data-layer="water">Water</button>
+              <button class="feral-layer-toggle is-active" type="button" data-layer="community">Community</button>
+              <button class="feral-site-drop" type="button">Suggest Site</button>
+            </div>
+            <aside class="feral-site-card" aria-live="polite">
+              <p class="eyebrow">Map Area</p>
+              <h2>Hover or click a zone.</h2>
+              <p>Explore potential habitat layers, then use Suggest Site to drop a future planting idea.</p>
+            </aside>
           </div>
         </div>
       </section>

@@ -684,6 +684,72 @@ input:focus, select:focus, textarea:focus { outline: 0; }
   place-items: center;
   text-transform: uppercase;
 }
+.feral-map-panel {
+  padding: 0;
+  border-color: rgba(111, 144, 110, .32);
+  background: #171a16;
+}
+.feral-habitat-map {
+  width: 100%;
+  height: 100%;
+  min-height: inherit;
+  background: #171a16;
+}
+.feral-habitat-map .leaflet-tile-pane {
+  filter: saturate(.72) brightness(.74) contrast(1.08);
+}
+.feral-habitat-map .leaflet-control-zoom {
+  overflow: hidden;
+  border: 1px solid rgba(208, 196, 147, .22);
+  border-radius: 0;
+  box-shadow: 0 10px 24px rgba(0, 0, 0, .34);
+}
+.feral-habitat-map .leaflet-control-zoom a {
+  border-bottom-color: rgba(208, 196, 147, .18);
+  background: rgba(23, 26, 22, .94);
+  color: #d0c493;
+}
+.feral-habitat-map .leaflet-control-zoom a:hover { background: #20241d; color: var(--feral-sage); }
+.feral-habitat-map .leaflet-control-attribution {
+  background: rgba(23, 26, 22, .82);
+  color: rgba(208, 196, 147, .68);
+  font-size: 8px;
+}
+.feral-habitat-map .leaflet-control-attribution a { color: var(--feral-sage); }
+.feral-habitat-map .leaflet-popup-content-wrapper,
+.feral-habitat-map .leaflet-popup-tip {
+  border: 1px solid rgba(158, 52, 56, .34);
+  background: rgba(23, 26, 22, .96);
+  box-shadow: 0 14px 32px rgba(0, 0, 0, .42);
+  color: #c0b994;
+}
+.feral-habitat-map .leaflet-popup-content {
+  margin: 10px 12px;
+  color: #c0b994;
+  font-size: .78rem;
+  font-weight: bold;
+  letter-spacing: .07em;
+  text-transform: uppercase;
+}
+.feral-habitat-map .leaflet-popup-close-button { color: #d0c493; }
+.feral-habitat-map .feral-popup-accent {
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  margin-right: 7px;
+  border-radius: 50%;
+  background: var(--feral-red);
+  box-shadow: 0 0 12px rgba(158, 52, 56, .72);
+}
+.feral-habitat-map path.leaflet-interactive {
+  filter: drop-shadow(0 0 7px rgba(111, 144, 110, .72));
+}
+.feral-project-marker {
+  border: 2px solid #d0c493;
+  border-radius: 50%;
+  background: rgba(111, 144, 110, .78);
+  box-shadow: 0 0 0 4px rgba(158, 52, 56, .15), 0 0 18px rgba(111, 144, 110, .72);
+}
 .feral-section {
   border-top: 1px solid rgba(111, 144, 110, .18);
   border-bottom: 1px solid rgba(111, 144, 110, .12);

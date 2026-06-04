@@ -12,7 +12,10 @@
     <meta name="theme-color" content="#1e3328">
     <title>The Feral Grounds | Native Urban Habitat</title>
     <link rel="icon" href="images/favicon-placeholder.svg" type="image/svg+xml">
-    <link rel="stylesheet" href="style.css?v=20260603-35">
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+    <link rel="stylesheet" href="style.css?v=20260603-36">
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" defer></script>
+    <script src="feral-grounds.js?v=20260603-1" defer></script>
   </head>
   <body class="feral-page">
     <a class="skip-link" href="#main-content">Skip to content</a>
@@ -33,8 +36,8 @@
             <h1 id="feral-title">The Feral Grounds</h1>
             <p class="hero-text">A future community project for Miyawaki-inspired native micro-forests, small habitat corridors, and rehabilitating overlooked urban spaces into living ground again.</p>
           </div>
-          <div class="feral-hero-panel" aria-hidden="true">
-            <span>Image placeholder</span>
+          <div class="feral-hero-panel feral-map-panel">
+            <div id="feral-habitat-map" class="feral-habitat-map" aria-label="Interactive map of future habitat corridors and planting sites in Portland, Oregon"></div>
           </div>
         </div>
       </section>

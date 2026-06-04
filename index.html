@@ -76,68 +76,70 @@
             <h2 id="calendar-title">Portland Property Care Calendar</h2>
             <p>See what services are most useful each season for homes, apartments, and commercial properties in Portland.</p>
           </div>
-          <div class="calendar-controls" aria-label="Property care calendar controls">
-            <div>
-              <p class="control-label">Property Type</p>
-              <div class="segmented-control" role="group" aria-label="Choose property type">
-                <button type="button" class="calendar-property-button is-active" data-property-type="residential">Residential</button>
-                <button type="button" class="calendar-property-button" data-property-type="apartments">Apartments / Multifamily</button>
-                <button type="button" class="calendar-property-button" data-property-type="commercial">Commercial</button>
-              </div>
-            </div>
-            <div>
-              <p class="control-label">Month</p>
-              <div class="month-grid" role="group" aria-label="Choose month">
-                <button type="button" class="calendar-month-button" data-month="0">Jan</button>
-                <button type="button" class="calendar-month-button" data-month="1">Feb</button>
-                <button type="button" class="calendar-month-button" data-month="2">Mar</button>
-                <button type="button" class="calendar-month-button" data-month="3">Apr</button>
-                <button type="button" class="calendar-month-button" data-month="4">May</button>
-                <button type="button" class="calendar-month-button" data-month="5">Jun</button>
-                <button type="button" class="calendar-month-button" data-month="6">Jul</button>
-                <button type="button" class="calendar-month-button" data-month="7">Aug</button>
-                <button type="button" class="calendar-month-button" data-month="8">Sep</button>
-                <button type="button" class="calendar-month-button" data-month="9">Oct</button>
-                <button type="button" class="calendar-month-button" data-month="10">Nov</button>
-                <button type="button" class="calendar-month-button" data-month="11">Dec</button>
-              </div>
-            </div>
-          </div>
-          <div class="calendar-results" aria-live="polite">
-            <article class="card calendar-main-card">
+          <div class="calendar-panel">
+            <div class="calendar-controls" aria-label="Property care calendar controls">
               <div>
-                <p class="eyebrow" id="calendar-property-label">Residential</p>
-                <h3 id="calendar-month-title">June Care Plan</h3>
-                <p id="calendar-property-note">Focus on curb appeal, yard cleanup, planting, mowing, mulch, and seasonal maintenance.</p>
-              </div>
-              <div>
-                <h4>Recommended Services</h4>
-                <ul id="calendar-service-list"></ul>
-              </div>
-              <div class="calendar-detail-grid">
-                <div>
-                  <h4>Why It Matters</h4>
-                  <p id="calendar-why"></p>
-                </div>
-                <div>
-                  <h4>Best Time To Schedule</h4>
-                  <p id="calendar-schedule"></p>
+                <p class="control-label">Property Type</p>
+                <div class="segmented-control" role="group" aria-label="Choose property type">
+                  <button type="button" class="calendar-property-button is-active" data-property-type="residential">Residential</button>
+                  <button type="button" class="calendar-property-button" data-property-type="apartments">Apartments / Multifamily</button>
+                  <button type="button" class="calendar-property-button" data-property-type="commercial">Commercial</button>
                 </div>
               </div>
-              <a class="button button-small" href="#quote">Request a Quote</a>
-            </article>
-            <aside class="calendar-side">
-              <article class="card calendar-highlight-card">
-                <p class="eyebrow">Best Services This Month</p>
-                <h3 id="calendar-best-title">Start Here</h3>
-                <ul id="calendar-best-list"></ul>
+              <div>
+                <p class="control-label">Month</p>
+                <div class="month-grid" role="group" aria-label="Choose month">
+                  <button type="button" class="calendar-month-button" data-month="0">Jan</button>
+                  <button type="button" class="calendar-month-button" data-month="1">Feb</button>
+                  <button type="button" class="calendar-month-button" data-month="2">Mar</button>
+                  <button type="button" class="calendar-month-button" data-month="3">Apr</button>
+                  <button type="button" class="calendar-month-button" data-month="4">May</button>
+                  <button type="button" class="calendar-month-button" data-month="5">Jun</button>
+                  <button type="button" class="calendar-month-button" data-month="6">Jul</button>
+                  <button type="button" class="calendar-month-button" data-month="7">Aug</button>
+                  <button type="button" class="calendar-month-button" data-month="8">Sep</button>
+                  <button type="button" class="calendar-month-button" data-month="9">Oct</button>
+                  <button type="button" class="calendar-month-button" data-month="10">Nov</button>
+                  <button type="button" class="calendar-month-button" data-month="11">Dec</button>
+                </div>
+              </div>
+            </div>
+            <div class="calendar-results" aria-live="polite">
+              <article class="card calendar-main-card">
+                <div>
+                  <p class="eyebrow" id="calendar-property-label">Residential</p>
+                  <h3 id="calendar-month-title">June Care Plan</h3>
+                  <p id="calendar-property-note">Focus on curb appeal, yard cleanup, planting, mowing, mulch, and seasonal maintenance.</p>
+                </div>
+                <div>
+                  <h4>Recommended Services</h4>
+                  <ul id="calendar-service-list"></ul>
+                </div>
+                <div class="calendar-detail-grid">
+                  <div>
+                    <h4>Why It Matters</h4>
+                    <p id="calendar-why"></p>
+                  </div>
+                  <div>
+                    <h4>Best Time To Schedule</h4>
+                    <p id="calendar-schedule"></p>
+                  </div>
+                </div>
+                <a class="button button-small" href="#quote">Request a Quote</a>
               </article>
-              <article class="card calendar-highlight-card">
-                <p class="eyebrow">Plan Ahead</p>
-                <h3>Next Up</h3>
-                <div id="calendar-plan-ahead" class="plan-ahead-list"></div>
-              </article>
-            </aside>
+              <aside class="calendar-side">
+                <article class="card calendar-highlight-card">
+                  <p class="eyebrow">Best Services This Month</p>
+                  <h3 id="calendar-best-title">Start Here</h3>
+                  <ul id="calendar-best-list"></ul>
+                </article>
+                <article class="card calendar-highlight-card">
+                  <p class="eyebrow">Plan Ahead</p>
+                  <h3>Next Up</h3>
+                  <div id="calendar-plan-ahead" class="plan-ahead-list"></div>
+                </article>
+              </aside>
+            </div>
           </div>
         </div>
       </section>

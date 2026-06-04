@@ -633,7 +633,11 @@ input:focus, select:focus, textarea:focus { outline: 0; }
   text-align: right;
 }
 .feral-hero-grid > div:last-child { order: 1; }
-.feral-hero h1 { max-width: 760px; font-size: clamp(4rem, 8vw, 7.5rem); }
+.feral-hero h1 {
+  max-width: 760px;
+  margin-left: auto;
+  font-size: clamp(4rem, 8vw, 7.5rem);
+}
 .feral-hero-panel {
   display: grid;
   position: relative;

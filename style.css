@@ -630,33 +630,38 @@ input:focus, select:focus, textarea:focus { outline: 0; }
 }
 .feral-hero-grid > div:first-child {
   order: 2;
-  text-align: right;
+  text-align: left;
 }
 .feral-page .feral-hero-copy {
   display: flex;
   flex-direction: column;
-  align-items: flex-end;
-  text-align: right;
+  align-items: flex-start;
+  justify-self: start;
+  width: min(100%, 760px);
+  margin-right: auto;
+  text-align: left;
 }
 .feral-hero-grid > div:first-child .eyebrow,
 .feral-hero-grid > div:first-child .hero-text {
-  margin-left: auto;
-  margin-right: 0;
-  text-align: right;
+  margin-left: 0;
+  margin-right: auto;
+  text-align: left;
 }
 .feral-page .feral-hero-copy .eyebrow,
 .feral-page .feral-hero-copy h1,
 .feral-page .feral-hero-copy .hero-text {
-  align-self: flex-end;
-  text-align: right !important;
+  align-self: flex-start;
+  width: 100%;
+  text-align: left !important;
 }
+.feral-page .feral-hero-copy .hero-text { max-width: 610px; }
 .feral-hero-grid > div:last-child { order: 1; }
 .feral-hero h1 {
   max-width: 760px;
-  margin-left: auto;
-  margin-right: 0;
+  margin-left: 0;
+  margin-right: auto;
   font-size: clamp(4rem, 8vw, 7.5rem);
-  text-align: right;
+  text-align: left;
 }
 .feral-hero-panel {
   display: grid;
@@ -806,8 +811,8 @@ input:focus, select:focus, textarea:focus { outline: 0; }
   .feral-hero-grid > div:first-child,
   .feral-hero-grid > div:first-child .eyebrow,
   .feral-hero-grid > div:first-child .hero-text,
-  .feral-hero h1 { text-align: right; }
-  .feral-page .feral-hero-copy { align-items: flex-end; }
+  .feral-hero h1 { text-align: left; }
+  .feral-page .feral-hero-copy { align-items: flex-start; }
   .feral-hero { padding: 70px 0 64px; }
   .feral-hero-panel { min-height: 300px; }
   .feral-card-grid { grid-template-columns: 1fr; }

@@ -703,6 +703,7 @@ input:focus, select:focus, textarea:focus { outline: 0; }
   max-width: 680px;
   color: #b7b08b;
   font-size: 1.12rem;
+  text-align: right;
 }
 .feral-work { background: #171a16; }
 .feral-card-grid {

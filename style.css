@@ -270,6 +270,7 @@ a:focus-visible, button:focus-visible, input:focus-visible, select:focus-visible
 }
 .calendar-layout { display: grid; gap: 4px; }
 .calendar-section .section-heading { margin-bottom: 0; }
+.calendar-section .section-heading h2 { margin-bottom: 8px; }
 .calendar-section .section-heading > p:last-child { margin-bottom: 0; }
 .calendar-panel {
   display: grid;

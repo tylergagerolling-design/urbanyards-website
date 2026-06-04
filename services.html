@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Explore Urban Yards Groundskeeping services for Portland, Beaverton, and Vancouver homes, apartments, and commercial properties.">
+    <meta property="og:type" content="website">
+    <meta property="og:title" content="Services | Urban Yards Groundskeeping">
+    <meta property="og:description" content="Groundskeeping, landscape improvements, property support, and ecological enhancements for better properties.">
+    <meta property="og:url" content="https://urbanyards.us/services.html">
+    <meta property="og:image" content="https://urbanyards.us/images/og-image-placeholder.svg">
+    <meta name="theme-color" content="#123f31">
+    <title>Services | Urban Yards Groundskeeping</title>
+    <link rel="icon" href="images/favicon.png?v=20260603-1" type="image/png">
+    <link rel="stylesheet" href="style.css?v=20260604-6">
+    <script src="services.js?v=20260604-1" defer></script>
+  </head>
+  <body class="services-page">
+    <a class="skip-link" href="#main-content">Skip to content</a>
+    <header class="site-header">
+      <a class="brand" href="index.html" aria-label="Urban Yards home">
+        <span class="brand-mark" aria-hidden="true"><img src="images/urban-yards-mark.png?v=20260603-12" alt=""></span>
+        <span><strong>Urban Yards</strong><small>Groundskeeping</small></span>
+      </a>
+      <button class="menu-toggle" type="button" aria-expanded="false" aria-controls="primary-nav">
+        <span class="sr-only">Toggle menu</span><b></b><b></b><b></b>
+      </button>
+      <nav id="primary-nav" class="primary-nav" aria-label="Primary navigation">
+        <a href="index.html">Home</a><a href="services.html" aria-current="page">Services</a><a href="index.html#calendar">Calendar</a><a href="portfolio.html">Portfolio</a><a href="index.html#about">About</a><a href="#contact">Contact</a>
+        <a class="button button-small" href="index.html#quote">Request a Quote</a>
+        <i class="nav-indicator" aria-hidden="true"></i>
+      </nav>
+      <span class="scroll-progress" aria-hidden="true"></span>
+    </header>
+    <main id="main-content">
+      <section class="portfolio-hero services-hero section" aria-labelledby="services-page-title">
+        <div class="container portfolio-hero-grid">
+          <div>
+            <p class="eyebrow">Urban Yards Services</p>
+            <h1 id="services-page-title">Property care that stays <span>practical.</span></h1>
+            <p class="hero-text">Explore service paths for homes, apartment communities, and commercial properties, then jump straight into the care plan that fits.</p>
+          </div>
+          <div class="portfolio-note service-hero-note">
+            <p class="eyebrow">Quick Fit</p>
+            <p>Use the service explorer to match a property type and goal with a recommended package.</p>
+          </div>
+        </div>
+      </section>
+      <section class="section service-explorer-section" aria-labelledby="service-explorer-title">
+        <div class="container">
+          <div class="service-explorer">
+            <div class="section-heading">
+              <p class="eyebrow">Service Explorer</p>
+              <h2 id="service-explorer-title">Build a starting point.</h2>
+              <p>Pick the property and the main thing you need handled. Urban Yards will point you toward a practical service mix.</p>
+            </div>
+            <div class="service-explorer-controls">
+              <div>
+                <p class="control-label">Property Type</p>
+                <div class="segmented-control" role="group" aria-label="Choose property type">
+                  <button class="service-explorer-button is-active" type="button" data-property="residential">Residential</button>
+                  <button class="service-explorer-button" type="button" data-property="apartments">Apartments</button>
+                  <button class="service-explorer-button" type="button" data-property="commercial">Commercial</button>
+                </div>
+              </div>
+              <div>
+                <p class="control-label">Primary Goal</p>
+                <div class="segmented-control" role="group" aria-label="Choose service goal">
+                  <button class="service-goal-button is-active" type="button" data-goal="routine">Routine Care</button>
+                  <button class="service-goal-button" type="button" data-goal="cleanup">Cleanup</button>
+                  <button class="service-goal-button" type="button" data-goal="improvement">Improvement</button>
+                  <button class="service-goal-button" type="button" data-goal="ecological">Ecological</button>
+                </div>
+              </div>
+            </div>
+            <div class="service-explorer-result" aria-live="polite">
+              <div>
+                <p class="eyebrow" id="service-result-label">Residential Routine Care</p>
+                <h3 id="service-result-title">Weekly curb appeal plan</h3>
+                <p id="service-result-copy">Mowing, edging, weed control, and seasonal touch-ups keep the property looking cared for without overbuilding the scope.</p>
+              </div>
+              <ul id="service-result-list"></ul>
+              <div class="service-result-actions">
+                <a id="service-result-link" class="button button-small" href="#groundskeeping">View Details</a>
+                <a id="service-result-quote" class="text-link" href="index.html?service=Groundskeeping#quote">Request this service <span aria-hidden="true">&rarr;</span></a>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+      <section class="section service-detail-section" aria-labelledby="service-detail-title">
+        <div class="container">
+          <div class="section-heading">
+            <p class="eyebrow">Service Details</p>
+            <h2 id="service-detail-title">What Urban Yards can handle.</h2>
+          </div>
+          <div class="service-detail-grid">
+            <article id="groundskeeping" class="card service-detail-card">
+              <p class="eyebrow">Groundskeeping</p>
+              <h3>Mowing, edging, weeds, and seasonal upkeep.</h3>
+              <p>Reliable recurring care for properties that need to look tended week after week.</p>
+              <ul><li>Mowing and edging</li><li>Weed suppression</li><li>Seasonal cleanup</li><li>Light pruning and touch-ups</li></ul>
+              <a class="button button-small" href="index.html?service=Groundskeeping#quote">Request Groundskeeping</a>
+            </article>
+            <article id="landscape-improvements" class="card service-detail-card">
+              <p class="eyebrow">Landscape Improvements</p>
+              <h3>Better beds, planting, mulch, and curb appeal updates.</h3>
+              <p>Focused upgrades for tired entries, shared spaces, borders, and high-visibility areas.</p>
+              <ul><li>Plant installations</li><li>Mulch refreshes</li><li>Privacy screens</li><li>Irrigation checks</li></ul>
+              <a class="button button-small" href="index.html?service=Landscape%20Improvements#quote">Request Improvements</a>
+            </article>
+            <article id="property-support" class="card service-detail-card">
+              <p class="eyebrow">Property Support</p>
+              <h3>Clean common areas and practical site support.</h3>
+              <p>Useful for apartment communities, commercial properties, and properties with regular public-facing traffic.</p>
+              <ul><li>Trash area cleanup</li><li>Day porter-style support</li><li>Entryway cleanup</li><li>Dog waste station checks</li></ul>
+              <a class="button button-small" href="index.html?service=Property%20Support#quote">Request Support</a>
+            </article>
+            <article id="ecological-enhancements" class="card service-detail-card">
+              <p class="eyebrow">Ecological Enhancements</p>
+              <h3>Native planting and lower-water landscape direction.</h3>
+              <p>Small, sensible ecological upgrades that make landscapes more resilient and habitat-friendly.</p>
+              <ul><li>Native plantings</li><li>Pollinator habitat</li><li>Low-water plant palettes</li><li>Urban greening ideas</li></ul>
+              <a class="button button-small" href="index.html?service=Ecological%20Enhancements#quote">Request Enhancements</a>
+            </article>
+          </div>
+        </div>
+      </section>
+      <section class="section service-frequency-section" aria-labelledby="service-frequency-title">
+        <div class="container service-frequency">
+          <div>
+            <p class="eyebrow">Maintenance Rhythm</p>
+            <h2 id="service-frequency-title">Choose the cadence that fits.</h2>
+          </div>
+          <div class="service-frequency-grid">
+            <article><strong>Weekly</strong><span>Best for active growing season and high-visibility properties.</span></article>
+            <article><strong>Biweekly</strong><span>A practical baseline for steady residential and smaller commercial care.</span></article>
+            <article><strong>Monthly</strong><span>Good for touch-ups, common area care, and seasonal property support.</span></article>
+            <article><strong>One-Time</strong><span>Useful for cleanups, refreshes, storm debris, and preparing a site for listing or leasing.</span></article>
+          </div>
+        </div>
+      </section>
+    </main>
+    <footer id="contact" class="site-footer">
+      <div class="container footer-grid">
+        <div>
+          <a class="brand footer-brand" href="index.html">
+            <span class="brand-mark" aria-hidden="true"><img src="images/urban-yards-mark.png?v=20260603-12" alt=""></span>
+            <span><strong>Urban Yards</strong><small>Groundskeeping</small></span>
+          </a>
+          <p>Landscape and property care for Beaverton, Portland, and Vancouver.</p>
+          <a class="footer-project-link" href="feral-grounds.html">The Feral Grounds</a>
+        </div>
+        <div>
+          <h2>Contact</h2>
+          <p>Beaverton, Portland &amp; Vancouver</p>
+        </div>
+        <div class="footer-quote-panel">
+          <p class="eyebrow">Quick Quote</p>
+          <h2>Get a fast yard care quote.</h2>
+          <p>Most replies within 1 business day for Beaverton, Portland, and Vancouver properties.</p>
+          <a class="button button-small" href="index.html#quote">Request a Quote</a>
+        </div>
+      </div>
+      <div class="container footer-bottom"><p>&copy; <span id="copyright-year"></span> Urban Yards Groundskeeping. All rights reserved.</p></div>
+    </footer>
+  </body>
+</html>

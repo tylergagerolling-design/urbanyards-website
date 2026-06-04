@@ -6,6 +6,7 @@ const header = document.querySelector(".site-header");
 const form = document.querySelector("#quote-form");
 const success = document.querySelector("#form-success");
 const submitButton = document.querySelector(".submit-button");
+const serviceSelect = form.querySelector('select[name="service"]');
 const mobileQuoteBar = document.querySelector(".mobile-quote-bar");
 const hero = document.querySelector("#home");
 const heroPlaceholder = document.querySelector(".placeholder-hero");
@@ -58,6 +59,12 @@ const buildServiceMap = (elementId, expanded = false) => {
 
 const compactServiceMap = buildServiceMap("service-area-map");
 const expandedServiceMap = buildServiceMap("expanded-service-area-map", true);
+
+const requestedService = new URLSearchParams(window.location.search).get("service");
+if (requestedService && serviceSelect) {
+  const matchingOption = [...serviceSelect.options].find((option) => option.value === requestedService || option.textContent === requestedService);
+  if (matchingOption) serviceSelect.value = matchingOption.value || matchingOption.textContent;
+}
 
 const monthNames = [
   "January",

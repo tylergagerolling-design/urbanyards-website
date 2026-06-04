@@ -622,6 +622,11 @@ input:focus, select:focus, textarea:focus { outline: 0; }
   align-items: center;
   gap: 58px;
 }
+.feral-hero-grid > div:first-child {
+  order: 2;
+  text-align: right;
+}
+.feral-hero-grid > div:last-child { order: 1; }
 .feral-hero h1 { max-width: 760px; font-size: clamp(4rem, 8vw, 7.5rem); }
 .feral-hero-panel {
   display: grid;
@@ -654,6 +659,11 @@ input:focus, select:focus, textarea:focus { outline: 0; }
   gap: 46px;
   align-items: start;
 }
+.feral-split > div:first-child {
+  order: 2;
+  text-align: right;
+}
+.feral-split > p:last-child { order: 1; }
 .feral-split p:last-child {
   max-width: 680px;
   color: #b7b08b;
@@ -751,6 +761,13 @@ input:focus, select:focus, textarea:focus { outline: 0; }
     transform: none;
   }
   .feral-hero-grid, .feral-split { grid-template-columns: 1fr; gap: 28px; }
+  .feral-hero-grid > div:first-child,
+  .feral-hero-grid > div:last-child,
+  .feral-split > div:first-child,
+  .feral-split > p:last-child {
+    order: initial;
+    text-align: left;
+  }
   .feral-hero { padding: 70px 0 64px; }
   .feral-hero-panel { min-height: 300px; }
   .feral-card-grid { grid-template-columns: 1fr; }

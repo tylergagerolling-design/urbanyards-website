@@ -632,6 +632,10 @@ input:focus, select:focus, textarea:focus { outline: 0; }
   order: 2;
   text-align: right;
 }
+.feral-hero-grid > div:first-child .eyebrow,
+.feral-hero-grid > div:first-child .hero-text {
+  margin-left: auto;
+}
 .feral-hero-grid > div:last-child { order: 1; }
 .feral-hero h1 {
   max-width: 760px;

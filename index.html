@@ -13,9 +13,9 @@
     <title>Urban Yards Groundskeeping | Beaverton, Portland & Vancouver Property Care</title>
     <link rel="icon" href="images/favicon.png?v=20260603-1" type="image/png">
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
-    <link rel="stylesheet" href="style.css?v=20260603-13">
+    <link rel="stylesheet" href="style.css?v=20260604-1">
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" defer></script>
-    <script src="script.js?v=20260603-1" defer></script>
+    <script src="script.js?v=20260604-1" defer></script>
   </head>
   <body>
     <a class="skip-link" href="#main-content">Skip to content</a>
@@ -28,7 +28,7 @@
         <span class="sr-only">Toggle menu</span><b></b><b></b><b></b>
       </button>
       <nav id="primary-nav" class="primary-nav" aria-label="Primary navigation">
-        <a href="#home">Home</a><a href="#services">Services</a><a href="portfolio.html">Portfolio</a><a href="#about">About</a><a href="#contact">Contact</a>
+        <a href="#home">Home</a><a href="#services">Services</a><a href="#calendar">Calendar</a><a href="portfolio.html">Portfolio</a><a href="#about">About</a><a href="#contact">Contact</a>
         <a class="button button-small" href="#quote">Request a Quote</a>
         <i class="nav-indicator" aria-hidden="true"></i>
       </nav>
@@ -66,6 +66,78 @@
           </div>
           <div class="property-types" aria-label="Property types served">
             <span>Apartment Communities</span><span>Commercial Properties</span><span>HOAs</span><span>Schools &amp; Institutions</span>
+          </div>
+        </div>
+      </section>
+      <section id="calendar" class="section calendar-section" aria-labelledby="calendar-title">
+        <div class="container calendar-layout">
+          <div class="section-heading">
+            <p class="eyebrow">Seasonal Planning</p>
+            <h2 id="calendar-title">Portland Property Care Calendar</h2>
+            <p>See what services are most useful each season for homes, apartments, and commercial properties in Portland.</p>
+          </div>
+          <div class="calendar-controls" aria-label="Property care calendar controls">
+            <div>
+              <p class="control-label">Property Type</p>
+              <div class="segmented-control" role="group" aria-label="Choose property type">
+                <button type="button" class="calendar-property-button is-active" data-property-type="residential">Residential</button>
+                <button type="button" class="calendar-property-button" data-property-type="apartments">Apartments / Multifamily</button>
+                <button type="button" class="calendar-property-button" data-property-type="commercial">Commercial</button>
+              </div>
+            </div>
+            <div>
+              <p class="control-label">Month</p>
+              <div class="month-grid" role="group" aria-label="Choose month">
+                <button type="button" class="calendar-month-button" data-month="0">Jan</button>
+                <button type="button" class="calendar-month-button" data-month="1">Feb</button>
+                <button type="button" class="calendar-month-button" data-month="2">Mar</button>
+                <button type="button" class="calendar-month-button" data-month="3">Apr</button>
+                <button type="button" class="calendar-month-button" data-month="4">May</button>
+                <button type="button" class="calendar-month-button" data-month="5">Jun</button>
+                <button type="button" class="calendar-month-button" data-month="6">Jul</button>
+                <button type="button" class="calendar-month-button" data-month="7">Aug</button>
+                <button type="button" class="calendar-month-button" data-month="8">Sep</button>
+                <button type="button" class="calendar-month-button" data-month="9">Oct</button>
+                <button type="button" class="calendar-month-button" data-month="10">Nov</button>
+                <button type="button" class="calendar-month-button" data-month="11">Dec</button>
+              </div>
+            </div>
+          </div>
+          <div class="calendar-results" aria-live="polite">
+            <article class="card calendar-main-card">
+              <div>
+                <p class="eyebrow" id="calendar-property-label">Residential</p>
+                <h3 id="calendar-month-title">June Care Plan</h3>
+                <p id="calendar-property-note">Focus on curb appeal, yard cleanup, planting, mowing, mulch, and seasonal maintenance.</p>
+              </div>
+              <div>
+                <h4>Recommended Services</h4>
+                <ul id="calendar-service-list"></ul>
+              </div>
+              <div class="calendar-detail-grid">
+                <div>
+                  <h4>Why It Matters</h4>
+                  <p id="calendar-why"></p>
+                </div>
+                <div>
+                  <h4>Best Time To Schedule</h4>
+                  <p id="calendar-schedule"></p>
+                </div>
+              </div>
+              <a class="button button-small" href="#quote">Request a Quote</a>
+            </article>
+            <aside class="calendar-side">
+              <article class="card calendar-highlight-card">
+                <p class="eyebrow">Best Services This Month</p>
+                <h3 id="calendar-best-title">Start Here</h3>
+                <ul id="calendar-best-list"></ul>
+              </article>
+              <article class="card calendar-highlight-card">
+                <p class="eyebrow">Plan Ahead</p>
+                <h3>Next Up</h3>
+                <div id="calendar-plan-ahead" class="plan-ahead-list"></div>
+              </article>
+            </aside>
           </div>
         </div>
       </section>

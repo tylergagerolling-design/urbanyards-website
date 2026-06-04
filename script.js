@@ -12,6 +12,9 @@ const heroPlaceholder = document.querySelector(".placeholder-hero");
 const navIndicator = document.querySelector(".nav-indicator");
 const serviceCards = [...document.querySelectorAll(".service-card")];
 const serviceToggles = [...document.querySelectorAll(".service-toggle")];
+const calendarSection = document.querySelector("#calendar");
+const calendarPropertyButtons = [...document.querySelectorAll(".calendar-property-button")];
+const calendarMonthButtons = [...document.querySelectorAll(".calendar-month-button")];
 const mapDialog = document.querySelector(".map-dialog");
 const mapExpand = document.querySelector(".map-expand");
 const mapClose = document.querySelector(".map-close");
@@ -56,6 +59,171 @@ const buildServiceMap = (elementId, expanded = false) => {
 const compactServiceMap = buildServiceMap("service-area-map");
 const expandedServiceMap = buildServiceMap("expanded-service-area-map", true);
 
+const monthNames = [
+  "January",
+  "February",
+  "March",
+  "April",
+  "May",
+  "June",
+  "July",
+  "August",
+  "September",
+  "October",
+  "November",
+  "December"
+];
+
+const propertyTypes = {
+  residential: {
+    label: "Residential",
+    note: "Focus on curb appeal, yard cleanup, planting, mowing, mulch, and seasonal maintenance.",
+    emphasis: ["curb appeal", "yard cleanup", "planting", "mowing", "mulch"]
+  },
+  apartments: {
+    label: "Apartments / Multifamily",
+    note: "Focus on resident experience, trash areas, dog waste stations, common areas, leaf cleanup, entryways, and low-maintenance planting.",
+    emphasis: ["resident experience", "trash areas", "dog waste stations", "common areas", "entryways"]
+  },
+  commercial: {
+    label: "Commercial",
+    note: "Focus on entrances, parking lot edges, sidewalks, customer-facing curb appeal, safety, litter cleanup, and consistent maintenance.",
+    emphasis: ["entrances", "parking lot edges", "sidewalks", "safety", "consistent maintenance"]
+  }
+};
+
+const serviceCalendar = [
+  {
+    services: ["Storm debris cleanup", "Winter property inspections", "Drainage issue checks", "Trash/recycling area cleanup"],
+    why: "Winter weather can reveal drainage, debris, and safety issues.",
+    schedule: "Book early in the month after heavy weather, then check again before the next storm system."
+  },
+  {
+    services: ["Winter pruning", "Bed cleanup", "Early weed prevention", "Mulch planning"],
+    why: "Late winter is a good time to prepare beds before spring growth.",
+    schedule: "Schedule pruning and bed prep before spring growth starts moving fast."
+  },
+  {
+    services: ["Spring cleanup", "Mulch installation", "Weed removal", "Lawn edging", "Early planting prep"],
+    why: "March is when properties start looking active again and first impressions matter.",
+    schedule: "Get on the calendar early so cleanup, mulch, and edging land before peak spring demand."
+  },
+  {
+    services: ["Lawn mowing begins", "Edging", "Weed control", "Irrigation inspection", "New plant installation"],
+    why: "Spring growth accelerates and maintenance routines should be established.",
+    schedule: "Use April to set recurring maintenance and inspect irrigation before warmer weather."
+  },
+  {
+    services: ["Weekly mowing", "Shrub trimming", "Bed maintenance", "Pollinator-friendly planting", "Mulch touch-ups"],
+    why: "May is peak curb appeal season and plants are actively growing.",
+    schedule: "Weekly or biweekly service works best while turf, weeds, and shrubs are growing quickly."
+  },
+  {
+    services: ["Mowing and edging", "Irrigation monitoring", "Weed suppression", "Light pruning", "Common area cleanup"],
+    why: "Early summer maintenance keeps landscapes from getting overgrown.",
+    schedule: "Schedule consistent visits before summer heat makes catch-up work harder."
+  },
+  {
+    services: ["Drought stress monitoring", "Deep watering support", "Mulch touch-ups", "Weed control", "Dog waste station maintenance"],
+    why: "Hot, dry weather can stress plants and make neglected areas stand out.",
+    schedule: "Plan visits around heat waves and high-use common areas."
+  },
+  {
+    services: ["Irrigation adjustments", "Heat stress checks", "Cleanup of dry plant material", "Late-summer weed control"],
+    why: "August is about keeping properties clean, safe, and resilient through heat.",
+    schedule: "Book heat checks and dry-material cleanup before late-summer landscapes look tired."
+  },
+  {
+    services: ["Lawn repair", "Overseeding", "Fall planting prep", "Soil improvement", "Bed renovation"],
+    why: "September is one of the best months to repair lawns and prepare for fall planting.",
+    schedule: "Schedule lawn repair and soil work early enough to catch cooler weather and fall moisture."
+  },
+  {
+    services: ["Native plant installation", "Shrub and tree planting", "Leaf cleanup", "Mulch installation", "Storm preparation"],
+    why: "Fall is one of the best planting windows in Portland.",
+    schedule: "Reserve planting and storm prep before leaf cleanup season fills the calendar."
+  },
+  {
+    services: ["Leaf removal", "Winter preparation", "Drainage checks", "Mulch refresh", "Debris cleanup"],
+    why: "Wet weather and leaf buildup can create messy and unsafe conditions.",
+    schedule: "Set cleanup visits around major leaf drop and before persistent rain."
+  },
+  {
+    services: ["Storm cleanup", "Winter inspections", "Trash area maintenance", "Entryway cleanup", "Snow/ice readiness if offered"],
+    why: "Winter maintenance helps keep properties presentable and functional.",
+    schedule: "Use December for storm response, entry cleanup, and winter-readiness checks."
+  }
+];
+
+let selectedPropertyType = "residential";
+let selectedMonth = new Date().getMonth();
+
+const createList = (target, items) => {
+  if (!target) return;
+  target.innerHTML = items.map((item) => `<li>${item}</li>`).join("");
+};
+
+const getPropertyServices = (monthData, propertyData) => {
+  const serviceSet = [...monthData.services];
+  propertyData.emphasis.forEach((item) => {
+    const alreadyCovered = serviceSet.some((service) => service.toLowerCase().includes(item.toLowerCase()));
+    if (!alreadyCovered && serviceSet.length < 7) serviceSet.push(item.replace(/\b\w/g, (letter) => letter.toUpperCase()));
+  });
+  return serviceSet.slice(0, 7);
+};
+
+const updateCalendarDisplay = () => {
+  if (!calendarSection) return;
+
+  const monthData = serviceCalendar[selectedMonth];
+  const propertyData = propertyTypes[selectedPropertyType];
+  const serviceList = getPropertyServices(monthData, propertyData);
+  const nextMonths = [1, 2].map((offset) => (selectedMonth + offset) % 12);
+
+  calendarPropertyButtons.forEach((button) => {
+    const active = button.dataset.propertyType === selectedPropertyType;
+    button.classList.toggle("is-active", active);
+    button.setAttribute("aria-pressed", String(active));
+  });
+
+  calendarMonthButtons.forEach((button) => {
+    const active = Number(button.dataset.month) === selectedMonth;
+    button.classList.toggle("is-active", active);
+    button.setAttribute("aria-pressed", String(active));
+  });
+
+  document.querySelector("#calendar-property-label").textContent = propertyData.label;
+  document.querySelector("#calendar-month-title").textContent = `${monthNames[selectedMonth]} Care Plan`;
+  document.querySelector("#calendar-property-note").textContent = propertyData.note;
+  document.querySelector("#calendar-why").textContent = monthData.why;
+  document.querySelector("#calendar-schedule").textContent = monthData.schedule;
+  document.querySelector("#calendar-best-title").textContent = `${monthNames[selectedMonth]} Priorities`;
+
+  createList(document.querySelector("#calendar-service-list"), serviceList);
+  createList(document.querySelector("#calendar-best-list"), serviceList.slice(0, 3));
+
+  document.querySelector("#calendar-plan-ahead").innerHTML = nextMonths.map((monthIndex) => {
+    const plan = serviceCalendar[monthIndex];
+    return `<div class="plan-ahead-item"><strong>${monthNames[monthIndex]}</strong><span>${plan.services.slice(0, 3).join(", ")}</span></div>`;
+  }).join("");
+};
+
+calendarPropertyButtons.forEach((button) => {
+  button.addEventListener("click", () => {
+    selectedPropertyType = button.dataset.propertyType;
+    updateCalendarDisplay();
+  });
+});
+
+calendarMonthButtons.forEach((button) => {
+  button.addEventListener("click", () => {
+    selectedMonth = Number(button.dataset.month);
+    updateCalendarDisplay();
+  });
+});
+
+updateCalendarDisplay();
+
 const positionNavIndicator = (link) => {
   if (!link || window.innerWidth <= 760) return;
   primaryNav.style.setProperty("--nav-indicator-x", `${link.offsetLeft}px`);
@@ -94,7 +262,7 @@ form.addEventListener("submit", (event) => {
   }, 2600);
 });
 
-const revealTargets = document.querySelectorAll(".section-heading, .service-card, .trust-strip article, .quote-copy, .quote-form, .lower-card");
+const revealTargets = document.querySelectorAll(".section-heading, .service-card, .calendar-controls, .calendar-main-card, .calendar-highlight-card, .trust-strip article, .quote-copy, .quote-form, .lower-card");
 revealTargets.forEach((target, index) => {
   target.classList.add("reveal");
   target.style.setProperty("--reveal-delay", `${Math.min(index % 4, 3) * 65}ms`);

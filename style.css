@@ -619,7 +619,7 @@ input:focus, select:focus, textarea:focus { outline: 0; }
   padding: 92px 0 76px;
   background:
     linear-gradient(90deg, rgba(23, 26, 22, .94), rgba(23, 26, 22, .64)),
-    url("images/feral-grounds-botanical.png?v=20260603-1") center / cover no-repeat,
+    url("images/feral-grounds-botanical.png?v=20260603-1") center 34px / cover no-repeat,
     radial-gradient(circle at 82% 31%, rgba(158, 52, 56, .2), transparent 28%),
     #171a16;
 }

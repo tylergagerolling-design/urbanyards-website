@@ -55,7 +55,7 @@ if (mapElement && window.L) {
       title: "North Portland Canopy Thread",
       detail: "Street-edge tree pockets could connect shade, cooling, and bird movement between neighborhood corridors.",
       center: [45.558, -122.667],
-      radius: 4300,
+      radius: 2300,
     },
     {
       layer: "pollinator",
@@ -63,7 +63,7 @@ if (mapElement && window.L) {
       title: "Inner Eastside Nectar Route",
       detail: "Small flowering patches can act as stepping stones for pollinators across tight urban blocks.",
       center: [45.513, -122.648],
-      radius: 3600,
+      radius: 2000,
     },
     {
       layer: "soil",
@@ -71,7 +71,7 @@ if (mapElement && window.L) {
       title: "South Portland Soil Repair",
       detail: "Compacted margins and leftover parcels could become test plots for mulch, fungi, and native understory recovery.",
       center: [45.472, -122.673],
-      radius: 3900,
+      radius: 2100,
     },
     {
       layer: "water",
@@ -79,7 +79,7 @@ if (mapElement && window.L) {
       title: "Columbia Slough Edge",
       detail: "Moisture-loving habitat can strengthen drainage edges while supporting birds and amphibians.",
       center: [45.588, -122.666],
-      radius: 4800,
+      radius: 2600,
     },
     {
       layer: "community",
@@ -87,7 +87,7 @@ if (mapElement && window.L) {
       title: "Neighborhood Planting Commons",
       detail: "Highly visible planting days could turn underused corners into shared stewardship sites.",
       center: [45.518, -122.713],
-      radius: 3300,
+      radius: 1850,
     },
   ];
 

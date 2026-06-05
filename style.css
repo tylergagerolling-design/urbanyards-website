@@ -1048,6 +1048,8 @@ input:focus, select:focus, textarea:focus { outline: 0; }
 .feral-habitat-map .leaflet-tile-pane {
   filter: invert(1) hue-rotate(180deg) saturate(.42) brightness(.58) contrast(1.08);
 }
+.feral-habitat-map .leaflet-overlay-pane { z-index: 350; }
+.feral-habitat-map .leaflet-tooltip-pane { z-index: 450; }
 .feral-habitat-map .leaflet-control-zoom {
   overflow: hidden;
   border: 1px solid rgba(208, 196, 147, .22);
@@ -1071,7 +1073,7 @@ input:focus, select:focus, textarea:focus { outline: 0; }
   top: 12px;
   right: 12px;
   left: 52px;
-  z-index: 1000;
+  z-index: 1200;
   display: flex;
   flex-wrap: wrap;
   gap: 6px;
@@ -1079,6 +1081,8 @@ input:focus, select:focus, textarea:focus { outline: 0; }
   pointer-events: none;
 }
 .feral-map-tools button {
+  position: relative;
+  z-index: 1;
   pointer-events: auto;
   padding: 7px 9px;
   border: 1px solid rgba(208, 196, 147, .22);

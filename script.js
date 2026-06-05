@@ -321,7 +321,7 @@ window.addEventListener("resize", () => {
 });
 updateScrollEffects();
 
-if (!reduceMotion && window.matchMedia("(pointer: fine)").matches) {
+if (heroPlaceholder && !reduceMotion && window.matchMedia("(pointer: fine)").matches) {
   heroPlaceholder.addEventListener("pointermove", (event) => {
     const rect = heroPlaceholder.getBoundingClientRect();
     heroPlaceholder.style.setProperty("--glow-x", `${event.clientX - rect.left - 85}px`);

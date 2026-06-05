@@ -1071,7 +1071,7 @@ input:focus, select:focus, textarea:focus { outline: 0; }
   top: 12px;
   right: 12px;
   left: 52px;
-  z-index: 500;
+  z-index: 1000;
   display: flex;
   flex-wrap: wrap;
   gap: 6px;
@@ -1112,7 +1112,7 @@ input:focus, select:focus, textarea:focus { outline: 0; }
   position: absolute;
   right: 14px;
   bottom: 14px;
-  z-index: 500;
+  z-index: 1000;
   width: min(285px, calc(100% - 28px));
   padding: 14px;
   border: 1px solid rgba(111, 144, 110, .28);

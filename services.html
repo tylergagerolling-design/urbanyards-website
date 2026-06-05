@@ -13,7 +13,7 @@
     <title>Services | Urban Yards Groundskeeping</title>
     <link rel="icon" href="images/favicon.png?v=20260603-1" type="image/png">
     <link rel="stylesheet" href="style.css?v=20260605-3">
-    <script src="services.js?v=20260604-1" defer></script>
+    <script src="services.js?v=20260605-1" defer></script>
   </head>
   <body class="services-page">
     <a class="skip-link" href="#main-content">Skip to content</a>
@@ -26,7 +26,7 @@
         <span class="sr-only">Toggle menu</span><b></b><b></b><b></b>
       </button>
       <nav id="primary-nav" class="primary-nav" aria-label="Primary navigation">
-        <a href="index.html">Home</a><a href="services.html" aria-current="page">Services</a><a href="index.html#calendar">Calendar</a><a href="portfolio.html">Portfolio</a><a href="about.html">About</a><a href="#contact">Contact</a>
+        <a href="index.html">Home</a><a href="services.html" aria-current="page">Services</a><a href="#calendar">Calendar</a><a href="portfolio.html">Portfolio</a><a href="about.html">About</a><a href="#contact">Contact</a>
         <a class="button button-small" href="index.html#quote">Request a Quote</a>
         <i class="nav-indicator" aria-hidden="true"></i>
       </nav>
@@ -84,6 +84,80 @@
                 <a id="service-result-link" class="button button-small" href="#groundskeeping">View Details</a>
                 <a id="service-result-quote" class="text-link" href="index.html?service=Groundskeeping#quote">Start with this service <span aria-hidden="true">&rarr;</span></a>
               </div>
+            </div>
+          </div>
+        </div>
+      </section>
+      <section id="calendar" class="section calendar-section" aria-labelledby="calendar-title">
+        <div class="container calendar-layout">
+          <div class="section-heading">
+            <p class="eyebrow">Seasonal Planning</p>
+            <h2 id="calendar-title">Portland Property Care Calendar</h2>
+            <p>See what services are most useful each season for homes, apartments, and commercial properties in Portland.</p>
+          </div>
+          <div class="calendar-panel">
+            <div class="calendar-controls" aria-label="Property care calendar controls">
+              <div>
+                <p class="control-label">Property Type</p>
+                <div class="segmented-control" role="group" aria-label="Choose property type">
+                  <button type="button" class="calendar-property-button is-active" data-property-type="residential">Residential</button>
+                  <button type="button" class="calendar-property-button" data-property-type="apartments">Apartments / Multifamily</button>
+                  <button type="button" class="calendar-property-button" data-property-type="commercial">Commercial</button>
+                </div>
+              </div>
+              <div>
+                <p class="control-label">Month</p>
+                <div class="month-grid" role="group" aria-label="Choose month">
+                  <button type="button" class="calendar-month-button" data-month="0">Jan</button>
+                  <button type="button" class="calendar-month-button" data-month="1">Feb</button>
+                  <button type="button" class="calendar-month-button" data-month="2">Mar</button>
+                  <button type="button" class="calendar-month-button" data-month="3">Apr</button>
+                  <button type="button" class="calendar-month-button" data-month="4">May</button>
+                  <button type="button" class="calendar-month-button" data-month="5">Jun</button>
+                  <button type="button" class="calendar-month-button" data-month="6">Jul</button>
+                  <button type="button" class="calendar-month-button" data-month="7">Aug</button>
+                  <button type="button" class="calendar-month-button" data-month="8">Sep</button>
+                  <button type="button" class="calendar-month-button" data-month="9">Oct</button>
+                  <button type="button" class="calendar-month-button" data-month="10">Nov</button>
+                  <button type="button" class="calendar-month-button" data-month="11">Dec</button>
+                </div>
+              </div>
+            </div>
+            <div class="calendar-results" aria-live="polite">
+              <article class="card calendar-main-card">
+                <div>
+                  <p class="eyebrow" id="calendar-property-label">Residential</p>
+                  <h3 id="calendar-month-title">June Care Plan</h3>
+                  <p id="calendar-property-note">Focus on curb appeal, yard cleanup, planting, mowing, mulch, and seasonal maintenance.</p>
+                </div>
+                <div>
+                  <h4>Recommended Services</h4>
+                  <ul id="calendar-service-list"></ul>
+                </div>
+                <div class="calendar-detail-grid">
+                  <div>
+                    <h4>Why It Matters</h4>
+                    <p id="calendar-why"></p>
+                  </div>
+                  <div>
+                    <h4>Best Time To Schedule</h4>
+                    <p id="calendar-schedule"></p>
+                  </div>
+                </div>
+                <a class="text-link" href="index.html#quote">Plan this month <span aria-hidden="true">&rarr;</span></a>
+              </article>
+              <aside class="calendar-side">
+                <article class="card calendar-highlight-card">
+                  <p class="eyebrow">Best Services This Month</p>
+                  <h3 id="calendar-best-title">Start Here</h3>
+                  <ul id="calendar-best-list"></ul>
+                </article>
+                <article class="card calendar-highlight-card">
+                  <p class="eyebrow">Plan Ahead</p>
+                  <h3>Next Up</h3>
+                  <div id="calendar-plan-ahead" class="plan-ahead-list"></div>
+                </article>
+              </aside>
             </div>
           </div>
         </div>

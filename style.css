@@ -232,7 +232,7 @@ a:focus-visible, button:focus-visible, input:focus-visible, select:focus-visible
   background-size: 230% 230%;
   animation: ambient-drift 14s ease-in-out infinite alternate;
 }
-.hero-video-frame {
+.hero-video-frame, .hero-image-frame {
   position: relative;
   min-height: 430px;
   overflow: hidden;
@@ -241,7 +241,7 @@ a:focus-visible, button:focus-visible, input:focus-visible, select:focus-visible
   background: #efe4cf;
   box-shadow: 0 24px 58px rgba(25, 59, 42, .13);
 }
-.hero-video {
+.hero-video, .hero-image {
   display: block;
   width: 100%;
   height: 100%;
@@ -1622,7 +1622,7 @@ input:focus, select:focus, textarea:focus { outline: 0; }
   }
   .feral-site-card h2 { font-size: 1rem; }
   h1 { font-size: clamp(3.15rem, 13vw, 4.8rem); }
-  .placeholder-hero, .hero-video-frame { min-height: 270px; }
+  .placeholder-hero, .hero-video-frame, .hero-image-frame { min-height: 270px; }
   .property-types { grid-template-columns: 1fr 1fr; }
   .calendar-panel { padding: 16px; }
   .calendar-controls { padding: 0 0 15px; }

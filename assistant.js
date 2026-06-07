@@ -237,8 +237,4 @@
   });
 
   renderMessages();
-  window.setTimeout(() => {
-    if (state.open) return;
-    setOpen(true, { focus: false });
-  }, 1600);
 })();

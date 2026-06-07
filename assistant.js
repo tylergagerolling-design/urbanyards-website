@@ -90,15 +90,16 @@
     prompts.appendChild(button);
   });
 
-  function setOpen(open) {
+  function setOpen(open, options = {}) {
+    const { focus = true } = options;
     state.open = open;
     panel.hidden = !open;
     toggle.setAttribute("aria-expanded", String(open));
     assistant.classList.toggle("is-open", open);
     if (open) {
       renderMessages();
-      requestAnimationFrame(() => input.focus());
-    } else {
+      if (focus) requestAnimationFrame(() => input.focus());
+    } else if (focus) {
       toggle.focus();
     }
   }
@@ -214,6 +215,10 @@
 
   toggle.addEventListener("click", () => setOpen(!state.open));
   closeButton.addEventListener("click", () => setOpen(false));
+  document.addEventListener("pointerdown", (event) => {
+    if (!state.open || assistant.contains(event.target)) return;
+    setOpen(false, { focus: false });
+  });
   form.addEventListener("submit", (event) => {
     event.preventDefault();
     submitMessage();
@@ -229,4 +234,8 @@
   });
 
   renderMessages();
+  window.setTimeout(() => {
+    if (state.open) return;
+    setOpen(true, { focus: false });
+  }, 1600);
 })();

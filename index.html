@@ -13,9 +13,9 @@
     <title>Urban Yards Groundskeeping | Beaverton, Portland & Vancouver Property Care</title>
     <link rel="icon" href="images/favicon.png?v=20260603-1" type="image/png">
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
-    <link rel="stylesheet" href="style.css?v=20260606-1">
+    <link rel="stylesheet" href="style.css?v=20260606-2">
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" defer></script>
-    <script src="script.js?v=20260606-1" defer></script>
+    <script src="script.js?v=20260606-2" defer></script>
   </head>
   <body>
     <a class="skip-link" href="#main-content">Skip to content</a>
@@ -106,54 +106,7 @@
             <p class="eyebrow">Request a Quote</p>
             <h2 id="quote-title">Get a fast yard care quote.</h2>
             <p>Tell us about your property and the support you need. Photos can often give us enough detail to prepare a quote without an onsite visit.</p>
-            <div class="ai-helper card" data-ai-helper>
-              <div class="ai-helper-heading">
-                <p class="eyebrow">Service Helper</p>
-                <h3>Find the right starting point.</h3>
-                <p>Answer a few quick questions and the helper will prepare a clean inquiry summary.</p>
-              </div>
-              <div class="ai-helper-field">
-                <span>Property Type</span>
-                <div class="ai-helper-options" role="group" aria-label="Choose property type">
-                  <button class="ai-option is-active" type="button" data-property="House">House</button>
-                  <button class="ai-option" type="button" data-property="Apartment complex">Apartment</button>
-                  <button class="ai-option" type="button" data-property="Commercial property">Commercial</button>
-                  <button class="ai-option" type="button" data-property="HOA">HOA</button>
-                  <button class="ai-option" type="button" data-property="Other">Other</button>
-                </div>
-              </div>
-              <label class="ai-helper-field">What problem do you need help with?
-                <textarea id="helper-problem" rows="3" placeholder="Overgrown lawn, weeds, shrubs, move-out cleanup, trash area, seasonal cleanup..."></textarea>
-              </label>
-              <div class="ai-helper-grid">
-                <label class="ai-helper-field">Location
-                  <input id="helper-location" placeholder="Beaverton, Portland, Vancouver...">
-                </label>
-                <label class="ai-helper-field">Preferred Timing
-                  <input id="helper-timing" placeholder="This week, next month, flexible...">
-                </label>
-              </div>
-              <div class="ai-helper-grid">
-                <label class="ai-helper-field">Contact Info
-                  <input id="helper-contact" placeholder="Name, phone, or email">
-                </label>
-                <label class="ai-helper-field">Photos Available?
-                  <select id="helper-photos">
-                    <option>Can send photos</option>
-                    <option>Need Tyler to review onsite</option>
-                    <option>Not sure yet</option>
-                  </select>
-                </label>
-              </div>
-              <div class="ai-helper-actions">
-                <button class="button button-small" type="button" id="helper-generate">Generate Summary</button>
-                <button class="text-button" type="button" id="helper-copy">Copy to Quote Form</button>
-              </div>
-              <label class="ai-helper-field ai-helper-summary">Summary for Tyler
-                <textarea id="helper-summary" rows="7" readonly></textarea>
-              </label>
-              <p class="ai-disclaimer">This assistant suggests a starting service only. This is not a final quote until Tyler reviews the job details, photos, timing, and site conditions.</p>
-            </div>
+            <div class="placeholder placeholder-detail aspect-detail" aria-label="Reserved supporting illustration area"><span>Supporting Illustration</span></div>
           </div>
           <form id="quote-form" class="quote-form card" novalidate>
             <div class="quote-form-heading wide">
@@ -165,7 +118,7 @@
             </div>
             <label>Name<input name="name" autocomplete="name" required></label>
             <label>Email<input name="email" type="email" autocomplete="email" required></label>
-            <label class="wide">What do you need help with?<select name="service" required><option value="">Select a service</option><option>Lawn mowing and edging</option><option>Weed trimming</option><option>Shrub and small tree trimming</option><option>Seasonal yard cleanup</option><option>Mulch and bed refresh</option><option>Trash/recycling area cleanup</option><option>Apartment move-out cleaning</option><option>Day porter style property cleanup</option><option>Other</option></select></label>
+            <label class="wide">What do you need help with?<select name="service" required><option value="">Select a service</option><option>Groundskeeping</option><option>Landscape Improvements</option><option>Property Support</option><option>Ecological Enhancements</option><option>Monthly Maintenance</option><option>One-Time Cleanup</option><option>Other</option></select></label>
             <label class="wide photo-upload">Add Photos<small>Optional, but helpful for faster quoting.</small><input name="photos" type="file" accept="image/*" multiple></label>
             <label class="wide">Message<textarea name="message" rows="4"></textarea></label>
             <div class="quote-submit-row wide">

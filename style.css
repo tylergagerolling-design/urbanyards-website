@@ -932,6 +932,7 @@ input:focus, select:focus, textarea:focus { outline: 0; }
     linear-gradient(180deg, #fffdf7, #f4efe0);
   box-shadow: 0 26px 80px rgba(13, 44, 36, .32);
 }
+.uy-assistant-panel[hidden] { display: none; }
 .uy-assistant-header {
   display: flex;
   align-items: start;

@@ -1,10 +1,10 @@
 (() => {
   const storageKey = "urbanYardsAssistantConversation";
   const maxStoredMessages = 18;
-  const leadSignals = ["quote", "estimate", "price", "cost", "hire", "schedule", "book", "service", "cleanup", "mowing", "mulch", "trim", "porter"];
+  const leadSignals = ["quote", "estimate", "price", "cost", "hire", "schedule", "book", "service", "cleanup", "mowing", "mulch", "trim", "porter", "address", "property"];
   const defaultMessages = [{
     role: "assistant",
-    content: "Hi, I am the Urban Yards assistant. I can help with services, seasonal property care, and preparing details for the team to review."
+    content: "Hi, I am The Groundskeeper. I can help with service questions, seasonal property care, and preparing details for Urban Yards to review."
   }];
 
   const state = { open: false, busy: false, messages: loadMessages() };
@@ -45,7 +45,9 @@
           <div class="uy-assistant-lead-grid">
             <label>Name<input name="name" autocomplete="name" placeholder="Name"></label>
             <label>Email<input name="email" type="email" autocomplete="email" placeholder="Email"></label>
+            <label>Phone<input name="phone" autocomplete="tel" placeholder="Phone"></label>
             <label>Property Type<input name="propertyType" placeholder="House, apartment, commercial..."></label>
+            <label>Property Location<input name="propertyLocation" autocomplete="street-address" placeholder="Address or general area"></label>
             <label>Service<input name="service" placeholder="Cleanup, mowing, mulch..."></label>
           </div>
         </form>
@@ -116,7 +118,9 @@
     return {
       name: String(data.get("name") || "").trim(),
       email: String(data.get("email") || "").trim(),
+      phone: String(data.get("phone") || "").trim(),
       propertyType: String(data.get("propertyType") || "").trim(),
+      propertyLocation: String(data.get("propertyLocation") || "").trim(),
       service: String(data.get("service") || "").trim()
     };
   }
@@ -154,13 +158,13 @@
       return "Tyler Gage.";
     }
     if (text.includes("quote") || text.includes("estimate") || text.includes("price") || text.includes("cost")) {
-      return "I can help prepare quote details. Please include property type, general location, service needed, approximate size, desired timeline, and photos if available. Final pricing and scheduling require Urban Yards to review the property and project details through the website contact form.";
+      return "I can help prepare quote details. A good starting point is property type, general location, service needed, approximate size, desired timeline, and photos if available.\n\nFinal pricing and scheduling require review of the property and project details. Please submit the website contact form so Urban Yards can review everything in one place.";
     }
     if (text.includes("apartment") || text.includes("hoa") || text.includes("commercial") || text.includes("porter")) {
-      return "Urban Yards works with multifamily, apartment communities, HOAs, and commercial properties. Common fits include routine groundskeeping, day porter style cleanup, trash and recycling enclosure cleanup, seasonal cleanup, and landscape bed maintenance.";
+      return "Urban Yards works with multifamily, apartment communities, HOAs, and commercial properties.\n\nCommon fits include routine groundskeeping, day porter style cleanup, trash and recycling enclosure cleanup, seasonal cleanup, and landscape bed maintenance. What type of property are you asking about?";
     }
     if (text.includes("mulch") || text.includes("bed")) {
-      return "For Portland-area properties, mulch and bed refreshes are often useful in spring or early fall. They help beds look clean, reduce weeds, and protect soil moisture. Urban Yards can review the site before confirming scope or timing.";
+      return "For Portland-area properties, mulch and bed refreshes are often useful in spring or early fall.\n\nMulch helps beds look clean, reduces weed pressure, protects soil moisture through dry summers, and gives tired plantings a sharper first impression. Urban Yards can review the site before confirming scope or timing.";
     }
     if (text.includes("lawn") || text.includes("mow") || text.includes("edge")) {
       return "Urban Yards offers lawn mowing, edging, weed trimming, and routine groundskeeping. In active growing season, consistent service usually keeps curb appeal stronger than catch-up visits.";
@@ -170,6 +174,9 @@
     }
     if (text.includes("water") || text.includes("season") || text.includes("spring") || text.includes("fall") || text.includes("winter") || text.includes("summer")) {
       return "Seasonal care in the Portland Metro area usually centers on spring cleanup and bed refreshes, summer mowing and irrigation checks, fall leaf cleanup, and winter storm debris prep.";
+    }
+    if (text.includes("plant") || text.includes("native") || text.includes("pollinator") || text.includes("groundcover")) {
+      return "For Portland-area landscapes, native and climate-appropriate plants are usually the best long-term fit.\n\nGood options can include Oregon Grape for tough evergreen structure, Red Twig Dogwood for winter color and wet soils, Kinnikinnick for low groundcover, and Yarrow or Oregon Sunshine for pollinator value. The right choice depends on sun, water, soil, and maintenance goals.";
     }
     if (text.includes("phone") || text.includes("email") || text.includes("contact")) {
       return "For direct contact, please use the website contact form so Urban Yards can review the details in one place.";

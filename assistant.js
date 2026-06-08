@@ -35,7 +35,6 @@
       <div class="uy-assistant-panel" id="uy-assistant-panel" role="dialog" aria-modal="false" aria-labelledby="uy-assistant-title" hidden>
         <header class="uy-assistant-header">
           <div>
-            <p class="eyebrow">First Impressions Start Here</p>
             <h2 id="uy-assistant-title">Urban Yards Assistant</h2>
           </div>
           <button class="uy-assistant-close" type="button" aria-label="Close assistant">Close</button>

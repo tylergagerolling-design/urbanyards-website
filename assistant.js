@@ -26,16 +26,16 @@
   function createAssistant() {
     const root = document.createElement("section");
     root.className = "uy-assistant";
-    root.setAttribute("aria-label", "Urban Yards website assistant");
+    root.setAttribute("aria-label", "The Groundskeeper website assistant");
     root.innerHTML = `
       <button class="uy-assistant-toggle" type="button" aria-expanded="false" aria-controls="uy-assistant-panel">
         <span class="uy-assistant-toggle-icon" aria-hidden="true"></span>
-        <span class="sr-only">Open Urban Yards assistant</span>
+        <span class="sr-only">Open The Groundskeeper assistant</span>
       </button>
       <div class="uy-assistant-panel" id="uy-assistant-panel" role="dialog" aria-modal="false" aria-labelledby="uy-assistant-title" hidden>
         <header class="uy-assistant-header">
           <div>
-            <h2 id="uy-assistant-title">Urban Yards Assistant</h2>
+            <h2 id="uy-assistant-title">The Groundskeeper</h2>
           </div>
           <button class="uy-assistant-close" type="button" aria-label="Close assistant">Close</button>
         </header>
@@ -50,7 +50,7 @@
           </div>
         </form>
         <form class="uy-assistant-form">
-          <label class="sr-only" for="uy-assistant-input">Ask Urban Yards a question</label>
+          <label class="sr-only" for="uy-assistant-input">Ask The Groundskeeper a question</label>
           <textarea id="uy-assistant-input" rows="2" placeholder="Ask about services, timing, or quote details..."></textarea>
           <button class="button button-small" type="submit">Send</button>
         </form>

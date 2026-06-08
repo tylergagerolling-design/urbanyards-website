@@ -1,12 +1,6 @@
 (() => {
   const storageKey = "urbanYardsAssistantConversation";
   const maxStoredMessages = 18;
-  const quickPrompts = [
-    "What services do you offer?",
-    "Do you work with apartments?",
-    "I need a quote",
-    "What should I schedule this season?"
-  ];
   const leadSignals = ["quote", "estimate", "price", "cost", "hire", "schedule", "book", "service", "cleanup", "mowing", "mulch", "trim", "porter"];
   const defaultMessages = [{
     role: "assistant",
@@ -47,7 +41,6 @@
           <button class="uy-assistant-close" type="button" aria-label="Close assistant">Close</button>
         </header>
         <div class="uy-assistant-messages" role="log" aria-live="polite" aria-relevant="additions"></div>
-        <div class="uy-assistant-prompts" aria-label="Suggested questions"></div>
         <form class="uy-assistant-lead" hidden>
           <p class="eyebrow">Optional Lead Details</p>
           <div class="uy-assistant-lead-grid">
@@ -74,21 +67,9 @@
   const panel = assistant.querySelector(".uy-assistant-panel");
   const closeButton = assistant.querySelector(".uy-assistant-close");
   const messagesList = assistant.querySelector(".uy-assistant-messages");
-  const prompts = assistant.querySelector(".uy-assistant-prompts");
   const form = assistant.querySelector(".uy-assistant-form");
   const input = assistant.querySelector("#uy-assistant-input");
   const leadForm = assistant.querySelector(".uy-assistant-lead");
-
-  quickPrompts.forEach((prompt) => {
-    const button = document.createElement("button");
-    button.type = "button";
-    button.textContent = prompt;
-    button.addEventListener("click", () => {
-      input.value = prompt;
-      submitMessage();
-    });
-    prompts.appendChild(button);
-  });
 
   function setOpen(open, options = {}) {
     const { focus = true } = options;

@@ -247,6 +247,63 @@ a:focus-visible, button:focus-visible, input:focus-visible, select:focus-visible
   height: 100%;
   object-fit: cover;
 }
+.hero-coming-soon {
+  display: grid;
+  place-items: center;
+  isolation: isolate;
+  background:
+    linear-gradient(180deg, #f1e7cf 0%, #e7ead8 44%, #d1dfbf 100%);
+}
+.hero-coming-soon-sky {
+  position: absolute;
+  inset: 0 0 42%;
+  z-index: 1;
+  background:
+    radial-gradient(circle at 22% 18%, rgba(255, 253, 247, .74) 0 9%, transparent 10%),
+    radial-gradient(circle at 29% 20%, rgba(255, 253, 247, .52) 0 7%, transparent 8%),
+    radial-gradient(circle at 65% 26%, rgba(255, 253, 247, .48) 0 6%, transparent 7%),
+    linear-gradient(180deg, rgba(255, 253, 247, .18), transparent);
+}
+.hero-coming-soon-hills {
+  position: absolute;
+  inset: 28% -8% 17%;
+  z-index: 2;
+  background:
+    radial-gradient(90% 58% at 16% 78%, #7d9a65 0 42%, transparent 43%),
+    radial-gradient(88% 62% at 52% 70%, #9aac78 0 48%, transparent 49%),
+    radial-gradient(95% 68% at 88% 70%, #58724f 0 50%, transparent 51%);
+  opacity: .9;
+}
+.hero-coming-soon-foreground {
+  position: absolute;
+  inset: auto 0 0;
+  z-index: 3;
+  height: 36%;
+  background:
+    radial-gradient(24% 72% at 4% 80%, #203f31 0 26%, transparent 27%),
+    radial-gradient(22% 62% at 12% 83%, #31553d 0 30%, transparent 31%),
+    radial-gradient(26% 62% at 88% 80%, #294b37 0 34%, transparent 35%),
+    radial-gradient(18% 54% at 96% 82%, #426344 0 34%, transparent 35%),
+    linear-gradient(180deg, transparent 0 18%, #31553d 19% 100%);
+}
+.hero-coming-soon-card {
+  position: relative;
+  z-index: 4;
+  width: min(78%, 390px);
+  padding: 24px;
+  border: 1px solid rgba(255, 253, 247, .58);
+  border-radius: 18px;
+  background: rgba(255, 253, 247, .72);
+  box-shadow: 0 24px 58px rgba(18, 63, 49, .18);
+  text-align: center;
+  backdrop-filter: blur(10px);
+}
+.hero-coming-soon-card h2 {
+  margin: 4px 0 0;
+  color: var(--forest);
+  font-size: clamp(2.2rem, 6vw, 4.4rem);
+  letter-spacing: 0;
+}
 .animated-hero-frame {
   display: block;
   position: relative;

@@ -202,8 +202,32 @@ a:focus-visible, button:focus-visible, input:focus-visible, select:focus-visible
   letter-spacing: .14em;
   text-transform: uppercase;
 }
-.hero { position: relative; overflow: hidden; padding: 72px 0 116px; }
-.hero-grid { display: grid; grid-template-columns: 1.02fr .98fr; align-items: center; gap: 52px; }
+.hero { position: relative; overflow: hidden; padding: 72px 0 116px; background: #123f31; isolation: isolate; }
+.hero-background-video {
+  position: absolute;
+  inset: -5%;
+  z-index: -2;
+  width: 110%;
+  height: 110%;
+  object-fit: cover;
+  transform: scale(1.05);
+  transform-origin: center;
+  animation: hero-video-fade .85s ease both;
+}
+.hero-background-overlay {
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  background:
+    linear-gradient(90deg, rgba(13, 44, 36, .86) 0%, rgba(13, 44, 36, .62) 42%, rgba(13, 44, 36, .32) 100%),
+    linear-gradient(180deg, rgba(13, 44, 36, .16), rgba(13, 44, 36, .66));
+}
+.hero-grid { position: relative; z-index: 1; display: grid; grid-template-columns: 1.02fr .98fr; align-items: center; gap: 52px; }
+.hero-copy .eyebrow { color: rgba(255, 253, 247, .82); }
+.hero-copy h1,
+.hero-copy h1 span,
+.hero-copy .hero-text { color: #fffdf7; text-shadow: 0 4px 22px rgba(13, 44, 36, .32); }
+.hero-copy .text-link { color: #fffdf7; }
 .hero-text { max-width: 610px; margin-bottom: 25px; font-size: 1.08rem; }
 .placeholder {
   position: relative;
@@ -248,26 +272,13 @@ a:focus-visible, button:focus-visible, input:focus-visible, select:focus-visible
   object-fit: cover;
 }
 .hero-video-card {
-  border: 0;
-  background: #123f31;
-  animation: hero-video-fade .7s ease both;
-}
-.hero-video-card .hero-video {
-  position: absolute;
-  inset: -4%;
-  width: 108%;
-  height: 108%;
-  transform: scale(1.08);
-  transform-origin: center;
-}
-.hero-video-overlay {
-  position: absolute;
-  inset: 0;
-  z-index: 1;
+  border-color: rgba(255, 253, 247, .32);
   background:
-    linear-gradient(to top, rgba(13, 44, 36, .72), rgba(13, 44, 36, .18) 54%, rgba(13, 44, 36, .08)),
-    linear-gradient(90deg, rgba(13, 44, 36, .48), rgba(13, 44, 36, 0) 60%);
-  pointer-events: none;
+    linear-gradient(180deg, rgba(13, 44, 36, .1), rgba(13, 44, 36, .42)),
+    rgba(255, 253, 247, .12);
+  box-shadow: 0 26px 70px rgba(13, 44, 36, .28);
+  backdrop-filter: blur(2px);
+  animation: hero-video-fade .7s ease both;
 }
 .hero-video-content {
   position: absolute;

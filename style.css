@@ -222,7 +222,7 @@ a:focus-visible, button:focus-visible, input:focus-visible, select:focus-visible
     linear-gradient(90deg, rgba(13, 44, 36, .86) 0%, rgba(13, 44, 36, .62) 42%, rgba(13, 44, 36, .32) 100%),
     linear-gradient(180deg, rgba(13, 44, 36, .16), rgba(13, 44, 36, .66));
 }
-.hero-grid { position: relative; z-index: 1; display: grid; grid-template-columns: 1.02fr .98fr; align-items: center; gap: 52px; }
+.hero-grid { position: relative; z-index: 1; display: grid; max-width: min(calc(100% - 40px), 820px); margin-left: max(20px, calc((100vw - 1180px) / 2)); }
 .hero-copy .eyebrow { color: rgba(255, 253, 247, .82); }
 .hero-copy h1,
 .hero-copy h1 span,
@@ -256,7 +256,7 @@ a:focus-visible, button:focus-visible, input:focus-visible, select:focus-visible
   background-size: 230% 230%;
   animation: ambient-drift 14s ease-in-out infinite alternate;
 }
-.hero-video-frame, .hero-image-frame {
+.hero-image-frame {
   position: relative;
   min-height: 430px;
   overflow: hidden;
@@ -265,20 +265,11 @@ a:focus-visible, button:focus-visible, input:focus-visible, select:focus-visible
   background: #efe4cf;
   box-shadow: 0 24px 58px rgba(25, 59, 42, .13);
 }
-.hero-video, .hero-image {
+.hero-image {
   display: block;
   width: 100%;
   height: 100%;
   object-fit: cover;
-}
-.hero-video-card {
-  border-color: rgba(255, 253, 247, .32);
-  background:
-    linear-gradient(180deg, rgba(13, 44, 36, .1), rgba(13, 44, 36, .42)),
-    rgba(255, 253, 247, .12);
-  box-shadow: 0 26px 70px rgba(13, 44, 36, .28);
-  backdrop-filter: blur(2px);
-  animation: hero-video-fade .7s ease both;
 }
 @keyframes hero-video-fade {
   from { opacity: 0; transform: translateY(8px); }
@@ -1852,7 +1843,7 @@ input:focus, select:focus, textarea:focus { outline: 0; }
   }
   .feral-site-card h2 { font-size: 1rem; }
   h1 { font-size: clamp(3.15rem, 13vw, 4.8rem); }
-  .placeholder-hero, .hero-video-frame, .hero-image-frame { min-height: 270px; }
+  .placeholder-hero, .hero-image-frame { min-height: 270px; }
   .property-types { grid-template-columns: 1fr 1fr; }
   .calendar-panel { padding: 16px; }
   .calendar-controls { padding: 0 0 15px; }

@@ -280,51 +280,6 @@ a:focus-visible, button:focus-visible, input:focus-visible, select:focus-visible
   backdrop-filter: blur(2px);
   animation: hero-video-fade .7s ease both;
 }
-.hero-video-content {
-  position: absolute;
-  inset: 0;
-  z-index: 4;
-  display: flex;
-  align-items: flex-end;
-  justify-content: space-between;
-  gap: 18px;
-  padding: 28px;
-  text-align: left;
-}
-.hero-video-badge {
-  display: grid;
-  flex: 0 0 auto;
-  width: 58px;
-  height: 58px;
-  place-items: center;
-  border: 1px solid rgba(255, 253, 247, .54);
-  border-radius: 50%;
-  background: rgba(255, 253, 247, .28);
-  box-shadow: 0 16px 34px rgba(18, 63, 49, .2);
-  backdrop-filter: blur(8px);
-}
-.hero-video-badge:before {
-  width: 0;
-  height: 0;
-  margin-left: 4px;
-  border-top: 10px solid transparent;
-  border-bottom: 10px solid transparent;
-  border-left: 15px solid #fffdf7;
-  content: "";
-}
-.hero-video-content .eyebrow { color: rgba(255, 253, 247, .82); }
-.hero-video-content div {
-  order: -1;
-  max-width: 360px;
-}
-.hero-video-content p,
-.hero-video-content h2 { text-shadow: 0 3px 18px rgba(13, 44, 36, .32); }
-.hero-video-content h2 {
-  margin: 4px 0 0;
-  color: #fffdf7;
-  font-size: clamp(2.2rem, 6vw, 4.4rem);
-  letter-spacing: 0;
-}
 @keyframes hero-video-fade {
   from { opacity: 0; transform: translateY(8px); }
   to { opacity: 1; transform: none; }

@@ -879,6 +879,14 @@ input:focus, select:focus, textarea:focus { outline: 0; }
 .footer-brand .brand-mark { border-color: rgba(255, 245, 221, .18); }
 .footer-grid h2 { margin-bottom: 12px; color: #fff5dd; font-size: 1.48rem; letter-spacing: -.02em; }
 .footer-grid p { margin-bottom: 7px; font-size: .84rem; }
+.footer-phone {
+  color: #fff5dd;
+  font-weight: bold;
+  letter-spacing: .02em;
+  text-decoration-color: rgba(226, 170, 33, .55);
+  text-underline-offset: 4px;
+}
+.footer-phone:hover { color: var(--mustard); }
 .footer-project-link {
   display: inline-flex;
   margin-top: 8px;

@@ -879,14 +879,37 @@ input:focus, select:focus, textarea:focus { outline: 0; }
 .footer-brand .brand-mark { border-color: rgba(255, 245, 221, .18); }
 .footer-grid h2 { margin-bottom: 12px; color: #fff5dd; font-size: 1.48rem; letter-spacing: -.02em; }
 .footer-grid p { margin-bottom: 7px; font-size: .84rem; }
-.footer-phone {
+.footer-contact-card {
+  padding: 16px;
+  border: 1px solid rgba(255, 245, 221, .14);
+  border-radius: 8px;
+  background: rgba(255, 253, 247, .045);
+}
+.footer-contact-card p {
+  display: grid;
+  gap: 2px;
+  margin-bottom: 11px;
+  color: rgba(232, 238, 223, .86);
+}
+.footer-contact-card p:last-child { margin-bottom: 0; }
+.footer-contact-card span {
+  color: rgba(255, 245, 221, .58);
+  font-size: .58rem;
+  font-weight: bold;
+  letter-spacing: .1em;
+  text-transform: uppercase;
+}
+.footer-contact-link {
+  width: max-content;
+  max-width: 100%;
   color: #fff5dd;
   font-weight: bold;
   letter-spacing: .02em;
+  overflow-wrap: anywhere;
   text-decoration-color: rgba(226, 170, 33, .55);
   text-underline-offset: 4px;
 }
-.footer-phone:hover { color: var(--mustard); }
+.footer-contact-link:hover { color: var(--mustard); }
 .footer-project-link {
   display: inline-flex;
   margin-top: 8px;

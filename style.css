@@ -229,6 +229,16 @@ a:focus-visible, button:focus-visible, input:focus-visible, select:focus-visible
 .hero-copy .hero-text { color: #fffdf7; text-shadow: 0 4px 22px rgba(13, 44, 36, .32); }
 .hero-copy .text-link { color: #fffdf7; }
 .hero-text { max-width: 610px; margin-bottom: 25px; font-size: 1.08rem; }
+.hero-test-note {
+  position: absolute;
+  right: max(20px, calc((100vw - 1120px) / 2));
+  bottom: 14px;
+  z-index: 2;
+  margin: 0;
+  color: rgba(255, 253, 247, .72);
+  font-size: .68rem;
+  letter-spacing: .02em;
+}
 .placeholder {
   position: relative;
   display: grid;

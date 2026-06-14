@@ -222,6 +222,16 @@ a:focus-visible, button:focus-visible, input:focus-visible, select:focus-visible
     linear-gradient(90deg, rgba(13, 44, 36, .54) 0%, rgba(13, 44, 36, .24) 46%, rgba(13, 44, 36, .08) 100%),
     linear-gradient(180deg, rgba(13, 44, 36, .04), rgba(13, 44, 36, .24));
 }
+.hero-film-effect {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  background: rgba(245, 211, 142, .035);
+  box-shadow: inset 0 0 100px rgba(8, 27, 21, .22);
+  mix-blend-mode: soft-light;
+  pointer-events: none;
+  animation: hero-film-flicker 1.35s steps(6, end) infinite;
+}
 .hero-grid { position: relative; z-index: 1; display: grid; max-width: min(calc(100% - 40px), 820px); margin-left: max(20px, calc((100vw - 1180px) / 2)); }
 .hero-copy .eyebrow { color: rgba(255, 253, 247, .82); }
 .hero-copy h1,
@@ -284,6 +294,13 @@ a:focus-visible, button:focus-visible, input:focus-visible, select:focus-visible
 @keyframes hero-video-fade {
   from { opacity: 0; transform: translateY(8px); }
   to { opacity: 1; transform: none; }
+}
+@keyframes hero-film-flicker {
+  0%, 100% { opacity: .72; }
+  18% { opacity: .82; }
+  41% { opacity: .68; }
+  63% { opacity: .78; }
+  84% { opacity: .71; }
 }
 .animated-hero-frame {
   display: block;

@@ -10,7 +10,7 @@ module.exports = async function handler(req, res) {
     timestamp: new Date().toISOString(),
     integrations: {
       assistant: Boolean(process.env.OPENAI_API_KEY),
-      email: Boolean(process.env.RESEND_API_KEY && process.env.QUOTE_TO_EMAIL),
+      email: Boolean(process.env.RESEND_API_KEY),
       leadArchive: Boolean(process.env.AIRTABLE_TOKEN && process.env.AIRTABLE_BASE_ID && process.env.AIRTABLE_TABLE_NAME),
       photoStorage: Boolean(process.env.CLOUDINARY_CLOUD_NAME && process.env.CLOUDINARY_API_KEY && process.env.CLOUDINARY_API_SECRET),
       retention: Boolean(process.env.LEAD_RETENTION_DAYS),

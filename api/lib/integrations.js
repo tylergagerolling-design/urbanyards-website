@@ -51,7 +51,8 @@ function quoteHtml(lead, photoUrls, requestId) {
 }
 
 async function sendEmail(lead, photos, photoUrls, requestId) {
-  if (!process.env.RESEND_API_KEY || !process.env.QUOTE_TO_EMAIL) return false;
+  if (!process.env.RESEND_API_KEY) return false;
+  const toEmail = process.env.QUOTE_TO_EMAIL || "team@urbanyards.us";
   const attachments = photoUrls.length ? [] : photos.map((photo) => ({
     filename: photo.name,
     content: photo.data
@@ -64,7 +65,7 @@ async function sendEmail(lead, photos, photoUrls, requestId) {
     },
     body: JSON.stringify({
       from: process.env.QUOTE_FROM_EMAIL || "Urban Yards Website <quotes@urbanyards.us>",
-      to: [process.env.QUOTE_TO_EMAIL],
+      to: [toEmail],
       reply_to: lead.email,
       subject: `Quote request: ${lead.service} - ${lead.name}`,
       html: quoteHtml(lead, photoUrls, requestId),

@@ -11,16 +11,20 @@
 
   function loadMessages() {
     try {
-      const saved = JSON.parse(localStorage.getItem(storageKey));
+      const saved = JSON.parse(sessionStorage.getItem(storageKey));
       if (Array.isArray(saved) && saved.length) return saved.slice(-maxStoredMessages);
     } catch (error) {
-      localStorage.removeItem(storageKey);
+      sessionStorage.removeItem(storageKey);
     }
     return [...defaultMessages];
   }
 
   function saveMessages() {
-    localStorage.setItem(storageKey, JSON.stringify(state.messages.slice(-maxStoredMessages)));
+    try {
+      sessionStorage.setItem(storageKey, JSON.stringify(state.messages.slice(-maxStoredMessages)));
+    } catch (error) {
+      // The assistant remains usable when browser storage is unavailable.
+    }
   }
 
   function createAssistant() {
@@ -56,7 +60,7 @@
           <textarea id="uy-assistant-input" rows="2" placeholder="Ask about services, timing, or quote details..."></textarea>
           <button class="button button-small" type="submit">Send</button>
         </form>
-        <p class="uy-assistant-note">Final pricing and scheduling require review of the property and project details.</p>
+        <p class="uy-assistant-note">Conversation details are kept only for this browser tab. Final pricing and scheduling require property review.</p>
       </div>
     `;
     document.body.appendChild(root);
@@ -132,14 +136,15 @@
       lead: getLeadDetails(),
       history: state.messages.slice(-10)
     };
-    const endpoints = ["/api/assistant", "/.netlify/functions/assistant"];
+    const endpoints = ["/api/assistant"];
 
     for (const endpoint of endpoints) {
       try {
         const response = await fetch(endpoint, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(payload)
+          body: JSON.stringify(payload),
+          signal: AbortSignal.timeout(15000)
         });
         if (!response.ok) continue;
         const result = await response.json();

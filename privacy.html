@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Request deletion of information submitted to Urban Yards Groundskeeping.">
+    <meta name="robots" content="noindex">
+    <meta name="theme-color" content="#123f31">
+    <title>Privacy Request | Urban Yards Groundskeeping</title>
+    <link rel="icon" href="images/favicon.png?v=20260603-1" type="image/png">
+    <link rel="stylesheet" href="style.css?v=20260615-2">
+    <script src="config.js?v=20260615-1" defer></script>
+    <script src="privacy.js?v=20260615-1" defer></script>
+  </head>
+  <body>
+    <a class="skip-link" href="#main-content">Skip to content</a>
+    <header class="site-header">
+      <a class="brand" href="index.html" aria-label="Urban Yards home">
+        <span class="brand-mark" aria-hidden="true"><img src="images/urban-yards-mark.png?v=20260603-12" alt=""></span>
+        <span><strong>Urban Yards</strong><small>Groundskeeping</small></span>
+      </a>
+      <nav class="primary-nav" aria-label="Primary navigation"><a href="index.html">Home</a><a href="index.html#contact">Contact</a></nav>
+    </header>
+    <main id="main-content" class="privacy-page">
+      <section class="section" aria-labelledby="privacy-title">
+        <div class="container privacy-layout">
+          <div>
+            <p class="eyebrow">Privacy Request</p>
+            <h1 id="privacy-title">Request deletion of your information.</h1>
+            <p>Use the email address from your quote request. Urban Yards will verify the request before deleting matching lead records and stored photos.</p>
+          </div>
+          <form id="privacy-form" class="quote-form card" novalidate>
+            <label class="wide">Email<input name="email" type="email" autocomplete="email" required></label>
+            <label class="wide">Quote Request ID<small>Optional. This appears in the submission confirmation.</small><input name="quoteRequestId" autocomplete="off"></label>
+            <label class="form-honeypot" aria-hidden="true">Company<input name="company" tabindex="-1" autocomplete="off"></label>
+            <div id="privacy-turnstile" class="quote-turnstile wide"></div>
+            <button class="button wide" type="submit">Send Deletion Request</button>
+            <p id="privacy-status" class="form-status wide" role="status" tabindex="-1"></p>
+          </form>
+        </div>
+      </section>
+    </main>
+    <footer class="site-footer"><div class="container footer-bottom"><p>&copy; 2026 Urban Yards Groundskeeping.</p><a href="index.html">Return to the website</a></div></footer>
+  </body>
+</html>

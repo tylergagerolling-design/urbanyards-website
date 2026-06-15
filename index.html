@@ -12,11 +12,12 @@
     <meta name="theme-color" content="#123f31">
     <title>Urban Yards Groundskeeping | Beaverton, Portland & Vancouver Property Care</title>
     <link rel="icon" href="images/favicon.png?v=20260603-1" type="image/png">
-    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="anonymous">
     <link rel="stylesheet" href="style.css?v=20260611-1">
-    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" defer></script>
-    <script src="script.js?v=20260606-2" defer></script>
-    <script src="assistant.js?v=20260608-4" defer></script>
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin="anonymous" defer></script>
+    <script src="config.js?v=20260615-1" defer></script>
+    <script src="script.js?v=20260615-1" defer></script>
+    <script src="assistant.js?v=20260615-1" defer></script>
   </head>
   <body>
     <a class="skip-link" href="#main-content">Skip to content</a>
@@ -38,7 +39,7 @@
     <main id="main-content">
       <section id="home" class="hero section" aria-labelledby="hero-title">
         <video class="hero-background-video" autoplay muted loop playsinline preload="metadata" poster="images/urban-yards-hero-still.png?v=20260605-1" aria-hidden="true">
-          <source src="videos/test-hero-8mm.mp4?v=20260614-3" type="video/mp4">
+          <source src="videos/test-hero-web.mp4?v=20260615-1" type="video/mp4">
         </video>
         <div class="hero-background-overlay" aria-hidden="true"></div>
         <div class="hero-film-effect" aria-hidden="true"></div>
@@ -120,15 +121,20 @@
             </div>
             <label>Name<input name="name" autocomplete="name" required></label>
             <label>Email<input name="email" type="email" autocomplete="email" required></label>
+            <label>Phone<input name="phone" type="tel" autocomplete="tel"></label>
+            <label>Property Location<input name="location" autocomplete="street-address" placeholder="Address or general area"></label>
             <label class="wide">What do you need help with?<select name="service" required><option value="">Select a service</option><option>Groundskeeping</option><option>Landscape Improvements</option><option>Property Support</option><option>Ecological Enhancements</option><option>Monthly Maintenance</option><option>One-Time Cleanup</option><option>Other</option></select></label>
-            <label class="wide photo-upload">Add Photos<small>Optional, but helpful for faster quoting.</small><input name="photos" type="file" accept="image/*" multiple></label>
+            <label class="wide">Preferred Timeline<select name="timeline"><option value="">No preference</option><option>As soon as possible</option><option>Within 2 weeks</option><option>Within a month</option><option>Planning ahead</option></select></label>
+            <label class="wide photo-upload">Add Photos<small>Up to 3 JPG, PNG, or WebP images. They are compressed before sending.</small><input name="photos" type="file" accept="image/jpeg,image/png,image/webp" multiple></label>
             <label class="wide">Message<textarea name="message" rows="4"></textarea></label>
+            <label class="form-honeypot" aria-hidden="true">Company<input name="company" tabindex="-1" autocomplete="off"></label>
+            <div id="quote-turnstile" class="quote-turnstile wide"></div>
             <div class="quote-submit-row wide">
               <button class="button submit-button" type="submit"><span>Request a Quote</span></button>
               <p class="quote-helper">Most replies within 1 business day. No scheduling required.</p>
             </div>
-            <p class="privacy-note wide">Your details are only used to respond to your quote request.</p>
-            <p id="form-success" class="form-success wide" role="status" tabindex="-1">Thank you. Your quote request has been received.</p>
+            <p class="privacy-note wide">Your details and photos are only used to review and respond to your quote request.</p>
+            <p id="form-success" class="form-status wide" role="status" tabindex="-1"></p>
           </form>
         </div>
       </section>
@@ -181,7 +187,7 @@
           <a class="text-link" href="#quote">Start a quote <span aria-hidden="true">&rarr;</span></a>
         </div>
       </div>
-      <div class="container footer-bottom"><p>&copy; <span id="copyright-year"></span> Urban Yards Groundskeeping. All rights reserved.</p></div>
+      <div class="container footer-bottom"><p>&copy; <span id="copyright-year"></span> Urban Yards Groundskeeping. All rights reserved.</p><a href="privacy.html">Privacy requests</a></div>
     </footer>
     <a class="mobile-quote-bar is-hidden" href="#quote">Start a Quote</a>
   </body>

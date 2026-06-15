@@ -142,6 +142,10 @@ Out of scope:
 If the question is unrelated to landscaping, groundskeeping, property maintenance, or Urban Yards services, respond: "I specialize in helping with Urban Yards services, landscaping, and property maintenance questions. For other topics, please consult an appropriate professional resource."
 `;
 
+const {
+  allowedOrigin, clientIp, rateLimit, requestId, setApiHeaders, text
+} = require("./lib/security");
+
 function cleanMessages(history = []) {
   return history
     .filter((message) => ["user", "assistant"].includes(message?.role) && typeof message?.content === "string")
@@ -153,20 +157,29 @@ function cleanMessages(history = []) {
 }
 
 async function handler(req, res) {
+  const id = requestId(req);
+  setApiHeaders(res, id);
   if (req.method !== "POST") {
     res.setHeader("Allow", "POST");
-    return res.status(405).json({ error: "Method not allowed" });
+    return res.status(405).json({ error: "Method not allowed", requestId: id });
+  }
+
+  if (!allowedOrigin(req)) return res.status(403).json({ error: "Origin not allowed", requestId: id });
+  const limit = rateLimit(`assistant:${clientIp(req)}`, 20, 10 * 60 * 1000);
+  if (!limit.allowed) {
+    res.setHeader("Retry-After", String(limit.retryAfter));
+    return res.status(429).json({ error: "Too many assistant requests. Please try again shortly.", requestId: id });
   }
 
   if (!process.env.OPENAI_API_KEY) {
-    return res.status(500).json({ error: "OPENAI_API_KEY is not configured" });
+    return res.status(503).json({ error: "Assistant is temporarily unavailable", requestId: id });
   }
 
   const { message = "", history = [], page = "", lead = {} } = req.body || {};
-  const userMessage = String(message).trim();
+  const userMessage = text(message, 1400);
 
   if (!userMessage) {
-    return res.status(400).json({ error: "Message is required" });
+    return res.status(400).json({ error: "Message is required", requestId: id });
   }
 
   const leadContext = [
@@ -186,30 +199,34 @@ async function handler(req, res) {
     { role: "user", content: userMessage.slice(0, 1400) }
   ];
 
-  const response = await fetch("https://api.openai.com/v1/chat/completions", {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      Authorization: `Bearer ${process.env.OPENAI_API_KEY}`
-    },
-    body: JSON.stringify({
-      model: process.env.OPENAI_MODEL || "gpt-4.1-mini",
-      messages,
-      temperature: 0.45,
-      max_tokens: 360
-    })
-  });
+  try {
+    const response = await fetch("https://api.openai.com/v1/chat/completions", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${process.env.OPENAI_API_KEY}`
+      },
+      body: JSON.stringify({
+        model: process.env.OPENAI_MODEL || "gpt-4.1-mini",
+        messages,
+        temperature: 0.45,
+        max_tokens: 360
+      }),
+      signal: AbortSignal.timeout(12000)
+    });
 
-  if (!response.ok) {
-    const detail = await response.text();
-    return res.status(502).json({ error: "Assistant service failed", detail: detail.slice(0, 300) });
+    if (!response.ok) throw new Error(`OpenAI request failed (${response.status})`);
+    const data = await response.json();
+    const reply = data?.choices?.[0]?.message?.content?.trim();
+    console.log(JSON.stringify({ event: "assistant_reply", requestId: id }));
+    return res.status(200).json({
+      reply: reply || "I can help with Urban Yards services, landscaping, and property maintenance questions.",
+      requestId: id
+    });
+  } catch (error) {
+    console.error(JSON.stringify({ event: "assistant_error", requestId: id, message: error.message }));
+    return res.status(502).json({ error: "Assistant is temporarily unavailable", requestId: id });
   }
-
-  const data = await response.json();
-  const reply = data?.choices?.[0]?.message?.content?.trim();
-  return res.status(200).json({
-    reply: reply || "I can help with Urban Yards services, landscaping, and property maintenance questions."
-  });
 }
 
 module.exports = handler;

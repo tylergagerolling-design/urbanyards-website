@@ -6,28 +6,8 @@
   node_bundler = "esbuild"
 
 [[redirects]]
-  from = "/api/assistant"
-  to = "/.netlify/functions/assistant"
-  status = 200
-
-[[redirects]]
-  from = "/api/quote"
-  to = "/.netlify/functions/quote"
-  status = 200
-
-[[redirects]]
-  from = "/api/health"
-  to = "/.netlify/functions/health"
-  status = 200
-
-[[redirects]]
-  from = "/api/leads-export"
-  to = "/.netlify/functions/leads-export"
-  status = 200
-
-[[redirects]]
-  from = "/api/privacy-request"
-  to = "/.netlify/functions/privacy-request"
+  from = "/api/*"
+  to = "/.netlify/functions/:splat"
   status = 200
 
 [[redirects]]

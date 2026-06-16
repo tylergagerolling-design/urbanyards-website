@@ -6,7 +6,7 @@ The website now uses serverless endpoints for quote delivery, the assistant, hea
 
 1. Deploy the repository to Netlify.
 2. Copy the variables from `.env.example` into Netlify environment variables.
-3. Configure Resend with `urbanyards.us`, then set `RESEND_API_KEY`, `QUOTE_TO_EMAIL`, and `QUOTE_FROM_EMAIL`.
+3. Configure Resend with `urbanyards.us`, then set `RESEND_API_KEY`. Quote emails default to `team@urbanyards.us` for both recipient and sender unless `QUOTE_TO_EMAIL` or `QUOTE_FROM_EMAIL` is set.
 4. Create an Airtable table named `Quote Requests` with these fields: `Request ID`, `Received At`, `Name`, `Email`, `Phone`, `Location`, `Service`, `Timeline`, `Message`, `Source`, and `Photos` (attachment field).
 5. Set `AIRTABLE_TOKEN`, `AIRTABLE_BASE_ID`, `AIRTABLE_TABLE_NAME`, and a long random `ADMIN_EXPORT_TOKEN`.
 6. Optional: configure Cloudinary server credentials with `CLOUDINARY_CLOUD_NAME`, `CLOUDINARY_API_KEY`, and `CLOUDINARY_API_SECRET`. Uploads are signed. Set `CLOUDINARY_DELIVERY_TYPE=authenticated` to keep stored photos private; the email delivery path will attach copies directly instead of publishing links.

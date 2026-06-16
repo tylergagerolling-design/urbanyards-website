@@ -64,7 +64,7 @@ async function sendEmail(lead, photos, photoUrls, requestId) {
       "Content-Type": "application/json"
     },
     body: JSON.stringify({
-      from: process.env.QUOTE_FROM_EMAIL || "Urban Yards Website <quotes@urbanyards.us>",
+      from: process.env.QUOTE_FROM_EMAIL || "Urban Yards Website <team@urbanyards.us>",
       to: [toEmail],
       reply_to: lead.email,
       subject: `Quote request: ${lead.service} - ${lead.name}`,

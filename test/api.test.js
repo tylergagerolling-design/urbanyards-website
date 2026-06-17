@@ -12,8 +12,10 @@ const {
   ASSISTANT_KNOWLEDGE,
   answerFromSiteKnowledge,
   buildSiteContext,
+  detectIntent,
   getRelevantFaqs,
-  getRelevantKnowledge
+  getRelevantKnowledge,
+  inferConversationContext
 } = require("../api/lib/site-knowledge");
 
 function mockResponse() {
@@ -103,6 +105,32 @@ test("site knowledge fallback answers common visitor questions", () => {
   assert.match(answerFromSiteKnowledge("What areas do you serve?"), /Portland/i);
   assert.match(answerFromSiteKnowledge("Are you owner operated?"), /Tyler Gage/i);
   assert.match(answerFromSiteKnowledge("Do you install fountains?"), /I don't see that listed on the site/i);
+});
+
+test("assistant recognizes conversational visitor intent", () => {
+  assert.equal(detectIntent("My yard is getting pretty rough.").id, "cleanup");
+  assert.equal(detectIntent("My HOA needs somebody.").id, "property_management");
+  assert.equal(detectIntent("Do you work in Vancouver?").id, "service_area");
+  assert.equal(detectIntent("How much would something like that cost?").id, "quote");
+  assert.equal(detectIntent("My weeds are getting crazy.").id, "cleanup");
+});
+
+test("assistant remembers conversation context for quote follow-up", () => {
+  const history = [{ role: "user", content: "I manage an apartment building in Vancouver." }];
+  const context = inferConversationContext("How do I get a quote?", history, {});
+  assert.equal(context.lead.propertyType, "Apartment community");
+  assert.equal(context.lead.city, "Vancouver");
+  const reply = answerFromSiteKnowledge("How do I get a quote?", {}, history);
+  assert.match(reply, /apartment community/i);
+  assert.doesNotMatch(reply, /What type of property/i);
+  assert.match(reply, /What service/i);
+});
+
+test("assistant asks natural follow-up questions for broad requests", () => {
+  assert.match(answerFromSiteKnowledge("My yard is getting pretty rough."), /overgrown grass, weeds, shrubs/i);
+  assert.match(answerFromSiteKnowledge("I need landscaping."), /what are you hoping to improve/i);
+  assert.match(answerFromSiteKnowledge("My shrubs need work."), /overgrown/i);
+  assert.match(answerFromSiteKnowledge("I need lawn care."), /recurring maintenance or a one-time service/i);
 });
 
 test("site knowledge retrieves FAQ answers and asks one lead question", () => {

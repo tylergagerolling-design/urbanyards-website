@@ -62,7 +62,7 @@ async function handler(req, res) {
 
   if (!shouldUseExternalAi()) {
     return res.status(200).json({
-      reply: answerFromSiteKnowledge(userMessage, lead),
+      reply: answerFromSiteKnowledge(userMessage, lead, history),
       requestId: id,
       source: "site-knowledge"
     });
@@ -114,7 +114,7 @@ async function handler(req, res) {
   } catch (error) {
     console.error(JSON.stringify({ event: "assistant_error", requestId: id, message: error.message }));
     return res.status(200).json({
-      reply: answerFromSiteKnowledge(userMessage, lead),
+      reply: answerFromSiteKnowledge(userMessage, lead, history),
       requestId: id,
       source: "site-knowledge-fallback"
     });

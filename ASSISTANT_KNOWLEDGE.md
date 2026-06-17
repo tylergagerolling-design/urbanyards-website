@@ -17,6 +17,8 @@ The API route preserves the existing security checks: allowed origin, client IP 
 
 The retrieval system is intentionally lightweight. `assistant-knowledge.json` stores readable website chunks and FAQs. `api/lib/site-knowledge.js` tokenizes visitor questions, filters common filler words, scores matching content chunks and FAQs, and builds either a direct answer or a compact context for optional external AI.
 
+The conversational layer sits on top of retrieval. It detects broad visitor intent such as quote requests, lawn care, cleanup, trimming, property management, service-area questions, contact requests, landscaping improvements, and casual greetings. It also infers useful session context from recent user messages, including property type, city, requested service, and name when provided.
+
 ## Updating Knowledge
 
 When website content changes:
@@ -41,3 +43,5 @@ The assistant looks for quote intent and asks for one missing detail at a time. 
 - notes
 
 The assistant should guide visitors toward the quote form without forcing a long chat workflow.
+
+Broad requests should receive a practical next question before logistics. For example, "my yard is rough" should ask whether the issue is grass, weeds, shrubs, or a mix; "I need lawn care" should ask whether the visitor wants recurring maintenance or one-time service; and a quote request after the visitor mentions an apartment property should remember that context.

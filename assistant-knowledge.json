@@ -13,7 +13,6 @@
     "Beaverton",
     "Portland",
     "Vancouver",
-    "North Portland",
     "nearby communities"
   ],
   "responseStyle": [
@@ -105,7 +104,7 @@
       "title": "Service Areas",
       "url": "/#service-area",
       "keywords": ["service area", "service areas", "areas", "serve", "served", "where", "location", "beaverton", "portland", "vancouver", "north portland"],
-      "text": "The site describes the service area as Beaverton, Portland, and Vancouver. The service area section says Urban Yards serves local homes, multifamily properties, HOAs, and community landscapes. The core service area listed on the site is Portland, Vancouver, North Portland, and nearby communities. If a visitor is outside or near those areas, Urban Yards should confirm through the quote form."
+      "text": "The site describes the service area as Beaverton, Portland, and Vancouver. The service area section says Urban Yards serves local homes, multifamily properties, HOAs, and community landscapes. The core service area listed on the site is Portland, Vancouver, Beaverton, and nearby communities. If a visitor is outside or near those areas, Urban Yards should confirm through the quote form."
     },
     {
       "id": "contact-quote",
@@ -133,7 +132,7 @@
       "id": "service-areas",
       "question": "What areas do you serve?",
       "keywords": ["area", "areas", "serve", "location", "where"],
-      "answer": "The site lists Beaverton, Portland, Vancouver, North Portland, and nearby communities as the service area. If a property is near those areas, Urban Yards can confirm through the quote form."
+      "answer": "The site lists Beaverton, Portland, Vancouver, and nearby communities as the service area. If a property is near those areas, Urban Yards can confirm through the quote form."
     },
     {
       "id": "owner-operated",

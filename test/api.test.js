@@ -94,7 +94,7 @@ test("site knowledge retrieves relevant website sections", () => {
   assert.equal(getRelevantKnowledge("Do you mow lawns?")[0].id, "homeowner-services");
   assert.equal(getRelevantKnowledge("Do you work with apartments?")[0].id, "property-management-services");
   assert.match(buildSiteContext("Do you do pressure washing?"), /Pressure Washing/i);
-  assert.match(buildSiteContext("What areas do you serve?"), /Portland, Vancouver, North Portland/i);
+  assert.match(buildSiteContext("What areas do you serve?"), /Portland, Vancouver, Beaverton/i);
   assert.match(buildSiteContext("How do I get a quote?"), /name, email, phone, property address/i);
   assert.match(buildSiteContext("Are you owner operated?"), /owner-operated by Tyler Gage/i);
 });

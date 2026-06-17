@@ -7,110 +7,76 @@ const activeNavLink = primaryNav.querySelector('[aria-current="page"]');
 const propertyButtons = [...document.querySelectorAll(".service-explorer-button")];
 const goalButtons = [...document.querySelectorAll(".service-goal-button")];
 
-let selectedProperty = "residential";
+let selectedProperty = "homeowner";
 let selectedGoal = "routine";
 
 const serviceRecommendations = {
-  residential: {
+  homeowner: {
     routine: {
-      label: "Residential Routine Care",
-      title: "Weekly curb appeal plan",
-      copy: "Mowing, edging, weed control, and seasonal touch-ups keep the property looking cared for without overbuilding the scope.",
-      items: ["Mowing and edging", "Weed control", "Seasonal touch-ups", "Bed cleanup"],
+      label: "Homeowner Services",
+      title: "Professional Landscape Care for Homeowners",
+      copy: "Routine maintenance, seasonal services, and landscape health work together to keep a home looking cared for.",
+      items: ["Lawn mowing", "Edging", "Weed management", "Garden bed maintenance"],
       href: "#groundskeeping",
-      quote: "Groundskeeping"
+      quote: "Lawn Mowing"
     },
     cleanup: {
-      label: "Residential Cleanup",
+      label: "Homeowner Services",
       title: "Seasonal reset",
       copy: "A good fit when the yard needs a practical reset before spring growth, summer use, or fall weather.",
-      items: ["Leaf and debris removal", "Bed cleanup", "Light pruning", "Mulch planning"],
+      items: ["Seasonal cleanup", "Shrub trimming", "Garden bed maintenance", "Mulching"],
       href: "#groundskeeping",
-      quote: "One-Time Cleanup"
+      quote: "Seasonal Cleanup"
     },
     improvement: {
-      label: "Residential Improvement",
-      title: "Curb appeal refresh",
+      label: "Homeowner Services",
+      title: "Landscape refresh",
       copy: "Targeted upgrades for beds, entries, and privacy edges that make the property feel more finished.",
-      items: ["Plant installation", "Mulch refresh", "Privacy screening", "Irrigation checks"],
+      items: ["Landscape refreshes", "Mulching", "Garden bed maintenance", "Planting updates"],
       href: "#landscape-improvements",
-      quote: "Landscape Improvements"
+      quote: "Landscape Maintenance"
     },
     ecological: {
-      label: "Residential Ecological",
+      label: "Homeowner Services",
       title: "Lower-water planting path",
       copy: "Native and pollinator-friendly plantings can make smaller landscapes feel intentional and resilient.",
       items: ["Native plants", "Pollinator habitat", "Low-water beds", "Soil improvement"],
       href: "#ecological-enhancements",
-      quote: "Ecological Enhancements"
+      quote: "Landscape Maintenance"
     }
   },
-  apartments: {
+  propertyManagement: {
     routine: {
-      label: "Apartment Routine Care",
-      title: "Resident-facing maintenance",
-      copy: "A steady plan for common areas, entry edges, and shared spaces residents notice every day.",
-      items: ["Mowing and edging", "Common area cleanup", "Weed suppression", "Entryway touch-ups"],
+      label: "Property Management Services",
+      title: "Dependable Groundskeeping for Multifamily and Community Properties",
+      copy: "Reliable communication and consistent property appearance help support resident satisfaction and long-term presentation.",
+      items: ["Apartment groundskeeping", "HOA landscape maintenance", "Common area care", "Property appearance audits"],
       href: "#groundskeeping",
-      quote: "Monthly Maintenance"
+      quote: "Apartment Groundskeeping"
     },
     cleanup: {
-      label: "Apartment Cleanup",
+      label: "Property Management Services",
       title: "Common area reset",
-      copy: "Useful for leaf buildup, trash areas, dog waste stations, and other high-use spaces.",
-      items: ["Trash area care", "Leaf removal", "Dog waste station checks", "Debris cleanup"],
+      copy: "Useful for leaf buildup, trash and recycling areas, move-out exterior cleanup, and other high-use spaces.",
+      items: ["Seasonal cleanup", "Trash and recycling area maintenance", "Move-out exterior cleanup", "Day porter services"],
       href: "#property-support",
-      quote: "Property Support"
+      quote: "Property Management Landscaping"
     },
     improvement: {
-      label: "Apartment Improvement",
-      title: "Shared-space upgrade",
-      copy: "Focused landscape improvements can make entries, courtyards, and borders feel more cared for.",
-      items: ["Mulch refresh", "Plant installation", "Low-maintenance beds", "Privacy screens"],
+      label: "Property Management Services",
+      title: "First impression refresh",
+      copy: "Focused landscape maintenance around entries, courtyards, and shared spaces can make the property feel more professional.",
+      items: ["Common area care", "Shrub trimming", "Pressure washing", "Mulch refresh"],
       href: "#landscape-improvements",
-      quote: "Landscape Improvements"
+      quote: "HOA Landscape Maintenance"
     },
     ecological: {
-      label: "Apartment Ecological",
-      title: "Low-maintenance habitat edge",
-      copy: "Pollinator-friendly plantings can add life and texture without adding complicated upkeep.",
-      items: ["Native planting", "Pollinator strips", "Soil prep", "Low-water palettes"],
-      href: "#ecological-enhancements",
-      quote: "Ecological Enhancements"
-    }
-  },
-  commercial: {
-    routine: {
-      label: "Commercial Routine Care",
-      title: "Customer-facing upkeep",
-      copy: "A clean, consistent maintenance plan for entrances, walkways, parking edges, and visible landscaping.",
-      items: ["Entrance cleanup", "Mowing and edging", "Litter checks", "Weed control"],
-      href: "#groundskeeping",
-      quote: "Monthly Maintenance"
-    },
-    cleanup: {
-      label: "Commercial Cleanup",
-      title: "High-visibility cleanup",
-      copy: "Good for storm debris, leaf buildup, parking lot edges, and neglected exterior areas.",
-      items: ["Storm debris cleanup", "Sidewalk edges", "Parking lot edges", "Trash area care"],
-      href: "#property-support",
-      quote: "Property Support"
-    },
-    improvement: {
-      label: "Commercial Improvement",
-      title: "Entrance and frontage refresh",
-      copy: "Small upgrades around entries and frontage can make the property feel more professional.",
-      items: ["Entry planting", "Mulch refresh", "Shrub cleanup", "Irrigation review"],
-      href: "#landscape-improvements",
-      quote: "Landscape Improvements"
-    },
-    ecological: {
-      label: "Commercial Ecological",
+      label: "Property Management Services",
       title: "Resilient planting upgrade",
       copy: "Lower-water, native-informed planting can improve the look of underused exterior strips.",
       items: ["Low-water planting", "Native accents", "Soil improvement", "Pollinator pockets"],
       href: "#ecological-enhancements",
-      quote: "Ecological Enhancements"
+      quote: "Property Management Landscaping"
     }
   }
 };
@@ -134,20 +100,15 @@ const monthNames = [
 ];
 
 const propertyTypes = {
-  residential: {
-    label: "Residential",
-    note: "Focus on curb appeal, yard cleanup, planting, mowing, mulch, and seasonal maintenance.",
-    emphasis: ["curb appeal", "yard cleanup", "planting", "mowing", "mulch"]
+  homeowner: {
+    label: "Homeowner Services",
+    note: "Focus on routine maintenance, seasonal services, property appearance, landscape health, and dependable service.",
+    emphasis: ["lawn mowing", "edging", "weed management", "mulching", "garden bed maintenance"]
   },
-  apartments: {
-    label: "Apartments / Multifamily",
-    note: "Focus on resident experience, trash areas, dog waste stations, common areas, leaf cleanup, entryways, and low-maintenance planting.",
-    emphasis: ["resident experience", "trash areas", "dog waste stations", "common areas", "entryways"]
-  },
-  commercial: {
-    label: "Commercial",
-    note: "Focus on entrances, parking lot edges, sidewalks, customer-facing curb appeal, safety, litter cleanup, and consistent maintenance.",
-    emphasis: ["entrances", "parking lot edges", "sidewalks", "safety", "consistent maintenance"]
+  propertyManagement: {
+    label: "Property Management Services",
+    note: "Focus on reliable communication, consistent appearance, resident satisfaction, first impressions, and long-term property presentation.",
+    emphasis: ["apartment groundskeeping", "HOA landscape maintenance", "common area care", "trash areas", "pressure washing"]
   }
 };
 
@@ -214,7 +175,7 @@ const serviceCalendar = [
   }
 ];
 
-let selectedPropertyType = "residential";
+let selectedPropertyType = "homeowner";
 let selectedMonth = new Date().getMonth();
 
 const createList = (target, items) => {

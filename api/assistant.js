@@ -34,9 +34,9 @@ Services:
 - Lawn care: mowing, edging, seasonal maintenance, lawn improvement recommendations, watering guidance, overseeding guidance.
 - Landscape maintenance: mulching, weed control, bed maintenance, seasonal cleanup, plant care, landscape enhancement.
 - Tree and shrub care: shrub pruning, small tree maintenance, rejuvenation pruning, visible plant health assessment.
-- Commercial services: apartment communities, HOA properties, office properties, retail centers, day porter services, property inspections.
+- Property management services: apartment communities, condominium associations, HOAs, multifamily properties, common area care, day porter services, trash and recycling area maintenance, pressure washing, move-out exterior cleanup, and property appearance audits.
 - Property support: trash enclosure maintenance, move-out exterior cleanup, common area maintenance, exterior appearance management.
-- Commercial grounds maintenance
+- Property management landscaping
 - Apartment community groundskeeping
 - HOA landscape maintenance
 - Lawn mowing

@@ -153,20 +153,15 @@ const monthNames = [
 ];
 
 const propertyTypes = {
-  residential: {
-    label: "Residential",
-    note: "Focus on curb appeal, yard cleanup, planting, mowing, mulch, and seasonal maintenance.",
-    emphasis: ["curb appeal", "yard cleanup", "planting", "mowing", "mulch"]
+  homeowner: {
+    label: "Homeowner Services",
+    note: "Focus on routine maintenance, seasonal services, property appearance, landscape health, and dependable service.",
+    emphasis: ["lawn mowing", "edging", "weed management", "mulching", "garden bed maintenance"]
   },
-  apartments: {
-    label: "Apartments / Multifamily",
-    note: "Focus on resident experience, trash areas, dog waste stations, common areas, leaf cleanup, entryways, and low-maintenance planting.",
-    emphasis: ["resident experience", "trash areas", "dog waste stations", "common areas", "entryways"]
-  },
-  commercial: {
-    label: "Commercial",
-    note: "Focus on entrances, parking lot edges, sidewalks, customer-facing curb appeal, safety, litter cleanup, and consistent maintenance.",
-    emphasis: ["entrances", "parking lot edges", "sidewalks", "safety", "consistent maintenance"]
+  propertyManagement: {
+    label: "Property Management Services",
+    note: "Focus on reliable communication, consistent property appearance, resident satisfaction, first impressions, and long-term property presentation.",
+    emphasis: ["apartment groundskeeping", "HOA landscape maintenance", "common area care", "trash areas", "pressure washing"]
   }
 };
 

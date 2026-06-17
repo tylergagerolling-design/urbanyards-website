@@ -167,3 +167,5 @@ if (mapElement && window.L) {
     siteDropButton?.classList.remove("is-active");
   });
 }
+
+document.querySelector("#copyright-year").textContent = new Date().getFullYear();

@@ -1,8 +1,38 @@
 (() => {
+  document.documentElement.classList.add("js");
+  const menuToggle = document.querySelector(".menu-toggle");
+  const primaryNav = document.querySelector(".primary-nav");
+  const header = document.querySelector(".site-header");
   const form = document.querySelector("#privacy-form");
   const status = document.querySelector("#privacy-status");
   const button = form.querySelector("button[type=submit]");
   const turnstileContainer = document.querySelector("#privacy-turnstile");
+
+  if (menuToggle && primaryNav) {
+    menuToggle.addEventListener("click", () => {
+      const open = primaryNav.classList.toggle("is-open");
+      menuToggle.setAttribute("aria-expanded", String(open));
+    });
+
+    primaryNav.querySelectorAll("a").forEach((link) => {
+      link.addEventListener("click", () => {
+        primaryNav.classList.remove("is-open");
+        menuToggle.setAttribute("aria-expanded", "false");
+      });
+    });
+  }
+
+  const updateScrollEffects = () => {
+    header?.classList.toggle("is-compact", window.scrollY > 56);
+    const scrollableHeight = document.documentElement.scrollHeight - window.innerHeight;
+    const scrollProgress = scrollableHeight > 0 ? (window.scrollY / scrollableHeight) * 100 : 0;
+    document.documentElement.style.setProperty("--scroll-progress", `${Math.min(scrollProgress, 100)}%`);
+  };
+
+  window.addEventListener("scroll", updateScrollEffects, { passive: true });
+  updateScrollEffects();
+  const copyrightYear = document.querySelector("#copyright-year");
+  if (copyrightYear) copyrightYear.textContent = new Date().getFullYear();
 
   const setStatus = (message, state) => {
     status.textContent = message;

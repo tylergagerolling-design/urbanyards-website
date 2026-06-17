@@ -27,6 +27,9 @@ const sectionLinks = navLinks
 const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 let quoteInView = false;
 
+const supportedPhotoPattern = /\.(jpe?g|png|hei[cf])$/i;
+const supportedPhotoTypes = new Set(["image/jpeg", "image/png", "image/heic", "image/heif"]);
+
 const trackEvent = (name, properties = {}) => {
   window.dataLayer = window.dataLayer || [];
   window.dataLayer.push({ event: name, ...properties });
@@ -49,6 +52,11 @@ const initializeAnalytics = () => {
 initializeAnalytics();
 
 const fileToCompressedPhoto = (file) => new Promise((resolve, reject) => {
+  const supportedType = supportedPhotoTypes.has(file.type.toLowerCase());
+  if (!supportedType && !supportedPhotoPattern.test(file.name)) {
+    reject(new Error(`${file.name} must be a JPG, PNG, HEIC, or HEIF image.`));
+    return;
+  }
   const reader = new FileReader();
   reader.onerror = () => reject(new Error(`Could not read ${file.name}.`));
   reader.onload = () => {

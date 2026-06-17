@@ -17,10 +17,10 @@
     <link rel="apple-touch-icon" href="apple-touch-icon.png">
     <link rel="manifest" href="site.webmanifest">
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="anonymous">
-    <link rel="stylesheet" href="style.css?v=20260617-6">
+    <link rel="stylesheet" href="style.css?v=20260617-7">
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin="anonymous" defer></script>
     <script src="config.js?v=20260615-1" defer></script>
-    <script src="script.js?v=20260617-6" defer></script>
+    <script src="script.js?v=20260617-7" defer></script>
     <script src="assistant.js?v=20260615-1" defer></script>
     <script type="application/ld+json">
       {
@@ -154,7 +154,7 @@
             <label>Phone<input name="phone" type="tel" autocomplete="tel"></label>
             <label>Property Address<input name="location" autocomplete="street-address" placeholder="Address or general area"></label>
             <label class="wide">Service Needed<select name="service" required><option value="">Select a service</option><option>Lawn Mowing</option><option>Landscape Maintenance</option><option>Seasonal Cleanup</option><option>Pressure Washing</option><option>Apartment Groundskeeping</option><option>HOA Landscape Maintenance</option><option>Property Management Landscaping</option><option>Other</option></select></label>
-            <label class="wide photo-upload">Upload Photos (optional)<small>Up to 3 JPG, PNG, or WebP images. They are compressed before sending.</small><input name="photos" type="file" accept="image/jpeg,image/png,image/webp" multiple></label>
+            <label class="wide photo-upload">Upload Photos (optional)<small>Up to 3 JPG, PNG, HEIC, or HEIF images. They are compressed before sending.</small><input name="photos" type="file" accept="image/jpeg,image/png,image/heic,image/heif,.jpg,.jpeg,.png,.heic,.heif" multiple></label>
             <label class="wide">Additional Details<textarea name="message" rows="4"></textarea></label>
             <label class="form-honeypot" aria-hidden="true">Company<input name="company" tabindex="-1" autocomplete="off"></label>
             <div id="quote-turnstile" class="quote-turnstile wide"></div>

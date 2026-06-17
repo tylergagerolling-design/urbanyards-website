@@ -5,7 +5,7 @@ const {
 const { scanImage, verifyImage } = require("./lib/images");
 const { alertSecurityEvent } = require("./lib/monitoring");
 
-const allowedImageTypes = new Set(["image/jpeg", "image/png", "image/webp"]);
+const allowedImageTypes = new Set(["image/jpeg", "image/png"]);
 
 function parsePhotos(input) {
   if (!Array.isArray(input)) return [];
@@ -13,7 +13,7 @@ function parsePhotos(input) {
   return input.map((photo, index) => {
     const type = text(photo?.type, 40).toLowerCase();
     const data = String(photo?.data || "").replace(/^data:[^;]+;base64,/, "");
-    if (!allowedImageTypes.has(type)) throw new Error("Photos must be JPG, PNG, or WebP images.");
+    if (!allowedImageTypes.has(type)) throw new Error("Photos must be JPG or PNG images.");
     if (!/^[A-Za-z0-9+/=]+$/.test(data) || data.length > 2200000) {
       throw new Error("Each compressed photo must be smaller than 1.6 MB.");
     }

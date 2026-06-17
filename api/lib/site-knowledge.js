@@ -159,10 +159,42 @@ function buildSiteContext(query = "", currentPage = "") {
   ].join("\n\n");
 }
 
+function answerFromSiteKnowledge(query = "") {
+  const text = String(query).toLowerCase();
+  const quotePrompt = `The best next step is to request a free quote through the website form with your property address or general area, service needed, timeline, details, and photos if useful. ${CONTACT.phone}. ${CONTACT.email}.`;
+
+  if (text.includes("owner") || text.includes("owned") || text.includes("owner operated") || text.includes("who owns")) {
+    return `Yes. Urban Yards is owner-operated by Tyler Gage. The site describes Urban Yards as practical, eco-conscious, reliable, and focused on cleaner, healthier, more welcoming outdoor spaces.\n\n${quotePrompt}`;
+  }
+  if (text.includes("quote") || text.includes("estimate") || text.includes("price") || text.includes("cost")) {
+    return `You can request a free quote through the website form. The form asks for name, email, phone, property address or general area, service needed, optional photos, and additional details.\n\nFinal pricing and scheduling require review of the property and project details. ${CONTACT.phone}. ${CONTACT.email}.`;
+  }
+  if (text.includes("area") || text.includes("serve") || text.includes("where") || text.includes("location")) {
+    return `The site lists Beaverton, Portland, Vancouver, North Portland, and nearby communities as the core service area. If you are near those areas, Urban Yards can confirm through a quote request.\n\n${CONTACT.phone}. ${CONTACT.email}.`;
+  }
+  if (text.includes("apartment") || text.includes("hoa") || text.includes("condo") || text.includes("multifamily") || text.includes("property manager") || text.includes("porter")) {
+    return `Yes. Urban Yards lists property management services for apartment communities, condominium associations, HOAs, property management companies, and multifamily properties.\n\nRelevant services include common area upkeep, trash and recycling enclosure care, day porter services, pressure washing, seasonal cleanup, recurring groundskeeping, and property appearance audits. ${quotePrompt}`;
+  }
+  if (text.includes("pressure wash") || text.includes("pressure washing") || text.includes("wash")) {
+    return `Yes. Pressure Washing is listed in the site footer services and on the Property Management Services page. ${quotePrompt}`;
+  }
+  if (text.includes("lawn") || text.includes("mow") || text.includes("mowing") || text.includes("edge")) {
+    return `Yes. Urban Yards lists lawn mowing, edging, weed management, garden bed maintenance, seasonal cleanup, and routine groundskeeping for homeowners and other property types.\n\n${quotePrompt}`;
+  }
+  if (text.includes("mulch") || text.includes("bed") || text.includes("plant") || text.includes("native") || text.includes("pollinator") || text.includes("low-water") || text.includes("ecological")) {
+    return `Yes. The site lists landscape improvements such as plant installations, mulch refreshes, privacy screens, and ecological enhancements like native plantings, pollinator habitat, low-water landscapes, and urban greening.\n\n${quotePrompt}`;
+  }
+  if (text.includes("phone") || text.includes("email") || text.includes("contact")) {
+    return `You can contact Urban Yards through the quote form, by phone, or by email. ${CONTACT.phone}. ${CONTACT.email}.`;
+  }
+  return FALLBACK_MESSAGE;
+}
+
 module.exports = {
   CONTACT,
   FALLBACK_MESSAGE,
   SITE_KNOWLEDGE,
+  answerFromSiteKnowledge,
   buildSiteContext,
   getRelevantKnowledge
 };

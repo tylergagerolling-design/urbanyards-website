@@ -18,7 +18,7 @@ Rules:
 - If a question is unrelated to Urban Yards services, landscaping, groundskeeping, property maintenance, or quote/contact details, say you specialize in Urban Yards website and service questions.
 `;
 
-const { buildSiteContext } = require("./lib/site-knowledge");
+const { answerFromSiteKnowledge, buildSiteContext } = require("./lib/site-knowledge");
 
 const {
   allowedOrigin, clientIp, rateLimit, requestId, setApiHeaders, text
@@ -49,15 +49,19 @@ async function handler(req, res) {
     return res.status(429).json({ error: "Too many assistant requests. Please try again shortly.", requestId: id });
   }
 
-  if (!process.env.OPENAI_API_KEY) {
-    return res.status(503).json({ error: "Assistant is temporarily unavailable", requestId: id });
-  }
-
   const { message = "", history = [], page = "", lead = {} } = req.body || {};
   const userMessage = text(message, 1400);
 
   if (!userMessage) {
     return res.status(400).json({ error: "Message is required", requestId: id });
+  }
+
+  if (!process.env.OPENAI_API_KEY) {
+    return res.status(200).json({
+      reply: answerFromSiteKnowledge(userMessage),
+      requestId: id,
+      source: "site-knowledge"
+    });
   }
 
   const leadContext = [
@@ -105,7 +109,11 @@ async function handler(req, res) {
     });
   } catch (error) {
     console.error(JSON.stringify({ event: "assistant_error", requestId: id, message: error.message }));
-    return res.status(502).json({ error: "Assistant is temporarily unavailable", requestId: id });
+    return res.status(200).json({
+      reply: answerFromSiteKnowledge(userMessage),
+      requestId: id,
+      source: "site-knowledge-fallback"
+    });
   }
 }
 

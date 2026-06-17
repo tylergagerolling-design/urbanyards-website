@@ -8,7 +8,7 @@ const privacyHandler = require("../api/privacy-request");
 const retentionHandler = require("../api/retention-cleanup");
 const { sendWebhook } = require("../api/lib/integrations");
 const { verifyImage } = require("../api/lib/images");
-const { buildSiteContext, getRelevantKnowledge } = require("../api/lib/site-knowledge");
+const { answerFromSiteKnowledge, buildSiteContext, getRelevantKnowledge } = require("../api/lib/site-knowledge");
 
 function mockResponse() {
   return {
@@ -65,13 +65,15 @@ test("valid quote fails honestly when no delivery integration is configured", as
   Object.entries(original).forEach(([key, value]) => value === undefined ? delete process.env[key] : process.env[key] = value);
 });
 
-test("assistant reports unavailable without exposing configuration details", async () => {
+test("assistant answers from site knowledge without an OpenAI key", async () => {
   const key = process.env.OPENAI_API_KEY;
   delete process.env.OPENAI_API_KEY;
   const res = mockResponse();
   await assistantHandler(request("POST", { message: "Do you mow lawns?" }), res);
-  assert.equal(res.statusCode, 503);
-  assert.equal(res.payload.error, "Assistant is temporarily unavailable");
+  assert.equal(res.statusCode, 200);
+  assert.match(res.payload.reply, /lawn mowing/i);
+  assert.equal(res.payload.source, "site-knowledge");
+  assert.equal("OPENAI_API_KEY" in res.payload, false);
   if (key !== undefined) process.env.OPENAI_API_KEY = key;
 });
 
@@ -82,6 +84,31 @@ test("site knowledge retrieves relevant website sections", () => {
   assert.match(buildSiteContext("What areas do you serve?"), /Portland, Vancouver, North Portland/i);
   assert.match(buildSiteContext("How do I get a quote?"), /name, email, phone, property address/i);
   assert.match(buildSiteContext("Are you owner operated?"), /owner-operated by Tyler Gage/i);
+});
+
+test("site knowledge fallback answers common visitor questions", () => {
+  assert.match(answerFromSiteKnowledge("Do you work with apartments?"), /apartment communities/i);
+  assert.match(answerFromSiteKnowledge("Do you do pressure washing?"), /Pressure Washing/i);
+  assert.match(answerFromSiteKnowledge("What areas do you serve?"), /Portland/i);
+  assert.match(answerFromSiteKnowledge("Are you owner operated?"), /Tyler Gage/i);
+  assert.match(answerFromSiteKnowledge("Do you install fountains?"), /I don't see that listed on the site/i);
+});
+
+test("assistant falls back to site knowledge if the model request fails", async () => {
+  const originalKey = process.env.OPENAI_API_KEY;
+  const originalFetch = global.fetch;
+  process.env.OPENAI_API_KEY = "test-key";
+  global.fetch = async () => ({ ok: false, status: 500 });
+  try {
+    const res = mockResponse();
+    await assistantHandler(request("POST", { message: "How do I get a quote?" }), res);
+    assert.equal(res.statusCode, 200);
+    assert.match(res.payload.reply, /free quote/i);
+    assert.equal(res.payload.source, "site-knowledge-fallback");
+  } finally {
+    global.fetch = originalFetch;
+    originalKey === undefined ? delete process.env.OPENAI_API_KEY : process.env.OPENAI_API_KEY = originalKey;
+  }
 });
 
 test("assistant sends relevant site knowledge to the model", async () => {

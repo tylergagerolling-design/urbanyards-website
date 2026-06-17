@@ -1,122 +1,14 @@
+const ASSISTANT_KNOWLEDGE = require("../../assistant-knowledge.json");
+
 const CONTACT = {
-  phone: "(971) 258-1109",
-  email: "team@urbanyards.us",
-  quotePath: "/#quote"
+  phone: ASSISTANT_KNOWLEDGE.phone,
+  email: ASSISTANT_KNOWLEDGE.email,
+  quotePath: ASSISTANT_KNOWLEDGE.quotePath
 };
 
-const SITE_KNOWLEDGE = [
-  {
-    id: "home",
-    title: "Home",
-    url: "/",
-    keywords: ["tagline", "first impressions", "home", "groundskeeping", "services", "property types"],
-    text: [
-      "Urban Yards Groundskeeping tagline: First Impressions Start Here.",
-      "Hero message: Groundskeeping for Homes, Multifamily, and Community Properties.",
-      "Urban Yards provides practical care for better properties.",
-      "Services highlighted on the home page include Groundskeeping, Landscape Improvements, Property Support, and Ecological Enhancements.",
-      "Groundskeeping includes mowing and edging, weed control, seasonal cleanup, and property upkeep.",
-      "Landscape Improvements include plant installations, mulch refreshes, privacy screens, and irrigation checks.",
-      "Property Support includes day porter services, trash area care, routine maintenance, and site support.",
-      "Ecological Enhancements include native plantings, pollinator habitat, low-water landscapes, and urban greening.",
-      "Property types served include homeowners, apartment communities, HOAs, and property managers."
-    ].join(" ")
-  },
-  {
-    id: "homeowner-services",
-    title: "Homeowner Services",
-    url: "/homeowner-services",
-    keywords: ["homeowner", "homeowners", "lawn", "lawns", "mow", "mowing", "edging", "weed", "garden", "mulch", "shrubs", "seasonal cleanup"],
-    text: [
-      "Homeowner Services page title: Professional Landscape Care for Homeowners.",
-      "Urban Yards provides routine maintenance, seasonal services, property appearance, landscape health, and dependable service for outdoor spaces that need steady care.",
-      "Routine care includes lawn mowing, edging, weed management, and garden bed maintenance.",
-      "Refresh services include mulching, shrub trimming, landscape refreshes, and seasonal cleanup.",
-      "The page invites homeowners to request a free quote and include photos if useful."
-    ].join(" ")
-  },
-  {
-    id: "property-management-services",
-    title: "Property Management Services",
-    url: "/property-management-services",
-    keywords: ["apartment", "apartments", "multifamily", "condominium", "condominiums", "hoa", "hoas", "property manager", "property management", "pressure", "washing", "day porter", "trash", "common area"],
-    text: [
-      "Property Management Services page title: Dependable Groundskeeping for Multifamily and Community Properties.",
-      "Urban Yards provides professional service for apartment communities, condominium associations, HOAs, property management companies, and multifamily properties.",
-      "Property support includes common area upkeep, trash area care, and appearance audits.",
-      "Services listed for property management include day porter services, trash and recycling enclosure care, property appearance audits, pressure washing, seasonal cleanup, recurring groundskeeping, and resident-facing landscape care.",
-      "The page invites property managers to request a free quote."
-    ].join(" ")
-  },
-  {
-    id: "services",
-    title: "Services Overview",
-    url: "/services",
-    keywords: ["services", "service explorer", "calendar", "weekly", "biweekly", "monthly", "one-time", "groundskeeping", "landscape improvements", "ecological"],
-    text: [
-      "The Services page includes a Service Explorer, Portland Property Care Calendar, detailed services, and maintenance rhythm options.",
-      "Service details include Groundskeeping: mowing, edging, weeds, and seasonal upkeep for homes, apartments, HOAs, and community properties.",
-      "Landscape Improvements include better beds, planting, mulch, and curb appeal updates.",
-      "Property Support includes clean common areas and practical site support for apartment communities, HOAs, condominium associations, and properties with regular resident-facing traffic.",
-      "Ecological Enhancements include native planting and lower-water landscape direction.",
-      "Maintenance cadence options include weekly, biweekly, monthly, and one-time service depending on property needs.",
-      "The seasonal calendar helps property owners plan maintenance throughout the year."
-    ].join(" ")
-  },
-  {
-    id: "about",
-    title: "About",
-    url: "/about",
-    keywords: ["about", "owner", "owned", "owner-operated", "tyler", "gage", "values", "eco-conscious", "clear communication"],
-    text: [
-      "Urban Yards is owner-operated by Tyler Gage, a Midwest native with a lifelong interest in gardening, landscape design, ecology, and restoration.",
-      "His background includes hands-on experimentation with traditional horticulture, landscape maintenance, food forests, habitat creation, ecological restoration, and the Miyawaki approach to dense native planting.",
-      "That background influences how properties are cared for: keeping outdoor spaces tidy while considering soil health, plant communities, habitat, water use, and how landscapes feel for people who live, work, and gather there.",
-      "Urban Yards aims to provide dependable groundskeeping and landscape care that makes properties cleaner, healthier, more welcoming, and more resilient over time.",
-      "Brand values on the About page include local and owner operated, reliable and practical, eco-conscious, and clear communication."
-    ].join(" ")
-  },
-  {
-    id: "service-areas",
-    title: "Service Areas",
-    url: "/#service-area",
-    keywords: ["service area", "service areas", "areas", "serve", "served", "where", "location", "beaverton", "portland", "vancouver", "north portland"],
-    text: [
-      "The site describes the service area as Beaverton, Portland, and Vancouver.",
-      "The service area section says Urban Yards serves local homes, multifamily properties, HOAs, and community landscapes.",
-      "The core service area listed on the site is Portland, Vancouver, North Portland, and nearby communities.",
-      "If a visitor is outside or near those areas, Urban Yards should confirm through the quote form."
-    ].join(" ")
-  },
-  {
-    id: "contact-quote",
-    title: "Contact and Quote",
-    url: "/#quote",
-    keywords: ["quote", "estimate", "contact", "phone", "email", "photos", "form", "request", "price", "cost"],
-    text: [
-      "The quote section heading says: Ready to Improve Your Property?",
-      "Visitors can request a free quote through the website form.",
-      "The quote form asks for name, email, phone, property address or general area, service needed, optional photos, and additional details.",
-      "Photo uploads can include up to 3 JPG, PNG, HEIC, or HEIF images, and they are compressed before sending.",
-      "The site says there is no obligation and Urban Yards will review the request and respond as soon as possible.",
-      `Contact phone: ${CONTACT.phone}. Contact email: ${CONTACT.email}.`
-    ].join(" ")
-  },
-  {
-    id: "footer",
-    title: "Footer",
-    url: "/#contact",
-    keywords: ["footer", "quick links", "phone", "email", "contact"],
-    text: [
-      "Footer tagline: First Impressions Start Here.",
-      "Footer quick links include Home, Services, Homeowner Services, Property Management Services, Portfolio, About, and Contact.",
-      "Footer services include Lawn Mowing, Landscape Maintenance, Seasonal Cleanup, Pressure Washing, Apartment Groundskeeping, and HOA Landscape Maintenance.",
-      "Footer property types include Homeowners, Apartment Communities, HOAs, Condominiums, and Property Managers.",
-      `Footer contact phone: ${CONTACT.phone}. Footer contact email: ${CONTACT.email}.`,
-      "Footer next step: Talk through your property. Most replies within 1 business day for Portland and Vancouver properties."
-    ].join(" ")
-  }
-];
+const SITE_KNOWLEDGE = ASSISTANT_KNOWLEDGE.contentChunks;
+const FAQS = ASSISTANT_KNOWLEDGE.faqs;
+const STOP_WORDS = new Set(["about", "and", "are", "can", "for", "get", "how", "the", "this", "that", "what", "with", "you", "your"]);
 
 const FALLBACK_MESSAGE = `I don't see that listed on the site, but you can request a quote and Urban Yards can confirm. Phone: ${CONTACT.phone}. Email: ${CONTACT.email}.`;
 
@@ -125,18 +17,30 @@ function tokenize(value = "") {
     .toLowerCase()
     .replace(/[^a-z0-9\s-]/g, " ")
     .split(/\s+/)
-    .filter((token) => token.length > 2);
+    .filter((token) => token.length > 2 && !STOP_WORDS.has(token));
 }
 
 function scoreSection(section, queryTokens) {
   const haystack = `${section.title} ${section.text}`.toLowerCase();
-  const keywordText = (section.keywords || []).join(" ").toLowerCase();
+  const keywordTokens = new Set(tokenize((section.keywords || []).join(" ")));
+  const haystackTokens = new Set(tokenize(haystack));
   const score = queryTokens.reduce((total, token) => {
-    if (keywordText.includes(token)) return total + 6;
-    if (haystack.includes(token)) return total + (section.title.toLowerCase().includes(token) ? 3 : 1);
+    if (keywordTokens.has(token)) return total + 6;
+    if (haystackTokens.has(token)) return total + (tokenize(section.title).includes(token) ? 3 : 1);
     return total;
   }, 0);
   return section.id === "footer" ? score * 0.5 : score;
+}
+
+function scoreFaq(faq, queryTokens) {
+  const haystack = `${faq.question} ${faq.answer}`.toLowerCase();
+  const keywordTokens = new Set(tokenize((faq.keywords || []).join(" ")));
+  const haystackTokens = new Set(tokenize(haystack));
+  return queryTokens.reduce((total, token) => {
+    if (keywordTokens.has(token)) return total + 8;
+    if (haystackTokens.has(token)) return total + (tokenize(faq.question).includes(token) ? 4 : 1);
+    return total;
+  }, 0);
 }
 
 function getRelevantKnowledge(query = "", currentPage = "") {
@@ -150,51 +54,84 @@ function getRelevantKnowledge(query = "", currentPage = "") {
   return [...new Map([...relevant, ...required].filter(Boolean).map((section) => [section.id, section])).values()].slice(0, 7);
 }
 
+function getRelevantFaqs(query = "") {
+  const tokens = tokenize(query);
+  return FAQS
+    .map((faq) => ({ faq, score: scoreFaq(faq, tokens) }))
+    .filter((item) => item.score > 0)
+    .sort((a, b) => b.score - a.score)
+    .slice(0, 3)
+    .map((item) => item.faq);
+}
+
 function buildSiteContext(query = "", currentPage = "") {
   const sections = getRelevantKnowledge(query, currentPage);
+  const faqs = getRelevantFaqs(query);
   return [
     "Urban Yards website knowledge source. Use only these site facts for Urban Yards-specific claims.",
+    `Business: ${ASSISTANT_KNOWLEDGE.businessName}. Tagline: ${ASSISTANT_KNOWLEDGE.tagline}.`,
+    `Contact: ${CONTACT.phone}. ${CONTACT.email}. Quote CTA: ${ASSISTANT_KNOWLEDGE.quoteCTA}.`,
     ...sections.map((section) => `Page: ${section.title}\nURL: ${section.url}\nFacts: ${section.text}`),
+    ...faqs.map((faq) => `FAQ: ${faq.question}\nAnswer: ${faq.answer}`),
     `Unlisted information fallback: ${FALLBACK_MESSAGE}`
   ].join("\n\n");
 }
 
-function answerFromSiteKnowledge(query = "") {
+function hasLeadIntent(text) {
+  return ASSISTANT_KNOWLEDGE.leadQualification.intentSignals.some((signal) => text.includes(signal));
+}
+
+function nextLeadPrompt(lead = {}) {
+  if (!lead.propertyType) return "What type of property is it: a home, apartment community, HOA, condominium, or another property type?";
+  if (!lead.city && !lead.propertyLocation) return "What city or general area is the property in?";
+  if (!lead.service && !lead.serviceRequested) return "What service are you looking for: mowing, cleanup, landscape maintenance, pressure washing, property support, or something else listed on the site?";
+  if (!lead.phone && !lead.email) return "What is the best phone number or email for Urban Yards to follow up?";
+  return "";
+}
+
+function answerFromSiteKnowledge(query = "", lead = {}) {
   const text = String(query).toLowerCase();
-  const quotePrompt = `The best next step is to request a free quote through the website form with your property address or general area, service needed, timeline, details, and photos if useful. ${CONTACT.phone}. ${CONTACT.email}.`;
+  const quotePrompt = `The best next step is to request a free quote through the website form with your property address or general area, service needed, timeline, details, and photos if useful. Phone: ${CONTACT.phone}. Email: ${CONTACT.email}.`;
+  const leadPrompt = hasLeadIntent(text) ? nextLeadPrompt(lead) : "";
+  const leadFollowUp = leadPrompt ? `\n\nI can help gather a few details for the quote request. ${leadPrompt}` : "";
+  const faq = getRelevantFaqs(query)[0];
 
   if (text.includes("owner") || text.includes("owned") || text.includes("owner operated") || text.includes("who owns")) {
     return `Yes. Urban Yards is owner-operated by Tyler Gage. The site describes Urban Yards as practical, eco-conscious, reliable, and focused on cleaner, healthier, more welcoming outdoor spaces.\n\n${quotePrompt}`;
   }
   if (text.includes("quote") || text.includes("estimate") || text.includes("price") || text.includes("cost")) {
-    return `You can request a free quote through the website form. The form asks for name, email, phone, property address or general area, service needed, optional photos, and additional details.\n\nFinal pricing and scheduling require review of the property and project details. ${CONTACT.phone}. ${CONTACT.email}.`;
+    return `You can request a free quote through the website form. The form asks for name, email, phone, property address or general area, service needed, optional photos, and additional details.\n\nFinal pricing and scheduling require review of the property and project details. Phone: ${CONTACT.phone}. Email: ${CONTACT.email}.${leadFollowUp}`;
   }
   if (text.includes("area") || text.includes("serve") || text.includes("where") || text.includes("location")) {
     return `The site lists Beaverton, Portland, Vancouver, North Portland, and nearby communities as the core service area. If you are near those areas, Urban Yards can confirm through a quote request.\n\n${CONTACT.phone}. ${CONTACT.email}.`;
   }
   if (text.includes("apartment") || text.includes("hoa") || text.includes("condo") || text.includes("multifamily") || text.includes("property manager") || text.includes("porter")) {
-    return `Yes. Urban Yards lists property management services for apartment communities, condominium associations, HOAs, property management companies, and multifamily properties.\n\nRelevant services include common area upkeep, trash and recycling enclosure care, day porter services, pressure washing, seasonal cleanup, recurring groundskeeping, and property appearance audits. ${quotePrompt}`;
+    return `Yes. Urban Yards lists property management services for apartment communities, condominium associations, HOAs, property management companies, and multifamily properties.\n\nRelevant services include common area upkeep, trash and recycling enclosure care, day porter services, pressure washing, seasonal cleanup, recurring groundskeeping, and property appearance audits. ${quotePrompt}${leadFollowUp}`;
   }
   if (text.includes("pressure wash") || text.includes("pressure washing") || text.includes("wash")) {
     return `Yes. Pressure Washing is listed in the site footer services and on the Property Management Services page. ${quotePrompt}`;
   }
   if (text.includes("lawn") || text.includes("mow") || text.includes("mowing") || text.includes("edge")) {
-    return `Yes. Urban Yards lists lawn mowing, edging, weed management, garden bed maintenance, seasonal cleanup, and routine groundskeeping for homeowners and other property types.\n\n${quotePrompt}`;
+    return `Yes. Urban Yards lists lawn mowing, edging, weed management, garden bed maintenance, seasonal cleanup, and routine groundskeeping for homeowners and other property types.\n\n${quotePrompt}${leadFollowUp}`;
   }
   if (text.includes("mulch") || text.includes("bed") || text.includes("plant") || text.includes("native") || text.includes("pollinator") || text.includes("low-water") || text.includes("ecological")) {
     return `Yes. The site lists landscape improvements such as plant installations, mulch refreshes, privacy screens, and ecological enhancements like native plantings, pollinator habitat, low-water landscapes, and urban greening.\n\n${quotePrompt}`;
   }
   if (text.includes("phone") || text.includes("email") || text.includes("contact")) {
-    return `You can contact Urban Yards through the quote form, by phone, or by email. ${CONTACT.phone}. ${CONTACT.email}.`;
+    return `You can contact Urban Yards through the quote form, by phone, or by email. Phone: ${CONTACT.phone}. Email: ${CONTACT.email}.`;
   }
+  if (faq) return `${faq.answer}\n\n${quotePrompt}${leadFollowUp}`;
   return FALLBACK_MESSAGE;
 }
 
 module.exports = {
+  ASSISTANT_KNOWLEDGE,
   CONTACT,
+  FAQS,
   FALLBACK_MESSAGE,
   SITE_KNOWLEDGE,
   answerFromSiteKnowledge,
   buildSiteContext,
+  getRelevantFaqs,
   getRelevantKnowledge
 };

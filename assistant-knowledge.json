@@ -1,0 +1,169 @@
+{
+  "businessName": "Urban Yards Groundskeeping",
+  "assistantName": "The Groundskeeper",
+  "tagline": "First Impressions Start Here",
+  "ownerOperated": true,
+  "ownerName": "Tyler Gage",
+  "phone": "(971) 258-1109",
+  "email": "team@urbanyards.us",
+  "website": "https://urbanyards.us",
+  "quoteCTA": "Request a Free Quote",
+  "quotePath": "/#quote",
+  "serviceAreas": [
+    "Beaverton",
+    "Portland",
+    "Vancouver",
+    "North Portland",
+    "nearby communities"
+  ],
+  "responseStyle": [
+    "helpful",
+    "professional",
+    "friendly",
+    "local",
+    "practical",
+    "plain-spoken",
+    "not overly salesy"
+  ],
+  "hardRules": [
+    "Do not invent pricing.",
+    "Do not invent availability or scheduling.",
+    "Do not invent guarantees.",
+    "Do not invent licensing or insurance claims.",
+    "Do not invent service areas.",
+    "Use website content, this knowledge file, FAQ content, and conversation context only."
+  ],
+  "leadQualification": {
+    "intentSignals": [
+      "quote",
+      "estimate",
+      "price",
+      "cost",
+      "hire",
+      "schedule",
+      "book",
+      "service my property",
+      "need landscaping help",
+      "manage an apartment",
+      "property manager"
+    ],
+    "fields": [
+      "name",
+      "phone",
+      "email",
+      "propertyType",
+      "city",
+      "serviceRequested",
+      "notes"
+    ]
+  },
+  "suggestedQuestions": [
+    "Request a Free Quote",
+    "Homeowner Services",
+    "Property Management Services",
+    "Service Areas",
+    "Contact Urban Yards"
+  ],
+  "contentChunks": [
+    {
+      "id": "home",
+      "title": "Home",
+      "url": "/",
+      "keywords": ["tagline", "first impressions", "home", "groundskeeping", "services", "property types"],
+      "text": "Urban Yards Groundskeeping tagline: First Impressions Start Here. Hero message: Groundskeeping for Homes, Multifamily, and Community Properties. Urban Yards provides practical care for better properties. Services highlighted on the home page include Groundskeeping, Landscape Improvements, Property Support, and Ecological Enhancements. Groundskeeping includes mowing and edging, weed control, seasonal cleanup, and property upkeep. Landscape Improvements include plant installations, mulch refreshes, privacy screens, and irrigation checks. Property Support includes day porter services, trash area care, routine maintenance, and site support. Ecological Enhancements include native plantings, pollinator habitat, low-water landscapes, and urban greening. Property types served include homeowners, apartment communities, HOAs, and property managers."
+    },
+    {
+      "id": "homeowner-services",
+      "title": "Homeowner Services",
+      "url": "/homeowner-services",
+      "keywords": ["homeowner", "homeowners", "lawn", "lawns", "mow", "mowing", "edging", "weed", "garden", "mulch", "shrubs", "seasonal cleanup"],
+      "text": "Homeowner Services page title: Professional Landscape Care for Homeowners. Urban Yards provides routine maintenance, seasonal services, property appearance, landscape health, and dependable service for outdoor spaces that need steady care. Routine care includes lawn mowing, edging, weed management, and garden bed maintenance. Refresh services include mulching, shrub trimming, landscape refreshes, and seasonal cleanup. The page invites homeowners to request a free quote and include photos if useful."
+    },
+    {
+      "id": "property-management-services",
+      "title": "Property Management Services",
+      "url": "/property-management-services",
+      "keywords": ["apartment", "apartments", "multifamily", "condominium", "condominiums", "hoa", "hoas", "property manager", "property management", "pressure", "washing", "day porter", "trash", "common area"],
+      "text": "Property Management Services page title: Dependable Groundskeeping for Multifamily and Community Properties. Urban Yards provides professional service for apartment communities, condominium associations, HOAs, property management companies, and multifamily properties. Property support includes common area upkeep, trash area care, and appearance audits. Services listed for property management include day porter services, trash and recycling enclosure care, property appearance audits, pressure washing, seasonal cleanup, recurring groundskeeping, and resident-facing landscape care. The page invites property managers to request a free quote."
+    },
+    {
+      "id": "services",
+      "title": "Services Overview",
+      "url": "/services",
+      "keywords": ["services", "service explorer", "calendar", "weekly", "biweekly", "monthly", "one-time", "groundskeeping", "landscape improvements", "ecological"],
+      "text": "The Services page includes a Service Explorer, Portland Property Care Calendar, detailed services, and maintenance rhythm options. Service details include Groundskeeping: mowing, edging, weeds, and seasonal upkeep for homes, apartments, HOAs, and community properties. Landscape Improvements include better beds, planting, mulch, and curb appeal updates. Property Support includes clean common areas and practical site support for apartment communities, HOAs, condominium associations, and properties with regular resident-facing traffic. Ecological Enhancements include native planting and lower-water landscape direction. Maintenance cadence options include weekly, biweekly, monthly, and one-time service depending on property needs. The seasonal calendar helps property owners plan maintenance throughout the year."
+    },
+    {
+      "id": "about",
+      "title": "About",
+      "url": "/about",
+      "keywords": ["about", "owner", "owned", "owner-operated", "tyler", "gage", "values", "eco-conscious", "clear communication"],
+      "text": "Urban Yards is owner-operated by Tyler Gage, a Midwest native with a lifelong interest in gardening, landscape design, ecology, and restoration. His background includes hands-on experimentation with traditional horticulture, landscape maintenance, food forests, habitat creation, ecological restoration, and the Miyawaki approach to dense native planting. That background influences how properties are cared for: keeping outdoor spaces tidy while considering soil health, plant communities, habitat, water use, and how landscapes feel for people who live, work, and gather there. Urban Yards aims to provide dependable groundskeeping and landscape care that makes properties cleaner, healthier, more welcoming, and more resilient over time. Brand values on the About page include local and owner operated, reliable and practical, eco-conscious, and clear communication."
+    },
+    {
+      "id": "service-areas",
+      "title": "Service Areas",
+      "url": "/#service-area",
+      "keywords": ["service area", "service areas", "areas", "serve", "served", "where", "location", "beaverton", "portland", "vancouver", "north portland"],
+      "text": "The site describes the service area as Beaverton, Portland, and Vancouver. The service area section says Urban Yards serves local homes, multifamily properties, HOAs, and community landscapes. The core service area listed on the site is Portland, Vancouver, North Portland, and nearby communities. If a visitor is outside or near those areas, Urban Yards should confirm through the quote form."
+    },
+    {
+      "id": "contact-quote",
+      "title": "Contact and Quote",
+      "url": "/#quote",
+      "keywords": ["quote", "estimate", "contact", "phone", "email", "photos", "form", "request", "price", "cost"],
+      "text": "The quote section heading says: Ready to Improve Your Property? Visitors can request a free quote through the website form. The quote form asks for name, email, phone, property address or general area, service needed, optional photos, and additional details. Photo uploads can include up to 3 JPG, PNG, HEIC, or HEIF images, and they are compressed before sending. The site says there is no obligation and Urban Yards will review the request and respond as soon as possible. Contact phone: (971) 258-1109. Contact email: team@urbanyards.us."
+    },
+    {
+      "id": "footer",
+      "title": "Footer",
+      "url": "/#contact",
+      "keywords": ["footer", "quick links", "phone", "email", "contact"],
+      "text": "Footer tagline: First Impressions Start Here. Footer quick links include Home, Services, Homeowner Services, Property Management Services, Portfolio, About, and Contact. Footer services include Lawn Mowing, Landscape Maintenance, Seasonal Cleanup, Pressure Washing, Apartment Groundskeeping, and HOA Landscape Maintenance. Footer property types include Homeowners, Apartment Communities, HOAs, Condominiums, and Property Managers. Footer contact phone: (971) 258-1109. Footer contact email: team@urbanyards.us. Footer next step: Talk through your property. Most replies within 1 business day for Portland and Vancouver properties."
+    }
+  ],
+  "faqs": [
+    {
+      "id": "services-offered",
+      "question": "What services do you offer?",
+      "keywords": ["services", "offer", "do", "groundskeeping", "maintenance"],
+      "answer": "Urban Yards lists groundskeeping, landscape improvements, property support, and ecological enhancements. Specific services on the site include mowing, edging, weed management, seasonal cleanup, garden bed maintenance, mulching, shrub trimming, plant installations, trash area care, day porter services, pressure washing, native plantings, pollinator habitat, and low-water landscape direction."
+    },
+    {
+      "id": "service-areas",
+      "question": "What areas do you serve?",
+      "keywords": ["area", "areas", "serve", "location", "where"],
+      "answer": "The site lists Beaverton, Portland, Vancouver, North Portland, and nearby communities as the service area. If a property is near those areas, Urban Yards can confirm through the quote form."
+    },
+    {
+      "id": "owner-operated",
+      "question": "Are you owner-operated?",
+      "keywords": ["owner", "owned", "owner-operated", "tyler", "gage"],
+      "answer": "Yes. Urban Yards is owner-operated by Tyler Gage."
+    },
+    {
+      "id": "apartments",
+      "question": "Do you work with apartments?",
+      "keywords": ["apartment", "apartments", "multifamily", "hoa", "condo", "property manager"],
+      "answer": "Yes. Urban Yards lists services for apartment communities, condominium associations, HOAs, property management companies, and multifamily properties."
+    },
+    {
+      "id": "homeowners",
+      "question": "Do you work with homeowners?",
+      "keywords": ["homeowner", "homeowners", "house", "residential", "yard"],
+      "answer": "Yes. Urban Yards has a Homeowner Services page for routine maintenance, seasonal services, property appearance, landscape health, lawn mowing, edging, weed management, garden bed maintenance, mulching, shrub trimming, landscape refreshes, and seasonal cleanup."
+    },
+    {
+      "id": "quote",
+      "question": "How do I request a quote?",
+      "keywords": ["quote", "estimate", "price", "cost", "request"],
+      "answer": "You can request a free quote through the website form. The form asks for name, email, phone, property address or general area, service needed, optional photos, and additional details."
+    },
+    {
+      "id": "contact",
+      "question": "How can I contact Urban Yards?",
+      "keywords": ["contact", "phone", "email", "call"],
+      "answer": "You can contact Urban Yards through the quote form, by phone at (971) 258-1109, or by email at team@urbanyards.us."
+    }
+  ]
+}

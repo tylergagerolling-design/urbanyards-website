@@ -1165,6 +1165,30 @@ input:focus, select:focus, textarea:focus { outline: 0; }
   background: var(--forest);
   color: #fffdf7;
 }
+.uy-assistant-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 7px;
+  padding: 0 18px 14px;
+}
+.uy-assistant-actions[hidden] { display: none; }
+.uy-assistant-action {
+  border: 1px solid rgba(18, 63, 49, .16);
+  border-radius: 999px;
+  background: rgba(255, 253, 247, .78);
+  color: var(--forest);
+  cursor: pointer;
+  font: inherit;
+  font-size: .74rem;
+  line-height: 1.1;
+  padding: 8px 10px;
+}
+.uy-assistant-action:hover,
+.uy-assistant-action:focus-visible {
+  background: var(--leaf);
+  color: var(--paper);
+  outline: none;
+}
 .uy-assistant-typing {
   display: flex;
   gap: 5px;
@@ -2152,6 +2176,7 @@ input:focus, select:focus, textarea:focus { outline: 0; }
   }
   .uy-assistant-header,
   .uy-assistant-messages,
+  .uy-assistant-actions,
   .uy-assistant-form,
   .uy-assistant-note { padding-right: 14px; padding-left: 14px; }
   .uy-assistant-lead { margin-right: 14px; margin-left: 14px; }

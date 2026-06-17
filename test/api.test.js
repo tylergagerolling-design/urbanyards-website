@@ -8,7 +8,13 @@ const privacyHandler = require("../api/privacy-request");
 const retentionHandler = require("../api/retention-cleanup");
 const { sendWebhook } = require("../api/lib/integrations");
 const { verifyImage } = require("../api/lib/images");
-const { answerFromSiteKnowledge, buildSiteContext, getRelevantKnowledge } = require("../api/lib/site-knowledge");
+const {
+  ASSISTANT_KNOWLEDGE,
+  answerFromSiteKnowledge,
+  buildSiteContext,
+  getRelevantFaqs,
+  getRelevantKnowledge
+} = require("../api/lib/site-knowledge");
 
 function mockResponse() {
   return {
@@ -81,6 +87,8 @@ test("assistant answers from site knowledge by default without paid AI", async (
 });
 
 test("site knowledge retrieves relevant website sections", () => {
+  assert.equal(ASSISTANT_KNOWLEDGE.businessName, "Urban Yards Groundskeeping");
+  assert.equal(ASSISTANT_KNOWLEDGE.tagline, "First Impressions Start Here");
   assert.equal(getRelevantKnowledge("Do you mow lawns?")[0].id, "homeowner-services");
   assert.equal(getRelevantKnowledge("Do you work with apartments?")[0].id, "property-management-services");
   assert.match(buildSiteContext("Do you do pressure washing?"), /Pressure Washing/i);
@@ -95,6 +103,14 @@ test("site knowledge fallback answers common visitor questions", () => {
   assert.match(answerFromSiteKnowledge("What areas do you serve?"), /Portland/i);
   assert.match(answerFromSiteKnowledge("Are you owner operated?"), /Tyler Gage/i);
   assert.match(answerFromSiteKnowledge("Do you install fountains?"), /I don't see that listed on the site/i);
+});
+
+test("site knowledge retrieves FAQ answers and asks one lead question", () => {
+  assert.equal(getRelevantFaqs("How can I contact Urban Yards?")[0].id, "contact");
+  const reply = answerFromSiteKnowledge("Can I get a quote?", { propertyType: "Home" });
+  assert.match(reply, /free quote/i);
+  assert.match(reply, /What city or general area/i);
+  assert.doesNotMatch(reply, /What service are you looking for.*best phone number/s);
 });
 
 test("assistant falls back to site knowledge if the model request fails", async () => {

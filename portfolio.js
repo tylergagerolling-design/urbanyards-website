@@ -6,7 +6,8 @@ const header = document.querySelector(".site-header");
 const portfolioCards = [...document.querySelectorAll(".portfolio-card")];
 const filterButtons = [...document.querySelectorAll(".filter-button")];
 const emptyMessage = document.querySelector(".portfolio-empty");
-const activeNavLink = primaryNav.querySelector('[aria-current="page"]');
+const navDropdowns = [...document.querySelectorAll(".nav-dropdown")];
+const activeNavLink = primaryNav.querySelector(".nav-dropdown-toggle.is-current, .primary-nav > a[aria-current='page']");
 
 const positionNavIndicator = () => {
   if (!activeNavLink || window.innerWidth <= 760) return;
@@ -18,13 +19,40 @@ const positionNavIndicator = () => {
 menuToggle.addEventListener("click", () => {
   const open = primaryNav.classList.toggle("is-open");
   menuToggle.setAttribute("aria-expanded", String(open));
+  if (!open) closeNavDropdowns();
+});
+
+const closeNavDropdowns = () => {
+  navDropdowns.forEach((dropdown) => {
+    dropdown.classList.remove("is-open");
+    dropdown.querySelector(".nav-dropdown-toggle")?.setAttribute("aria-expanded", "false");
+  });
+};
+
+navDropdowns.forEach((dropdown) => {
+  const toggle = dropdown.querySelector(".nav-dropdown-toggle");
+  toggle?.addEventListener("click", () => {
+    const open = !dropdown.classList.contains("is-open");
+    closeNavDropdowns();
+    dropdown.classList.toggle("is-open", open);
+    toggle.setAttribute("aria-expanded", String(open));
+  });
 });
 
 primaryNav.querySelectorAll("a").forEach((link) => {
   link.addEventListener("click", () => {
+    closeNavDropdowns();
     primaryNav.classList.remove("is-open");
     menuToggle.setAttribute("aria-expanded", "false");
   });
+});
+
+document.addEventListener("click", (event) => {
+  if (!primaryNav.contains(event.target)) closeNavDropdowns();
+});
+
+document.addEventListener("keydown", (event) => {
+  if (event.key === "Escape") closeNavDropdowns();
 });
 
 filterButtons.forEach((button) => {

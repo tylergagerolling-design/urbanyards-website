@@ -3,9 +3,10 @@ document.documentElement.classList.add("js");
 const menuToggle = document.querySelector(".menu-toggle");
 const primaryNav = document.querySelector(".primary-nav");
 const header = document.querySelector(".site-header");
-const activeNavLink = primaryNav.querySelector('[aria-current="page"]');
+const activeNavLink = primaryNav.querySelector(".nav-dropdown-toggle.is-current, .primary-nav > a[aria-current='page']");
 const propertyButtons = [...document.querySelectorAll(".service-explorer-button")];
 const goalButtons = [...document.querySelectorAll(".service-goal-button")];
+const navDropdowns = [...document.querySelectorAll(".nav-dropdown")];
 
 let selectedProperty = "homeowner";
 let selectedGoal = "routine";
@@ -259,13 +260,40 @@ const updateExplorer = () => {
 menuToggle.addEventListener("click", () => {
   const open = primaryNav.classList.toggle("is-open");
   menuToggle.setAttribute("aria-expanded", String(open));
+  if (!open) closeNavDropdowns();
+});
+
+const closeNavDropdowns = () => {
+  navDropdowns.forEach((dropdown) => {
+    dropdown.classList.remove("is-open");
+    dropdown.querySelector(".nav-dropdown-toggle")?.setAttribute("aria-expanded", "false");
+  });
+};
+
+navDropdowns.forEach((dropdown) => {
+  const toggle = dropdown.querySelector(".nav-dropdown-toggle");
+  toggle?.addEventListener("click", () => {
+    const open = !dropdown.classList.contains("is-open");
+    closeNavDropdowns();
+    dropdown.classList.toggle("is-open", open);
+    toggle.setAttribute("aria-expanded", String(open));
+  });
 });
 
 primaryNav.querySelectorAll("a").forEach((link) => {
   link.addEventListener("click", () => {
+    closeNavDropdowns();
     primaryNav.classList.remove("is-open");
     menuToggle.setAttribute("aria-expanded", "false");
   });
+});
+
+document.addEventListener("click", (event) => {
+  if (!primaryNav.contains(event.target)) closeNavDropdowns();
+});
+
+document.addEventListener("keydown", (event) => {
+  if (event.key === "Escape") closeNavDropdowns();
 });
 
 propertyButtons.forEach((button) => {

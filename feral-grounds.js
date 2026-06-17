@@ -166,6 +166,8 @@ if (mapElement && window.L) {
     dropMode = false;
     siteDropButton?.classList.remove("is-active");
   });
+} else if (mapElement) {
+  mapElement.innerHTML = '<div class="map-fallback">Map tools are temporarily unavailable. Please refresh the page or try again shortly.</div>';
 }
 
 document.querySelector("#copyright-year").textContent = new Date().getFullYear();

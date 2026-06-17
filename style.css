@@ -948,6 +948,15 @@ input:focus, select:focus, textarea:focus { outline: 0; }
 .leaflet-service-map path {
   filter: drop-shadow(0 4px 4px rgba(18, 63, 49, .12));
 }
+.map-fallback {
+  display: grid;
+  min-height: inherit;
+  padding: 18px;
+  place-items: center;
+  color: var(--muted);
+  font-size: .84rem;
+  text-align: center;
+}
 .map-actions {
   position: absolute;
   right: 10px;

@@ -65,16 +65,19 @@ test("valid quote fails honestly when no delivery integration is configured", as
   Object.entries(original).forEach(([key, value]) => value === undefined ? delete process.env[key] : process.env[key] = value);
 });
 
-test("assistant answers from site knowledge without an OpenAI key", async () => {
+test("assistant answers from site knowledge by default without paid AI", async () => {
   const key = process.env.OPENAI_API_KEY;
-  delete process.env.OPENAI_API_KEY;
+  const useExternalAi = process.env.ASSISTANT_USE_EXTERNAL_AI;
+  process.env.OPENAI_API_KEY = "configured-key";
+  delete process.env.ASSISTANT_USE_EXTERNAL_AI;
   const res = mockResponse();
   await assistantHandler(request("POST", { message: "Do you mow lawns?" }), res);
   assert.equal(res.statusCode, 200);
   assert.match(res.payload.reply, /lawn mowing/i);
   assert.equal(res.payload.source, "site-knowledge");
   assert.equal("OPENAI_API_KEY" in res.payload, false);
-  if (key !== undefined) process.env.OPENAI_API_KEY = key;
+  key === undefined ? delete process.env.OPENAI_API_KEY : process.env.OPENAI_API_KEY = key;
+  useExternalAi === undefined ? delete process.env.ASSISTANT_USE_EXTERNAL_AI : process.env.ASSISTANT_USE_EXTERNAL_AI = useExternalAi;
 });
 
 test("site knowledge retrieves relevant website sections", () => {
@@ -96,8 +99,10 @@ test("site knowledge fallback answers common visitor questions", () => {
 
 test("assistant falls back to site knowledge if the model request fails", async () => {
   const originalKey = process.env.OPENAI_API_KEY;
+  const originalUseExternalAi = process.env.ASSISTANT_USE_EXTERNAL_AI;
   const originalFetch = global.fetch;
   process.env.OPENAI_API_KEY = "test-key";
+  process.env.ASSISTANT_USE_EXTERNAL_AI = "true";
   global.fetch = async () => ({ ok: false, status: 500 });
   try {
     const res = mockResponse();
@@ -108,14 +113,17 @@ test("assistant falls back to site knowledge if the model request fails", async 
   } finally {
     global.fetch = originalFetch;
     originalKey === undefined ? delete process.env.OPENAI_API_KEY : process.env.OPENAI_API_KEY = originalKey;
+    originalUseExternalAi === undefined ? delete process.env.ASSISTANT_USE_EXTERNAL_AI : process.env.ASSISTANT_USE_EXTERNAL_AI = originalUseExternalAi;
   }
 });
 
 test("assistant sends relevant site knowledge to the model", async () => {
   const originalKey = process.env.OPENAI_API_KEY;
+  const originalUseExternalAi = process.env.ASSISTANT_USE_EXTERNAL_AI;
   const originalFetch = global.fetch;
   let capturedBody;
   process.env.OPENAI_API_KEY = "test-key";
+  process.env.ASSISTANT_USE_EXTERNAL_AI = "true";
   global.fetch = async (url, options) => {
     assert.equal(url, "https://api.openai.com/v1/chat/completions");
     capturedBody = JSON.parse(options.body);
@@ -138,6 +146,7 @@ test("assistant sends relevant site knowledge to the model", async () => {
   } finally {
     global.fetch = originalFetch;
     originalKey === undefined ? delete process.env.OPENAI_API_KEY : process.env.OPENAI_API_KEY = originalKey;
+    originalUseExternalAi === undefined ? delete process.env.ASSISTANT_USE_EXTERNAL_AI : process.env.ASSISTANT_USE_EXTERNAL_AI = originalUseExternalAi;
   }
 });
 

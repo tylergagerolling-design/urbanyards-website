@@ -34,6 +34,10 @@ function cleanMessages(history = []) {
     }));
 }
 
+function shouldUseExternalAi() {
+  return process.env.ASSISTANT_USE_EXTERNAL_AI === "true" && Boolean(process.env.OPENAI_API_KEY);
+}
+
 async function handler(req, res) {
   const id = requestId(req);
   setApiHeaders(res, id);
@@ -56,7 +60,7 @@ async function handler(req, res) {
     return res.status(400).json({ error: "Message is required", requestId: id });
   }
 
-  if (!process.env.OPENAI_API_KEY) {
+  if (!shouldUseExternalAi()) {
     return res.status(200).json({
       reply: answerFromSiteKnowledge(userMessage),
       requestId: id,

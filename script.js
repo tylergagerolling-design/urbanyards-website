@@ -300,8 +300,10 @@ updateCalendarDisplay();
 
 const positionNavIndicator = (link) => {
   if (!link || window.innerWidth <= 760) return;
-  primaryNav.style.setProperty("--nav-indicator-x", `${link.offsetLeft}px`);
-  primaryNav.style.setProperty("--nav-indicator-width", `${link.offsetWidth}px`);
+  const navRect = primaryNav.getBoundingClientRect();
+  const linkRect = link.getBoundingClientRect();
+  primaryNav.style.setProperty("--nav-indicator-x", `${linkRect.left - navRect.left}px`);
+  primaryNav.style.setProperty("--nav-indicator-width", `${linkRect.width}px`);
   primaryNav.style.setProperty("--nav-indicator-opacity", "1");
 };
 

@@ -11,8 +11,10 @@ const activeNavLink = primaryNav.querySelector(".nav-dropdown-toggle.is-current,
 
 const positionNavIndicator = () => {
   if (!activeNavLink || window.innerWidth <= 760) return;
-  primaryNav.style.setProperty("--nav-indicator-x", `${activeNavLink.offsetLeft}px`);
-  primaryNav.style.setProperty("--nav-indicator-width", `${activeNavLink.offsetWidth}px`);
+  const navRect = primaryNav.getBoundingClientRect();
+  const activeRect = activeNavLink.getBoundingClientRect();
+  primaryNav.style.setProperty("--nav-indicator-x", `${activeRect.left - navRect.left}px`);
+  primaryNav.style.setProperty("--nav-indicator-width", `${activeRect.width}px`);
   primaryNav.style.setProperty("--nav-indicator-opacity", "1");
 };
 

@@ -2,6 +2,8 @@
   const storageKey = "urbanYardsAssistantConversation";
   const maxStoredMessages = 18;
   const leadSignals = ["quote", "estimate", "price", "cost", "hire", "schedule", "book", "service", "cleanup", "mowing", "mulch", "trim", "porter", "address", "property"];
+  const siteContact = "Phone: (971) 258-1109. Email: team@urbanyards.us.";
+  const quotePrompt = "The best next step is to request a free quote through the website form with your property address or general area, service needed, timeline, details, and photos if useful.";
   const defaultMessages = [{
     role: "assistant",
     content: "Hi, I am The Groundskeeper. I can help with service questions, seasonal property care, and preparing details for Urban Yards to review."
@@ -159,34 +161,34 @@
 
   function fallbackReply(message) {
     const text = message.toLowerCase();
-    if (text.includes("owner") || text.includes("who owns") || text.includes("owned by")) {
-      return "Tyler Gage.";
+    if (text.includes("owner") || text.includes("who owns") || text.includes("owned by") || text.includes("owner operated")) {
+      return `Yes. Urban Yards is owner-operated by Tyler Gage. The About page describes the business as practical, eco-conscious, reliable, and focused on healthier, more welcoming outdoor spaces.\n\n${quotePrompt}`;
     }
     if (text.includes("quote") || text.includes("estimate") || text.includes("price") || text.includes("cost")) {
-      return "I can help prepare quote details. A good starting point is property type, general location, service needed, approximate size, desired timeline, and photos if available.\n\nFinal pricing and scheduling require review of the property and project details. Please submit the website contact form so Urban Yards can review everything in one place.";
+      return `You can request a free quote through the website form. It asks for your name, email, phone, property address or general area, service needed, optional photos, and additional details.\n\nFinal pricing and scheduling require review of the property and project details. ${siteContact}`;
     }
-    if (text.includes("apartment") || text.includes("hoa") || text.includes("commercial") || text.includes("porter")) {
-      return "Urban Yards works with multifamily, apartment communities, HOAs, and commercial properties.\n\nCommon fits include routine groundskeeping, day porter style cleanup, trash and recycling enclosure cleanup, seasonal cleanup, and landscape bed maintenance. What type of property are you asking about?";
+    if (text.includes("area") || text.includes("serve") || text.includes("where") || text.includes("location")) {
+      return `The site lists Beaverton, Portland, Vancouver, North Portland, and nearby communities as the core service area. If you are near those areas, Urban Yards can confirm through a quote request.\n\n${siteContact}`;
     }
-    if (text.includes("mulch") || text.includes("bed")) {
-      return "For Portland-area properties, mulch and bed refreshes are often useful in spring or early fall.\n\nMulch helps beds look clean, reduces weed pressure, protects soil moisture through dry summers, and gives tired plantings a sharper first impression. Urban Yards can review the site before confirming scope or timing.";
+    if (text.includes("apartment") || text.includes("hoa") || text.includes("condo") || text.includes("multifamily") || text.includes("property manager") || text.includes("porter")) {
+      return `Yes. The site lists property management services for apartment communities, condominium associations, HOAs, property management companies, and multifamily properties.\n\nRelevant services include common area upkeep, trash and recycling enclosure care, day porter services, pressure washing, seasonal cleanup, recurring groundskeeping, and property appearance audits. ${quotePrompt}`;
     }
-    if (text.includes("lawn") || text.includes("mow") || text.includes("edge")) {
-      return "Urban Yards offers lawn mowing, edging, weed trimming, and routine groundskeeping. In active growing season, consistent service usually keeps curb appeal stronger than catch-up visits.";
+    if (text.includes("pressure wash") || text.includes("pressure washing") || text.includes("wash")) {
+      return `Yes. Pressure Washing is listed in the footer services and on the Property Management Services page. ${quotePrompt}`;
     }
-    if (text.includes("shrub") || text.includes("tree") || text.includes("prune") || text.includes("trim")) {
-      return "Urban Yards can help with shrub trimming and small tree pruning. Timing depends on the plant and the goal, so final recommendations should be reviewed against the property details.";
+    if (text.includes("lawn") || text.includes("mow") || text.includes("mowing") || text.includes("edge")) {
+      return `Yes. Urban Yards lists lawn mowing, edging, weed management, garden bed maintenance, seasonal cleanup, and routine groundskeeping for homeowners and other property types.\n\n${quotePrompt}`;
     }
-    if (text.includes("water") || text.includes("season") || text.includes("spring") || text.includes("fall") || text.includes("winter") || text.includes("summer")) {
-      return "Seasonal care in the Portland Metro area usually centers on spring cleanup and bed refreshes, summer mowing and irrigation checks, fall leaf cleanup, and winter storm debris prep.";
+    if (text.includes("mulch") || text.includes("bed") || text.includes("plant") || text.includes("native") || text.includes("pollinator") || text.includes("low-water") || text.includes("ecological")) {
+      return `Yes. The site lists landscape improvements such as plant installations, mulch refreshes, privacy screens, and ecological enhancements like native plantings, pollinator habitat, low-water landscapes, and urban greening.\n\n${quotePrompt}`;
     }
-    if (text.includes("plant") || text.includes("native") || text.includes("pollinator") || text.includes("groundcover")) {
-      return "For Portland-area landscapes, native and climate-appropriate plants are usually the best long-term fit.\n\nGood options can include Oregon Grape for tough evergreen structure, Red Twig Dogwood for winter color and wet soils, Kinnikinnick for low groundcover, and Yarrow or Oregon Sunshine for pollinator value. The right choice depends on sun, water, soil, and maintenance goals.";
+    if (text.includes("season") || text.includes("spring") || text.includes("fall") || text.includes("winter") || text.includes("summer")) {
+      return `The Services page includes a Portland Property Care Calendar for seasonal planning. The site points visitors toward routine care, seasonal cleanup, bed refreshes, mowing, edging, irrigation checks, leaf cleanup, storm cleanup, and similar property care depending on the season.\n\n${quotePrompt}`;
     }
     if (text.includes("phone") || text.includes("email") || text.includes("contact")) {
-      return "For direct contact, please use the website contact form so Urban Yards can review the details in one place.";
+      return `You can contact Urban Yards through the quote form, by phone, or by email. ${siteContact}`;
     }
-    return "I specialize in Urban Yards services, landscaping, and property maintenance. Urban Yards helps with mowing, edging, weed trimming, seasonal cleanup, shrub trimming, mulch, property cleanup, apartment community maintenance, and day porter style groundskeeping.";
+    return `I don't see that listed on the site, but you can request a quote and Urban Yards can confirm. ${siteContact}`;
   }
 
   async function submitMessage() {

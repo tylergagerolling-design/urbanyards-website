@@ -8,6 +8,7 @@ const privacyHandler = require("../api/privacy-request");
 const retentionHandler = require("../api/retention-cleanup");
 const { sendWebhook } = require("../api/lib/integrations");
 const { verifyImage } = require("../api/lib/images");
+const { buildSiteContext, getRelevantKnowledge } = require("../api/lib/site-knowledge");
 
 function mockResponse() {
   return {
@@ -72,6 +73,45 @@ test("assistant reports unavailable without exposing configuration details", asy
   assert.equal(res.statusCode, 503);
   assert.equal(res.payload.error, "Assistant is temporarily unavailable");
   if (key !== undefined) process.env.OPENAI_API_KEY = key;
+});
+
+test("site knowledge retrieves relevant website sections", () => {
+  assert.equal(getRelevantKnowledge("Do you mow lawns?")[0].id, "homeowner-services");
+  assert.equal(getRelevantKnowledge("Do you work with apartments?")[0].id, "property-management-services");
+  assert.match(buildSiteContext("Do you do pressure washing?"), /Pressure Washing/i);
+  assert.match(buildSiteContext("What areas do you serve?"), /Portland, Vancouver, North Portland/i);
+  assert.match(buildSiteContext("How do I get a quote?"), /name, email, phone, property address/i);
+  assert.match(buildSiteContext("Are you owner operated?"), /owner-operated by Tyler Gage/i);
+});
+
+test("assistant sends relevant site knowledge to the model", async () => {
+  const originalKey = process.env.OPENAI_API_KEY;
+  const originalFetch = global.fetch;
+  let capturedBody;
+  process.env.OPENAI_API_KEY = "test-key";
+  global.fetch = async (url, options) => {
+    assert.equal(url, "https://api.openai.com/v1/chat/completions");
+    capturedBody = JSON.parse(options.body);
+    return {
+      ok: true,
+      async json() {
+        return { choices: [{ message: { content: "Yes. Pressure Washing is listed on the site." } }] };
+      }
+    };
+  };
+  try {
+    const res = mockResponse();
+    await assistantHandler(request("POST", { message: "Do you do pressure washing?", page: "Home" }), res);
+    assert.equal(res.statusCode, 200);
+    assert.match(res.payload.reply, /Pressure Washing/i);
+    const siteMessage = capturedBody.messages.find((message) => message.content.startsWith("Urban Yards website knowledge source"));
+    assert.ok(siteMessage);
+    assert.match(siteMessage.content, /Pressure Washing/i);
+    assert.match(siteMessage.content, /request a quote/i);
+  } finally {
+    global.fetch = originalFetch;
+    originalKey === undefined ? delete process.env.OPENAI_API_KEY : process.env.OPENAI_API_KEY = originalKey;
+  }
 });
 
 test("health endpoint reports service state without secrets", async () => {

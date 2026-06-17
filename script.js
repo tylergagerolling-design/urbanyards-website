@@ -140,6 +140,17 @@ const buildServiceMap = (elementId, expanded = false) => {
 const compactServiceMap = buildServiceMap("service-area-map");
 const expandedServiceMap = buildServiceMap("expanded-service-area-map", true);
 
+const refreshServiceMaps = () => {
+  [compactServiceMap, expandedServiceMap].forEach((map) => {
+    if (!map) return;
+    const rect = map.getContainer().getBoundingClientRect();
+    if (!rect.width || !rect.height) return;
+    map.invalidateSize();
+    map.fitBounds(map.serviceBounds, { padding: map === expandedServiceMap ? [28, 28] : [18, 18] });
+  });
+};
+window.addEventListener("load", refreshServiceMaps);
+
 const requestedService = new URLSearchParams(window.location.search).get("service");
 if (requestedService && serviceSelect) {
   const matchingOption = [...serviceSelect.options].find((option) => option.value === requestedService || option.textContent === requestedService);
@@ -464,6 +475,7 @@ window.addEventListener("scroll", updateScrollEffects, { passive: true });
 window.addEventListener("resize", () => {
   positionNavIndicator(navLinks.find((link) => link.hasAttribute("aria-current")));
   syncServiceAccordions();
+  refreshServiceMaps();
 });
 updateScrollEffects();
 

@@ -891,6 +891,10 @@ input:focus, select:focus, textarea:focus { outline: 0; }
 .footer-bottom a { color: inherit; font-size: .78rem; }
 .lower-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 17px; }
 .lower-card { display: grid; grid-template-columns: .9fr 1.1fr; min-height: 248px; }
+.lower-card:has(.map-embed) {
+  grid-column: 1 / -1;
+  grid-template-columns: minmax(260px, .78fr) minmax(420px, 1.22fr);
+}
 .lower-card > div:first-child { padding: 24px; }
 .lower-card h2 { font-size: 2rem; }
 .lower-card .text-link { margin-left: 0; }
@@ -898,7 +902,8 @@ input:focus, select:focus, textarea:focus { outline: 0; }
 .map-embed {
   position: relative;
   isolation: isolate;
-  min-height: 100%;
+  height: clamp(360px, 38vw, 460px);
+  min-height: 360px;
   overflow: hidden;
   border-left: 1px solid var(--line);
   background: var(--sage-soft);
@@ -912,6 +917,10 @@ input:focus, select:focus, textarea:focus { outline: 0; }
   height: 100%;
   aspect-ratio: 1;
   background: #dfe8d3;
+}
+.map-embed .leaflet-service-map {
+  min-height: 360px;
+  aspect-ratio: auto;
 }
 .leaflet-service-map .leaflet-tile-pane {
   filter: saturate(.48) sepia(.1) hue-rotate(345deg) brightness(1.05) contrast(.88);
@@ -1946,6 +1955,7 @@ input:focus, select:focus, textarea:focus { outline: 0; }
   .portfolio-grid { grid-template-columns: repeat(2, 1fr); }
   .service-explorer-controls, .service-explorer-result, .service-frequency, .about-story-grid { grid-template-columns: 1fr; }
   .lower-grid { grid-template-columns: 1fr; }
+  .lower-card:has(.map-embed) { grid-template-columns: 1fr; }
   .footer-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 }
 @media (max-width: 760px) {
@@ -2185,8 +2195,9 @@ input:focus, select:focus, textarea:focus { outline: 0; }
   .uy-assistant-form .button { width: 100%; }
   .lower-card { grid-template-columns: 1fr; }
   .placeholder-lower { min-height: 165px; border-top: 1px dashed rgba(18, 63, 49, .2); border-left: 0; }
-  .map-embed { min-height: 230px; border-top: 1px solid var(--line); border-left: 0; }
+  .map-embed { height: auto; min-height: 230px; border-top: 1px solid var(--line); border-left: 0; }
   .leaflet-service-map { min-height: 230px; }
+  .map-embed .leaflet-service-map { min-height: 230px; }
   .map-actions { right: 8px; bottom: 8px; left: 8px; justify-content: flex-end; }
   .map-link, .map-expand { padding: 6px 8px; font-size: .55rem; }
   .map-dialog { padding: 13px; }

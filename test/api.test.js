@@ -4,7 +4,6 @@ const assert = require("node:assert/strict");
 const quoteHandler = require("../api/quote");
 const assistantHandler = require("../api/assistant");
 const healthHandler = require("../api/health");
-const privacyHandler = require("../api/privacy-request");
 const retentionHandler = require("../api/retention-cleanup");
 const { sendWebhook } = require("../api/lib/integrations");
 const { verifyImage } = require("../api/lib/images");
@@ -211,12 +210,6 @@ test("retention cleanup requires its secret", async () => {
   const res = mockResponse();
   await retentionHandler(request("POST"), res);
   assert.equal(res.statusCode, 401);
-});
-
-test("privacy request validates email before delivery", async () => {
-  const res = mockResponse();
-  await privacyHandler(request("POST", { email: "not-an-email" }), res);
-  assert.equal(res.statusCode, 400);
 });
 
 test("quote webhooks include an HMAC signature", async () => {

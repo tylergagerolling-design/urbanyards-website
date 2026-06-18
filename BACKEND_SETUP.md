@@ -19,14 +19,13 @@ At least one of Resend, Airtable, or `QUOTE_WEBHOOK_URL` must be configured or t
 
 - Health: `GET /api/health`
 - Lead CSV: `GET /api/leads-export` with `Authorization: Bearer YOUR_ADMIN_EXPORT_TOKEN`
-- Privacy deletion requests: `POST /api/privacy-request` with `email`, optional original `quoteRequestId`, and the Turnstile token when enabled.
 - Daily retention removes Airtable leads and Cloudinary quote photos older than `LEAD_RETENTION_DAYS` (180 by default).
 - Tests: `npm test`
 - Syntax checks: `npm run check`
 
 Server logs use structured JSON events with request IDs, making failed deliveries and assistant errors searchable in Netlify logs.
 
-Outgoing quote, privacy, and security webhooks include `X-Urban-Yards-Timestamp` and an `X-Urban-Yards-Signature` HMAC (`sha256=...`). Verify the signature against `timestamp + "." + rawRequestBody`, reject timestamps older than five minutes, and use the corresponding webhook secret.
+Outgoing quote and security webhooks include `X-Urban-Yards-Timestamp` and an `X-Urban-Yards-Signature` HMAC (`sha256=...`). Verify the signature against `timestamp + "." + rawRequestBody`, reject timestamps older than five minutes, and use the corresponding webhook secret.
 
 Set `SECURITY_ALERT_WEBHOOK_URL` to receive redacted alerts for rate-limit spikes, delivery outages, unauthorized exports, and retention failures. Alert payloads intentionally exclude customer names, contact details, messages, and photos.
 

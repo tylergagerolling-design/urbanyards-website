@@ -4,7 +4,7 @@
   "private": true,
   "scripts": {
     "test": "node --test",
-    "check": "node --check script.js && node --check assistant.js && node --check privacy.js && node --check api/assistant.js && node --check api/quote.js && node --check api/privacy-request.js && node --check api/retention-cleanup.js",
+    "check": "node --check script.js && node --check assistant.js && node --check api/assistant.js && node --check api/quote.js && node --check api/retention-cleanup.js",
     "dev": "netlify dev"
   },
   "engines": { "node": ">=20" }

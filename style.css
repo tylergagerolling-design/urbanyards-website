@@ -893,7 +893,7 @@ input:focus, select:focus, textarea:focus { outline: 0; }
 .lower-card { display: grid; grid-template-columns: .9fr 1.1fr; min-height: 248px; }
 .lower-card:has(.map-embed) {
   grid-column: 1 / -1;
-  grid-template-columns: minmax(260px, .78fr) minmax(420px, 1.22fr);
+  grid-template-columns: minmax(300px, .9fr) minmax(360px, 1.1fr);
 }
 .lower-card > div:first-child { padding: 24px; }
 .lower-card h2 { font-size: 2rem; }
@@ -902,8 +902,8 @@ input:focus, select:focus, textarea:focus { outline: 0; }
 .map-embed {
   position: relative;
   isolation: isolate;
-  height: clamp(360px, 38vw, 460px);
-  min-height: 360px;
+  height: clamp(285px, 30vw, 340px);
+  min-height: 285px;
   overflow: hidden;
   border-left: 1px solid var(--line);
   background: var(--sage-soft);
@@ -919,7 +919,7 @@ input:focus, select:focus, textarea:focus { outline: 0; }
   background: #dfe8d3;
 }
 .map-embed .leaflet-service-map {
-  min-height: 360px;
+  min-height: 285px;
   aspect-ratio: auto;
 }
 .leaflet-service-map .leaflet-tile-pane {

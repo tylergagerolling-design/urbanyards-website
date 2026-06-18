@@ -7,9 +7,9 @@
     <meta name="theme-color" content="#123f31">
     <title>Urban Yards Owner Dashboard</title>
     <link rel="icon" href="/favicon.ico" sizes="any">
-    <link rel="stylesheet" href="dashboard.css?v=20260618-2">
-    <script src="dashboard-config.js?v=20260618-2" defer></script>
-    <script src="dashboard.js?v=20260618-2" defer></script>
+    <link rel="stylesheet" href="dashboard.css?v=20260618-3">
+    <script src="dashboard-config.js?v=20260618-3" defer></script>
+    <script src="dashboard.js?v=20260618-3" defer></script>
   </head>
   <body>
     <main class="dashboard-shell" aria-labelledby="dashboard-title">
@@ -60,6 +60,7 @@
               <button type="button" data-new-note>New Note</button>
             </div>
           </header>
+          <div class="dashboard-state" data-dashboard-state role="status" hidden></div>
 
           <section class="dashboard-section" id="overview" data-section="overview">
             <div class="metric-grid" data-metrics></div>
@@ -91,7 +92,7 @@
             <div class="panel">
               <div class="panel-heading">
                 <h3>Quote/contact submissions</h3>
-                <p>Sample data for now. This will read from Supabase tables later.</p>
+                <p>Live quote requests from Supabase.</p>
               </div>
               <div class="table-wrap">
                 <table>

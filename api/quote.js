@@ -1,4 +1,4 @@
-const { saveToAirtable, sendEmail, sendWebhook, uploadPhoto } = require("./lib/integrations");
+const { saveToAirtable, saveToSupabase, sendEmail, sendWebhook, uploadPhoto } = require("./lib/integrations");
 const {
   allowedOrigin, clientIp, rateLimit, requestId, setApiHeaders, text, validEmail, verifyTurnstile
 } = require("./lib/security");
@@ -84,6 +84,7 @@ async function handler(req, res) {
 
     const results = await Promise.allSettled([
       sendEmail(lead, photos, photoUrls, id),
+      saveToSupabase(lead, photoUrls, id),
       saveToAirtable(lead, photoUrls, id),
       sendWebhook(lead, photoUrls, id)
     ]);

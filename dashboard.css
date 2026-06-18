@@ -160,7 +160,8 @@ textarea:focus {
 }
 
 .form-note,
-.form-status {
+.form-status,
+.dashboard-state {
   margin: 0;
   color: var(--uy-muted);
   font-size: 0.86rem;
@@ -168,6 +169,21 @@ textarea:focus {
 }
 
 .form-status[data-tone="error"] {
+  color: var(--uy-danger);
+}
+
+.dashboard-state {
+  margin-bottom: 16px;
+  padding: 12px 14px;
+  border: 1px solid var(--uy-line);
+  border-radius: 8px;
+  background: #fff;
+}
+
+.dashboard-state[data-tone="error"],
+.error-state {
+  border-color: rgba(143, 47, 34, 0.24);
+  background: #fff5f2;
   color: var(--uy-danger);
 }
 
@@ -377,8 +393,27 @@ textarea:focus {
 .contact-card,
 .job-card,
 .note-card,
-.reminder-card {
+.reminder-card,
+.empty-state,
+.loading-state {
   padding: 14px;
+}
+
+.empty-state,
+.loading-state {
+  border: 1px dashed var(--uy-line);
+  border-radius: 8px;
+  background: #fbfaf5;
+  color: var(--uy-muted);
+}
+
+.status-select {
+  min-width: 132px;
+  min-height: 36px;
+  padding: 6px 9px;
+  border-radius: 999px;
+  font-size: 0.82rem;
+  font-weight: 800;
 }
 
 .item-topline {

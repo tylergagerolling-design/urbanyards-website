@@ -2,7 +2,7 @@
 
 The owner dashboard is available at `/dashboard`. It is intentionally not linked from public navigation or the footer, and the page is marked `noindex,nofollow`.
 
-The dashboard now uses Supabase Auth for login/logout. The dashboard records are still sample data until the database tables below are created and wired into `loadDashboardData()` in `dashboard.js`.
+The dashboard now uses Supabase Auth for login/logout and reads/writes the Supabase dashboard tables after the SQL below has been run.
 
 ## Netlify Environment Variables
 
@@ -11,6 +11,8 @@ Add these in Netlify under Site configuration > Environment variables:
 ```text
 VITE_SUPABASE_URL=https://gvdeqqrbonulwgmgpgis.supabase.co
 VITE_SUPABASE_ANON_KEY=sb_publishable_vdgK4ap6lzVz379PcwN4cw_LZrHZRCS
+SUPABASE_URL=https://gvdeqqrbonulwgmgpgis.supabase.co
+SUPABASE_SERVICE_ROLE_KEY=your-service-role-key
 ```
 
 Optional:
@@ -20,6 +22,8 @@ VITE_DASHBOARD_OWNER_EMAIL=team@urbanyards.us
 ```
 
 Netlify runs `node scripts/build-dashboard-config.js` during deploy. That script generates `dashboard-config.js` from the environment variables.
+
+`SUPABASE_SERVICE_ROLE_KEY` is server-only. It lets the Netlify quote function save public website quote requests into `quote_submissions`. Do not paste the service-role key into frontend code.
 
 ## Supabase Auth Settings
 
@@ -49,9 +53,9 @@ Create the owner manually:
 
 Do not create dashboard users for any other email unless the dashboard owner email is intentionally changed.
 
-## SQL For Future Dashboard Tables
+## SQL For Dashboard Tables
 
-Run this SQL in Supabase SQL Editor when you are ready to store real dashboard records.
+Run this SQL in Supabase SQL Editor to create the dashboard records.
 
 ```sql
 create type dashboard_status as enum (

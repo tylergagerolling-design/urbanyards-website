@@ -105,6 +105,48 @@ async function saveToAirtable(lead, photoUrls, requestId) {
   return true;
 }
 
+async function saveToSupabase(lead, photoUrls, requestId) {
+  const url = (process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL || "").replace(/\/$/, "");
+  const key = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_SERVICE_KEY;
+  if (!url || !key) return false;
+
+  const noteParts = [
+    lead.message ? `Message: ${lead.message}` : "",
+    lead.timeline ? `Timeline: ${lead.timeline}` : "",
+    lead.location ? `Location: ${lead.location}` : "",
+    photoUrls.length ? `Photos: ${photoUrls.join(", ")}` : "",
+    `Request ID: ${requestId}`
+  ].filter(Boolean);
+
+  const payload = {
+    name: lead.name,
+    email: lead.email,
+    phone: lead.phone,
+    city: lead.location,
+    property_type: lead.location,
+    service: lead.service,
+    source: lead.source || "Website quote form",
+    status: "New",
+    follow_up: "New website quote request",
+    notes: noteParts.join("\n\n")
+  };
+
+  const response = await fetch(`${url}/rest/v1/quote_submissions`, {
+    method: "POST",
+    headers: {
+      apikey: key,
+      Authorization: `Bearer ${key}`,
+      "Content-Type": "application/json",
+      Prefer: "return=minimal"
+    },
+    body: JSON.stringify(payload),
+    signal: AbortSignal.timeout(10000)
+  });
+
+  if (!response.ok) throw new Error(`Supabase quote archive failed (${response.status})`);
+  return true;
+}
+
 async function sendWebhook(lead, photoUrls, requestId) {
   if (!process.env.QUOTE_WEBHOOK_URL) return false;
   const payload = JSON.stringify({ requestId, receivedAt: new Date().toISOString(), lead, photoUrls });
@@ -127,4 +169,4 @@ async function sendWebhook(lead, photoUrls, requestId) {
   return true;
 }
 
-module.exports = { saveToAirtable, sendEmail, sendWebhook, uploadPhoto };
+module.exports = { saveToAirtable, saveToSupabase, sendEmail, sendWebhook, uploadPhoto };

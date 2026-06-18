@@ -10,6 +10,13 @@ function getSquareAccessToken() {
   return token;
 }
 
+function parseEnvList(value) {
+  return String(value || "")
+    .split(",")
+    .map((item) => item.trim())
+    .filter(Boolean);
+}
+
 async function squareRequest(method, path, body) {
   const response = await fetch(`https://connect.squareup.com${path}`, {
     method,
@@ -31,13 +38,13 @@ async function squareRequest(method, path, body) {
 }
 
 async function findCustomerIdsByEmail(email) {
-  // Square Customers Search supports exact email filtering. If Square adjusts
-  // this shape, update only this query while keeping the returned ids trimmed.
+  // Square Customers Search documents email_address.fuzzy for email matching.
+  // We still verify the exact email client-side before using the customer id.
   const payload = await squareRequest("POST", "/v2/customers/search", {
     query: {
       filter: {
         email_address: {
-          exact: email
+          fuzzy: email
         }
       }
     },
@@ -100,7 +107,8 @@ async function getInvoice(invoiceId) {
 
 async function searchInvoices(customerIds) {
   const filter = {};
-  if (process.env.SQUARE_LOCATION_ID) filter.location_ids = [process.env.SQUARE_LOCATION_ID];
+  const locationIds = parseEnvList(process.env.SQUARE_LOCATION_ID);
+  if (locationIds.length) filter.location_ids = locationIds;
   if (customerIds.length) filter.customer_ids = customerIds;
 
   const payload = await squareRequest("POST", "/v2/invoices/search", {

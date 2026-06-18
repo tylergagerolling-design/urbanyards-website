@@ -144,48 +144,125 @@
     return (config.ownerEmail || "team@urbanyards.us").toLowerCase();
   }
 
-  // Supabase setup note:
-  // When the project is ready, load @supabase/supabase-js and create the client here
-  // using config.supabaseUrl and config.supabaseAnonKey from dashboard-config.js.
-  function createSupabaseClient() {
-    if (!config.supabaseUrl || !config.supabaseAnonKey || !window.supabase) {
-      return null;
+  function getSupabaseUrl() {
+    return String(config.supabaseUrl || "").replace(/\/$/, "");
+  }
+
+  function isSupabaseConfigured() {
+    return Boolean(getSupabaseUrl() && config.supabaseAnonKey);
+  }
+
+  async function supabaseAuthRequest(path, options, accessToken) {
+    if (!isSupabaseConfigured()) {
+      throw new Error("Supabase is missing configuration. Add the Netlify environment variables and redeploy.");
     }
 
-    return window.supabase.createClient(config.supabaseUrl, config.supabaseAnonKey);
+    const headers = {
+      apikey: config.supabaseAnonKey,
+      "Content-Type": "application/json",
+      ...(options && options.headers ? options.headers : {})
+    };
+
+    if (accessToken) {
+      headers.Authorization = `Bearer ${accessToken}`;
+    }
+
+    const response = await fetch(`${getSupabaseUrl()}${path}`, {
+      ...options,
+      headers
+    });
+
+    const text = await response.text();
+    const payload = text ? JSON.parse(text) : {};
+
+    if (!response.ok) {
+      throw new Error(payload.error_description || payload.msg || payload.message || "Supabase request failed.");
+    }
+
+    return payload;
+  }
+
+  function normalizeAuthSession(payload) {
+    const userEmail = String(payload.user && payload.user.email ? payload.user.email : "").toLowerCase();
+
+    if (userEmail !== getOwnerEmail()) {
+      throw new Error(`Only ${getOwnerEmail()} can access this dashboard.`);
+    }
+
+    const expiresIn = Number(payload.expires_in || 3600);
+
+    return {
+      accessToken: payload.access_token,
+      refreshToken: payload.refresh_token,
+      expiresAt: Date.now() + expiresIn * 1000,
+      email: userEmail
+    };
   }
 
   async function signInOwner(email, password) {
-    const supabase = createSupabaseClient();
-
-    if (supabase) {
-      // Replace mock behavior with Supabase Auth once configured:
-      // const { data, error } = await supabase.auth.signInWithPassword({ email, password });
-      // if (error) throw error;
-      // if (data.user.email.toLowerCase() !== getOwnerEmail()) throw new Error("Unauthorized email.");
-      // return { email: data.user.email, mock: false };
-    }
-
     if (email.toLowerCase() !== getOwnerEmail()) {
-      throw new Error(`Only ${getOwnerEmail()} is prepared for dashboard access.`);
+      throw new Error(`Only ${getOwnerEmail()} can access this dashboard.`);
     }
 
-    if (!password) {
-      throw new Error("Enter a password. Supabase will verify it after setup.");
+    const payload = await supabaseAuthRequest("/auth/v1/token?grant_type=password", {
+      method: "POST",
+      body: JSON.stringify({ email, password })
+    });
+
+    return normalizeAuthSession(payload);
+  }
+
+  async function refreshSession(session) {
+    if (!session || !session.refreshToken) {
+      return null;
     }
 
-    return { email, mock: true, createdAt: new Date().toISOString() };
+    const payload = await supabaseAuthRequest("/auth/v1/token?grant_type=refresh_token", {
+      method: "POST",
+      body: JSON.stringify({ refresh_token: session.refreshToken })
+    });
+
+    return normalizeAuthSession(payload);
+  }
+
+  async function verifySession(session) {
+    if (!session || !session.accessToken) {
+      return null;
+    }
+
+    if (Date.now() > Number(session.expiresAt || 0) - 60000) {
+      return refreshSession(session);
+    }
+
+    const payload = await supabaseAuthRequest("/auth/v1/user", {
+      method: "GET",
+      headers: { "Content-Type": "application/json" }
+    }, session.accessToken);
+
+    if (String(payload.email || "").toLowerCase() !== getOwnerEmail()) {
+      throw new Error(`Only ${getOwnerEmail()} can access this dashboard.`);
+    }
+
+    return session;
+  }
+
+  async function signOutOwner() {
+    const session = getSession();
+    if (session && session.accessToken && isSupabaseConfigured()) {
+      try {
+        await supabaseAuthRequest("/auth/v1/logout", { method: "POST" }, session.accessToken);
+      } catch (error) {
+        // Local session cleanup should still happen if the remote token is already expired.
+      }
+    }
+
+    clearSession();
   }
 
   async function loadDashboardData() {
-    const supabase = createSupabaseClient();
-
-    if (supabase) {
-      // Future database wiring belongs here. Planned tables:
-      // quote_submissions, contacts, scheduled_jobs, job_notes, follow_up_reminders.
-      // Use RLS so only the authorized owner account can read/write dashboard records.
-    }
-
+    // Future database wiring belongs here. Planned tables:
+    // quote_submissions, contacts, scheduled_jobs, job_notes, follow_up_reminders.
+    // Use Supabase RLS so only the authorized owner account can read/write records.
     return mockData;
   }
 
@@ -193,6 +270,7 @@
     try {
       return JSON.parse(sessionStorage.getItem(SESSION_KEY) || "null");
     } catch (error) {
+      clearSession();
       return null;
     }
   }
@@ -257,12 +335,12 @@
         <div class="item-topline">
           <div>
             <h4>${escapeHtml(item.name)}</h4>
-            <div class="meta">${escapeHtml(item.city)} · ${escapeHtml(item.propertyType)} · ${escapeHtml(item.receivedAt)}</div>
+            <div class="meta">${escapeHtml(item.city)} / ${escapeHtml(item.propertyType)} / ${escapeHtml(item.receivedAt)}</div>
           </div>
           ${statusBadge(item.status)}
         </div>
         <p class="item-body">${escapeHtml(item.service)}. ${escapeHtml(item.notes)}</p>
-        <p class="small">Follow-up: ${escapeHtml(item.followUp)} · ${escapeHtml(item.phone)} · ${escapeHtml(item.email)}</p>
+        <p class="small">Follow-up: ${escapeHtml(item.followUp)} / ${escapeHtml(item.phone)} / ${escapeHtml(item.email)}</p>
       </article>
     `).join("");
   }
@@ -273,7 +351,7 @@
         <div class="item-topline">
           <div>
             <h4>${escapeHtml(job.site)}</h4>
-            <div class="meta">${escapeHtml(job.date)} · ${escapeHtml(job.window)}</div>
+            <div class="meta">${escapeHtml(job.date)} / ${escapeHtml(job.window)}</div>
           </div>
           ${statusBadge(job.status)}
         </div>
@@ -286,7 +364,7 @@
     els.quoteTable.innerHTML = data.submissions.map((item) => `
       <tr>
         <td><strong>${escapeHtml(item.name)}</strong><br><span class="meta">${escapeHtml(item.email)}<br>${escapeHtml(item.phone)}</span></td>
-        <td>${escapeHtml(item.service)}<br><span class="meta">${escapeHtml(item.source)} · ${escapeHtml(item.receivedAt)}</span></td>
+        <td>${escapeHtml(item.service)}<br><span class="meta">${escapeHtml(item.source)} / ${escapeHtml(item.receivedAt)}</span></td>
         <td>${escapeHtml(item.propertyType)}<br><span class="meta">${escapeHtml(item.city)}</span></td>
         <td>${statusBadge(item.status)}</td>
         <td>${escapeHtml(item.followUp)}</td>
@@ -300,7 +378,7 @@
         <div class="item-topline">
           <div>
             <h4>${escapeHtml(contact.name)}</h4>
-            <div class="meta">${escapeHtml(contact.type)} · ${escapeHtml(contact.city)}</div>
+            <div class="meta">${escapeHtml(contact.type)} / ${escapeHtml(contact.city)}</div>
           </div>
           ${statusBadge(contact.status)}
         </div>
@@ -315,7 +393,7 @@
         <div class="item-topline">
           <div>
             <h4>${escapeHtml(job.site)}</h4>
-            <div class="meta">${escapeHtml(job.date)} · ${escapeHtml(job.window)}</div>
+            <div class="meta">${escapeHtml(job.date)} / ${escapeHtml(job.window)}</div>
           </div>
           ${statusBadge(job.status)}
         </div>
@@ -413,8 +491,8 @@
       if (titleInput) titleInput.focus();
     });
 
-    els.signOut.addEventListener("click", () => {
-      clearSession();
+    els.signOut.addEventListener("click", async () => {
+      await signOutOwner();
       showLogin();
     });
   }
@@ -445,10 +523,20 @@
     const hashSection = window.location.hash.replace("#", "");
     if (hashSection) state.activeSection = hashSection;
 
-    if (getSession()) {
-      await showApp();
-    } else {
+    const session = getSession();
+    if (!session) {
       showLogin();
+      return;
+    }
+
+    try {
+      const verifiedSession = await verifySession(session);
+      setSession(verifiedSession);
+      await showApp();
+    } catch (error) {
+      clearSession();
+      showLogin();
+      setLoginStatus("Please sign in again.");
     }
   }
 

@@ -7,9 +7,9 @@
     <meta name="theme-color" content="#123f31">
     <title>Urban Yards Owner Dashboard</title>
     <link rel="icon" href="/favicon.ico" sizes="any">
-    <link rel="stylesheet" href="dashboard.css?v=20260618-1">
-    <script src="dashboard-config.js?v=20260618-1" defer></script>
-    <script src="dashboard.js?v=20260618-1" defer></script>
+    <link rel="stylesheet" href="dashboard.css?v=20260618-2">
+    <script src="dashboard-config.js?v=20260618-2" defer></script>
+    <script src="dashboard.js?v=20260618-2" defer></script>
   </head>
   <body>
     <main class="dashboard-shell" aria-labelledby="dashboard-title">
@@ -26,7 +26,7 @@
               <input name="password" type="password" autocomplete="current-password" required>
             </label>
             <button type="submit">Sign In</button>
-            <p class="form-note">Supabase Auth is prepared but not connected yet. Public sign-up is not available.</p>
+            <p class="form-note">Protected by Supabase Auth. Public sign-up is not available.</p>
             <p class="form-status" data-login-status role="status"></p>
           </form>
         </div>
@@ -91,7 +91,7 @@
             <div class="panel">
               <div class="panel-heading">
                 <h3>Quote/contact submissions</h3>
-                <p>Mock data for now. This will read from Supabase later.</p>
+                <p>Sample data for now. This will read from Supabase tables later.</p>
               </div>
               <div class="table-wrap">
                 <table>
@@ -130,7 +130,7 @@
               </div>
               <form class="note-form" data-note-form>
                 <input name="title" placeholder="Note title" required>
-                <textarea name="body" rows="3" placeholder="Add a mock note for this browser session..." required></textarea>
+                <textarea name="body" rows="3" placeholder="Add a sample note for this browser session..." required></textarea>
                 <button type="submit">Add Note</button>
               </form>
               <div class="note-list" data-notes></div>

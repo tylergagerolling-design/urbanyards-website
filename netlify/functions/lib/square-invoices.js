@@ -105,9 +105,20 @@ async function getInvoice(invoiceId) {
   return payload.invoice;
 }
 
+async function findLocationIds() {
+  const configured = parseEnvList(process.env.SQUARE_LOCATION_ID);
+  if (configured.length) return configured;
+
+  const payload = await squareRequest("GET", "/v2/locations");
+  return (payload.locations || [])
+    .filter((location) => !location.status || location.status === "ACTIVE")
+    .map((location) => location.id)
+    .filter(Boolean);
+}
+
 async function searchInvoices(customerIds) {
   const filter = {};
-  const locationIds = parseEnvList(process.env.SQUARE_LOCATION_ID);
+  const locationIds = await findLocationIds();
   if (locationIds.length) filter.location_ids = locationIds;
   if (customerIds.length) filter.customer_ids = customerIds;
 

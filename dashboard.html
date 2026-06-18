@@ -7,9 +7,9 @@
     <meta name="theme-color" content="#123f31">
     <title>Urban Yards Owner Dashboard</title>
     <link rel="icon" href="/favicon.ico" sizes="any">
-    <link rel="stylesheet" href="dashboard.css?v=20260618-4">
-    <script src="dashboard-config.js?v=20260618-4" defer></script>
-    <script src="dashboard.js?v=20260618-4" defer></script>
+    <link rel="stylesheet" href="dashboard.css?v=20260618-5">
+    <script src="dashboard-config.js?v=20260618-5" defer></script>
+    <script src="dashboard.js?v=20260618-5" defer></script>
   </head>
   <body>
     <main class="dashboard-shell" aria-labelledby="dashboard-title">
@@ -42,6 +42,7 @@
             <a href="#overview" data-dashboard-link="overview">Overview</a>
             <a href="#quotes" data-dashboard-link="quotes">Quotes</a>
             <a href="#pipeline" data-dashboard-link="pipeline">Pipeline</a>
+            <a href="#documents" data-dashboard-link="documents">Docs</a>
             <a href="#contacts" data-dashboard-link="contacts">Contacts</a>
             <a href="#schedule" data-dashboard-link="schedule">Schedule</a>
             <a href="#notes" data-dashboard-link="notes">Job Notes</a>
@@ -122,6 +123,28 @@
             </div>
           </section>
 
+          <section class="dashboard-section" id="documents" data-section="documents">
+            <div class="panel">
+              <div class="panel-heading">
+                <h3>Estimates & Invoices</h3>
+                <p>Create quotes, estimates, and invoices from dashboard records.</p>
+              </div>
+              <form class="document-form" data-document-form>
+                <select name="document_type" required>
+                  <option value="estimate">Estimate / Quote</option>
+                  <option value="invoice">Invoice</option>
+                </select>
+                <input name="client_name" placeholder="Client name" required>
+                <input name="client_email" type="email" placeholder="Client email">
+                <input name="description" placeholder="Line item / service" required>
+                <input name="amount" type="number" min="0" step="0.01" placeholder="Amount">
+                <input name="due_date" type="date" aria-label="Due date">
+                <button type="submit">Create Document</button>
+              </form>
+              <div class="document-list" data-documents></div>
+            </div>
+          </section>
+
           <section class="dashboard-section" id="contacts" data-section="contacts">
             <div class="panel">
               <div class="panel-heading">
@@ -141,6 +164,14 @@
                 <h3>Scheduled jobs/visits</h3>
                 <p>Upcoming work and estimated service windows.</p>
               </div>
+              <form class="schedule-create-form" data-job-create-form>
+                <input name="visit_date" type="date" required>
+                <input name="visit_window" placeholder="Visit window">
+                <input name="site_name" placeholder="Site / customer" required>
+                <input name="city" placeholder="City">
+                <input name="service" placeholder="Service" required>
+                <button type="submit">Add Visit</button>
+              </form>
               <div class="toolbar">
                 <button type="button" data-export="jobs">Export Jobs CSV</button>
               </div>

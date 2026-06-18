@@ -16,12 +16,15 @@
     search: "",
     propertyFilter: "All",
     selectedSubmissionId: "",
+    selectedJobId: "",
+    documentsReady: true,
     data: {
       submissions: [],
       contacts: [],
       jobs: [],
       notes: [],
-      reminders: []
+      reminders: [],
+      documents: []
     },
     loading: false,
     error: ""
@@ -225,6 +228,24 @@
     };
   }
 
+  function normalizeDocument(row) {
+    return {
+      id: row.id,
+      type: row.document_type || "estimate",
+      number: row.document_number || "Draft",
+      clientName: row.client_name || "Unnamed client",
+      clientEmail: row.client_email || "",
+      issueDate: formatDate(row.issue_date || row.created_at),
+      dueDate: formatDate(row.due_date),
+      status: row.status || "draft",
+      lineItems: Array.isArray(row.line_items) ? row.line_items : [],
+      subtotal: Number(row.subtotal || 0),
+      tax: Number(row.tax || 0),
+      total: Number(row.total || 0),
+      notes: row.notes || ""
+    };
+  }
+
   function normalizeAuthSession(payload) {
     const userEmail = String(payload.user && payload.user.email ? payload.user.email : "").toLowerCase();
 
@@ -303,12 +324,13 @@
   }
 
   async function loadDashboardData() {
-    const [submissions, contacts, jobs, notes, reminders] = await Promise.all([
+    const [submissions, contacts, jobs, notes, reminders, documents] = await Promise.all([
       supabaseRestRequest("quote_submissions?select=*&order=created_at.desc", { method: "GET" }),
       supabaseRestRequest("contacts?select=*&order=created_at.desc", { method: "GET" }),
       supabaseRestRequest("scheduled_jobs?select=*&order=visit_date.asc", { method: "GET" }),
       supabaseRestRequest("job_notes?select=*&order=created_at.desc", { method: "GET" }),
-      supabaseRestRequest("follow_up_reminders?select=*&order=due_date.asc", { method: "GET" })
+      supabaseRestRequest("follow_up_reminders?select=*&order=due_date.asc", { method: "GET" }),
+      loadSalesDocuments()
     ]);
 
     return {
@@ -316,8 +338,20 @@
       contacts: contacts.map(normalizeContact),
       jobs: jobs.map(normalizeJob),
       notes: notes.map(normalizeNote),
-      reminders: reminders.map(normalizeReminder)
+      reminders: reminders.map(normalizeReminder),
+      documents
     };
+  }
+
+  async function loadSalesDocuments() {
+    try {
+      const rows = await supabaseRestRequest("sales_documents?select=*&order=created_at.desc", { method: "GET" });
+      state.documentsReady = true;
+      return rows.map(normalizeDocument);
+    } catch (error) {
+      state.documentsReady = false;
+      return [];
+    }
   }
 
   async function insertJobNote(title, body) {
@@ -336,6 +370,64 @@
       body: JSON.stringify(payload)
     });
     return normalizeJob(rows[0]);
+  }
+
+  async function updateScheduledJob(id, payload) {
+    await supabaseRestRequest(`scheduled_jobs?id=eq.${encodeURIComponent(id)}`, {
+      method: "PATCH",
+      headers: { Prefer: "return=minimal" },
+      body: JSON.stringify(payload)
+    });
+  }
+
+  async function cancelScheduledJob(id) {
+    await supabaseRestRequest(`scheduled_jobs?id=eq.${encodeURIComponent(id)}`, {
+      method: "DELETE",
+      headers: { Prefer: "return=minimal" }
+    });
+  }
+
+  function buildDocumentPayload(input) {
+    const amount = Number(input.amount || 0);
+    const lineItems = [{
+      description: input.description || "Landscape service",
+      quantity: 1,
+      unit_price: amount,
+      amount
+    }];
+    return {
+      document_type: input.document_type || "estimate",
+      document_number: input.document_number || nextDocumentNumber(input.document_type || "estimate"),
+      client_name: input.client_name,
+      client_email: input.client_email || null,
+      issue_date: new Date().toISOString().slice(0, 10),
+      due_date: input.due_date || null,
+      status: "draft",
+      line_items: lineItems,
+      subtotal: amount,
+      tax: 0,
+      total: amount,
+      notes: input.notes || ""
+    };
+  }
+
+  function nextDocumentNumber(type) {
+    const prefix = type === "invoice" ? "INV" : "EST";
+    const stamp = new Date().toISOString().slice(0, 10).replace(/-/g, "");
+    const count = state.data.documents.filter((doc) => doc.type === type).length + 1;
+    return `${prefix}-${stamp}-${String(count).padStart(3, "0")}`;
+  }
+
+  async function insertSalesDocument(input) {
+    if (!state.documentsReady) {
+      throw new Error("Create the sales_documents table first. See DASHBOARD_SETUP.md.");
+    }
+    const rows = await supabaseRestRequest("sales_documents", {
+      method: "POST",
+      headers: { Prefer: "return=representation" },
+      body: JSON.stringify(buildDocumentPayload(input))
+    });
+    return normalizeDocument(rows[0]);
   }
 
   async function insertReminder(payload) {
@@ -606,6 +698,35 @@
           ${statusSelect("scheduled_jobs", job.id, job.status)}
         </div>
         <p class="item-body">${escapeHtml(job.service)}<br>${escapeHtml(job.city)}</p>
+        <div class="job-actions">
+          ${actionButton("Edit", "edit-job", job.id)}
+          ${actionButton("Cancel", "cancel-job", job.id).replace("inline-action", "inline-action danger-action")}
+        </div>
+      </article>
+    `).join("");
+  }
+
+  function renderDocuments(data) {
+    if (!els.documents) return;
+    if (!state.documentsReady) {
+      els.documents.innerHTML = emptyState("Document storage is not set up yet. Run the sales_documents SQL in DASHBOARD_SETUP.md.");
+      return;
+    }
+    if (!data.documents.length) {
+      els.documents.innerHTML = emptyState("No estimates or invoices yet.");
+      return;
+    }
+    els.documents.innerHTML = data.documents.map((doc) => `
+      <article class="document-card">
+        <div class="item-topline">
+          <div>
+            <h4>${escapeHtml(doc.number)}</h4>
+            <div class="meta">${escapeHtml(doc.type === "invoice" ? "Invoice" : "Estimate / Quote")} / ${escapeHtml(doc.status)}</div>
+          </div>
+          <button class="inline-action" type="button" data-action="open-document" data-id="${escapeHtml(doc.id)}">Open</button>
+        </div>
+        <p class="item-body">${escapeHtml(doc.clientName)}<br>${escapeHtml(doc.clientEmail || "No email")}</p>
+        <strong class="document-total">$${doc.total.toFixed(2)}</strong>
       </article>
     `).join("");
   }
@@ -689,6 +810,8 @@
           <div class="drawer-actions">
             <button type="submit">Save Quote</button>
             <button type="button" data-action="sync-contact" data-id="${escapeHtml(item.id)}">Sync Contact</button>
+            <button type="button" data-action="create-estimate" data-id="${escapeHtml(item.id)}">Create Estimate</button>
+            <button type="button" data-action="create-invoice" data-id="${escapeHtml(item.id)}">Create Invoice</button>
           </div>
         </form>
 
@@ -707,6 +830,95 @@
         ${renderTimeline(item)}
       </div>
     `;
+  }
+
+  function openJobDrawer(id) {
+    const job = state.data.jobs.find((item) => item.id === id);
+    if (!job || !els.detailDrawer || !els.detailContent) return;
+    state.selectedJobId = id;
+    els.detailDrawer.hidden = false;
+    els.detailContent.innerHTML = `
+      <div class="drawer-content">
+        <p class="eyebrow">Schedule Detail</p>
+        <h3>${escapeHtml(job.site)}</h3>
+        <form class="drawer-form" data-job-edit-form>
+          <label>Visit date
+            <input name="visit_date" type="date" value="${escapeHtml(toDateInputValue(job.dateRaw))}" required>
+          </label>
+          <label>Visit window
+            <input name="visit_window" value="${escapeHtml(job.window === "Window not set" ? "" : job.window)}">
+          </label>
+          <label>Site / customer
+            <input name="site_name" value="${escapeHtml(job.site)}" required>
+          </label>
+          <label>City
+            <input name="city" value="${escapeHtml(job.city === "Not provided" ? "" : job.city)}">
+          </label>
+          <label>Service
+            <input name="service" value="${escapeHtml(job.service)}" required>
+          </label>
+          <label>Status
+            <select name="status">${STATUSES.map((status) => `<option value="${status}"${status === job.status ? " selected" : ""}>${status}</option>`).join("")}</select>
+          </label>
+          <div class="drawer-actions">
+            <button type="submit">Save Visit</button>
+            <button type="button" class="danger-action" data-action="cancel-job" data-id="${escapeHtml(job.id)}">Cancel Visit</button>
+          </div>
+        </form>
+      </div>
+    `;
+  }
+
+  function openDocumentDrawer(id) {
+    const doc = state.data.documents.find((item) => item.id === id);
+    if (!doc || !els.detailDrawer || !els.detailContent) return;
+    els.detailDrawer.hidden = false;
+    els.detailContent.innerHTML = `
+      <div class="drawer-content">
+        <p class="eyebrow">${escapeHtml(doc.type === "invoice" ? "Invoice" : "Estimate / Quote")}</p>
+        ${renderPrintableDocument(doc)}
+        <div class="drawer-actions">
+          <button type="button" data-action="print-document" data-id="${escapeHtml(doc.id)}">Print / Save PDF</button>
+        </div>
+      </div>
+    `;
+  }
+
+  function renderPrintableDocument(doc) {
+    return `
+      <section class="print-document">
+        <h1>Urban Yards</h1>
+        <p><strong>${escapeHtml(doc.type === "invoice" ? "Invoice" : "Estimate / Quote")} ${escapeHtml(doc.number)}</strong></p>
+        <p>${escapeHtml(doc.clientName)}<br>${escapeHtml(doc.clientEmail || "")}</p>
+        <p>Issued: ${escapeHtml(doc.issueDate)}<br>Due: ${escapeHtml(doc.dueDate)}</p>
+        <table>
+          <thead><tr><th>Description</th><th>Qty</th><th>Rate</th><th>Total</th></tr></thead>
+          <tbody>${doc.lineItems.map((item) => `
+            <tr>
+              <td>${escapeHtml(item.description || "")}</td>
+              <td>${escapeHtml(item.quantity || 1)}</td>
+              <td>$${Number(item.unit_price || 0).toFixed(2)}</td>
+              <td>$${Number(item.amount || 0).toFixed(2)}</td>
+            </tr>
+          `).join("")}</tbody>
+        </table>
+        <p><strong>Total: $${doc.total.toFixed(2)}</strong></p>
+        ${doc.notes ? `<p>${escapeHtml(doc.notes)}</p>` : ""}
+      </section>
+    `;
+  }
+
+  function printDocument(id) {
+    const doc = state.data.documents.find((item) => item.id === id);
+    if (!doc) return;
+    const win = window.open("", "_blank", "noopener,noreferrer");
+    if (!win) {
+      setDashboardState("Popup blocked. Allow popups to print documents.", "error");
+      return;
+    }
+    win.document.write(`<!DOCTYPE html><html><head><title>${escapeHtml(doc.number)}</title><style>body{font-family:Georgia,serif;color:#17251d;padding:32px}h1{color:#123f31}table{width:100%;border-collapse:collapse;margin:20px 0}th,td{border-bottom:1px solid #dfe6df;padding:10px;text-align:left}</style></head><body>${renderPrintableDocument(doc)}</body></html>`);
+    win.document.close();
+    win.print();
   }
 
   function closeSubmissionDrawer() {
@@ -759,6 +971,7 @@
     renderUpcoming(data);
     renderQuoteTable(data);
     renderPipeline(data);
+    renderDocuments(data);
     renderContacts(data);
     renderJobs(data);
     renderNotes();
@@ -912,6 +1125,45 @@
         } catch (error) {
           setDashboardState(error.message || "Unable to create reminder.", "error");
         }
+      } else if (action === "create-estimate" || action === "create-invoice") {
+        const item = findSubmission(id);
+        if (!item) return;
+        try {
+          setDashboardState("Creating document...");
+          await insertSalesDocument({
+            document_type: action === "create-invoice" ? "invoice" : "estimate",
+            client_name: item.name,
+            client_email: item.email === "No email" ? "" : item.email,
+            description: item.service,
+            amount: 0,
+            notes: `Created from quote submission ${item.id}. ${item.notes}`
+          });
+          if (action === "create-invoice") await updateStatus("quote_submissions", item.id, "Invoiced");
+          await refreshDashboard();
+          setActiveSection("documents");
+          closeSubmissionDrawer();
+          setDashboardState("");
+        } catch (error) {
+          setDashboardState(error.message || "Unable to create document.", "error");
+        }
+      } else if (action === "edit-job") {
+        openJobDrawer(id);
+      } else if (action === "cancel-job") {
+        const ok = window.confirm("Cancel this scheduled visit?");
+        if (!ok) return;
+        try {
+          setDashboardState("Canceling visit...");
+          await cancelScheduledJob(id);
+          closeSubmissionDrawer();
+          await refreshDashboard();
+          setDashboardState("");
+        } catch (error) {
+          setDashboardState(error.message || "Unable to cancel visit.", "error");
+        }
+      } else if (action === "open-document") {
+        openDocumentDrawer(id);
+      } else if (action === "print-document") {
+        printDocument(id);
       }
     });
 
@@ -956,6 +1208,64 @@
         } catch (error) {
           setDashboardState(error.message || "Unable to create job.", "error");
         }
+      } else if (event.target.matches("[data-job-edit-form]")) {
+        event.preventDefault();
+        const formData = new FormData(event.target);
+        try {
+          setDashboardState("Saving visit...");
+          await updateScheduledJob(state.selectedJobId, {
+            visit_date: String(formData.get("visit_date") || ""),
+            visit_window: String(formData.get("visit_window") || ""),
+            site_name: String(formData.get("site_name") || ""),
+            city: String(formData.get("city") || ""),
+            service: String(formData.get("service") || ""),
+            status: String(formData.get("status") || "Scheduled")
+          });
+          closeSubmissionDrawer();
+          await refreshDashboard();
+          setDashboardState("");
+        } catch (error) {
+          setDashboardState(error.message || "Unable to save visit.", "error");
+        }
+      } else if (event.target.matches("[data-document-form]")) {
+        event.preventDefault();
+        const formData = new FormData(event.target);
+        try {
+          setDashboardState("Creating document...");
+          const document = await insertSalesDocument({
+            document_type: String(formData.get("document_type") || "estimate"),
+            client_name: String(formData.get("client_name") || ""),
+            client_email: String(formData.get("client_email") || ""),
+            description: String(formData.get("description") || ""),
+            amount: Number(formData.get("amount") || 0),
+            due_date: String(formData.get("due_date") || "")
+          });
+          event.target.reset();
+          await refreshDashboard();
+          openDocumentDrawer(document.id);
+          setDashboardState("");
+        } catch (error) {
+          setDashboardState(error.message || "Unable to create document.", "error");
+        }
+      } else if (event.target.matches("[data-job-create-form]")) {
+        event.preventDefault();
+        const formData = new FormData(event.target);
+        try {
+          setDashboardState("Adding visit...");
+          await insertScheduledJob({
+            visit_date: String(formData.get("visit_date") || ""),
+            visit_window: String(formData.get("visit_window") || ""),
+            site_name: String(formData.get("site_name") || ""),
+            city: String(formData.get("city") || ""),
+            service: String(formData.get("service") || ""),
+            status: "Scheduled"
+          });
+          event.target.reset();
+          await refreshDashboard();
+          setDashboardState("");
+        } catch (error) {
+          setDashboardState(error.message || "Unable to add visit.", "error");
+        }
       }
     });
 
@@ -993,6 +1303,7 @@
     els.search = qs("[data-dashboard-search]");
     els.propertyFilter = qs("[data-property-filter]");
     els.pipeline = qs("[data-pipeline]");
+    els.documents = qs("[data-documents]");
     els.detailDrawer = qs("[data-detail-drawer]");
     els.detailContent = qs("[data-detail-content]");
     els.closeDetail = qs("[data-close-detail]");

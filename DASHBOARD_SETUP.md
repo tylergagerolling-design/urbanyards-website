@@ -121,11 +121,29 @@ create table follow_up_reminders (
   related_contact_id uuid references contacts(id) on delete set null
 );
 
+create table sales_documents (
+  id uuid primary key default gen_random_uuid(),
+  created_at timestamptz not null default now(),
+  document_type text not null check (document_type in ('estimate', 'invoice')),
+  document_number text not null unique,
+  client_name text not null,
+  client_email text,
+  issue_date date not null default current_date,
+  due_date date,
+  status text not null default 'draft' check (status in ('draft', 'sent', 'paid', 'void')),
+  line_items jsonb not null default '[]'::jsonb,
+  subtotal numeric(12,2) not null default 0,
+  tax numeric(12,2) not null default 0,
+  total numeric(12,2) not null default 0,
+  notes text
+);
+
 alter table quote_submissions enable row level security;
 alter table contacts enable row level security;
 alter table scheduled_jobs enable row level security;
 alter table job_notes enable row level security;
 alter table follow_up_reminders enable row level security;
+alter table sales_documents enable row level security;
 
 create policy "owner read quote submissions"
   on quote_submissions for select
@@ -169,6 +187,15 @@ create policy "owner read follow up reminders"
 
 create policy "owner write follow up reminders"
   on follow_up_reminders for all
+  using ((auth.jwt() ->> 'email') = 'team@urbanyards.us')
+  with check ((auth.jwt() ->> 'email') = 'team@urbanyards.us');
+
+create policy "owner read sales documents"
+  on sales_documents for select
+  using ((auth.jwt() ->> 'email') = 'team@urbanyards.us');
+
+create policy "owner write sales documents"
+  on sales_documents for all
   using ((auth.jwt() ->> 'email') = 'team@urbanyards.us')
   with check ((auth.jwt() ->> 'email') = 'team@urbanyards.us');
 ```

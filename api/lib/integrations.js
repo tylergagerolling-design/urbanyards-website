@@ -144,6 +144,28 @@ async function saveToSupabase(lead, photoUrls, requestId) {
   });
 
   if (!response.ok) throw new Error(`Supabase quote archive failed (${response.status})`);
+
+  const contactPayload = {
+    name: lead.name,
+    email: lead.email,
+    phone: lead.phone,
+    contact_type: lead.location || "Website lead",
+    city: lead.location,
+    status: "New"
+  };
+  const contactResponse = await fetch(`${url}/rest/v1/contacts`, {
+    method: "POST",
+    headers: {
+      apikey: key,
+      Authorization: `Bearer ${key}`,
+      "Content-Type": "application/json",
+      Prefer: "return=minimal"
+    },
+    body: JSON.stringify(contactPayload),
+    signal: AbortSignal.timeout(10000)
+  });
+  if (!contactResponse.ok) throw new Error(`Supabase contact archive failed (${contactResponse.status})`);
+
   return true;
 }
 

@@ -13,6 +13,9 @@
   const state = {
     activeSection: "overview",
     statusFilter: "All",
+    search: "",
+    propertyFilter: "All",
+    selectedSubmissionId: "",
     data: {
       submissions: [],
       contacts: [],
@@ -56,6 +59,10 @@
     const safeStatus = STATUSES.includes(status) ? status : "New";
     const options = STATUSES.map((item) => `<option value="${item}"${item === safeStatus ? " selected" : ""}>${item}</option>`).join("");
     return `<select class="status-select" data-status-table="${escapeHtml(table)}" data-status-id="${escapeHtml(id)}" aria-label="Update status">${options}</select>`;
+  }
+
+  function actionButton(label, action, id) {
+    return `<button class="inline-action" type="button" data-action="${escapeHtml(action)}" data-id="${escapeHtml(id)}">${escapeHtml(label)}</button>`;
   }
 
   function emptyState(message) {
@@ -149,6 +156,13 @@
     return date.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
   }
 
+  function toDateInputValue(value) {
+    if (!value) return "";
+    const date = new Date(value);
+    if (Number.isNaN(date.getTime())) return "";
+    return date.toISOString().slice(0, 10);
+  }
+
   function normalizeSubmission(row) {
     return {
       id: row.id,
@@ -160,6 +174,7 @@
       service: row.service || "Not provided",
       status: row.status || "New",
       source: row.source || "Quote form",
+      createdAtRaw: row.created_at || "",
       receivedAt: formatDate(row.created_at),
       followUp: row.follow_up || "Not set",
       notes: row.notes || ""
@@ -182,6 +197,7 @@
     return {
       id: row.id,
       date: formatDate(row.visit_date),
+      dateRaw: row.visit_date || "",
       window: row.visit_window || "Window not set",
       site: row.site_name || "Unnamed site",
       city: row.city || "Not provided",
@@ -203,6 +219,7 @@
     return {
       id: row.id,
       due: formatDate(row.due_date),
+      dueRaw: row.due_date || "",
       task: row.task || "Untitled reminder",
       status: row.status || "New"
     };
@@ -312,6 +329,64 @@
     return normalizeNote(rows[0]);
   }
 
+  async function insertScheduledJob(payload) {
+    const rows = await supabaseRestRequest("scheduled_jobs", {
+      method: "POST",
+      headers: { Prefer: "return=representation" },
+      body: JSON.stringify(payload)
+    });
+    return normalizeJob(rows[0]);
+  }
+
+  async function insertReminder(payload) {
+    const rows = await supabaseRestRequest("follow_up_reminders", {
+      method: "POST",
+      headers: { Prefer: "return=representation" },
+      body: JSON.stringify(payload)
+    });
+    return normalizeReminder(rows[0]);
+  }
+
+  async function upsertContactFromSubmission(item) {
+    const existing = state.data.contacts.find((contact) => {
+      const sameEmail = item.email !== "No email" && contact.email.toLowerCase() === item.email.toLowerCase();
+      const samePhone = item.phone !== "No phone" && contact.phone === item.phone;
+      return sameEmail || samePhone;
+    });
+
+    const payload = {
+      name: item.name,
+      email: item.email === "No email" ? null : item.email,
+      phone: item.phone === "No phone" ? null : item.phone,
+      contact_type: item.propertyType,
+      city: item.city,
+      status: item.status
+    };
+
+    if (existing) {
+      await supabaseRestRequest(`contacts?id=eq.${encodeURIComponent(existing.id)}`, {
+        method: "PATCH",
+        headers: { Prefer: "return=minimal" },
+        body: JSON.stringify(payload)
+      });
+      return;
+    }
+
+    await supabaseRestRequest("contacts", {
+      method: "POST",
+      headers: { Prefer: "return=minimal" },
+      body: JSON.stringify(payload)
+    });
+  }
+
+  async function updateSubmission(id, payload) {
+    await supabaseRestRequest(`quote_submissions?id=eq.${encodeURIComponent(id)}`, {
+      method: "PATCH",
+      headers: { Prefer: "return=minimal" },
+      body: JSON.stringify(payload)
+    });
+  }
+
   async function updateStatus(table, id, status) {
     if (!STATUSES.includes(status)) throw new Error("Invalid status.");
     return supabaseRestRequest(`${table}?id=eq.${encodeURIComponent(id)}`, {
@@ -366,6 +441,43 @@
     });
   }
 
+  function matchesSearch(item) {
+    const query = state.search.trim().toLowerCase();
+    if (!query) return true;
+    return [
+      item.name,
+      item.email,
+      item.phone,
+      item.city,
+      item.propertyType,
+      item.service,
+      item.source,
+      item.followUp,
+      item.notes
+    ].some((value) => String(value || "").toLowerCase().includes(query));
+  }
+
+  function filteredSubmissions() {
+    return state.data.submissions.filter((item) => {
+      const statusMatches = state.statusFilter === "All" || item.status === state.statusFilter;
+      const propertyMatches = state.propertyFilter === "All" || item.propertyType === state.propertyFilter;
+      return statusMatches && propertyMatches && matchesSearch(item);
+    });
+  }
+
+  function findSubmission(id) {
+    return state.data.submissions.find((item) => item.id === id);
+  }
+
+  function populatePropertyFilter(data) {
+    if (!els.propertyFilter) return;
+    const current = state.propertyFilter;
+    const properties = Array.from(new Set(data.submissions.map((item) => item.propertyType).filter(Boolean))).sort();
+    els.propertyFilter.innerHTML = `<option value="All">All Properties</option>${properties.map((item) => `<option value="${escapeHtml(item)}">${escapeHtml(item)}</option>`).join("")}`;
+    els.propertyFilter.value = properties.includes(current) ? current : "All";
+    state.propertyFilter = els.propertyFilter.value;
+  }
+
   function renderMetrics(data) {
     const openLeads = data.submissions.filter((item) => ["New", "Contacted"].includes(item.status)).length;
     const scheduled = data.jobs.filter((item) => item.status === "Scheduled").length;
@@ -384,7 +496,7 @@
   }
 
   function renderSubmissions(data) {
-    const items = data.submissions.filter((item) => state.statusFilter === "All" || item.status === state.statusFilter);
+    const items = filteredSubmissions();
     if (!items.length) {
       els.submissions.innerHTML = emptyState("No quote/contact submissions match this view yet.");
       return;
@@ -424,19 +536,40 @@
   }
 
   function renderQuoteTable(data) {
-    if (!data.submissions.length) {
-      els.quoteTable.innerHTML = `<tr><td colspan="5">${emptyState("No quote/contact submissions yet.")}</td></tr>`;
+    const items = filteredSubmissions();
+    if (!items.length) {
+      els.quoteTable.innerHTML = `<tr><td colspan="6">${emptyState("No quote/contact submissions match this view yet.")}</td></tr>`;
       return;
     }
-    els.quoteTable.innerHTML = data.submissions.map((item) => `
+    els.quoteTable.innerHTML = items.map((item) => `
       <tr>
         <td><strong>${escapeHtml(item.name)}</strong><br><span class="meta">${escapeHtml(item.email)}<br>${escapeHtml(item.phone)}</span></td>
         <td>${escapeHtml(item.service)}<br><span class="meta">${escapeHtml(item.source)} / ${escapeHtml(item.receivedAt)}</span></td>
         <td>${escapeHtml(item.propertyType)}<br><span class="meta">${escapeHtml(item.city)}</span></td>
         <td>${statusSelect("quote_submissions", item.id, item.status)}</td>
         <td>${escapeHtml(item.followUp)}</td>
+        <td>${actionButton("Open", "open-submission", item.id)}</td>
       </tr>
     `).join("");
+  }
+
+  function renderPipeline(data) {
+    if (!els.pipeline) return;
+    const items = filteredSubmissions();
+    els.pipeline.innerHTML = STATUSES.map((status) => {
+      const cards = items.filter((item) => item.status === status);
+      return `
+        <section class="pipeline-column">
+          <h4>${escapeHtml(status)} <span>${cards.length}</span></h4>
+          ${cards.length ? cards.map((item) => `
+            <button class="pipeline-card" type="button" data-action="open-submission" data-id="${escapeHtml(item.id)}">
+              <strong>${escapeHtml(item.name)}</strong>
+              <span class="meta">${escapeHtml(item.service)} / ${escapeHtml(item.city)}</span>
+            </button>
+          `).join("") : emptyState("No leads")}
+        </section>
+      `;
+    }).join("");
   }
 
   function renderContacts(data) {
@@ -511,12 +644,121 @@
     `).join("");
   }
 
+  function renderTimeline(item) {
+    const relatedJobs = state.data.jobs.filter((job) => job.site === item.name || job.site === item.propertyType);
+    const relatedReminders = state.data.reminders.filter((reminder) => reminder.task.toLowerCase().includes(item.name.toLowerCase()));
+    const entries = [
+      { label: "Quote received", detail: item.receivedAt },
+      { label: "Current status", detail: item.status },
+      { label: "Follow-up", detail: item.followUp },
+      ...relatedJobs.map((job) => ({ label: "Scheduled job", detail: `${job.date} / ${job.service}` })),
+      ...relatedReminders.map((reminder) => ({ label: "Reminder", detail: `${reminder.due} / ${reminder.task}` }))
+    ];
+    return `<div class="timeline">${entries.map((entry) => `<div class="timeline-item"><strong>${escapeHtml(entry.label)}</strong><br>${escapeHtml(entry.detail)}</div>`).join("")}</div>`;
+  }
+
+  function openSubmissionDrawer(id) {
+    const item = findSubmission(id);
+    if (!item || !els.detailDrawer || !els.detailContent) return;
+    state.selectedSubmissionId = id;
+    els.detailDrawer.hidden = false;
+    els.detailContent.innerHTML = `
+      <div class="drawer-content">
+        <p class="eyebrow">Quote Detail</p>
+        <h3>${escapeHtml(item.name)}</h3>
+        ${statusBadge(item.status)}
+        <div class="drawer-grid">
+          <div class="drawer-field"><span>Email</span>${escapeHtml(item.email)}</div>
+          <div class="drawer-field"><span>Phone</span>${escapeHtml(item.phone)}</div>
+          <div class="drawer-field"><span>City</span>${escapeHtml(item.city)}</div>
+          <div class="drawer-field"><span>Property</span>${escapeHtml(item.propertyType)}</div>
+          <div class="drawer-field"><span>Service</span>${escapeHtml(item.service)}</div>
+          <div class="drawer-field"><span>Source</span>${escapeHtml(item.source)}</div>
+        </div>
+
+        <form class="drawer-form" data-submission-edit>
+          <label>Status
+            <select name="status">${STATUSES.map((status) => `<option value="${status}"${status === item.status ? " selected" : ""}>${status}</option>`).join("")}</select>
+          </label>
+          <label>Follow-up
+            <input name="follow_up" value="${escapeHtml(item.followUp === "Not set" ? "" : item.followUp)}" placeholder="Call today, send estimate, check in Friday...">
+          </label>
+          <label>Notes
+            <textarea name="notes" rows="5">${escapeHtml(item.notes)}</textarea>
+          </label>
+          <div class="drawer-actions">
+            <button type="submit">Save Quote</button>
+            <button type="button" data-action="sync-contact" data-id="${escapeHtml(item.id)}">Sync Contact</button>
+          </div>
+        </form>
+
+        <form class="schedule-form" data-schedule-form>
+          <h4>Create scheduled job/visit</h4>
+          <input name="visit_date" type="date" required>
+          <input name="visit_window" placeholder="Visit window, e.g. 9 AM - 11 AM">
+          <input name="service" value="${escapeHtml(item.service)}" placeholder="Service">
+          <div class="drawer-actions">
+            <button type="submit">Create Job</button>
+            <button type="button" data-action="create-reminder" data-id="${escapeHtml(item.id)}">Create Follow-Up Reminder</button>
+          </div>
+        </form>
+
+        <h4>Contact timeline</h4>
+        ${renderTimeline(item)}
+      </div>
+    `;
+  }
+
+  function closeSubmissionDrawer() {
+    state.selectedSubmissionId = "";
+    if (els.detailDrawer) els.detailDrawer.hidden = true;
+    if (els.detailContent) els.detailContent.innerHTML = "";
+  }
+
+  function csvValue(value) {
+    return `"${String(value ?? "").replace(/"/g, '""')}"`;
+  }
+
+  function downloadCsv(filename, rows) {
+    const csv = rows.map((row) => row.map(csvValue).join(",")).join("\n");
+    const blob = new Blob([csv], { type: "text/csv;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = filename;
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    URL.revokeObjectURL(url);
+  }
+
+  function exportData(type) {
+    if (type === "submissions") {
+      downloadCsv("urban-yards-quotes.csv", [
+        ["Name", "Email", "Phone", "City", "Property", "Service", "Status", "Follow-Up", "Source", "Received", "Notes"],
+        ...filteredSubmissions().map((item) => [item.name, item.email, item.phone, item.city, item.propertyType, item.service, item.status, item.followUp, item.source, item.receivedAt, item.notes])
+      ]);
+    } else if (type === "contacts") {
+      downloadCsv("urban-yards-contacts.csv", [
+        ["Name", "Email", "Phone", "Type", "City", "Status"],
+        ...state.data.contacts.map((item) => [item.name, item.email, item.phone, item.type, item.city, item.status])
+      ]);
+    } else if (type === "jobs") {
+      downloadCsv("urban-yards-jobs.csv", [
+        ["Site", "City", "Service", "Date", "Window", "Status"],
+        ...state.data.jobs.map((item) => [item.site, item.city, item.service, item.date, item.window, item.status])
+      ]);
+    }
+  }
+
   async function render() {
     const data = state.data;
+    populatePropertyFilter(data);
     renderMetrics(data);
     renderSubmissions(data);
     renderUpcoming(data);
     renderQuoteTable(data);
+    renderPipeline(data);
     renderContacts(data);
     renderJobs(data);
     renderNotes();
@@ -582,6 +824,20 @@
       await render();
     });
 
+    if (els.search) {
+      els.search.addEventListener("input", async () => {
+        state.search = els.search.value;
+        await render();
+      });
+    }
+
+    if (els.propertyFilter) {
+      els.propertyFilter.addEventListener("change", async () => {
+        state.propertyFilter = els.propertyFilter.value;
+        await render();
+      });
+    }
+
     els.noteForm.addEventListener("submit", async (event) => {
       event.preventDefault();
       const formData = new FormData(els.noteForm);
@@ -614,6 +870,103 @@
       }
     });
 
+    els.appView.addEventListener("click", async (event) => {
+      const target = event.target.closest("[data-action], [data-export]");
+      if (!target) return;
+
+      const action = target.dataset.action;
+      const id = target.dataset.id;
+
+      if (target.dataset.export) {
+        exportData(target.dataset.export);
+        return;
+      }
+
+      if (action === "open-submission") {
+        openSubmissionDrawer(id);
+      } else if (action === "sync-contact") {
+        const item = findSubmission(id);
+        if (!item) return;
+        try {
+          setDashboardState("Syncing contact...");
+          await upsertContactFromSubmission(item);
+          await refreshDashboard();
+          openSubmissionDrawer(id);
+          setDashboardState("");
+        } catch (error) {
+          setDashboardState(error.message || "Unable to sync contact.", "error");
+        }
+      } else if (action === "create-reminder") {
+        const item = findSubmission(id);
+        if (!item) return;
+        try {
+          setDashboardState("Creating reminder...");
+          await insertReminder({
+            task: `Follow up with ${item.name}`,
+            status: "New",
+            related_submission_id: item.id
+          });
+          await refreshDashboard();
+          openSubmissionDrawer(id);
+          setDashboardState("");
+        } catch (error) {
+          setDashboardState(error.message || "Unable to create reminder.", "error");
+        }
+      }
+    });
+
+    els.appView.addEventListener("submit", async (event) => {
+      if (event.target.matches("[data-submission-edit]")) {
+        event.preventDefault();
+        const item = findSubmission(state.selectedSubmissionId);
+        if (!item) return;
+        const formData = new FormData(event.target);
+        try {
+          setDashboardState("Saving quote...");
+          await updateSubmission(item.id, {
+            status: String(formData.get("status") || "New"),
+            follow_up: String(formData.get("follow_up") || ""),
+            notes: String(formData.get("notes") || "")
+          });
+          await refreshDashboard();
+          openSubmissionDrawer(item.id);
+          setDashboardState("");
+        } catch (error) {
+          setDashboardState(error.message || "Unable to save quote.", "error");
+        }
+      } else if (event.target.matches("[data-schedule-form]")) {
+        event.preventDefault();
+        const item = findSubmission(state.selectedSubmissionId);
+        if (!item) return;
+        const formData = new FormData(event.target);
+        try {
+          setDashboardState("Creating job...");
+          await insertScheduledJob({
+            visit_date: String(formData.get("visit_date") || ""),
+            visit_window: String(formData.get("visit_window") || ""),
+            site_name: item.name,
+            city: item.city,
+            service: String(formData.get("service") || item.service),
+            status: "Scheduled"
+          });
+          await updateStatus("quote_submissions", item.id, "Scheduled");
+          await refreshDashboard();
+          openSubmissionDrawer(item.id);
+          setDashboardState("");
+        } catch (error) {
+          setDashboardState(error.message || "Unable to create job.", "error");
+        }
+      }
+    });
+
+    if (els.closeDetail) {
+      els.closeDetail.addEventListener("click", closeSubmissionDrawer);
+    }
+
+    if (els.refreshDashboard) {
+      els.refreshDashboard.addEventListener("click", refreshDashboard);
+    }
+
     els.newNote.addEventListener("click", () => {
       setActiveSection("notes");
       history.replaceState(null, "", "#notes");
@@ -635,7 +988,14 @@
     els.ownerEmail = qs("[data-owner-email]");
     els.signOut = qs("[data-sign-out]");
     els.newNote = qs("[data-new-note]");
+    els.refreshDashboard = qs("[data-refresh-dashboard]");
     els.dashboardState = qs("[data-dashboard-state]");
+    els.search = qs("[data-dashboard-search]");
+    els.propertyFilter = qs("[data-property-filter]");
+    els.pipeline = qs("[data-pipeline]");
+    els.detailDrawer = qs("[data-detail-drawer]");
+    els.detailContent = qs("[data-detail-content]");
+    els.closeDetail = qs("[data-close-detail]");
     els.metrics = qs("[data-metrics]");
     els.statusFilter = qs("[data-status-filter]");
     els.submissions = qs("[data-submissions]");

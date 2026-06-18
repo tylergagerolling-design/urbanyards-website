@@ -144,7 +144,10 @@ textarea:focus {
 .login-form button,
 .topbar-actions button,
 .note-form button,
-.sign-out {
+.sign-out,
+.toolbar button,
+.drawer-actions button,
+.inline-action {
   min-height: 44px;
   border: 0;
   border-radius: 8px;
@@ -155,7 +158,10 @@ textarea:focus {
 
 .login-form button:hover,
 .topbar-actions button:hover,
-.note-form button:hover {
+.note-form button:hover,
+.toolbar button:hover,
+.drawer-actions button:hover,
+.inline-action:hover {
   background: #0c3025;
 }
 
@@ -510,8 +516,148 @@ td {
 }
 
 .contact-grid,
-.job-grid {
+.job-grid,
+.pipeline-grid {
   grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.toolbar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 14px;
+}
+
+.toolbar input {
+  flex: 1 1 280px;
+}
+
+.toolbar select {
+  max-width: 190px;
+}
+
+.toolbar button,
+.inline-action {
+  padding: 0 14px;
+}
+
+.inline-action {
+  min-height: 34px;
+  font-size: 0.82rem;
+}
+
+.pipeline-grid {
+  display: grid;
+  gap: 12px;
+}
+
+.pipeline-column {
+  min-height: 180px;
+  border: 1px solid var(--uy-line);
+  border-radius: 8px;
+  background: #fbfaf5;
+  padding: 12px;
+}
+
+.pipeline-column h4 {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  margin: 0 0 10px;
+  color: var(--uy-green);
+  font-size: 0.92rem;
+}
+
+.pipeline-card {
+  display: block;
+  width: 100%;
+  margin-top: 8px;
+  padding: 10px;
+  border: 1px solid var(--uy-line);
+  border-radius: 8px;
+  background: #fff;
+  color: var(--uy-ink);
+  text-align: left;
+}
+
+.detail-drawer {
+  position: fixed;
+  inset: 0;
+  z-index: 30;
+  display: grid;
+  justify-content: end;
+  background: rgba(19, 36, 28, 0.28);
+}
+
+.drawer-panel {
+  width: min(100vw, 520px);
+  height: 100vh;
+  overflow-y: auto;
+  background: #fff;
+  box-shadow: -18px 0 40px rgba(19, 36, 28, 0.18);
+  padding: 22px;
+}
+
+.drawer-close {
+  float: right;
+  min-height: 36px;
+  border: 1px solid var(--uy-line);
+  border-radius: 8px;
+  background: #fff;
+  color: var(--uy-green);
+  font-weight: 800;
+  padding: 0 12px;
+}
+
+.drawer-content h3 {
+  margin: 28px 0 6px;
+  color: var(--uy-green);
+  font-size: 1.6rem;
+}
+
+.drawer-grid,
+.drawer-form,
+.schedule-form {
+  display: grid;
+  gap: 10px;
+}
+
+.drawer-grid {
+  grid-template-columns: 1fr 1fr;
+  margin: 16px 0;
+}
+
+.drawer-field {
+  border: 1px solid var(--uy-line);
+  border-radius: 8px;
+  padding: 10px;
+}
+
+.drawer-field span {
+  display: block;
+  color: var(--uy-muted);
+  font-size: 0.78rem;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+.drawer-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin: 14px 0 18px;
+}
+
+.timeline {
+  display: grid;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.timeline-item {
+  border-left: 3px solid var(--uy-green-2);
+  padding: 4px 0 4px 10px;
+  color: var(--uy-muted);
 }
 
 .note-form {
@@ -546,6 +692,8 @@ td {
   .split-grid,
   .contact-grid,
   .job-grid,
+  .pipeline-grid,
+  .drawer-grid,
   .note-form {
     grid-template-columns: 1fr;
   }
@@ -567,12 +715,18 @@ td {
 
   .dashboard-topbar,
   .panel-heading,
-  .topbar-actions {
+  .topbar-actions,
+  .toolbar {
     align-items: stretch;
     flex-direction: column;
   }
 
-  .panel-heading select {
+  .panel-heading select,
+  .toolbar select {
     max-width: none;
+  }
+
+  .drawer-panel {
+    width: 100vw;
   }
 }

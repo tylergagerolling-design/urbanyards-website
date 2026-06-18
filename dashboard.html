@@ -7,9 +7,9 @@
     <meta name="theme-color" content="#123f31">
     <title>Urban Yards Owner Dashboard</title>
     <link rel="icon" href="/favicon.ico" sizes="any">
-    <link rel="stylesheet" href="dashboard.css?v=20260618-3">
-    <script src="dashboard-config.js?v=20260618-3" defer></script>
-    <script src="dashboard.js?v=20260618-3" defer></script>
+    <link rel="stylesheet" href="dashboard.css?v=20260618-4">
+    <script src="dashboard-config.js?v=20260618-4" defer></script>
+    <script src="dashboard.js?v=20260618-4" defer></script>
   </head>
   <body>
     <main class="dashboard-shell" aria-labelledby="dashboard-title">
@@ -41,6 +41,7 @@
           <nav class="dashboard-nav" aria-label="Dashboard navigation">
             <a href="#overview" data-dashboard-link="overview">Overview</a>
             <a href="#quotes" data-dashboard-link="quotes">Quotes</a>
+            <a href="#pipeline" data-dashboard-link="pipeline">Pipeline</a>
             <a href="#contacts" data-dashboard-link="contacts">Contacts</a>
             <a href="#schedule" data-dashboard-link="schedule">Schedule</a>
             <a href="#notes" data-dashboard-link="notes">Job Notes</a>
@@ -57,6 +58,7 @@
             </div>
             <div class="topbar-actions">
               <span data-owner-email>team@urbanyards.us</span>
+              <button type="button" data-refresh-dashboard>Refresh</button>
               <button type="button" data-new-note>New Note</button>
             </div>
           </header>
@@ -94,12 +96,29 @@
                 <h3>Quote/contact submissions</h3>
                 <p>Live quote requests from Supabase.</p>
               </div>
+              <div class="toolbar">
+                <input data-dashboard-search type="search" placeholder="Search name, email, phone, city, service...">
+                <select data-property-filter aria-label="Filter by property type">
+                  <option value="All">All Properties</option>
+                </select>
+                <button type="button" data-export="submissions">Export Quotes CSV</button>
+              </div>
               <div class="table-wrap">
                 <table>
-                  <thead><tr><th>Lead</th><th>Service</th><th>Property</th><th>Status</th><th>Follow-Up</th></tr></thead>
+                  <thead><tr><th>Lead</th><th>Service</th><th>Property</th><th>Status</th><th>Follow-Up</th><th>Actions</th></tr></thead>
                   <tbody data-quote-table></tbody>
                 </table>
               </div>
+            </div>
+          </section>
+
+          <section class="dashboard-section" id="pipeline" data-section="pipeline">
+            <div class="panel">
+              <div class="panel-heading">
+                <h3>Pipeline</h3>
+                <p>Quotes grouped by working status.</p>
+              </div>
+              <div class="pipeline-grid" data-pipeline></div>
             </div>
           </section>
 
@@ -108,6 +127,9 @@
               <div class="panel-heading">
                 <h3>Contact list</h3>
                 <p>Owner-visible contacts captured from quote requests and follow-ups.</p>
+              </div>
+              <div class="toolbar">
+                <button type="button" data-export="contacts">Export Contacts CSV</button>
               </div>
               <div class="contact-grid" data-contacts></div>
             </div>
@@ -118,6 +140,9 @@
               <div class="panel-heading">
                 <h3>Scheduled jobs/visits</h3>
                 <p>Upcoming work and estimated service windows.</p>
+              </div>
+              <div class="toolbar">
+                <button type="button" data-export="jobs">Export Jobs CSV</button>
               </div>
               <div class="job-grid" data-jobs></div>
             </div>
@@ -148,6 +173,13 @@
             </div>
           </section>
         </div>
+
+        <aside class="detail-drawer" data-detail-drawer hidden aria-label="Quote details">
+          <div class="drawer-panel">
+            <button class="drawer-close" type="button" data-close-detail aria-label="Close details">Close</button>
+            <div data-detail-content></div>
+          </div>
+        </aside>
       </section>
     </main>
   </body>

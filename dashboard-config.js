@@ -3,6 +3,6 @@
 // during deploy with environment-injected values.
 window.URBAN_YARDS_DASHBOARD_CONFIG = {
   supabaseUrl: "https://gvdeqqrbonulwgmgpgis.supabase.co",
-  supabaseAnonKey: "",
+  supabaseAnonKey: "sb_publishable_vdgK4ap6lzVz379PcwN4cw_LZrHZRCS",
   ownerEmail: "team@urbanyards.us"
 };

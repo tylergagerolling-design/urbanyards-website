@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Look up and pay an open Urban Yards invoice securely through Square.">
+    <meta property="og:type" content="website">
+    <meta property="og:title" content="Pay Invoice | Urban Yards Groundskeeping">
+    <meta property="og:description" content="Find an open Urban Yards invoice and pay securely through Square.">
+    <meta property="og:url" content="https://urbanyards.us/pay">
+    <meta property="og:image" content="https://urbanyards.us/images/og-image-placeholder.svg">
+    <meta name="theme-color" content="#123f31">
+    <title>Pay Invoice | Urban Yards Groundskeeping</title>
+    <link rel="icon" href="/favicon.ico" sizes="any">
+    <link rel="icon" href="/favicon-32x32.png" type="image/png" sizes="32x32">
+    <link rel="icon" href="/favicon-16x16.png" type="image/png" sizes="16x16">
+    <link rel="icon" href="/android-chrome-192x192.png" type="image/png" sizes="192x192">
+    <link rel="icon" href="/android-chrome-512x512.png" type="image/png" sizes="512x512">
+    <link rel="apple-touch-icon" href="/apple-touch-icon.png">
+    <link rel="manifest" href="/site.webmanifest">
+    <link rel="stylesheet" href="style.css?v=20260618-1">
+    <script src="portfolio.js?v=20260617-8" defer></script>
+    <script src="assistant.js?v=20260617-12" defer></script>
+    <script src="pay.js?v=20260618-1" defer></script>
+  </head>
+  <body class="services-page pay-page">
+    <a class="skip-link" href="#main-content">Skip to content</a>
+    <header class="site-header">
+      <a class="brand" href="index.html" aria-label="Urban Yards home">
+        <span class="brand-mark" aria-hidden="true"><img src="images/urban-yards-mark.png?v=20260603-12" alt=""></span>
+        <span><strong>Urban Yards</strong><small>Groundskeeping</small></span>
+      </a>
+      <button class="menu-toggle" type="button" aria-expanded="false" aria-controls="primary-nav">
+        <span class="sr-only">Toggle menu</span><b></b><b></b><b></b>
+      </button>
+      <nav id="primary-nav" class="primary-nav" aria-label="Primary navigation">
+        <a href="index.html">Home</a><div class="nav-dropdown"><button class="nav-dropdown-toggle" type="button" aria-expanded="false" aria-haspopup="true">Services</button><div class="nav-dropdown-menu"><a href="services.html">Services Overview</a><a href="homeowner-services.html">Homeowner Services</a><a href="property-management-services.html">Property Management Services</a></div></div><a href="portfolio.html">Portfolio</a><a href="about.html">About</a><a href="pay.html" aria-current="page">Pay</a><a href="#contact">Contact</a>
+        <a class="button button-small" href="index.html#quote">Request a Free Quote</a>
+        <i class="nav-indicator" aria-hidden="true"></i>
+      </nav>
+      <span class="scroll-progress" aria-hidden="true"></span>
+    </header>
+    <main id="main-content">
+      <section class="section pay-hero-section" aria-labelledby="pay-title">
+        <div class="container pay-layout">
+          <div class="pay-copy">
+            <p class="eyebrow">Secure Square Payments</p>
+            <h1 id="pay-title">Find and pay your Urban Yards invoice.</h1>
+            <p>Enter the email address connected to your invoice. If you have the invoice number, add it for a faster match. Payments are completed securely through Square.</p>
+            <div class="payment-list pay-security-list">
+              <span><i aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M4 7h16v10H4z"/><path d="M4 10h16"/><path d="M8 15h4"/></svg></i>No card details collected here</span>
+              <span><i aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M12 3l7 4v5c0 4-3 7-7 9-4-2-7-5-7-9V7z"/><path d="M9 12l2 2 4-5"/></svg></i>Square handles payment</span>
+            </div>
+          </div>
+          <section class="card pay-card" aria-label="Invoice lookup">
+            <form class="pay-form" data-pay-form novalidate>
+              <div class="quote-form-heading wide">
+                <div>
+                  <p class="eyebrow">Invoice Lookup</p>
+                  <h2>Find My Invoice</h2>
+                </div>
+              </div>
+              <label>Email address<input name="email" type="email" autocomplete="email" required></label>
+              <label>Invoice number <span>(optional)</span><input name="invoiceNumber" autocomplete="off" placeholder="Example: INV-00123"></label>
+              <button class="button submit-button" type="submit"><span>Find My Invoice</span></button>
+              <p class="privacy-note">This lookup only returns open invoices with Square payment links.</p>
+              <p class="form-status" data-pay-status role="status" tabindex="-1"></p>
+            </form>
+            <div class="pay-results" data-pay-results aria-live="polite"></div>
+          </section>
+        </div>
+      </section>
+    </main>
+    <footer id="contact" class="site-footer">
+      <div class="container footer-grid">
+        <div class="footer-brand-panel">
+          <a class="brand footer-brand" href="index.html"><span class="brand-mark" aria-hidden="true"><img src="images/urban-yards-mark.png?v=20260603-12" alt=""></span><span><strong>Urban Yards</strong><small>Groundskeeping</small></span></a>
+          <p>First Impressions Start Here.</p>
+          <a class="footer-project-link" href="feral-grounds.html">The Feral Grounds</a>
+        </div>
+        <div class="footer-nav-group"><h2>Quick Links</h2><a href="index.html">Home</a><a href="services.html">Services</a><a href="homeowner-services.html">Homeowner Services</a><a href="property-management-services.html">Property Management Services</a><a href="portfolio.html">Portfolio</a><a href="about.html">About</a><a href="pay.html">Pay Invoice</a><a href="#contact">Contact</a></div>
+        <div class="footer-nav-group"><h2>Services</h2><a href="homeowner-services.html">Lawn Mowing</a><a href="services.html#groundskeeping">Landscape Maintenance</a><a href="services.html#groundskeeping">Seasonal Cleanup</a><a href="property-management-services.html">Pressure Washing</a><a href="property-management-services.html">Apartment Groundskeeping</a><a href="property-management-services.html">HOA Landscape Maintenance</a></div>
+        <div class="footer-nav-group"><h2>Property Types</h2><a href="homeowner-services.html">Homeowners</a><a href="property-management-services.html">Apartment Communities</a><a href="property-management-services.html">HOAs</a><a href="property-management-services.html">Condominiums</a><a href="property-management-services.html">Property Managers</a></div>
+        <div class="footer-nav-group"><h2>Contact</h2><p><span>Phone</span><a class="footer-contact-link" href="tel:+19712581109">(971) 258-1109</a></p><p><span>Email</span><a class="footer-contact-link" href="mailto:team@urbanyards.us">team@urbanyards.us</a></p></div>
+        <div class="footer-quote-panel"><p class="eyebrow">Need Help?</p><h2>Need invoice help?</h2><p>If your invoice does not appear, Urban Yards can confirm the details.</p><a class="text-link" href="mailto:team@urbanyards.us?subject=Invoice%20Help">Request Invoice Help <span aria-hidden="true">&rarr;</span></a></div>
+      </div>
+      <div class="container footer-bottom"><p>&copy; <span id="copyright-year"></span> Urban Yards Groundskeeping. All rights reserved.</p></div>
+    </footer>
+  </body>
+</html>

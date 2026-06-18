@@ -889,21 +889,25 @@ input:focus, select:focus, textarea:focus { outline: 0; }
 .privacy-layout h1 { font-size: clamp(2.7rem, 6vw, 5.4rem); }
 .footer-bottom { display: flex; justify-content: space-between; gap: 20px; align-items: center; }
 .footer-bottom a { color: inherit; font-size: .78rem; }
-.lower-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 17px; }
+.lower-grid { display: grid; grid-template-columns: 1fr 1fr; align-items: start; gap: 17px; }
 .lower-card { display: grid; grid-template-columns: .9fr 1.1fr; min-height: 248px; }
 .lower-card:has(.map-embed) {
-  grid-column: 1 / -1;
-  grid-template-columns: minmax(300px, .9fr) minmax(360px, 1.1fr);
+  grid-column: auto;
+  grid-template-columns: 1.15fr .85fr;
+  align-items: start;
+  min-height: 0;
 }
 .lower-card > div:first-child { padding: 24px; }
+.lower-card:has(.map-embed) > div:first-child { padding: 20px; }
 .lower-card h2 { font-size: 2rem; }
+.lower-card:has(.map-embed) h2 { font-size: 1.68rem; }
 .lower-card .text-link { margin-left: 0; }
 .placeholder-lower { min-height: 100%; border: 0; border-left: 1px dashed rgba(18, 63, 49, .2); border-radius: 0; box-shadow: inset 0 0 0 7px rgba(255, 253, 247, .32); }
 .map-embed {
   position: relative;
   isolation: isolate;
-  height: clamp(285px, 30vw, 340px);
-  min-height: 285px;
+  height: 270px;
+  min-height: 248px;
   overflow: hidden;
   border-left: 1px solid var(--line);
   background: var(--sage-soft);
@@ -919,7 +923,8 @@ input:focus, select:focus, textarea:focus { outline: 0; }
   background: #dfe8d3;
 }
 .map-embed .leaflet-service-map {
-  min-height: 285px;
+  min-height: 248px;
+  height: 270px;
   aspect-ratio: auto;
 }
 .leaflet-service-map .leaflet-tile-pane {
@@ -2204,9 +2209,9 @@ input:focus, select:focus, textarea:focus { outline: 0; }
   .uy-assistant-form .button { width: 100%; }
   .lower-card { grid-template-columns: 1fr; }
   .placeholder-lower { min-height: 165px; border-top: 1px dashed rgba(18, 63, 49, .2); border-left: 0; }
-  .map-embed { height: auto; min-height: 230px; border-top: 1px solid var(--line); border-left: 0; }
+  .map-embed { height: 230px; min-height: 230px; border-top: 1px solid var(--line); border-left: 0; }
   .leaflet-service-map { min-height: 230px; }
-  .map-embed .leaflet-service-map { min-height: 230px; }
+  .map-embed .leaflet-service-map { height: 230px; min-height: 230px; }
   .map-actions { right: 8px; bottom: 8px; left: 8px; justify-content: flex-end; }
   .map-link, .map-expand { padding: 6px 8px; font-size: .55rem; }
   .map-dialog { padding: 13px; }

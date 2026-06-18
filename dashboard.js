@@ -159,6 +159,11 @@
     return date.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
   }
 
+  function formatCurrency(cents, currency) {
+    if (typeof cents !== "number") return "";
+    return new Intl.NumberFormat("en-US", { style: "currency", currency: currency || "USD" }).format(cents / 100);
+  }
+
   function toDateInputValue(value) {
     if (!value) return "";
     const date = new Date(value);
@@ -238,6 +243,13 @@
       issueDate: formatDate(row.issue_date || row.created_at),
       dueDate: formatDate(row.due_date),
       status: row.status || "draft",
+      squareInvoiceId: row.square_invoice_id || "",
+      squareInvoiceNumber: row.square_invoice_number || "",
+      squareStatus: row.square_status || "",
+      squarePaymentUrl: row.square_payment_url || "",
+      squareAmountDueCents: typeof row.square_amount_due_cents === "number" ? row.square_amount_due_cents : null,
+      squareCurrency: row.square_currency || "USD",
+      squareSyncedAt: row.square_synced_at ? formatDate(row.square_synced_at) : "",
       lineItems: Array.isArray(row.line_items) ? row.line_items : [],
       subtotal: Number(row.subtotal || 0),
       tax: Number(row.tax || 0),
@@ -398,6 +410,8 @@
     return {
       document_type: input.document_type || "estimate",
       document_number: input.document_number || nextDocumentNumber(input.document_type || "estimate"),
+      square_invoice_number: input.square_invoice_number || null,
+      square_invoice_id: input.square_invoice_id || null,
       client_name: input.client_name,
       client_email: input.client_email || null,
       issue_date: new Date().toISOString().slice(0, 10),
@@ -428,6 +442,23 @@
       body: JSON.stringify(buildDocumentPayload(input))
     });
     return normalizeDocument(rows[0]);
+  }
+
+  async function syncSquareInvoice(documentId) {
+    const session = getSession();
+    if (!session || !session.accessToken) throw new Error("Please sign in again.");
+
+    const response = await fetch("/api/sync-square-invoice", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${session.accessToken}`
+      },
+      body: JSON.stringify({ documentId })
+    });
+    const data = await response.json();
+    if (!response.ok) throw new Error(data.error || "Unable to sync Square invoice.");
+    return data.document ? normalizeDocument(data.document) : null;
   }
 
   async function insertReminder(payload) {
@@ -721,12 +752,13 @@
         <div class="item-topline">
           <div>
             <h4>${escapeHtml(doc.number)}</h4>
-            <div class="meta">${escapeHtml(doc.type === "invoice" ? "Invoice" : "Estimate / Quote")} / ${escapeHtml(doc.status)}</div>
+          <div class="meta">${escapeHtml(doc.type === "invoice" ? "Invoice" : "Estimate / Quote")} / ${escapeHtml(doc.status)}</div>
+            ${doc.squareStatus ? `<div class="meta">Square: ${escapeHtml(doc.squareStatus)}${doc.squareSyncedAt ? ` / synced ${escapeHtml(doc.squareSyncedAt)}` : ""}</div>` : ""}
           </div>
           <button class="inline-action" type="button" data-action="open-document" data-id="${escapeHtml(doc.id)}">Open</button>
         </div>
         <p class="item-body">${escapeHtml(doc.clientName)}<br>${escapeHtml(doc.clientEmail || "No email")}</p>
-        <strong class="document-total">$${doc.total.toFixed(2)}</strong>
+        <strong class="document-total">${doc.squareAmountDueCents !== null ? `${escapeHtml(formatCurrency(doc.squareAmountDueCents, doc.squareCurrency))} due` : `$${doc.total.toFixed(2)}`}</strong>
       </article>
     `).join("");
   }
@@ -877,8 +909,16 @@
       <div class="drawer-content">
         <p class="eyebrow">${escapeHtml(doc.type === "invoice" ? "Invoice" : "Estimate / Quote")}</p>
         ${renderPrintableDocument(doc)}
+        <div class="drawer-grid">
+          <div class="drawer-field"><span>Square Invoice</span>${escapeHtml(doc.squareInvoiceNumber || "Not linked")}</div>
+          <div class="drawer-field"><span>Square Status</span>${escapeHtml(doc.squareStatus || "Not synced")}</div>
+          <div class="drawer-field"><span>Amount Due</span>${doc.squareAmountDueCents !== null ? escapeHtml(formatCurrency(doc.squareAmountDueCents, doc.squareCurrency)) : "Not synced"}</div>
+          <div class="drawer-field"><span>Last Sync</span>${escapeHtml(doc.squareSyncedAt || "Never")}</div>
+        </div>
         <div class="drawer-actions">
+          <button type="button" data-action="sync-square-document" data-id="${escapeHtml(doc.id)}">Sync with Square</button>
           <button type="button" data-action="print-document" data-id="${escapeHtml(doc.id)}">Print / Save PDF</button>
+          ${doc.squarePaymentUrl ? `<a class="button" href="${escapeHtml(doc.squarePaymentUrl)}" target="_blank" rel="noopener noreferrer">Open Square Payment Link</a>` : ""}
         </div>
       </div>
     `;
@@ -1134,6 +1174,7 @@
             document_type: action === "create-invoice" ? "invoice" : "estimate",
             client_name: item.name,
             client_email: item.email === "No email" ? "" : item.email,
+            square_invoice_number: "",
             description: item.service,
             amount: 0,
             notes: `Created from quote submission ${item.id}. ${item.notes}`
@@ -1162,6 +1203,16 @@
         }
       } else if (action === "open-document") {
         openDocumentDrawer(id);
+      } else if (action === "sync-square-document") {
+        try {
+          setDashboardState("Syncing with Square...");
+          const document = await syncSquareInvoice(id);
+          await refreshDashboard();
+          if (document) openDocumentDrawer(document.id);
+          setDashboardState("");
+        } catch (error) {
+          setDashboardState(error.message || "Unable to sync Square invoice.", "error");
+        }
       } else if (action === "print-document") {
         printDocument(id);
       }
@@ -1236,6 +1287,7 @@
             document_type: String(formData.get("document_type") || "estimate"),
             client_name: String(formData.get("client_name") || ""),
             client_email: String(formData.get("client_email") || ""),
+            square_invoice_number: String(formData.get("square_invoice_number") || ""),
             description: String(formData.get("description") || ""),
             amount: Number(formData.get("amount") || 0),
             due_date: String(formData.get("due_date") || "")

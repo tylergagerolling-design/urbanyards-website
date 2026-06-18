@@ -13,6 +13,11 @@ VITE_SUPABASE_URL=https://gvdeqqrbonulwgmgpgis.supabase.co
 VITE_SUPABASE_ANON_KEY=sb_publishable_vdgK4ap6lzVz379PcwN4cw_LZrHZRCS
 SUPABASE_URL=https://gvdeqqrbonulwgmgpgis.supabase.co
 SUPABASE_SERVICE_ROLE_KEY=your-service-role-key
+SQUARE_ACCESS_TOKEN=
+SQUARE_LOCATION_ID=
+SQUARE_VERSION=2025-06-18
+SQUARE_WEBHOOK_SIGNATURE_KEY=
+SQUARE_WEBHOOK_URL=https://urbanyards.us/api/square-webhook
 ```
 
 Optional:
@@ -131,6 +136,13 @@ create table sales_documents (
   issue_date date not null default current_date,
   due_date date,
   status text not null default 'draft' check (status in ('draft', 'sent', 'paid', 'void')),
+  square_invoice_id text,
+  square_invoice_number text,
+  square_status text,
+  square_payment_url text,
+  square_amount_due_cents integer,
+  square_currency text default 'USD',
+  square_synced_at timestamptz,
   line_items jsonb not null default '[]'::jsonb,
   subtotal numeric(12,2) not null default 0,
   tax numeric(12,2) not null default 0,
@@ -198,6 +210,25 @@ create policy "owner write sales documents"
   on sales_documents for all
   using ((auth.jwt() ->> 'email') = 'team@urbanyards.us')
   with check ((auth.jwt() ->> 'email') = 'team@urbanyards.us');
+```
+
+If you already created `sales_documents`, run this upgrade SQL:
+
+```sql
+alter table sales_documents
+  add column if not exists square_invoice_id text,
+  add column if not exists square_invoice_number text,
+  add column if not exists square_status text,
+  add column if not exists square_payment_url text,
+  add column if not exists square_amount_due_cents integer,
+  add column if not exists square_currency text default 'USD',
+  add column if not exists square_synced_at timestamptz;
+
+create index if not exists sales_documents_square_invoice_id_idx
+  on sales_documents (square_invoice_id);
+
+create index if not exists sales_documents_square_invoice_number_idx
+  on sales_documents (square_invoice_number);
 ```
 
 ## Current Dashboard Sections

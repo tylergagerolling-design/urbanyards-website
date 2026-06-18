@@ -1,5 +1,7 @@
 User-agent: *
 Allow: /
 Disallow: /api/
+Disallow: /dashboard
+Disallow: /dashboard.html
 
 Sitemap: https://urbanyards.us/sitemap.xml

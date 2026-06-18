@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="robots" content="noindex,nofollow">
+    <meta name="theme-color" content="#123f31">
+    <title>Urban Yards Owner Dashboard</title>
+    <link rel="icon" href="/favicon.ico" sizes="any">
+    <link rel="stylesheet" href="dashboard.css?v=20260618-1">
+    <script src="dashboard-config.js?v=20260618-1" defer></script>
+    <script src="dashboard.js?v=20260618-1" defer></script>
+  </head>
+  <body>
+    <main class="dashboard-shell" aria-labelledby="dashboard-title">
+      <section class="login-view" data-view="login">
+        <div class="login-panel">
+          <p class="eyebrow">Private Owner Dashboard</p>
+          <h1 id="dashboard-title">Urban Yards</h1>
+          <p class="login-copy">Sign in to review quote requests, contacts, jobs, notes, and follow-up reminders.</p>
+          <form class="login-form" data-login-form>
+            <label>Email
+              <input name="email" type="email" autocomplete="email" value="team@urbanyards.us" required>
+            </label>
+            <label>Password
+              <input name="password" type="password" autocomplete="current-password" required>
+            </label>
+            <button type="submit">Sign In</button>
+            <p class="form-note">Supabase Auth is prepared but not connected yet. Public sign-up is not available.</p>
+            <p class="form-status" data-login-status role="status"></p>
+          </form>
+        </div>
+      </section>
+
+      <section class="app-view" data-view="app" hidden>
+        <aside class="dashboard-sidebar">
+          <a class="dashboard-brand" href="/" aria-label="Urban Yards public website">
+            <img src="images/urban-yards-mark.png?v=20260603-12" alt="">
+            <span><strong>Urban Yards</strong><small>Owner Dashboard</small></span>
+          </a>
+          <nav class="dashboard-nav" aria-label="Dashboard navigation">
+            <a href="#overview" data-dashboard-link="overview">Overview</a>
+            <a href="#quotes" data-dashboard-link="quotes">Quotes</a>
+            <a href="#contacts" data-dashboard-link="contacts">Contacts</a>
+            <a href="#schedule" data-dashboard-link="schedule">Schedule</a>
+            <a href="#notes" data-dashboard-link="notes">Job Notes</a>
+            <a href="#reminders" data-dashboard-link="reminders">Reminders</a>
+          </nav>
+          <button class="sign-out" type="button" data-sign-out>Sign Out</button>
+        </aside>
+
+        <div class="dashboard-main">
+          <header class="dashboard-topbar">
+            <div>
+              <p class="eyebrow">Owner Workspace</p>
+              <h2>Quote pipeline and field work</h2>
+            </div>
+            <div class="topbar-actions">
+              <span data-owner-email>team@urbanyards.us</span>
+              <button type="button" data-new-note>New Note</button>
+            </div>
+          </header>
+
+          <section class="dashboard-section" id="overview" data-section="overview">
+            <div class="metric-grid" data-metrics></div>
+            <div class="split-grid">
+              <article class="panel">
+                <div class="panel-heading">
+                  <h3>Recent quote/contact submissions</h3>
+                  <select data-status-filter aria-label="Filter submissions by status">
+                    <option value="All">All Statuses</option>
+                    <option>New</option>
+                    <option>Contacted</option>
+                    <option>Scheduled</option>
+                    <option>Completed</option>
+                    <option>Invoiced</option>
+                  </select>
+                </div>
+                <div class="submission-list" data-submissions></div>
+              </article>
+              <article class="panel">
+                <div class="panel-heading">
+                  <h3>Today and next visits</h3>
+                </div>
+                <div class="schedule-list" data-upcoming></div>
+              </article>
+            </div>
+          </section>
+
+          <section class="dashboard-section" id="quotes" data-section="quotes">
+            <div class="panel">
+              <div class="panel-heading">
+                <h3>Quote/contact submissions</h3>
+                <p>Mock data for now. This will read from Supabase later.</p>
+              </div>
+              <div class="table-wrap">
+                <table>
+                  <thead><tr><th>Lead</th><th>Service</th><th>Property</th><th>Status</th><th>Follow-Up</th></tr></thead>
+                  <tbody data-quote-table></tbody>
+                </table>
+              </div>
+            </div>
+          </section>
+
+          <section class="dashboard-section" id="contacts" data-section="contacts">
+            <div class="panel">
+              <div class="panel-heading">
+                <h3>Contact list</h3>
+                <p>Owner-visible contacts captured from quote requests and follow-ups.</p>
+              </div>
+              <div class="contact-grid" data-contacts></div>
+            </div>
+          </section>
+
+          <section class="dashboard-section" id="schedule" data-section="schedule">
+            <div class="panel">
+              <div class="panel-heading">
+                <h3>Scheduled jobs/visits</h3>
+                <p>Upcoming work and estimated service windows.</p>
+              </div>
+              <div class="job-grid" data-jobs></div>
+            </div>
+          </section>
+
+          <section class="dashboard-section" id="notes" data-section="notes">
+            <div class="panel">
+              <div class="panel-heading">
+                <h3>Job notes</h3>
+                <p>Field notes, property observations, and internal reminders.</p>
+              </div>
+              <form class="note-form" data-note-form>
+                <input name="title" placeholder="Note title" required>
+                <textarea name="body" rows="3" placeholder="Add a mock note for this browser session..." required></textarea>
+                <button type="submit">Add Note</button>
+              </form>
+              <div class="note-list" data-notes></div>
+            </div>
+          </section>
+
+          <section class="dashboard-section" id="reminders" data-section="reminders">
+            <div class="panel">
+              <div class="panel-heading">
+                <h3>Follow-up reminders</h3>
+                <p>Calls, emails, estimates, and post-job follow-up.</p>
+              </div>
+              <div class="reminder-list" data-reminders></div>
+            </div>
+          </section>
+        </div>
+      </section>
+    </main>
+  </body>
+</html>

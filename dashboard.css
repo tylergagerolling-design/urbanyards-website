@@ -1,0 +1,539 @@
+:root {
+  --uy-green: #123f31;
+  --uy-green-2: #1e5a45;
+  --uy-ink: #13241c;
+  --uy-muted: #65756c;
+  --uy-line: #dfe6df;
+  --uy-paper: #f7f5ec;
+  --uy-card: #ffffff;
+  --uy-warm: #d9b66f;
+  --uy-danger: #8f2f22;
+  --uy-shadow: 0 18px 48px rgba(19, 36, 28, 0.12);
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html {
+  background: var(--uy-paper);
+}
+
+body {
+  margin: 0;
+  min-width: 320px;
+  color: var(--uy-ink);
+  font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  letter-spacing: 0;
+}
+
+button,
+input,
+select,
+textarea {
+  font: inherit;
+}
+
+button {
+  cursor: pointer;
+}
+
+.dashboard-shell {
+  min-height: 100vh;
+  background:
+    radial-gradient(circle at top left, rgba(217, 182, 111, 0.18), transparent 30rem),
+    linear-gradient(135deg, #f7f5ec 0%, #edf2eb 100%);
+}
+
+.login-view {
+  display: grid;
+  min-height: 100vh;
+  place-items: center;
+  padding: 24px;
+}
+
+.login-panel {
+  width: min(100%, 440px);
+  padding: 34px;
+  border: 1px solid rgba(18, 63, 49, 0.14);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.92);
+  box-shadow: var(--uy-shadow);
+}
+
+.eyebrow {
+  margin: 0 0 8px;
+  color: var(--uy-green-2);
+  font-size: 0.75rem;
+  font-weight: 800;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+h1,
+h2,
+h3,
+p {
+  margin-top: 0;
+}
+
+h1 {
+  margin-bottom: 12px;
+  color: var(--uy-green);
+  font-size: clamp(2.4rem, 9vw, 4rem);
+  line-height: 0.95;
+}
+
+.login-copy {
+  margin-bottom: 24px;
+  color: var(--uy-muted);
+  line-height: 1.55;
+}
+
+.login-form {
+  display: grid;
+  gap: 14px;
+}
+
+.login-form label,
+.note-form {
+  display: grid;
+  gap: 8px;
+}
+
+.login-form label {
+  color: var(--uy-green);
+  font-size: 0.88rem;
+  font-weight: 750;
+}
+
+input,
+select,
+textarea {
+  width: 100%;
+  border: 1px solid var(--uy-line);
+  border-radius: 8px;
+  background: #fff;
+  color: var(--uy-ink);
+  outline: none;
+}
+
+input,
+select {
+  min-height: 44px;
+  padding: 10px 12px;
+}
+
+textarea {
+  min-height: 96px;
+  padding: 12px;
+  resize: vertical;
+}
+
+input:focus,
+select:focus,
+textarea:focus {
+  border-color: var(--uy-green-2);
+  box-shadow: 0 0 0 3px rgba(30, 90, 69, 0.16);
+}
+
+.login-form button,
+.topbar-actions button,
+.note-form button,
+.sign-out {
+  min-height: 44px;
+  border: 0;
+  border-radius: 8px;
+  background: var(--uy-green);
+  color: #fff;
+  font-weight: 800;
+}
+
+.login-form button:hover,
+.topbar-actions button:hover,
+.note-form button:hover {
+  background: #0c3025;
+}
+
+.form-note,
+.form-status {
+  margin: 0;
+  color: var(--uy-muted);
+  font-size: 0.86rem;
+  line-height: 1.45;
+}
+
+.form-status[data-tone="error"] {
+  color: var(--uy-danger);
+}
+
+.app-view {
+  display: grid;
+  min-height: 100vh;
+  grid-template-columns: 264px minmax(0, 1fr);
+}
+
+.dashboard-sidebar {
+  position: sticky;
+  top: 0;
+  display: flex;
+  height: 100vh;
+  flex-direction: column;
+  gap: 22px;
+  padding: 24px;
+  border-right: 1px solid rgba(255, 255, 255, 0.14);
+  background: var(--uy-green);
+  color: #fff;
+}
+
+.dashboard-brand {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  color: #fff;
+  text-decoration: none;
+}
+
+.dashboard-brand img {
+  width: 44px;
+  height: 44px;
+  border-radius: 8px;
+  object-fit: contain;
+}
+
+.dashboard-brand strong,
+.dashboard-brand small {
+  display: block;
+}
+
+.dashboard-brand small {
+  margin-top: 2px;
+  color: rgba(255, 255, 255, 0.68);
+  font-size: 0.78rem;
+}
+
+.dashboard-nav {
+  display: grid;
+  gap: 6px;
+}
+
+.dashboard-nav a {
+  border-radius: 8px;
+  color: rgba(255, 255, 255, 0.78);
+  font-weight: 750;
+  padding: 11px 12px;
+  text-decoration: none;
+}
+
+.dashboard-nav a:hover,
+.dashboard-nav a.is-active {
+  background: rgba(255, 255, 255, 0.12);
+  color: #fff;
+}
+
+.sign-out {
+  margin-top: auto;
+  border: 1px solid rgba(255, 255, 255, 0.28);
+  background: transparent;
+}
+
+.sign-out:hover {
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.dashboard-main {
+  min-width: 0;
+  padding: 28px;
+}
+
+.dashboard-topbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 18px;
+  margin-bottom: 24px;
+}
+
+.dashboard-topbar h2 {
+  margin-bottom: 0;
+  color: var(--uy-green);
+  font-size: clamp(1.7rem, 4vw, 2.7rem);
+  line-height: 1.05;
+}
+
+.topbar-actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.topbar-actions span {
+  color: var(--uy-muted);
+  font-size: 0.9rem;
+  font-weight: 700;
+}
+
+.topbar-actions button,
+.note-form button {
+  padding: 0 16px;
+}
+
+.dashboard-section {
+  display: none;
+}
+
+.dashboard-section.is-active {
+  display: block;
+}
+
+.metric-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 14px;
+  margin-bottom: 14px;
+}
+
+.metric-card,
+.panel,
+.contact-card,
+.job-card,
+.submission-card,
+.note-card,
+.reminder-card {
+  border: 1px solid var(--uy-line);
+  border-radius: 8px;
+  background: var(--uy-card);
+  box-shadow: 0 10px 24px rgba(19, 36, 28, 0.07);
+}
+
+.metric-card {
+  padding: 18px;
+}
+
+.metric-card strong {
+  display: block;
+  color: var(--uy-green);
+  font-size: 2rem;
+  line-height: 1;
+}
+
+.metric-card span {
+  display: block;
+  margin-top: 8px;
+  color: var(--uy-muted);
+  font-weight: 750;
+}
+
+.split-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.4fr) minmax(300px, 0.8fr);
+  gap: 14px;
+}
+
+.panel {
+  padding: 20px;
+}
+
+.panel-heading {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 14px;
+  margin-bottom: 16px;
+}
+
+.panel-heading h3 {
+  margin-bottom: 4px;
+  color: var(--uy-green);
+  font-size: 1.2rem;
+}
+
+.panel-heading p {
+  margin-bottom: 0;
+  color: var(--uy-muted);
+  font-size: 0.92rem;
+  line-height: 1.45;
+}
+
+.panel-heading select {
+  max-width: 190px;
+}
+
+.submission-list,
+.schedule-list,
+.contact-grid,
+.job-grid,
+.note-list,
+.reminder-list {
+  display: grid;
+  gap: 12px;
+}
+
+.submission-card,
+.contact-card,
+.job-card,
+.note-card,
+.reminder-card {
+  padding: 14px;
+}
+
+.item-topline {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.item-topline h4 {
+  margin: 0 0 4px;
+  color: var(--uy-ink);
+  font-size: 1rem;
+}
+
+.meta,
+.item-body,
+.small {
+  color: var(--uy-muted);
+  font-size: 0.9rem;
+  line-height: 1.45;
+}
+
+.item-body {
+  margin: 10px 0 0;
+}
+
+.status {
+  display: inline-flex;
+  align-items: center;
+  min-height: 28px;
+  padding: 5px 9px;
+  border-radius: 999px;
+  background: #eef3ed;
+  color: var(--uy-green);
+  font-size: 0.78rem;
+  font-weight: 850;
+  white-space: nowrap;
+}
+
+.status-new {
+  background: #fff3cf;
+  color: #72510d;
+}
+
+.status-contacted {
+  background: #eaf1ff;
+  color: #254b78;
+}
+
+.status-scheduled {
+  background: #e8f4ef;
+  color: #176143;
+}
+
+.status-completed {
+  background: #edf7e5;
+  color: #436b20;
+}
+
+.status-invoiced {
+  background: #f5ecfb;
+  color: #673d7d;
+}
+
+.table-wrap {
+  overflow-x: auto;
+}
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+  min-width: 760px;
+}
+
+th,
+td {
+  padding: 13px 12px;
+  border-bottom: 1px solid var(--uy-line);
+  text-align: left;
+  vertical-align: top;
+}
+
+th {
+  color: var(--uy-green);
+  font-size: 0.78rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+td {
+  color: var(--uy-ink);
+  font-size: 0.92rem;
+}
+
+.contact-grid,
+.job-grid {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.note-form {
+  grid-template-columns: minmax(160px, 0.8fr) minmax(220px, 1.4fr) auto;
+  align-items: start;
+  margin-bottom: 16px;
+}
+
+.note-form button {
+  align-self: stretch;
+}
+
+@media (max-width: 980px) {
+  .app-view {
+    grid-template-columns: 1fr;
+  }
+
+  .dashboard-sidebar {
+    position: static;
+    height: auto;
+  }
+
+  .dashboard-nav {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  .dashboard-main {
+    padding: 22px;
+  }
+
+  .metric-grid,
+  .split-grid,
+  .contact-grid,
+  .job-grid,
+  .note-form {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 640px) {
+  .login-panel {
+    padding: 24px;
+  }
+
+  .dashboard-sidebar,
+  .dashboard-main {
+    padding: 18px;
+  }
+
+  .dashboard-nav {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .dashboard-topbar,
+  .panel-heading,
+  .topbar-actions {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .panel-heading select {
+    max-width: none;
+  }
+}

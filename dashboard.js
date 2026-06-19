@@ -1753,16 +1753,9 @@
       link.addEventListener("click", (event) => {
         event.preventDefault();
         setActiveSection(link.dataset.dashboardLink);
-        setSidebarOpen(false);
         history.replaceState(null, "", `#${link.dataset.dashboardLink}`);
       });
     });
-
-    if (els.sidebarToggle) {
-      els.sidebarToggle.addEventListener("click", () => {
-        setSidebarOpen(!els.appView.classList.contains("is-sidebar-open"));
-      });
-    }
 
     if (els.sidebarClose) {
       els.sidebarClose.addEventListener("click", () => setSidebarOpen(false));

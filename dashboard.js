@@ -1723,6 +1723,14 @@
     }
   }
 
+  function setSidebarOpen(isOpen) {
+    if (!els.appView) return;
+    els.appView.classList.toggle("is-sidebar-open", Boolean(isOpen));
+    if (els.sidebarToggle) {
+      els.sidebarToggle.setAttribute("aria-expanded", String(Boolean(isOpen)));
+    }
+  }
+
   function bindEvents() {
     els.loginForm.addEventListener("submit", async (event) => {
       event.preventDefault();
@@ -1745,8 +1753,23 @@
       link.addEventListener("click", (event) => {
         event.preventDefault();
         setActiveSection(link.dataset.dashboardLink);
+        setSidebarOpen(false);
         history.replaceState(null, "", `#${link.dataset.dashboardLink}`);
       });
+    });
+
+    if (els.sidebarToggle) {
+      els.sidebarToggle.addEventListener("click", () => {
+        setSidebarOpen(!els.appView.classList.contains("is-sidebar-open"));
+      });
+    }
+
+    if (els.sidebarClose) {
+      els.sidebarClose.addEventListener("click", () => setSidebarOpen(false));
+    }
+
+    document.addEventListener("keydown", (event) => {
+      if (event.key === "Escape") setSidebarOpen(false);
     });
 
     qsa("[data-calendar-view]").forEach((button) => {
@@ -2291,6 +2314,8 @@
     els.clientForm = qs("[data-client-form]");
     els.notes = qs("[data-notes]");
     els.reminders = qs("[data-reminders]");
+    els.sidebarToggle = qs("[data-sidebar-toggle]");
+    els.sidebarClose = qs("[data-sidebar-close]");
   }
 
   async function init() {

@@ -11,9 +11,9 @@
     <link rel="icon" href="/favicon.ico" sizes="any">
     <link rel="apple-touch-icon" href="/apple-touch-icon.png">
     <link rel="manifest" href="/dashboard.webmanifest">
-    <link rel="stylesheet" href="dashboard.css?v=20260619-12">
+    <link rel="stylesheet" href="dashboard.css?v=20260619-13">
     <script src="dashboard-config.js?v=20260619-5" defer></script>
-    <script src="dashboard.js?v=20260619-9" defer></script>
+    <script src="dashboard.js?v=20260619-10" defer></script>
   </head>
   <body>
     <main class="dashboard-shell" aria-labelledby="dashboard-title">
@@ -37,7 +37,8 @@
       </section>
 
       <section class="app-view" data-view="app" hidden>
-        <aside class="dashboard-sidebar">
+        <button class="sidebar-scrim" type="button" data-sidebar-close aria-label="Close dashboard menu"></button>
+        <aside class="dashboard-sidebar" id="dashboard-sidebar">
           <a class="dashboard-brand" href="/" aria-label="Urban Yards public website">
             <img src="images/urban-yards-mark.png?v=20260603-12" alt="">
             <span><strong>Urban Yards</strong><small>Owner Dashboard</small></span>
@@ -55,9 +56,14 @@
 
         <div class="dashboard-main">
           <header class="dashboard-topbar">
-            <div>
-              <p class="eyebrow">Owner Workspace</p>
-              <h2>Today at Urban Yards</h2>
+            <div class="topbar-title-group">
+              <button class="sidebar-toggle" type="button" data-sidebar-toggle aria-controls="dashboard-sidebar" aria-expanded="false">
+                <span class="button-icon" aria-hidden="true">=</span><span>Menu</span>
+              </button>
+              <div>
+                <p class="eyebrow">Owner Workspace</p>
+                <h2>Today at Urban Yards</h2>
+              </div>
             </div>
             <div class="topbar-actions">
               <span data-owner-email>team@urbanyards.us</span>

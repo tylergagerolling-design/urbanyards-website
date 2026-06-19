@@ -149,6 +149,7 @@ textarea:focus {
 .toolbar button,
 .drawer-actions button,
 .client-form button,
+.operations-form button,
 .document-form button,
 .schedule-create-form button {
   min-height: 44px;
@@ -165,6 +166,7 @@ textarea:focus {
 .toolbar button:hover,
 .drawer-actions button:hover,
 .client-form button:hover,
+.operations-form button:hover,
 .document-form button:hover,
 .schedule-create-form button:hover {
   background: #0c3025;
@@ -693,11 +695,73 @@ td {
 
 .document-form,
 .client-form,
+.operations-form,
 .schedule-create-form {
   display: grid;
   grid-template-columns: repeat(6, minmax(110px, 1fr));
   gap: 10px;
   margin-bottom: 16px;
+}
+
+.operations-form {
+  grid-template-columns: repeat(4, minmax(140px, 1fr));
+}
+
+.operations-form textarea {
+  grid-column: 1 / -1;
+}
+
+.operations-summary {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 10px;
+  margin-bottom: 16px;
+}
+
+.operation-feature,
+.operation-card {
+  border: 1px solid var(--uy-line);
+  border-radius: 8px;
+  background: #fff;
+  box-shadow: 0 8px 18px rgba(19, 36, 28, 0.06);
+}
+
+.operation-feature {
+  min-height: 92px;
+  padding: 13px;
+  color: var(--uy-ink);
+  text-align: left;
+}
+
+.operation-feature strong,
+.operation-feature span {
+  display: block;
+}
+
+.operation-feature strong {
+  color: var(--uy-green);
+  font-size: 0.95rem;
+}
+
+.operation-feature span {
+  margin-top: 7px;
+  color: var(--uy-muted);
+  font-size: 0.82rem;
+  line-height: 1.35;
+}
+
+.operation-feature:hover {
+  border-color: var(--uy-green-2);
+  background: #f8fbf8;
+}
+
+.operations-list {
+  display: grid;
+  gap: 12px;
+}
+
+.operation-card {
+  padding: 14px;
 }
 
 .schedule-create-form {
@@ -1116,6 +1180,7 @@ td {
   .settings-grid,
   .document-form,
   .client-form,
+  .operations-form,
   .schedule-create-form,
   .drawer-grid,
   .note-form {
@@ -1125,6 +1190,7 @@ td {
   .split-grid,
   .document-form,
   .client-form,
+  .operations-form,
   .schedule-create-form,
   .drawer-grid,
   .note-form {
@@ -1199,6 +1265,7 @@ td {
   .job-grid,
   .pipeline-grid,
   .document-list,
+  .operations-summary,
   .settings-grid {
     grid-template-columns: 1fr;
   }
@@ -1291,7 +1358,7 @@ td {
     left: 0;
     z-index: 20;
     display: grid;
-    grid-template-columns: repeat(5, minmax(0, 1fr));
+    grid-template-columns: repeat(6, minmax(0, 1fr));
     gap: 4px;
     border-top: 1px solid rgba(18, 63, 49, 0.14);
     background: rgba(255, 255, 255, 0.96);
@@ -1306,7 +1373,7 @@ td {
     place-items: center;
     border-radius: 8px;
     color: var(--uy-muted);
-    font-size: 0.72rem;
+    font-size: 0.68rem;
     font-weight: 850;
     text-align: center;
     text-decoration: none;

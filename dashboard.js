@@ -15,18 +15,21 @@
     statusFilter: "All",
     calendarFilter: "All",
     calendarView: "agenda",
+    operationsFilter: "All",
     search: "",
     propertyFilter: "All",
     selectedSubmissionId: "",
     selectedJobId: "",
     documentsReady: true,
+    operationsReady: true,
     data: {
       submissions: [],
       contacts: [],
       jobs: [],
       notes: [],
       reminders: [],
-      documents: []
+      documents: [],
+      operations: []
     },
     loading: false,
     error: ""
@@ -252,6 +255,22 @@
     };
   }
 
+  function normalizeOperation(row) {
+    return {
+      id: row.id,
+      type: row.record_type || "property_profile",
+      title: row.title || "Untitled operation",
+      clientName: row.client_name || "",
+      propertyAddress: row.property_address || "",
+      dueDate: formatDate(row.due_date),
+      dueDateRaw: row.due_date || "",
+      status: row.status || "Active",
+      notes: row.notes || "",
+      payload: row.payload && typeof row.payload === "object" ? row.payload : {},
+      createdAt: formatDate(row.created_at)
+    };
+  }
+
   function normalizeDocument(row) {
     return {
       id: row.id,
@@ -356,13 +375,14 @@
   }
 
   async function loadDashboardData() {
-    const [submissions, contacts, jobs, notes, reminders, documents] = await Promise.all([
+    const [submissions, contacts, jobs, notes, reminders, documents, operations] = await Promise.all([
       supabaseRestRequest("quote_submissions?select=*&order=created_at.desc", { method: "GET" }),
       supabaseRestRequest("contacts?select=*&order=created_at.desc", { method: "GET" }),
       supabaseRestRequest("scheduled_jobs?select=*&order=visit_date.asc", { method: "GET" }),
       supabaseRestRequest("job_notes?select=*&order=created_at.desc", { method: "GET" }),
       supabaseRestRequest("follow_up_reminders?select=*&order=due_date.asc", { method: "GET" }),
-      loadSalesDocuments()
+      loadSalesDocuments(),
+      loadOperationsRecords()
     ]);
 
     return {
@@ -371,7 +391,8 @@
       jobs: jobs.map(normalizeJob),
       notes: notes.map(normalizeNote),
       reminders: reminders.map(normalizeReminder),
-      documents
+      documents,
+      operations
     };
   }
 
@@ -382,6 +403,17 @@
       return rows.map(normalizeDocument);
     } catch (error) {
       state.documentsReady = false;
+      return [];
+    }
+  }
+
+  async function loadOperationsRecords() {
+    try {
+      const rows = await supabaseRestRequest("operations_records?select=*&order=created_at.desc", { method: "GET" });
+      state.operationsReady = true;
+      return rows.map(normalizeOperation);
+    } catch (error) {
+      state.operationsReady = false;
       return [];
     }
   }
@@ -550,6 +582,18 @@
     });
   }
 
+  async function insertOperation(payload) {
+    if (!state.operationsReady) {
+      throw new Error("Create the operations_records table first. See DASHBOARD_OPERATIONS_SQL.md.");
+    }
+    const rows = await supabaseRestRequest("operations_records", {
+      method: "POST",
+      headers: { Prefer: "return=representation" },
+      body: JSON.stringify(payload)
+    });
+    return normalizeOperation(rows[0]);
+  }
+
   async function upsertContactFromSubmission(item) {
     const existing = state.data.contacts.find((contact) => {
       const sameEmail = item.email !== "No email" && contact.email.toLowerCase() === item.email.toLowerCase();
@@ -699,6 +743,13 @@
     return state.data.notes.filter(matchesSearch);
   }
 
+  function filteredOperations() {
+    return state.data.operations.filter((item) => {
+      const typeMatches = state.operationsFilter === "All" || item.type === state.operationsFilter;
+      return typeMatches && matchesSearch(item);
+    });
+  }
+
   function populatePropertyFilter(data) {
     if (!els.propertyFilter) return;
     const current = state.propertyFilter;
@@ -806,6 +857,79 @@
       return;
     }
     els.dashboardAlerts.innerHTML = alerts.map((alert) => `<button type="button" data-action="quick-add-follow-up">${escapeHtml(alert)}</button>`).join("");
+  }
+
+  function operationTypeLabel(value) {
+    return String(value || "")
+      .split("_")
+      .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+      .join(" ");
+  }
+
+  function renderOperations(data) {
+    if (!els.operationsSummary || !els.operationsList) return;
+    const today = todayKey();
+    const weekEnd = daysFromToday(7);
+    const unpaidInvoices = data.documents.filter((doc) => doc.type === "invoice" && doc.status !== "paid");
+    const overdueInvoices = unpaidInvoices.filter((doc) => doc.dueDateRaw && doc.dueDateRaw < today);
+    const routeJobs = data.jobs.filter((job) => job.dateRaw >= today && job.dateRaw <= weekEnd);
+    const pendingQuotes = data.submissions.filter((item) => ["New", "Contacted"].includes(item.status));
+    const featureCards = [
+      ["Recurring jobs", `${routeJobs.length} jobs in next 7 days`, "recurring_job"],
+      ["Property profiles", `${data.contacts.length} clients to profile`, "property_profile"],
+      ["Job checklists", "Templates for field work", "job_checklist"],
+      ["Before/after photos", "Paste photo links or notes", "photo_log"],
+      ["Estimate approvals", `${pendingQuotes.length} pending quotes`, "estimate_approval"],
+      ["Invoice aging", `${overdueInvoices.length} overdue`, "invoice_aging"],
+      ["Daily route", `${routeJobs.length} route stops`, "daily_route"],
+      ["Quick call/email", "Use client cards", "quick_action"],
+      ["Open in maps", "Track address actions", "quick_action"],
+      ["Activity timeline", "Client history entries", "activity_timeline"],
+      ["Archive notes", "Hide or preserve context", "archive"],
+      ["Follow-up rules", "3-day and 7-day reminders", "automation_rule"],
+      ["Maintenance plans", "Recurring service packages", "maintenance_plan"],
+      ["Inspection notes", "Soil, drainage, plant health", "inspection_note"],
+      ["Service history", "Property work records", "service_history"],
+      ["Crew/day notes", "Daily field observations", "crew_note"],
+      ["Revenue summary", `${formatCurrency(unpaidInvoices.reduce((sum, doc) => sum + (doc.squareAmountDueCents || Math.round(doc.total * 100)), 0), "USD")} open`, "revenue_note"],
+      ["Quote to job", "Convert approved work", "quote_conversion"],
+      ["Completion reports", "Notes, photos, timestamp", "completion_report"],
+      ["Notifications", "Due work and missing info", "notification"]
+    ];
+    els.operationsSummary.innerHTML = featureCards.map(([title, detail, type]) => `
+      <button class="operation-feature" type="button" data-action="prefill-operation" data-type="${escapeHtml(type)}" data-title="${escapeHtml(title)}">
+        <strong>${escapeHtml(title)}</strong>
+        <span>${escapeHtml(detail)}</span>
+      </button>
+    `).join("");
+
+    if (!state.operationsReady) {
+      els.operationsList.innerHTML = emptyState("Saved operation records need the operations_records table. The feature cards above still summarize existing dashboard data.");
+      return;
+    }
+
+    const operations = filteredOperations();
+    if (!operations.length) {
+      els.operationsList.innerHTML = emptyState("No saved operation records yet.");
+      return;
+    }
+    els.operationsList.innerHTML = operations.map((item) => `
+      <article class="operation-card">
+        <div class="item-topline">
+          <div>
+            <p class="eyebrow">${escapeHtml(operationTypeLabel(item.type))}</p>
+            <h4>${escapeHtml(item.title)}</h4>
+            <div class="meta">${escapeHtml(item.clientName || "No client")} / ${escapeHtml(item.dueDate || "No due date")}</div>
+          </div>
+          <div class="card-actions">
+            <span class="status">${escapeHtml(item.status)}</span>
+            ${actionButton("Delete", "delete-operation", item.id).replace("inline-action", "inline-action danger-action")}
+          </div>
+        </div>
+        <p class="item-body">${escapeHtml(item.propertyAddress || "")}</p>
+        <p class="small">${escapeHtml(item.notes || "No notes yet.")}</p>
+      </article>
+    `).join("");
   }
 
   function documentStatusBadge(doc) {
@@ -1448,6 +1572,7 @@
     renderNotes();
     renderReminders(data);
     renderCalendar(data);
+    renderOperations(data);
     if (els.todayChip) els.todayChip.textContent = new Date().toLocaleDateString("en-US", { weekday: "long", month: "short", day: "numeric" });
     setActiveSection(state.activeSection);
   }
@@ -1548,6 +1673,13 @@
       });
     }
 
+    if (els.operationsFilter) {
+      els.operationsFilter.addEventListener("change", async () => {
+        state.operationsFilter = els.operationsFilter.value;
+        await render();
+      });
+    }
+
     els.noteForm.addEventListener("submit", async (event) => {
       event.preventDefault();
       const formData = new FormData(els.noteForm);
@@ -1621,6 +1753,20 @@
         history.replaceState(null, "", "#contacts");
         const input = qs("[data-client-form] input[name='name']");
         if (input) input.focus();
+      } else if (action === "quick-add-operation") {
+        setActiveSection("operations");
+        history.replaceState(null, "", "#operations");
+        const input = qs("[data-operations-form] input[name='title']");
+        if (input) input.focus();
+      } else if (action === "prefill-operation") {
+        setActiveSection("operations");
+        history.replaceState(null, "", "#operations");
+        const form = qs("[data-operations-form]");
+        if (form) {
+          form.record_type.value = target.dataset.type || "property_profile";
+          form.title.value = target.dataset.title || "";
+          form.notes.focus();
+        }
       } else if (action === "refresh-dashboard") {
         await refreshDashboard();
       } else if (action === "sync-contact") {
@@ -1768,6 +1914,17 @@
         } catch (error) {
           setDashboardState(error.message || "Unable to delete task.", "error");
         }
+      } else if (action === "delete-operation") {
+        const ok = window.confirm("Delete this operation record?");
+        if (!ok) return;
+        try {
+          setDashboardState("Deleting operation...");
+          await deleteRow("operations_records", id);
+          await refreshDashboard();
+          setDashboardState("");
+        } catch (error) {
+          setDashboardState(error.message || "Unable to delete operation.", "error");
+        }
       }
     });
 
@@ -1890,6 +2047,28 @@
         } catch (error) {
           setDashboardState(error.message || "Unable to add client.", "error");
         }
+      } else if (event.target.matches("[data-operations-form]")) {
+        event.preventDefault();
+        const formData = new FormData(event.target);
+        try {
+          setDashboardState("Saving operation...");
+          await insertOperation({
+            record_type: String(formData.get("record_type") || "property_profile"),
+            title: String(formData.get("title") || ""),
+            client_name: String(formData.get("client_name") || "") || null,
+            property_address: String(formData.get("property_address") || "") || null,
+            due_date: String(formData.get("due_date") || "") || null,
+            status: String(formData.get("status") || "Active"),
+            notes: String(formData.get("notes") || ""),
+            payload: {}
+          });
+          event.target.reset();
+          await refreshDashboard();
+          setActiveSection("operations");
+          setDashboardState("");
+        } catch (error) {
+          setDashboardState(error.message || "Unable to save operation.", "error");
+        }
       } else if (event.target.matches("[data-contact-edit]")) {
         event.preventDefault();
         const formData = new FormData(event.target);
@@ -1973,7 +2152,10 @@
     els.pipeline = qs("[data-pipeline]");
     els.documents = qs("[data-documents]");
     els.calendarFilter = qs("[data-calendar-filter]");
+    els.operationsFilter = qs("[data-operations-filter]");
     els.calendarList = qs("[data-calendar-list]");
+    els.operationsSummary = qs("[data-operations-summary]");
+    els.operationsList = qs("[data-operations-list]");
     els.homeReminders = qs("[data-home-reminders]");
     els.dashboardAlerts = qs("[data-dashboard-alerts]");
     els.todayChip = qs("[data-today-chip]");

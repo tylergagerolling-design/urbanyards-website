@@ -11,9 +11,9 @@
     <link rel="icon" href="/favicon.ico" sizes="any">
     <link rel="apple-touch-icon" href="/apple-touch-icon.png">
     <link rel="manifest" href="/dashboard.webmanifest">
-    <link rel="stylesheet" href="dashboard.css?v=20260619-3">
-    <script src="dashboard-config.js?v=20260619-3" defer></script>
-    <script src="dashboard.js?v=20260619-3" defer></script>
+    <link rel="stylesheet" href="dashboard.css?v=20260619-4">
+    <script src="dashboard-config.js?v=20260619-4" defer></script>
+    <script src="dashboard.js?v=20260619-4" defer></script>
   </head>
   <body>
     <main class="dashboard-shell" aria-labelledby="dashboard-title">
@@ -47,6 +47,7 @@
             <a href="#calendar" data-dashboard-link="calendar">Calendar</a>
             <a href="#contacts" data-dashboard-link="contacts">Clients</a>
             <a href="#documents" data-dashboard-link="documents">Quotes / Invoices</a>
+            <a href="#operations" data-dashboard-link="operations">Operations</a>
             <a href="#settings" data-dashboard-link="settings">Settings</a>
           </nav>
           <button class="sign-out" type="button" data-sign-out>Sign Out</button>
@@ -84,6 +85,7 @@
               <button type="button" data-action="quick-add-client">Add Client</button>
               <button type="button" data-action="quick-add-invoice-reminder">Add Invoice Reminder</button>
               <button type="button" data-new-note>Add Task</button>
+              <button type="button" data-action="quick-add-operation">Add Operation</button>
             </div>
             <div class="dashboard-alerts" data-dashboard-alerts></div>
             <div class="split-grid">
@@ -231,6 +233,81 @@
             </div>
           </section>
 
+          <section class="dashboard-section" id="operations" data-section="operations">
+            <div class="panel">
+              <div class="panel-heading">
+                <div>
+                  <h3>Operations</h3>
+                  <p>Recurring work, property notes, checklists, reports, route planning, approvals, and business reminders.</p>
+                </div>
+                <select data-operations-filter aria-label="Filter operations">
+                  <option value="All">All Operations</option>
+                  <option value="recurring_job">Recurring Jobs</option>
+                  <option value="property_profile">Property Profiles</option>
+                  <option value="job_checklist">Job Checklists</option>
+                  <option value="photo_log">Photo Logs</option>
+                  <option value="estimate_approval">Estimate Approvals</option>
+                  <option value="invoice_aging">Invoice Aging</option>
+                  <option value="daily_route">Daily Route</option>
+                  <option value="quick_action">Quick Actions</option>
+                  <option value="activity_timeline">Activity Timeline</option>
+                  <option value="archive">Archive</option>
+                  <option value="automation_rule">Automation Rules</option>
+                  <option value="maintenance_plan">Maintenance Plans</option>
+                  <option value="inspection_note">Inspection Notes</option>
+                  <option value="service_history">Service History</option>
+                  <option value="crew_note">Crew Notes</option>
+                  <option value="revenue_note">Revenue Notes</option>
+                  <option value="quote_conversion">Quote Conversion</option>
+                  <option value="completion_report">Completion Reports</option>
+                  <option value="notification">Notifications</option>
+                </select>
+              </div>
+              <div class="operations-summary" data-operations-summary></div>
+              <form class="operations-form" data-operations-form>
+                <select name="record_type" required>
+                  <option value="property_profile">Property profile</option>
+                  <option value="recurring_job">Recurring job</option>
+                  <option value="job_checklist">Job checklist</option>
+                  <option value="photo_log">Before/after photo log</option>
+                  <option value="estimate_approval">Estimate approval</option>
+                  <option value="invoice_aging">Invoice aging note</option>
+                  <option value="daily_route">Daily route stop</option>
+                  <option value="quick_action">Quick call/email/map action</option>
+                  <option value="activity_timeline">Activity timeline entry</option>
+                  <option value="archive">Archive note</option>
+                  <option value="automation_rule">Follow-up automation rule</option>
+                  <option value="maintenance_plan">Maintenance plan</option>
+                  <option value="inspection_note">Property inspection note</option>
+                  <option value="service_history">Service history</option>
+                  <option value="crew_note">Crew/day note</option>
+                  <option value="revenue_note">Revenue note</option>
+                  <option value="quote_conversion">Quote-to-job conversion</option>
+                  <option value="completion_report">Job completion report</option>
+                  <option value="notification">Dashboard notification</option>
+                </select>
+                <input name="title" placeholder="Title" required>
+                <input name="client_name" placeholder="Client / property">
+                <input name="property_address" placeholder="Address / access notes">
+                <input name="due_date" type="date" aria-label="Due date">
+                <select name="status">
+                  <option>Active</option>
+                  <option>Draft</option>
+                  <option>Sent</option>
+                  <option>Approved</option>
+                  <option>Scheduled</option>
+                  <option>Completed</option>
+                  <option>Paid</option>
+                  <option>Follow-up needed</option>
+                  <option>Archived</option>
+                </select>
+                <textarea name="notes" rows="3" placeholder="Notes, checklist items, photo links, access info, route details, or follow-up rules..."></textarea>
+                <button type="submit">Save Operation</button>
+              </form>
+              <div class="operations-list" data-operations-list></div>
+            </div>
+          </section>
+
           <section class="dashboard-section" id="settings" data-section="settings">
             <div class="panel">
               <div class="panel-heading">
@@ -264,6 +341,7 @@
           <a href="#calendar" data-dashboard-link="calendar">Calendar</a>
           <a href="#contacts" data-dashboard-link="contacts">Clients</a>
           <a href="#documents" data-dashboard-link="documents">Invoices</a>
+          <a href="#operations" data-dashboard-link="operations">Ops</a>
           <a href="#settings" data-dashboard-link="settings">Settings</a>
         </nav>
 

@@ -11,9 +11,9 @@
     <link rel="icon" href="/favicon.ico" sizes="any">
     <link rel="apple-touch-icon" href="/apple-touch-icon.png">
     <link rel="manifest" href="/dashboard.webmanifest">
-    <link rel="stylesheet" href="dashboard.css?v=20260619-4">
-    <script src="dashboard-config.js?v=20260619-4" defer></script>
-    <script src="dashboard.js?v=20260619-4" defer></script>
+    <link rel="stylesheet" href="dashboard.css?v=20260619-5">
+    <script src="dashboard-config.js?v=20260619-5" defer></script>
+    <script src="dashboard.js?v=20260619-5" defer></script>
   </head>
   <body>
     <main class="dashboard-shell" aria-labelledby="dashboard-title">
@@ -43,10 +43,10 @@
             <span><strong>Urban Yards</strong><small>Owner Dashboard</small></span>
           </a>
           <nav class="dashboard-nav" aria-label="Dashboard navigation">
-            <a href="#overview" data-dashboard-link="overview">Home</a>
-            <a href="#calendar" data-dashboard-link="calendar">Calendar</a>
+            <a href="#overview" data-dashboard-link="overview">Today</a>
+            <a href="#calendar" data-dashboard-link="calendar">Work</a>
             <a href="#contacts" data-dashboard-link="contacts">Clients</a>
-            <a href="#documents" data-dashboard-link="documents">Quotes / Invoices</a>
+            <a href="#documents" data-dashboard-link="documents">Money</a>
             <a href="#operations" data-dashboard-link="operations">Operations</a>
             <a href="#settings" data-dashboard-link="settings">Settings</a>
           </nav>
@@ -57,7 +57,7 @@
           <header class="dashboard-topbar">
             <div>
               <p class="eyebrow">Owner Workspace</p>
-              <h2>Urban Yards Control Center</h2>
+              <h2>Today at Urban Yards</h2>
             </div>
             <div class="topbar-actions">
               <span data-owner-email>team@urbanyards.us</span>
@@ -71,9 +71,9 @@
           <section class="dashboard-section" id="overview" data-section="overview">
             <div class="home-hero">
               <div>
-                <p class="eyebrow">Today</p>
-                <h3>What needs attention next</h3>
-                <p>Schedule, follow-ups, clients, quotes, and invoices in one daily view.</p>
+                <p class="eyebrow">Command Center</p>
+                <h3>Run the day from one place</h3>
+                <p>Work due today, client follow-ups, open quotes, and invoices that need attention.</p>
               </div>
               <div class="today-chip" data-today-chip></div>
             </div>
@@ -117,7 +117,7 @@
             <div class="panel">
               <div class="panel-heading">
                 <div>
-                  <h3>Master Calendar</h3>
+                  <h3>Work Calendar</h3>
                   <p>Jobs, quote follow-ups, invoice due dates, reminders, and tasks.</p>
                 </div>
                 <select data-calendar-filter aria-label="Filter calendar by type">
@@ -151,7 +151,7 @@
             <div class="panel">
               <div class="panel-heading">
                 <div>
-                  <h3>Quotes & Invoices</h3>
+                  <h3>Money</h3>
                   <p>Quote requests, estimates, Square invoice links, and payment follow-ups.</p>
                 </div>
                 <select data-status-filter aria-label="Filter submissions by status">
@@ -184,9 +184,6 @@
               </div>
               <div class="pipeline-grid" data-pipeline></div>
             </div>
-          </section>
-
-          <section class="dashboard-section" id="documents" data-section="documents">
             <div class="panel">
               <div class="panel-heading">
                 <h3>Estimates & Invoices</h3>
@@ -337,10 +334,10 @@
         </div>
 
         <nav class="mobile-tabbar" aria-label="Mobile dashboard navigation">
-          <a href="#overview" data-dashboard-link="overview">Home</a>
-          <a href="#calendar" data-dashboard-link="calendar">Calendar</a>
+          <a href="#overview" data-dashboard-link="overview">Today</a>
+          <a href="#calendar" data-dashboard-link="calendar">Work</a>
           <a href="#contacts" data-dashboard-link="contacts">Clients</a>
-          <a href="#documents" data-dashboard-link="documents">Invoices</a>
+          <a href="#documents" data-dashboard-link="documents">Money</a>
           <a href="#operations" data-dashboard-link="operations">Ops</a>
           <a href="#settings" data-dashboard-link="settings">Settings</a>
         </nav>

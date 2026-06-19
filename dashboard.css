@@ -148,7 +148,6 @@ textarea:focus {
 .sign-out,
 .toolbar button,
 .drawer-actions button,
-.inline-action,
 .client-form button,
 .document-form button,
 .schedule-create-form button {
@@ -165,11 +164,24 @@ textarea:focus {
 .note-form button:hover,
 .toolbar button:hover,
 .drawer-actions button:hover,
-.inline-action:hover,
 .client-form button:hover,
 .document-form button:hover,
 .schedule-create-form button:hover {
   background: #0c3025;
+}
+
+.inline-action {
+  min-height: 38px;
+  border: 1px solid rgba(18, 63, 49, 0.18);
+  border-radius: 8px;
+  background: #fff;
+  color: var(--uy-green);
+  font-weight: 850;
+}
+
+.inline-action:hover {
+  border-color: var(--uy-green);
+  background: #f2f6f2;
 }
 
 .form-note,
@@ -398,6 +410,16 @@ textarea:focus {
   color: var(--uy-green);
   font-weight: 850;
   box-shadow: 0 8px 18px rgba(19, 36, 28, 0.06);
+}
+
+.quick-actions button:first-child,
+.topbar-actions button:last-child,
+.document-form button,
+.schedule-create-form button,
+.client-form button {
+  border-color: var(--uy-green);
+  background: var(--uy-green);
+  color: #fff;
 }
 
 .quick-actions button:hover,
@@ -708,6 +730,10 @@ td {
   flex-wrap: wrap;
   justify-content: flex-end;
   gap: 8px;
+  padding: 4px;
+  border: 1px solid rgba(18, 63, 49, 0.08);
+  border-radius: 8px;
+  background: #fbfaf5;
 }
 
 .calendar-tabs {
@@ -735,6 +761,113 @@ td {
 .calendar-list {
   display: grid;
   gap: 10px;
+}
+
+.calendar-grid {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  overflow: hidden;
+  border: 1px solid var(--uy-line);
+  border-radius: 8px;
+  background: #fff;
+}
+
+.calendar-weekday {
+  border-bottom: 1px solid var(--uy-line);
+  background: #f8faf5;
+  color: var(--uy-green);
+  font-size: 0.74rem;
+  font-weight: 850;
+  padding: 10px;
+  text-transform: uppercase;
+}
+
+.calendar-day {
+  min-height: 128px;
+  border-right: 1px solid var(--uy-line);
+  border-bottom: 1px solid var(--uy-line);
+  background: #fff;
+  padding: 9px;
+}
+
+.calendar-day:nth-child(7n + 7) {
+  border-right: 0;
+}
+
+.calendar-day.is-muted {
+  background: #fbfaf5;
+  color: var(--uy-muted);
+}
+
+.calendar-day.is-today {
+  box-shadow: inset 0 0 0 2px var(--uy-green-2);
+}
+
+.calendar-day-number {
+  display: inline-grid;
+  width: 28px;
+  height: 28px;
+  place-items: center;
+  border-radius: 999px;
+  color: var(--uy-green);
+  font-size: 0.86rem;
+  font-weight: 850;
+}
+
+.calendar-day.is-today .calendar-day-number {
+  background: var(--uy-green);
+  color: #fff;
+}
+
+.calendar-day-events {
+  display: grid;
+  gap: 5px;
+  margin-top: 8px;
+}
+
+.calendar-pill {
+  display: block;
+  min-height: 28px;
+  width: 100%;
+  overflow: hidden;
+  border: 0;
+  border-left: 4px solid var(--uy-green-2);
+  border-radius: 6px;
+  background: #eef3ed;
+  color: var(--uy-ink);
+  font-size: 0.74rem;
+  font-weight: 800;
+  padding: 5px 7px;
+  text-align: left;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.calendar-pill.calendar-follow-up {
+  border-left-color: #d9b66f;
+  background: #fff7df;
+}
+
+.calendar-pill.calendar-invoice {
+  border-left-color: #71518f;
+  background: #f5ecfb;
+}
+
+.calendar-pill.calendar-task {
+  border-left-color: #65756c;
+  background: #eef0ee;
+}
+
+.calendar-more {
+  color: var(--uy-muted);
+  font-size: 0.72rem;
+  font-weight: 800;
+}
+
+.calendar-agenda-after-grid {
+  display: grid;
+  gap: 10px;
+  margin-top: 14px;
 }
 
 .calendar-card {
@@ -776,8 +909,10 @@ td {
 }
 
 .calendar-actions {
-  display: grid;
-  justify-items: end;
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  align-items: center;
   gap: 8px;
 }
 
@@ -837,12 +972,15 @@ td {
 }
 
 .danger-action {
-  background: var(--uy-danger);
-  color: #fff;
+  border-color: rgba(143, 47, 34, 0.28);
+  background: #fff5f2;
+  color: var(--uy-danger);
 }
 
 .danger-action:hover {
-  background: #6f2118;
+  border-color: var(--uy-danger);
+  background: var(--uy-danger);
+  color: #fff;
 }
 
 .print-document {
@@ -1094,6 +1232,36 @@ td {
   .calendar-card,
   .item-topline {
     flex-direction: column;
+  }
+
+  .calendar-list {
+    display: grid;
+  }
+
+  .calendar-grid {
+    display: block;
+    border: 0;
+    background: transparent;
+  }
+
+  .calendar-weekday {
+    display: none;
+  }
+
+  .calendar-day {
+    min-height: 0;
+    margin-bottom: 10px;
+    border: 1px solid var(--uy-line);
+    border-radius: 8px;
+    background: #fff;
+  }
+
+  .calendar-day.is-muted:not(:has(.calendar-pill)) {
+    display: none;
+  }
+
+  .calendar-agenda-after-grid {
+    margin-top: 4px;
   }
 
   .calendar-actions,

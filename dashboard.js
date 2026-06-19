@@ -917,6 +917,78 @@
     return events.filter((event) => event.date >= today).slice(0, 30);
   }
 
+  function calendarGridDays() {
+    const today = new Date(`${todayKey()}T12:00:00`);
+    if (state.calendarView === "week") {
+      const day = today.getDay();
+      const start = new Date(today);
+      start.setDate(today.getDate() - day);
+      return Array.from({ length: 7 }, (_, index) => {
+        const date = new Date(start);
+        date.setDate(start.getDate() + index);
+        return date.toISOString().slice(0, 10);
+      });
+    }
+    if (state.calendarView === "month") {
+      const first = new Date(today.getFullYear(), today.getMonth(), 1, 12);
+      const start = new Date(first);
+      start.setDate(first.getDate() - first.getDay());
+      return Array.from({ length: 42 }, (_, index) => {
+        const date = new Date(start);
+        date.setDate(start.getDate() + index);
+        return date.toISOString().slice(0, 10);
+      });
+    }
+    return [];
+  }
+
+  function renderCalendarGrid(events) {
+    const days = calendarGridDays();
+    const currentMonth = todayKey().slice(0, 7);
+    return `
+      <div class="calendar-grid" data-view="${escapeHtml(state.calendarView)}">
+        ${["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"].map((day) => `<div class="calendar-weekday">${day}</div>`).join("")}
+        ${days.map((day) => {
+          const dayEvents = events.filter((event) => event.date === day);
+          return `
+            <section class="calendar-day${day === todayKey() ? " is-today" : ""}${day.slice(0, 7) !== currentMonth ? " is-muted" : ""}">
+              <div class="calendar-day-number">${new Date(`${day}T12:00:00`).getDate()}</div>
+              <div class="calendar-day-events">
+                ${dayEvents.slice(0, 3).map((event) => `
+                  <button type="button" class="calendar-pill calendar-${escapeHtml(event.type)}" ${event.action ? `data-action="${escapeHtml(event.action)}" data-id="${escapeHtml(event.sourceId)}"` : ""}>
+                    <span>${escapeHtml(event.title)}</span>
+                  </button>
+                `).join("")}
+                ${dayEvents.length > 3 ? `<span class="calendar-more">+${dayEvents.length - 3} more</span>` : ""}
+              </div>
+            </section>
+          `;
+        }).join("")}
+      </div>
+      <div class="calendar-agenda-after-grid">
+        ${events.length ? events.slice(0, 8).map(renderCalendarListCard).join("") : emptyState("No calendar items match this view.")}
+      </div>
+    `;
+  }
+
+  function renderCalendarListCard(event) {
+    return `
+      <article class="calendar-card calendar-${escapeHtml(event.type)}">
+        <div>
+          <p class="calendar-date">${escapeHtml(formatDate(event.date))}</p>
+          <h4>${escapeHtml(event.title)}</h4>
+          <p class="meta">${escapeHtml(event.client)}${event.property ? ` / ${escapeHtml(event.property)}` : ""}</p>
+          <p class="item-body">${escapeHtml(event.time)} / ${escapeHtml(event.status)}</p>
+        </div>
+        <div class="calendar-actions">
+          <span>${escapeHtml(event.type)}</span>
+          ${event.action ? `<button class="inline-action" type="button" data-action="${escapeHtml(event.action)}" data-id="${escapeHtml(event.sourceId)}">${escapeHtml(event.actionLabel || "Open")}</button>` : ""}
+          ${event.deleteAction ? `<button class="inline-action danger-action" type="button" data-action="${escapeHtml(event.deleteAction)}" data-id="${escapeHtml(event.sourceId)}">Delete</button>` : ""}
+        </div>
+      </article>
+    `;
+  }
+
   function renderCalendar(data) {
     if (!els.calendarList) return;
     let events = buildCalendarEvents(data);
@@ -931,21 +1003,9 @@
       els.calendarList.innerHTML = emptyState("No calendar items match this view.");
       return;
     }
-    els.calendarList.innerHTML = events.map((event) => `
-      <article class="calendar-card calendar-${escapeHtml(event.type)}">
-        <div>
-          <p class="calendar-date">${escapeHtml(formatDate(event.date))}</p>
-          <h4>${escapeHtml(event.title)}</h4>
-          <p class="meta">${escapeHtml(event.client)}${event.property ? ` / ${escapeHtml(event.property)}` : ""}</p>
-          <p class="item-body">${escapeHtml(event.time)} / ${escapeHtml(event.status)}</p>
-        </div>
-        <div class="calendar-actions">
-          <span>${escapeHtml(event.type)}</span>
-          ${event.action ? `<button class="inline-action" type="button" data-action="${escapeHtml(event.action)}" data-id="${escapeHtml(event.sourceId)}">${escapeHtml(event.actionLabel || "Open")}</button>` : ""}
-          ${event.deleteAction ? `<button class="inline-action danger-action" type="button" data-action="${escapeHtml(event.deleteAction)}" data-id="${escapeHtml(event.sourceId)}">Delete</button>` : ""}
-        </div>
-      </article>
-    `).join("");
+    els.calendarList.innerHTML = ["week", "month"].includes(state.calendarView)
+      ? renderCalendarGrid(events)
+      : events.map(renderCalendarListCard).join("");
   }
 
   function renderQuoteTable(data) {

@@ -13,6 +13,8 @@
   const state = {
     activeSection: "overview",
     statusFilter: "All",
+    calendarFilter: "All",
+    calendarView: "agenda",
     search: "",
     propertyFilter: "All",
     selectedSubmissionId: "",
@@ -157,6 +159,23 @@
     const date = new Date(value);
     if (Number.isNaN(date.getTime())) return value;
     return date.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
+  }
+
+  function dateKey(value) {
+    if (!value) return "";
+    const date = new Date(value);
+    if (Number.isNaN(date.getTime())) return "";
+    return date.toISOString().slice(0, 10);
+  }
+
+  function todayKey() {
+    return new Date().toISOString().slice(0, 10);
+  }
+
+  function daysFromToday(count) {
+    const date = new Date();
+    date.setDate(date.getDate() + count);
+    return date.toISOString().slice(0, 10);
   }
 
   function formatCurrency(cents, currency) {
@@ -470,6 +489,15 @@
     return normalizeReminder(rows[0]);
   }
 
+  async function insertContact(payload) {
+    const rows = await supabaseRestRequest("contacts", {
+      method: "POST",
+      headers: { Prefer: "return=representation" },
+      body: JSON.stringify(payload)
+    });
+    return normalizeContact(rows[0]);
+  }
+
   async function upsertContactFromSubmission(item) {
     const existing = state.data.contacts.find((contact) => {
       const sameEmail = item.email !== "No email" && contact.email.toLowerCase() === item.email.toLowerCase();
@@ -555,7 +583,14 @@
   }
 
   function setActiveSection(section) {
-    state.activeSection = section || "overview";
+    const sectionMap = {
+      quotes: "documents",
+      pipeline: "documents",
+      schedule: "calendar",
+      notes: "settings",
+      reminders: "settings"
+    };
+    state.activeSection = sectionMap[section] || section || "overview";
     qsa("[data-section]").forEach((node) => {
       node.classList.toggle("is-active", node.dataset.section === state.activeSection);
     });
@@ -602,15 +637,19 @@
   }
 
   function renderMetrics(data) {
-    const openLeads = data.submissions.filter((item) => ["New", "Contacted"].includes(item.status)).length;
-    const scheduled = data.jobs.filter((item) => item.status === "Scheduled").length;
-    const completed = data.submissions.filter((item) => item.status === "Completed").length;
-    const invoiced = data.submissions.filter((item) => item.status === "Invoiced").length;
+    const today = todayKey();
+    const weekEnd = daysFromToday(7);
+    const jobsThisWeek = data.jobs.filter((item) => item.dateRaw >= today && item.dateRaw <= weekEnd).length;
+    const quotesPending = data.submissions.filter((item) => ["New", "Contacted"].includes(item.status)).length;
+    const invoicesDue = data.documents.filter((item) => item.type === "invoice" && item.status !== "paid").length;
+    const followUps = data.reminders.filter((item) => item.status !== "Completed").length;
+    const openTasks = data.notes.length;
     const metrics = [
-      ["Open leads", openLeads],
-      ["Scheduled visits", scheduled],
-      ["Completed jobs", completed],
-      ["Invoiced", invoiced]
+      ["Jobs this week", jobsThisWeek],
+      ["Quotes pending", quotesPending],
+      ["Invoices due", invoicesDue],
+      ["Follow-ups needed", followUps],
+      ["Open tasks", openTasks]
     ];
 
     els.metrics.innerHTML = metrics
@@ -658,6 +697,151 @@
     `).join("");
   }
 
+  function renderHomeReminders(data) {
+    if (!els.homeReminders) return;
+    const reminders = data.reminders.filter((item) => item.status !== "Completed").slice(0, 5);
+    if (!reminders.length) {
+      els.homeReminders.innerHTML = emptyState("No active follow-ups right now.");
+      return;
+    }
+    els.homeReminders.innerHTML = reminders.map((reminder) => `
+      <article class="reminder-card">
+        <div class="item-topline">
+          <div>
+            <h4>${escapeHtml(reminder.task)}</h4>
+            <div class="meta">Due: ${escapeHtml(reminder.due)}</div>
+          </div>
+          ${statusBadge(reminder.status)}
+        </div>
+      </article>
+    `).join("");
+  }
+
+  function buildCalendarEvents(data) {
+    const events = [];
+    data.jobs.forEach((job) => {
+      events.push({
+        id: `job-${job.id}`,
+        sourceId: job.id,
+        type: "job",
+        date: job.dateRaw,
+        title: job.service,
+        client: job.site,
+        property: job.city,
+        time: job.window,
+        status: job.status,
+        action: "edit-job"
+      });
+    });
+    data.submissions.forEach((item) => {
+      if (item.createdAtRaw) {
+        events.push({
+          id: `quote-${item.id}`,
+          sourceId: item.id,
+          type: "quote",
+          date: dateKey(item.createdAtRaw),
+          title: item.service,
+          client: item.name,
+          property: item.city,
+          time: "Quote request",
+          status: item.status,
+          action: "open-submission"
+        });
+      }
+    });
+    data.reminders.forEach((reminder) => {
+      events.push({
+        id: `reminder-${reminder.id}`,
+        sourceId: reminder.id,
+        type: "follow-up",
+        date: reminder.dueRaw,
+        title: reminder.task,
+        client: "Follow-up",
+        property: "",
+        time: "Reminder",
+        status: reminder.status
+      });
+    });
+    data.documents.forEach((doc) => {
+      if (doc.dueDate && doc.dueDate !== "Not scheduled") {
+        events.push({
+          id: `invoice-${doc.id}`,
+          sourceId: doc.id,
+          type: doc.type === "invoice" ? "invoice" : "quote",
+          date: dateKey(doc.dueDate),
+          title: doc.number,
+          client: doc.clientName,
+          property: doc.clientEmail,
+          time: doc.squareStatus || doc.status,
+          status: doc.status,
+          action: "open-document"
+        });
+      }
+    });
+    data.notes.forEach((note) => {
+      events.push({
+        id: `task-${note.id}`,
+        sourceId: note.id,
+        type: "task",
+        date: todayKey(),
+        title: note.title,
+        client: "Task",
+        property: note.body,
+        time: "Open task",
+        status: "New"
+      });
+    });
+    return events
+      .filter((event) => event.date)
+      .sort((a, b) => a.date.localeCompare(b.date));
+  }
+
+  function calendarWindow(events) {
+    const today = todayKey();
+    if (state.calendarView === "today") {
+      return events.filter((event) => event.date === today);
+    }
+    if (state.calendarView === "week") {
+      const end = daysFromToday(7);
+      return events.filter((event) => event.date >= today && event.date <= end);
+    }
+    if (state.calendarView === "month") {
+      const currentMonth = today.slice(0, 7);
+      return events.filter((event) => event.date.slice(0, 7) === currentMonth);
+    }
+    return events.filter((event) => event.date >= today).slice(0, 30);
+  }
+
+  function renderCalendar(data) {
+    if (!els.calendarList) return;
+    let events = buildCalendarEvents(data);
+    if (state.calendarFilter !== "All") {
+      events = events.filter((event) => event.type === state.calendarFilter);
+    }
+    events = calendarWindow(events);
+    qsa("[data-calendar-view]").forEach((button) => {
+      button.classList.toggle("is-active", button.dataset.calendarView === state.calendarView);
+    });
+    if (!events.length) {
+      els.calendarList.innerHTML = emptyState("No calendar items match this view.");
+      return;
+    }
+    els.calendarList.innerHTML = events.map((event) => `
+      <article class="calendar-card calendar-${escapeHtml(event.type)}">
+        <div>
+          <p class="calendar-date">${escapeHtml(formatDate(event.date))}</p>
+          <h4>${escapeHtml(event.title)}</h4>
+          <p class="meta">${escapeHtml(event.client)}${event.property ? ` / ${escapeHtml(event.property)}` : ""}</p>
+          <p class="item-body">${escapeHtml(event.time)} / ${escapeHtml(event.status)}</p>
+        </div>
+        <div class="calendar-actions">
+          <span>${escapeHtml(event.type)}</span>
+          ${event.action ? `<button class="inline-action" type="button" data-action="${escapeHtml(event.action)}" data-id="${escapeHtml(event.sourceId)}">Open</button>` : ""}
+        </div>
+      </article>
+    `).join("");
+  }
+
   function renderQuoteTable(data) {
     const items = filteredSubmissions();
     if (!items.length) {
@@ -700,7 +884,11 @@
       els.contacts.innerHTML = emptyState("No contacts yet.");
       return;
     }
-    els.contacts.innerHTML = data.contacts.map((contact) => `
+    els.contacts.innerHTML = data.contacts.map((contact) => {
+      const relatedJobs = data.jobs.filter((job) => job.site.toLowerCase() === contact.name.toLowerCase()).length;
+      const relatedDocs = data.documents.filter((doc) => doc.clientName.toLowerCase() === contact.name.toLowerCase() || doc.clientEmail.toLowerCase() === contact.email.toLowerCase()).length;
+      const relatedQuotes = data.submissions.filter((item) => item.name.toLowerCase() === contact.name.toLowerCase() || item.email.toLowerCase() === contact.email.toLowerCase()).length;
+      return `
       <article class="contact-card">
         <div class="item-topline">
           <div>
@@ -710,8 +898,10 @@
           ${statusSelect("contacts", contact.id, contact.status)}
         </div>
         <p class="item-body">${escapeHtml(contact.email)}<br>${escapeHtml(contact.phone)}</p>
+        <p class="small">Related: ${relatedJobs} jobs / ${relatedQuotes} quotes / ${relatedDocs} docs</p>
       </article>
-    `).join("");
+    `;
+    }).join("");
   }
 
   function renderJobs(data) {
@@ -1013,6 +1203,7 @@
     renderMetrics(data);
     renderSubmissions(data);
     renderUpcoming(data);
+    renderHomeReminders(data);
     renderQuoteTable(data);
     renderPipeline(data);
     renderDocuments(data);
@@ -1020,6 +1211,8 @@
     renderJobs(data);
     renderNotes();
     renderReminders(data);
+    renderCalendar(data);
+    if (els.todayChip) els.todayChip.textContent = new Date().toLocaleDateString("en-US", { weekday: "long", month: "short", day: "numeric" });
     setActiveSection(state.activeSection);
   }
 
@@ -1028,10 +1221,11 @@
     state.error = "";
     setDashboardState("Loading dashboard records...");
     els.metrics.innerHTML = [
-      ["Open leads", "..."],
-      ["Scheduled visits", "..."],
-      ["Completed jobs", "..."],
-      ["Invoiced", "..."]
+      ["Jobs this week", "..."],
+      ["Quotes pending", "..."],
+      ["Invoices due", "..."],
+      ["Follow-ups needed", "..."],
+      ["Open tasks", "..."]
     ].map(([label, value]) => `<article class="metric-card"><strong>${value}</strong><span>${label}</span></article>`).join("");
     els.submissions.innerHTML = loadingState("Loading submissions...");
     els.upcoming.innerHTML = loadingState("Loading visits...");
@@ -1076,6 +1270,13 @@
       });
     });
 
+    qsa("[data-calendar-view]").forEach((button) => {
+      button.addEventListener("click", async () => {
+        state.calendarView = button.dataset.calendarView || "agenda";
+        await render();
+      });
+    });
+
     els.statusFilter.addEventListener("change", async () => {
       state.statusFilter = els.statusFilter.value;
       await render();
@@ -1091,6 +1292,13 @@
     if (els.propertyFilter) {
       els.propertyFilter.addEventListener("change", async () => {
         state.propertyFilter = els.propertyFilter.value;
+        await render();
+      });
+    }
+
+    if (els.calendarFilter) {
+      els.calendarFilter.addEventListener("change", async () => {
+        state.calendarFilter = els.calendarFilter.value;
         await render();
       });
     }
@@ -1141,6 +1349,33 @@
 
       if (action === "open-submission") {
         openSubmissionDrawer(id);
+      } else if (action === "quick-add-job") {
+        setActiveSection("calendar");
+        history.replaceState(null, "", "#calendar");
+        const input = qs("[data-job-create-form] input[name='site_name']");
+        if (input) input.focus();
+      } else if (action === "quick-add-quote") {
+        setActiveSection("documents");
+        history.replaceState(null, "", "#documents");
+        const input = qs("[data-document-form] input[name='client_name']");
+        if (input) input.focus();
+      } else if (action === "quick-add-follow-up" || action === "quick-add-invoice-reminder") {
+        setActiveSection("settings");
+        history.replaceState(null, "", "#settings");
+        if (els.noteForm) {
+          const titleInput = els.noteForm.querySelector("input[name='title']");
+          if (titleInput) {
+            titleInput.value = action === "quick-add-invoice-reminder" ? "Invoice reminder" : "Follow-up";
+            titleInput.focus();
+          }
+        }
+      } else if (action === "quick-add-client") {
+        setActiveSection("contacts");
+        history.replaceState(null, "", "#contacts");
+        const input = qs("[data-client-form] input[name='name']");
+        if (input) input.focus();
+      } else if (action === "refresh-dashboard") {
+        await refreshDashboard();
       } else if (action === "sync-contact") {
         const item = findSubmission(id);
         if (!item) return;
@@ -1322,6 +1557,25 @@
         } catch (error) {
           setDashboardState(error.message || "Unable to add visit.", "error");
         }
+      } else if (event.target.matches("[data-client-form]")) {
+        event.preventDefault();
+        const formData = new FormData(event.target);
+        try {
+          setDashboardState("Adding client...");
+          await insertContact({
+            name: String(formData.get("name") || ""),
+            email: String(formData.get("email") || "") || null,
+            phone: String(formData.get("phone") || "") || null,
+            city: String(formData.get("city") || "") || null,
+            contact_type: String(formData.get("contact_type") || "") || "Client",
+            status: "New"
+          });
+          event.target.reset();
+          await refreshDashboard();
+          setDashboardState("");
+        } catch (error) {
+          setDashboardState(error.message || "Unable to add client.", "error");
+        }
       }
     });
 
@@ -1334,8 +1588,8 @@
     }
 
     els.newNote.addEventListener("click", () => {
-      setActiveSection("notes");
-      history.replaceState(null, "", "#notes");
+      setActiveSection("settings");
+      history.replaceState(null, "", "#settings");
       const titleInput = els.noteForm.querySelector("input[name='title']");
       if (titleInput) titleInput.focus();
     });
@@ -1360,6 +1614,10 @@
     els.propertyFilter = qs("[data-property-filter]");
     els.pipeline = qs("[data-pipeline]");
     els.documents = qs("[data-documents]");
+    els.calendarFilter = qs("[data-calendar-filter]");
+    els.calendarList = qs("[data-calendar-list]");
+    els.homeReminders = qs("[data-home-reminders]");
+    els.todayChip = qs("[data-today-chip]");
     els.detailDrawer = qs("[data-detail-drawer]");
     els.detailContent = qs("[data-detail-content]");
     els.closeDetail = qs("[data-close-detail]");
@@ -1371,6 +1629,7 @@
     els.contacts = qs("[data-contacts]");
     els.jobs = qs("[data-jobs]");
     els.noteForm = qs("[data-note-form]");
+    els.clientForm = qs("[data-client-form]");
     els.notes = qs("[data-notes]");
     els.reminders = qs("[data-reminders]");
   }

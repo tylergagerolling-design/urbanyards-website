@@ -5,11 +5,15 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="robots" content="noindex,nofollow">
     <meta name="theme-color" content="#123f31">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-title" content="Urban Yards">
     <title>Urban Yards Owner Dashboard</title>
     <link rel="icon" href="/favicon.ico" sizes="any">
-    <link rel="stylesheet" href="dashboard.css?v=20260618-7">
-    <script src="dashboard-config.js?v=20260618-7" defer></script>
-    <script src="dashboard.js?v=20260618-7" defer></script>
+    <link rel="apple-touch-icon" href="/apple-touch-icon.png">
+    <link rel="manifest" href="/dashboard.webmanifest">
+    <link rel="stylesheet" href="dashboard.css?v=20260619-1">
+    <script src="dashboard-config.js?v=20260619-1" defer></script>
+    <script src="dashboard.js?v=20260619-1" defer></script>
   </head>
   <body>
     <main class="dashboard-shell" aria-labelledby="dashboard-title">
@@ -39,14 +43,11 @@
             <span><strong>Urban Yards</strong><small>Owner Dashboard</small></span>
           </a>
           <nav class="dashboard-nav" aria-label="Dashboard navigation">
-            <a href="#overview" data-dashboard-link="overview">Overview</a>
-            <a href="#quotes" data-dashboard-link="quotes">Quotes</a>
-            <a href="#pipeline" data-dashboard-link="pipeline">Pipeline</a>
-            <a href="#documents" data-dashboard-link="documents">Docs</a>
-            <a href="#contacts" data-dashboard-link="contacts">Contacts</a>
-            <a href="#schedule" data-dashboard-link="schedule">Schedule</a>
-            <a href="#notes" data-dashboard-link="notes">Job Notes</a>
-            <a href="#reminders" data-dashboard-link="reminders">Reminders</a>
+            <a href="#overview" data-dashboard-link="overview">Home</a>
+            <a href="#calendar" data-dashboard-link="calendar">Calendar</a>
+            <a href="#contacts" data-dashboard-link="contacts">Clients</a>
+            <a href="#documents" data-dashboard-link="documents">Quotes / Invoices</a>
+            <a href="#settings" data-dashboard-link="settings">Settings</a>
           </nav>
           <button class="sign-out" type="button" data-sign-out>Sign Out</button>
         </aside>
@@ -55,47 +56,108 @@
           <header class="dashboard-topbar">
             <div>
               <p class="eyebrow">Owner Workspace</p>
-              <h2>Quote pipeline and field work</h2>
+              <h2>Urban Yards Control Center</h2>
             </div>
             <div class="topbar-actions">
               <span data-owner-email>team@urbanyards.us</span>
               <button type="button" data-refresh-dashboard>Refresh</button>
-              <button type="button" data-new-note>New Note</button>
+              <button type="button" data-action="quick-add-job">Add Job</button>
             </div>
           </header>
           <div class="dashboard-state" data-dashboard-state role="status" hidden></div>
 
           <section class="dashboard-section" id="overview" data-section="overview">
+            <div class="home-hero">
+              <div>
+                <p class="eyebrow">Today</p>
+                <h3>What needs attention next</h3>
+                <p>Schedule, follow-ups, clients, quotes, and invoices in one daily view.</p>
+              </div>
+              <div class="today-chip" data-today-chip></div>
+            </div>
             <div class="metric-grid" data-metrics></div>
+            <div class="quick-actions" aria-label="Quick actions">
+              <button type="button" data-action="quick-add-job">Add Job</button>
+              <button type="button" data-action="quick-add-quote">Add Quote</button>
+              <button type="button" data-action="quick-add-follow-up">Add Follow-Up</button>
+              <button type="button" data-action="quick-add-client">Add Client</button>
+              <button type="button" data-action="quick-add-invoice-reminder">Add Invoice Reminder</button>
+              <button type="button" data-new-note>Add Task</button>
+            </div>
             <div class="split-grid">
               <article class="panel">
                 <div class="panel-heading">
-                  <h3>Recent quote/contact submissions</h3>
-                  <select data-status-filter aria-label="Filter submissions by status">
-                    <option value="All">All Statuses</option>
-                    <option>New</option>
-                    <option>Contacted</option>
-                    <option>Scheduled</option>
-                    <option>Completed</option>
-                    <option>Invoiced</option>
-                  </select>
-                </div>
-                <div class="submission-list" data-submissions></div>
-              </article>
-              <article class="panel">
-                <div class="panel-heading">
                   <h3>Today and next visits</h3>
+                  <button class="inline-action" type="button" data-action="quick-add-job">Add Job</button>
                 </div>
                 <div class="schedule-list" data-upcoming></div>
               </article>
+              <article class="panel">
+                <div class="panel-heading">
+                  <h3>Important reminders</h3>
+                  <button class="inline-action" type="button" data-action="quick-add-follow-up">Add Follow-Up</button>
+                </div>
+                <div class="reminder-list" data-home-reminders></div>
+              </article>
+            </div>
+            <div class="panel home-panel">
+              <div class="panel-heading">
+                <h3>Quote pipeline</h3>
+                <button class="inline-action" type="button" data-action="quick-add-quote">Add Quote</button>
+              </div>
+              <div class="submission-list" data-submissions></div>
             </div>
           </section>
 
-          <section class="dashboard-section" id="quotes" data-section="quotes">
+          <section class="dashboard-section" id="calendar" data-section="calendar">
             <div class="panel">
               <div class="panel-heading">
-                <h3>Quote/contact submissions</h3>
-                <p>Live quote requests from Supabase.</p>
+                <div>
+                  <h3>Master Calendar</h3>
+                  <p>Jobs, quote follow-ups, invoice due dates, reminders, and tasks.</p>
+                </div>
+                <select data-calendar-filter aria-label="Filter calendar by type">
+                  <option value="All">All Types</option>
+                  <option value="job">Jobs</option>
+                  <option value="quote">Quotes</option>
+                  <option value="follow-up">Follow-ups</option>
+                  <option value="invoice">Invoices</option>
+                  <option value="task">Tasks</option>
+                </select>
+              </div>
+              <div class="calendar-tabs" role="tablist" aria-label="Calendar views">
+                <button type="button" data-calendar-view="today">Today</button>
+                <button type="button" data-calendar-view="agenda">Agenda</button>
+                <button type="button" data-calendar-view="week">Week</button>
+                <button type="button" data-calendar-view="month">Month</button>
+              </div>
+              <form class="schedule-create-form calendar-create-form" data-job-create-form>
+                <input name="visit_date" type="date" required>
+                <input name="visit_window" placeholder="Time window">
+                <input name="site_name" placeholder="Client / title" required>
+                <input name="city" placeholder="Property / area">
+                <input name="service" placeholder="Job, task, or reminder" required>
+                <button type="submit">Add Calendar Item</button>
+              </form>
+              <div class="calendar-list" data-calendar-list></div>
+            </div>
+          </section>
+
+          <section class="dashboard-section" id="documents" data-section="documents">
+            <div class="panel">
+              <div class="panel-heading">
+                <div>
+                  <h3>Quotes & Invoices</h3>
+                  <p>Quote requests, estimates, Square invoice links, and payment follow-ups.</p>
+                </div>
+                <select data-status-filter aria-label="Filter submissions by status">
+                  <option value="All">All Statuses</option>
+                  <option>New</option>
+                  <option>Contacted</option>
+                  <option>Scheduled</option>
+                  <option>Completed</option>
+                  <option>Invoiced</option>
+                </select>
               </div>
               <div class="toolbar">
                 <input data-dashboard-search type="search" placeholder="Search name, email, phone, city, service...">
@@ -111,9 +173,6 @@
                 </table>
               </div>
             </div>
-          </section>
-
-          <section class="dashboard-section" id="pipeline" data-section="pipeline">
             <div class="panel">
               <div class="panel-heading">
                 <h3>Pipeline</h3>
@@ -149,62 +208,62 @@
           <section class="dashboard-section" id="contacts" data-section="contacts">
             <div class="panel">
               <div class="panel-heading">
-                <h3>Contact list</h3>
-                <p>Owner-visible contacts captured from quote requests and follow-ups.</p>
+                <div>
+                  <h3>Clients</h3>
+                  <p>Client cards with contact details and related work signals.</p>
+                </div>
+                <button class="inline-action" type="button" data-action="quick-add-client">Add Client</button>
               </div>
               <div class="toolbar">
                 <button type="button" data-export="contacts">Export Contacts CSV</button>
               </div>
+              <form class="client-form" data-client-form>
+                <input name="name" placeholder="Client name" required>
+                <input name="email" type="email" placeholder="Email">
+                <input name="phone" placeholder="Phone">
+                <input name="city" placeholder="Property / area">
+                <input name="contact_type" placeholder="Client type">
+                <button type="submit">Add Client</button>
+              </form>
               <div class="contact-grid" data-contacts></div>
             </div>
           </section>
 
-          <section class="dashboard-section" id="schedule" data-section="schedule">
+          <section class="dashboard-section" id="settings" data-section="settings">
             <div class="panel">
               <div class="panel-heading">
-                <h3>Scheduled jobs/visits</h3>
-                <p>Upcoming work and estimated service windows.</p>
+                <div>
+                  <h3>Settings & Tools</h3>
+                  <p>Exports, task notes, reminders, and account controls.</p>
+                </div>
               </div>
-              <form class="schedule-create-form" data-job-create-form>
-                <input name="visit_date" type="date" required>
-                <input name="visit_window" placeholder="Visit window">
-                <input name="site_name" placeholder="Site / customer" required>
-                <input name="city" placeholder="City">
-                <input name="service" placeholder="Service" required>
-                <button type="submit">Add Visit</button>
-              </form>
-              <div class="toolbar">
+              <div class="settings-grid">
                 <button type="button" data-export="jobs">Export Jobs CSV</button>
-              </div>
-              <div class="job-grid" data-jobs></div>
-            </div>
-          </section>
-
-          <section class="dashboard-section" id="notes" data-section="notes">
-            <div class="panel">
-              <div class="panel-heading">
-                <h3>Job notes</h3>
-                <p>Field notes, property observations, and internal reminders.</p>
+                <button type="button" data-export="contacts">Export Contacts CSV</button>
+                <button type="button" data-export="submissions">Export Quotes CSV</button>
+                <button type="button" data-action="refresh-dashboard">Refresh Dashboard</button>
               </div>
               <form class="note-form" data-note-form>
                 <input name="title" placeholder="Note title" required>
-                <textarea name="body" rows="3" placeholder="Add a sample note for this browser session..." required></textarea>
-                <button type="submit">Add Note</button>
+                <textarea name="body" rows="3" placeholder="Task, property note, or business reminder..." required></textarea>
+                <button type="submit">Add Task</button>
               </form>
               <div class="note-list" data-notes></div>
-            </div>
-          </section>
-
-          <section class="dashboard-section" id="reminders" data-section="reminders">
-            <div class="panel">
-              <div class="panel-heading">
-                <h3>Follow-up reminders</h3>
-                <p>Calls, emails, estimates, and post-job follow-up.</p>
-              </div>
+              <h3 class="settings-subhead">Follow-up reminders</h3>
               <div class="reminder-list" data-reminders></div>
+              <h3 class="settings-subhead">Scheduled jobs</h3>
+              <div class="job-grid" data-jobs></div>
             </div>
           </section>
         </div>
+
+        <nav class="mobile-tabbar" aria-label="Mobile dashboard navigation">
+          <a href="#overview" data-dashboard-link="overview">Home</a>
+          <a href="#calendar" data-dashboard-link="calendar">Calendar</a>
+          <a href="#contacts" data-dashboard-link="contacts">Clients</a>
+          <a href="#documents" data-dashboard-link="documents">Invoices</a>
+          <a href="#settings" data-dashboard-link="settings">Settings</a>
+        </nav>
 
         <aside class="detail-drawer" data-detail-drawer hidden aria-label="Quote details">
           <div class="drawer-panel">

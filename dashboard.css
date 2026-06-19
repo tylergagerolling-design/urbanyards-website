@@ -2046,3 +2046,218 @@ button:active,
     color: var(--uy-green);
   }
 }
+
+/* 2M finish pass 7: dashboard shell and navigation */
+.dashboard-shell {
+  background:
+    radial-gradient(circle at 10% -10%, rgba(217, 182, 111, .16), transparent 32%),
+    radial-gradient(circle at 88% 4%, rgba(30, 90, 69, .1), transparent 28%),
+    linear-gradient(180deg, #faf8ef 0%, #edf3ed 54%, #fbfaf5 100%);
+}
+
+.dashboard-sidebar {
+  border-right-color: rgba(255, 255, 255, .08);
+}
+
+.dashboard-brand {
+  padding: 4px;
+  border-radius: 8px;
+}
+
+.dashboard-nav a {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.dashboard-nav a::after {
+  width: 6px;
+  height: 6px;
+  border-radius: 999px;
+  background: currentColor;
+  content: "";
+  opacity: 0;
+  transform: scale(.7);
+  transition: opacity .18s ease, transform .18s ease;
+}
+
+.dashboard-nav a.is-active::after {
+  opacity: .5;
+  transform: scale(1);
+}
+
+.dashboard-topbar {
+  backdrop-filter: blur(18px) saturate(130%);
+}
+
+/* 2M finish pass 8: dashboard controls, tables, and cards */
+.topbar-actions,
+.quick-actions,
+.toolbar,
+.document-form,
+.client-form,
+.operations-form,
+.schedule-create-form,
+.calendar-tabs,
+.document-card-actions {
+  border-color: rgba(18, 63, 49, .09);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, .78),
+    0 10px 28px rgba(19, 36, 28, .055);
+}
+
+.login-form button,
+.topbar-actions button,
+.note-form button,
+.toolbar button,
+.drawer-actions button,
+.client-form button,
+.operations-form button,
+.document-form button,
+.schedule-create-form button,
+.calendar-tabs button,
+.quick-actions button,
+.settings-grid button,
+.inline-action,
+.drawer-actions .button {
+  min-height: 42px;
+  border-radius: 999px;
+}
+
+.topbar-actions button:last-child,
+.quick-actions button:first-child,
+.document-form button,
+.schedule-create-form button,
+.client-form button,
+.operations-form button,
+.note-form button,
+.drawer-actions button[type="submit"] {
+  background: linear-gradient(180deg, #245f49, #123f31);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, .2),
+    0 14px 28px rgba(18, 63, 49, .18);
+}
+
+.toolbar button,
+.settings-grid button,
+.topbar-actions button:not(:last-child),
+.quick-actions button:not(:first-child),
+.inline-action,
+.calendar-tabs button {
+  background: linear-gradient(180deg, #fff, #f8fbf8);
+}
+
+.button-icon {
+  flex: 0 0 auto;
+}
+
+.panel,
+.metric-card,
+.submission-card,
+.contact-card,
+.job-card,
+.note-card,
+.reminder-card,
+.document-card,
+.calendar-card,
+.operation-card {
+  border-color: rgba(18, 63, 49, .1);
+}
+
+.panel-heading h3,
+.document-card h4,
+.calendar-card h4 {
+  text-wrap: balance;
+}
+
+.table-wrap {
+  border: 1px solid rgba(18, 63, 49, .08);
+  border-radius: 8px;
+  background: #fff;
+}
+
+table {
+  overflow: hidden;
+  border-radius: 8px;
+}
+
+th:first-child {
+  border-top-left-radius: 8px;
+}
+
+th:last-child {
+  border-top-right-radius: 8px;
+}
+
+/* 2M finish pass 9: drawer, documents, danger, and mobile */
+.danger-action,
+.inline-action.danger-action,
+.drawer-actions .danger-action {
+  border: 1px solid rgba(143, 47, 34, .2);
+  background: linear-gradient(180deg, #fff8f6, #fff0eb);
+  box-shadow: 0 8px 18px rgba(143, 47, 34, .06);
+  color: var(--uy-danger);
+}
+
+.danger-action:hover,
+.inline-action.danger-action:hover,
+.drawer-actions .danger-action:hover {
+  border-color: rgba(143, 47, 34, .72);
+  background: var(--uy-danger);
+  box-shadow: 0 14px 28px rgba(143, 47, 34, .18);
+  color: #fff;
+}
+
+.drawer-panel {
+  border-left: 1px solid rgba(18, 63, 49, .08);
+}
+
+.drawer-close {
+  float: none;
+  margin: 0 0 14px auto;
+}
+
+.document-drawer-heading {
+  padding-top: 0;
+}
+
+.print-document,
+.document-sidebar-card,
+.document-edit-form {
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, .8),
+    0 14px 34px rgba(19, 36, 28, .08);
+}
+
+.document-primary-actions .button {
+  background: linear-gradient(180deg, #245f49, #123f31);
+}
+
+@media (max-width: 760px) {
+  .dashboard-sidebar {
+    border-bottom-color: rgba(255, 255, 255, .1);
+  }
+
+  .quick-actions {
+    grid-template-columns: 1fr 1fr;
+    padding-bottom: 10px;
+  }
+
+  .quick-actions button {
+    min-width: 0;
+  }
+
+  .drawer-panel {
+    border-left: 0;
+  }
+
+  .mobile-tabbar {
+    background: rgba(255, 255, 255, .97);
+  }
+
+  .mobile-tabbar a.is-active {
+    background: var(--uy-green);
+    color: #fff;
+    box-shadow: 0 10px 22px rgba(18, 63, 49, .18);
+  }
+}

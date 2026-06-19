@@ -1492,10 +1492,11 @@ input:focus, select:focus, textarea:focus { outline: 0; }
   display: grid;
   gap: 22px;
   align-content: start;
+  justify-items: center;
 }
 .about-portrait-placeholder {
   display: grid;
-  width: min(100%, 310px);
+  width: min(100%, 236px);
   aspect-ratio: 4 / 5;
   align-content: end;
   gap: 4px;

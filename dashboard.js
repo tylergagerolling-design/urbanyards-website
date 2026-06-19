@@ -261,6 +261,7 @@
       clientEmail: row.client_email || "",
       issueDate: formatDate(row.issue_date || row.created_at),
       dueDate: formatDate(row.due_date),
+      dueDateRaw: row.due_date || "",
       status: row.status || "draft",
       squareInvoiceId: row.square_invoice_id || "",
       squareInvoiceNumber: row.square_invoice_number || "",
@@ -403,6 +404,13 @@
     return normalizeJob(rows[0]);
   }
 
+  async function deleteRow(table, id) {
+    await supabaseRestRequest(`${table}?id=eq.${encodeURIComponent(id)}`, {
+      method: "DELETE",
+      headers: { Prefer: "return=minimal" }
+    });
+  }
+
   async function updateScheduledJob(id, payload) {
     await supabaseRestRequest(`scheduled_jobs?id=eq.${encodeURIComponent(id)}`, {
       method: "PATCH",
@@ -480,6 +488,34 @@
     return data.document ? normalizeDocument(data.document) : null;
   }
 
+  async function updateSalesDocument(id, input) {
+    const amount = Number(input.amount || 0);
+    const lineItems = [{
+      description: input.description || "Landscape service",
+      quantity: 1,
+      unit_price: amount,
+      amount
+    }];
+    const rows = await supabaseRestRequest(`sales_documents?id=eq.${encodeURIComponent(id)}`, {
+      method: "PATCH",
+      headers: { Prefer: "return=representation" },
+      body: JSON.stringify({
+        document_type: input.document_type || "estimate",
+        client_name: input.client_name,
+        client_email: input.client_email || null,
+        square_invoice_number: input.square_invoice_number || null,
+        due_date: input.due_date || null,
+        status: input.status || "draft",
+        line_items: lineItems,
+        subtotal: amount,
+        tax: 0,
+        total: amount,
+        notes: input.notes || ""
+      })
+    });
+    return normalizeDocument(rows[0]);
+  }
+
   async function insertReminder(payload) {
     const rows = await supabaseRestRequest("follow_up_reminders", {
       method: "POST",
@@ -496,6 +532,22 @@
       body: JSON.stringify(payload)
     });
     return normalizeContact(rows[0]);
+  }
+
+  async function updateContact(id, payload) {
+    await supabaseRestRequest(`contacts?id=eq.${encodeURIComponent(id)}`, {
+      method: "PATCH",
+      headers: { Prefer: "return=minimal" },
+      body: JSON.stringify(payload)
+    });
+  }
+
+  async function updateReminder(id, payload) {
+    await supabaseRestRequest(`follow_up_reminders?id=eq.${encodeURIComponent(id)}`, {
+      method: "PATCH",
+      headers: { Prefer: "return=minimal" },
+      body: JSON.stringify(payload)
+    });
   }
 
   async function upsertContactFromSubmission(item) {
@@ -602,7 +654,7 @@
   function matchesSearch(item) {
     const query = state.search.trim().toLowerCase();
     if (!query) return true;
-    return [
+    return Object.values(item).some((value) => String(value || "").toLowerCase().includes(query)) || [
       item.name,
       item.email,
       item.phone,
@@ -625,6 +677,26 @@
 
   function findSubmission(id) {
     return state.data.submissions.find((item) => item.id === id);
+  }
+
+  function filteredContacts() {
+    return state.data.contacts.filter(matchesSearch);
+  }
+
+  function filteredJobs() {
+    return state.data.jobs.filter(matchesSearch);
+  }
+
+  function filteredDocuments() {
+    return state.data.documents.filter(matchesSearch);
+  }
+
+  function filteredReminders() {
+    return state.data.reminders.filter(matchesSearch);
+  }
+
+  function filteredNotes() {
+    return state.data.notes.filter(matchesSearch);
   }
 
   function populatePropertyFilter(data) {
@@ -717,6 +789,33 @@
     `).join("");
   }
 
+  function renderDashboardAlerts(data) {
+    if (!els.dashboardAlerts) return;
+    const today = todayKey();
+    const soon = daysFromToday(7);
+    const overdueReminders = data.reminders.filter((item) => item.dueRaw && item.dueRaw < today && item.status !== "Completed");
+    const dueInvoices = data.documents.filter((item) => item.type === "invoice" && item.dueDateRaw && item.dueDateRaw <= soon && item.status !== "paid");
+    const newQuotes = data.submissions.filter((item) => item.status === "New");
+    const alerts = [
+      overdueReminders.length ? `${overdueReminders.length} overdue follow-up${overdueReminders.length === 1 ? "" : "s"}` : "",
+      dueInvoices.length ? `${dueInvoices.length} invoice${dueInvoices.length === 1 ? "" : "s"} due soon` : "",
+      newQuotes.length ? `${newQuotes.length} new quote request${newQuotes.length === 1 ? "" : "s"}` : ""
+    ].filter(Boolean);
+    if (!alerts.length) {
+      els.dashboardAlerts.innerHTML = "";
+      return;
+    }
+    els.dashboardAlerts.innerHTML = alerts.map((alert) => `<button type="button" data-action="quick-add-follow-up">${escapeHtml(alert)}</button>`).join("");
+  }
+
+  function documentStatusBadge(doc) {
+    const squareStatus = String(doc.squareStatus || "").toUpperCase();
+    const status = squareStatus === "PAID" || doc.status === "paid" ? "Paid" :
+      doc.dueDateRaw && doc.dueDateRaw < todayKey() ? "Overdue" :
+      squareStatus || doc.status || "Draft";
+    return `<span class="status document-status document-status-${slug(status)}">${escapeHtml(status)}</span>`;
+  }
+
   function buildCalendarEvents(data) {
     const events = [];
     data.jobs.forEach((job) => {
@@ -744,37 +843,42 @@
           client: item.name,
           property: item.city,
           time: "Quote request",
-          status: item.status,
-          action: "open-submission"
+        status: item.status,
+        action: "open-submission",
+        actionLabel: "Open"
         });
       }
     });
     data.reminders.forEach((reminder) => {
       events.push({
-        id: `reminder-${reminder.id}`,
-        sourceId: reminder.id,
-        type: "follow-up",
+      id: `reminder-${reminder.id}`,
+      sourceId: reminder.id,
+      type: "follow-up",
         date: reminder.dueRaw,
         title: reminder.task,
         client: "Follow-up",
         property: "",
         time: "Reminder",
-        status: reminder.status
+        status: reminder.status,
+        action: "complete-reminder",
+        actionLabel: "Done",
+        deleteAction: "delete-reminder"
       });
     });
     data.documents.forEach((doc) => {
-      if (doc.dueDate && doc.dueDate !== "Not scheduled") {
+      if (doc.dueDateRaw) {
         events.push({
           id: `invoice-${doc.id}`,
           sourceId: doc.id,
           type: doc.type === "invoice" ? "invoice" : "quote",
-          date: dateKey(doc.dueDate),
+          date: doc.dueDateRaw,
           title: doc.number,
           client: doc.clientName,
           property: doc.clientEmail,
           time: doc.squareStatus || doc.status,
           status: doc.status,
-          action: "open-document"
+          action: "open-document",
+          actionLabel: "Open"
         });
       }
     });
@@ -788,7 +892,8 @@
         client: "Task",
         property: note.body,
         time: "Open task",
-        status: "New"
+        status: "New",
+        deleteAction: "delete-note"
       });
     });
     return events
@@ -836,7 +941,8 @@
         </div>
         <div class="calendar-actions">
           <span>${escapeHtml(event.type)}</span>
-          ${event.action ? `<button class="inline-action" type="button" data-action="${escapeHtml(event.action)}" data-id="${escapeHtml(event.sourceId)}">Open</button>` : ""}
+          ${event.action ? `<button class="inline-action" type="button" data-action="${escapeHtml(event.action)}" data-id="${escapeHtml(event.sourceId)}">${escapeHtml(event.actionLabel || "Open")}</button>` : ""}
+          ${event.deleteAction ? `<button class="inline-action danger-action" type="button" data-action="${escapeHtml(event.deleteAction)}" data-id="${escapeHtml(event.sourceId)}">Delete</button>` : ""}
         </div>
       </article>
     `).join("");
@@ -880,11 +986,12 @@
   }
 
   function renderContacts(data) {
-    if (!data.contacts.length) {
+    const contacts = filteredContacts();
+    if (!contacts.length) {
       els.contacts.innerHTML = emptyState("No contacts yet.");
       return;
     }
-    els.contacts.innerHTML = data.contacts.map((contact) => {
+    els.contacts.innerHTML = contacts.map((contact) => {
       const relatedJobs = data.jobs.filter((job) => job.site.toLowerCase() === contact.name.toLowerCase()).length;
       const relatedDocs = data.documents.filter((doc) => doc.clientName.toLowerCase() === contact.name.toLowerCase() || doc.clientEmail.toLowerCase() === contact.email.toLowerCase()).length;
       const relatedQuotes = data.submissions.filter((item) => item.name.toLowerCase() === contact.name.toLowerCase() || item.email.toLowerCase() === contact.email.toLowerCase()).length;
@@ -895,7 +1002,11 @@
             <h4>${escapeHtml(contact.name)}</h4>
             <div class="meta">${escapeHtml(contact.type)} / ${escapeHtml(contact.city)}</div>
           </div>
-          ${statusSelect("contacts", contact.id, contact.status)}
+          <div class="card-actions">
+            ${statusSelect("contacts", contact.id, contact.status)}
+            ${actionButton("Open", "open-contact", contact.id)}
+            ${actionButton("Delete", "delete-contact", contact.id).replace("inline-action", "inline-action danger-action")}
+          </div>
         </div>
         <p class="item-body">${escapeHtml(contact.email)}<br>${escapeHtml(contact.phone)}</p>
         <p class="small">Related: ${relatedJobs} jobs / ${relatedQuotes} quotes / ${relatedDocs} docs</p>
@@ -905,11 +1016,12 @@
   }
 
   function renderJobs(data) {
-    if (!data.jobs.length) {
+    const jobs = filteredJobs();
+    if (!jobs.length) {
       els.jobs.innerHTML = emptyState("No scheduled jobs/visits yet.");
       return;
     }
-    els.jobs.innerHTML = data.jobs.map((job) => `
+    els.jobs.innerHTML = jobs.map((job) => `
       <article class="job-card">
         <div class="item-topline">
           <div>
@@ -921,7 +1033,7 @@
         <p class="item-body">${escapeHtml(job.service)}<br>${escapeHtml(job.city)}</p>
         <div class="job-actions">
           ${actionButton("Edit", "edit-job", job.id)}
-          ${actionButton("Cancel", "cancel-job", job.id).replace("inline-action", "inline-action danger-action")}
+          ${actionButton("Delete", "cancel-job", job.id).replace("inline-action", "inline-action danger-action")}
         </div>
       </article>
     `).join("");
@@ -933,22 +1045,25 @@
       els.documents.innerHTML = emptyState("Document storage is not set up yet. Run the sales_documents SQL in DASHBOARD_SETUP.md.");
       return;
     }
-    if (!data.documents.length) {
+    const docs = filteredDocuments();
+    if (!docs.length) {
       els.documents.innerHTML = emptyState("No estimates or invoices yet.");
       return;
     }
-    els.documents.innerHTML = data.documents.map((doc) => `
+    els.documents.innerHTML = docs.map((doc) => `
       <article class="document-card">
         <div class="item-topline">
           <div>
             <h4>${escapeHtml(doc.number)}</h4>
             <div class="meta">${escapeHtml(doc.type === "invoice" ? "Invoice" : "Estimate / Quote")} / ${escapeHtml(doc.status)}</div>
+            ${documentStatusBadge(doc)}
             <div class="meta">Square invoice: ${escapeHtml(doc.squareInvoiceNumber || "Add invoice #, then sync")}</div>
             ${doc.squareStatus ? `<div class="meta">Square: ${escapeHtml(doc.squareStatus)}${doc.squareSyncedAt ? ` / synced ${escapeHtml(doc.squareSyncedAt)}` : ""}</div>` : ""}
           </div>
           <div class="document-card-actions">
             <button class="inline-action" type="button" data-action="open-document" data-id="${escapeHtml(doc.id)}">Open</button>
             <button class="inline-action" type="button" data-action="sync-square-document" data-id="${escapeHtml(doc.id)}">Sync Square</button>
+            <button class="inline-action danger-action" type="button" data-action="delete-document" data-id="${escapeHtml(doc.id)}">Delete</button>
           </div>
         </div>
         <p class="item-body">${escapeHtml(doc.clientName)}<br>${escapeHtml(doc.clientEmail || "No email")}</p>
@@ -958,15 +1073,19 @@
   }
 
   function renderNotes() {
-    if (!state.data.notes.length) {
+    const notes = filteredNotes();
+    if (!notes.length) {
       els.notes.innerHTML = emptyState("No job notes yet.");
       return;
     }
-    els.notes.innerHTML = state.data.notes.map((note) => `
+    els.notes.innerHTML = notes.map((note) => `
       <article class="note-card">
         <div class="item-topline">
           <h4>${escapeHtml(note.title)}</h4>
-          <span class="meta">${escapeHtml(note.date)}</span>
+          <div class="card-actions">
+            <span class="meta">${escapeHtml(note.date)}</span>
+            ${actionButton("Delete", "delete-note", note.id).replace("inline-action", "inline-action danger-action")}
+          </div>
         </div>
         <p class="item-body">${escapeHtml(note.body)}</p>
       </article>
@@ -974,18 +1093,23 @@
   }
 
   function renderReminders(data) {
-    if (!data.reminders.length) {
+    const reminders = filteredReminders();
+    if (!reminders.length) {
       els.reminders.innerHTML = emptyState("No follow-up reminders yet.");
       return;
     }
-    els.reminders.innerHTML = data.reminders.map((reminder) => `
+    els.reminders.innerHTML = reminders.map((reminder) => `
       <article class="reminder-card">
         <div class="item-topline">
           <div>
             <h4>${escapeHtml(reminder.task)}</h4>
             <div class="meta">Due: ${escapeHtml(reminder.due)}</div>
           </div>
-          ${statusSelect("follow_up_reminders", reminder.id, reminder.status)}
+          <div class="card-actions">
+            ${statusSelect("follow_up_reminders", reminder.id, reminder.status)}
+            ${actionButton("Done", "complete-reminder", reminder.id)}
+            ${actionButton("Delete", "delete-reminder", reminder.id).replace("inline-action", "inline-action danger-action")}
+          </div>
         </div>
       </article>
     `).join("");
@@ -1038,6 +1162,7 @@
             <button type="button" data-action="sync-contact" data-id="${escapeHtml(item.id)}">Sync Contact</button>
             <button type="button" data-action="create-estimate" data-id="${escapeHtml(item.id)}">Create Estimate</button>
             <button type="button" data-action="create-invoice" data-id="${escapeHtml(item.id)}">Create Invoice</button>
+            <button type="button" class="danger-action" data-action="delete-submission" data-id="${escapeHtml(item.id)}">Delete Quote</button>
           </div>
         </form>
 
@@ -1054,6 +1179,42 @@
 
         <h4>Contact timeline</h4>
         ${renderTimeline(item)}
+      </div>
+    `;
+  }
+
+  function openContactDrawer(id) {
+    const contact = state.data.contacts.find((item) => item.id === id);
+    if (!contact || !els.detailDrawer || !els.detailContent) return;
+    const relatedJobs = state.data.jobs.filter((job) => job.site.toLowerCase() === contact.name.toLowerCase());
+    const relatedDocs = state.data.documents.filter((doc) => doc.clientName.toLowerCase() === contact.name.toLowerCase() || doc.clientEmail.toLowerCase() === contact.email.toLowerCase());
+    const relatedQuotes = state.data.submissions.filter((item) => item.name.toLowerCase() === contact.name.toLowerCase() || item.email.toLowerCase() === contact.email.toLowerCase());
+    els.detailDrawer.hidden = false;
+    els.detailContent.innerHTML = `
+      <div class="drawer-content">
+        <p class="eyebrow">Client Detail</p>
+        <h3>${escapeHtml(contact.name)}</h3>
+        <form class="drawer-form" data-contact-edit data-id="${escapeHtml(contact.id)}">
+          <label>Name<input name="name" value="${escapeHtml(contact.name)}" required></label>
+          <label>Email<input name="email" type="email" value="${escapeHtml(contact.email === "No email" ? "" : contact.email)}"></label>
+          <label>Phone<input name="phone" value="${escapeHtml(contact.phone === "No phone" ? "" : contact.phone)}"></label>
+          <label>Property / area<input name="city" value="${escapeHtml(contact.city === "Not provided" ? "" : contact.city)}"></label>
+          <label>Type<input name="contact_type" value="${escapeHtml(contact.type === "Contact" ? "" : contact.type)}"></label>
+          <label>Status<select name="status">${STATUSES.map((status) => `<option value="${status}"${status === contact.status ? " selected" : ""}>${status}</option>`).join("")}</select></label>
+          <div class="drawer-actions">
+            <button type="submit">Save Client</button>
+            <button type="button" data-action="quick-add-job">Add Job</button>
+            <button type="button" data-action="quick-add-quote">Add Quote</button>
+            <button type="button" class="danger-action" data-action="delete-contact" data-id="${escapeHtml(contact.id)}">Delete Client</button>
+          </div>
+        </form>
+        <h4>Related work</h4>
+        <div class="timeline">
+          ${relatedQuotes.map((item) => `<div class="timeline-item"><strong>Quote</strong><br>${escapeHtml(item.service)} / ${escapeHtml(item.status)}</div>`).join("")}
+          ${relatedJobs.map((job) => `<div class="timeline-item"><strong>Job</strong><br>${escapeHtml(job.date)} / ${escapeHtml(job.service)}</div>`).join("")}
+          ${relatedDocs.map((doc) => `<div class="timeline-item"><strong>${escapeHtml(doc.type)}</strong><br>${escapeHtml(doc.number)} / ${escapeHtml(doc.status)}</div>`).join("")}
+          ${!relatedQuotes.length && !relatedJobs.length && !relatedDocs.length ? emptyState("No related work yet.") : ""}
+        </div>
       </div>
     `;
   }
@@ -1113,7 +1274,21 @@
           <button type="button" data-action="sync-square-document" data-id="${escapeHtml(doc.id)}">Sync with Square</button>
           <button type="button" data-action="print-document" data-id="${escapeHtml(doc.id)}">Print / Save PDF</button>
           ${doc.squarePaymentUrl ? `<a class="button" href="${escapeHtml(doc.squarePaymentUrl)}" target="_blank" rel="noopener noreferrer">Open Square Payment Link</a>` : ""}
+          <button type="button" class="danger-action" data-action="delete-document" data-id="${escapeHtml(doc.id)}">Delete Document</button>
         </div>
+        <form class="drawer-form" data-document-edit data-id="${escapeHtml(doc.id)}">
+          <h4>Edit document</h4>
+          <label>Type<select name="document_type"><option value="estimate"${doc.type === "estimate" ? " selected" : ""}>Estimate / Quote</option><option value="invoice"${doc.type === "invoice" ? " selected" : ""}>Invoice</option></select></label>
+          <label>Client name<input name="client_name" value="${escapeHtml(doc.clientName)}" required></label>
+          <label>Client email<input name="client_email" type="email" value="${escapeHtml(doc.clientEmail)}"></label>
+          <label>Square invoice #<input name="square_invoice_number" value="${escapeHtml(doc.squareInvoiceNumber)}"></label>
+          <label>Description<input name="description" value="${escapeHtml(doc.lineItems[0]?.description || "")}" required></label>
+          <label>Amount<input name="amount" type="number" min="0" step="0.01" value="${escapeHtml(doc.total)}"></label>
+          <label>Due date<input name="due_date" type="date" value="${escapeHtml(doc.dueDateRaw)}"></label>
+          <label>Status<select name="status"><option value="draft"${doc.status === "draft" ? " selected" : ""}>Draft</option><option value="sent"${doc.status === "sent" ? " selected" : ""}>Sent</option><option value="paid"${doc.status === "paid" ? " selected" : ""}>Paid</option><option value="void"${doc.status === "void" ? " selected" : ""}>Void</option></select></label>
+          <label>Notes<textarea name="notes" rows="3">${escapeHtml(doc.notes)}</textarea></label>
+          <div class="drawer-actions"><button type="submit">Save Document</button></div>
+        </form>
       </div>
     `;
   }
@@ -1201,6 +1376,7 @@
     const data = state.data;
     populatePropertyFilter(data);
     renderMetrics(data);
+    renderDashboardAlerts(data);
     renderSubmissions(data);
     renderUpcoming(data);
     renderHomeReminders(data);
@@ -1285,6 +1461,15 @@
     if (els.search) {
       els.search.addEventListener("input", async () => {
         state.search = els.search.value;
+        if (els.globalSearch && els.globalSearch.value !== state.search) els.globalSearch.value = state.search;
+        await render();
+      });
+    }
+
+    if (els.globalSearch) {
+      els.globalSearch.addEventListener("input", async () => {
+        state.search = els.globalSearch.value;
+        if (els.search && els.search.value !== state.search) els.search.value = state.search;
         await render();
       });
     }
@@ -1349,6 +1534,8 @@
 
       if (action === "open-submission") {
         openSubmissionDrawer(id);
+      } else if (action === "open-contact") {
+        openContactDrawer(id);
       } else if (action === "quick-add-job") {
         setActiveSection("calendar");
         history.replaceState(null, "", "#calendar");
@@ -1429,7 +1616,7 @@
       } else if (action === "edit-job") {
         openJobDrawer(id);
       } else if (action === "cancel-job") {
-        const ok = window.confirm("Cancel this scheduled visit?");
+        const ok = window.confirm("Delete this scheduled visit?");
         if (!ok) return;
         try {
           setDashboardState("Canceling visit...");
@@ -1442,6 +1629,18 @@
         }
       } else if (action === "open-document") {
         openDocumentDrawer(id);
+      } else if (action === "delete-document") {
+        const ok = window.confirm("Delete this document record? Square invoices are not deleted.");
+        if (!ok) return;
+        try {
+          setDashboardState("Deleting document...");
+          await deleteRow("sales_documents", id);
+          closeSubmissionDrawer();
+          await refreshDashboard();
+          setDashboardState("");
+        } catch (error) {
+          setDashboardState(error.message || "Unable to delete document.", "error");
+        }
       } else if (action === "sync-square-document") {
         try {
           setDashboardState("Syncing with Square...");
@@ -1454,6 +1653,61 @@
         }
       } else if (action === "print-document") {
         printDocument(id);
+      } else if (action === "delete-contact") {
+        const ok = window.confirm("Delete this client?");
+        if (!ok) return;
+        try {
+          setDashboardState("Deleting client...");
+          await deleteRow("contacts", id);
+          closeSubmissionDrawer();
+          await refreshDashboard();
+          setDashboardState("");
+        } catch (error) {
+          setDashboardState(error.message || "Unable to delete client.", "error");
+        }
+      } else if (action === "delete-submission") {
+        const ok = window.confirm("Delete this quote/contact submission?");
+        if (!ok) return;
+        try {
+          setDashboardState("Deleting quote...");
+          await deleteRow("quote_submissions", id);
+          closeSubmissionDrawer();
+          await refreshDashboard();
+          setDashboardState("");
+        } catch (error) {
+          setDashboardState(error.message || "Unable to delete quote.", "error");
+        }
+      } else if (action === "complete-reminder") {
+        try {
+          setDashboardState("Marking complete...");
+          await updateReminder(id, { status: "Completed" });
+          await refreshDashboard();
+          setDashboardState("");
+        } catch (error) {
+          setDashboardState(error.message || "Unable to update reminder.", "error");
+        }
+      } else if (action === "delete-reminder") {
+        const ok = window.confirm("Delete this reminder?");
+        if (!ok) return;
+        try {
+          setDashboardState("Deleting reminder...");
+          await deleteRow("follow_up_reminders", id);
+          await refreshDashboard();
+          setDashboardState("");
+        } catch (error) {
+          setDashboardState(error.message || "Unable to delete reminder.", "error");
+        }
+      } else if (action === "delete-note") {
+        const ok = window.confirm("Delete this task/note?");
+        if (!ok) return;
+        try {
+          setDashboardState("Deleting task...");
+          await deleteRow("job_notes", id);
+          await refreshDashboard();
+          setDashboardState("");
+        } catch (error) {
+          setDashboardState(error.message || "Unable to delete task.", "error");
+        }
       }
     });
 
@@ -1576,6 +1830,49 @@
         } catch (error) {
           setDashboardState(error.message || "Unable to add client.", "error");
         }
+      } else if (event.target.matches("[data-contact-edit]")) {
+        event.preventDefault();
+        const formData = new FormData(event.target);
+        const id = event.target.dataset.id;
+        try {
+          setDashboardState("Saving client...");
+          await updateContact(id, {
+            name: String(formData.get("name") || ""),
+            email: String(formData.get("email") || "") || null,
+            phone: String(formData.get("phone") || "") || null,
+            city: String(formData.get("city") || "") || null,
+            contact_type: String(formData.get("contact_type") || "") || "Client",
+            status: String(formData.get("status") || "New")
+          });
+          await refreshDashboard();
+          openContactDrawer(id);
+          setDashboardState("");
+        } catch (error) {
+          setDashboardState(error.message || "Unable to save client.", "error");
+        }
+      } else if (event.target.matches("[data-document-edit]")) {
+        event.preventDefault();
+        const formData = new FormData(event.target);
+        const id = event.target.dataset.id;
+        try {
+          setDashboardState("Saving document...");
+          const document = await updateSalesDocument(id, {
+            document_type: String(formData.get("document_type") || "estimate"),
+            client_name: String(formData.get("client_name") || ""),
+            client_email: String(formData.get("client_email") || ""),
+            square_invoice_number: String(formData.get("square_invoice_number") || ""),
+            description: String(formData.get("description") || ""),
+            amount: Number(formData.get("amount") || 0),
+            due_date: String(formData.get("due_date") || ""),
+            status: String(formData.get("status") || "draft"),
+            notes: String(formData.get("notes") || "")
+          });
+          await refreshDashboard();
+          openDocumentDrawer(document.id);
+          setDashboardState("");
+        } catch (error) {
+          setDashboardState(error.message || "Unable to save document.", "error");
+        }
       }
     });
 
@@ -1611,12 +1908,14 @@
     els.refreshDashboard = qs("[data-refresh-dashboard]");
     els.dashboardState = qs("[data-dashboard-state]");
     els.search = qs("[data-dashboard-search]");
+    els.globalSearch = qs("[data-global-search]");
     els.propertyFilter = qs("[data-property-filter]");
     els.pipeline = qs("[data-pipeline]");
     els.documents = qs("[data-documents]");
     els.calendarFilter = qs("[data-calendar-filter]");
     els.calendarList = qs("[data-calendar-list]");
     els.homeReminders = qs("[data-home-reminders]");
+    els.dashboardAlerts = qs("[data-dashboard-alerts]");
     els.todayChip = qs("[data-today-chip]");
     els.detailDrawer = qs("[data-detail-drawer]");
     els.detailContent = qs("[data-detail-content]");

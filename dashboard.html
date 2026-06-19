@@ -11,9 +11,9 @@
     <link rel="icon" href="/favicon.ico" sizes="any">
     <link rel="apple-touch-icon" href="/apple-touch-icon.png">
     <link rel="manifest" href="/dashboard.webmanifest">
-    <link rel="stylesheet" href="dashboard.css?v=20260619-1">
-    <script src="dashboard-config.js?v=20260619-1" defer></script>
-    <script src="dashboard.js?v=20260619-1" defer></script>
+    <link rel="stylesheet" href="dashboard.css?v=20260619-2">
+    <script src="dashboard-config.js?v=20260619-2" defer></script>
+    <script src="dashboard.js?v=20260619-2" defer></script>
   </head>
   <body>
     <main class="dashboard-shell" aria-labelledby="dashboard-title">
@@ -60,6 +60,7 @@
             </div>
             <div class="topbar-actions">
               <span data-owner-email>team@urbanyards.us</span>
+              <input data-global-search type="search" placeholder="Search everything...">
               <button type="button" data-refresh-dashboard>Refresh</button>
               <button type="button" data-action="quick-add-job">Add Job</button>
             </div>
@@ -84,6 +85,7 @@
               <button type="button" data-action="quick-add-invoice-reminder">Add Invoice Reminder</button>
               <button type="button" data-new-note>Add Task</button>
             </div>
+            <div class="dashboard-alerts" data-dashboard-alerts></div>
             <div class="split-grid">
               <article class="panel">
                 <div class="panel-heading">

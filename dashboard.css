@@ -300,6 +300,10 @@ textarea:focus {
   gap: 12px;
 }
 
+.topbar-actions input {
+  min-width: min(260px, 100%);
+}
+
 .topbar-actions span {
   color: var(--uy-muted);
   font-size: 0.9rem;
@@ -366,6 +370,23 @@ textarea:focus {
   grid-template-columns: repeat(6, minmax(0, 1fr));
   gap: 10px;
   margin-bottom: 14px;
+}
+
+.dashboard-alerts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin: 0 0 14px;
+}
+
+.dashboard-alerts button {
+  min-height: 40px;
+  border: 1px solid rgba(143, 47, 34, 0.22);
+  border-radius: 8px;
+  background: #fff8ef;
+  color: #765014;
+  font-weight: 850;
+  padding: 0 12px;
 }
 
 .quick-actions button,
@@ -760,6 +781,27 @@ td {
   gap: 8px;
 }
 
+.card-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+.document-status {
+  margin-top: 6px;
+}
+
+.document-status-overdue {
+  background: #fff0eb;
+  color: var(--uy-danger);
+}
+
+.document-status-paid {
+  background: #e8f4ef;
+  color: #176143;
+}
+
 .calendar-actions span {
   border-radius: 999px;
   background: #eef3ed;
@@ -796,6 +838,7 @@ td {
 
 .danger-action {
   background: var(--uy-danger);
+  color: #fff;
 }
 
 .danger-action:hover {
@@ -1001,7 +1044,8 @@ td {
     width: 100%;
   }
 
-  .topbar-actions span {
+  .topbar-actions span,
+  .topbar-actions input {
     grid-column: 1 / -1;
   }
 
@@ -1053,12 +1097,14 @@ td {
   }
 
   .calendar-actions,
+  .card-actions,
   .document-card-actions {
     justify-items: stretch;
     width: 100%;
   }
 
   .document-card-actions,
+  .card-actions,
   .job-actions,
   .drawer-actions {
     display: grid;

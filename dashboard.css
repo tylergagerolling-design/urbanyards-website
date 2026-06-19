@@ -2261,3 +2261,45 @@ th:last-child {
     box-shadow: 0 10px 22px rgba(18, 63, 49, .18);
   }
 }
+
+/* Targeted alignment polish for dashboard action buttons */
+.topbar-actions button {
+  justify-content: center;
+  text-align: center;
+}
+
+.topbar-actions button:last-child {
+  min-width: 116px;
+  padding-inline: 18px 20px;
+}
+
+.topbar-actions button:last-child .button-icon {
+  margin-left: -2px;
+}
+
+.operation-feature {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  min-height: 96px;
+  padding: 14px 12px;
+  text-align: center;
+}
+
+.operation-feature strong,
+.operation-feature span {
+  width: 100%;
+}
+
+.operation-feature span {
+  margin-top: 0;
+}
+
+@media (max-width: 760px) {
+  .topbar-actions button:last-child {
+    min-width: 0;
+    padding-inline: 15px;
+  }
+}

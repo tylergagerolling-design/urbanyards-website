@@ -159,13 +159,16 @@
 
   function formatDate(value) {
     if (!value) return "Not scheduled";
-    const date = new Date(value);
+    const date = /^\d{4}-\d{2}-\d{2}$/.test(String(value))
+      ? new Date(`${value}T12:00:00`)
+      : new Date(value);
     if (Number.isNaN(date.getTime())) return value;
     return date.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
   }
 
   function dateKey(value) {
     if (!value) return "";
+    if (/^\d{4}-\d{2}-\d{2}$/.test(String(value))) return String(value);
     const date = new Date(value);
     if (Number.isNaN(date.getTime())) return "";
     return date.toISOString().slice(0, 10);
@@ -272,6 +275,20 @@
   }
 
   function normalizeDocument(row) {
+    const total = Number(row.total || 0);
+    const lineItems = Array.isArray(row.line_items) ? row.line_items : [];
+    const normalizedLineItems = lineItems.length ? lineItems.map((item, index) => {
+      const quantity = Number(item.quantity || 1) || 1;
+      const amount = Number(item.amount || 0);
+      const unitPrice = Number(item.unit_price || 0);
+      const shouldUseTotal = index === 0 && lineItems.length === 1 && total > 0 && amount === 0 && unitPrice === 0;
+      return {
+        ...item,
+        quantity,
+        unit_price: shouldUseTotal ? total / quantity : unitPrice,
+        amount: shouldUseTotal ? total : amount
+      };
+    }) : [];
     return {
       id: row.id,
       type: row.document_type || "estimate",
@@ -289,10 +306,10 @@
       squareAmountDueCents: typeof row.square_amount_due_cents === "number" ? row.square_amount_due_cents : null,
       squareCurrency: row.square_currency || "USD",
       squareSyncedAt: row.square_synced_at ? formatDate(row.square_synced_at) : "",
-      lineItems: Array.isArray(row.line_items) ? row.line_items : [],
+      lineItems: normalizedLineItems,
       subtotal: Number(row.subtotal || 0),
       tax: Number(row.tax || 0),
-      total: Number(row.total || 0),
+      total,
       notes: row.notes || ""
     };
   }
@@ -1455,50 +1472,98 @@
   function openDocumentDrawer(id) {
     const doc = state.data.documents.find((item) => item.id === id);
     if (!doc || !els.detailDrawer || !els.detailContent) return;
+    const typeLabel = doc.type === "invoice" ? "Invoice" : "Estimate / Quote";
+    const squareStatus = doc.squareStatus || "Not synced";
+    const amountDue = doc.squareAmountDueCents !== null ? formatCurrency(doc.squareAmountDueCents, doc.squareCurrency) : "Not synced";
     els.detailDrawer.hidden = false;
     els.detailContent.innerHTML = `
-      <div class="drawer-content">
-        <p class="eyebrow">${escapeHtml(doc.type === "invoice" ? "Invoice" : "Estimate / Quote")}</p>
+      <div class="drawer-content document-drawer">
+        <div class="document-drawer-heading">
+          <div>
+            <p class="eyebrow">${escapeHtml(typeLabel)}</p>
+            <h3>${escapeHtml(doc.number)}</h3>
+            <p>${escapeHtml(doc.clientName)}${doc.clientEmail ? ` / ${escapeHtml(doc.clientEmail)}` : ""}</p>
+          </div>
+          ${documentStatusBadge(doc)}
+        </div>
         ${renderPrintableDocument(doc)}
-        <div class="drawer-grid">
-          <div class="drawer-field"><span>Square Invoice</span>${escapeHtml(doc.squareInvoiceNumber || "Not linked")}</div>
-          <div class="drawer-field"><span>Square Status</span>${escapeHtml(doc.squareStatus || "Not synced")}</div>
-          <div class="drawer-field"><span>Amount Due</span>${doc.squareAmountDueCents !== null ? escapeHtml(formatCurrency(doc.squareAmountDueCents, doc.squareCurrency)) : "Not synced"}</div>
-          <div class="drawer-field"><span>Last Sync</span>${escapeHtml(doc.squareSyncedAt || "Never")}</div>
-        </div>
-        <div class="drawer-actions">
-          <button type="button" data-action="sync-square-document" data-id="${escapeHtml(doc.id)}">Sync with Square</button>
-          <button type="button" data-action="print-document" data-id="${escapeHtml(doc.id)}">Print / Save PDF</button>
-          ${doc.squarePaymentUrl ? `<a class="button" href="${escapeHtml(doc.squarePaymentUrl)}" target="_blank" rel="noopener noreferrer">Open Square Payment Link</a>` : ""}
-          <button type="button" class="danger-action" data-action="delete-document" data-id="${escapeHtml(doc.id)}">Delete Document</button>
-        </div>
-        <form class="drawer-form" data-document-edit data-id="${escapeHtml(doc.id)}">
-          <h4>Edit document</h4>
-          <label>Type<select name="document_type"><option value="estimate"${doc.type === "estimate" ? " selected" : ""}>Estimate / Quote</option><option value="invoice"${doc.type === "invoice" ? " selected" : ""}>Invoice</option></select></label>
+        <section class="document-sidebar-card">
+          <div class="document-sidebar-total">
+            <span>${doc.squareAmountDueCents !== null ? "Square amount due" : "Document total"}</span>
+            <strong>${doc.squareAmountDueCents !== null ? escapeHtml(amountDue) : `$${doc.total.toFixed(2)}`}</strong>
+          </div>
+          <div class="drawer-grid document-meta-grid">
+            <div class="drawer-field"><span>Square invoice</span>${escapeHtml(doc.squareInvoiceNumber || "Not linked")}</div>
+            <div class="drawer-field"><span>Square status</span>${escapeHtml(squareStatus)}</div>
+            <div class="drawer-field"><span>Issued</span>${escapeHtml(doc.issueDate)}</div>
+            <div class="drawer-field"><span>Due</span>${escapeHtml(doc.dueDate)}</div>
+            <div class="drawer-field"><span>Last sync</span>${escapeHtml(doc.squareSyncedAt || "Never")}</div>
+            <div class="drawer-field"><span>Dashboard status</span>${escapeHtml(doc.status)}</div>
+          </div>
+          <div class="drawer-actions document-primary-actions">
+            <button type="button" data-action="sync-square-document" data-id="${escapeHtml(doc.id)}">Sync Square</button>
+            ${doc.squarePaymentUrl ? `<a class="button" href="${escapeHtml(doc.squarePaymentUrl)}" target="_blank" rel="noopener noreferrer">Open Payment Link</a>` : ""}
+            <button type="button" data-action="print-document" data-id="${escapeHtml(doc.id)}">Print / PDF</button>
+          </div>
+          <button type="button" class="inline-action danger-action document-delete-action" data-action="delete-document" data-id="${escapeHtml(doc.id)}">Delete Document</button>
+        </section>
+        <form class="drawer-form document-edit-form" data-document-edit data-id="${escapeHtml(doc.id)}">
+          <div class="document-form-heading">
+            <h4>Edit details</h4>
+            <p>Update dashboard records here. Square payment details come from Square sync.</p>
+          </div>
+          <label>Type
+            <select name="document_type">
+              <option value="estimate"${doc.type === "estimate" ? " selected" : ""}>Estimate / Quote</option>
+              <option value="invoice"${doc.type === "invoice" ? " selected" : ""}>Invoice</option>
+            </select>
+          </label>
           <label>Client name<input name="client_name" value="${escapeHtml(doc.clientName)}" required></label>
           <label>Client email<input name="client_email" type="email" value="${escapeHtml(doc.clientEmail)}"></label>
           <label>Square invoice #<input name="square_invoice_number" value="${escapeHtml(doc.squareInvoiceNumber)}"></label>
-          <label>Description<input name="description" value="${escapeHtml(doc.lineItems[0]?.description || "")}" required></label>
+          <label class="span-full">Description<input name="description" value="${escapeHtml(doc.lineItems[0]?.description || "")}" required></label>
           <label>Amount<input name="amount" type="number" min="0" step="0.01" value="${escapeHtml(doc.total)}"></label>
           <label>Due date<input name="due_date" type="date" value="${escapeHtml(doc.dueDateRaw)}"></label>
-          <label>Status<select name="status"><option value="draft"${doc.status === "draft" ? " selected" : ""}>Draft</option><option value="sent"${doc.status === "sent" ? " selected" : ""}>Sent</option><option value="paid"${doc.status === "paid" ? " selected" : ""}>Paid</option><option value="void"${doc.status === "void" ? " selected" : ""}>Void</option></select></label>
-          <label>Notes<textarea name="notes" rows="3">${escapeHtml(doc.notes)}</textarea></label>
-          <div class="drawer-actions"><button type="submit">Save Document</button></div>
+          <label>Status
+            <select name="status">
+              <option value="draft"${doc.status === "draft" ? " selected" : ""}>Draft</option>
+              <option value="sent"${doc.status === "sent" ? " selected" : ""}>Sent</option>
+              <option value="paid"${doc.status === "paid" ? " selected" : ""}>Paid</option>
+              <option value="void"${doc.status === "void" ? " selected" : ""}>Void</option>
+            </select>
+          </label>
+          <label class="span-full">Notes<textarea name="notes" rows="3">${escapeHtml(doc.notes)}</textarea></label>
+          <div class="drawer-actions document-save-actions">
+            <button type="submit">Save Changes</button>
+          </div>
         </form>
       </div>
     `;
   }
 
   function renderPrintableDocument(doc) {
+    const lineItems = doc.lineItems.length ? doc.lineItems : [{
+      description: "Landscape service",
+      quantity: 1,
+      unit_price: doc.total,
+      amount: doc.total
+    }];
     return `
       <section class="print-document">
-        <h1>Urban Yards</h1>
-        <p><strong>${escapeHtml(doc.type === "invoice" ? "Invoice" : "Estimate / Quote")} ${escapeHtml(doc.number)}</strong></p>
-        <p>${escapeHtml(doc.clientName)}<br>${escapeHtml(doc.clientEmail || "")}</p>
-        <p>Issued: ${escapeHtml(doc.issueDate)}<br>Due: ${escapeHtml(doc.dueDate)}</p>
+        <div class="print-document-top">
+          <div>
+            <h1>Urban Yards</h1>
+            <p>${escapeHtml(doc.type === "invoice" ? "Invoice" : "Estimate / Quote")} ${escapeHtml(doc.number)}</p>
+          </div>
+          <strong>$${doc.total.toFixed(2)}</strong>
+        </div>
+        <div class="print-document-parties">
+          <p><span>Prepared for</span>${escapeHtml(doc.clientName)}${doc.clientEmail ? `<br>${escapeHtml(doc.clientEmail)}` : ""}</p>
+          <p><span>Dates</span>Issued ${escapeHtml(doc.issueDate)}<br>Due ${escapeHtml(doc.dueDate)}</p>
+        </div>
         <table>
           <thead><tr><th>Description</th><th>Qty</th><th>Rate</th><th>Total</th></tr></thead>
-          <tbody>${doc.lineItems.map((item) => `
+          <tbody>${lineItems.map((item) => `
             <tr>
               <td>${escapeHtml(item.description || "")}</td>
               <td>${escapeHtml(item.quantity || 1)}</td>
@@ -1507,7 +1572,7 @@
             </tr>
           `).join("")}</tbody>
         </table>
-        <p><strong>Total: $${doc.total.toFixed(2)}</strong></p>
+        <p class="print-total"><span>Total</span><strong>$${doc.total.toFixed(2)}</strong></p>
         ${doc.notes ? `<p>${escapeHtml(doc.notes)}</p>` : ""}
       </section>
     `;
@@ -1521,7 +1586,21 @@
       setDashboardState("Popup blocked. Allow popups to print documents.", "error");
       return;
     }
-    win.document.write(`<!DOCTYPE html><html><head><title>${escapeHtml(doc.number)}</title><style>body{font-family:Georgia,serif;color:#17251d;padding:32px}h1{color:#123f31}table{width:100%;border-collapse:collapse;margin:20px 0}th,td{border-bottom:1px solid #dfe6df;padding:10px;text-align:left}</style></head><body>${renderPrintableDocument(doc)}</body></html>`);
+    win.document.write(`<!DOCTYPE html><html><head><title>${escapeHtml(doc.number)}</title><style>
+      body{font-family:Inter,Arial,sans-serif;color:#17251d;padding:32px}
+      .print-document{font-family:Georgia,"Times New Roman",serif}
+      .print-document-top,.print-document-parties,.print-total{display:flex;justify-content:space-between;gap:18px}
+      .print-document-top{align-items:flex-start;padding-bottom:16px;border-bottom:1px solid #dfe6df}
+      h1{margin:0 0 4px;color:#123f31;font-size:2rem;line-height:1}
+      p{margin-top:0}.print-document-top strong{color:#123f31;font-family:Inter,Arial,sans-serif;font-size:1.7rem}
+      .print-document-parties{margin:18px 0;font-family:Inter,Arial,sans-serif;font-size:.92rem}
+      .print-document-parties span,.print-total span{display:block;margin-bottom:4px;color:#65756c;font-size:.72rem;font-weight:800;letter-spacing:.06em;text-transform:uppercase}
+      table{width:100%;border-collapse:collapse;margin:0;font-family:Inter,Arial,sans-serif;font-size:.92rem}
+      th,td{border-bottom:1px solid #dfe6df;padding:10px 8px;text-align:left}
+      th:not(:first-child),td:not(:first-child){text-align:right}
+      .print-total{align-items:center;margin-top:14px;padding-top:10px;border-top:2px solid #123f31;font-family:Inter,Arial,sans-serif}
+      .print-total strong{color:#123f31;font-size:1.3rem}
+    </style></head><body>${renderPrintableDocument(doc)}</body></html>`);
     win.document.close();
     win.print();
   }

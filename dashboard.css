@@ -1095,18 +1095,95 @@ td {
 }
 
 .print-document {
+  padding: 18px;
+  border: 1px solid rgba(18, 63, 49, 0.12);
+  border-radius: 8px;
+  background: #fff;
   color: #17251d;
   font-family: Georgia, "Times New Roman", serif;
 }
 
+.print-document-top,
+.print-document-parties,
+.print-total {
+  display: flex;
+  justify-content: space-between;
+  gap: 18px;
+}
+
+.print-document-top {
+  align-items: flex-start;
+  padding-bottom: 16px;
+  border-bottom: 1px solid var(--uy-line);
+}
+
 .print-document h1 {
+  margin-bottom: 4px;
   color: #123f31;
-  font-size: 2rem;
+  font-size: 1.8rem;
+  line-height: 1;
+}
+
+.print-document p {
+  margin-bottom: 0;
+}
+
+.print-document-top strong {
+  color: var(--uy-green);
+  font-family: Inter, ui-sans-serif, system-ui, sans-serif;
+  font-size: 1.6rem;
+}
+
+.print-document-parties {
+  margin: 16px 0;
+  color: var(--uy-ink);
+  font-family: Inter, ui-sans-serif, system-ui, sans-serif;
+  font-size: 0.9rem;
+}
+
+.print-document-parties span,
+.print-total span {
+  display: block;
+  margin-bottom: 4px;
+  color: var(--uy-muted);
+  font-size: 0.72rem;
+  font-weight: 850;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
 }
 
 .print-document table {
+  width: 100%;
   min-width: 0;
-  margin-top: 18px;
+  border-collapse: collapse;
+  margin: 0;
+  font-family: Inter, ui-sans-serif, system-ui, sans-serif;
+  font-size: 0.9rem;
+}
+
+.print-document th,
+.print-document td {
+  border-bottom: 1px solid var(--uy-line);
+  padding: 10px 8px;
+  text-align: left;
+}
+
+.print-document th:not(:first-child),
+.print-document td:not(:first-child) {
+  text-align: right;
+}
+
+.print-total {
+  align-items: center;
+  margin-top: 14px;
+  padding-top: 10px;
+  border-top: 2px solid var(--uy-green);
+  font-family: Inter, ui-sans-serif, system-ui, sans-serif;
+}
+
+.print-total strong {
+  color: var(--uy-green);
+  font-size: 1.25rem;
 }
 
 .detail-drawer {
@@ -1119,7 +1196,7 @@ td {
 }
 
 .drawer-panel {
-  width: min(100vw, 520px);
+  width: min(100vw, 640px);
   height: 100vh;
   overflow-y: auto;
   background: #fff;
@@ -1139,9 +1216,62 @@ td {
 }
 
 .drawer-content h3 {
-  margin: 28px 0 6px;
+  margin: 0 0 6px;
   color: var(--uy-green);
   font-size: 1.6rem;
+}
+
+.document-drawer {
+  display: grid;
+  gap: 16px;
+}
+
+.document-drawer-heading {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 14px;
+  padding: 8px 0 4px;
+}
+
+.document-drawer-heading p:last-child {
+  margin: 0;
+  color: var(--uy-muted);
+}
+
+.document-sidebar-card,
+.document-edit-form {
+  border: 1px solid rgba(18, 63, 49, 0.12);
+  border-radius: 8px;
+  background: var(--uy-surface);
+  padding: 14px;
+}
+
+.document-sidebar-total {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  margin-bottom: 12px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid var(--uy-line);
+}
+
+.document-sidebar-total span {
+  color: var(--uy-muted);
+  font-size: 0.78rem;
+  font-weight: 850;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.document-sidebar-total strong {
+  color: var(--uy-green);
+  font-size: 1.55rem;
+}
+
+.document-meta-grid {
+  margin: 0;
 }
 
 .drawer-grid,
@@ -1159,6 +1289,7 @@ td {
 .drawer-field {
   border: 1px solid var(--uy-line);
   border-radius: 8px;
+  background: #fff;
   padding: 10px;
 }
 
@@ -1175,6 +1306,63 @@ td {
   flex-wrap: wrap;
   gap: 10px;
   margin: 14px 0 18px;
+}
+
+.document-primary-actions,
+.document-save-actions {
+  margin-bottom: 0;
+}
+
+.drawer-actions .button {
+  display: inline-flex;
+  min-height: 44px;
+  align-items: center;
+  border-radius: 8px;
+  background: var(--uy-green);
+  color: #fff;
+  font-weight: 800;
+  padding: 0 16px;
+  text-decoration: none;
+}
+
+.drawer-actions .button:hover {
+  background: #0c3025;
+}
+
+.document-delete-action {
+  width: 100%;
+  margin-top: 10px;
+}
+
+.document-edit-form {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.document-edit-form label {
+  display: grid;
+  gap: 6px;
+  color: var(--uy-green);
+  font-size: 0.82rem;
+  font-weight: 800;
+}
+
+.document-form-heading,
+.span-full,
+.document-save-actions {
+  grid-column: 1 / -1;
+}
+
+.document-form-heading h4 {
+  margin: 0 0 4px;
+  color: var(--uy-green);
+  font-size: 1.05rem;
+}
+
+.document-form-heading p {
+  margin: 0;
+  color: var(--uy-muted);
+  font-size: 0.88rem;
+  line-height: 1.45;
 }
 
 .timeline {

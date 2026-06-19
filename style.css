@@ -1496,8 +1496,8 @@ input:focus, select:focus, textarea:focus { outline: 0; }
 }
 .about-portrait-placeholder {
   display: grid;
-  width: min(100%, 236px);
-  aspect-ratio: 4 / 5;
+  inline-size: min(100%, 236px);
+  block-size: 295px;
   align-content: end;
   gap: 4px;
   padding: 18px;
@@ -1519,8 +1519,8 @@ input:focus, select:focus, textarea:focus { outline: 0; }
   display: block;
   width: 100%;
   height: 100%;
-  object-fit: cover;
-  object-position: 68% 42%;
+  object-fit: contain;
+  object-position: center;
 }
 .about-portrait-placeholder span {
   font-size: .68rem;

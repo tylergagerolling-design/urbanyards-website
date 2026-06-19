@@ -12,6 +12,8 @@
   --uy-danger: #8f2f22;
   --uy-shadow: 0 18px 48px rgba(19, 36, 28, 0.12);
   --uy-soft-shadow: 0 10px 28px rgba(19, 36, 28, 0.08);
+  --uy-premium-shadow: 0 24px 70px rgba(19, 36, 28, 0.12);
+  --uy-button-shadow: 0 12px 24px rgba(18, 63, 49, 0.18);
 }
 
 * {
@@ -1073,6 +1075,251 @@ td {
 
 .mobile-tabbar {
   display: none;
+}
+
+/* Premium dashboard app polish layer */
+.dashboard-shell {
+  background:
+    radial-gradient(circle at 12% 0%, rgba(217, 182, 111, 0.12), transparent 30%),
+    linear-gradient(180deg, #f9f7ef 0%, #edf3ed 48%, #fbfaf5 100%);
+}
+
+.login-panel,
+.metric-card,
+.panel,
+.contact-card,
+.job-card,
+.submission-card,
+.note-card,
+.reminder-card,
+.document-card,
+.calendar-card,
+.operation-card,
+.operation-feature,
+.print-document,
+.document-sidebar-card,
+.document-edit-form {
+  border-color: rgba(18, 63, 49, 0.1);
+  border-radius: 8px;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.96), rgba(251, 250, 245, 0.98));
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.8),
+    var(--uy-soft-shadow);
+}
+
+.dashboard-sidebar {
+  background:
+    radial-gradient(circle at 20% 0%, rgba(217, 182, 111, 0.16), transparent 34%),
+    linear-gradient(180deg, #174a39 0%, #0d3025 100%);
+  box-shadow: inset -1px 0 0 rgba(255, 255, 255, 0.07);
+}
+
+.dashboard-brand img {
+  filter: drop-shadow(0 10px 18px rgba(0, 0, 0, 0.16));
+}
+
+.dashboard-nav {
+  gap: 6px;
+  padding: 6px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.045);
+}
+
+.dashboard-nav a {
+  min-height: 42px;
+  border-radius: 7px;
+  transition: background 0.18s ease, color 0.18s ease, transform 0.18s ease;
+}
+
+.dashboard-nav a:hover {
+  background: rgba(255, 255, 255, 0.11);
+  transform: translateX(2px);
+}
+
+.dashboard-nav a.is-active {
+  background: rgba(255, 255, 255, 0.94);
+  color: var(--uy-green);
+  box-shadow: 0 12px 24px rgba(0, 0, 0, 0.12);
+}
+
+.dashboard-topbar {
+  border: 1px solid rgba(18, 63, 49, 0.08);
+  background: rgba(249, 247, 239, 0.88);
+  box-shadow: 0 16px 44px rgba(19, 36, 28, 0.07);
+}
+
+.topbar-actions,
+.quick-actions,
+.toolbar,
+.document-form,
+.client-form,
+.operations-form,
+.schedule-create-form,
+.calendar-tabs,
+.document-card-actions {
+  border-color: rgba(18, 63, 49, 0.1);
+  background: rgba(255, 255, 255, 0.72);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.76);
+}
+
+.login-form button,
+.topbar-actions button,
+.note-form button,
+.sign-out,
+.toolbar button,
+.drawer-actions button,
+.client-form button,
+.operations-form button,
+.document-form button,
+.schedule-create-form button,
+.calendar-tabs button,
+.quick-actions button,
+.settings-grid button,
+.inline-action {
+  border-radius: 999px;
+  transition: transform 0.18s ease, box-shadow 0.18s ease, background 0.18s ease, border-color 0.18s ease, color 0.18s ease;
+}
+
+.login-form button,
+.topbar-actions button:last-child,
+.note-form button,
+.drawer-actions button,
+.client-form button,
+.operations-form button,
+.document-form button,
+.schedule-create-form button,
+.calendar-tabs button.is-active,
+.quick-actions button:first-child {
+  background: linear-gradient(180deg, var(--uy-green-2), var(--uy-green));
+  box-shadow: var(--uy-button-shadow);
+}
+
+.topbar-actions button:not(:last-child),
+.toolbar button,
+.quick-actions button:not(:first-child),
+.settings-grid button,
+.inline-action,
+.calendar-tabs button {
+  border: 1px solid rgba(18, 63, 49, 0.13);
+  background: #fff;
+  color: var(--uy-green);
+  box-shadow: 0 8px 18px rgba(19, 36, 28, 0.06);
+}
+
+.login-form button:hover,
+.topbar-actions button:hover,
+.note-form button:hover,
+.toolbar button:hover,
+.drawer-actions button:hover,
+.client-form button:hover,
+.operations-form button:hover,
+.document-form button:hover,
+.schedule-create-form button:hover,
+.quick-actions button:hover,
+.settings-grid button:hover,
+.inline-action:hover,
+.calendar-tabs button:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 14px 26px rgba(19, 36, 28, 0.13);
+}
+
+.home-hero {
+  border-color: rgba(18, 63, 49, 0.1);
+  background:
+    radial-gradient(circle at 88% 12%, rgba(217, 182, 111, 0.2), transparent 28%),
+    linear-gradient(135deg, rgba(255, 255, 255, 0.97), rgba(241, 247, 239, 0.92));
+  box-shadow: var(--uy-premium-shadow);
+}
+
+.metric-card {
+  position: relative;
+  overflow: hidden;
+}
+
+.metric-card::before {
+  position: absolute;
+  inset: 0 0 auto;
+  height: 3px;
+  background: linear-gradient(90deg, var(--uy-green), var(--uy-warm));
+  content: "";
+}
+
+.panel {
+  padding: 20px;
+}
+
+.panel-heading {
+  padding-bottom: 12px;
+  border-bottom: 1px solid rgba(18, 63, 49, 0.08);
+}
+
+.submission-card,
+.contact-card,
+.job-card,
+.note-card,
+.reminder-card,
+.document-card,
+.calendar-card,
+.operation-card {
+  transition: transform 0.18s ease, box-shadow 0.18s ease, border-color 0.18s ease;
+}
+
+.submission-card:hover,
+.contact-card:hover,
+.job-card:hover,
+.note-card:hover,
+.reminder-card:hover,
+.document-card:hover,
+.calendar-card:hover,
+.operation-card:hover {
+  border-color: rgba(18, 63, 49, 0.18);
+  box-shadow: var(--uy-premium-shadow);
+  transform: translateY(-2px);
+}
+
+table {
+  border-collapse: separate;
+  border-spacing: 0;
+}
+
+thead th {
+  background: #f2f6f1;
+  color: var(--uy-green);
+  font-size: 0.72rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+tbody tr {
+  transition: background 0.16s ease;
+}
+
+tbody tr:hover {
+  background: rgba(232, 240, 235, 0.55);
+}
+
+.drawer-panel {
+  background:
+    radial-gradient(circle at 92% 0%, rgba(217, 182, 111, 0.12), transparent 30%),
+    #fff;
+  box-shadow: -28px 0 70px rgba(19, 36, 28, 0.2);
+}
+
+.drawer-close {
+  border-radius: 999px;
+  box-shadow: 0 8px 18px rgba(19, 36, 28, 0.06);
+}
+
+.mobile-tabbar {
+  border-top: 1px solid rgba(18, 63, 49, 0.08);
+}
+
+.mobile-tabbar a.is-active {
+  background: var(--uy-green);
+  color: #fff;
+  box-shadow: 0 10px 22px rgba(18, 63, 49, 0.18);
 }
 
 .job-actions {

@@ -2256,3 +2256,259 @@ input:focus, select:focus, textarea:focus { outline: 0; }
   .uy-rabbit-ear,
   .uy-assistant-typing span { animation: none !important; }
 }
+
+/* Premium Urban Yards visual polish layer */
+body:not(.feral-page) {
+  background:
+    radial-gradient(circle at 8% 0%, rgba(226, 170, 33, .08), transparent 28%),
+    linear-gradient(180deg, #fbf8ee 0%, #f1f5ed 48%, #fffdf7 100%);
+}
+
+body:not(.feral-page) .site-header {
+  min-height: 76px;
+  padding: 12px max(18px, calc((100vw - 1220px) / 2));
+  border-bottom-color: rgba(18, 63, 49, .08);
+  background: rgba(255, 253, 247, .9);
+  box-shadow: 0 16px 44px rgba(18, 63, 49, .075);
+}
+
+body:not(.feral-page) .site-header.is-compact {
+  min-height: 66px;
+  background: rgba(255, 253, 247, .96);
+  box-shadow: 0 18px 50px rgba(18, 63, 49, .1);
+}
+
+body:not(.feral-page) .brand {
+  gap: 12px;
+}
+
+body:not(.feral-page) .brand-mark {
+  border-radius: 8px;
+  filter: drop-shadow(0 10px 18px rgba(18, 63, 49, .12));
+}
+
+body:not(.feral-page) .primary-nav {
+  gap: 5px;
+  padding: 5px;
+  border-color: rgba(18, 63, 49, .09);
+  background: rgba(255, 255, 255, .64);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, .92),
+    0 10px 26px rgba(18, 63, 49, .055);
+}
+
+body:not(.feral-page) .primary-nav a,
+body:not(.feral-page) .nav-dropdown-toggle {
+  min-height: 38px;
+  padding: 9px 12px;
+  border-radius: 999px;
+  letter-spacing: .065em;
+}
+
+body:not(.feral-page) .primary-nav a:not(.button):hover,
+body:not(.feral-page) .nav-dropdown-toggle:hover {
+  background: rgba(18, 63, 49, .08);
+  color: var(--deep);
+  transform: translateY(-1px);
+}
+
+body:not(.feral-page) .primary-nav a[aria-current="page"]:not(.button),
+body:not(.feral-page) .nav-dropdown-toggle.is-current {
+  background: var(--deep);
+  color: #fffdf7;
+  box-shadow: 0 9px 20px rgba(18, 63, 49, .16);
+}
+
+body:not(.feral-page) .nav-dropdown-menu {
+  top: calc(100% + 14px);
+  padding: 8px;
+  border-color: rgba(18, 63, 49, .1);
+  border-radius: 8px;
+  box-shadow: 0 24px 54px rgba(18, 63, 49, .18);
+}
+
+body:not(.feral-page) .nav-dropdown-menu a {
+  border-radius: 6px;
+}
+
+body:not(.feral-page) .button,
+body:not(.feral-page) .submit-button,
+body:not(.feral-page) .map-expand,
+body:not(.feral-page) .map-link,
+body:not(.feral-page) .portfolio-filter,
+body:not(.feral-page) .service-explorer-button,
+body:not(.feral-page) .service-goal-button,
+body:not(.feral-page) .pay-submit,
+body:not(.feral-page) .pay-result-action .button {
+  min-height: 46px;
+  border-radius: 999px;
+  border-width: 1px;
+  background:
+    linear-gradient(180deg, #efc653 0%, var(--mustard) 100%);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, .48),
+    0 13px 24px rgba(126, 93, 24, .16);
+  transition: transform .18s ease, box-shadow .18s ease, filter .18s ease, background .18s ease, border-color .18s ease;
+}
+
+body:not(.feral-page) .button:hover,
+body:not(.feral-page) .submit-button:hover,
+body:not(.feral-page) .map-expand:hover,
+body:not(.feral-page) .map-link:hover,
+body:not(.feral-page) .portfolio-filter:hover,
+body:not(.feral-page) .service-explorer-button:hover,
+body:not(.feral-page) .service-goal-button:hover,
+body:not(.feral-page) .pay-submit:hover,
+body:not(.feral-page) .pay-result-action .button:hover {
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, .55),
+    0 18px 32px rgba(126, 93, 24, .2);
+  filter: brightness(.99);
+  transform: translateY(-2px);
+}
+
+body:not(.feral-page) .button-small {
+  min-height: 38px;
+  padding: 9px 15px;
+}
+
+body:not(.feral-page) .text-link {
+  font-weight: 800;
+  text-decoration-thickness: 1px;
+  text-underline-offset: 6px;
+}
+
+body:not(.feral-page) .card,
+body:not(.feral-page) .quote-form,
+body:not(.feral-page) .service-detail-card,
+body:not(.feral-page) .portfolio-card,
+body:not(.feral-page) .pay-card,
+body:not(.feral-page) .pay-result-card,
+body:not(.feral-page) .lower-card,
+body:not(.feral-page) .calendar-panel,
+body:not(.feral-page) .about-story-copy,
+body:not(.feral-page) .footer-quote-panel {
+  border-color: rgba(18, 63, 49, .1);
+  border-radius: 8px;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, .9), rgba(255, 253, 247, .96));
+  box-shadow:
+    0 1px 0 rgba(255, 255, 255, .8) inset,
+    0 22px 60px rgba(18, 63, 49, .095);
+}
+
+body:not(.feral-page) .service-card,
+body:not(.feral-page) .trust-strip article,
+body:not(.feral-page) .portfolio-card {
+  transition: transform .2s ease, box-shadow .2s ease, border-color .2s ease;
+}
+
+body:not(.feral-page) .service-card:hover,
+body:not(.feral-page) .trust-strip article:hover,
+body:not(.feral-page) .portfolio-card:hover {
+  border-color: rgba(18, 63, 49, .2);
+  box-shadow: 0 28px 70px rgba(18, 63, 49, .13);
+  transform: translateY(-5px);
+}
+
+body:not(.feral-page) .hero {
+  min-height: clamp(620px, 76vh, 820px);
+  display: grid;
+  align-items: end;
+  padding: 92px 0 112px;
+}
+
+body:not(.feral-page) .hero-background-overlay {
+  background:
+    linear-gradient(90deg, rgba(8, 32, 25, .78) 0%, rgba(8, 32, 25, .52) 42%, rgba(8, 32, 25, .18) 100%),
+    linear-gradient(180deg, rgba(8, 32, 25, .18), rgba(8, 32, 25, .62));
+}
+
+body:not(.feral-page) .hero-copy {
+  max-width: 720px;
+}
+
+body:not(.feral-page) .hero-copy h1 {
+  letter-spacing: 0;
+  text-wrap: balance;
+}
+
+body:not(.feral-page) .hero-text {
+  max-width: 560px;
+  font-size: clamp(1rem, 1.4vw, 1.22rem);
+}
+
+body:not(.feral-page) .quote-section {
+  background:
+    linear-gradient(180deg, rgba(255, 253, 247, .76), rgba(232, 239, 225, .72));
+}
+
+body:not(.feral-page) .quote-form {
+  gap: 12px;
+  padding: clamp(18px, 3vw, 28px);
+}
+
+body:not(.feral-page) .quote-form label,
+body:not(.feral-page) .pay-form label,
+body:not(.feral-page) .uy-assistant-form label {
+  border-color: rgba(18, 63, 49, .1);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, .8);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, .85);
+}
+
+body:not(.feral-page) input,
+body:not(.feral-page) select,
+body:not(.feral-page) textarea {
+  border-radius: 8px;
+}
+
+body:not(.feral-page) .lower-card {
+  overflow: clip;
+}
+
+body:not(.feral-page) .map-embed {
+  border-left-color: rgba(18, 63, 49, .09);
+}
+
+body:not(.feral-page) .payment-list span,
+body:not(.feral-page) .property-types span {
+  border-color: rgba(18, 63, 49, .11);
+  background: rgba(255, 255, 255, .76);
+  box-shadow: 0 8px 18px rgba(18, 63, 49, .055);
+}
+
+body:not(.feral-page) .site-footer {
+  border-top: 1px solid rgba(255, 255, 255, .08);
+  background:
+    radial-gradient(circle at 12% 0%, rgba(226, 170, 33, .13), transparent 30%),
+    linear-gradient(180deg, #102f26 0%, #0a241d 100%);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, .08);
+}
+
+body:not(.feral-page) .footer-brand-panel,
+body:not(.feral-page) .footer-nav-group,
+body:not(.feral-page) .footer-quote-panel {
+  border-color: rgba(255, 255, 255, .08);
+}
+
+@media (max-width: 760px) {
+  body:not(.feral-page) .site-header,
+  body:not(.feral-page) .site-header.is-compact {
+    padding: 10px 16px;
+  }
+
+  body:not(.feral-page) .primary-nav {
+    border-radius: 0 0 14px 14px;
+  }
+
+  body:not(.feral-page) .hero {
+    min-height: 560px;
+    padding: 64px 0 92px;
+  }
+
+  body:not(.feral-page) .button,
+  body:not(.feral-page) .submit-button {
+    width: 100%;
+  }
+}

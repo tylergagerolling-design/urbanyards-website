@@ -691,7 +691,13 @@
       node.classList.toggle("is-active", node.dataset.section === state.activeSection);
     });
     qsa("[data-dashboard-link]").forEach((node) => {
-      node.classList.toggle("is-active", node.dataset.dashboardLink === state.activeSection);
+      const isActive = node.dataset.dashboardLink === state.activeSection;
+      node.classList.toggle("is-active", isActive);
+      if (isActive) {
+        node.setAttribute("aria-current", "page");
+      } else {
+        node.removeAttribute("aria-current");
+      }
     });
   }
 
@@ -967,17 +973,17 @@
           client: item.name,
           property: item.city,
           time: "Quote request",
-        status: item.status,
-        action: "open-submission",
-        actionLabel: "Open"
+          status: item.status,
+          action: "open-submission",
+          actionLabel: "Open"
         });
       }
     });
     data.reminders.forEach((reminder) => {
       events.push({
-      id: `reminder-${reminder.id}`,
-      sourceId: reminder.id,
-      type: "follow-up",
+        id: `reminder-${reminder.id}`,
+        sourceId: reminder.id,
+        type: "follow-up",
         date: reminder.dueRaw,
         title: reminder.task,
         client: "Follow-up",
@@ -1074,8 +1080,14 @@
         ${["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"].map((day) => `<div class="calendar-weekday">${day}</div>`).join("")}
         ${days.map((day) => {
           const dayEvents = events.filter((event) => event.date === day);
+          const dayClasses = [
+            "calendar-day",
+            day === todayKey() ? "is-today" : "",
+            day.slice(0, 7) !== currentMonth ? "is-muted" : "",
+            dayEvents.length ? "has-events" : ""
+          ].filter(Boolean).join(" ");
           return `
-            <section class="calendar-day${day === todayKey() ? " is-today" : ""}${day.slice(0, 7) !== currentMonth ? " is-muted" : ""}">
+            <section class="${dayClasses}">
               <div class="calendar-day-number">${new Date(`${day}T12:00:00`).getDate()}</div>
               <div class="calendar-day-events">
                 ${dayEvents.slice(0, 3).map((event) => `

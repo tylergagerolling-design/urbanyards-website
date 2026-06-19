@@ -46,6 +46,15 @@ button {
   cursor: pointer;
 }
 
+a:focus-visible,
+button:focus-visible,
+input:focus-visible,
+select:focus-visible,
+textarea:focus-visible {
+  outline: 3px solid rgba(217, 182, 111, 0.72);
+  outline-offset: 2px;
+}
+
 .dashboard-shell {
   min-height: 100vh;
   background: linear-gradient(180deg, #f8f7ef 0%, #eef3ee 100%);
@@ -1390,7 +1399,7 @@ td {
     background: #fff;
   }
 
-  .calendar-day.is-muted:not(:has(.calendar-pill)) {
+  .calendar-day.is-muted:not(.has-events) {
     display: none;
   }
 

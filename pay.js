@@ -24,7 +24,7 @@
     results.innerHTML = `
       <div class="pay-empty">
         <p>We couldn't find a matching open invoice. Please check your email/invoice number or request help.</p>
-        <a class="text-link" href="mailto:team@urbanyards.us?subject=Invoice%20Help">Request Invoice Help <span aria-hidden="true">&rarr;</span></a>
+        <a class="text-link" href="mailto:team@urbanyards.us?subject=Invoice%20Help">Request Invoice Help</a>
       </div>
     `;
   }

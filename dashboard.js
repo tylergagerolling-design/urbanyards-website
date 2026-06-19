@@ -752,10 +752,14 @@
         <div class="item-topline">
           <div>
             <h4>${escapeHtml(doc.number)}</h4>
-          <div class="meta">${escapeHtml(doc.type === "invoice" ? "Invoice" : "Estimate / Quote")} / ${escapeHtml(doc.status)}</div>
+            <div class="meta">${escapeHtml(doc.type === "invoice" ? "Invoice" : "Estimate / Quote")} / ${escapeHtml(doc.status)}</div>
+            <div class="meta">Square invoice: ${escapeHtml(doc.squareInvoiceNumber || "Add invoice #, then sync")}</div>
             ${doc.squareStatus ? `<div class="meta">Square: ${escapeHtml(doc.squareStatus)}${doc.squareSyncedAt ? ` / synced ${escapeHtml(doc.squareSyncedAt)}` : ""}</div>` : ""}
           </div>
-          <button class="inline-action" type="button" data-action="open-document" data-id="${escapeHtml(doc.id)}">Open</button>
+          <div class="document-card-actions">
+            <button class="inline-action" type="button" data-action="open-document" data-id="${escapeHtml(doc.id)}">Open</button>
+            <button class="inline-action" type="button" data-action="sync-square-document" data-id="${escapeHtml(doc.id)}">Sync Square</button>
+          </div>
         </div>
         <p class="item-body">${escapeHtml(doc.clientName)}<br>${escapeHtml(doc.clientEmail || "No email")}</p>
         <strong class="document-total">${doc.squareAmountDueCents !== null ? `${escapeHtml(formatCurrency(doc.squareAmountDueCents, doc.squareCurrency))} due` : `$${doc.total.toFixed(2)}`}</strong>

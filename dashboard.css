@@ -618,6 +618,13 @@ td {
   font-weight: 850;
 }
 
+.document-card-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
 .job-actions {
   display: flex;
   flex-wrap: wrap;

@@ -1491,6 +1491,7 @@ input:focus, select:focus, textarea:focus { outline: 0; }
 .about-story-intro {
   display: grid;
   gap: 22px;
+  align-content: start;
 }
 .about-portrait-placeholder {
   display: grid;
@@ -1523,6 +1524,11 @@ input:focus, select:focus, textarea:focus { outline: 0; }
   border-radius: var(--radius);
   background: rgba(255, 253, 247, .78);
   box-shadow: 0 18px 38px rgba(25, 59, 42, .07);
+}
+.about-story-copy .eyebrow { margin-bottom: 8px; }
+.about-story-copy h2 {
+  margin-bottom: 18px;
+  max-width: 12ch;
 }
 .about-story-copy p { margin-bottom: 14px; color: var(--muted); }
 .about-story-copy p:last-child { margin-bottom: 0; }

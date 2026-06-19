@@ -69,8 +69,35 @@
     return `<select class="status-select" data-status-table="${escapeHtml(table)}" data-status-id="${escapeHtml(id)}" aria-label="Update status">${options}</select>`;
   }
 
+  function buttonContent(label, action) {
+    const icons = {
+      "cancel-job": "x",
+      "complete-reminder": "OK",
+      "create-estimate": "+",
+      "create-invoice": "$",
+      "create-reminder": "+",
+      "delete-contact": "x",
+      "delete-document": "x",
+      "delete-note": "x",
+      "delete-operation": "x",
+      "delete-reminder": "x",
+      "delete-submission": "x",
+      "edit-job": "/",
+      "open-contact": "-&gt;",
+      "open-document": "-&gt;",
+      "open-submission": "-&gt;",
+      "print-document": "PDF",
+      "quick-add-job": "+",
+      "quick-add-quote": "+",
+      "sync-contact": "~",
+      "sync-square-document": "~"
+    };
+    const icon = icons[action] || "";
+    return `${icon ? `<span class="button-icon" aria-hidden="true">${icon}</span>` : ""}<span>${escapeHtml(label)}</span>`;
+  }
+
   function actionButton(label, action, id) {
-    return `<button class="inline-action" type="button" data-action="${escapeHtml(action)}" data-id="${escapeHtml(id)}">${escapeHtml(label)}</button>`;
+    return `<button class="inline-action" type="button" data-action="${escapeHtml(action)}" data-id="${escapeHtml(id)}">${buttonContent(label, action)}</button>`;
   }
 
   function emptyState(message) {
@@ -879,7 +906,7 @@
       els.dashboardAlerts.innerHTML = "";
       return;
     }
-    els.dashboardAlerts.innerHTML = alerts.map((alert) => `<button type="button" data-action="quick-add-follow-up">${escapeHtml(alert)}</button>`).join("");
+    els.dashboardAlerts.innerHTML = alerts.map((alert) => `<button type="button" data-action="quick-add-follow-up">${buttonContent(alert, "quick-add-quote")}</button>`).join("");
   }
 
   function operationTypeLabel(value) {
@@ -1135,8 +1162,8 @@
         </div>
         <div class="calendar-actions">
           <span>${escapeHtml(event.type)}</span>
-          ${event.action ? `<button class="inline-action" type="button" data-action="${escapeHtml(event.action)}" data-id="${escapeHtml(event.sourceId)}">${escapeHtml(event.actionLabel || "Open")}</button>` : ""}
-          ${event.deleteAction ? `<button class="inline-action danger-action" type="button" data-action="${escapeHtml(event.deleteAction)}" data-id="${escapeHtml(event.sourceId)}">Delete</button>` : ""}
+          ${event.action ? `<button class="inline-action" type="button" data-action="${escapeHtml(event.action)}" data-id="${escapeHtml(event.sourceId)}">${buttonContent(event.actionLabel || "Open", event.action)}</button>` : ""}
+          ${event.deleteAction ? `<button class="inline-action danger-action" type="button" data-action="${escapeHtml(event.deleteAction)}" data-id="${escapeHtml(event.sourceId)}">${buttonContent("Delete", event.deleteAction)}</button>` : ""}
         </div>
       </article>
     `;
@@ -1274,9 +1301,9 @@
             ${doc.squareStatus ? `<div class="meta">Square: ${escapeHtml(doc.squareStatus)}${doc.squareSyncedAt ? ` / synced ${escapeHtml(doc.squareSyncedAt)}` : ""}</div>` : ""}
           </div>
           <div class="document-card-actions">
-            <button class="inline-action" type="button" data-action="open-document" data-id="${escapeHtml(doc.id)}">Open</button>
-            <button class="inline-action" type="button" data-action="sync-square-document" data-id="${escapeHtml(doc.id)}">Sync Square</button>
-            <button class="inline-action danger-action" type="button" data-action="delete-document" data-id="${escapeHtml(doc.id)}">Delete</button>
+            ${actionButton("Open", "open-document", doc.id)}
+            ${actionButton("Sync", "sync-square-document", doc.id)}
+            ${actionButton("Delete", "delete-document", doc.id).replace("inline-action", "inline-action danger-action")}
           </div>
         </div>
         <p class="item-body">${escapeHtml(doc.clientName)}<br>${escapeHtml(doc.clientEmail || "No email")}</p>
@@ -1371,11 +1398,11 @@
             <textarea name="notes" rows="5">${escapeHtml(item.notes)}</textarea>
           </label>
           <div class="drawer-actions">
-            <button type="submit">Save Quote</button>
-            <button type="button" data-action="sync-contact" data-id="${escapeHtml(item.id)}">Sync Contact</button>
-            <button type="button" data-action="create-estimate" data-id="${escapeHtml(item.id)}">Create Estimate</button>
-            <button type="button" data-action="create-invoice" data-id="${escapeHtml(item.id)}">Create Invoice</button>
-            <button type="button" class="danger-action" data-action="delete-submission" data-id="${escapeHtml(item.id)}">Delete Quote</button>
+            <button type="submit">${buttonContent("Save Quote", "complete-reminder")}</button>
+            <button type="button" data-action="sync-contact" data-id="${escapeHtml(item.id)}">${buttonContent("Sync Contact", "sync-contact")}</button>
+            <button type="button" data-action="create-estimate" data-id="${escapeHtml(item.id)}">${buttonContent("Estimate", "create-estimate")}</button>
+            <button type="button" data-action="create-invoice" data-id="${escapeHtml(item.id)}">${buttonContent("Invoice", "create-invoice")}</button>
+            <button type="button" class="danger-action" data-action="delete-submission" data-id="${escapeHtml(item.id)}">${buttonContent("Delete Quote", "delete-submission")}</button>
           </div>
         </form>
 
@@ -1385,8 +1412,8 @@
           <input name="visit_window" placeholder="Visit window, e.g. 9 AM - 11 AM">
           <input name="service" value="${escapeHtml(item.service)}" placeholder="Service">
           <div class="drawer-actions">
-            <button type="submit">Create Job</button>
-            <button type="button" data-action="create-reminder" data-id="${escapeHtml(item.id)}">Create Follow-Up Reminder</button>
+            <button type="submit">${buttonContent("Create Job", "quick-add-job")}</button>
+            <button type="button" data-action="create-reminder" data-id="${escapeHtml(item.id)}">${buttonContent("Follow-Up", "create-reminder")}</button>
           </div>
         </form>
 
@@ -1415,10 +1442,10 @@
           <label>Type<input name="contact_type" value="${escapeHtml(contact.type === "Contact" ? "" : contact.type)}"></label>
           <label>Status<select name="status">${STATUSES.map((status) => `<option value="${status}"${status === contact.status ? " selected" : ""}>${status}</option>`).join("")}</select></label>
           <div class="drawer-actions">
-            <button type="submit">Save Client</button>
-            <button type="button" data-action="quick-add-job">Add Job</button>
-            <button type="button" data-action="quick-add-quote">Add Quote</button>
-            <button type="button" class="danger-action" data-action="delete-contact" data-id="${escapeHtml(contact.id)}">Delete Client</button>
+            <button type="submit">${buttonContent("Save Client", "complete-reminder")}</button>
+            <button type="button" data-action="quick-add-job">${buttonContent("Add Job", "quick-add-job")}</button>
+            <button type="button" data-action="quick-add-quote">${buttonContent("Add Quote", "quick-add-quote")}</button>
+            <button type="button" class="danger-action" data-action="delete-contact" data-id="${escapeHtml(contact.id)}">${buttonContent("Delete Client", "delete-contact")}</button>
           </div>
         </form>
         <h4>Related work</h4>
@@ -1461,8 +1488,8 @@
             <select name="status">${STATUSES.map((status) => `<option value="${status}"${status === job.status ? " selected" : ""}>${status}</option>`).join("")}</select>
           </label>
           <div class="drawer-actions">
-            <button type="submit">Save Visit</button>
-            <button type="button" class="danger-action" data-action="cancel-job" data-id="${escapeHtml(job.id)}">Cancel Visit</button>
+            <button type="submit">${buttonContent("Save Visit", "complete-reminder")}</button>
+            <button type="button" class="danger-action" data-action="cancel-job" data-id="${escapeHtml(job.id)}">${buttonContent("Cancel Visit", "cancel-job")}</button>
           </div>
         </form>
       </div>
@@ -1501,11 +1528,11 @@
             <div class="drawer-field"><span>Dashboard status</span>${escapeHtml(doc.status)}</div>
           </div>
           <div class="drawer-actions document-primary-actions">
-            <button type="button" data-action="sync-square-document" data-id="${escapeHtml(doc.id)}">Sync Square</button>
+            <button type="button" data-action="sync-square-document" data-id="${escapeHtml(doc.id)}">${buttonContent("Sync Square", "sync-square-document")}</button>
             ${doc.squarePaymentUrl ? `<a class="button" href="${escapeHtml(doc.squarePaymentUrl)}" target="_blank" rel="noopener noreferrer">Open Payment Link</a>` : ""}
-            <button type="button" data-action="print-document" data-id="${escapeHtml(doc.id)}">Print / PDF</button>
+            <button type="button" data-action="print-document" data-id="${escapeHtml(doc.id)}">${buttonContent("Print / PDF", "print-document")}</button>
           </div>
-          <button type="button" class="inline-action danger-action document-delete-action" data-action="delete-document" data-id="${escapeHtml(doc.id)}">Delete Document</button>
+          <button type="button" class="inline-action danger-action document-delete-action" data-action="delete-document" data-id="${escapeHtml(doc.id)}">${buttonContent("Delete Document", "delete-document")}</button>
         </section>
         <form class="drawer-form document-edit-form" data-document-edit data-id="${escapeHtml(doc.id)}">
           <div class="document-form-heading">
@@ -1534,7 +1561,7 @@
           </label>
           <label class="span-full">Notes<textarea name="notes" rows="3">${escapeHtml(doc.notes)}</textarea></label>
           <div class="drawer-actions document-save-actions">
-            <button type="submit">Save Changes</button>
+            <button type="submit">${buttonContent("Save Changes", "complete-reminder")}</button>
           </div>
         </form>
       </div>

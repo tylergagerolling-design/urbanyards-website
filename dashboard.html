@@ -11,9 +11,9 @@
     <link rel="icon" href="/favicon.ico" sizes="any">
     <link rel="apple-touch-icon" href="/apple-touch-icon.png">
     <link rel="manifest" href="/dashboard.webmanifest">
-    <link rel="stylesheet" href="dashboard.css?v=20260619-7">
+    <link rel="stylesheet" href="dashboard.css?v=20260619-8">
     <script src="dashboard-config.js?v=20260619-5" defer></script>
-    <script src="dashboard.js?v=20260619-7" defer></script>
+    <script src="dashboard.js?v=20260619-8" defer></script>
   </head>
   <body>
     <main class="dashboard-shell" aria-labelledby="dashboard-title">
@@ -29,7 +29,7 @@
             <label>Password
               <input name="password" type="password" autocomplete="current-password" required>
             </label>
-            <button type="submit">Sign In</button>
+            <button type="submit"><span class="button-icon" aria-hidden="true">-&gt;</span><span>Sign In</span></button>
             <p class="form-note">Protected by Supabase Auth. Public sign-up is not available.</p>
             <p class="form-status" data-login-status role="status"></p>
           </form>
@@ -50,7 +50,7 @@
             <a href="#operations" data-dashboard-link="operations">Operations</a>
             <a href="#settings" data-dashboard-link="settings">Settings</a>
           </nav>
-          <button class="sign-out" type="button" data-sign-out>Sign Out</button>
+          <button class="sign-out" type="button" data-sign-out><span class="button-icon" aria-hidden="true">x</span><span>Sign Out</span></button>
         </aside>
 
         <div class="dashboard-main">
@@ -62,8 +62,8 @@
             <div class="topbar-actions">
               <span data-owner-email>team@urbanyards.us</span>
               <input data-global-search type="search" aria-label="Search dashboard" placeholder="Search everything...">
-              <button type="button" data-refresh-dashboard>Refresh</button>
-              <button type="button" data-action="quick-add-job">Add Job</button>
+              <button type="button" data-refresh-dashboard><span class="button-icon" aria-hidden="true">R</span><span>Refresh</span></button>
+              <button type="button" data-action="quick-add-job"><span class="button-icon" aria-hidden="true">+</span><span>Add Job</span></button>
             </div>
           </header>
           <div class="dashboard-state" data-dashboard-state role="status" hidden></div>
@@ -79,13 +79,13 @@
             </div>
             <div class="metric-grid" data-metrics></div>
             <div class="quick-actions" aria-label="Quick actions">
-              <button type="button" data-action="quick-add-job">Add Job</button>
-              <button type="button" data-action="quick-add-quote">Add Quote</button>
-              <button type="button" data-action="quick-add-follow-up">Add Follow-Up</button>
-              <button type="button" data-action="quick-add-client">Add Client</button>
-              <button type="button" data-action="quick-add-invoice-reminder">Add Invoice Reminder</button>
-              <button type="button" data-new-note>Add Task</button>
-              <button type="button" data-action="quick-add-operation">Add Operation</button>
+              <button type="button" data-action="quick-add-job"><span class="button-icon" aria-hidden="true">+</span><span>Job</span></button>
+              <button type="button" data-action="quick-add-quote"><span class="button-icon" aria-hidden="true">+</span><span>Quote</span></button>
+              <button type="button" data-action="quick-add-follow-up"><span class="button-icon" aria-hidden="true">+</span><span>Follow-Up</span></button>
+              <button type="button" data-action="quick-add-client"><span class="button-icon" aria-hidden="true">+</span><span>Client</span></button>
+              <button type="button" data-action="quick-add-invoice-reminder"><span class="button-icon" aria-hidden="true">$</span><span>Invoice</span></button>
+              <button type="button" data-new-note><span class="button-icon" aria-hidden="true">+</span><span>Task</span></button>
+              <button type="button" data-action="quick-add-operation"><span class="button-icon" aria-hidden="true">+</span><span>Operation</span></button>
             </div>
             <div class="dashboard-alerts" data-dashboard-alerts></div>
             <div class="split-grid">
@@ -141,7 +141,7 @@
                 <input name="site_name" placeholder="Client / title" required>
                 <input name="city" placeholder="Property / area">
                 <input name="service" placeholder="Job, task, or reminder" required>
-                <button type="submit">Add Calendar Item</button>
+                <button type="submit"><span class="button-icon" aria-hidden="true">+</span><span>Add Visit</span></button>
               </form>
               <div class="calendar-list" data-calendar-list></div>
             </div>
@@ -168,7 +168,7 @@
                 <select data-property-filter aria-label="Filter by property type">
                   <option value="All">All Properties</option>
                 </select>
-                <button type="button" data-export="submissions">Export Quotes CSV</button>
+                <button type="button" data-export="submissions"><span class="button-icon" aria-hidden="true">CSV</span><span>Export Quotes</span></button>
               </div>
               <div class="table-wrap">
                 <table>
@@ -200,7 +200,7 @@
                 <input name="description" placeholder="Line item / service" required>
                 <input name="amount" type="number" min="0" step="0.01" placeholder="Amount">
                 <input name="due_date" type="date" aria-label="Due date">
-                <button type="submit">Create Document</button>
+                <button type="submit"><span class="button-icon" aria-hidden="true">+</span><span>Create</span></button>
               </form>
               <div class="document-list" data-documents></div>
             </div>
@@ -216,7 +216,7 @@
                 <button class="inline-action" type="button" data-action="quick-add-client">Add Client</button>
               </div>
               <div class="toolbar">
-                <button type="button" data-export="contacts">Export Contacts CSV</button>
+                <button type="button" data-export="contacts"><span class="button-icon" aria-hidden="true">CSV</span><span>Export Contacts</span></button>
               </div>
               <form class="client-form" data-client-form>
                 <input name="name" placeholder="Client name" required>
@@ -224,7 +224,7 @@
                 <input name="phone" placeholder="Phone">
                 <input name="city" placeholder="Property / area">
                 <input name="contact_type" placeholder="Client type">
-                <button type="submit">Add Client</button>
+                <button type="submit"><span class="button-icon" aria-hidden="true">+</span><span>Add Client</span></button>
               </form>
               <div class="contact-grid" data-contacts></div>
             </div>
@@ -299,7 +299,7 @@
                   <option>Archived</option>
                 </select>
                 <textarea name="notes" rows="3" placeholder="Notes, checklist items, photo links, access info, route details, or follow-up rules..."></textarea>
-                <button type="submit">Save Operation</button>
+                <button type="submit"><span class="button-icon" aria-hidden="true">OK</span><span>Save Operation</span></button>
               </form>
               <div class="operations-list" data-operations-list></div>
             </div>
@@ -314,15 +314,15 @@
                 </div>
               </div>
               <div class="settings-grid">
-                <button type="button" data-export="jobs">Export Jobs CSV</button>
-                <button type="button" data-export="contacts">Export Contacts CSV</button>
-                <button type="button" data-export="submissions">Export Quotes CSV</button>
-                <button type="button" data-action="refresh-dashboard">Refresh Dashboard</button>
+                <button type="button" data-export="jobs"><span class="button-icon" aria-hidden="true">CSV</span><span>Export Jobs</span></button>
+                <button type="button" data-export="contacts"><span class="button-icon" aria-hidden="true">CSV</span><span>Export Contacts</span></button>
+                <button type="button" data-export="submissions"><span class="button-icon" aria-hidden="true">CSV</span><span>Export Quotes</span></button>
+                <button type="button" data-action="refresh-dashboard"><span class="button-icon" aria-hidden="true">R</span><span>Refresh</span></button>
               </div>
               <form class="note-form" data-note-form>
                 <input name="title" placeholder="Note title" required>
                 <textarea name="body" rows="3" placeholder="Task, property note, or business reminder..." required></textarea>
-                <button type="submit">Add Task</button>
+                <button type="submit"><span class="button-icon" aria-hidden="true">+</span><span>Add Task</span></button>
               </form>
               <div class="note-list" data-notes></div>
               <h3 class="settings-subhead">Follow-up reminders</h3>

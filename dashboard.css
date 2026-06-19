@@ -1322,6 +1322,157 @@ tbody tr:hover {
   box-shadow: 0 10px 22px rgba(18, 63, 49, 0.18);
 }
 
+/* Focused button system pass */
+button,
+.button,
+.inline-action,
+.drawer-actions .button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  white-space: nowrap;
+}
+
+button,
+.inline-action {
+  letter-spacing: 0;
+}
+
+.button-icon {
+  display: inline-grid;
+  min-width: 22px;
+  height: 22px;
+  align-items: center;
+  justify-content: center;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.2);
+  color: inherit;
+  font-size: 0.68rem;
+  font-weight: 900;
+  line-height: 1;
+}
+
+.topbar-actions button:not(:last-child) .button-icon,
+.toolbar button .button-icon,
+.quick-actions button:not(:first-child) .button-icon,
+.settings-grid button .button-icon,
+.inline-action .button-icon,
+.calendar-tabs button .button-icon {
+  background: rgba(18, 63, 49, 0.08);
+}
+
+.danger-action .button-icon {
+  background: rgba(143, 47, 34, 0.1);
+}
+
+.danger-action:hover .button-icon {
+  background: rgba(255, 255, 255, 0.18);
+}
+
+.topbar-actions {
+  gap: 8px;
+}
+
+.topbar-actions button,
+.toolbar button,
+.settings-grid button,
+.quick-actions button {
+  padding-inline: 15px;
+}
+
+.quick-actions {
+  gap: 7px;
+}
+
+.quick-actions button {
+  min-height: 46px;
+}
+
+.toolbar button,
+.settings-grid button,
+.topbar-actions button:not(:last-child),
+.inline-action {
+  background: linear-gradient(180deg, #fff, #f8fbf8);
+}
+
+.topbar-actions button:last-child,
+.quick-actions button:first-child,
+.document-form button,
+.schedule-create-form button,
+.client-form button,
+.operations-form button,
+.note-form button,
+.drawer-actions button[type="submit"] {
+  border: 1px solid rgba(18, 63, 49, 0.14);
+}
+
+.drawer-actions {
+  align-items: center;
+}
+
+.drawer-actions button,
+.drawer-actions .button {
+  min-width: 132px;
+}
+
+.drawer-actions .danger-action,
+.document-delete-action {
+  margin-left: auto;
+}
+
+.danger-action,
+.inline-action.danger-action,
+.drawer-actions .danger-action {
+  border: 1px solid rgba(143, 47, 34, 0.2);
+  background: linear-gradient(180deg, #fff8f6, #fff0eb);
+  box-shadow: 0 8px 18px rgba(143, 47, 34, 0.06);
+  color: var(--uy-danger);
+}
+
+.danger-action:hover,
+.inline-action.danger-action:hover,
+.drawer-actions .danger-action:hover {
+  border-color: rgba(143, 47, 34, 0.72);
+  background: var(--uy-danger);
+  box-shadow: 0 14px 28px rgba(143, 47, 34, 0.18);
+  color: #fff;
+}
+
+button:active,
+.button:active,
+.inline-action:active {
+  transform: translateY(0);
+  box-shadow: 0 6px 14px rgba(19, 36, 28, 0.12);
+}
+
+.calendar-tabs button {
+  min-height: 40px;
+}
+
+.calendar-tabs button.is-active {
+  box-shadow: 0 12px 24px rgba(18, 63, 49, 0.16);
+}
+
+@media (max-width: 760px) {
+  button,
+  .button,
+  .inline-action,
+  .drawer-actions .button {
+    white-space: normal;
+  }
+
+  .button-icon {
+    min-width: 20px;
+    height: 20px;
+  }
+
+  .drawer-actions .danger-action,
+  .document-delete-action {
+    margin-left: 0;
+  }
+}
+
 .job-actions {
   display: flex;
   flex-wrap: wrap;

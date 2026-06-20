@@ -1,6 +1,6 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 600 600" role="img" aria-labelledby="title desc">
   <title id="title">Illustrated Portland metro service area map</title>
-  <desc id="desc">A square stylized map showing Portland and nearby communities served by Urban Yards.</desc>
+  <desc id="desc">A square stylized map showing Portland, Vancouver, and Beaverton served by Urban Yards.</desc>
   <defs>
     <linearGradient id="paper" x1="0" y1="0" x2="1" y2="1">
       <stop stop-color="#f8f3e6"/>

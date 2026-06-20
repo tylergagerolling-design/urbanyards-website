@@ -1,17 +1,22 @@
 /* Mobile webapp shell guard. Loaded after dashboard.css so it wins over older layout layers. */
-@media (max-width: 760px) {
+@media (max-width: 980px), (hover: none) and (pointer: coarse) {
   html,
   body {
-    width: 100%;
-    max-width: 100%;
-    overflow-x: hidden;
+    width: 100% !important;
+    max-width: 100% !important;
+    overflow-x: hidden !important;
   }
 
   .dashboard-shell,
   .app-view {
-    width: 100%;
-    max-width: 100vw;
-    overflow-x: hidden;
+    left: auto !important;
+    right: auto !important;
+    width: 100% !important;
+    min-width: 0 !important;
+    max-width: 100% !important;
+    margin-left: 0 !important;
+    transform: none !important;
+    overflow-x: clip !important;
   }
 
   .dashboard-shell {
@@ -21,16 +26,25 @@
   }
 
   .app-view::before {
+    inset: 0 !important;
     background:
       radial-gradient(circle at 82% 12%, rgba(255, 252, 239, .68), transparent 28%),
       rgba(245, 240, 223, .82);
   }
 
+  .sidebar-scrim,
+  .dashboard-sidebar {
+    display: none !important;
+  }
+
   .dashboard-main {
-    width: 100%;
-    max-width: 100vw;
-    margin: 0;
-    box-sizing: border-box;
+    width: 100% !important;
+    min-width: 0 !important;
+    max-width: 100% !important;
+    margin: 0 !important;
+    padding-right: max(10px, env(safe-area-inset-right)) !important;
+    padding-left: max(10px, env(safe-area-inset-left)) !important;
+    box-sizing: border-box !important;
   }
 
   .dashboard-topbar,
@@ -39,7 +53,107 @@
   .home-hero,
   .operations-command,
   .route-hero {
-    max-width: 100%;
-    box-sizing: border-box;
+    width: 100% !important;
+    min-width: 0 !important;
+    max-width: 100% !important;
+    margin-left: 0 !important;
+    box-sizing: border-box !important;
+  }
+
+  .topbar-actions,
+  .quick-actions,
+  .settings-grid,
+  .calendar-tabs,
+  .operations-command-actions,
+  .route-actions,
+  .drawer-actions {
+    max-width: 100% !important;
+    overflow-x: auto;
+  }
+
+  .quote-table,
+  .table-scroll,
+  .document-list,
+  .calendar-list,
+  .operations-layout,
+  .route-layout {
+    min-width: 0 !important;
+    max-width: 100% !important;
+    overflow-x: auto;
+  }
+
+  .mobile-tabbar {
+    left: 0 !important;
+    right: 0 !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    box-sizing: border-box !important;
+  }
+}
+
+.pull-refresh {
+  position: fixed;
+  top: calc(10px + env(safe-area-inset-top));
+  left: 50%;
+  z-index: 80;
+  display: inline-flex;
+  align-items: center;
+  gap: 9px;
+  min-height: 42px;
+  padding: 9px 13px;
+  border: 1px solid rgba(6, 27, 21, .13);
+  border-radius: 999px;
+  background: rgba(255, 252, 239, .94);
+  box-shadow: 0 16px 42px rgba(6, 27, 21, .18);
+  color: #123f31;
+  opacity: 0;
+  pointer-events: none;
+  transform: translate(-50%, calc(-76px + var(--pull-distance, 0px)));
+  transition: opacity .16s ease, transform .16s ease;
+}
+
+.pull-refresh span {
+  width: 19px;
+  height: 19px;
+  border: 2px solid rgba(18, 63, 49, .18);
+  border-top-color: #2f6b4f;
+  border-radius: 999px;
+  transform: rotate(calc(var(--pull-progress, 0) * 260deg));
+}
+
+.pull-refresh strong {
+  font-size: .72rem;
+  font-weight: 900;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.pull-refresh.is-visible {
+  opacity: 1;
+}
+
+.pull-refresh.is-ready {
+  background: #123f31;
+  color: #fffcef;
+}
+
+.pull-refresh.is-ready span {
+  border-color: rgba(255, 252, 239, .28);
+  border-top-color: #c9d982;
+}
+
+.pull-refresh.is-refreshing {
+  opacity: 1;
+  transform: translate(-50%, 0);
+}
+
+.pull-refresh.is-refreshing span {
+  animation: dashboard-refresh-spin .75s linear infinite;
+}
+
+@keyframes dashboard-refresh-spin {
+  to {
+    transform: rotate(360deg);
   }
 }

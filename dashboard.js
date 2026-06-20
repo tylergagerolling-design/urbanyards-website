@@ -2005,6 +2005,68 @@
     }
   }
 
+  function bindPullToRefresh() {
+    if (!els.pullRefresh) return;
+    let startY = 0;
+    let distance = 0;
+    let pulling = false;
+    const threshold = 88;
+
+    function setPull(distanceValue, isReady) {
+      const clamped = Math.min(Math.max(distanceValue, 0), 96);
+      const progress = Math.min(clamped / threshold, 1);
+      els.pullRefresh.style.setProperty("--pull-distance", `${clamped}px`);
+      els.pullRefresh.style.setProperty("--pull-progress", String(progress));
+      els.pullRefresh.classList.toggle("is-visible", clamped > 8);
+      els.pullRefresh.classList.toggle("is-ready", Boolean(isReady));
+      const label = els.pullRefresh.querySelector("strong");
+      if (label) label.textContent = isReady ? "Release to refresh" : "Pull to refresh";
+    }
+
+    function resetPull() {
+      distance = 0;
+      pulling = false;
+      els.pullRefresh.classList.remove("is-visible", "is-ready", "is-refreshing");
+      els.pullRefresh.style.setProperty("--pull-distance", "0px");
+      els.pullRefresh.style.setProperty("--pull-progress", "0");
+      const label = els.pullRefresh.querySelector("strong");
+      if (label) label.textContent = "Pull to refresh";
+    }
+
+    document.addEventListener("touchstart", (event) => {
+      if (!els.appView || els.appView.hidden || window.scrollY > 0 || state.loading) return;
+      startY = event.touches[0]?.clientY || 0;
+      pulling = true;
+    }, { passive: true });
+
+    document.addEventListener("touchmove", (event) => {
+      if (!pulling || !startY || window.scrollY > 0) return;
+      distance = Math.max((event.touches[0]?.clientY || 0) - startY, 0);
+      if (distance > 6) {
+        setPull(distance * .72, distance >= threshold);
+      }
+    }, { passive: true });
+
+    document.addEventListener("touchend", async () => {
+      if (!pulling) return;
+      const shouldRefresh = distance >= threshold;
+      if (!shouldRefresh) {
+        resetPull();
+        return;
+      }
+
+      els.pullRefresh.classList.remove("is-ready");
+      els.pullRefresh.classList.add("is-refreshing");
+      const label = els.pullRefresh.querySelector("strong");
+      if (label) label.textContent = "Refreshing";
+      try {
+        await refreshDashboard();
+      } finally {
+        resetPull();
+      }
+    }, { passive: true });
+  }
+
   function bindEvents() {
     els.loginForm.addEventListener("submit", async (event) => {
       event.preventDefault();
@@ -2626,6 +2688,8 @@
       els.refreshDashboard.addEventListener("click", refreshDashboard);
     }
 
+    bindPullToRefresh();
+
     els.newNote.addEventListener("click", () => {
       setActiveSection("settings");
       history.replaceState(null, "", "#settings");
@@ -2672,6 +2736,7 @@
     els.detailDrawer = qs("[data-detail-drawer]");
     els.detailContent = qs("[data-detail-content]");
     els.closeDetail = qs("[data-close-detail]");
+    els.pullRefresh = qs("[data-pull-refresh]");
     els.metrics = qs("[data-metrics]");
     els.statusFilter = qs("[data-status-filter]");
     els.submissions = qs("[data-submissions]");

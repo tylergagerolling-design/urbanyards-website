@@ -12,9 +12,9 @@
     <link rel="apple-touch-icon" href="/apple-touch-icon.png">
     <link rel="manifest" href="/dashboard.webmanifest">
     <link rel="stylesheet" href="dashboard.css?v=20260619-23">
-    <link rel="stylesheet" href="dashboard-mobile-fix.css?v=20260620-1">
+    <link rel="stylesheet" href="dashboard-mobile-fix.css?v=20260620-2">
     <script src="dashboard-config.js?v=20260619-5" defer></script>
-    <script src="dashboard.js?v=20260619-13" defer></script>
+    <script src="dashboard.js?v=20260620-1" defer></script>
   </head>
   <body>
     <main class="dashboard-shell" aria-labelledby="dashboard-title">
@@ -38,6 +38,10 @@
       </section>
 
       <section class="app-view" data-view="app" hidden>
+        <div class="pull-refresh" data-pull-refresh aria-hidden="true">
+          <span></span>
+          <strong>Pull to refresh</strong>
+        </div>
         <button class="sidebar-scrim" type="button" data-sidebar-close aria-label="Close dashboard menu"></button>
         <aside class="dashboard-sidebar" id="dashboard-sidebar">
           <a class="dashboard-brand" href="/" aria-label="Urban Yards public website">

@@ -1484,7 +1484,7 @@ input:focus, select:focus, textarea:focus { outline: 0; }
 .about-story-section { background: rgba(255, 253, 247, .72); }
 .about-story-grid {
   display: grid;
-  grid-template-columns: .64fr 1.36fr;
+  grid-template-columns: 1.36fr .64fr;
   gap: 34px;
   align-items: start;
 }

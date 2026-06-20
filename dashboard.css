@@ -5463,3 +5463,56 @@ td {
     filter: drop-shadow(0 0 10px rgba(201, 217, 130, .32));
   }
 }
+
+/* Final collapsed-only sidebar cleanup. Expanded drawer labels/layout stay intact. */
+@media (min-width: 981px) {
+  .app-view:not(.is-sidebar-open) .dashboard-sidebar:not(:hover):not(:focus-within) .dashboard-nav,
+  .app-view:not(.is-sidebar-open) .dashboard-sidebar:not(:hover):not(:focus-within) .dashboard-nav a,
+  .app-view:not(.is-sidebar-open) .dashboard-sidebar:not(:hover):not(:focus-within) .dashboard-nav a.is-active,
+  .app-view:not(.is-sidebar-open) .dashboard-sidebar:not(:hover):not(:focus-within) .dashboard-nav a:hover,
+  .app-view:not(.is-sidebar-open) .dashboard-sidebar:not(:hover):not(:focus-within) .nav-icon,
+  .app-view:not(.is-sidebar-open) .dashboard-sidebar:not(:hover):not(:focus-within) .dashboard-nav a.is-active .nav-icon,
+  .app-view:not(.is-sidebar-open) .dashboard-sidebar:not(:hover):not(:focus-within) .dashboard-nav a:hover .nav-icon {
+    background: transparent !important;
+    background-color: transparent !important;
+    background-image: none !important;
+    border-color: transparent !important;
+    box-shadow: none !important;
+  }
+
+  .app-view:not(.is-sidebar-open) .dashboard-sidebar:not(:hover):not(:focus-within) .dashboard-nav a {
+    display: grid !important;
+    grid-template-columns: 48px minmax(0, 1fr) !important;
+    align-items: center !important;
+    justify-items: start !important;
+    min-height: 48px !important;
+    padding: 0 10px 0 0 !important;
+    color: rgba(255, 252, 239, .72) !important;
+  }
+
+  .app-view:not(.is-sidebar-open) .dashboard-sidebar:not(:hover):not(:focus-within) .nav-icon {
+    display: inline-grid !important;
+    place-items: center !important;
+    width: 48px !important;
+    height: 48px !important;
+    color: rgba(255, 252, 239, .76) !important;
+    line-height: 0 !important;
+  }
+
+  .app-view:not(.is-sidebar-open) .dashboard-sidebar:not(:hover):not(:focus-within) .nav-icon svg {
+    display: block !important;
+    width: 25px !important;
+    height: 25px !important;
+    margin: auto !important;
+  }
+
+  .app-view:not(.is-sidebar-open) .dashboard-sidebar:not(:hover):not(:focus-within) .dashboard-nav a.is-active .nav-icon {
+    color: #c9d982 !important;
+    filter: none !important;
+  }
+
+  .app-view:not(.is-sidebar-open) .dashboard-sidebar:not(:hover):not(:focus-within) .dashboard-nav a:hover .nav-icon {
+    color: #d8e69a !important;
+    filter: drop-shadow(0 0 8px rgba(201, 217, 130, .22)) !important;
+  }
+}

@@ -95,6 +95,8 @@
       "delete-submission": "x",
       "edit-job": "/",
       "edit-route-stop": "/",
+      "go-calendar": "+",
+      "go-route-planner": "M",
       "mark-route-complete": "OK",
       "move-route-down": "v",
       "move-route-up": "^",
@@ -925,6 +927,19 @@
     });
   }
 
+  function operationFilterGroups() {
+    return [
+      ["All", "All"],
+      ["property_profile", "Properties"],
+      ["recurring_job", "Recurring"],
+      ["job_checklist", "Checklists"],
+      ["inspection_note", "Inspections"],
+      ["maintenance_plan", "Plans"],
+      ["estimate_approval", "Approvals"],
+      ["daily_route", "Routes"]
+    ];
+  }
+
   function findRouteStop(id) {
     return state.data.routeStops.find((stop) => stop.id === id);
   }
@@ -1110,30 +1125,47 @@
     const overdueInvoices = unpaidInvoices.filter((doc) => doc.dueDateRaw && doc.dueDateRaw < today);
     const routeJobs = data.jobs.filter((job) => job.dateRaw >= today && job.dateRaw <= weekEnd);
     const pendingQuotes = data.submissions.filter((item) => ["New", "Contacted"].includes(item.status));
-    const featureCards = [
-      ["Recurring jobs", `${routeJobs.length} jobs in next 7 days`, "recurring_job"],
-      ["Property profiles", `${data.contacts.length} clients to profile`, "property_profile"],
-      ["Job checklists", "Templates for field work", "job_checklist"],
-      ["Before/after photos", "Paste photo links or notes", "photo_log"],
-      ["Estimate approvals", `${pendingQuotes.length} pending quotes`, "estimate_approval"],
-      ["Invoice aging", `${overdueInvoices.length} overdue`, "invoice_aging"],
-      ["Daily route", `${routeJobs.length} route stops`, "daily_route"],
-      ["Quick call/email", "Use client cards", "quick_action"],
-      ["Open in maps", "Track address actions", "quick_action"],
-      ["Activity timeline", "Client history entries", "activity_timeline"],
-      ["Archive notes", "Hide or preserve context", "archive"],
-      ["Follow-up rules", "3-day and 7-day reminders", "automation_rule"],
-      ["Maintenance plans", "Recurring service packages", "maintenance_plan"],
-      ["Inspection notes", "Soil, drainage, plant health", "inspection_note"],
-      ["Service history", "Property work records", "service_history"],
-      ["Crew/day notes", "Daily field observations", "crew_note"],
-      ["Revenue summary", `${formatCurrency(unpaidInvoices.reduce((sum, doc) => sum + (doc.squareAmountDueCents || Math.round(doc.total * 100)), 0), "USD")} open`, "revenue_note"],
-      ["Quote to job", "Convert approved work", "quote_conversion"],
-      ["Completion reports", "Notes, photos, timestamp", "completion_report"],
-      ["Notifications", "Due work and missing info", "notification"]
+    const openOperations = data.operations.filter((item) => !["Completed", "Paid", "Archived"].includes(item.status));
+    const dueOperations = data.operations.filter((item) => item.dueDateRaw && item.dueDateRaw <= weekEnd && !["Completed", "Paid", "Archived"].includes(item.status));
+    const routeStopsToday = data.routeStops.filter((stop) => stop.routeDate === today);
+    const healthCards = [
+      ["Open records", openOperations.length, "Active operation items"],
+      ["Due this week", dueOperations.length, "Items needing attention"],
+      ["Route stops today", routeStopsToday.length, "Planned stops"],
+      ["Pending approvals", pendingQuotes.length, "Quotes to move forward"],
+      ["Invoice issues", overdueInvoices.length, "Overdue invoices"]
     ];
-    els.operationsSummary.innerHTML = featureCards.map(([title, detail, type]) => `
-      <button class="operation-feature" type="button" data-action="prefill-operation" data-type="${escapeHtml(type)}" data-title="${escapeHtml(title)}">
+
+    if (els.operationsHealth) {
+      els.operationsHealth.innerHTML = healthCards.map(([label, value, detail]) => `
+        <article class="operations-health-card">
+          <strong>${escapeHtml(value)}</strong>
+          <span>${escapeHtml(label)}</span>
+          <small>${escapeHtml(detail)}</small>
+        </article>
+      `).join("");
+    }
+
+    if (els.operationsFilterPills) {
+      els.operationsFilterPills.innerHTML = operationFilterGroups().map(([value, label]) => {
+        const isActive = state.operationsFilter === value;
+        return `<button type="button" data-action="set-operation-filter" data-filter="${escapeHtml(value)}" class="${isActive ? "is-active" : ""}">${escapeHtml(label)}</button>`;
+      }).join("");
+    }
+
+    const featureCards = [
+      ["Property profile", "Site details, access, preferences, plant notes", "property_profile", data.contacts.length],
+      ["Recurring service", "Track repeat work and maintenance rhythm", "recurring_job", routeJobs.length],
+      ["Job checklist", "Turn repeat field tasks into a checklist", "job_checklist", data.jobs.length],
+      ["Inspection note", "Soil, drainage, plant health, repair flags", "inspection_note", dueOperations.length],
+      ["Maintenance plan", "Plan seasonal work and care cadence", "maintenance_plan", openOperations.length],
+      ["Estimate approval", "Track decision, next step, and follow-up", "estimate_approval", pendingQuotes.length],
+      ["Daily route note", "Route context, access issues, or field timing", "daily_route", routeStopsToday.length],
+      ["Completion report", "End-of-job notes, photos, and next action", "completion_report", data.jobs.filter((job) => job.status === "Completed").length]
+    ];
+    els.operationsSummary.innerHTML = featureCards.map(([title, detail, type, count]) => `
+      <button class="operation-feature operation-feature-${escapeHtml(type)}" type="button" data-action="prefill-operation" data-type="${escapeHtml(type)}" data-title="${escapeHtml(title)}">
+        <span class="operation-feature-count">${escapeHtml(count)}</span>
         <strong>${escapeHtml(title)}</strong>
         <span>${escapeHtml(detail)}</span>
       </button>
@@ -1149,8 +1181,10 @@
       els.operationsList.innerHTML = emptyState("No saved operation records yet.");
       return;
     }
-    els.operationsList.innerHTML = operations.map((item) => `
-      <article class="operation-card">
+    els.operationsList.innerHTML = operations.map((item) => {
+      const isDue = item.dueDateRaw && item.dueDateRaw <= weekEnd && !["Completed", "Paid", "Archived"].includes(item.status);
+      return `
+      <article class="operation-card ${isDue ? "is-due" : ""}">
         <div class="item-topline">
           <div>
             <p class="eyebrow">${escapeHtml(operationTypeLabel(item.type))}</p>
@@ -1164,8 +1198,13 @@
         </div>
         <p class="item-body">${escapeHtml(item.propertyAddress || "")}</p>
         <p class="small">${escapeHtml(item.notes || "No notes yet.")}</p>
+        <div class="operation-card-footer">
+          <span>${isDue ? "Needs attention" : "Logged"}</span>
+          <span>${escapeHtml(item.createdAt)}</span>
+        </div>
       </article>
-    `).join("");
+    `;
+    }).join("");
   }
 
   function renderRoutePlanner() {
@@ -2149,6 +2188,18 @@
         history.replaceState(null, "", "#operations");
         const input = qs("[data-operations-form] input[name='title']");
         if (input) input.focus();
+      } else if (action === "go-route-planner") {
+        setActiveSection("route-planner");
+        history.replaceState(null, "", "#route-planner");
+      } else if (action === "go-calendar") {
+        setActiveSection("calendar");
+        history.replaceState(null, "", "#calendar");
+        const input = qs("[data-job-create-form] input[name='site_name']");
+        if (input) input.focus();
+      } else if (action === "set-operation-filter") {
+        state.operationsFilter = target.dataset.filter || "All";
+        if (els.operationsFilter) els.operationsFilter.value = state.operationsFilter;
+        await render();
       } else if (action === "prefill-operation") {
         setActiveSection("operations");
         history.replaceState(null, "", "#operations");
@@ -2156,6 +2207,7 @@
         if (form) {
           form.record_type.value = target.dataset.type || "property_profile";
           form.title.value = target.dataset.title || "";
+          form.status.value = target.dataset.type === "estimate_approval" ? "Follow-up needed" : "Active";
           form.notes.focus();
         }
       } else if (action === "open-route-map") {
@@ -2607,6 +2659,8 @@
     els.calendarList = qs("[data-calendar-list]");
     els.operationsSummary = qs("[data-operations-summary]");
     els.operationsList = qs("[data-operations-list]");
+    els.operationsHealth = qs("[data-operations-health]");
+    els.operationsFilterPills = qs("[data-operations-filter-pills]");
     els.routeDate = qs("[data-route-date]");
     els.routeForm = qs("[data-route-form]");
     els.routeSubmit = qs("[data-route-submit]");

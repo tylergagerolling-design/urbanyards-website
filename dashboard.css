@@ -1491,6 +1491,323 @@ button:active,
   }
 }
 
+/* Operations board rethink */
+.operations-workspace {
+  display: grid;
+  gap: 18px;
+}
+
+.operations-command {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 18px;
+  align-items: end;
+  padding: clamp(22px, 3.4vw, 42px);
+  border: 1px solid rgba(6, 27, 21, .16);
+  border-radius: 8px;
+  background:
+    linear-gradient(135deg, rgba(6, 27, 21, .96), rgba(16, 55, 43, .86) 52%, rgba(47, 107, 79, .74)),
+    var(--studio-forest);
+  color: #fffcef;
+  box-shadow: var(--studio-deep-shadow);
+}
+
+.operations-command h3 {
+  max-width: 850px;
+  margin: 0;
+  color: #fffcef;
+  font-size: clamp(2.35rem, 5.4vw, 5.8rem);
+  line-height: .86;
+}
+
+.operations-command p:not(.eyebrow) {
+  max-width: 680px;
+  margin: 14px 0 0;
+  color: rgba(255, 252, 239, .82);
+}
+
+.operations-command-actions {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(132px, 1fr));
+  gap: 10px;
+  min-width: min(520px, 100%);
+  padding: 10px;
+  border: 1px solid rgba(255, 252, 239, .16);
+  border-radius: 8px;
+  background: rgba(255, 252, 239, .1);
+}
+
+.operations-command-actions button {
+  min-height: 52px;
+  border-radius: 8px;
+  background: rgba(255, 252, 239, .95);
+  color: var(--studio-forest);
+}
+
+.operations-command-actions button:first-child {
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, .16), transparent 45%),
+    linear-gradient(135deg, #c9d982, #2f6b4f);
+  color: #061b15;
+}
+
+.operations-health {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(140px, 1fr));
+  gap: 12px;
+}
+
+.operations-health-card {
+  min-height: 138px;
+  padding: 18px;
+  border: 1px solid rgba(6, 27, 21, .12);
+  border-radius: 8px;
+  background:
+    radial-gradient(circle at 90% 8%, rgba(201, 217, 130, .24), transparent 34%),
+    linear-gradient(180deg, rgba(255, 252, 239, .98), rgba(235, 244, 229, .92));
+  box-shadow: var(--studio-shadow);
+}
+
+.operations-health-card strong {
+  display: block;
+  color: var(--studio-ink);
+  font-size: clamp(2.2rem, 4vw, 4rem);
+  line-height: .9;
+}
+
+.operations-health-card span {
+  display: block;
+  margin-top: 12px;
+  color: var(--studio-forest);
+  font-size: .76rem;
+  font-weight: 950;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+}
+
+.operations-health-card small {
+  display: block;
+  margin-top: 6px;
+  color: rgba(6, 27, 21, .58);
+  line-height: 1.35;
+}
+
+.operations-controls {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(210px, 280px);
+  gap: 12px;
+  align-items: center;
+  padding: 12px;
+  border: 1px solid rgba(6, 27, 21, .11);
+  border-radius: 8px;
+  background: rgba(255, 252, 239, .82);
+  box-shadow: var(--studio-shadow);
+  backdrop-filter: blur(16px) saturate(130%);
+}
+
+.operations-filter-pills {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.operations-filter-pills button {
+  min-height: 40px;
+  padding: 9px 13px;
+  border: 1px solid rgba(6, 27, 21, .12);
+  border-radius: 8px;
+  background: rgba(255, 252, 239, .96);
+  color: rgba(6, 27, 21, .72);
+  font-size: .78rem;
+  font-weight: 900;
+}
+
+.operations-filter-pills button.is-active {
+  background: var(--studio-forest);
+  color: #fffcef;
+}
+
+.operations-controls select {
+  min-height: 44px;
+  border-radius: 8px;
+  background: #fffcef;
+}
+
+.operations-layout {
+  display: grid;
+  grid-template-columns: minmax(310px, 430px) minmax(0, 1fr);
+  gap: 18px;
+  align-items: start;
+}
+
+.operations-capture-panel {
+  position: sticky;
+  top: 126px;
+}
+
+.operations-main-column {
+  display: grid;
+  gap: 18px;
+}
+
+.operations-form {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 12px;
+}
+
+.operations-form label {
+  display: grid;
+  gap: 7px;
+  color: rgba(6, 27, 21, .66);
+  font-size: .76rem;
+  font-weight: 900;
+  letter-spacing: .06em;
+  text-transform: uppercase;
+}
+
+.operations-form-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+
+.operations-form input,
+.operations-form select,
+.operations-form textarea {
+  width: 100%;
+  min-height: 48px;
+  border: 1px solid rgba(6, 27, 21, .14);
+  border-radius: 8px;
+  background: rgba(255, 252, 239, .96);
+  color: var(--studio-ink);
+  font: inherit;
+  letter-spacing: 0;
+}
+
+.operations-form textarea {
+  min-height: 132px;
+  resize: vertical;
+}
+
+.operations-summary {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(160px, 1fr));
+  gap: 12px;
+}
+
+.operation-feature {
+  display: grid;
+  align-content: start;
+  min-height: 154px;
+  padding: 16px;
+  text-align: left;
+}
+
+.operation-feature-count {
+  display: inline-grid;
+  place-items: center;
+  width: 34px;
+  height: 34px;
+  margin-bottom: 16px;
+  border-radius: 8px;
+  background: rgba(6, 27, 21, .1);
+  color: var(--studio-forest);
+  font-size: .9rem;
+  font-weight: 950;
+}
+
+.operations-list {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.operation-card {
+  padding: 16px;
+}
+
+.operation-card.is-due {
+  border-color: rgba(201, 135, 82, .46);
+  background:
+    radial-gradient(circle at 92% 8%, rgba(201, 135, 82, .18), transparent 32%),
+    linear-gradient(180deg, rgba(255, 252, 239, .98), rgba(246, 236, 222, .92));
+}
+
+.operation-card .eyebrow {
+  color: var(--studio-leaf);
+}
+
+.operation-card-footer {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  margin-top: 14px;
+  padding-top: 12px;
+  border-top: 1px solid rgba(6, 27, 21, .1);
+  color: rgba(6, 27, 21, .58);
+  font-size: .78rem;
+  font-weight: 850;
+}
+
+@media (max-width: 1180px) {
+  .operations-command,
+  .operations-layout,
+  .operations-controls {
+    grid-template-columns: 1fr;
+  }
+
+  .operations-command-actions {
+    min-width: 0;
+  }
+
+  .operations-capture-panel {
+    position: static;
+  }
+
+  .operations-health,
+  .operations-summary {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 760px) {
+  .operations-command {
+    padding: 20px;
+  }
+
+  .operations-command h3 {
+    font-size: clamp(2rem, 13vw, 3.8rem);
+  }
+
+  .operations-command-actions,
+  .operations-health,
+  .operations-summary,
+  .operations-list,
+  .operations-form-row {
+    grid-template-columns: 1fr;
+  }
+
+  .operations-command-actions button,
+  .operations-filter-pills button {
+    justify-content: center;
+    min-height: 50px;
+  }
+
+  .operations-controls {
+    padding: 10px;
+  }
+
+  .operations-filter-pills {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .operations-health-card {
+    min-height: 116px;
+  }
+}
+
 /* Route Planner module */
 .route-planner-shell {
   display: grid;

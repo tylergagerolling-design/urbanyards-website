@@ -5653,3 +5653,49 @@ td {
     max-width: none !important;
   }
 }
+
+/* Final compact topbar: remove mode pills and reduce toolbar height. */
+.dashboard-topbar {
+  grid-template-columns: minmax(180px, .58fr) minmax(300px, 480px) !important;
+  gap: 14px !important;
+  padding: 12px 14px !important;
+}
+
+.topbar-title-group {
+  min-height: 0 !important;
+}
+
+.dashboard-topbar h2 {
+  font-size: clamp(1.28rem, 1.65vw, 1.8rem) !important;
+  line-height: 1 !important;
+}
+
+.dashboard-topbar .eyebrow {
+  margin-bottom: 2px !important;
+  font-size: .6rem !important;
+}
+
+.dashboard-mode-strip {
+  display: none !important;
+}
+
+.topbar-actions {
+  width: min(100%, 480px) !important;
+  max-width: 480px !important;
+  gap: 7px !important;
+  padding: 6px !important;
+}
+
+.topbar-actions span {
+  font-size: .7rem !important;
+}
+
+.topbar-actions input,
+.topbar-actions button {
+  min-height: 40px !important;
+}
+
+.topbar-actions button {
+  min-width: 104px !important;
+  padding-inline: 13px !important;
+}

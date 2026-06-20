@@ -42,7 +42,7 @@
     min-width: 0 !important;
     max-width: 100% !important;
     margin: 0 !important;
-    padding-top: calc(82px + env(safe-area-inset-top)) !important;
+    padding-top: calc(66px + env(safe-area-inset-top)) !important;
     padding-right: max(10px, env(safe-area-inset-right)) !important;
     padding-bottom: 24px !important;
     padding-left: max(10px, env(safe-area-inset-left)) !important;
@@ -63,7 +63,7 @@
   }
 
   .dashboard-topbar {
-    top: calc(72px + env(safe-area-inset-top)) !important;
+    top: calc(64px + env(safe-area-inset-top)) !important;
     display: grid !important;
     grid-template-columns: 1fr !important;
     gap: 10px !important;
@@ -238,7 +238,7 @@
 
 .pull-refresh {
   position: fixed;
-  top: calc(72px + env(safe-area-inset-top));
+  top: calc(64px + env(safe-area-inset-top));
   left: 50%;
   z-index: 80;
   display: inline-flex;

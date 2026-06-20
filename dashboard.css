@@ -5584,3 +5584,72 @@ td {
     scrollbar-gutter: stable;
   }
 }
+
+/* Final topbar tune: compact title, right-aligned controls, no refresh button. */
+.dashboard-topbar {
+  grid-template-columns: minmax(220px, .72fr) minmax(320px, 520px) !important;
+  align-items: center !important;
+}
+
+.topbar-title-group {
+  justify-content: flex-start !important;
+  gap: 14px !important;
+}
+
+.dashboard-topbar h2 {
+  font-size: clamp(1.55rem, 2.2vw, 2.25rem) !important;
+  line-height: .98 !important;
+}
+
+.dashboard-topbar .eyebrow {
+  margin-bottom: 4px !important;
+  font-size: .68rem !important;
+  letter-spacing: .14em !important;
+}
+
+.dashboard-mode-strip {
+  justify-self: start !important;
+  padding: 4px !important;
+}
+
+.dashboard-mode-strip span {
+  min-height: 26px !important;
+  padding: 6px 8px !important;
+  font-size: .62rem !important;
+}
+
+.topbar-actions {
+  grid-template-columns: minmax(220px, 1fr) auto !important;
+  justify-self: end !important;
+  width: min(100%, 520px) !important;
+  max-width: 520px !important;
+  margin-left: auto !important;
+  padding: 8px !important;
+}
+
+.topbar-actions span {
+  grid-column: 1 / -1 !important;
+  justify-self: end !important;
+}
+
+.topbar-actions input {
+  min-height: 46px !important;
+}
+
+.topbar-actions button {
+  min-height: 46px !important;
+  min-width: 118px !important;
+  padding-inline: 16px !important;
+}
+
+@media (max-width: 980px) {
+  .dashboard-topbar {
+    grid-template-columns: 1fr !important;
+  }
+
+  .topbar-actions {
+    justify-self: stretch !important;
+    width: 100% !important;
+    max-width: none !important;
+  }
+}

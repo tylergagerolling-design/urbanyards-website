@@ -5516,3 +5516,49 @@ td {
     filter: drop-shadow(0 0 8px rgba(201, 217, 130, .22)) !important;
   }
 }
+
+/* Final desktop sidebar layout: reserve real space for the rail/drawer. */
+@media (min-width: 981px) {
+  .app-view {
+    --dashboard-rail-width: 76px;
+    --dashboard-drawer-width: 292px;
+    display: grid !important;
+    grid-template-columns: var(--dashboard-rail-width) minmax(0, 1fr) !important;
+    align-items: stretch !important;
+    width: 100% !important;
+  }
+
+  .app-view:has(.dashboard-sidebar:hover),
+  .app-view:has(.dashboard-sidebar:focus-within),
+  .app-view.is-sidebar-open {
+    grid-template-columns: var(--dashboard-drawer-width) minmax(0, 1fr) !important;
+  }
+
+  .dashboard-sidebar {
+    position: sticky !important;
+    top: 0 !important;
+    bottom: auto !important;
+    left: 0 !important;
+    grid-column: 1 !important;
+    align-self: start !important;
+    width: var(--dashboard-rail-width) !important;
+    height: 100vh !important;
+    transform: none !important;
+  }
+
+  .dashboard-sidebar:hover,
+  .dashboard-sidebar:focus-within,
+  .app-view.is-sidebar-open .dashboard-sidebar {
+    width: var(--dashboard-drawer-width) !important;
+    transform: none !important;
+  }
+
+  .dashboard-main {
+    grid-column: 2 !important;
+    width: 100% !important;
+    min-width: 0 !important;
+    max-width: 100% !important;
+    margin-inline: 0 !important;
+    margin-left: 0 !important;
+  }
+}

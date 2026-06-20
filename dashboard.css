@@ -1863,6 +1863,485 @@ button:active,
   }
 }
 
+/* Final mobile webapp content scale */
+@media (max-width: 760px) {
+  .dashboard-main {
+    gap: 12px;
+    padding: 10px 10px calc(124px + env(safe-area-inset-bottom));
+  }
+
+  .dashboard-section.is-active {
+    gap: 12px;
+  }
+
+  .dashboard-topbar {
+    top: 6px;
+    gap: 10px;
+    padding: 10px;
+  }
+
+  .dashboard-topbar h2 {
+    font-size: clamp(1.35rem, 7vw, 2rem);
+    line-height: .98;
+  }
+
+  .topbar-actions input,
+  .topbar-actions button {
+    min-height: 42px;
+  }
+
+  .topbar-actions button {
+    padding: 9px 10px;
+    font-size: .78rem;
+  }
+
+  .home-hero,
+  .operations-command,
+  .route-hero {
+    min-height: 0;
+    padding: 18px;
+  }
+
+  .home-hero h3,
+  .operations-command h3,
+  .route-hero h3 {
+    max-width: 12ch;
+    font-size: clamp(1.9rem, 10vw, 2.8rem);
+    line-height: .9;
+  }
+
+  .home-hero p:last-child,
+  .operations-command p:not(.eyebrow),
+  .route-hero p:not(.eyebrow) {
+    margin-top: 10px;
+    font-size: .92rem;
+    line-height: 1.42;
+  }
+
+  .metric-card,
+  .operations-health-card {
+    min-height: 102px;
+    padding: 14px;
+  }
+
+  .metric-card strong,
+  .operations-health-card strong {
+    font-size: clamp(1.95rem, 9vw, 2.7rem);
+  }
+
+  .panel {
+    padding: 14px;
+  }
+
+  .panel-heading h3 {
+    font-size: 1.08rem;
+  }
+
+  .panel-heading p,
+  .meta,
+  .item-body,
+  .small {
+    font-size: .82rem;
+  }
+
+  .quick-actions button,
+  .operations-command-actions button,
+  .route-date-card button,
+  .route-stop-form button[type="submit"],
+  .operations-form button {
+    min-height: 46px;
+    font-size: .82rem;
+  }
+
+  .submission-card,
+  .contact-card,
+  .job-card,
+  .note-card,
+  .reminder-card,
+  .document-card,
+  .operation-card,
+  .calendar-card,
+  .route-stop-card {
+    padding: 12px;
+  }
+}
+
+/* Final mobile webapp content scale */
+@media (max-width: 760px) {
+  .dashboard-main {
+    gap: 12px;
+    padding: 10px 10px calc(124px + env(safe-area-inset-bottom));
+  }
+
+  .dashboard-section.is-active {
+    gap: 12px;
+  }
+
+  .dashboard-topbar {
+    top: 6px;
+    gap: 10px;
+    padding: 10px;
+  }
+
+  .dashboard-topbar .eyebrow {
+    margin-bottom: 3px;
+    font-size: .64rem;
+  }
+
+  .dashboard-topbar h2 {
+    font-size: clamp(1.35rem, 7vw, 2rem);
+    line-height: .98;
+  }
+
+  .topbar-actions {
+    gap: 8px;
+    padding: 8px;
+  }
+
+  .topbar-actions input {
+    min-height: 42px;
+  }
+
+  .topbar-actions button {
+    min-height: 42px;
+    padding: 9px 10px;
+    font-size: .78rem;
+  }
+
+  .home-hero,
+  .operations-command,
+  .route-hero {
+    min-height: 0;
+    padding: 18px;
+  }
+
+  .home-hero h3,
+  .operations-command h3,
+  .route-hero h3 {
+    max-width: 12ch;
+    font-size: clamp(1.9rem, 10vw, 2.8rem);
+    line-height: .9;
+  }
+
+  .home-hero p:last-child,
+  .operations-command p:not(.eyebrow),
+  .route-hero p:not(.eyebrow) {
+    margin-top: 10px;
+    font-size: .92rem;
+    line-height: 1.42;
+  }
+
+  .today-chip {
+    padding: 9px 10px;
+    font-size: .78rem;
+  }
+
+  .metric-grid {
+    gap: 10px;
+  }
+
+  .metric-card,
+  .operations-health-card {
+    min-height: 102px;
+    padding: 14px;
+  }
+
+  .metric-card strong,
+  .operations-health-card strong {
+    font-size: clamp(1.95rem, 9vw, 2.7rem);
+  }
+
+  .metric-card span,
+  .operations-health-card span {
+    margin-top: 8px;
+    font-size: .68rem;
+  }
+
+  .panel {
+    padding: 14px;
+  }
+
+  .panel-heading {
+    gap: 8px;
+    margin-bottom: 12px;
+    padding-bottom: 10px;
+  }
+
+  .panel-heading h3 {
+    font-size: 1.08rem;
+  }
+
+  .panel-heading p {
+    font-size: .84rem;
+  }
+
+  .quick-actions {
+    gap: 8px;
+    padding: 8px;
+  }
+
+  .quick-actions button {
+    min-height: 46px;
+    padding: 9px 10px;
+    font-size: .78rem;
+  }
+
+  .submission-card,
+  .contact-card,
+  .job-card,
+  .note-card,
+  .reminder-card,
+  .document-card,
+  .operation-card,
+  .calendar-card,
+  .route-stop-card {
+    padding: 12px;
+  }
+
+  .item-topline h4 {
+    font-size: .95rem;
+  }
+
+  .meta,
+  .item-body,
+  .small {
+    font-size: .82rem;
+  }
+
+  .operations-command-actions {
+    grid-template-columns: 1fr;
+    gap: 8px;
+    padding: 8px;
+  }
+
+  .operations-command-actions button,
+  .route-date-card button,
+  .route-stop-form button[type="submit"],
+  .operations-form button {
+    min-height: 46px;
+    font-size: .82rem;
+  }
+
+  .route-date-card,
+  .operations-controls {
+    padding: 10px;
+  }
+
+  .route-stop-form input,
+  .route-stop-form select,
+  .route-stop-form textarea,
+  .operations-form input,
+  .operations-form select,
+  .operations-form textarea,
+  .client-form input,
+  .document-form input,
+  .document-form select,
+  .schedule-create-form input {
+    min-height: 42px;
+    font-size: .9rem;
+  }
+
+  .calendar-tabs button,
+  .operations-filter-pills button,
+  .inline-action {
+    min-height: 40px;
+    padding: 8px 10px;
+    font-size: .76rem;
+  }
+
+  .drawer-panel {
+    padding: 16px 14px calc(20px + env(safe-area-inset-bottom));
+  }
+}
+
+/* Final mobile webapp content scale */
+@media (max-width: 760px) {
+  .dashboard-main {
+    gap: 12px;
+    padding: 10px 10px calc(124px + env(safe-area-inset-bottom));
+  }
+
+  .dashboard-section.is-active {
+    gap: 12px;
+  }
+
+  .dashboard-topbar {
+    top: 6px;
+    gap: 10px;
+    padding: 10px;
+  }
+
+  .dashboard-topbar .eyebrow {
+    margin-bottom: 3px;
+    font-size: .64rem;
+  }
+
+  .dashboard-topbar h2 {
+    font-size: clamp(1.35rem, 7vw, 2rem);
+    line-height: .98;
+  }
+
+  .topbar-actions {
+    gap: 8px;
+    padding: 8px;
+  }
+
+  .topbar-actions input {
+    min-height: 42px;
+  }
+
+  .topbar-actions button {
+    min-height: 42px;
+    padding: 9px 10px;
+    font-size: .78rem;
+  }
+
+  .home-hero,
+  .operations-command,
+  .route-hero {
+    min-height: 0;
+    padding: 18px;
+  }
+
+  .home-hero h3,
+  .operations-command h3,
+  .route-hero h3 {
+    max-width: 12ch;
+    font-size: clamp(1.9rem, 10vw, 2.8rem);
+    line-height: .9;
+  }
+
+  .home-hero p:last-child,
+  .operations-command p:not(.eyebrow),
+  .route-hero p:not(.eyebrow) {
+    margin-top: 10px;
+    font-size: .92rem;
+    line-height: 1.42;
+  }
+
+  .today-chip {
+    padding: 9px 10px;
+    font-size: .78rem;
+  }
+
+  .metric-grid {
+    gap: 10px;
+  }
+
+  .metric-card,
+  .operations-health-card {
+    min-height: 102px;
+    padding: 14px;
+  }
+
+  .metric-card strong,
+  .operations-health-card strong {
+    font-size: clamp(1.95rem, 9vw, 2.7rem);
+  }
+
+  .metric-card span,
+  .operations-health-card span {
+    margin-top: 8px;
+    font-size: .68rem;
+  }
+
+  .panel {
+    padding: 14px;
+  }
+
+  .panel-heading {
+    gap: 8px;
+    margin-bottom: 12px;
+    padding-bottom: 10px;
+  }
+
+  .panel-heading h3 {
+    font-size: 1.08rem;
+  }
+
+  .panel-heading p {
+    font-size: .84rem;
+  }
+
+  .quick-actions {
+    gap: 8px;
+    padding: 8px;
+  }
+
+  .quick-actions button {
+    min-height: 46px;
+    padding: 9px 10px;
+    font-size: .78rem;
+  }
+
+  .submission-card,
+  .contact-card,
+  .job-card,
+  .note-card,
+  .reminder-card,
+  .document-card,
+  .operation-card,
+  .calendar-card,
+  .route-stop-card {
+    padding: 12px;
+  }
+
+  .item-topline h4 {
+    font-size: .95rem;
+  }
+
+  .meta,
+  .item-body,
+  .small {
+    font-size: .82rem;
+  }
+
+  .operations-command-actions {
+    grid-template-columns: 1fr;
+    gap: 8px;
+    padding: 8px;
+  }
+
+  .operations-command-actions button,
+  .route-date-card button,
+  .route-stop-form button[type="submit"],
+  .operations-form button {
+    min-height: 46px;
+    font-size: .82rem;
+  }
+
+  .route-date-card,
+  .operations-controls {
+    padding: 10px;
+  }
+
+  .route-stop-form input,
+  .route-stop-form select,
+  .route-stop-form textarea,
+  .operations-form input,
+  .operations-form select,
+  .operations-form textarea,
+  .client-form input,
+  .document-form input,
+  .document-form select,
+  .schedule-create-form input {
+    min-height: 42px;
+    font-size: .9rem;
+  }
+
+  .calendar-tabs button,
+  .operations-filter-pills button,
+  .inline-action {
+    min-height: 40px;
+    padding: 8px 10px;
+    font-size: .76rem;
+  }
+
+  .drawer-panel {
+    padding: 16px 14px calc(20px + env(safe-area-inset-bottom));
+  }
+}
+
 /* Mobile webapp dock rethink */
 @media (max-width: 760px) {
   .dashboard-main {
@@ -4187,6 +4666,109 @@ td {
   .split-grid,
   .pipeline-grid {
     grid-template-columns: 1fr;
+  }
+}
+
+/* Final mobile webapp content scale */
+@media (max-width: 760px) {
+  .dashboard-main {
+    gap: 12px;
+    padding: 10px 10px calc(124px + env(safe-area-inset-bottom));
+  }
+
+  .dashboard-section.is-active {
+    gap: 12px;
+  }
+
+  .dashboard-topbar {
+    top: 6px;
+    gap: 10px;
+    padding: 10px;
+  }
+
+  .dashboard-topbar h2 {
+    font-size: clamp(1.35rem, 7vw, 2rem);
+    line-height: .98;
+  }
+
+  .topbar-actions input,
+  .topbar-actions button {
+    min-height: 42px;
+  }
+
+  .topbar-actions button {
+    padding: 9px 10px;
+    font-size: .78rem;
+  }
+
+  .home-hero,
+  .operations-command,
+  .route-hero {
+    min-height: 0;
+    padding: 18px;
+  }
+
+  .home-hero h3,
+  .operations-command h3,
+  .route-hero h3 {
+    max-width: 12ch;
+    font-size: clamp(1.9rem, 10vw, 2.8rem);
+    line-height: .9;
+  }
+
+  .home-hero p:last-child,
+  .operations-command p:not(.eyebrow),
+  .route-hero p:not(.eyebrow) {
+    margin-top: 10px;
+    font-size: .92rem;
+    line-height: 1.42;
+  }
+
+  .metric-card,
+  .operations-health-card {
+    min-height: 102px;
+    padding: 14px;
+  }
+
+  .metric-card strong,
+  .operations-health-card strong {
+    font-size: clamp(1.95rem, 9vw, 2.7rem);
+  }
+
+  .panel {
+    padding: 14px;
+  }
+
+  .panel-heading h3 {
+    font-size: 1.08rem;
+  }
+
+  .panel-heading p,
+  .meta,
+  .item-body,
+  .small {
+    font-size: .82rem;
+  }
+
+  .quick-actions button,
+  .operations-command-actions button,
+  .route-date-card button,
+  .route-stop-form button[type="submit"],
+  .operations-form button {
+    min-height: 46px;
+    font-size: .82rem;
+  }
+
+  .submission-card,
+  .contact-card,
+  .job-card,
+  .note-card,
+  .reminder-card,
+  .document-card,
+  .operation-card,
+  .calendar-card,
+  .route-stop-card {
+    padding: 12px;
   }
 }
 

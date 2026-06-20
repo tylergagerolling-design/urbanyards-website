@@ -5519,12 +5519,27 @@ td {
 
 /* Final desktop sidebar layout: reserve real space for the rail/drawer. */
 @media (min-width: 981px) {
+  html:has(.dashboard-shell),
+  body:has(.dashboard-shell) {
+    height: 100%;
+    overflow: hidden !important;
+  }
+
+  .dashboard-shell {
+    height: 100vh !important;
+    min-height: 100vh !important;
+    overflow: hidden !important;
+  }
+
   .app-view {
     --dashboard-rail-width: 76px;
     --dashboard-drawer-width: 292px;
     display: grid !important;
     grid-template-columns: var(--dashboard-rail-width) minmax(0, 1fr) !important;
     align-items: stretch !important;
+    height: 100vh !important;
+    min-height: 100vh !important;
+    overflow: hidden !important;
     width: 100% !important;
   }
 
@@ -5543,6 +5558,9 @@ td {
     align-self: start !important;
     width: var(--dashboard-rail-width) !important;
     height: 100vh !important;
+    max-height: 100vh !important;
+    overflow-x: hidden !important;
+    overflow-y: auto !important;
     transform: none !important;
   }
 
@@ -5555,10 +5573,14 @@ td {
 
   .dashboard-main {
     grid-column: 2 !important;
+    height: 100vh !important;
     width: 100% !important;
     min-width: 0 !important;
     max-width: 100% !important;
     margin-inline: 0 !important;
     margin-left: 0 !important;
+    overflow-x: hidden !important;
+    overflow-y: auto !important;
+    scrollbar-gutter: stable;
   }
 }

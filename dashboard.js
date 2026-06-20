@@ -4,6 +4,7 @@
   const STATUSES = ["New", "Contacted", "Scheduled", "Completed", "Invoiced"];
   const ROUTE_STATUSES = ["Planned", "In Progress", "Complete"];
   const SESSION_KEY = "urbanYardsDashboardSession";
+  const DEMO_QUERY_KEYS = ["demo", "test"];
 
   const config = window.URBAN_YARDS_DASHBOARD_CONFIG || {
     supabaseUrl: "",
@@ -40,6 +41,7 @@
   };
 
   const els = {};
+  let demoIdCount = 100;
 
   function qs(selector) {
     return document.querySelector(selector);
@@ -229,6 +231,16 @@
     return date.toISOString().slice(0, 10);
   }
 
+  function isDemoMode() {
+    const params = new URLSearchParams(window.location.search);
+    return DEMO_QUERY_KEYS.some((key) => ["1", "true", "yes"].includes(String(params.get(key) || "").toLowerCase()));
+  }
+
+  function nextDemoId(prefix) {
+    demoIdCount += 1;
+    return `${prefix}-${demoIdCount}`;
+  }
+
   function formatCurrency(cents, currency) {
     if (typeof cents !== "number") return "";
     return new Intl.NumberFormat("en-US", { style: "currency", currency: currency || "USD" }).format(cents / 100);
@@ -376,6 +388,123 @@
     };
   }
 
+  function demoDashboardData() {
+    const today = todayKey();
+    const now = new Date().toISOString();
+    return {
+      submissions: [
+        normalizeSubmission({
+          id: "demo-quote-1",
+          name: "Hannah Edge",
+          email: "hannah@edgemgt.com",
+          phone: "(971) 555-0188",
+          property_type: "Multifamily",
+          city: "Portland",
+          service: "Recurring groundskeeping and pressure washing",
+          status: "Contacted",
+          source: "Quote form",
+          follow_up: "Send estimate this afternoon",
+          notes: "Wants courtyard cleanup, weekly mowing, and entry pressure washing.",
+          created_at: now
+        }),
+        normalizeSubmission({
+          id: "demo-quote-2",
+          name: "Mason Lee",
+          email: "mason@example.com",
+          phone: "(971) 555-0112",
+          property_type: "Home",
+          city: "Beaverton",
+          service: "Backyard cleanup and planting refresh",
+          status: "New",
+          source: "Website assistant",
+          follow_up: "Call tomorrow morning",
+          notes: "Overgrown side yard, wants lower-maintenance beds.",
+          created_at: daysFromToday(-1)
+        }),
+        normalizeSubmission({
+          id: "demo-quote-3",
+          name: "River Court HOA",
+          email: "board@example.com",
+          phone: "(360) 555-0144",
+          property_type: "HOA",
+          city: "Vancouver",
+          service: "Seasonal cleanup and mulch",
+          status: "Scheduled",
+          source: "Referral",
+          follow_up: "Site walk scheduled",
+          notes: "Shared frontage, mailbox beds, and pond-edge weeds.",
+          created_at: daysFromToday(-4)
+        })
+      ],
+      contacts: [
+        normalizeContact({ id: "demo-contact-1", name: "Hannah Edge", email: "hannah@edgemgt.com", phone: "(971) 555-0188", contact_type: "Property manager", city: "Portland", status: "Contacted" }),
+        normalizeContact({ id: "demo-contact-2", name: "Mason Lee", email: "mason@example.com", phone: "(971) 555-0112", contact_type: "Homeowner", city: "Beaverton", status: "New" }),
+        normalizeContact({ id: "demo-contact-3", name: "River Court HOA", email: "board@example.com", phone: "(360) 555-0144", contact_type: "HOA", city: "Vancouver", status: "Scheduled" })
+      ],
+      jobs: [
+        normalizeJob({ id: "demo-job-1", visit_date: today, visit_window: "8:30 AM - 10:00 AM", site_name: "Hannah Edge", city: "Portland", service: "Courtyard mow, blow, and pressure wash check", status: "Scheduled" }),
+        normalizeJob({ id: "demo-job-2", visit_date: daysFromToday(2), visit_window: "1:00 PM - 3:00 PM", site_name: "River Court HOA", city: "Vancouver", service: "Site walk and seasonal cleanup plan", status: "Scheduled" }),
+        normalizeJob({ id: "demo-job-3", visit_date: daysFromToday(5), visit_window: "Morning", site_name: "Mason Lee", city: "Beaverton", service: "Backyard cleanup", status: "New" })
+      ],
+      notes: [
+        normalizeNote({ id: "demo-note-1", title: "Order mulch samples", body: "Bring dark hemlock and fine bark options for River Court.", created_at: now }),
+        normalizeNote({ id: "demo-note-2", title: "Check route fuel", body: "Plan Portland to Beaverton to Vancouver route before Friday.", created_at: daysFromToday(-1) })
+      ],
+      reminders: [
+        normalizeReminder({ id: "demo-reminder-1", due_date: daysFromToday(1), task: "Follow up with Hannah on estimate approval", status: "New" }),
+        normalizeReminder({ id: "demo-reminder-2", due_date: daysFromToday(3), task: "Send before/after photos to Mason", status: "Contacted" })
+      ],
+      documents: [
+        normalizeDocument({
+          id: "demo-doc-1",
+          document_type: "estimate",
+          document_number: "EST-DEMO-001",
+          client_name: "Hannah Edge",
+          client_email: "hannah@edgemgt.com",
+          issue_date: today,
+          due_date: daysFromToday(14),
+          status: "sent",
+          line_items: [{ description: "Monthly groundskeeping test estimate", quantity: 1, unit_price: 1500, amount: 1500 }],
+          subtotal: 1500,
+          tax: 0,
+          total: 1500,
+          square_invoice_number: "000008",
+          square_status: "UNPAID",
+          square_payment_url: "https://square.link/u/test-demo",
+          square_amount_due_cents: 150000,
+          square_currency: "USD",
+          square_synced_at: now,
+          notes: "Demo document. Square link is a placeholder."
+        }),
+        normalizeDocument({
+          id: "demo-doc-2",
+          document_type: "invoice",
+          document_number: "INV-DEMO-001",
+          client_name: "River Court HOA",
+          client_email: "board@example.com",
+          issue_date: today,
+          due_date: daysFromToday(21),
+          status: "draft",
+          line_items: [{ description: "Seasonal cleanup deposit", quantity: 1, unit_price: 425, amount: 425 }],
+          subtotal: 425,
+          tax: 0,
+          total: 425,
+          notes: "Demo invoice draft."
+        })
+      ],
+      operations: [
+        normalizeOperation({ id: "demo-operation-1", record_type: "property_profile", title: "Hannah Edge site profile", client_name: "Hannah Edge", property_address: "SE Portland apartment community", due_date: daysFromToday(2), status: "Active", notes: "Gate code, courtyard slope, irrigation heads along east walk.", payload: {}, created_at: now }),
+        normalizeOperation({ id: "demo-operation-2", record_type: "job_checklist", title: "Friday recurring visit checklist", client_name: "Hannah Edge", property_address: "Courtyard and frontage", due_date: daysFromToday(4), status: "Follow-up needed", notes: "Mow, edge, blow, weeds at entry, check pressure wash stain.", payload: {}, created_at: now }),
+        normalizeOperation({ id: "demo-operation-3", record_type: "daily_route", title: "Test daily route", client_name: "Urban Yards", property_address: "Portland / Beaverton / Vancouver", due_date: today, status: "Active", notes: "Use Route Planner tab to reorder stops and open Google Maps.", payload: {}, created_at: now })
+      ],
+      routeStops: [
+        normalizeRouteStop({ id: "demo-route-1", route_date: today, client_name: "Hannah Edge", address: "SE Division St, Portland, OR", service_type: "Groundskeeping", estimated_minutes: 75, notes: "Start with courtyard before residents return.", status: "Planned", stop_order: 1, created_at: now, updated_at: now }),
+        normalizeRouteStop({ id: "demo-route-2", route_date: today, client_name: "Mason Lee", address: "Beaverton, OR", service_type: "Cleanup estimate", estimated_minutes: 45, notes: "Take photos and measure bed edges.", status: "In Progress", stop_order: 2, created_at: now, updated_at: now }),
+        normalizeRouteStop({ id: "demo-route-3", route_date: today, client_name: "River Court HOA", address: "Vancouver, WA", service_type: "Site walk", estimated_minutes: 60, notes: "Review frontage and shared pond edge.", status: "Planned", stop_order: 3, created_at: now, updated_at: now })
+      ]
+    };
+  }
+
   function normalizeAuthSession(payload) {
     const userEmail = String(payload.user && payload.user.email ? payload.user.email : "").toLowerCase();
 
@@ -454,6 +583,17 @@
   }
 
   async function loadDashboardData() {
+    if (isDemoMode() && state.data.submissions.length) {
+      return state.data;
+    }
+
+    if (isDemoMode()) {
+      state.documentsReady = true;
+      state.operationsReady = true;
+      state.routeStopsReady = true;
+      return demoDashboardData();
+    }
+
     const [submissions, contacts, jobs, notes, reminders, documents, operations, routeStops] = await Promise.all([
       supabaseRestRequest("quote_submissions?select=*&order=created_at.desc", { method: "GET" }),
       supabaseRestRequest("contacts?select=*&order=created_at.desc", { method: "GET" }),
@@ -511,6 +651,15 @@
   }
 
   async function insertJobNote(title, body) {
+    if (isDemoMode()) {
+      return normalizeNote({
+        id: nextDemoId("note"),
+        title,
+        body,
+        created_at: new Date().toISOString()
+      });
+    }
+
     const rows = await supabaseRestRequest("job_notes", {
       method: "POST",
       headers: { Prefer: "return=representation" },
@@ -520,6 +669,12 @@
   }
 
   async function insertScheduledJob(payload) {
+    if (isDemoMode()) {
+      const job = normalizeJob({ id: nextDemoId("job"), ...payload });
+      state.data.jobs.unshift(job);
+      return job;
+    }
+
     const rows = await supabaseRestRequest("scheduled_jobs", {
       method: "POST",
       headers: { Prefer: "return=representation" },
@@ -529,6 +684,24 @@
   }
 
   async function deleteRow(table, id) {
+    if (isDemoMode()) {
+      const map = {
+        quote_submissions: "submissions",
+        contacts: "contacts",
+        scheduled_jobs: "jobs",
+        job_notes: "notes",
+        follow_up_reminders: "reminders",
+        sales_documents: "documents",
+        operations_records: "operations",
+        route_stops: "routeStops"
+      };
+      const key = map[table];
+      if (key && Array.isArray(state.data[key])) {
+        state.data[key] = state.data[key].filter((item) => item.id !== id);
+      }
+      return;
+    }
+
     await supabaseRestRequest(`${table}?id=eq.${encodeURIComponent(id)}`, {
       method: "DELETE",
       headers: { Prefer: "return=minimal" }
@@ -536,6 +709,12 @@
   }
 
   async function updateScheduledJob(id, payload) {
+    if (isDemoMode()) {
+      const index = state.data.jobs.findIndex((job) => job.id === id);
+      if (index >= 0) state.data.jobs[index] = normalizeJob({ id, ...payload });
+      return;
+    }
+
     await supabaseRestRequest(`scheduled_jobs?id=eq.${encodeURIComponent(id)}`, {
       method: "PATCH",
       headers: { Prefer: "return=minimal" },
@@ -544,6 +723,11 @@
   }
 
   async function cancelScheduledJob(id) {
+    if (isDemoMode()) {
+      await deleteRow("scheduled_jobs", id);
+      return;
+    }
+
     await supabaseRestRequest(`scheduled_jobs?id=eq.${encodeURIComponent(id)}`, {
       method: "DELETE",
       headers: { Prefer: "return=minimal" }
@@ -587,6 +771,16 @@
     if (!state.documentsReady) {
       throw new Error("Create the sales_documents table first. See DASHBOARD_SETUP.md.");
     }
+    if (isDemoMode()) {
+      const document = normalizeDocument({
+        id: nextDemoId("doc"),
+        ...buildDocumentPayload(input),
+        created_at: new Date().toISOString()
+      });
+      state.data.documents.unshift(document);
+      return document;
+    }
+
     const rows = await supabaseRestRequest("sales_documents", {
       method: "POST",
       headers: { Prefer: "return=representation" },
@@ -596,6 +790,16 @@
   }
 
   async function syncSquareInvoice(documentId) {
+    if (isDemoMode()) {
+      const doc = state.data.documents.find((item) => item.id === documentId);
+      if (!doc) return null;
+      doc.squareStatus = doc.status === "paid" ? "PAID" : "UNPAID";
+      doc.squareAmountDueCents = Math.round(Number(doc.total || 0) * 100);
+      doc.squarePaymentUrl = "https://square.link/u/test-demo";
+      doc.squareSyncedAt = formatDate(new Date().toISOString());
+      return doc;
+    }
+
     const session = getSession();
     if (!session || !session.accessToken) throw new Error("Please sign in again.");
 
@@ -613,6 +817,29 @@
   }
 
   async function updateSalesDocument(id, input) {
+    if (isDemoMode()) {
+      const existing = state.data.documents.find((doc) => doc.id === id);
+      const updated = normalizeDocument({
+        id,
+        ...buildDocumentPayload({
+          ...input,
+          document_number: existing?.number,
+          square_invoice_id: existing?.squareInvoiceId
+        }),
+        issue_date: existing?.issueDateRaw || new Date().toISOString().slice(0, 10),
+        status: input.status || "draft",
+        square_status: existing?.squareStatus || "",
+        square_payment_url: existing?.squarePaymentUrl || "",
+        square_amount_due_cents: existing?.squareAmountDueCents,
+        square_currency: existing?.squareCurrency || "USD",
+        square_synced_at: existing?.squareSyncedAt || "",
+        created_at: new Date().toISOString()
+      });
+      const index = state.data.documents.findIndex((doc) => doc.id === id);
+      if (index >= 0) state.data.documents[index] = updated;
+      return updated;
+    }
+
     const amount = Number(input.amount || 0);
     const lineItems = [{
       description: input.description || "Landscape service",
@@ -641,6 +868,17 @@
   }
 
   async function insertReminder(payload) {
+    if (isDemoMode()) {
+      const reminder = normalizeReminder({
+        id: nextDemoId("reminder"),
+        due_date: payload.due_date || daysFromToday(2),
+        task: payload.task,
+        status: payload.status || "New"
+      });
+      state.data.reminders.unshift(reminder);
+      return reminder;
+    }
+
     const rows = await supabaseRestRequest("follow_up_reminders", {
       method: "POST",
       headers: { Prefer: "return=representation" },
@@ -650,6 +888,12 @@
   }
 
   async function insertContact(payload) {
+    if (isDemoMode()) {
+      const contact = normalizeContact({ id: nextDemoId("contact"), ...payload });
+      state.data.contacts.unshift(contact);
+      return contact;
+    }
+
     const rows = await supabaseRestRequest("contacts", {
       method: "POST",
       headers: { Prefer: "return=representation" },
@@ -659,6 +903,12 @@
   }
 
   async function updateContact(id, payload) {
+    if (isDemoMode()) {
+      const index = state.data.contacts.findIndex((contact) => contact.id === id);
+      if (index >= 0) state.data.contacts[index] = normalizeContact({ id, ...payload });
+      return;
+    }
+
     await supabaseRestRequest(`contacts?id=eq.${encodeURIComponent(id)}`, {
       method: "PATCH",
       headers: { Prefer: "return=minimal" },
@@ -667,6 +917,15 @@
   }
 
   async function updateReminder(id, payload) {
+    if (isDemoMode()) {
+      const existing = state.data.reminders.find((reminder) => reminder.id === id);
+      const index = state.data.reminders.findIndex((reminder) => reminder.id === id);
+      if (index >= 0) {
+        state.data.reminders[index] = { ...existing, ...payload, due: existing.due, dueRaw: existing.dueRaw, task: payload.task || existing.task };
+      }
+      return;
+    }
+
     await supabaseRestRequest(`follow_up_reminders?id=eq.${encodeURIComponent(id)}`, {
       method: "PATCH",
       headers: { Prefer: "return=minimal" },
@@ -678,6 +937,16 @@
     if (!state.operationsReady) {
       throw new Error("Create the operations_records table first. See DASHBOARD_OPERATIONS_SQL.md.");
     }
+    if (isDemoMode()) {
+      const operation = normalizeOperation({
+        id: nextDemoId("operation"),
+        ...payload,
+        created_at: new Date().toISOString()
+      });
+      state.data.operations.unshift(operation);
+      return operation;
+    }
+
     const rows = await supabaseRestRequest("operations_records", {
       method: "POST",
       headers: { Prefer: "return=representation" },
@@ -701,6 +970,24 @@
     if (!state.routeStopsReady) {
       throw new Error("Create the route_stops table first. See DASHBOARD_SETUP.md.");
     }
+    if (isDemoMode()) {
+      const stop = normalizeRouteStop({
+        id: nextDemoId("route"),
+        route_date: state.routeDate,
+        client_name: input.client_name,
+        address: input.address,
+        service_type: input.service_type,
+        estimated_minutes: input.estimated_minutes || null,
+        notes: input.notes || null,
+        status: input.status || "Planned",
+        stop_order: nextRouteStopOrder(),
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString()
+      });
+      state.data.routeStops.push(stop);
+      return stop;
+    }
+
     const rows = await supabaseRestRequest("route_stops", {
       method: "POST",
       headers: { Prefer: "return=representation" },
@@ -719,6 +1006,24 @@
   }
 
   async function updateRouteStop(id, input) {
+    if (isDemoMode()) {
+      const existing = state.data.routeStops.find((stop) => stop.id === id);
+      const index = state.data.routeStops.findIndex((stop) => stop.id === id);
+      if (index >= 0) {
+        state.data.routeStops[index] = {
+          ...existing,
+          clientName: input.client_name,
+          address: input.address,
+          serviceType: input.service_type,
+          estimatedMinutes: input.estimated_minutes || 0,
+          notes: input.notes || "",
+          status: input.status || "Planned",
+          updatedAt: formatDate(new Date().toISOString())
+        };
+      }
+      return state.data.routeStops[index];
+    }
+
     const rows = await supabaseRestRequest(`route_stops?id=eq.${encodeURIComponent(id)}`, {
       method: "PATCH",
       headers: { Prefer: "return=representation" },
@@ -737,6 +1042,12 @@
 
   async function updateRouteStopStatus(id, status) {
     if (!ROUTE_STATUSES.includes(status)) throw new Error("Invalid route status.");
+    if (isDemoMode()) {
+      const stop = state.data.routeStops.find((item) => item.id === id);
+      if (stop) stop.status = status;
+      return;
+    }
+
     await supabaseRestRequest(`route_stops?id=eq.${encodeURIComponent(id)}`, {
       method: "PATCH",
       headers: { Prefer: "return=minimal" },
@@ -751,6 +1062,13 @@
     if (index < 0 || swapIndex < 0 || swapIndex >= stops.length) return;
     const current = stops[index];
     const other = stops[swapIndex];
+    if (isDemoMode()) {
+      const currentOrder = current.stopOrder;
+      current.stopOrder = other.stopOrder;
+      other.stopOrder = currentOrder;
+      return;
+    }
+
     await Promise.all([
       supabaseRestRequest(`route_stops?id=eq.${encodeURIComponent(current.id)}`, {
         method: "PATCH",
@@ -782,11 +1100,21 @@
     };
 
     if (existing) {
+      if (isDemoMode()) {
+        await updateContact(existing.id, payload);
+        return;
+      }
+
       await supabaseRestRequest(`contacts?id=eq.${encodeURIComponent(existing.id)}`, {
         method: "PATCH",
         headers: { Prefer: "return=minimal" },
         body: JSON.stringify(payload)
       });
+      return;
+    }
+
+    if (isDemoMode()) {
+      await insertContact(payload);
       return;
     }
 
@@ -798,6 +1126,16 @@
   }
 
   async function updateSubmission(id, payload) {
+    if (isDemoMode()) {
+      const item = state.data.submissions.find((submission) => submission.id === id);
+      if (item) {
+        item.status = payload.status || item.status;
+        item.followUp = payload.follow_up || "Not set";
+        item.notes = payload.notes || "";
+      }
+      return;
+    }
+
     await supabaseRestRequest(`quote_submissions?id=eq.${encodeURIComponent(id)}`, {
       method: "PATCH",
       headers: { Prefer: "return=minimal" },
@@ -807,6 +1145,19 @@
 
   async function updateStatus(table, id, status) {
     if (!STATUSES.includes(status)) throw new Error("Invalid status.");
+    if (isDemoMode()) {
+      const map = {
+        quote_submissions: "submissions",
+        contacts: "contacts",
+        scheduled_jobs: "jobs",
+        follow_up_reminders: "reminders"
+      };
+      const key = map[table];
+      const item = key ? state.data[key].find((record) => record.id === id) : null;
+      if (item) item.status = status;
+      return null;
+    }
+
     return supabaseRestRequest(`${table}?id=eq.${encodeURIComponent(id)}`, {
       method: "PATCH",
       headers: { Prefer: "return=minimal" },
@@ -845,7 +1196,8 @@
   async function showApp() {
     els.loginView.hidden = true;
     els.appView.hidden = false;
-    if (els.ownerEmail) els.ownerEmail.textContent = getOwnerEmail();
+    if (els.ownerEmail) els.ownerEmail.textContent = isDemoMode() ? "Demo mode" : getOwnerEmail();
+    if (els.demoBadge) els.demoBadge.hidden = !isDemoMode();
     await refreshDashboard();
   }
 
@@ -1986,8 +2338,8 @@
     try {
       state.data = await loadDashboardData();
       state.loading = false;
-      setDashboardState("");
       await render();
+      setDashboardState(isDemoMode() ? "Demo mode: sample records only. Changes stay in this browser session and do not touch Supabase, Square, or real client data." : "");
     } catch (error) {
       state.loading = false;
       state.error = error.message || "Unable to load dashboard records.";
@@ -2737,6 +3089,7 @@
     els.detailContent = qs("[data-detail-content]");
     els.closeDetail = qs("[data-close-detail]");
     els.pullRefresh = qs("[data-pull-refresh]");
+    els.demoBadge = qs("[data-demo-badge]");
     els.metrics = qs("[data-metrics]");
     els.statusFilter = qs("[data-status-filter]");
     els.submissions = qs("[data-submissions]");
@@ -2757,6 +3110,12 @@
     bindEvents();
     const hashSection = window.location.hash.replace("#", "");
     if (hashSection) state.activeSection = hashSection;
+
+    if (isDemoMode()) {
+      clearSession();
+      await showApp();
+      return;
+    }
 
     const session = getSession();
     if (!session) {

@@ -5415,3 +5415,51 @@ td {
     transform: translateX(0);
   }
 }
+
+/* Absolute final desktop rail state: no collapsed active highlight, centered line icons. */
+@media (min-width: 981px) {
+  .dashboard-sidebar:not(:hover):not(:focus-within):not(.is-sidebar-open) .dashboard-nav a,
+  .app-view:not(.is-sidebar-open) .dashboard-sidebar:not(:hover):not(:focus-within) .dashboard-nav a.is-active {
+    background: transparent !important;
+    color: rgba(255, 252, 239, .72) !important;
+    box-shadow: none !important;
+    filter: none !important;
+  }
+
+  .app-view:not(.is-sidebar-open) .dashboard-sidebar:not(:hover):not(:focus-within) .dashboard-nav a.is-active .nav-icon {
+    color: rgba(255, 252, 239, .74) !important;
+    filter: none !important;
+  }
+
+  .nav-icon {
+    align-items: center !important;
+    justify-items: center !important;
+    place-items: center !important;
+    line-height: 0 !important;
+  }
+
+  .nav-icon svg {
+    display: block !important;
+    margin: auto !important;
+    transform-origin: center !important;
+  }
+
+  .dashboard-nav a[data-dashboard-link="settings"] .nav-icon svg {
+    width: 24px !important;
+    height: 24px !important;
+    transform: translateX(1px);
+  }
+
+  .dashboard-sidebar:hover .dashboard-nav a.is-active,
+  .dashboard-sidebar:focus-within .dashboard-nav a.is-active,
+  .app-view.is-sidebar-open .dashboard-nav a.is-active {
+    color: #c9d982 !important;
+  }
+
+  .dashboard-sidebar:hover .dashboard-nav a.is-active .nav-icon,
+  .dashboard-sidebar:focus-within .dashboard-nav a.is-active .nav-icon,
+  .app-view.is-sidebar-open .dashboard-nav a.is-active .nav-icon {
+    color: #c9d982 !important;
+    filter: drop-shadow(0 0 10px rgba(201, 217, 130, .32));
+  }
+}

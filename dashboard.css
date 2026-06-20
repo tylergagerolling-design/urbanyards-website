@@ -1863,6 +1863,104 @@ button:active,
   }
 }
 
+/* Final desktop rail polish: logo and tab icons stay visible while collapsed. */
+@media (min-width: 981px) {
+  .dashboard-sidebar {
+    --rail-width: 76px;
+    --drawer-width: 292px;
+    width: var(--drawer-width);
+    transform: translateX(calc(var(--rail-width) - var(--drawer-width)));
+  }
+
+  .dashboard-brand {
+    display: grid;
+    grid-template-columns: 48px minmax(0, 1fr);
+    gap: 12px;
+    align-items: center;
+    min-height: 52px;
+  }
+
+  .dashboard-brand img {
+    width: 48px;
+    height: 48px;
+  }
+
+  .dashboard-nav {
+    display: grid;
+    gap: 8px;
+    min-width: 248px;
+    margin-top: 18px;
+    padding: 0;
+    background: transparent;
+    opacity: 1;
+    pointer-events: auto;
+    transform: none;
+  }
+
+  .dashboard-nav a {
+    display: grid;
+    grid-template-columns: 48px minmax(0, 1fr);
+    gap: 12px;
+    align-items: center;
+    min-height: 48px;
+    padding: 0 10px 0 0;
+    overflow: hidden;
+    border-radius: 10px;
+  }
+
+  .nav-icon {
+    display: inline-grid;
+    place-items: center;
+    width: 48px;
+    height: 48px;
+    border: 1px solid rgba(255, 252, 239, .14);
+    border-radius: 10px;
+    background: rgba(255, 252, 239, .08);
+    color: rgba(255, 252, 239, .84);
+    font-size: .8rem;
+    font-weight: 900;
+    letter-spacing: 0;
+    line-height: 1;
+  }
+
+  .dashboard-nav a.is-active {
+    background: transparent;
+    color: rgba(255, 252, 239, .9);
+  }
+
+  .dashboard-nav a.is-active .nav-icon,
+  .dashboard-nav a:hover .nav-icon {
+    border-color: rgba(201, 217, 130, .42);
+    background:
+      linear-gradient(180deg, rgba(255, 255, 255, .14), transparent 46%),
+      linear-gradient(135deg, #c9d982, #2f6b4f);
+    color: #061b15;
+  }
+
+  .dashboard-brand span,
+  .nav-label,
+  .sign-out {
+    opacity: 0;
+    pointer-events: none;
+    transform: translateX(-8px);
+    transition: opacity .18s ease, transform .18s ease;
+  }
+
+  .dashboard-sidebar:hover .dashboard-brand span,
+  .dashboard-sidebar:hover .nav-label,
+  .dashboard-sidebar:hover .sign-out,
+  .dashboard-sidebar:focus-within .dashboard-brand span,
+  .dashboard-sidebar:focus-within .nav-label,
+  .dashboard-sidebar:focus-within .sign-out,
+  .app-view.is-sidebar-open .dashboard-sidebar .dashboard-brand span,
+  .app-view.is-sidebar-open .dashboard-sidebar .nav-label,
+  .app-view.is-sidebar-open .dashboard-sidebar .sign-out {
+    opacity: 1;
+    pointer-events: auto;
+    transform: translateX(0);
+  }
+}
+
 /* Final mobile webapp content scale */
 @media (max-width: 760px) {
   html,
@@ -4216,8 +4314,52 @@ tbody tr:hover td {
     height: 48px;
   }
 
+  .dashboard-nav {
+    display: grid;
+    gap: 8px;
+    min-width: 248px;
+    margin-top: 18px;
+    opacity: 1;
+    pointer-events: auto;
+    transform: none;
+  }
+
+  .dashboard-nav a {
+    display: grid;
+    grid-template-columns: 48px minmax(0, 1fr);
+    gap: 12px;
+    align-items: center;
+    min-height: 48px;
+    padding: 0 10px 0 0;
+    overflow: hidden;
+  }
+
+  .nav-icon {
+    display: inline-grid;
+    place-items: center;
+    width: 48px;
+    height: 48px;
+    border: 1px solid rgba(255, 252, 239, .14);
+    border-radius: 10px;
+    background: rgba(255, 252, 239, .08);
+    color: rgba(255, 252, 239, .84);
+    font-size: .8rem;
+    font-weight: 900;
+    letter-spacing: 0;
+    line-height: 1;
+  }
+
+  .dashboard-nav a.is-active .nav-icon,
+  .dashboard-nav a:hover .nav-icon {
+    border-color: rgba(201, 217, 130, .42);
+    background:
+      linear-gradient(180deg, rgba(255, 255, 255, .14), transparent 46%),
+      linear-gradient(135deg, #c9d982, #2f6b4f);
+    color: #061b15;
+  }
+
+  .nav-label,
   .dashboard-brand span,
-  .dashboard-nav,
   .sign-out {
     opacity: 0;
     pointer-events: none;
@@ -4226,26 +4368,21 @@ tbody tr:hover td {
   }
 
   .dashboard-sidebar:hover .dashboard-brand span,
-  .dashboard-sidebar:hover .dashboard-nav,
+  .dashboard-sidebar:hover .nav-label,
   .dashboard-sidebar:hover .sign-out,
   .dashboard-sidebar:focus-within .dashboard-brand span,
-  .dashboard-sidebar:focus-within .dashboard-nav,
+  .dashboard-sidebar:focus-within .nav-label,
   .dashboard-sidebar:focus-within .sign-out,
   .app-view.is-sidebar-open .dashboard-sidebar .dashboard-brand span,
-  .app-view.is-sidebar-open .dashboard-sidebar .dashboard-nav,
+  .app-view.is-sidebar-open .dashboard-sidebar .nav-label,
   .app-view.is-sidebar-open .dashboard-sidebar .sign-out {
     opacity: 1;
     pointer-events: auto;
     transform: translateX(0);
   }
 
-  .dashboard-nav,
   .sign-out {
     min-width: 248px;
-  }
-
-  .dashboard-nav {
-    margin-top: 18px;
   }
 
   .sign-out {

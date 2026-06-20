@@ -2,6 +2,7 @@
   "use strict";
 
   const STATUSES = ["New", "Contacted", "Scheduled", "Completed", "Invoiced"];
+  const ROUTE_STATUSES = ["Planned", "In Progress", "Complete"];
   const SESSION_KEY = "urbanYardsDashboardSession";
 
   const config = window.URBAN_YARDS_DASHBOARD_CONFIG || {
@@ -16,12 +17,14 @@
     calendarFilter: "All",
     calendarView: "agenda",
     operationsFilter: "All",
+    routeDate: todayKey(),
     search: "",
     propertyFilter: "All",
     selectedSubmissionId: "",
     selectedJobId: "",
     documentsReady: true,
     operationsReady: true,
+    routeStopsReady: true,
     data: {
       submissions: [],
       contacts: [],
@@ -29,7 +32,8 @@
       notes: [],
       reminders: [],
       documents: [],
-      operations: []
+      operations: [],
+      routeStops: []
     },
     loading: false,
     error: ""
@@ -69,6 +73,12 @@
     return `<select class="status-select" data-status-table="${escapeHtml(table)}" data-status-id="${escapeHtml(id)}" aria-label="Update status">${options}</select>`;
   }
 
+  function routeStatusSelect(id, status) {
+    const safeStatus = ROUTE_STATUSES.includes(status) ? status : "Planned";
+    const options = ROUTE_STATUSES.map((item) => `<option value="${item}"${item === safeStatus ? " selected" : ""}>${item}</option>`).join("");
+    return `<select class="status-select route-status-select" data-route-status-id="${escapeHtml(id)}" aria-label="Update route stop status">${options}</select>`;
+  }
+
   function buttonContent(label, action) {
     const icons = {
       "cancel-job": "x",
@@ -81,8 +91,14 @@
       "delete-note": "x",
       "delete-operation": "x",
       "delete-reminder": "x",
+      "delete-route-stop": "x",
       "delete-submission": "x",
       "edit-job": "/",
+      "edit-route-stop": "/",
+      "mark-route-complete": "OK",
+      "move-route-down": "v",
+      "move-route-up": "^",
+      "open-route-map": "M",
       "open-contact": "-&gt;",
       "open-document": "-&gt;",
       "open-submission": "-&gt;",
@@ -301,6 +317,23 @@
     };
   }
 
+  function normalizeRouteStop(row) {
+    const estimatedMinutes = Number(row.estimated_minutes || 0);
+    return {
+      id: row.id,
+      routeDate: row.route_date || "",
+      clientName: row.client_name || "Unnamed stop",
+      address: row.address || "",
+      serviceType: row.service_type || "Service",
+      estimatedMinutes: Number.isFinite(estimatedMinutes) ? estimatedMinutes : 0,
+      notes: row.notes || "",
+      status: ROUTE_STATUSES.includes(row.status) ? row.status : "Planned",
+      stopOrder: Number(row.stop_order || 0),
+      createdAt: formatDate(row.created_at),
+      updatedAt: formatDate(row.updated_at)
+    };
+  }
+
   function normalizeDocument(row) {
     const total = Number(row.total || 0);
     const lineItems = Array.isArray(row.line_items) ? row.line_items : [];
@@ -419,14 +452,15 @@
   }
 
   async function loadDashboardData() {
-    const [submissions, contacts, jobs, notes, reminders, documents, operations] = await Promise.all([
+    const [submissions, contacts, jobs, notes, reminders, documents, operations, routeStops] = await Promise.all([
       supabaseRestRequest("quote_submissions?select=*&order=created_at.desc", { method: "GET" }),
       supabaseRestRequest("contacts?select=*&order=created_at.desc", { method: "GET" }),
       supabaseRestRequest("scheduled_jobs?select=*&order=visit_date.asc", { method: "GET" }),
       supabaseRestRequest("job_notes?select=*&order=created_at.desc", { method: "GET" }),
       supabaseRestRequest("follow_up_reminders?select=*&order=due_date.asc", { method: "GET" }),
       loadSalesDocuments(),
-      loadOperationsRecords()
+      loadOperationsRecords(),
+      loadRouteStops()
     ]);
 
     return {
@@ -436,7 +470,8 @@
       notes: notes.map(normalizeNote),
       reminders: reminders.map(normalizeReminder),
       documents,
-      operations
+      operations,
+      routeStops
     };
   }
 
@@ -458,6 +493,17 @@
       return rows.map(normalizeOperation);
     } catch (error) {
       state.operationsReady = false;
+      return [];
+    }
+  }
+
+  async function loadRouteStops() {
+    try {
+      const rows = await supabaseRestRequest("route_stops?select=*&order=route_date.asc,stop_order.asc,created_at.asc", { method: "GET" });
+      state.routeStopsReady = true;
+      return rows.map(normalizeRouteStop);
+    } catch (error) {
+      state.routeStopsReady = false;
       return [];
     }
   }
@@ -638,6 +684,85 @@
     return normalizeOperation(rows[0]);
   }
 
+  function selectedRouteStops() {
+    return state.data.routeStops
+      .filter((stop) => stop.routeDate === state.routeDate)
+      .sort((a, b) => a.stopOrder - b.stopOrder || a.createdAt.localeCompare(b.createdAt));
+  }
+
+  function nextRouteStopOrder() {
+    const stops = selectedRouteStops();
+    return stops.length ? Math.max(...stops.map((stop) => stop.stopOrder || 0)) + 1 : 1;
+  }
+
+  async function insertRouteStop(input) {
+    if (!state.routeStopsReady) {
+      throw new Error("Create the route_stops table first. See DASHBOARD_SETUP.md.");
+    }
+    const rows = await supabaseRestRequest("route_stops", {
+      method: "POST",
+      headers: { Prefer: "return=representation" },
+      body: JSON.stringify({
+        route_date: state.routeDate,
+        client_name: input.client_name,
+        address: input.address,
+        service_type: input.service_type,
+        estimated_minutes: input.estimated_minutes || null,
+        notes: input.notes || null,
+        status: input.status || "Planned",
+        stop_order: nextRouteStopOrder()
+      })
+    });
+    return normalizeRouteStop(rows[0]);
+  }
+
+  async function updateRouteStop(id, input) {
+    const rows = await supabaseRestRequest(`route_stops?id=eq.${encodeURIComponent(id)}`, {
+      method: "PATCH",
+      headers: { Prefer: "return=representation" },
+      body: JSON.stringify({
+        client_name: input.client_name,
+        address: input.address,
+        service_type: input.service_type,
+        estimated_minutes: input.estimated_minutes || null,
+        notes: input.notes || null,
+        status: input.status || "Planned",
+        updated_at: new Date().toISOString()
+      })
+    });
+    return normalizeRouteStop(rows[0]);
+  }
+
+  async function updateRouteStopStatus(id, status) {
+    if (!ROUTE_STATUSES.includes(status)) throw new Error("Invalid route status.");
+    await supabaseRestRequest(`route_stops?id=eq.${encodeURIComponent(id)}`, {
+      method: "PATCH",
+      headers: { Prefer: "return=minimal" },
+      body: JSON.stringify({ status, updated_at: new Date().toISOString() })
+    });
+  }
+
+  async function moveRouteStop(id, direction) {
+    const stops = selectedRouteStops();
+    const index = stops.findIndex((stop) => stop.id === id);
+    const swapIndex = direction === "up" ? index - 1 : index + 1;
+    if (index < 0 || swapIndex < 0 || swapIndex >= stops.length) return;
+    const current = stops[index];
+    const other = stops[swapIndex];
+    await Promise.all([
+      supabaseRestRequest(`route_stops?id=eq.${encodeURIComponent(current.id)}`, {
+        method: "PATCH",
+        headers: { Prefer: "return=minimal" },
+        body: JSON.stringify({ stop_order: other.stopOrder, updated_at: new Date().toISOString() })
+      }),
+      supabaseRestRequest(`route_stops?id=eq.${encodeURIComponent(other.id)}`, {
+        method: "PATCH",
+        headers: { Prefer: "return=minimal" },
+        body: JSON.stringify({ stop_order: current.stopOrder, updated_at: new Date().toISOString() })
+      })
+    ]);
+  }
+
   async function upsertContactFromSubmission(item) {
     const existing = state.data.contacts.find((contact) => {
       const sameEmail = item.email !== "No email" && contact.email.toLowerCase() === item.email.toLowerCase();
@@ -798,6 +923,67 @@
       const typeMatches = state.operationsFilter === "All" || item.type === state.operationsFilter;
       return typeMatches && matchesSearch(item);
     });
+  }
+
+  function findRouteStop(id) {
+    return state.data.routeStops.find((stop) => stop.id === id);
+  }
+
+  function routeStopFormPayload(form) {
+    const formData = new FormData(form);
+    return {
+      client_name: String(formData.get("client_name") || "").trim(),
+      address: String(formData.get("address") || "").trim(),
+      service_type: String(formData.get("service_type") || "").trim(),
+      estimated_minutes: Number(formData.get("estimated_minutes") || 0),
+      status: String(formData.get("status") || "Planned"),
+      notes: String(formData.get("notes") || "").trim()
+    };
+  }
+
+  function resetRouteForm() {
+    if (!els.routeForm) return;
+    els.routeForm.reset();
+    const idInput = els.routeForm.querySelector("input[name='route_stop_id']");
+    if (idInput) idInput.value = "";
+    const heading = qs(".route-form-panel .panel-heading h3");
+    if (heading) heading.textContent = "Add Stop";
+    if (els.routeSubmit) {
+      els.routeSubmit.innerHTML = buttonContent("Save Stop", "quick-add-job");
+    }
+  }
+
+  function editRouteStop(id) {
+    const stop = findRouteStop(id);
+    if (!stop || !els.routeForm) return;
+    els.routeForm.route_stop_id.value = stop.id;
+    els.routeForm.client_name.value = stop.clientName;
+    els.routeForm.address.value = stop.address;
+    els.routeForm.service_type.value = stop.serviceType;
+    els.routeForm.estimated_minutes.value = stop.estimatedMinutes || "";
+    els.routeForm.status.value = stop.status;
+    els.routeForm.notes.value = stop.notes;
+    const heading = qs(".route-form-panel .panel-heading h3");
+    if (heading) heading.textContent = "Edit Stop";
+    if (els.routeSubmit) {
+      els.routeSubmit.innerHTML = buttonContent("Save Changes", "edit-route-stop");
+    }
+    els.routeForm.scrollIntoView({ behavior: "smooth", block: "start" });
+  }
+
+  function routeMapsUrl() {
+    const addresses = selectedRouteStops()
+      .map((stop) => stop.address.trim())
+      .filter(Boolean);
+    if (!addresses.length) return "";
+    const encode = (value) => encodeURIComponent(value);
+    if (addresses.length === 1) {
+      return `https://www.google.com/maps/dir/?api=1&destination=${encode(addresses[0])}`;
+    }
+    const origin = addresses[0];
+    const destination = addresses[addresses.length - 1];
+    const waypoints = addresses.slice(1, -1);
+    return `https://www.google.com/maps/dir/?api=1&origin=${encode(origin)}&destination=${encode(destination)}${waypoints.length ? `&waypoints=${waypoints.map(encode).join("%7C")}` : ""}`;
   }
 
   function populatePropertyFilter(data) {
@@ -978,6 +1164,54 @@
         </div>
         <p class="item-body">${escapeHtml(item.propertyAddress || "")}</p>
         <p class="small">${escapeHtml(item.notes || "No notes yet.")}</p>
+      </article>
+    `).join("");
+  }
+
+  function renderRoutePlanner() {
+    if (!els.routeDate || !els.routeStops || !els.routeSummary) return;
+    els.routeDate.value = state.routeDate;
+
+    if (!state.routeStopsReady) {
+      els.routeSummary.textContent = "Route Planner needs the route_stops table.";
+      els.routeStops.innerHTML = emptyState("Create the route_stops table in Supabase, then refresh this dashboard.");
+      return;
+    }
+
+    const stops = selectedRouteStops();
+    const minutes = stops.reduce((sum, stop) => sum + (stop.estimatedMinutes || 0), 0);
+    els.routeSummary.textContent = stops.length
+      ? `${stops.length} stop${stops.length === 1 ? "" : "s"} / ${minutes || 0} min estimated`
+      : "No stops planned for this date.";
+
+    if (!stops.length) {
+      els.routeStops.innerHTML = emptyState("No route stops yet. Add the first property for this day.");
+      return;
+    }
+
+    els.routeStops.innerHTML = stops.map((stop, index) => `
+      <article class="route-stop-card route-stop-${slug(stop.status)}">
+        <div class="route-stop-order">
+          <span>${index + 1}</span>
+        </div>
+        <div class="route-stop-body">
+          <div class="item-topline">
+            <div>
+              <h4>${escapeHtml(stop.clientName)}</h4>
+              <div class="meta">${escapeHtml(stop.serviceType)} / ${stop.estimatedMinutes ? `${escapeHtml(stop.estimatedMinutes)} min` : "Time not set"}</div>
+            </div>
+            ${routeStatusSelect(stop.id, stop.status)}
+          </div>
+          <p class="route-address">${escapeHtml(stop.address)}</p>
+          <p class="small">${escapeHtml(stop.notes || "No notes yet.")}</p>
+          <div class="route-stop-actions">
+            <button class="inline-action" type="button" data-action="move-route-up" data-id="${escapeHtml(stop.id)}"${index === 0 ? " disabled" : ""}>${buttonContent("Up", "move-route-up")}</button>
+            <button class="inline-action" type="button" data-action="move-route-down" data-id="${escapeHtml(stop.id)}"${index === stops.length - 1 ? " disabled" : ""}>${buttonContent("Down", "move-route-down")}</button>
+            <button class="inline-action" type="button" data-action="mark-route-complete" data-id="${escapeHtml(stop.id)}">${buttonContent("Mark Complete", "mark-route-complete")}</button>
+            <button class="inline-action" type="button" data-action="edit-route-stop" data-id="${escapeHtml(stop.id)}">${buttonContent("Edit", "edit-route-stop")}</button>
+            <button class="inline-action danger-action" type="button" data-action="delete-route-stop" data-id="${escapeHtml(stop.id)}">${buttonContent("Delete", "delete-route-stop")}</button>
+          </div>
+        </div>
       </article>
     `).join("");
   }
@@ -1691,6 +1925,7 @@
     renderReminders(data);
     renderCalendar(data);
     renderOperations(data);
+    renderRoutePlanner(data);
     if (els.todayChip) els.todayChip.textContent = new Date().toLocaleDateString("en-US", { weekday: "long", month: "short", day: "numeric" });
     setActiveSection(state.activeSection);
   }
@@ -1814,6 +2049,14 @@
       });
     }
 
+    if (els.routeDate) {
+      els.routeDate.addEventListener("change", async () => {
+        state.routeDate = els.routeDate.value || todayKey();
+        resetRouteForm();
+        await render();
+      });
+    }
+
     els.noteForm.addEventListener("submit", async (event) => {
       event.preventDefault();
       const formData = new FormData(els.noteForm);
@@ -1835,7 +2078,21 @@
 
     els.appView.addEventListener("change", async (event) => {
       const target = event.target;
-      if (!target || !target.matches("[data-status-table][data-status-id]")) return;
+      if (!target) return;
+
+      if (target.matches("[data-route-status-id]")) {
+        try {
+          setDashboardState("Updating route stop...");
+          await updateRouteStopStatus(target.dataset.routeStatusId, target.value);
+          await refreshDashboard();
+          setDashboardState("");
+        } catch (error) {
+          setDashboardState(error.message || "Unable to update route stop.", "error");
+        }
+        return;
+      }
+
+      if (!target.matches("[data-status-table][data-status-id]")) return;
 
       try {
         setDashboardState("Updating status...");
@@ -1900,6 +2157,47 @@
           form.record_type.value = target.dataset.type || "property_profile";
           form.title.value = target.dataset.title || "";
           form.notes.focus();
+        }
+      } else if (action === "open-route-map") {
+        const url = routeMapsUrl();
+        if (!url) {
+          setDashboardState("Add at least one route stop address before opening Google Maps.", "error");
+          return;
+        }
+        window.open(url, "_blank", "noopener");
+      } else if (action === "reset-route-form") {
+        resetRouteForm();
+      } else if (action === "move-route-up" || action === "move-route-down") {
+        try {
+          setDashboardState("Reordering route...");
+          await moveRouteStop(id, action === "move-route-up" ? "up" : "down");
+          await refreshDashboard();
+          setDashboardState("");
+        } catch (error) {
+          setDashboardState(error.message || "Unable to reorder route.", "error");
+        }
+      } else if (action === "mark-route-complete") {
+        try {
+          setDashboardState("Marking stop complete...");
+          await updateRouteStopStatus(id, "Complete");
+          await refreshDashboard();
+          setDashboardState("");
+        } catch (error) {
+          setDashboardState(error.message || "Unable to complete stop.", "error");
+        }
+      } else if (action === "edit-route-stop") {
+        editRouteStop(id);
+      } else if (action === "delete-route-stop") {
+        const ok = window.confirm("Delete this route stop?");
+        if (!ok) return;
+        try {
+          setDashboardState("Deleting route stop...");
+          await deleteRow("route_stops", id);
+          resetRouteForm();
+          await refreshDashboard();
+          setDashboardState("");
+        } catch (error) {
+          setDashboardState(error.message || "Unable to delete route stop.", "error");
         }
       } else if (action === "refresh-dashboard") {
         await refreshDashboard();
@@ -2203,6 +2501,25 @@
         } catch (error) {
           setDashboardState(error.message || "Unable to save operation.", "error");
         }
+      } else if (event.target.matches("[data-route-form]")) {
+        event.preventDefault();
+        const payload = routeStopFormPayload(event.target);
+        if (!payload.client_name || !payload.address || !payload.service_type) return;
+        const id = String(new FormData(event.target).get("route_stop_id") || "");
+        try {
+          setDashboardState(id ? "Saving route stop..." : "Adding route stop...");
+          if (id) {
+            await updateRouteStop(id, payload);
+          } else {
+            await insertRouteStop(payload);
+          }
+          resetRouteForm();
+          await refreshDashboard();
+          setActiveSection("route-planner");
+          setDashboardState("");
+        } catch (error) {
+          setDashboardState(error.message || "Unable to save route stop.", "error");
+        }
       } else if (event.target.matches("[data-contact-edit]")) {
         event.preventDefault();
         const formData = new FormData(event.target);
@@ -2290,6 +2607,11 @@
     els.calendarList = qs("[data-calendar-list]");
     els.operationsSummary = qs("[data-operations-summary]");
     els.operationsList = qs("[data-operations-list]");
+    els.routeDate = qs("[data-route-date]");
+    els.routeForm = qs("[data-route-form]");
+    els.routeSubmit = qs("[data-route-submit]");
+    els.routeStops = qs("[data-route-stops]");
+    els.routeSummary = qs("[data-route-summary]");
     els.homeReminders = qs("[data-home-reminders]");
     els.dashboardAlerts = qs("[data-dashboard-alerts]");
     els.todayChip = qs("[data-today-chip]");

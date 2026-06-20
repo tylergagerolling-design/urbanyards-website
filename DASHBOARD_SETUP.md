@@ -150,12 +150,27 @@ create table sales_documents (
   notes text
 );
 
+create table route_stops (
+  id uuid primary key default gen_random_uuid(),
+  route_date date not null,
+  client_name text not null,
+  address text not null,
+  service_type text not null,
+  estimated_minutes integer,
+  notes text,
+  status text not null default 'Planned' check (status in ('Planned', 'In Progress', 'Complete')),
+  stop_order integer not null default 1,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+
 alter table quote_submissions enable row level security;
 alter table contacts enable row level security;
 alter table scheduled_jobs enable row level security;
 alter table job_notes enable row level security;
 alter table follow_up_reminders enable row level security;
 alter table sales_documents enable row level security;
+alter table route_stops enable row level security;
 
 create policy "owner read quote submissions"
   on quote_submissions for select
@@ -210,6 +225,18 @@ create policy "owner write sales documents"
   on sales_documents for all
   using ((auth.jwt() ->> 'email') = 'team@urbanyards.us')
   with check ((auth.jwt() ->> 'email') = 'team@urbanyards.us');
+
+create policy "owner read route stops"
+  on route_stops for select
+  using ((auth.jwt() ->> 'email') = 'team@urbanyards.us');
+
+create policy "owner write route stops"
+  on route_stops for all
+  using ((auth.jwt() ->> 'email') = 'team@urbanyards.us')
+  with check ((auth.jwt() ->> 'email') = 'team@urbanyards.us');
+
+create index if not exists route_stops_route_date_order_idx
+  on route_stops (route_date, stop_order);
 ```
 
 If you already created `sales_documents`, run this upgrade SQL:
@@ -231,6 +258,41 @@ create index if not exists sales_documents_square_invoice_number_idx
   on sales_documents (square_invoice_number);
 ```
 
+If you already created the original dashboard tables, run this Route Planner SQL:
+
+```sql
+create table if not exists route_stops (
+  id uuid primary key default gen_random_uuid(),
+  route_date date not null,
+  client_name text not null,
+  address text not null,
+  service_type text not null,
+  estimated_minutes integer,
+  notes text,
+  status text not null default 'Planned' check (status in ('Planned', 'In Progress', 'Complete')),
+  stop_order integer not null default 1,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+
+alter table route_stops enable row level security;
+
+drop policy if exists "owner read route stops" on route_stops;
+drop policy if exists "owner write route stops" on route_stops;
+
+create policy "owner read route stops"
+  on route_stops for select
+  using ((auth.jwt() ->> 'email') = 'team@urbanyards.us');
+
+create policy "owner write route stops"
+  on route_stops for all
+  using ((auth.jwt() ->> 'email') = 'team@urbanyards.us')
+  with check ((auth.jwt() ->> 'email') = 'team@urbanyards.us');
+
+create index if not exists route_stops_route_date_order_idx
+  on route_stops (route_date, stop_order);
+```
+
 ## Current Dashboard Sections
 
 - Quote/contact submissions
@@ -238,4 +300,5 @@ create index if not exists sales_documents_square_invoice_number_idx
 - Scheduled jobs/visits
 - Job notes
 - Follow-up reminders
+- Route Planner route stops
 - Status fields: New, Contacted, Scheduled, Completed, Invoiced

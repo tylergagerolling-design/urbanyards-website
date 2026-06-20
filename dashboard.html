@@ -11,9 +11,9 @@
     <link rel="icon" href="/favicon.ico" sizes="any">
     <link rel="apple-touch-icon" href="/apple-touch-icon.png">
     <link rel="manifest" href="/dashboard.webmanifest">
-    <link rel="stylesheet" href="dashboard.css?v=20260619-18">
+    <link rel="stylesheet" href="dashboard.css?v=20260619-19">
     <script src="dashboard-config.js?v=20260619-5" defer></script>
-    <script src="dashboard.js?v=20260619-11" defer></script>
+    <script src="dashboard.js?v=20260619-12" defer></script>
   </head>
   <body>
     <main class="dashboard-shell" aria-labelledby="dashboard-title">
@@ -46,6 +46,7 @@
           <nav class="dashboard-nav" aria-label="Dashboard navigation">
             <a href="#overview" data-dashboard-link="overview">Today</a>
             <a href="#calendar" data-dashboard-link="calendar">Work</a>
+            <a href="#route-planner" data-dashboard-link="route-planner">Route Planner</a>
             <a href="#contacts" data-dashboard-link="contacts">Clients</a>
             <a href="#documents" data-dashboard-link="documents">Money</a>
             <a href="#operations" data-dashboard-link="operations">Operations</a>
@@ -152,6 +153,74 @@
                 <button type="submit"><span class="button-icon" aria-hidden="true">+</span><span>Add Visit</span></button>
               </form>
               <div class="calendar-list" data-calendar-list></div>
+            </div>
+          </section>
+
+          <section class="dashboard-section" id="route-planner" data-section="route-planner">
+            <div class="route-planner-shell">
+              <div class="route-hero">
+                <div>
+                  <p class="eyebrow">Daily Route</p>
+                  <h3>Plan the day stop by stop</h3>
+                  <p>Build a simple service route, reorder stops, track status, and open the current route in Google Maps.</p>
+                </div>
+                <div class="route-date-card">
+                  <label>Route Date
+                    <input data-route-date type="date" aria-label="Route date">
+                  </label>
+                  <button type="button" data-action="open-route-map"><span class="button-icon" aria-hidden="true">M</span><span>Open Route in Google Maps</span></button>
+                </div>
+              </div>
+
+              <div class="route-layout">
+                <article class="panel route-form-panel">
+                  <div class="panel-heading">
+                    <div>
+                      <h3>Add Stop</h3>
+                      <p>Save the property, service, expected time, notes, and route status.</p>
+                    </div>
+                  </div>
+                  <form class="route-stop-form" data-route-form>
+                    <input name="route_stop_id" type="hidden">
+                    <label>Property / Client name
+                      <input name="client_name" placeholder="Example: Hannah / Edge Management" required>
+                    </label>
+                    <label>Address
+                      <input name="address" placeholder="Street, city, state" required>
+                    </label>
+                    <label>Service type
+                      <input name="service_type" placeholder="Mow, cleanup, pressure washing..." required>
+                    </label>
+                    <label>Estimated time on site
+                      <input name="estimated_minutes" type="number" min="0" step="5" placeholder="Minutes">
+                    </label>
+                    <label>Status
+                      <select name="status">
+                        <option>Planned</option>
+                        <option>In Progress</option>
+                        <option>Complete</option>
+                      </select>
+                    </label>
+                    <label>Notes
+                      <textarea name="notes" rows="4" placeholder="Gate code, access note, task list, materials, or reminder..."></textarea>
+                    </label>
+                    <div class="route-form-actions">
+                      <button type="submit" data-route-submit><span class="button-icon" aria-hidden="true">+</span><span>Save Stop</span></button>
+                      <button class="inline-action" type="button" data-action="reset-route-form">Clear</button>
+                    </div>
+                  </form>
+                </article>
+
+                <article class="panel route-list-panel">
+                  <div class="panel-heading">
+                    <div>
+                      <h3>Stops</h3>
+                      <p data-route-summary>No stops selected.</p>
+                    </div>
+                  </div>
+                  <div class="route-stop-list" data-route-stops></div>
+                </article>
+              </div>
             </div>
           </section>
 
@@ -344,6 +413,7 @@
         <nav class="mobile-tabbar" aria-label="Mobile dashboard navigation">
           <a href="#overview" data-dashboard-link="overview">Today</a>
           <a href="#calendar" data-dashboard-link="calendar">Work</a>
+          <a href="#route-planner" data-dashboard-link="route-planner">Route</a>
           <a href="#contacts" data-dashboard-link="contacts">Clients</a>
           <a href="#documents" data-dashboard-link="documents">Money</a>
           <a href="#operations" data-dashboard-link="operations">Ops</a>

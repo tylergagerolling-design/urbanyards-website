@@ -1700,7 +1700,6 @@ input:focus, select:focus, textarea:focus { outline: 0; }
   stroke-linejoin: round;
   stroke-width: 1.8;
 }
-.about-cta-section { background: var(--sage-soft); }
 .feral-page {
   --feral-black: #171a16;
   --feral-ink: #20241d;

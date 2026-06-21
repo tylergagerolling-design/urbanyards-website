@@ -1481,6 +1481,87 @@ input:focus, select:focus, textarea:focus { outline: 0; }
 }
 .service-frequency-grid strong { display: block; color: var(--deep); font-family: Georgia, serif; font-size: 1.16rem; line-height: 1.15; }
 .service-frequency-grid span { display: block; margin-top: 7px; color: var(--muted); font-size: .86rem; }
+.about-reliability-section {
+  background:
+    radial-gradient(circle at 12% 12%, rgba(205, 162, 86, .12), transparent 28%),
+    linear-gradient(180deg, rgba(255, 253, 247, .88), rgba(239, 245, 238, .7));
+}
+.about-reliability-grid {
+  display: grid;
+  grid-template-columns: minmax(0, .82fr) minmax(320px, 1.18fr);
+  gap: 30px;
+  align-items: stretch;
+}
+.about-section-heading {
+  display: grid;
+  align-content: center;
+  padding: 26px;
+  border: 1px solid rgba(18, 63, 49, .12);
+  border-radius: var(--radius);
+  background: rgba(255, 253, 247, .66);
+  box-shadow: 0 18px 38px rgba(25, 59, 42, .06);
+}
+.about-section-heading h1,
+.about-section-heading h2 {
+  margin-bottom: 14px;
+  max-width: 13ch;
+  color: var(--deep);
+}
+.about-section-heading p:not(.eyebrow) {
+  max-width: 640px;
+  color: var(--muted);
+  font-size: 1.02rem;
+  line-height: 1.62;
+}
+.about-expect-card,
+.about-difference-grid article,
+.about-brand-card {
+  border: 1px solid rgba(18, 63, 49, .13);
+  border-radius: var(--radius);
+  background: rgba(255, 253, 247, .8);
+  box-shadow: 0 18px 38px rgba(25, 59, 42, .07);
+}
+.about-expect-card {
+  padding: 24px;
+}
+.about-expect-card h2 {
+  margin-bottom: 18px;
+  color: var(--deep);
+  font-size: clamp(1.55rem, 2.4vw, 2.15rem);
+}
+.about-check-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+.about-check-grid span {
+  position: relative;
+  min-height: 58px;
+  padding: 15px 16px 15px 44px;
+  border: 1px solid rgba(18, 63, 49, .12);
+  border-radius: 8px;
+  background:
+    linear-gradient(135deg, rgba(227, 234, 219, .78), rgba(255, 253, 247, .82));
+  color: var(--forest);
+  font-size: .94rem;
+  font-weight: 800;
+  line-height: 1.25;
+}
+.about-check-grid span::before {
+  position: absolute;
+  top: 15px;
+  left: 16px;
+  display: grid;
+  width: 18px;
+  height: 18px;
+  place-items: center;
+  border-radius: 50%;
+  background: var(--forest);
+  color: #fffdf7;
+  content: "✓";
+  font-size: .72rem;
+  font-weight: 900;
+}
 .about-story-section { background: rgba(255, 253, 247, .72); }
 .about-story-grid {
   display: grid;
@@ -1546,6 +1627,60 @@ input:focus, select:focus, textarea:focus { outline: 0; }
 }
 .about-story-copy p { margin-bottom: 14px; color: var(--muted); }
 .about-story-copy p:last-child { margin-bottom: 0; }
+.about-difference-section {
+  background:
+    radial-gradient(circle at 88% 8%, rgba(18, 63, 49, .08), transparent 30%),
+    var(--sage-soft);
+}
+.about-difference-inner {
+  display: grid;
+  gap: 24px;
+}
+.about-section-heading-wide h2 {
+  max-width: none;
+}
+.about-difference-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 14px;
+}
+.about-difference-grid article {
+  padding: 20px;
+}
+.about-difference-grid h3 {
+  margin-bottom: 10px;
+  color: var(--deep);
+  font-size: 1.2rem;
+}
+.about-difference-grid p {
+  color: var(--muted);
+  font-size: .92rem;
+  line-height: 1.58;
+}
+.about-brand-card {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 26px;
+  padding: 26px;
+  background:
+    linear-gradient(135deg, rgba(18, 63, 49, .98), rgba(47, 107, 79, .92));
+  color: #fffdf7;
+}
+.about-brand-card h2 {
+  margin-bottom: 10px;
+  color: #fffdf7;
+}
+.about-brand-card p:not(.eyebrow) {
+  max-width: 760px;
+  color: rgba(255, 253, 247, .8);
+}
+.about-brand-card .eyebrow {
+  color: var(--gold);
+}
+.about-brand-card .button {
+  flex: 0 0 auto;
+}
 .about-values-section { background: #fffaf0; }
 .about-values-strip .trust-icon {
   width: 38px;
@@ -2105,7 +2240,23 @@ input:focus, select:focus, textarea:focus { outline: 0; }
   .service-explorer { padding: 16px; }
   .service-explorer-controls { padding-bottom: 15px; }
   .service-result-actions { display: grid; gap: 10px; justify-items: start; }
-  .service-detail-grid, .service-frequency-grid { grid-template-columns: 1fr; }
+  .service-detail-grid,
+  .service-frequency-grid,
+  .about-reliability-grid,
+  .about-check-grid,
+  .about-difference-grid {
+    grid-template-columns: 1fr;
+  }
+  .about-section-heading,
+  .about-expect-card,
+  .about-difference-grid article,
+  .about-brand-card {
+    padding: 18px;
+  }
+  .about-brand-card {
+    display: grid;
+    justify-items: start;
+  }
   .feral-header { display: grid; gap: 14px; justify-content: stretch; }
   .feral-header .feral-brand { justify-self: end; }
   .feral-header .primary-nav {

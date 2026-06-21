@@ -95,7 +95,7 @@ test("site knowledge retrieves relevant website sections", () => {
   assert.match(buildSiteContext("Do you do pressure washing?"), /Pressure Washing/i);
   assert.match(buildSiteContext("What areas do you serve?"), /Portland, Vancouver, and Beaverton/i);
   assert.match(buildSiteContext("How do I get a quote?"), /name, email, phone, property address/i);
-  assert.match(buildSiteContext("Are you owner operated?"), /led by Tyler Gage/i);
+  assert.match(buildSiteContext("Are you owner operated?"), /owner-operated by Tyler Gage/i);
 });
 
 test("site knowledge fallback answers common visitor questions", () => {

@@ -95,8 +95,8 @@
       "id": "about",
       "title": "About",
       "url": "/about",
-      "keywords": ["about", "owner", "owned", "tyler", "gage", "mission", "values", "eco-conscious", "clear communication"],
-      "text": "Urban Yards exists to help outdoor spaces stay clean, healthy, welcoming, and resilient through dependable landscape care. Urban Yards is led by Tyler Gage, a Midwest native with a lifelong interest in gardening, landscape design, ecology, and restoration. His background includes hands-on experimentation with traditional horticulture, landscape maintenance, food forests, habitat creation, ecological restoration, and the Miyawaki approach to dense native planting. That background influences how properties are cared for: keeping outdoor spaces tidy while considering soil health, plant communities, habitat, water use, and how landscapes feel for people who live, work, and gather there. Urban Yards aims to provide dependable groundskeeping and landscape care that makes properties cleaner, healthier, more welcoming, and more resilient over time. Brand values on the About page include local knowledge, reliable and practical care, eco-conscious thinking, and clear communication."
+      "keywords": ["about", "owner", "owned", "owner-operated", "tyler", "gage", "values", "eco-conscious", "clear communication"],
+      "text": "Urban Yards is owner-operated by Tyler Gage, a Midwest native with a lifelong interest in gardening, landscape design, ecology, and restoration. His background includes hands-on experimentation with traditional horticulture, landscape maintenance, food forests, habitat creation, ecological restoration, and the Miyawaki approach to dense native planting. That background influences how properties are cared for: keeping outdoor spaces tidy while considering soil health, plant communities, habitat, water use, and how landscapes feel for people who live, work, and gather there. Urban Yards aims to provide dependable groundskeeping and landscape care that makes properties cleaner, healthier, more welcoming, and more resilient over time. Brand values on the About page include local and owner operated, reliable and practical, eco-conscious, and clear communication."
     },
     {
       "id": "service-areas",
@@ -134,10 +134,10 @@
       "answer": "The site lists Beaverton, Portland, and Vancouver as the service area. If a property is near those areas, Urban Yards can confirm through the quote form."
     },
     {
-      "id": "owner",
-      "question": "Who leads Urban Yards?",
-      "keywords": ["owner", "owned", "tyler", "gage", "who leads"],
-      "answer": "Urban Yards is led by Tyler Gage, a Midwest native with a lifelong interest in gardening, landscape design, ecology, and restoration."
+      "id": "owner-operated",
+      "question": "Are you owner-operated?",
+      "keywords": ["owner", "owned", "owner-operated", "tyler", "gage"],
+      "answer": "Yes. Urban Yards is owner-operated by Tyler Gage."
     },
     {
       "id": "apartments",

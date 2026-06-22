@@ -1013,6 +1013,78 @@ input:focus, select:focus, textarea:focus { outline: 0; }
 .pay-layout { display: grid; grid-template-columns: minmax(0, .9fr) minmax(340px, .7fr); gap: 32px; align-items: start; }
 .pay-copy h1 { max-width: 720px; margin-bottom: 16px; color: var(--deep); font-size: clamp(2.8rem, 7vw, 5.8rem); line-height: .92; }
 .pay-copy > p { max-width: 640px; color: var(--muted); font-size: 1.06rem; }
+.square-brand-lockup,
+.square-mini-lockup,
+.footer-square-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  width: max-content;
+  max-width: 100%;
+  border-radius: 8px;
+}
+.square-logo-mark {
+  display: grid;
+  width: 34px;
+  height: 34px;
+  flex: 0 0 auto;
+  place-items: center;
+  border-radius: 8px;
+  background: #111;
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, .18);
+}
+.square-logo-mark span {
+  display: block;
+  width: 16px;
+  height: 16px;
+  border: 2px solid #fff;
+  border-radius: 4px;
+}
+.square-brand-lockup {
+  margin: 22px 0 2px;
+  padding: 10px 12px;
+  border: 1px solid rgba(18, 63, 49, .12);
+  background: rgba(255, 253, 247, .86);
+  color: var(--deep);
+  box-shadow: 0 14px 30px rgba(18, 63, 49, .08);
+}
+.square-brand-lockup strong,
+.square-brand-lockup small {
+  display: block;
+}
+.square-brand-lockup strong {
+  font-size: .98rem;
+  letter-spacing: 0;
+}
+.square-brand-lockup small {
+  margin-top: 2px;
+  color: var(--muted);
+  font-size: .72rem;
+  font-weight: 800;
+  letter-spacing: .06em;
+  text-transform: uppercase;
+}
+.square-mini-lockup {
+  padding: 7px 9px;
+  border: 1px solid rgba(18, 63, 49, .12);
+  background: var(--sage-soft);
+  color: var(--deep);
+  font-size: .74rem;
+  font-weight: 900;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+}
+.square-mini-lockup .square-logo-mark {
+  width: 26px;
+  height: 26px;
+  border-radius: 7px;
+}
+.square-mini-lockup .square-logo-mark span {
+  width: 12px;
+  height: 12px;
+  border-width: 2px;
+  border-radius: 3px;
+}
 .pay-security-list { max-width: 520px; margin-top: 24px; padding: 0; }
 .pay-card { padding: 24px; }
 .pay-form { display: grid; gap: 14px; }
@@ -1082,6 +1154,31 @@ input:focus, select:focus, textarea:focus { outline: 0; }
   text-transform: uppercase;
 }
 .footer-project-link:hover { color: var(--mustard); }
+.footer-square-badge {
+  margin-top: 14px;
+  padding: 8px 10px;
+  border: 1px solid rgba(255, 245, 221, .16);
+  background: rgba(255, 253, 247, .08);
+  color: rgba(232, 238, 223, .84);
+  font-size: .68rem;
+  font-weight: 800;
+  line-height: 1.2;
+}
+.footer-square-badge .square-logo-mark {
+  width: 28px;
+  height: 28px;
+  border-radius: 7px;
+  background: #fff5dd;
+}
+.footer-square-badge .square-logo-mark span {
+  width: 13px;
+  height: 13px;
+  border-color: var(--deep);
+  border-radius: 3px;
+}
+.footer-square-badge strong {
+  color: #fff5dd;
+}
 .footer-quote-panel {
   padding: 18px;
   border: 1px solid rgba(255, 245, 221, .18);

@@ -213,11 +213,15 @@
     width: 100% !important;
     min-width: 0 !important;
     max-width: 100% !important;
+    padding: 12px !important;
+    box-sizing: border-box !important;
+    overflow: hidden !important;
   }
 
   .route-date-card label,
   .route-date-card input,
   .route-date-card button {
+    display: block !important;
     width: 100% !important;
     min-width: 0 !important;
     max-width: 100% !important;
@@ -225,7 +229,12 @@
   }
 
   .route-date-card input {
+    appearance: none !important;
+    -webkit-appearance: none !important;
     min-height: 44px !important;
+    margin-top: 8px !important;
+    padding-right: 10px !important;
+    padding-left: 10px !important;
     font-size: .92rem !important;
   }
 
@@ -239,6 +248,13 @@
     display: grid !important;
     grid-template-columns: 1fr !important;
     gap: 12px !important;
+    overflow: hidden !important;
+  }
+
+  .route-hero > * {
+    min-width: 0 !important;
+    max-width: 100% !important;
+    box-sizing: border-box !important;
   }
 
   .dashboard-section.is-active {

@@ -1289,6 +1289,14 @@
         node.removeAttribute("aria-current");
       }
     });
+    if (state.activeSection === "route-planner" && routeMap) {
+      setTimeout(() => {
+        routeMap.invalidateSize();
+        if (!selectedRouteStops().some(hasRouteCoordinates)) {
+          routeMap.setView([45.5152, -122.6784], 11);
+        }
+      }, 80);
+    }
   }
 
   function matchesSearch(item) {
@@ -1429,12 +1437,16 @@
     routeMap = window.L.map(els.routeMap, {
       scrollWheelZoom: false,
       zoomControl: true
-    }).setView([45.5152, -122.6784], 10);
+    }).setView([45.5152, -122.6784], 11);
     window.L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
       maxZoom: 19,
       attribution: "&copy; OpenStreetMap contributors"
     }).addTo(routeMap);
     routeLayer = window.L.layerGroup().addTo(routeMap);
+    setTimeout(() => {
+      routeMap.invalidateSize();
+      routeMap.setView([45.5152, -122.6784], 11);
+    }, 80);
     return routeMap;
   }
 
@@ -1450,10 +1462,14 @@
     const missingPins = stops.filter((stop) => stop.address && !hasRouteCoordinates(stop));
     if (!stops.length) {
       els.routeMapStatus.textContent = "Add stops to preview today's route.";
+      map.setView([45.5152, -122.6784], 11);
+      setTimeout(() => map.invalidateSize(), 80);
       return;
     }
     if (!pinnedStops.length) {
       els.routeMapStatus.textContent = "Map pin needed.";
+      map.setView([45.5152, -122.6784], 11);
+      setTimeout(() => map.invalidateSize(), 80);
       return;
     }
     els.routeMapStatus.textContent = missingPins.length
@@ -1484,8 +1500,20 @@
         opacity: .75
       }).addTo(routeLayer);
     }
-    map.fitBounds(window.L.latLngBounds(latLngs).pad(.18));
-    setTimeout(() => map.invalidateSize(), 50);
+    map.invalidateSize();
+    if (latLngs.length === 1) {
+      map.setView(latLngs[0], 12);
+    } else {
+      map.fitBounds(window.L.latLngBounds(latLngs).pad(.18), { maxZoom: 12 });
+    }
+    setTimeout(() => {
+      map.invalidateSize();
+      if (latLngs.length === 1) {
+        map.setView(latLngs[0], 12);
+      } else {
+        map.fitBounds(window.L.latLngBounds(latLngs).pad(.18), { maxZoom: 12 });
+      }
+    }, 120);
   }
 
   function populatePropertyFilter(data) {

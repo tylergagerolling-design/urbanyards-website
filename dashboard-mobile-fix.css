@@ -63,11 +63,15 @@
   }
 
   .dashboard-topbar {
+    position: static !important;
     top: calc(64px + env(safe-area-inset-top)) !important;
+    z-index: auto !important;
     display: grid !important;
     grid-template-columns: 1fr !important;
     gap: 10px !important;
+    margin: 0 0 14px !important;
     padding: 10px !important;
+    transform: none !important;
   }
 
   .dashboard-topbar h2 {
@@ -105,6 +109,8 @@
     min-width: 0 !important;
     padding: 8px !important;
     overflow: visible !important;
+    align-self: stretch !important;
+    justify-self: stretch !important;
   }
 
   .topbar-actions input {
@@ -233,6 +239,39 @@
     display: grid !important;
     grid-template-columns: 1fr !important;
     gap: 12px !important;
+  }
+
+  .dashboard-section.is-active {
+    clear: both !important;
+    margin-top: 0 !important;
+    padding-top: 0 !important;
+  }
+
+  .home-hero,
+  .panel,
+  .operations-command,
+  .route-hero {
+    position: relative !important;
+    z-index: 0 !important;
+  }
+}
+
+@media (max-width: 430px), (hover: none) and (pointer: coarse) {
+  .dashboard-main {
+    padding-top: calc(72px + env(safe-area-inset-top)) !important;
+  }
+
+  .dashboard-topbar {
+    margin-bottom: 16px !important;
+  }
+
+  .topbar-actions {
+    grid-template-columns: 1fr !important;
+  }
+
+  .topbar-actions input,
+  .topbar-actions button {
+    width: 100% !important;
   }
 }
 

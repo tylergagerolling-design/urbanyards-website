@@ -3018,13 +3018,22 @@ button:active,
 .route-layout {
   display: grid;
   grid-template-columns: minmax(300px, 420px) minmax(0, 1fr);
+  grid-template-areas:
+    "form stops"
+    "form map";
   gap: 18px;
   align-items: start;
 }
 
 .route-form-panel {
+  grid-area: form;
   position: sticky;
   top: 126px;
+}
+
+.route-list-panel {
+  grid-area: stops;
+  min-width: 0;
 }
 
 .route-stop-form {
@@ -3153,8 +3162,9 @@ button:active,
 }
 
 .route-map-panel {
-  grid-column: 1 / -1;
+  grid-area: map;
   min-width: 0;
+  overflow: hidden;
 }
 
 .route-map-panel .panel-heading p {
@@ -3162,11 +3172,20 @@ button:active,
 }
 
 .route-map {
-  min-height: 360px;
+  width: 100%;
+  height: clamp(320px, 32vw, 420px);
+  min-height: 320px;
   overflow: hidden;
   border: 1px solid rgba(6, 27, 21, .12);
   border-radius: 8px;
   background: rgba(235, 244, 229, .75);
+}
+
+.route-map .leaflet-container,
+.leaflet-container.route-map {
+  width: 100%;
+  height: 100%;
+  border-radius: inherit;
 }
 
 .route-number-marker {
@@ -3192,6 +3211,10 @@ button:active,
   .route-hero,
   .route-layout {
     grid-template-columns: 1fr;
+    grid-template-areas:
+      "form"
+      "stops"
+      "map";
   }
 
   .route-form-panel {
@@ -3246,6 +3269,7 @@ button:active,
   }
 
   .route-map {
+    height: clamp(280px, 72vw, 340px);
     min-height: 280px;
   }
 }

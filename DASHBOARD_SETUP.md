@@ -160,6 +160,8 @@ create table route_stops (
   notes text,
   status text not null default 'Planned' check (status in ('Planned', 'In Progress', 'Complete')),
   stop_order integer not null default 1,
+  latitude double precision,
+  longitude double precision,
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
 );
@@ -271,9 +273,15 @@ create table if not exists route_stops (
   notes text,
   status text not null default 'Planned' check (status in ('Planned', 'In Progress', 'Complete')),
   stop_order integer not null default 1,
+  latitude double precision,
+  longitude double precision,
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
 );
+
+alter table route_stops
+  add column if not exists latitude double precision,
+  add column if not exists longitude double precision;
 
 alter table route_stops enable row level security;
 

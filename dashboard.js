@@ -47,6 +47,7 @@
   let demoIdCount = 100;
   let routeMap = null;
   let routeLayer = null;
+  const routeGeocodingIds = new Set();
 
   function qs(selector) {
     return document.querySelector(selector);
@@ -1106,6 +1107,57 @@
     return normalizeRouteStop(rows[0]);
   }
 
+  async function updateRouteStopCoordinates(id, coordinates) {
+    const latitude = Number(coordinates?.lat);
+    const longitude = Number(coordinates?.lng);
+    if (!Number.isFinite(latitude) || !Number.isFinite(longitude)) {
+      throw new Error("Map lookup did not return usable coordinates.");
+    }
+
+    if (isDemoMode()) {
+      const stop = state.data.routeStops.find((item) => item.id === id);
+      if (stop) {
+        stop.latitude = latitude;
+        stop.longitude = longitude;
+        stop.updatedAt = formatDate(new Date().toISOString());
+      }
+      return stop;
+    }
+
+    const rows = await supabaseRestRequest(`route_stops?id=eq.${encodeURIComponent(id)}`, {
+      method: "PATCH",
+      headers: { Prefer: "return=representation" },
+      body: JSON.stringify({
+        latitude,
+        longitude,
+        updated_at: new Date().toISOString()
+      })
+    });
+    return normalizeRouteStop(rows[0]);
+  }
+
+  async function clearRouteStopCoordinates(id) {
+    if (isDemoMode()) {
+      const stop = state.data.routeStops.find((item) => item.id === id);
+      if (stop) {
+        stop.latitude = null;
+        stop.longitude = null;
+        stop.updatedAt = formatDate(new Date().toISOString());
+      }
+      return;
+    }
+
+    await supabaseRestRequest(`route_stops?id=eq.${encodeURIComponent(id)}`, {
+      method: "PATCH",
+      headers: { Prefer: "return=minimal" },
+      body: JSON.stringify({
+        latitude: null,
+        longitude: null,
+        updated_at: new Date().toISOString()
+      })
+    });
+  }
+
   async function updateRouteStopStatus(id, status) {
     if (!ROUTE_STATUSES.includes(status)) throw new Error("Invalid route status.");
     if (isDemoMode()) {
@@ -1380,6 +1432,42 @@
       status: String(formData.get("status") || "Planned"),
       notes: String(formData.get("notes") || "").trim()
     };
+  }
+
+  function normalizedRouteLookupAddress(address) {
+    const compact = String(address || "").replace(/\s+/g, " ").trim();
+    if (!compact) return "";
+    const hasCityOrState = /\b(portland|beaverton|vancouver)\b/i.test(compact) || /\b(or|oregon|wa|washington)\b/i.test(compact);
+    return hasCityOrState ? compact : `${compact}, Portland, OR`;
+  }
+
+  async function geocodeRouteAddress(address) {
+    const normalizedAddress = normalizedRouteLookupAddress(address);
+    if (!normalizedAddress) throw new Error("Add an address before looking up a map pin.");
+
+    const response = await fetch("/.netlify/functions/route-geocode", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ address: normalizedAddress })
+    });
+    const payload = await response.json().catch(() => ({}));
+    if (!response.ok) {
+      throw new Error(payload.error || "Unable to find a map pin for this address.");
+    }
+    return payload;
+  }
+
+  async function geocodeAndStoreRouteStop(stop) {
+    if (!stop || !stop.id || !stop.address) return null;
+    routeGeocodingIds.add(stop.id);
+    renderRoutePlanner();
+    try {
+      const coordinates = await geocodeRouteAddress(stop.address);
+      const updated = await updateRouteStopCoordinates(stop.id, coordinates);
+      return updated || { ...stop, latitude: coordinates.lat, longitude: coordinates.lng };
+    } finally {
+      routeGeocodingIds.delete(stop.id);
+    }
   }
 
   function resetRouteForm() {
@@ -1900,8 +1988,11 @@
       return;
     }
 
-    els.routeStops.innerHTML = stops.map((stop, index) => `
-      <article class="route-stop-card route-stop-${slug(stop.status)} ${state.selectedRouteStopId === stop.id ? "is-selected" : ""}" data-route-stop-card data-action="select-route-stop" data-id="${escapeHtml(stop.id)}">
+    els.routeStops.innerHTML = stops.map((stop, index) => {
+      const isFindingPin = routeGeocodingIds.has(stop.id);
+      const needsPin = stop.address && !hasRouteCoordinates(stop);
+      return `
+      <article class="route-stop-card route-stop-${slug(stop.status)} ${state.selectedRouteStopId === stop.id ? "is-selected" : ""} ${isFindingPin ? "is-finding-pin" : ""}" data-route-stop-card data-action="select-route-stop" data-id="${escapeHtml(stop.id)}">
         <div class="route-stop-order">
           <span>${index + 1}</span>
         </div>
@@ -1914,19 +2005,21 @@
             ${routeStatusSelect(stop.id, stop.status)}
           </div>
           <p class="route-address">${escapeHtml(stop.address)}</p>
-          ${stop.address && !hasRouteCoordinates(stop) ? `<p class="route-pin-needed">Map pin needed.</p>` : ""}
+          ${isFindingPin ? `<p class="route-pin-needed route-pin-loading">Finding map pin...</p>` : ""}
+          ${needsPin && !isFindingPin ? `<p class="route-pin-needed">Map pin needed.</p>` : ""}
           <p class="small">${escapeHtml(stop.notes || "No notes yet.")}</p>
           <div class="route-stop-actions">
             <button class="inline-action" type="button" data-action="move-route-up" data-id="${escapeHtml(stop.id)}"${index === 0 ? " disabled" : ""}>${buttonContent("Up", "move-route-up")}</button>
             <button class="inline-action" type="button" data-action="move-route-down" data-id="${escapeHtml(stop.id)}"${index === stops.length - 1 ? " disabled" : ""}>${buttonContent("Down", "move-route-down")}</button>
             <button class="inline-action" type="button" data-action="mark-route-complete" data-id="${escapeHtml(stop.id)}">${buttonContent("Mark Complete", "mark-route-complete")}</button>
-            ${stop.address && !hasRouteCoordinates(stop) ? `<button class="inline-action" type="button" data-action="find-stop-map" data-id="${escapeHtml(stop.id)}">${buttonContent("Find on Map", "open-route-map")}</button>` : ""}
+            ${needsPin ? `<button class="inline-action" type="button" data-action="retry-stop-map" data-id="${escapeHtml(stop.id)}"${isFindingPin ? " disabled" : ""}>${buttonContent(isFindingPin ? "Finding..." : "Retry Map Lookup", "open-route-map")}</button>` : ""}
             <button class="inline-action" type="button" data-action="edit-route-stop" data-id="${escapeHtml(stop.id)}">${buttonContent("Edit", "edit-route-stop")}</button>
             <button class="inline-action danger-action" type="button" data-action="delete-route-stop" data-id="${escapeHtml(stop.id)}">${buttonContent("Delete", "delete-route-stop")}</button>
           </div>
         </div>
       </article>
-    `).join("");
+    `;
+    }).join("");
     renderRouteMap(stops);
   }
 
@@ -3051,10 +3144,18 @@
       } else if (action === "select-route-stop") {
         state.selectedRouteStopId = id;
         renderRoutePlanner();
-      } else if (action === "find-stop-map") {
+      } else if (action === "retry-stop-map" || action === "find-stop-map") {
         const stop = findRouteStop(id);
-        if (stop && stop.address) {
-          window.open(`https://www.openstreetmap.org/search?query=${encodeURIComponent(stop.address)}`, "_blank", "noopener");
+        if (!stop || !stop.address) return;
+        try {
+          setDashboardState("Finding map pin...");
+          await geocodeAndStoreRouteStop(stop);
+          await refreshDashboard();
+          setDashboardState("");
+        } catch (error) {
+          routeGeocodingIds.delete(id);
+          renderRoutePlanner();
+          setDashboardState(error.message || "Unable to find a map pin for this stop.", "error");
         }
       } else if (action === "open-route-map") {
         const url = routeMapsUrl();
@@ -3425,18 +3526,40 @@
         const payload = routeStopFormPayload(event.target);
         if (!payload.client_name || !payload.address || !payload.service_type) return;
         const id = String(new FormData(event.target).get("route_stop_id") || "");
+        const existingStop = id ? findRouteStop(id) : null;
+        const addressChanged = existingStop && normalizedRouteLookupAddress(existingStop.address) !== normalizedRouteLookupAddress(payload.address);
+        let savedStop = null;
+        let pinWarning = "";
         try {
           setDashboardState(id ? "Saving route stop..." : "Adding route stop...");
           if (id) {
-            await updateRouteStop(id, payload);
+            savedStop = await updateRouteStop(id, payload);
+            if (addressChanged) {
+              try {
+                await clearRouteStopCoordinates(id);
+                savedStop = { ...savedStop, latitude: null, longitude: null };
+              } catch (error) {
+                console.warn("Unable to clear old route coordinates.", error);
+              }
+            }
           } else {
-            await insertRouteStop(payload);
+            savedStop = await insertRouteStop(payload);
+          }
+          if (savedStop?.address && (!hasRouteCoordinates(savedStop) || addressChanged)) {
+            try {
+              setDashboardState("Finding map pin...");
+              await geocodeAndStoreRouteStop(savedStop);
+            } catch (error) {
+              pinWarning = error.message || "Stop saved, but the map pin lookup failed.";
+              routeGeocodingIds.delete(savedStop.id);
+            }
           }
           resetRouteForm();
           await refreshDashboard();
           setActiveSection("route-planner");
-          setDashboardState("");
+          setDashboardState(pinWarning ? `${pinWarning} Use Retry Map Lookup on the stop card.` : "");
         } catch (error) {
+          if (savedStop?.id) routeGeocodingIds.delete(savedStop.id);
           setDashboardState(error.message || "Unable to save route stop.", "error");
         }
       } else if (event.target.matches("[data-contact-edit]")) {

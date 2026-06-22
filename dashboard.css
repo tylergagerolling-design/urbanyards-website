@@ -3145,6 +3145,12 @@ button:active,
   font-weight: 900;
 }
 
+.route-pin-loading {
+  border-color: rgba(47, 107, 79, .28);
+  background: rgba(236, 246, 228, .9);
+  color: var(--studio-forest);
+}
+
 .route-stop-actions {
   display: flex;
   flex-wrap: wrap;

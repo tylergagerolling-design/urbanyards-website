@@ -8,12 +8,14 @@ create table if not exists operations_records (
   created_at timestamptz not null default now(),
   record_type text not null,
   title text not null,
-  client_name text,
-  property_address text,
-  due_date date,
+  description text,
   status text not null default 'Active',
+  priority text default 'Normal',
+  due_date date,
+  completed_at timestamptz,
   notes text,
-  payload jsonb not null default '{}'::jsonb
+  constraint operations_records_status_check check (status in ('Active', 'Completed', 'Follow-up needed', 'Archived')),
+  constraint operations_records_priority_check check (priority in ('Low', 'Normal', 'High'))
 );
 
 alter table operations_records enable row level security;

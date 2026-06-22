@@ -98,7 +98,10 @@
       "edit-job": "/",
       "edit-route-stop": "/",
       "go-calendar": "+",
+      "go-contacts": "-&gt;",
+      "go-documents": "$",
       "go-route-planner": "M",
+      "go-settings": "-&gt;",
       "mark-route-complete": "OK",
       "move-route-down": "v",
       "move-route-up": "^",
@@ -108,6 +111,7 @@
       "open-submission": "-&gt;",
       "print-document": "PDF",
       "quick-add-job": "+",
+      "quick-add-operation": "+",
       "quick-add-quote": "+",
       "sync-contact": "~",
       "sync-square-document": "~"
@@ -318,13 +322,16 @@
   function normalizeOperation(row) {
     return {
       id: row.id,
-      type: row.record_type || "property_profile",
+      type: row.record_type || "admin_task",
       title: row.title || "Untitled operation",
-      clientName: row.client_name || "",
-      propertyAddress: row.property_address || "",
+      clientName: row.client_name || row.description || "",
+      propertyAddress: row.property_address || row.description || "",
+      description: row.description || row.property_address || row.client_name || "",
       dueDate: formatDate(row.due_date),
       dueDateRaw: row.due_date || "",
       status: row.status || "Active",
+      priority: row.priority || row.payload?.priority || "Normal",
+      completedAt: row.completed_at ? formatDate(row.completed_at) : "",
       notes: row.notes || "",
       payload: row.payload && typeof row.payload === "object" ? row.payload : {},
       createdAt: formatDate(row.created_at)
@@ -493,9 +500,9 @@
         })
       ],
       operations: [
-        normalizeOperation({ id: "demo-operation-1", record_type: "property_profile", title: "Hannah Edge site profile", client_name: "Hannah Edge", property_address: "SE Portland apartment community", due_date: daysFromToday(2), status: "Active", notes: "Gate code, courtyard slope, irrigation heads along east walk.", payload: {}, created_at: now }),
-        normalizeOperation({ id: "demo-operation-2", record_type: "job_checklist", title: "Friday recurring visit checklist", client_name: "Hannah Edge", property_address: "Courtyard and frontage", due_date: daysFromToday(4), status: "Follow-up needed", notes: "Mow, edge, blow, weeds at entry, check pressure wash stain.", payload: {}, created_at: now }),
-        normalizeOperation({ id: "demo-operation-3", record_type: "daily_route", title: "Test daily route", client_name: "Urban Yards", property_address: "Portland / Beaverton / Vancouver", due_date: today, status: "Active", notes: "Use Route Planner tab to reorder stops and open Google Maps.", payload: {}, created_at: now })
+        normalizeOperation({ id: "demo-operation-1", record_type: "client_follow_up", title: "Call Hannah about estimate", description: "Hannah Edge", due_date: today, status: "Follow-up needed", priority: "High", notes: "Confirm scope and next visit window.", created_at: now }),
+        normalizeOperation({ id: "demo-operation-2", record_type: "maintenance_reminder", title: "Friday recurring visit checklist", description: "Courtyard and frontage", due_date: daysFromToday(4), status: "Active", priority: "Normal", notes: "Mow, edge, blow, weeds at entry, check pressure wash stain.", created_at: now }),
+        normalizeOperation({ id: "demo-operation-3", record_type: "equipment_reminder", title: "Sharpen mower blades", description: "Equipment", due_date: daysFromToday(2), status: "Active", priority: "Normal", notes: "Do before next full mowing route.", created_at: now })
       ],
       routeStops: [
         normalizeRouteStop({ id: "demo-route-1", route_date: today, client_name: "Hannah Edge", address: "SE Division St, Portland, OR", service_type: "Groundskeeping", estimated_minutes: 75, notes: "Start with courtyard before residents return.", status: "Planned", stop_order: 1, created_at: now, updated_at: now }),
@@ -947,11 +954,32 @@
       return operation;
     }
 
-    const rows = await supabaseRestRequest("operations_records", {
-      method: "POST",
-      headers: { Prefer: "return=representation" },
-      body: JSON.stringify(payload)
-    });
+    let rows;
+    try {
+      rows = await supabaseRestRequest("operations_records", {
+        method: "POST",
+        headers: { Prefer: "return=representation" },
+        body: JSON.stringify(payload)
+      });
+    } catch (error) {
+      if (!/description|priority|completed_at/i.test(error.message || "")) {
+        throw error;
+      }
+      rows = await supabaseRestRequest("operations_records", {
+        method: "POST",
+        headers: { Prefer: "return=representation" },
+        body: JSON.stringify({
+          record_type: payload.record_type,
+          title: payload.title,
+          client_name: payload.description || null,
+          property_address: payload.description || null,
+          due_date: payload.due_date || null,
+          status: payload.status || "Active",
+          notes: payload.notes || "",
+          payload: { priority: payload.priority || "Normal" }
+        })
+      });
+    }
     return normalizeOperation(rows[0]);
   }
 
@@ -1282,13 +1310,12 @@
   function operationFilterGroups() {
     return [
       ["All", "All"],
-      ["property_profile", "Properties"],
-      ["recurring_job", "Recurring"],
-      ["job_checklist", "Checklists"],
-      ["inspection_note", "Inspections"],
-      ["maintenance_plan", "Plans"],
-      ["estimate_approval", "Approvals"],
-      ["daily_route", "Routes"]
+      ["daily_check", "Daily"],
+      ["property_issue", "Issues"],
+      ["client_follow_up", "Follow-ups"],
+      ["admin_task", "Admin"],
+      ["equipment_reminder", "Equipment"],
+      ["maintenance_reminder", "Maintenance"]
     ];
   }
 
@@ -1469,23 +1496,136 @@
       .join(" ");
   }
 
+  function isOperationOpen(item) {
+    return !["Completed", "Paid", "Archived"].includes(item.status);
+  }
+
+  function operationCommandItems(data) {
+    const today = todayKey();
+    const tomorrow = daysFromToday(1);
+    const weekEnd = daysFromToday(7);
+    const commands = [];
+    const pushCommand = (item) => {
+      if (commands.length < 8) commands.push(item);
+    };
+
+    const newQuotes = data.submissions.filter((item) => item.status === "New");
+    if (newQuotes.length) {
+      pushCommand({
+        label: "New lead review",
+        title: `${newQuotes.length} quote request${newQuotes.length === 1 ? "" : "s"} need first contact`,
+        detail: newQuotes.slice(0, 2).map((item) => item.name).join(", "),
+        action: "quick-add-quote",
+        actionLabel: "Open Leads",
+        type: "client_follow_up",
+        priority: "High"
+      });
+    }
+
+    const overdueReminders = data.reminders.filter((item) => item.dueRaw && item.dueRaw < today && item.status !== "Completed");
+    if (overdueReminders.length) {
+      pushCommand({
+        label: "Overdue follow-up",
+        title: `${overdueReminders.length} reminder${overdueReminders.length === 1 ? "" : "s"} overdue`,
+        detail: overdueReminders[0].task,
+        action: "go-settings",
+        actionLabel: "Open Reminders",
+        type: "client_follow_up",
+        priority: "High"
+      });
+    }
+
+    const todaysJobs = data.jobs.filter((job) => job.dateRaw === today);
+    const tomorrowJobs = data.jobs.filter((job) => job.dateRaw === tomorrow);
+    if (todaysJobs.length || tomorrowJobs.length) {
+      pushCommand({
+        label: "Schedule check",
+        title: todaysJobs.length ? `${todaysJobs.length} job${todaysJobs.length === 1 ? "" : "s"} today` : `${tomorrowJobs.length} job${tomorrowJobs.length === 1 ? "" : "s"} tomorrow`,
+        detail: (todaysJobs[0] || tomorrowJobs[0]).site,
+        action: "go-calendar",
+        actionLabel: "Open Work",
+        type: "daily_check",
+        priority: "Normal"
+      });
+    }
+
+    const routeStopsToday = data.routeStops.filter((stop) => stop.routeDate === today);
+    const incompleteStops = routeStopsToday.filter((stop) => stop.status !== "Complete");
+    if (incompleteStops.length) {
+      pushCommand({
+        label: "Route status",
+        title: `${incompleteStops.length} route stop${incompleteStops.length === 1 ? "" : "s"} still open`,
+        detail: incompleteStops[0].clientName,
+        action: "go-route-planner",
+        actionLabel: "Open Route",
+        type: "daily_check",
+        priority: "Normal"
+      });
+    }
+
+    const unpaidInvoices = data.documents.filter((doc) => doc.type === "invoice" && doc.status !== "paid");
+    const overdueInvoices = unpaidInvoices.filter((doc) => doc.dueDateRaw && doc.dueDateRaw < today);
+    if (overdueInvoices.length || unpaidInvoices.length) {
+      const invoices = overdueInvoices.length ? overdueInvoices : unpaidInvoices;
+      pushCommand({
+        label: overdueInvoices.length ? "Invoice issue" : "Payment follow-up",
+        title: `${invoices.length} invoice${invoices.length === 1 ? "" : "s"} need attention`,
+        detail: invoices[0].clientName,
+        action: "go-documents",
+        actionLabel: "Open Money",
+        type: "admin_task",
+        priority: overdueInvoices.length ? "High" : "Normal"
+      });
+    }
+
+    const incompleteContacts = data.contacts.filter((contact) => contact.email === "No email" || contact.phone === "No phone");
+    if (incompleteContacts.length) {
+      pushCommand({
+        label: "Client data",
+        title: `${incompleteContacts.length} contact${incompleteContacts.length === 1 ? "" : "s"} missing details`,
+        detail: incompleteContacts[0].name,
+        action: "go-contacts",
+        actionLabel: "Open Clients",
+        type: "admin_task",
+        priority: "Low"
+      });
+    }
+
+    const dueOperations = data.operations.filter((item) => item.dueDateRaw && item.dueDateRaw <= weekEnd && isOperationOpen(item));
+    if (dueOperations.length) {
+      pushCommand({
+        label: "Saved ops",
+        title: `${dueOperations.length} operation record${dueOperations.length === 1 ? "" : "s"} due soon`,
+        detail: dueOperations[0].title,
+        action: "quick-add-operation",
+        actionLabel: "Add Record",
+        type: "daily_check",
+        priority: "Normal"
+      });
+    }
+
+    return commands;
+  }
+
   function renderOperations(data) {
     if (!els.operationsSummary || !els.operationsList) return;
     const today = todayKey();
     const weekEnd = daysFromToday(7);
     const unpaidInvoices = data.documents.filter((doc) => doc.type === "invoice" && doc.status !== "paid");
     const overdueInvoices = unpaidInvoices.filter((doc) => doc.dueDateRaw && doc.dueDateRaw < today);
-    const routeJobs = data.jobs.filter((job) => job.dateRaw >= today && job.dateRaw <= weekEnd);
+    const jobsThisWeek = data.jobs.filter((job) => job.dateRaw >= today && job.dateRaw <= weekEnd);
     const pendingQuotes = data.submissions.filter((item) => ["New", "Contacted"].includes(item.status));
-    const openOperations = data.operations.filter((item) => !["Completed", "Paid", "Archived"].includes(item.status));
-    const dueOperations = data.operations.filter((item) => item.dueDateRaw && item.dueDateRaw <= weekEnd && !["Completed", "Paid", "Archived"].includes(item.status));
+    const openOperations = data.operations.filter(isOperationOpen);
+    const dueOperations = data.operations.filter((item) => item.dueDateRaw && item.dueDateRaw <= weekEnd && isOperationOpen(item));
     const routeStopsToday = data.routeStops.filter((stop) => stop.routeDate === today);
+    const overdueReminders = data.reminders.filter((item) => item.dueRaw && item.dueRaw < today && item.status !== "Completed");
+    const commandItems = operationCommandItems(data);
     const healthCards = [
-      ["Open records", openOperations.length, "Active operation items"],
-      ["Due this week", dueOperations.length, "Items needing attention"],
-      ["Route stops today", routeStopsToday.length, "Planned stops"],
-      ["Pending approvals", pendingQuotes.length, "Quotes to move forward"],
-      ["Invoice issues", overdueInvoices.length, "Overdue invoices"]
+      ["Action queue", commandItems.length, "Smart items from all tabs"],
+      ["Open ops", openOperations.length, "Saved operation records"],
+      ["Jobs this week", jobsThisWeek.length, "Scheduled visits"],
+      ["Pending leads", pendingQuotes.length, "Quotes to move forward"],
+      ["Money watch", overdueInvoices.length || unpaidInvoices.length, overdueInvoices.length ? "Overdue invoices" : "Open invoices"]
     ];
 
     if (els.operationsHealth) {
@@ -1498,6 +1638,26 @@
       `).join("");
     }
 
+    if (els.operationsCommandList) {
+      if (!commandItems.length) {
+        els.operationsCommandList.innerHTML = emptyState("No urgent cross-tab actions right now. Use New Record to capture an issue, reminder, or admin task.");
+      } else {
+        els.operationsCommandList.innerHTML = commandItems.map((item) => `
+          <article class="operations-command-item priority-${slug(item.priority)}">
+            <div>
+              <p class="eyebrow">${escapeHtml(item.label)}</p>
+              <h4>${escapeHtml(item.title)}</h4>
+              <p>${escapeHtml(item.detail || "Review and decide the next step.")}</p>
+            </div>
+            <div class="operations-command-item-actions">
+              <button class="inline-action" type="button" data-action="prefill-operation" data-type="${escapeHtml(item.type)}" data-title="${escapeHtml(item.title)}" data-priority="${escapeHtml(item.priority)}" data-notes="${escapeHtml(item.detail || "")}">${buttonContent("Save Ops Task", "quick-add-operation")}</button>
+              <button class="inline-action" type="button" data-action="${escapeHtml(item.action)}">${buttonContent(item.actionLabel, item.action)}</button>
+            </div>
+          </article>
+        `).join("");
+      }
+    }
+
     if (els.operationsFilterPills) {
       els.operationsFilterPills.innerHTML = operationFilterGroups().map(([value, label]) => {
         const isActive = state.operationsFilter === value;
@@ -1506,14 +1666,12 @@
     }
 
     const featureCards = [
-      ["Property profile", "Site details, access, preferences, plant notes", "property_profile", data.contacts.length],
-      ["Recurring service", "Track repeat work and maintenance rhythm", "recurring_job", routeJobs.length],
-      ["Job checklist", "Turn repeat field tasks into a checklist", "job_checklist", data.jobs.length],
-      ["Inspection note", "Soil, drainage, plant health, repair flags", "inspection_note", dueOperations.length],
-      ["Maintenance plan", "Plan seasonal work and care cadence", "maintenance_plan", openOperations.length],
-      ["Estimate approval", "Track decision, next step, and follow-up", "estimate_approval", pendingQuotes.length],
-      ["Daily route note", "Route context, access issues, or field timing", "daily_route", routeStopsToday.length],
-      ["Completion report", "End-of-job notes, photos, and next action", "completion_report", data.jobs.filter((job) => job.status === "Completed").length]
+      ["Daily check", "Review leads, route, schedule, invoices, and follow-ups", "daily_check", commandItems.length],
+      ["Property issue", "Gate codes, access problems, site concerns, or complaints", "property_issue", openOperations.filter((item) => item.type === "property_issue").length],
+      ["Client follow-up", "Calls, emails, approvals, and next-step reminders", "client_follow_up", pendingQuotes.length + overdueReminders.length],
+      ["Admin task", "Insurance, billing, paperwork, exports, and account work", "admin_task", unpaidInvoices.length],
+      ["Equipment reminder", "Blade sharpening, fuel, string, tools, and restock tasks", "equipment_reminder", openOperations.filter((item) => item.type === "equipment_reminder").length],
+      ["Maintenance reminder", "Recurring quality checks and seasonal property work", "maintenance_reminder", jobsThisWeek.length]
     ];
     els.operationsSummary.innerHTML = featureCards.map(([title, detail, type, count]) => `
       <button class="operation-feature operation-feature-${escapeHtml(type)}" type="button" data-action="prefill-operation" data-type="${escapeHtml(type)}" data-title="${escapeHtml(title)}">
@@ -1549,7 +1707,7 @@
           </div>
         </div>
         <p class="item-body">${escapeHtml(item.propertyAddress || "")}</p>
-        <p class="small">${escapeHtml(item.notes || "No notes yet.")}</p>
+        <p class="small">${escapeHtml(item.priority || "Normal")} priority / ${escapeHtml(item.notes || "No notes yet.")}</p>
         <div class="operation-card-footer">
           <span>${isDue ? "Needs attention" : "Logged"}</span>
           <span>${escapeHtml(item.createdAt)}</span>
@@ -2610,6 +2768,15 @@
         history.replaceState(null, "", "#calendar");
         const input = qs("[data-job-create-form] input[name='site_name']");
         if (input) input.focus();
+      } else if (action === "go-documents") {
+        setActiveSection("documents");
+        history.replaceState(null, "", "#documents");
+      } else if (action === "go-settings") {
+        setActiveSection("settings");
+        history.replaceState(null, "", "#settings");
+      } else if (action === "go-contacts") {
+        setActiveSection("contacts");
+        history.replaceState(null, "", "#contacts");
       } else if (action === "set-operation-filter") {
         state.operationsFilter = target.dataset.filter || "All";
         if (els.operationsFilter) els.operationsFilter.value = state.operationsFilter;
@@ -2619,9 +2786,11 @@
         history.replaceState(null, "", "#operations");
         const form = qs("[data-operations-form]");
         if (form) {
-          form.record_type.value = target.dataset.type || "property_profile";
+          form.record_type.value = target.dataset.type || "admin_task";
           form.title.value = target.dataset.title || "";
-          form.status.value = target.dataset.type === "estimate_approval" ? "Follow-up needed" : "Active";
+          if (form.elements.description) form.elements.description.value = target.dataset.notes || "";
+          if (form.elements.priority) form.elements.priority.value = target.dataset.priority || "Normal";
+          form.status.value = target.dataset.type === "client_follow_up" ? "Follow-up needed" : "Active";
           form.notes.focus();
         }
       } else if (action === "open-route-map") {
@@ -2951,14 +3120,14 @@
         try {
           setDashboardState("Saving operation...");
           await insertOperation({
-            record_type: String(formData.get("record_type") || "property_profile"),
+            record_type: String(formData.get("record_type") || "admin_task"),
             title: String(formData.get("title") || ""),
-            client_name: String(formData.get("client_name") || "") || null,
-            property_address: String(formData.get("property_address") || "") || null,
+            description: String(formData.get("description") || "") || null,
             due_date: String(formData.get("due_date") || "") || null,
             status: String(formData.get("status") || "Active"),
-            notes: String(formData.get("notes") || ""),
-            payload: {}
+            priority: String(formData.get("priority") || "Normal"),
+            completed_at: String(formData.get("status") || "") === "Completed" ? new Date().toISOString() : null,
+            notes: String(formData.get("notes") || "")
           });
           event.target.reset();
           await refreshDashboard();
@@ -3077,6 +3246,7 @@
     els.operationsList = qs("[data-operations-list]");
     els.operationsHealth = qs("[data-operations-health]");
     els.operationsFilterPills = qs("[data-operations-filter-pills]");
+    els.operationsCommandList = qs("[data-operations-command-list]");
     els.routeDate = qs("[data-route-date]");
     els.routeForm = qs("[data-route-form]");
     els.routeSubmit = qs("[data-route-submit]");

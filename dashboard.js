@@ -3,6 +3,7 @@
 
   const STATUSES = ["New", "Contacted", "Scheduled", "Completed", "Invoiced"];
   const ROUTE_STATUSES = ["Planned", "In Progress", "Complete"];
+  const COMMAND_CATEGORIES = ["task", "client", "payment", "deadline", "equipment"];
   const SESSION_KEY = "urbanYardsDashboardSession";
   const DEMO_QUERY_KEYS = ["demo", "test"];
 
@@ -17,8 +18,10 @@
     statusFilter: "All",
     calendarFilter: "All",
     calendarView: "agenda",
+    calendarRangeOffset: 0,
     operationsFilter: "All",
     routeDate: todayKey(),
+    selectedRouteStopId: "",
     search: "",
     propertyFilter: "All",
     selectedSubmissionId: "",
@@ -42,6 +45,8 @@
 
   const els = {};
   let demoIdCount = 100;
+  let routeMap = null;
+  let routeLayer = null;
 
   function qs(selector) {
     return document.querySelector(selector);
@@ -64,6 +69,11 @@
     return String(value).toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
   }
 
+  function cssEscape(value) {
+    if (window.CSS && typeof window.CSS.escape === "function") return window.CSS.escape(String(value));
+    return String(value).replace(/["\\]/g, "\\$&");
+  }
+
   function statusBadge(status) {
     const safeStatus = STATUSES.includes(status) ? status : "New";
     return `<span class="status status-${slug(safeStatus)}">${escapeHtml(safeStatus)}</span>`;
@@ -84,6 +94,8 @@
   function buttonContent(label, action) {
     const icons = {
       "cancel-job": "x",
+      "clear-demo-data": "x",
+      "complete-operation": "OK",
       "complete-reminder": "OK",
       "create-estimate": "+",
       "create-invoice": "$",
@@ -97,6 +109,8 @@
       "delete-submission": "x",
       "edit-job": "/",
       "edit-route-stop": "/",
+      "export-full-backup": "JSON",
+      "find-stop-map": "M",
       "go-calendar": "+",
       "go-contacts": "-&gt;",
       "go-documents": "$",
@@ -235,6 +249,17 @@
     return date.toISOString().slice(0, 10);
   }
 
+  function addDaysKey(value, count) {
+    const date = new Date(`${value}T12:00:00`);
+    date.setDate(date.getDate() + count);
+    return date.toISOString().slice(0, 10);
+  }
+
+  function monthLabel(value) {
+    const date = new Date(`${value}T12:00:00`);
+    return date.toLocaleDateString("en-US", { month: "long", year: "numeric" });
+  }
+
   function isDemoMode() {
     const params = new URLSearchParams(window.location.search);
     return DEMO_QUERY_KEYS.some((key) => ["1", "true", "yes"].includes(String(params.get(key) || "").toLowerCase()));
@@ -320,16 +345,25 @@
   }
 
   function normalizeOperation(row) {
+    const legacyTypeMap = {
+      daily_check: "task",
+      property_issue: "task",
+      client_follow_up: "client",
+      admin_task: "task",
+      equipment_reminder: "equipment",
+      maintenance_reminder: "deadline"
+    };
+    const rawType = row.record_type || "task";
     return {
       id: row.id,
-      type: row.record_type || "admin_task",
+      type: COMMAND_CATEGORIES.includes(rawType) ? rawType : legacyTypeMap[rawType] || "task",
       title: row.title || "Untitled operation",
       clientName: row.client_name || row.description || "",
       propertyAddress: row.property_address || row.description || "",
       description: row.description || row.property_address || row.client_name || "",
       dueDate: formatDate(row.due_date),
       dueDateRaw: row.due_date || "",
-      status: row.status || "Active",
+      status: row.status === "Active" || row.status === "Follow-up needed" ? "Open" : row.status === "Completed" ? "Done" : row.status || "Open",
       priority: row.priority || row.payload?.priority || "Normal",
       completedAt: row.completed_at ? formatDate(row.completed_at) : "",
       notes: row.notes || "",
@@ -340,6 +374,8 @@
 
   function normalizeRouteStop(row) {
     const estimatedMinutes = Number(row.estimated_minutes || 0);
+    const latitude = Number(row.latitude ?? row.lat ?? row.payload?.latitude);
+    const longitude = Number(row.longitude ?? row.lng ?? row.payload?.longitude);
     return {
       id: row.id,
       routeDate: row.route_date || "",
@@ -350,6 +386,8 @@
       notes: row.notes || "",
       status: ROUTE_STATUSES.includes(row.status) ? row.status : "Planned",
       stopOrder: Number(row.stop_order || 0),
+      latitude: Number.isFinite(latitude) ? latitude : null,
+      longitude: Number.isFinite(longitude) ? longitude : null,
       createdAt: formatDate(row.created_at),
       updatedAt: formatDate(row.updated_at)
     };
@@ -500,14 +538,14 @@
         })
       ],
       operations: [
-        normalizeOperation({ id: "demo-operation-1", record_type: "client_follow_up", title: "Call Hannah about estimate", description: "Hannah Edge", due_date: today, status: "Follow-up needed", priority: "High", notes: "Confirm scope and next visit window.", created_at: now }),
-        normalizeOperation({ id: "demo-operation-2", record_type: "maintenance_reminder", title: "Friday recurring visit checklist", description: "Courtyard and frontage", due_date: daysFromToday(4), status: "Active", priority: "Normal", notes: "Mow, edge, blow, weeds at entry, check pressure wash stain.", created_at: now }),
-        normalizeOperation({ id: "demo-operation-3", record_type: "equipment_reminder", title: "Sharpen mower blades", description: "Equipment", due_date: daysFromToday(2), status: "Active", priority: "Normal", notes: "Do before next full mowing route.", created_at: now })
+        normalizeOperation({ id: "demo-operation-1", record_type: "client", title: "Call Hannah about estimate", description: "Hannah Edge", due_date: today, status: "Waiting", priority: "High", notes: "Confirm scope and next visit window.", created_at: now }),
+        normalizeOperation({ id: "demo-operation-2", record_type: "deadline", title: "Friday recurring visit checklist", description: "Courtyard and frontage", due_date: daysFromToday(4), status: "Open", priority: "Normal", notes: "Mow, edge, blow, weeds at entry, check pressure wash stain.", created_at: now }),
+        normalizeOperation({ id: "demo-operation-3", record_type: "equipment", title: "Sharpen mower blades", description: "Equipment", due_date: daysFromToday(2), status: "Open", priority: "Normal", notes: "Do before next full mowing route.", created_at: now })
       ],
       routeStops: [
-        normalizeRouteStop({ id: "demo-route-1", route_date: today, client_name: "Hannah Edge", address: "SE Division St, Portland, OR", service_type: "Groundskeeping", estimated_minutes: 75, notes: "Start with courtyard before residents return.", status: "Planned", stop_order: 1, created_at: now, updated_at: now }),
-        normalizeRouteStop({ id: "demo-route-2", route_date: today, client_name: "Mason Lee", address: "Beaverton, OR", service_type: "Cleanup estimate", estimated_minutes: 45, notes: "Take photos and measure bed edges.", status: "In Progress", stop_order: 2, created_at: now, updated_at: now }),
-        normalizeRouteStop({ id: "demo-route-3", route_date: today, client_name: "River Court HOA", address: "Vancouver, WA", service_type: "Site walk", estimated_minutes: 60, notes: "Review frontage and shared pond edge.", status: "Planned", stop_order: 3, created_at: now, updated_at: now })
+        normalizeRouteStop({ id: "demo-route-1", route_date: today, client_name: "Hannah Edge", address: "SE Division St, Portland, OR", service_type: "Groundskeeping", estimated_minutes: 75, notes: "Start with courtyard before residents return.", status: "Planned", stop_order: 1, latitude: 45.5045, longitude: -122.6235, created_at: now, updated_at: now }),
+        normalizeRouteStop({ id: "demo-route-2", route_date: today, client_name: "Mason Lee", address: "Beaverton, OR", service_type: "Cleanup estimate", estimated_minutes: 45, notes: "Take photos and measure bed edges.", status: "In Progress", stop_order: 2, latitude: 45.4871, longitude: -122.8037, created_at: now, updated_at: now }),
+        normalizeRouteStop({ id: "demo-route-3", route_date: today, client_name: "River Court HOA", address: "Vancouver, WA", service_type: "Site walk", estimated_minutes: 60, notes: "Review frontage and shared pond edge.", status: "Planned", stop_order: 3, latitude: 45.628, longitude: -122.672, created_at: now, updated_at: now })
       ]
     };
   }
@@ -974,7 +1012,7 @@
           client_name: payload.description || null,
           property_address: payload.description || null,
           due_date: payload.due_date || null,
-          status: payload.status || "Active",
+          status: payload.status || "Open",
           notes: payload.notes || "",
           payload: { priority: payload.priority || "Normal" }
         })
@@ -1234,6 +1272,7 @@
       quotes: "documents",
       pipeline: "documents",
       schedule: "calendar",
+      operations: "command-center",
       notes: "settings",
       reminders: "settings"
     };
@@ -1380,6 +1419,75 @@
     return `https://www.google.com/maps/dir/?api=1&origin=${encode(origin)}&destination=${encode(destination)}${waypoints.length ? `&waypoints=${waypoints.map(encode).join("%7C")}` : ""}`;
   }
 
+  function hasRouteCoordinates(stop) {
+    return typeof stop.latitude === "number" && typeof stop.longitude === "number";
+  }
+
+  function ensureRouteMap() {
+    if (!els.routeMap || !window.L) return null;
+    if (routeMap) return routeMap;
+    routeMap = window.L.map(els.routeMap, {
+      scrollWheelZoom: false,
+      zoomControl: true
+    }).setView([45.5152, -122.6784], 10);
+    window.L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+      maxZoom: 19,
+      attribution: "&copy; OpenStreetMap contributors"
+    }).addTo(routeMap);
+    routeLayer = window.L.layerGroup().addTo(routeMap);
+    return routeMap;
+  }
+
+  function renderRouteMap(stops) {
+    if (!els.routeMapStatus) return;
+    const map = ensureRouteMap();
+    if (!map || !routeLayer) {
+      els.routeMapStatus.textContent = "Route map is loading.";
+      return;
+    }
+    routeLayer.clearLayers();
+    const pinnedStops = stops.filter(hasRouteCoordinates);
+    const missingPins = stops.filter((stop) => stop.address && !hasRouteCoordinates(stop));
+    if (!stops.length) {
+      els.routeMapStatus.textContent = "Add stops to preview today's route.";
+      return;
+    }
+    if (!pinnedStops.length) {
+      els.routeMapStatus.textContent = "Map pin needed.";
+      return;
+    }
+    els.routeMapStatus.textContent = missingPins.length
+      ? `${pinnedStops.length} pinned / ${missingPins.length} need pins.`
+      : `${pinnedStops.length} stop${pinnedStops.length === 1 ? "" : "s"} mapped.`;
+    const latLngs = pinnedStops.map((stop) => [stop.latitude, stop.longitude]);
+    pinnedStops.forEach((stop) => {
+      const stopIndex = stops.findIndex((item) => item.id === stop.id) + 1;
+      const marker = window.L.marker([stop.latitude, stop.longitude], {
+        icon: window.L.divIcon({
+          className: `route-number-marker ${state.selectedRouteStopId === stop.id ? "is-selected" : ""}`,
+          html: `<span>${stopIndex}</span>`,
+          iconSize: [34, 34],
+          iconAnchor: [17, 17]
+        })
+      }).addTo(routeLayer);
+      marker.on("click", () => {
+        state.selectedRouteStopId = stop.id;
+        renderRoutePlanner();
+        const card = qs(`[data-route-stop-card][data-id="${cssEscape(stop.id)}"]`);
+        if (card) card.scrollIntoView({ behavior: "smooth", block: "center" });
+      });
+    });
+    if (latLngs.length > 1) {
+      window.L.polyline(latLngs, {
+        color: "#2f6b4f",
+        weight: 4,
+        opacity: .75
+      }).addTo(routeLayer);
+    }
+    map.fitBounds(window.L.latLngBounds(latLngs).pad(.18));
+    setTimeout(() => map.invalidateSize(), 50);
+  }
+
   function populatePropertyFilter(data) {
     if (!els.propertyFilter) return;
     const current = state.propertyFilter;
@@ -1497,7 +1605,7 @@
   }
 
   function isOperationOpen(item) {
-    return !["Completed", "Paid", "Archived"].includes(item.status);
+    return !["Completed", "Done", "Paid", "Archived"].includes(item.status);
   }
 
   function operationCommandItems(data) {
@@ -1595,10 +1703,10 @@
     if (dueOperations.length) {
       pushCommand({
         label: "Saved ops",
-        title: `${dueOperations.length} operation record${dueOperations.length === 1 ? "" : "s"} due soon`,
+        title: `${dueOperations.length} Command Center task${dueOperations.length === 1 ? "" : "s"} due soon`,
         detail: dueOperations[0].title,
         action: "quick-add-operation",
-        actionLabel: "Add Record",
+        actionLabel: "Add Task",
         type: "daily_check",
         priority: "Normal"
       });
@@ -1608,113 +1716,138 @@
   }
 
   function renderOperations(data) {
-    if (!els.operationsSummary || !els.operationsList) return;
+    if (!els.operationsHealth || !els.commandToday) return;
     const today = todayKey();
-    const weekEnd = daysFromToday(7);
+    const next30 = daysFromToday(30);
     const unpaidInvoices = data.documents.filter((doc) => doc.type === "invoice" && doc.status !== "paid");
-    const overdueInvoices = unpaidInvoices.filter((doc) => doc.dueDateRaw && doc.dueDateRaw < today);
-    const jobsThisWeek = data.jobs.filter((job) => job.dateRaw >= today && job.dateRaw <= weekEnd);
     const pendingQuotes = data.submissions.filter((item) => ["New", "Contacted"].includes(item.status));
     const openOperations = data.operations.filter(isOperationOpen);
-    const dueOperations = data.operations.filter((item) => item.dueDateRaw && item.dueDateRaw <= weekEnd && isOperationOpen(item));
-    const routeStopsToday = data.routeStops.filter((stop) => stop.routeDate === today);
-    const overdueReminders = data.reminders.filter((item) => item.dueRaw && item.dueRaw < today && item.status !== "Completed");
-    const commandItems = operationCommandItems(data);
+    const commandItems = operationCommandItems(data).map((item) => ({
+      ...item,
+      id: item.id || `system-${slug(item.title)}`,
+      status: item.status || "Open",
+      source: "system"
+    }));
+    const savedItems = openOperations.map((item) => ({
+      id: item.id,
+      label: item.type,
+      title: item.title,
+      detail: item.description || item.notes || "Review and decide the next step.",
+      dueDateRaw: item.dueDateRaw,
+      dueDate: item.dueDate,
+      priority: item.priority || "Normal",
+      status: item.status || "Open",
+      type: item.type,
+      source: "operation"
+    }));
+    const paymentItems = unpaidInvoices.map((doc) => ({
+      id: doc.id,
+      label: "payment",
+      title: `${doc.clientName || "Client"} payment`,
+      detail: `${doc.number || "Invoice"}${doc.dueDateRaw ? ` due ${doc.dueDate}` : ""}`,
+      dueDateRaw: doc.dueDateRaw,
+      dueDate: doc.dueDate,
+      priority: doc.dueDateRaw && doc.dueDateRaw < today ? "High" : "Normal",
+      status: "Waiting",
+      type: "payment",
+      action: "open-document",
+      actionLabel: "Open Money",
+      source: "payment"
+    }));
+    const waitingQuoteItems = pendingQuotes.map((item) => ({
+      id: item.id,
+      label: "client",
+      title: `${item.name} quote follow-up`,
+      detail: item.followUp || item.service,
+      dueDateRaw: "",
+      dueDate: "",
+      priority: item.status === "New" ? "High" : "Normal",
+      status: "Waiting",
+      type: "client",
+      action: "open-submission",
+      actionLabel: "Open Lead",
+      source: "quote"
+    }));
+    const reminderDeadlineItems = data.reminders
+      .filter((item) => item.status !== "Completed")
+      .map((item) => ({
+        id: item.id,
+        label: "deadline",
+        title: item.task,
+        detail: `Follow-up due ${item.due || "soon"}`,
+        dueDateRaw: item.dueRaw,
+        dueDate: item.due,
+        priority: item.dueRaw && item.dueRaw <= today ? "High" : "Normal",
+        status: "Open",
+        type: "deadline",
+        action: "complete-reminder",
+        actionLabel: "Done",
+        source: "reminder"
+      }));
+
+    const todayItems = [
+      ...savedItems.filter((item) => item.dueDateRaw === today),
+      ...commandItems.filter((item) => item.priority === "High")
+    ].slice(0, 10);
+    const waitingItems = [
+      ...savedItems.filter((item) => item.status === "Waiting" || ["client", "payment"].includes(item.type)),
+      ...waitingQuoteItems,
+      ...paymentItems
+    ].slice(0, 10);
+    const deadlineItems = [
+      ...savedItems.filter((item) => item.dueDateRaw && item.dueDateRaw >= today && item.dueDateRaw <= next30),
+      ...reminderDeadlineItems.filter((item) => item.dueDateRaw && item.dueDateRaw >= today && item.dueDateRaw <= next30),
+      ...paymentItems.filter((item) => item.dueDateRaw && item.dueDateRaw >= today && item.dueDateRaw <= next30)
+    ].sort((a, b) => String(a.dueDateRaw || "9999").localeCompare(String(b.dueDateRaw || "9999"))).slice(0, 12);
+    const equipmentItems = savedItems.filter((item) => item.type === "equipment").slice(0, 10);
+
     const healthCards = [
-      ["Action queue", commandItems.length, "Smart items from all tabs"],
-      ["Open ops", openOperations.length, "Saved operation records"],
-      ["Jobs this week", jobsThisWeek.length, "Scheduled visits"],
-      ["Pending leads", pendingQuotes.length, "Quotes to move forward"],
-      ["Money watch", overdueInvoices.length || unpaidInvoices.length, overdueInvoices.length ? "Overdue invoices" : "Open invoices"]
+      ["Tasks Due Today", todayItems.length, "Priority items for today"],
+      ["Waiting On Clients", waitingQuoteItems.length + savedItems.filter((item) => item.type === "client" && item.status === "Waiting").length, "Responses, approvals, info"],
+      ["Waiting On Payment", paymentItems.length, "Open unpaid invoices"],
+      ["Upcoming Deadlines", deadlineItems.length, "Due in the next 30 days"],
+      ["Equipment Alerts", equipmentItems.length, "Tools, mower, vehicle"]
     ];
 
-    if (els.operationsHealth) {
-      els.operationsHealth.innerHTML = healthCards.map(([label, value, detail]) => `
-        <article class="operations-health-card">
-          <strong>${escapeHtml(value)}</strong>
-          <span>${escapeHtml(label)}</span>
-          <small>${escapeHtml(detail)}</small>
-        </article>
-      `).join("");
-    }
-
-    if (els.operationsCommandList) {
-      if (!commandItems.length) {
-        els.operationsCommandList.innerHTML = emptyState("No urgent cross-tab actions right now. Use New Record to capture an issue, reminder, or admin task.");
-      } else {
-        els.operationsCommandList.innerHTML = commandItems.map((item) => `
-          <article class="operations-command-item priority-${slug(item.priority)}">
-            <div>
-              <p class="eyebrow">${escapeHtml(item.label)}</p>
-              <h4>${escapeHtml(item.title)}</h4>
-              <p>${escapeHtml(item.detail || "Review and decide the next step.")}</p>
-            </div>
-            <div class="operations-command-item-actions">
-              <button class="inline-action" type="button" data-action="prefill-operation" data-type="${escapeHtml(item.type)}" data-title="${escapeHtml(item.title)}" data-priority="${escapeHtml(item.priority)}" data-notes="${escapeHtml(item.detail || "")}">${buttonContent("Save Ops Task", "quick-add-operation")}</button>
-              <button class="inline-action" type="button" data-action="${escapeHtml(item.action)}">${buttonContent(item.actionLabel, item.action)}</button>
-            </div>
-          </article>
-        `).join("");
-      }
-    }
-
-    if (els.operationsFilterPills) {
-      els.operationsFilterPills.innerHTML = operationFilterGroups().map(([value, label]) => {
-        const isActive = state.operationsFilter === value;
-        return `<button type="button" data-action="set-operation-filter" data-filter="${escapeHtml(value)}" class="${isActive ? "is-active" : ""}">${escapeHtml(label)}</button>`;
-      }).join("");
-    }
-
-    const featureCards = [
-      ["Daily check", "Review leads, route, schedule, invoices, and follow-ups", "daily_check", commandItems.length],
-      ["Property issue", "Gate codes, access problems, site concerns, or complaints", "property_issue", openOperations.filter((item) => item.type === "property_issue").length],
-      ["Client follow-up", "Calls, emails, approvals, and next-step reminders", "client_follow_up", pendingQuotes.length + overdueReminders.length],
-      ["Admin task", "Insurance, billing, paperwork, exports, and account work", "admin_task", unpaidInvoices.length],
-      ["Equipment reminder", "Blade sharpening, fuel, string, tools, and restock tasks", "equipment_reminder", openOperations.filter((item) => item.type === "equipment_reminder").length],
-      ["Maintenance reminder", "Recurring quality checks and seasonal property work", "maintenance_reminder", jobsThisWeek.length]
-    ];
-    els.operationsSummary.innerHTML = featureCards.map(([title, detail, type, count]) => `
-      <button class="operation-feature operation-feature-${escapeHtml(type)}" type="button" data-action="prefill-operation" data-type="${escapeHtml(type)}" data-title="${escapeHtml(title)}">
-        <span class="operation-feature-count">${escapeHtml(count)}</span>
-        <strong>${escapeHtml(title)}</strong>
-        <span>${escapeHtml(detail)}</span>
-      </button>
+    els.operationsHealth.innerHTML = healthCards.map(([label, value, detail]) => `
+      <article class="operations-health-card">
+        <strong>${escapeHtml(value)}</strong>
+        <span>${escapeHtml(label)}</span>
+        <small>${escapeHtml(detail)}</small>
+      </article>
     `).join("");
 
     if (!state.operationsReady) {
-      els.operationsList.innerHTML = emptyState("Saved operation records need the operations_records table. The feature cards above still summarize existing dashboard data.");
+      els.commandToday.innerHTML = emptyState("Command Center tasks need the operations_records table. The dashboard can still summarize quotes, jobs, invoices, and reminders.");
+      if (els.commandWaiting) els.commandWaiting.innerHTML = renderCommandList(waitingItems, "Nothing waiting right now.");
+      if (els.commandDeadlines) els.commandDeadlines.innerHTML = renderCommandList(deadlineItems, "No upcoming deadlines.");
+      if (els.commandEquipment) els.commandEquipment.innerHTML = emptyState("No equipment reminders.");
       return;
     }
 
-    const operations = filteredOperations();
-    if (!operations.length) {
-      els.operationsList.innerHTML = emptyState("No saved operation records yet.");
-      return;
-    }
-    els.operationsList.innerHTML = operations.map((item) => {
-      const isDue = item.dueDateRaw && item.dueDateRaw <= weekEnd && !["Completed", "Paid", "Archived"].includes(item.status);
-      return `
-      <article class="operation-card ${isDue ? "is-due" : ""}">
-        <div class="item-topline">
-          <div>
-            <p class="eyebrow">${escapeHtml(operationTypeLabel(item.type))}</p>
-            <h4>${escapeHtml(item.title)}</h4>
-            <div class="meta">${escapeHtml(item.clientName || "No client")} / ${escapeHtml(item.dueDate || "No due date")}</div>
-          </div>
-          <div class="card-actions">
-            <span class="status">${escapeHtml(item.status)}</span>
-            ${actionButton("Delete", "delete-operation", item.id).replace("inline-action", "inline-action danger-action")}
-          </div>
+    els.commandToday.innerHTML = renderCommandList(todayItems, "No priority tasks for today.");
+    if (els.commandWaiting) els.commandWaiting.innerHTML = renderCommandList(waitingItems, "Nothing waiting right now.");
+    if (els.commandDeadlines) els.commandDeadlines.innerHTML = renderCommandList(deadlineItems, "No upcoming deadlines.");
+    if (els.commandEquipment) els.commandEquipment.innerHTML = renderCommandList(equipmentItems, "No equipment reminders.");
+  }
+
+  function renderCommandList(items, emptyMessage) {
+    if (!items.length) return emptyState(emptyMessage);
+    return items.map((item) => `
+      <article class="operations-command-item priority-${slug(item.priority || "Normal")}">
+        <div>
+          <p class="eyebrow">${escapeHtml(operationTypeLabel(item.label || item.type || "task"))}</p>
+          <h4>${escapeHtml(item.title)}</h4>
+          <p>${escapeHtml(item.detail || "Review and decide the next step.")}</p>
+          <p class="small">${escapeHtml(item.priority || "Normal")} priority${item.dueDate ? ` / Due ${escapeHtml(item.dueDate)}` : ""} / ${escapeHtml(item.status || "Open")}</p>
         </div>
-        <p class="item-body">${escapeHtml(item.propertyAddress || "")}</p>
-        <p class="small">${escapeHtml(item.priority || "Normal")} priority / ${escapeHtml(item.notes || "No notes yet.")}</p>
-        <div class="operation-card-footer">
-          <span>${isDue ? "Needs attention" : "Logged"}</span>
-          <span>${escapeHtml(item.createdAt)}</span>
+        <div class="operations-command-item-actions">
+          ${item.source === "operation" ? actionButton("Done", "complete-operation", item.id) : ""}
+          ${item.action ? `<button class="inline-action" type="button" data-action="${escapeHtml(item.action)}" data-id="${escapeHtml(item.id)}">${buttonContent(item.actionLabel || "Open", item.action)}</button>` : ""}
+          ${item.source === "operation" ? actionButton("Delete", "delete-operation", item.id).replace("inline-action", "inline-action danger-action") : ""}
         </div>
       </article>
-    `;
-    }).join("");
+    `).join("");
   }
 
   function renderRoutePlanner() {
@@ -1735,11 +1868,12 @@
 
     if (!stops.length) {
       els.routeStops.innerHTML = emptyState("No route stops yet. Add the first property for this day.");
+      renderRouteMap(stops);
       return;
     }
 
     els.routeStops.innerHTML = stops.map((stop, index) => `
-      <article class="route-stop-card route-stop-${slug(stop.status)}">
+      <article class="route-stop-card route-stop-${slug(stop.status)} ${state.selectedRouteStopId === stop.id ? "is-selected" : ""}" data-route-stop-card data-action="select-route-stop" data-id="${escapeHtml(stop.id)}">
         <div class="route-stop-order">
           <span>${index + 1}</span>
         </div>
@@ -1752,17 +1886,20 @@
             ${routeStatusSelect(stop.id, stop.status)}
           </div>
           <p class="route-address">${escapeHtml(stop.address)}</p>
+          ${stop.address && !hasRouteCoordinates(stop) ? `<p class="route-pin-needed">Map pin needed.</p>` : ""}
           <p class="small">${escapeHtml(stop.notes || "No notes yet.")}</p>
           <div class="route-stop-actions">
             <button class="inline-action" type="button" data-action="move-route-up" data-id="${escapeHtml(stop.id)}"${index === 0 ? " disabled" : ""}>${buttonContent("Up", "move-route-up")}</button>
             <button class="inline-action" type="button" data-action="move-route-down" data-id="${escapeHtml(stop.id)}"${index === stops.length - 1 ? " disabled" : ""}>${buttonContent("Down", "move-route-down")}</button>
             <button class="inline-action" type="button" data-action="mark-route-complete" data-id="${escapeHtml(stop.id)}">${buttonContent("Mark Complete", "mark-route-complete")}</button>
+            ${stop.address && !hasRouteCoordinates(stop) ? `<button class="inline-action" type="button" data-action="find-stop-map" data-id="${escapeHtml(stop.id)}">${buttonContent("Find on Map", "open-route-map")}</button>` : ""}
             <button class="inline-action" type="button" data-action="edit-route-stop" data-id="${escapeHtml(stop.id)}">${buttonContent("Edit", "edit-route-stop")}</button>
             <button class="inline-action danger-action" type="button" data-action="delete-route-stop" data-id="${escapeHtml(stop.id)}">${buttonContent("Delete", "delete-route-stop")}</button>
           </div>
         </div>
       </article>
     `).join("");
+    renderRouteMap(stops);
   }
 
   function documentStatusBadge(doc) {
@@ -1864,33 +2001,22 @@
       return events.filter((event) => event.date === today);
     }
     if (state.calendarView === "week") {
-      const end = daysFromToday(7);
+      const end = addDaysKey(today, 7);
       return events.filter((event) => event.date >= today && event.date <= end);
     }
-    if (state.calendarView === "month") {
-      const currentMonth = today.slice(0, 7);
-      return events.filter((event) => event.date.slice(0, 7) === currentMonth);
+    if (state.calendarView === "thirty") {
+      const start = addDaysKey(today, state.calendarRangeOffset * 30);
+      const end = addDaysKey(start, 30);
+      return events.filter((event) => event.date >= start && event.date <= end);
     }
-    return events.filter((event) => event.date >= today).slice(0, 30);
+    return events.filter((event) => event.date >= today);
   }
 
   function calendarGridDays() {
     const today = new Date(`${todayKey()}T12:00:00`);
     if (state.calendarView === "week") {
-      const day = today.getDay();
       const start = new Date(today);
-      start.setDate(today.getDate() - day);
-      return Array.from({ length: 7 }, (_, index) => {
-        const date = new Date(start);
-        date.setDate(start.getDate() + index);
-        return date.toISOString().slice(0, 10);
-      });
-    }
-    if (state.calendarView === "month") {
-      const first = new Date(today.getFullYear(), today.getMonth(), 1, 12);
-      const start = new Date(first);
-      start.setDate(first.getDate() - first.getDay());
-      return Array.from({ length: 42 }, (_, index) => {
+      return Array.from({ length: 8 }, (_, index) => {
         const date = new Date(start);
         date.setDate(start.getDate() + index);
         return date.toISOString().slice(0, 10);
@@ -1952,6 +2078,32 @@
     `;
   }
 
+  function renderCalendarGrouped(events) {
+    if (!events.length) return emptyState("No calendar items match this view.");
+    let currentMonth = "";
+    let currentDate = "";
+    let monthIndex = -1;
+    const parts = [];
+    events.forEach((event) => {
+      const eventMonth = event.date.slice(0, 7);
+      if (eventMonth !== currentMonth) {
+        currentMonth = eventMonth;
+        monthIndex += 1;
+        parts.push(`<section class="calendar-month-group calendar-month-tone-${monthIndex % 3}"><h4>${escapeHtml(monthLabel(event.date))}</h4>`);
+        currentDate = "";
+      }
+      if (event.date !== currentDate) {
+        if (currentDate) parts.push(`</div>`);
+        currentDate = event.date;
+        parts.push(`<div class="calendar-date-group"><p>${escapeHtml(formatDate(event.date))}</p>`);
+      }
+      parts.push(renderCalendarListCard(event));
+    });
+    if (currentDate) parts.push(`</div>`);
+    if (currentMonth) parts.push(`</section>`);
+    return parts.join("");
+  }
+
   function renderCalendar(data) {
     if (!els.calendarList) return;
     let events = buildCalendarEvents(data);
@@ -1959,6 +2111,13 @@
       events = events.filter((event) => event.type === state.calendarFilter);
     }
     events = calendarWindow(events);
+    const isThirty = state.calendarView === "thirty";
+    if (els.calendarRangeControls) els.calendarRangeControls.hidden = !isThirty;
+    if (els.calendarRangeLabel) {
+      const start = addDaysKey(todayKey(), state.calendarRangeOffset * 30);
+      const end = addDaysKey(start, 30);
+      els.calendarRangeLabel.textContent = `${formatDate(start)} - ${formatDate(end)}`;
+    }
     qsa("[data-calendar-view]").forEach((button) => {
       button.classList.toggle("is-active", button.dataset.calendarView === state.calendarView);
     });
@@ -1966,9 +2125,7 @@
       els.calendarList.innerHTML = emptyState("No calendar items match this view.");
       return;
     }
-    els.calendarList.innerHTML = ["week", "month"].includes(state.calendarView)
-      ? renderCalendarGrid(events)
-      : events.map(renderCalendarListCard).join("");
+    els.calendarList.innerHTML = renderCalendarGrouped(events);
   }
 
   function renderQuoteTable(data) {
@@ -2039,6 +2196,7 @@
   }
 
   function renderJobs(data) {
+    if (!els.jobs) return;
     const jobs = filteredJobs();
     if (!jobs.length) {
       els.jobs.innerHTML = emptyState("No scheduled jobs/visits yet.");
@@ -2096,6 +2254,7 @@
   }
 
   function renderNotes() {
+    if (!els.notes) return;
     const notes = filteredNotes();
     if (!notes.length) {
       els.notes.innerHTML = emptyState("No job notes yet.");
@@ -2116,6 +2275,7 @@
   }
 
   function renderReminders(data) {
+    if (!els.reminders) return;
     const reminders = filteredReminders();
     if (!reminders.length) {
       els.reminders.innerHTML = emptyState("No follow-up reminders yet.");
@@ -2438,6 +2598,18 @@
     URL.revokeObjectURL(url);
   }
 
+  function downloadJson(filename, payload) {
+    const blob = new Blob([JSON.stringify(payload, null, 2)], { type: "application/json;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = filename;
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    URL.revokeObjectURL(url);
+  }
+
   function exportData(type) {
     if (type === "submissions") {
       downloadCsv("urban-yards-quotes.csv", [
@@ -2455,6 +2627,37 @@
         ...state.data.jobs.map((item) => [item.site, item.city, item.service, item.date, item.window, item.status])
       ]);
     }
+  }
+
+  function exportFullBackup() {
+    downloadJson(`urban-yards-dashboard-backup-${todayKey()}.json`, {
+      exported_at: new Date().toISOString(),
+      source: isDemoMode() ? "demo" : "dashboard",
+      data: state.data
+    });
+  }
+
+  async function importBackupFile(file) {
+    if (!file) return;
+    if (!isDemoMode()) {
+      setDashboardState("Import backup is available in demo/test mode for now to prevent accidental live data changes.", "error");
+      return;
+    }
+    const text = await file.text();
+    const payload = JSON.parse(text);
+    const imported = payload.data || payload;
+    state.data = {
+      submissions: Array.isArray(imported.submissions) ? imported.submissions : [],
+      contacts: Array.isArray(imported.contacts) ? imported.contacts : [],
+      jobs: Array.isArray(imported.jobs) ? imported.jobs : [],
+      notes: Array.isArray(imported.notes) ? imported.notes : [],
+      reminders: Array.isArray(imported.reminders) ? imported.reminders : [],
+      documents: Array.isArray(imported.documents) ? imported.documents : [],
+      operations: Array.isArray(imported.operations) ? imported.operations : [],
+      routeStops: Array.isArray(imported.routeStops) ? imported.routeStops : []
+    };
+    await render();
+    setDashboardState("Backup imported into demo mode.");
   }
 
   async function render() {
@@ -2614,6 +2817,7 @@
     qsa("[data-calendar-view]").forEach((button) => {
       button.addEventListener("click", async () => {
         state.calendarView = button.dataset.calendarView || "agenda";
+        if (state.calendarView !== "thirty") state.calendarRangeOffset = 0;
         await render();
       });
     });
@@ -2668,24 +2872,39 @@
       });
     }
 
-    els.noteForm.addEventListener("submit", async (event) => {
-      event.preventDefault();
-      const formData = new FormData(els.noteForm);
-      const title = String(formData.get("title") || "").trim();
-      const body = String(formData.get("body") || "").trim();
-      if (!title || !body) return;
+    if (els.importBackup) {
+      els.importBackup.addEventListener("change", async () => {
+        const file = els.importBackup.files && els.importBackup.files[0];
+        try {
+          await importBackupFile(file);
+        } catch (error) {
+          setDashboardState(error.message || "Unable to import backup.", "error");
+        } finally {
+          els.importBackup.value = "";
+        }
+      });
+    }
 
-      try {
-        setDashboardState("Saving note...");
-        const note = await insertJobNote(title, body);
-        state.data.notes.unshift(note);
-        els.noteForm.reset();
-        renderNotes();
-        setDashboardState("");
-      } catch (error) {
-        setDashboardState(error.message || "Unable to save note.", "error");
-      }
-    });
+    if (els.noteForm) {
+      els.noteForm.addEventListener("submit", async (event) => {
+        event.preventDefault();
+        const formData = new FormData(els.noteForm);
+        const title = String(formData.get("title") || "").trim();
+        const body = String(formData.get("body") || "").trim();
+        if (!title || !body) return;
+
+        try {
+          setDashboardState("Saving note...");
+          const note = await insertJobNote(title, body);
+          state.data.notes.unshift(note);
+          els.noteForm.reset();
+          renderNotes();
+          setDashboardState("");
+        } catch (error) {
+          setDashboardState(error.message || "Unable to save note.", "error");
+        }
+      });
+    }
 
     els.appView.addEventListener("change", async (event) => {
       const target = event.target;
@@ -2741,14 +2960,14 @@
         const input = qs("[data-document-form] input[name='client_name']");
         if (input) input.focus();
       } else if (action === "quick-add-follow-up" || action === "quick-add-invoice-reminder") {
-        setActiveSection("settings");
-        history.replaceState(null, "", "#settings");
-        if (els.noteForm) {
-          const titleInput = els.noteForm.querySelector("input[name='title']");
-          if (titleInput) {
-            titleInput.value = action === "quick-add-invoice-reminder" ? "Invoice reminder" : "Follow-up";
-            titleInput.focus();
-          }
+        setActiveSection("command-center");
+        history.replaceState(null, "", "#command-center");
+        const form = qs("[data-operations-form]");
+        if (form) {
+          form.record_type.value = action === "quick-add-invoice-reminder" ? "payment" : "client";
+          form.title.value = action === "quick-add-invoice-reminder" ? "Invoice reminder" : "Follow-up";
+          form.status.value = "Open";
+          form.title.focus();
         }
       } else if (action === "quick-add-client") {
         setActiveSection("contacts");
@@ -2756,8 +2975,8 @@
         const input = qs("[data-client-form] input[name='name']");
         if (input) input.focus();
       } else if (action === "quick-add-operation") {
-        setActiveSection("operations");
-        history.replaceState(null, "", "#operations");
+        setActiveSection("command-center");
+        history.replaceState(null, "", "#command-center");
         const input = qs("[data-operations-form] input[name='title']");
         if (input) input.focus();
       } else if (action === "go-route-planner") {
@@ -2782,16 +3001,32 @@
         if (els.operationsFilter) els.operationsFilter.value = state.operationsFilter;
         await render();
       } else if (action === "prefill-operation") {
-        setActiveSection("operations");
-        history.replaceState(null, "", "#operations");
+        setActiveSection("command-center");
+        history.replaceState(null, "", "#command-center");
         const form = qs("[data-operations-form]");
         if (form) {
-          form.record_type.value = target.dataset.type || "admin_task";
+          form.record_type.value = target.dataset.type || "task";
           form.title.value = target.dataset.title || "";
           if (form.elements.description) form.elements.description.value = target.dataset.notes || "";
           if (form.elements.priority) form.elements.priority.value = target.dataset.priority || "Normal";
-          form.status.value = target.dataset.type === "client_follow_up" ? "Follow-up needed" : "Active";
-          form.notes.focus();
+          form.status.value = "Open";
+          form.title.focus();
+        }
+      } else if (action === "previous-30-days") {
+        state.calendarView = "thirty";
+        state.calendarRangeOffset -= 1;
+        await render();
+      } else if (action === "next-30-days") {
+        state.calendarView = "thirty";
+        state.calendarRangeOffset += 1;
+        await render();
+      } else if (action === "select-route-stop") {
+        state.selectedRouteStopId = id;
+        renderRoutePlanner();
+      } else if (action === "find-stop-map") {
+        const stop = findRouteStop(id);
+        if (stop && stop.address) {
+          window.open(`https://www.openstreetmap.org/search?query=${encodeURIComponent(stop.address)}`, "_blank", "noopener");
         }
       } else if (action === "open-route-map") {
         const url = routeMapsUrl();
@@ -2836,6 +3071,18 @@
         }
       } else if (action === "refresh-dashboard") {
         await refreshDashboard();
+      } else if (action === "export-full-backup") {
+        exportFullBackup();
+      } else if (action === "import-backup") {
+        if (els.importBackup) els.importBackup.click();
+      } else if (action === "clear-demo-data") {
+        if (!isDemoMode()) {
+          setDashboardState("Clear Demo Data only affects demo/test mode.", "error");
+          return;
+        }
+        state.data = demoDashboardData();
+        await render();
+        setDashboardState("Demo data reset.");
       } else if (action === "sync-contact") {
         const item = findSubmission(id);
         if (!item) return;
@@ -2982,7 +3229,7 @@
           setDashboardState(error.message || "Unable to delete task.", "error");
         }
       } else if (action === "delete-operation") {
-        const ok = window.confirm("Delete this operation record?");
+        const ok = window.confirm("Delete this Command Center task?");
         if (!ok) return;
         try {
           setDashboardState("Deleting operation...");
@@ -2991,6 +3238,15 @@
           setDashboardState("");
         } catch (error) {
           setDashboardState(error.message || "Unable to delete operation.", "error");
+        }
+      } else if (action === "complete-operation") {
+        try {
+          setDashboardState("Marking task done...");
+          await updateStatus("operations_records", id, "Done");
+          await refreshDashboard();
+          setDashboardState("");
+        } catch (error) {
+          setDashboardState(error.message || "Unable to mark task done.", "error");
         }
       }
     });
@@ -3118,20 +3374,20 @@
         event.preventDefault();
         const formData = new FormData(event.target);
         try {
-          setDashboardState("Saving operation...");
+          setDashboardState("Saving Command Center task...");
           await insertOperation({
-            record_type: String(formData.get("record_type") || "admin_task"),
+            record_type: String(formData.get("record_type") || "task"),
             title: String(formData.get("title") || ""),
             description: String(formData.get("description") || "") || null,
             due_date: String(formData.get("due_date") || "") || null,
-            status: String(formData.get("status") || "Active"),
+            status: String(formData.get("status") || "Open"),
             priority: String(formData.get("priority") || "Normal"),
-            completed_at: String(formData.get("status") || "") === "Completed" ? new Date().toISOString() : null,
+            completed_at: String(formData.get("status") || "") === "Done" ? new Date().toISOString() : null,
             notes: String(formData.get("notes") || "")
           });
           event.target.reset();
           await refreshDashboard();
-          setActiveSection("operations");
+          setActiveSection("command-center");
           setDashboardState("");
         } catch (error) {
           setDashboardState(error.message || "Unable to save operation.", "error");
@@ -3211,12 +3467,14 @@
 
     bindPullToRefresh();
 
-    els.newNote.addEventListener("click", () => {
-      setActiveSection("settings");
-      history.replaceState(null, "", "#settings");
-      const titleInput = els.noteForm.querySelector("input[name='title']");
-      if (titleInput) titleInput.focus();
-    });
+    if (els.newNote) {
+      els.newNote.addEventListener("click", () => {
+        setActiveSection("command-center");
+        history.replaceState(null, "", "#command-center");
+        const titleInput = qs("[data-operations-form] input[name='title']");
+        if (titleInput) titleInput.focus();
+      });
+    }
 
     els.signOut.addEventListener("click", async () => {
       await signOutOwner();
@@ -3240,6 +3498,8 @@
     els.pipeline = qs("[data-pipeline]");
     els.documents = qs("[data-documents]");
     els.calendarFilter = qs("[data-calendar-filter]");
+    els.calendarRangeControls = qs("[data-calendar-range-controls]");
+    els.calendarRangeLabel = qs("[data-calendar-range-label]");
     els.operationsFilter = qs("[data-operations-filter]");
     els.calendarList = qs("[data-calendar-list]");
     els.operationsSummary = qs("[data-operations-summary]");
@@ -3247,11 +3507,18 @@
     els.operationsHealth = qs("[data-operations-health]");
     els.operationsFilterPills = qs("[data-operations-filter-pills]");
     els.operationsCommandList = qs("[data-operations-command-list]");
+    els.commandToday = qs("[data-command-today]");
+    els.commandWaiting = qs("[data-command-waiting]");
+    els.commandDeadlines = qs("[data-command-deadlines]");
+    els.commandEquipment = qs("[data-command-equipment]");
     els.routeDate = qs("[data-route-date]");
     els.routeForm = qs("[data-route-form]");
     els.routeSubmit = qs("[data-route-submit]");
     els.routeStops = qs("[data-route-stops]");
     els.routeSummary = qs("[data-route-summary]");
+    els.routeMap = qs("[data-route-map]");
+    els.routeMapStatus = qs("[data-route-map-status]");
+    els.importBackup = qs("[data-import-backup]");
     els.homeReminders = qs("[data-home-reminders]");
     els.dashboardAlerts = qs("[data-dashboard-alerts]");
     els.todayChip = qs("[data-today-chip]");
@@ -3279,7 +3546,7 @@
     cacheElements();
     bindEvents();
     const hashSection = window.location.hash.replace("#", "");
-    if (hashSection) state.activeSection = hashSection;
+    if (hashSection) state.activeSection = hashSection === "operations" ? "command-center" : hashSection;
 
     if (isDemoMode()) {
       clearSession();

@@ -3359,6 +3359,17 @@ button:active,
   background: rgba(235, 244, 229, .75);
 }
 
+.route-map .gm-style button {
+  border-radius: 8px !important;
+  box-shadow: 0 8px 18px rgba(6, 27, 21, .14) !important;
+}
+
+.route-map .gm-style-cc,
+.route-map .gmnoprint a,
+.route-map .gmnoprint span {
+  font-size: 10px !important;
+}
+
 .pac-container {
   z-index: 10050 !important;
   margin-top: 8px;

@@ -1734,7 +1734,13 @@
       zoom: 11,
       mapTypeControl: false,
       streetViewControl: false,
-      fullscreenControl: true,
+      fullscreenControl: false,
+      rotateControl: false,
+      scaleControl: false,
+      zoomControl: true,
+      zoomControlOptions: {
+        position: window.google.maps.ControlPosition.LEFT_BOTTOM
+      },
       clickableIcons: false,
       gestureHandling: "greedy"
     });

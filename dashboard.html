@@ -14,7 +14,7 @@
     <link rel="stylesheet" href="dashboard.css?v=20260622-4">
     <link rel="stylesheet" href="dashboard-mobile-fix.css?v=20260622-3">
     <script src="dashboard-config.js?v=20260623-1" defer></script>
-    <script src="dashboard.js?v=20260623-3" defer></script>
+    <script src="dashboard.js?v=20260623-4" defer></script>
   </head>
   <body>
     <main class="dashboard-shell" aria-labelledby="dashboard-title">
@@ -152,7 +152,7 @@
                 <input name="visit_date" type="date" required>
                 <input name="visit_window" placeholder="Time window">
                 <input name="site_name" placeholder="Client / title" required>
-                <input name="city" placeholder="Property / area">
+                <input name="city" placeholder="Property / area" autocomplete="street-address" data-address-autocomplete>
                 <input name="service" placeholder="Job, task, or reminder" required>
                 <button type="submit"><span class="button-icon" aria-hidden="true">+</span><span>Add Visit</span></button>
               </form>
@@ -190,7 +190,7 @@
                       <input name="client_name" placeholder="Example: Hannah / Edge Management" required>
                     </label>
                     <label>Address
-                      <input name="address" placeholder="Street, city, state" required>
+                      <input name="address" placeholder="Street, city, state" autocomplete="street-address" data-address-autocomplete data-route-address-input required>
                     </label>
                     <label>Service type
                       <input name="service_type" placeholder="Mow, cleanup, pressure washing..." required>
@@ -313,7 +313,7 @@
                 <input name="name" placeholder="Client name" required>
                 <input name="email" type="email" placeholder="Email">
                 <input name="phone" placeholder="Phone">
-                <input name="city" placeholder="Property / area">
+                <input name="city" placeholder="Property / area" autocomplete="street-address" data-address-autocomplete>
                 <input name="contact_type" placeholder="Client type">
                 <button type="submit"><span class="button-icon" aria-hidden="true">+</span><span>Add Client</span></button>
               </form>
@@ -365,7 +365,7 @@
                       <input name="title" placeholder="Example: Call Hannah about estimate" required>
                     </label>
                     <label>Related client/property
-                      <input name="description" placeholder="Client, property, equipment, or context">
+                      <input name="description" placeholder="Client, property, equipment, or context" autocomplete="street-address" data-address-autocomplete>
                     </label>
                     <div class="operations-form-row">
                       <label>Due date
@@ -468,4 +468,6 @@
     </main>
   </body>
 </html>
+
+
 

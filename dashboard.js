@@ -49,6 +49,7 @@
   let googleRouteLine = null;
   let googleMapsLoadPromise = null;
   let googleMapsBrowserKeyPromise = null;
+  const addressAutocompleteInputs = new WeakSet();
   let googleRouteMarkers = [];
   const routeGeocodingIds = new Set();
   const PORTLAND_CENTER = { lat: 45.5152, lng: -122.6784 };
@@ -1620,7 +1621,7 @@
         return;
       }
       const script = document.createElement("script");
-      script.src = `https://maps.googleapis.com/maps/api/js?key=${encodeURIComponent(key)}&v=weekly`;
+      script.src = `https://maps.googleapis.com/maps/api/js?key=${encodeURIComponent(key)}&v=weekly&libraries=places`;
       script.async = true;
       script.defer = true;
       script.dataset.googleMapsRoute = "true";
@@ -1646,6 +1647,35 @@
       gestureHandling: "greedy"
     });
     return googleRouteMap;
+  }
+
+  async function initAddressAutocomplete(input) {
+    if (!input || addressAutocompleteInputs.has(input)) return;
+    try {
+      await loadGoogleMapsScript();
+    } catch (error) {
+      console.warn("Google address autocomplete is unavailable.", error);
+      return;
+    }
+    if (!window.google?.maps?.places) return;
+    const autocomplete = new window.google.maps.places.Autocomplete(input, {
+      componentRestrictions: { country: "us" },
+      fields: ["formatted_address", "geometry", "name"],
+      types: ["geocode"]
+    });
+    autocomplete.addListener("place_changed", () => {
+      const place = autocomplete.getPlace();
+      const address = place.formatted_address || place.name || "";
+      if (address) input.value = address;
+    });
+    addressAutocompleteInputs.add(input);
+  }
+
+  function initVisibleAddressAutocompletes(root) {
+    const scope = root || document;
+    Array.from(scope.querySelectorAll("[data-address-autocomplete]")).forEach((input) => {
+      initAddressAutocomplete(input);
+    });
   }
 
   async function renderGoogleRouteMap(stops) {
@@ -2646,7 +2676,7 @@
           <label>Name<input name="name" value="${escapeHtml(contact.name)}" required></label>
           <label>Email<input name="email" type="email" value="${escapeHtml(contact.email === "No email" ? "" : contact.email)}"></label>
           <label>Phone<input name="phone" value="${escapeHtml(contact.phone === "No phone" ? "" : contact.phone)}"></label>
-          <label>Property / area<input name="city" value="${escapeHtml(contact.city === "Not provided" ? "" : contact.city)}"></label>
+          <label>Property / area<input name="city" value="${escapeHtml(contact.city === "Not provided" ? "" : contact.city)}" autocomplete="street-address" data-address-autocomplete></label>
           <label>Type<input name="contact_type" value="${escapeHtml(contact.type === "Contact" ? "" : contact.type)}"></label>
           <label>Status<select name="status">${STATUSES.map((status) => `<option value="${status}"${status === contact.status ? " selected" : ""}>${status}</option>`).join("")}</select></label>
           <div class="drawer-actions">
@@ -2684,10 +2714,10 @@
             <input name="visit_window" value="${escapeHtml(job.window === "Window not set" ? "" : job.window)}">
           </label>
           <label>Site / customer
-            <input name="site_name" value="${escapeHtml(job.site)}" required>
+            <input name="site_name" value="${escapeHtml(job.site)}" autocomplete="organization">
           </label>
           <label>City
-            <input name="city" value="${escapeHtml(job.city === "Not provided" ? "" : job.city)}">
+            <input name="city" value="${escapeHtml(job.city === "Not provided" ? "" : job.city)}" autocomplete="street-address" data-address-autocomplete>
           </label>
           <label>Service
             <input name="service" value="${escapeHtml(job.service)}" required>
@@ -3077,6 +3107,12 @@
 
     document.addEventListener("keydown", (event) => {
       if (event.key === "Escape") setSidebarOpen(false);
+    });
+
+    document.addEventListener("focusin", (event) => {
+      if (event.target.matches("[data-address-autocomplete]")) {
+        initAddressAutocomplete(event.target);
+      }
     });
 
     qsa("[data-calendar-view]").forEach((button) => {
@@ -3808,6 +3844,7 @@
     els.commandEquipment = qs("[data-command-equipment]");
     els.routeDate = qs("[data-route-date]");
     els.routeForm = qs("[data-route-form]");
+    els.routeAddressInput = qs("[data-route-address-input]");
     els.routeSubmit = qs("[data-route-submit]");
     els.routeStops = qs("[data-route-stops]");
     els.routeSummary = qs("[data-route-summary]");

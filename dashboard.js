@@ -1329,7 +1329,8 @@
       quotes: "documents",
       pipeline: "documents",
       schedule: "calendar",
-      operations: "command-center",
+      operations: "overview",
+      "command-center": "overview",
       notes: "settings",
       reminders: "settings"
     };
@@ -1830,11 +1831,12 @@
   }
 
   function renderUpcoming(data) {
-    if (!data.jobs.length) {
-      els.upcoming.innerHTML = emptyState("No scheduled visits yet.");
+    const todayJobs = data.jobs.filter((job) => job.dateRaw === todayKey());
+    if (!todayJobs.length) {
+      els.upcoming.innerHTML = emptyState("No jobs scheduled for today.");
       return;
     }
-    els.upcoming.innerHTML = data.jobs.slice(0, 3).map((job) => `
+    els.upcoming.innerHTML = todayJobs.slice(0, 5).map((job) => `
       <article class="job-card">
         <div class="item-topline">
           <div>
@@ -1868,16 +1870,58 @@
     `).join("");
   }
 
+  function renderHomeNotes(data) {
+    if (!els.homeNotes) return;
+    const notes = data.notes.slice(0, 4);
+    if (!notes.length) {
+      els.homeNotes.innerHTML = emptyState("No job notes yet.");
+      return;
+    }
+    els.homeNotes.innerHTML = notes.map((note) => `
+      <article class="note-card">
+        <div class="item-topline">
+          <h4>${escapeHtml(note.title)}</h4>
+          <span class="meta">${escapeHtml(note.date)}</span>
+        </div>
+        <p class="item-body">${escapeHtml(note.body)}</p>
+      </article>
+    `).join("");
+  }
+
+  function renderTodayRouteSnapshot(data) {
+    if (!els.todayRouteSnapshot) return;
+    const today = todayKey();
+    const stops = data.routeStops
+      .filter((stop) => stop.routeDate === today)
+      .sort((a, b) => a.stopOrder - b.stopOrder || a.createdAt.localeCompare(b.createdAt));
+    if (!stops.length) {
+      els.todayRouteSnapshot.innerHTML = emptyState("No route stops planned for today.");
+      return;
+    }
+    const openStops = stops.filter((stop) => stop.status !== "Complete");
+    els.todayRouteSnapshot.innerHTML = `
+      <article class="route-snapshot-card">
+        <strong>${openStops.length} open / ${stops.length} total</strong>
+        <p>${escapeHtml(stops.slice(0, 3).map((stop) => stop.clientName).join(" / "))}${stops.length > 3 ? " / ..." : ""}</p>
+        <button class="inline-action" type="button" data-action="go-route-planner">${buttonContent("Open Route Planner", "go-route-planner")}</button>
+      </article>
+    `;
+  }
+
   function renderDashboardAlerts(data) {
     if (!els.dashboardAlerts) return;
     const today = todayKey();
     const soon = daysFromToday(7);
     const overdueReminders = data.reminders.filter((item) => item.dueRaw && item.dueRaw < today && item.status !== "Completed");
+    const overdueInvoices = data.documents.filter((item) => item.type === "invoice" && item.dueDateRaw && item.dueDateRaw < today && item.status !== "paid");
     const dueInvoices = data.documents.filter((item) => item.type === "invoice" && item.dueDateRaw && item.dueDateRaw <= soon && item.status !== "paid");
+    const unsentQuotes = data.documents.filter((item) => item.type === "quote" && ["draft", "Draft", "New"].includes(item.status));
     const newQuotes = data.submissions.filter((item) => item.status === "New");
     const alerts = [
-      overdueReminders.length ? `${overdueReminders.length} overdue follow-up${overdueReminders.length === 1 ? "" : "s"}` : "",
-      dueInvoices.length ? `${dueInvoices.length} invoice${dueInvoices.length === 1 ? "" : "s"} due soon` : "",
+      overdueReminders.length ? `${overdueReminders.length} incomplete follow-up${overdueReminders.length === 1 ? "" : "s"} overdue` : "",
+      overdueInvoices.length ? `${overdueInvoices.length} overdue invoice${overdueInvoices.length === 1 ? "" : "s"}` : "",
+      !overdueInvoices.length && dueInvoices.length ? `${dueInvoices.length} invoice${dueInvoices.length === 1 ? "" : "s"} due soon` : "",
+      unsentQuotes.length ? `${unsentQuotes.length} unsent quote${unsentQuotes.length === 1 ? "" : "s"}` : "",
       newQuotes.length ? `${newQuotes.length} new quote request${newQuotes.length === 1 ? "" : "s"}` : ""
     ].filter(Boolean);
     if (!alerts.length) {
@@ -1993,7 +2037,7 @@
     if (dueOperations.length) {
       pushCommand({
         label: "Saved ops",
-        title: `${dueOperations.length} Command Center task${dueOperations.length === 1 ? "" : "s"} due soon`,
+        title: `${dueOperations.length} priority task${dueOperations.length === 1 ? "" : "s"} due soon`,
         detail: dueOperations[0].title,
         action: "quick-add-operation",
         actionLabel: "Add Task",
@@ -2076,9 +2120,15 @@
       }));
 
     const todayItems = [
-      ...savedItems.filter((item) => item.dueDateRaw === today),
+      ...savedItems.filter((item) => (item.dueDateRaw && item.dueDateRaw <= today) || item.priority === "High"),
       ...commandItems.filter((item) => item.priority === "High")
-    ].slice(0, 10);
+    ]
+      .sort((a, b) => {
+        const dateSort = String(a.dueDateRaw || "9999").localeCompare(String(b.dueDateRaw || "9999"));
+        if (dateSort) return dateSort;
+        return String(a.priority === "High" ? "0" : "1").localeCompare(String(b.priority === "High" ? "0" : "1"));
+      })
+      .slice(0, 10);
     const waitingItems = [
       ...savedItems.filter((item) => item.status === "Waiting" || ["client", "payment"].includes(item.type)),
       ...waitingQuoteItems,
@@ -2108,7 +2158,7 @@
     `).join("");
 
     if (!state.operationsReady) {
-      els.commandToday.innerHTML = emptyState("Command Center tasks need the operations_records table. The dashboard can still summarize quotes, jobs, invoices, and reminders.");
+      els.commandToday.innerHTML = emptyState("Saved tasks need the operations_records table. The dashboard can still summarize quotes, jobs, invoices, and reminders.");
       if (els.commandWaiting) els.commandWaiting.innerHTML = renderCommandList(waitingItems, "Nothing waiting right now.");
       if (els.commandDeadlines) els.commandDeadlines.innerHTML = renderCommandList(deadlineItems, "No upcoming deadlines.");
       if (els.commandEquipment) els.commandEquipment.innerHTML = emptyState("No equipment reminders.");
@@ -2963,6 +3013,8 @@
     renderSubmissions(data);
     renderUpcoming(data);
     renderHomeReminders(data);
+    renderHomeNotes(data);
+    renderTodayRouteSnapshot(data);
     renderQuoteTable(data);
     renderPipeline(data);
     renderDocuments(data);
@@ -3261,8 +3313,8 @@
         const input = qs("[data-document-form] input[name='client_name']");
         if (input) input.focus();
       } else if (action === "quick-add-follow-up" || action === "quick-add-invoice-reminder") {
-        setActiveSection("command-center");
-        history.replaceState(null, "", "#command-center");
+        setActiveSection("overview");
+        history.replaceState(null, "", "#overview");
         const form = qs("[data-operations-form]");
         if (form) {
           form.record_type.value = action === "quick-add-invoice-reminder" ? "payment" : "client";
@@ -3276,8 +3328,8 @@
         const input = qs("[data-client-form] input[name='name']");
         if (input) input.focus();
       } else if (action === "quick-add-operation") {
-        setActiveSection("command-center");
-        history.replaceState(null, "", "#command-center");
+        setActiveSection("overview");
+        history.replaceState(null, "", "#overview");
         const input = qs("[data-operations-form] input[name='title']");
         if (input) input.focus();
       } else if (action === "go-route-planner") {
@@ -3302,8 +3354,8 @@
         if (els.operationsFilter) els.operationsFilter.value = state.operationsFilter;
         await render();
       } else if (action === "prefill-operation") {
-        setActiveSection("command-center");
-        history.replaceState(null, "", "#command-center");
+        setActiveSection("overview");
+        history.replaceState(null, "", "#overview");
         const form = qs("[data-operations-form]");
         if (form) {
           form.record_type.value = target.dataset.type || "task";
@@ -3538,7 +3590,7 @@
           setDashboardState(error.message || "Unable to delete task.", "error");
         }
       } else if (action === "delete-operation") {
-        const ok = window.confirm("Delete this Command Center task?");
+        const ok = window.confirm("Delete this task?");
         if (!ok) return;
         try {
           setDashboardState("Deleting operation...");
@@ -3683,7 +3735,7 @@
         event.preventDefault();
         const formData = new FormData(event.target);
         try {
-          setDashboardState("Saving Command Center task...");
+          setDashboardState("Saving task...");
           await insertOperation({
             record_type: String(formData.get("record_type") || "task"),
             title: String(formData.get("title") || ""),
@@ -3696,7 +3748,7 @@
           });
           event.target.reset();
           await refreshDashboard();
-          setActiveSection("command-center");
+          setActiveSection("overview");
           setDashboardState("");
         } catch (error) {
           setDashboardState(error.message || "Unable to save operation.", "error");
@@ -3800,8 +3852,8 @@
 
     if (els.newNote) {
       els.newNote.addEventListener("click", () => {
-        setActiveSection("command-center");
-        history.replaceState(null, "", "#command-center");
+        setActiveSection("overview");
+        history.replaceState(null, "", "#overview");
         const titleInput = qs("[data-operations-form] input[name='title']");
         if (titleInput) titleInput.focus();
       });
@@ -3852,6 +3904,8 @@
     els.routeMapStatus = qs("[data-route-map-status]");
     els.importBackup = qs("[data-import-backup]");
     els.homeReminders = qs("[data-home-reminders]");
+    els.homeNotes = qs("[data-home-notes]");
+    els.todayRouteSnapshot = qs("[data-today-route-snapshot]");
     els.dashboardAlerts = qs("[data-dashboard-alerts]");
     els.todayChip = qs("[data-today-chip]");
     els.detailDrawer = qs("[data-detail-drawer]");
@@ -3878,7 +3932,7 @@
     cacheElements();
     bindEvents();
     const hashSection = window.location.hash.replace("#", "");
-    if (hashSection) state.activeSection = hashSection === "operations" ? "command-center" : hashSection;
+    if (hashSection) state.activeSection = hashSection === "operations" || hashSection === "command-center" ? "overview" : hashSection;
 
     if (isDemoMode()) {
       clearSession();

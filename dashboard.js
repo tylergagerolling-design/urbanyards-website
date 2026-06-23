@@ -1524,6 +1524,72 @@
     return typeof stop.latitude === "number" && typeof stop.longitude === "number";
   }
 
+  function formatRouteDuration(seconds) {
+    const totalMinutes = Math.max(1, Math.round(Number(seconds || 0) / 60));
+    if (totalMinutes < 60) return `${totalMinutes} min drive`;
+    const hours = Math.floor(totalMinutes / 60);
+    const minutes = totalMinutes % 60;
+    return `${hours} hr${hours === 1 ? "" : "s"}${minutes ? ` ${minutes} min` : ""} drive`;
+  }
+
+  function formatRouteDistance(meters) {
+    const miles = Number(meters || 0) / 1609.344;
+    if (!Number.isFinite(miles) || miles <= 0) return "";
+    return `${miles.toFixed(miles >= 10 ? 0 : 1)} mi`;
+  }
+
+  function decodeGooglePolyline(encoded) {
+    let index = 0;
+    let lat = 0;
+    let lng = 0;
+    const path = [];
+    while (index < encoded.length) {
+      let result = 0;
+      let shift = 0;
+      let byte = null;
+      do {
+        byte = encoded.charCodeAt(index++) - 63;
+        result |= (byte & 0x1f) << shift;
+        shift += 5;
+      } while (byte >= 0x20);
+      lat += result & 1 ? ~(result >> 1) : result >> 1;
+
+      result = 0;
+      shift = 0;
+      do {
+        byte = encoded.charCodeAt(index++) - 63;
+        result |= (byte & 0x1f) << shift;
+        shift += 5;
+      } while (byte >= 0x20);
+      lng += result & 1 ? ~(result >> 1) : result >> 1;
+      path.push({ lat: lat / 1e5, lng: lng / 1e5 });
+    }
+    return path;
+  }
+
+  async function fetchDrivingRoute(pinnedStops) {
+    if (pinnedStops.length < 2) return null;
+    const response = await fetch("/.netlify/functions/route-directions", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", "Accept": "application/json" },
+      body: JSON.stringify({
+        stops: pinnedStops.map((stop) => ({
+          lat: stop.latitude,
+          lng: stop.longitude,
+          address: stop.address
+        }))
+      })
+    });
+    const payload = await response.json().catch(() => ({}));
+    if (!response.ok) {
+      throw new Error(payload.error || "Driving route preview is unavailable.");
+    }
+    return {
+      ...payload,
+      path: decodeGooglePolyline(payload.encodedPolyline || "")
+    };
+  }
+
   async function getGoogleMapsBrowserKey() {
     if (googleMapsBrowserKeyPromise) return googleMapsBrowserKeyPromise;
     googleMapsBrowserKeyPromise = fetch("/.netlify/functions/google-maps-browser-key", {
@@ -1639,13 +1705,31 @@
       });
 
       if (path.length > 1) {
+        let routePath = path;
+        let routeLabel = "";
+        try {
+          els.routeMapStatus.textContent = "Previewing driving route...";
+          const drivingRoute = await fetchDrivingRoute(pinnedStops);
+          if (drivingRoute?.path?.length) {
+            routePath = drivingRoute.path;
+            routeLabel = [formatRouteDuration(drivingRoute.durationSeconds), formatRouteDistance(drivingRoute.distanceMeters)]
+              .filter(Boolean)
+              .join(" / ");
+          }
+        } catch (error) {
+          routeLabel = "Straight-line preview; driving route unavailable.";
+        }
+        routePath.forEach((point) => bounds.extend(point));
         googleRouteLine = new window.google.maps.Polyline({
-          path,
+          path: routePath,
           map,
           strokeColor: "#2f6b4f",
           strokeOpacity: .82,
           strokeWeight: 4
         });
+        els.routeMapStatus.textContent = routeLabel
+          ? `${routeLabel}${missingPins.length ? ` / ${missingPins.length} need pins.` : ""}`
+          : `${pinnedStops.length} stop${pinnedStops.length === 1 ? "" : "s"} mapped with Google driving directions.`;
       }
 
       if (path.length === 1) {

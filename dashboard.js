@@ -1732,9 +1732,13 @@
     googleRouteMap = new window.google.maps.Map(els.routeMap, {
       center: PORTLAND_CENTER,
       zoom: 11,
+      controlSize: 32,
       mapTypeControl: false,
       streetViewControl: false,
-      fullscreenControl: false,
+      fullscreenControl: true,
+      fullscreenControlOptions: {
+        position: window.google.maps.ControlPosition.RIGHT_BOTTOM
+      },
       rotateControl: false,
       scaleControl: false,
       zoomControl: true,

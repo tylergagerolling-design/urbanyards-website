@@ -3353,21 +3353,12 @@ button:active,
   width: 100%;
   height: clamp(320px, 32vw, 420px);
   min-height: 320px;
+  max-height: 460px;
   overflow: hidden;
   border: 1px solid rgba(6, 27, 21, .12);
   border-radius: 8px;
   background: rgba(235, 244, 229, .75);
-}
-
-.route-map .gm-style button {
-  border-radius: 8px !important;
-  box-shadow: 0 8px 18px rgba(6, 27, 21, .14) !important;
-}
-
-.route-map .gm-style-cc,
-.route-map .gmnoprint a,
-.route-map .gmnoprint span {
-  font-size: 10px !important;
+  isolation: isolate;
 }
 
 .pac-container {

@@ -3361,17 +3361,61 @@ button:active,
   isolation: isolate;
 }
 
-.route-map .gm-style button {
-  all: revert;
-  box-sizing: border-box;
+.route-map-shell {
+  position: relative;
+  overflow: hidden;
+  border-radius: 8px;
+}
+
+.route-map .gm-style button,
+.route-map .gm-style [role="button"] {
+  all: revert !important;
+  box-sizing: border-box !important;
 }
 
 .route-map .gm-style img {
-  max-width: none;
+  max-width: none !important;
+  height: auto;
+}
+
+.route-map .gm-style .gm-control-active {
+  background: #fff !important;
+  border-radius: 2px !important;
 }
 
 .route-map .gm-style button img {
   display: inline-block;
+}
+
+.route-map-zoom {
+  position: absolute;
+  left: 12px;
+  bottom: 12px;
+  z-index: 5;
+  display: grid;
+  gap: 6px;
+}
+
+.route-map-zoom button {
+  width: 38px;
+  height: 38px;
+  min-width: 38px;
+  min-height: 38px;
+  padding: 0;
+  border: 1px solid rgba(6, 27, 21, .14);
+  border-radius: 8px;
+  background: rgba(255, 252, 239, .98);
+  box-shadow: 0 10px 22px rgba(6, 27, 21, .18);
+  color: var(--studio-forest);
+  font-size: 1.25rem;
+  font-weight: 900;
+  line-height: 1;
+}
+
+.route-map-zoom button:hover {
+  border-color: rgba(47, 107, 79, .42);
+  background: #fff;
+  transform: translateY(-1px);
 }
 
 .pac-container {

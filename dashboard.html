@@ -11,10 +11,10 @@
     <link rel="icon" href="/favicon.ico" sizes="any">
     <link rel="apple-touch-icon" href="/apple-touch-icon.png">
     <link rel="manifest" href="/dashboard.webmanifest">
-    <link rel="stylesheet" href="dashboard.css?v=20260623-10">
+    <link rel="stylesheet" href="dashboard.css?v=20260623-11">
     <link rel="stylesheet" href="dashboard-mobile-fix.css?v=20260622-3">
     <script src="dashboard-config.js?v=20260623-1" defer></script>
-    <script src="dashboard.js?v=20260623-11" defer></script>
+    <script src="dashboard.js?v=20260623-12" defer></script>
   </head>
   <body>
     <main class="dashboard-shell" aria-labelledby="dashboard-title">
@@ -338,7 +338,13 @@
                       <p data-route-map-status>Add stops to preview today's route.</p>
                     </div>
                   </div>
-                  <div class="route-map" data-route-map></div>
+                  <div class="route-map-shell">
+                    <div class="route-map" data-route-map></div>
+                    <div class="route-map-zoom" aria-label="Map zoom controls">
+                      <button type="button" data-action="route-zoom-in" aria-label="Zoom map in">+</button>
+                      <button type="button" data-action="route-zoom-out" aria-label="Zoom map out">-</button>
+                    </div>
+                  </div>
                 </article>
               </div>
             </div>

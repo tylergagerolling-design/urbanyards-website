@@ -1741,10 +1741,7 @@
       },
       rotateControl: false,
       scaleControl: false,
-      zoomControl: true,
-      zoomControlOptions: {
-        position: window.google.maps.ControlPosition.LEFT_BOTTOM
-      },
+      zoomControl: false,
       clickableIcons: false,
       gestureHandling: "greedy"
     });
@@ -3627,6 +3624,10 @@
           return;
         }
         window.open(url, "_blank", "noopener");
+      } else if (action === "route-zoom-in" || action === "route-zoom-out") {
+        if (!googleRouteMap) return;
+        const currentZoom = googleRouteMap.getZoom() ?? 12;
+        googleRouteMap.setZoom(currentZoom + (action === "route-zoom-in" ? 1 : -1));
       } else if (action === "reset-route-form") {
         resetRouteForm();
       } else if (action === "move-route-up" || action === "move-route-down") {

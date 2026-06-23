@@ -281,6 +281,35 @@
     return new Intl.NumberFormat("en-US", { style: "currency", currency: currency || "USD" }).format(cents / 100);
   }
 
+  function normalizeLookup(value) {
+    return String(value || "")
+      .toLowerCase()
+      .replace(/[^a-z0-9@.]+/g, " ")
+      .replace(/\s+/g, " ")
+      .trim();
+  }
+
+  function hasLookupMatch(needles, haystacks) {
+    const normalizedNeedles = needles
+      .map(normalizeLookup)
+      .filter((value) => value && !["no email", "no phone", "not provided", "contact"].includes(value));
+    if (!normalizedNeedles.length) return false;
+    const normalizedHaystacks = haystacks.map(normalizeLookup).filter(Boolean);
+    return normalizedNeedles.some((needle) => normalizedHaystacks.some((haystack) => haystack === needle || haystack.includes(needle) || needle.includes(haystack)));
+  }
+
+  function isDocumentUnpaid(doc) {
+    const squareStatus = String(doc.squareStatus || "").toUpperCase();
+    const dashboardStatus = String(doc.status || "").toLowerCase();
+    return doc.type === "invoice" && squareStatus !== "PAID" && dashboardStatus !== "paid" && dashboardStatus !== "void";
+  }
+
+  function squareAmountOwedCents(data) {
+    return data.documents
+      .filter(isDocumentUnpaid)
+      .reduce((sum, doc) => sum + (typeof doc.squareAmountDueCents === "number" ? doc.squareAmountDueCents : 0), 0);
+  }
+
   function toDateInputValue(value) {
     if (!value) return "";
     const date = new Date(value);
@@ -1406,6 +1435,51 @@
     return state.data.notes.filter(matchesSearch);
   }
 
+  function contactNeedles(contact) {
+    return [contact.name, contact.email, contact.phone, contact.city, contact.type];
+  }
+
+  function recordRelatesToContact(contact, values) {
+    return hasLookupMatch(contactNeedles(contact), values);
+  }
+
+  function clientProfile(contact, data = state.data) {
+    const quotes = data.submissions.filter((item) => recordRelatesToContact(contact, [item.name, item.email, item.phone, item.city, item.propertyType, item.service, item.notes]));
+    const jobs = data.jobs.filter((job) => recordRelatesToContact(contact, [job.site, job.city, job.service]));
+    const documents = data.documents.filter((doc) => recordRelatesToContact(contact, [doc.clientName, doc.clientEmail, doc.number, doc.squareInvoiceNumber, doc.notes]));
+    const routeStops = data.routeStops.filter((stop) => recordRelatesToContact(contact, [stop.clientName, stop.address, stop.serviceType, stop.notes]));
+    const reminders = data.reminders.filter((reminder) => recordRelatesToContact(contact, [reminder.task]));
+    const notes = data.notes.filter((note) => recordRelatesToContact(contact, [note.title, note.body]));
+    const tasks = data.operations.filter((task) => recordRelatesToContact(contact, [task.title, task.clientName, task.propertyAddress, task.description, task.notes]));
+    const unpaidDocuments = documents.filter(isDocumentUnpaid);
+    const amountOwedCents = unpaidDocuments.reduce((sum, doc) => sum + (typeof doc.squareAmountDueCents === "number" ? doc.squareAmountDueCents : 0), 0);
+    const upcomingJobs = jobs.filter((job) => job.dateRaw && job.dateRaw >= todayKey()).sort((a, b) => a.dateRaw.localeCompare(b.dateRaw));
+    const openFollowUps = reminders.filter((reminder) => reminder.status !== "Completed");
+    return {
+      contact,
+      quotes,
+      jobs,
+      documents,
+      routeStops,
+      reminders,
+      notes,
+      tasks,
+      unpaidDocuments,
+      amountOwedCents,
+      upcomingJobs,
+      openFollowUps
+    };
+  }
+
+  function miniCount(label, value) {
+    return `<span class="profile-count"><strong>${escapeHtml(value)}</strong>${escapeHtml(label)}</span>`;
+  }
+
+  function renderMiniList(items, renderItem, emptyMessage, limit = 4) {
+    if (!items.length) return emptyState(emptyMessage);
+    return `<div class="profile-mini-list">${items.slice(0, limit).map(renderItem).join("")}</div>`;
+  }
+
   function filteredOperations() {
     return state.data.operations.filter((item) => {
       const typeMatches = state.operationsFilter === "All" || item.type === state.operationsFilter;
@@ -1796,9 +1870,11 @@
     const invoicesDue = data.documents.filter((item) => item.type === "invoice" && item.status !== "paid").length;
     const followUps = data.reminders.filter((item) => item.status !== "Completed").length;
     const openTasks = data.notes.length;
+    const squareOwed = squareAmountOwedCents(data);
     const metrics = [
       ["Jobs this week", jobsThisWeek],
       ["Quotes pending", quotesPending],
+      ["Square owed", formatCurrency(squareOwed, "USD")],
       ["Invoices due", invoicesDue],
       ["Follow-ups needed", followUps],
       ["Open tasks", openTasks]
@@ -2513,19 +2589,20 @@
   function renderContacts(data) {
     const contacts = filteredContacts();
     if (!contacts.length) {
-      els.contacts.innerHTML = emptyState("No contacts yet.");
+      els.contacts.innerHTML = emptyState("No client/property profiles yet.");
       return;
     }
     els.contacts.innerHTML = contacts.map((contact) => {
-      const relatedJobs = data.jobs.filter((job) => job.site.toLowerCase() === contact.name.toLowerCase()).length;
-      const relatedDocs = data.documents.filter((doc) => doc.clientName.toLowerCase() === contact.name.toLowerCase() || doc.clientEmail.toLowerCase() === contact.email.toLowerCase()).length;
-      const relatedQuotes = data.submissions.filter((item) => item.name.toLowerCase() === contact.name.toLowerCase() || item.email.toLowerCase() === contact.email.toLowerCase()).length;
+      const profile = clientProfile(contact, data);
+      const nextJob = profile.upcomingJobs[0];
+      const routeStop = profile.routeStops.find((stop) => stop.routeDate >= todayKey()) || profile.routeStops[0];
       return `
-      <article class="contact-card">
-        <div class="item-topline">
-          <div>
+      <article class="contact-card client-profile-card">
+        <div class="client-profile-top">
+          <div class="client-profile-identity">
+            <p class="eyebrow">${escapeHtml(contact.type)}</p>
             <h4>${escapeHtml(contact.name)}</h4>
-            <div class="meta">${escapeHtml(contact.type)} / ${escapeHtml(contact.city)}</div>
+            <p>${escapeHtml(contact.city)}</p>
           </div>
           <div class="card-actions">
             ${statusSelect("contacts", contact.id, contact.status)}
@@ -2533,8 +2610,28 @@
             ${actionButton("Delete", "delete-contact", contact.id).replace("inline-action", "inline-action danger-action")}
           </div>
         </div>
-        <p class="item-body">${escapeHtml(contact.email)}<br>${escapeHtml(contact.phone)}</p>
-        <p class="small">Related: ${relatedJobs} jobs / ${relatedQuotes} quotes / ${relatedDocs} docs</p>
+        <div class="client-profile-contact-line">
+          <span>${escapeHtml(contact.email)}</span>
+          <span>${escapeHtml(contact.phone)}</span>
+        </div>
+        <div class="client-profile-counts">
+          ${miniCount("jobs", profile.jobs.length)}
+          ${miniCount("quotes", profile.quotes.length)}
+          ${miniCount("invoices/docs", profile.documents.length)}
+          ${miniCount("route stops", profile.routeStops.length)}
+          ${miniCount("follow-ups", profile.openFollowUps.length)}
+        </div>
+        <div class="client-profile-snapshot">
+          <div><span>Next job</span><strong>${nextJob ? `${escapeHtml(nextJob.date)} / ${escapeHtml(nextJob.service)}` : "None scheduled"}</strong></div>
+          <div><span>Route</span><strong>${routeStop ? `${escapeHtml(routeStop.routeDate)} / ${escapeHtml(routeStop.status)}` : "No route history"}</strong></div>
+          <div><span>Square owed</span><strong>${escapeHtml(formatCurrency(profile.amountOwedCents, "USD"))}</strong></div>
+        </div>
+        <div class="client-profile-actions">
+          <button class="inline-action" type="button" data-action="add-client-job" data-id="${escapeHtml(contact.id)}">${buttonContent("Schedule Job", "quick-add-job")}</button>
+          <button class="inline-action" type="button" data-action="add-client-route" data-id="${escapeHtml(contact.id)}">${buttonContent("Route Stop", "go-route-planner")}</button>
+          <button class="inline-action" type="button" data-action="add-client-follow-up" data-id="${escapeHtml(contact.id)}">${buttonContent("Follow-Up", "quick-add-follow-up")}</button>
+          <button class="inline-action" type="button" data-action="add-client-document" data-id="${escapeHtml(contact.id)}">${buttonContent("Quote / Invoice", "quick-add-quote")}</button>
+        </div>
       </article>
     `;
     }).join("");
@@ -2558,6 +2655,7 @@
         </div>
         <p class="item-body">${escapeHtml(job.service)}<br>${escapeHtml(job.city)}</p>
         <div class="job-actions">
+          ${job.status !== "Completed" ? actionButton("Complete", "complete-job", job.id) : ""}
           ${actionButton("Edit", "edit-job", job.id)}
           ${actionButton("Delete", "cancel-job", job.id).replace("inline-action", "inline-action danger-action")}
         </div>
@@ -2714,14 +2812,20 @@
   function openContactDrawer(id) {
     const contact = state.data.contacts.find((item) => item.id === id);
     if (!contact || !els.detailDrawer || !els.detailContent) return;
-    const relatedJobs = state.data.jobs.filter((job) => job.site.toLowerCase() === contact.name.toLowerCase());
-    const relatedDocs = state.data.documents.filter((doc) => doc.clientName.toLowerCase() === contact.name.toLowerCase() || doc.clientEmail.toLowerCase() === contact.email.toLowerCase());
-    const relatedQuotes = state.data.submissions.filter((item) => item.name.toLowerCase() === contact.name.toLowerCase() || item.email.toLowerCase() === contact.email.toLowerCase());
+    const profile = clientProfile(contact);
     els.detailDrawer.hidden = false;
     els.detailContent.innerHTML = `
       <div class="drawer-content">
-        <p class="eyebrow">Client Detail</p>
+        <p class="eyebrow">Client / Property Profile</p>
         <h3>${escapeHtml(contact.name)}</h3>
+        <div class="profile-drawer-metrics">
+          ${miniCount("jobs", profile.jobs.length)}
+          ${miniCount("route stops", profile.routeStops.length)}
+          ${miniCount("quotes", profile.quotes.length)}
+          ${miniCount("docs", profile.documents.length)}
+          ${miniCount("open follow-ups", profile.openFollowUps.length)}
+          ${miniCount("Square owed", formatCurrency(profile.amountOwedCents, "USD"))}
+        </div>
         <form class="drawer-form" data-contact-edit data-id="${escapeHtml(contact.id)}">
           <label>Name<input name="name" value="${escapeHtml(contact.name)}" required></label>
           <label>Email<input name="email" type="email" value="${escapeHtml(contact.email === "No email" ? "" : contact.email)}"></label>
@@ -2731,17 +2835,38 @@
           <label>Status<select name="status">${STATUSES.map((status) => `<option value="${status}"${status === contact.status ? " selected" : ""}>${status}</option>`).join("")}</select></label>
           <div class="drawer-actions">
             <button type="submit">${buttonContent("Save Client", "complete-reminder")}</button>
-            <button type="button" data-action="quick-add-job">${buttonContent("Add Job", "quick-add-job")}</button>
-            <button type="button" data-action="quick-add-quote">${buttonContent("Add Quote", "quick-add-quote")}</button>
+            <button type="button" data-action="add-client-job" data-id="${escapeHtml(contact.id)}">${buttonContent("Add Job", "quick-add-job")}</button>
+            <button type="button" data-action="add-client-route" data-id="${escapeHtml(contact.id)}">${buttonContent("Route Stop", "go-route-planner")}</button>
+            <button type="button" data-action="add-client-follow-up" data-id="${escapeHtml(contact.id)}">${buttonContent("Follow-Up", "quick-add-follow-up")}</button>
+            <button type="button" data-action="add-client-document" data-id="${escapeHtml(contact.id)}">${buttonContent("Quote / Invoice", "quick-add-quote")}</button>
             <button type="button" class="danger-action" data-action="delete-contact" data-id="${escapeHtml(contact.id)}">${buttonContent("Delete Client", "delete-contact")}</button>
           </div>
         </form>
-        <h4>Related work</h4>
-        <div class="timeline">
-          ${relatedQuotes.map((item) => `<div class="timeline-item"><strong>Quote</strong><br>${escapeHtml(item.service)} / ${escapeHtml(item.status)}</div>`).join("")}
-          ${relatedJobs.map((job) => `<div class="timeline-item"><strong>Job</strong><br>${escapeHtml(job.date)} / ${escapeHtml(job.service)}</div>`).join("")}
-          ${relatedDocs.map((doc) => `<div class="timeline-item"><strong>${escapeHtml(doc.type)}</strong><br>${escapeHtml(doc.number)} / ${escapeHtml(doc.status)}</div>`).join("")}
-          ${!relatedQuotes.length && !relatedJobs.length && !relatedDocs.length ? emptyState("No related work yet.") : ""}
+        <div class="profile-drawer-grid">
+          <section>
+            <h4>Jobs / Visits</h4>
+            ${renderMiniList(profile.jobs, (job) => `<button class="profile-mini-item" type="button" data-action="edit-job" data-id="${escapeHtml(job.id)}"><strong>${escapeHtml(job.date)}</strong><span>${escapeHtml(job.service)} / ${escapeHtml(job.status)}</span></button>`, "No jobs or visits yet.")}
+          </section>
+          <section>
+            <h4>Quotes & Invoices</h4>
+            ${renderMiniList(profile.documents, (doc) => `<button class="profile-mini-item" type="button" data-action="open-document" data-id="${escapeHtml(doc.id)}"><strong>${escapeHtml(doc.number)}</strong><span>${escapeHtml(doc.type)} / ${escapeHtml(doc.squareStatus || doc.status)} / ${escapeHtml(doc.squareAmountDueCents !== null ? formatCurrency(doc.squareAmountDueCents, doc.squareCurrency) : `$${doc.total.toFixed(2)}`)}</span></button>`, "No estimates or invoices yet.")}
+          </section>
+          <section>
+            <h4>Quote Requests</h4>
+            ${renderMiniList(profile.quotes, (item) => `<button class="profile-mini-item" type="button" data-action="open-submission" data-id="${escapeHtml(item.id)}"><strong>${escapeHtml(item.service)}</strong><span>${escapeHtml(item.status)} / ${escapeHtml(item.receivedAt)}</span></button>`, "No quote requests yet.")}
+          </section>
+          <section>
+            <h4>Route History</h4>
+            ${renderMiniList(profile.routeStops, (stop) => `<button class="profile-mini-item" type="button" data-action="go-route-planner"><strong>${escapeHtml(stop.routeDate || "No date")}</strong><span>${escapeHtml(stop.serviceType)} / ${escapeHtml(stop.status)}</span></button>`, "No route stops yet.")}
+          </section>
+          <section>
+            <h4>Follow-Ups & Communication</h4>
+            ${renderMiniList([...profile.openFollowUps, ...profile.tasks], (item) => `<div class="profile-mini-item"><strong>${escapeHtml(item.task || item.title)}</strong><span>${escapeHtml(item.due || item.dueDate || item.status || "Open")}</span></div>`, "No open follow-ups right now.")}
+          </section>
+          <section>
+            <h4>Notes / Photo History</h4>
+            ${renderMiniList(profile.notes, (note) => `<div class="profile-mini-item"><strong>${escapeHtml(note.title)}</strong><span>${escapeHtml(note.body)}</span></div>`, "No notes yet. Photo storage can be added later with Supabase Storage.")}
+          </section>
         </div>
       </div>
     `;
@@ -2777,6 +2902,7 @@
           </label>
           <div class="drawer-actions">
             <button type="submit">${buttonContent("Save Visit", "complete-reminder")}</button>
+            ${job.status !== "Completed" ? `<button type="button" data-action="complete-job" data-id="${escapeHtml(job.id)}">${buttonContent("Mark Complete", "complete-reminder")}</button>` : ""}
             <button type="button" class="danger-action" data-action="cancel-job" data-id="${escapeHtml(job.id)}">${buttonContent("Cancel Visit", "cancel-job")}</button>
           </div>
         </form>
@@ -3036,6 +3162,7 @@
     els.metrics.innerHTML = [
       ["Jobs this week", "..."],
       ["Quotes pending", "..."],
+      ["Square owed", "..."],
       ["Invoices due", "..."],
       ["Follow-ups needed", "..."],
       ["Open tasks", "..."]
@@ -3184,6 +3311,7 @@
       els.search.addEventListener("input", async () => {
         state.search = els.search.value;
         if (els.globalSearch && els.globalSearch.value !== state.search) els.globalSearch.value = state.search;
+        if (els.clientSearch && els.clientSearch.value !== state.search) els.clientSearch.value = state.search;
         await render();
       });
     }
@@ -3192,6 +3320,16 @@
       els.globalSearch.addEventListener("input", async () => {
         state.search = els.globalSearch.value;
         if (els.search && els.search.value !== state.search) els.search.value = state.search;
+        if (els.clientSearch && els.clientSearch.value !== state.search) els.clientSearch.value = state.search;
+        await render();
+      });
+    }
+
+    if (els.clientSearch) {
+      els.clientSearch.addEventListener("input", async () => {
+        state.search = els.clientSearch.value;
+        if (els.search && els.search.value !== state.search) els.search.value = state.search;
+        if (els.globalSearch && els.globalSearch.value !== state.search) els.globalSearch.value = state.search;
         await render();
       });
     }
@@ -3327,6 +3465,67 @@
         history.replaceState(null, "", "#contacts");
         const input = qs("[data-client-form] input[name='name']");
         if (input) input.focus();
+      } else if (action === "add-client-job") {
+        const contact = state.data.contacts.find((item) => item.id === id);
+        if (!contact) return;
+        setActiveSection("calendar");
+        history.replaceState(null, "", "#calendar");
+        closeSubmissionDrawer();
+        const form = qs("[data-job-create-form]");
+        if (form) {
+          form.visit_date.value = todayKey();
+          form.visit_window.value = "";
+          form.site_name.value = contact.name;
+          form.city.value = contact.city === "Not provided" ? "" : contact.city;
+          form.service.value = "Groundskeeping visit";
+          form.service.focus();
+        }
+      } else if (action === "add-client-route") {
+        const contact = state.data.contacts.find((item) => item.id === id);
+        if (!contact) return;
+        setActiveSection("route-planner");
+        history.replaceState(null, "", "#route-planner");
+        closeSubmissionDrawer();
+        if (els.routeForm) {
+          els.routeForm.client_name.value = contact.name;
+          els.routeForm.address.value = contact.city === "Not provided" ? "" : contact.city;
+          els.routeForm.service_type.value = "Groundskeeping";
+          els.routeForm.estimated_minutes.value = "";
+          els.routeForm.status.value = "Planned";
+          els.routeForm.notes.value = "";
+          els.routeForm.service_type.focus();
+        }
+      } else if (action === "add-client-follow-up") {
+        const contact = state.data.contacts.find((item) => item.id === id);
+        if (!contact) return;
+        setActiveSection("overview");
+        history.replaceState(null, "", "#overview");
+        closeSubmissionDrawer();
+        const form = qs("[data-operations-form]");
+        if (form) {
+          form.record_type.value = "client";
+          form.title.value = `Follow up with ${contact.name}`;
+          form.description.value = contact.city === "Not provided" ? contact.name : contact.city;
+          form.priority.value = "Normal";
+          form.status.value = "Open";
+          form.title.focus();
+        }
+      } else if (action === "add-client-document") {
+        const contact = state.data.contacts.find((item) => item.id === id);
+        if (!contact) return;
+        setActiveSection("documents");
+        history.replaceState(null, "", "#documents");
+        closeSubmissionDrawer();
+        const form = qs("[data-document-form]");
+        if (form) {
+          form.document_type.value = "estimate";
+          form.client_name.value = contact.name;
+          form.client_email.value = contact.email === "No email" ? "" : contact.email;
+          form.square_invoice_number.value = "";
+          form.description.value = "Groundskeeping service";
+          form.amount.value = "";
+          form.description.focus();
+        }
       } else if (action === "quick-add-operation") {
         setActiveSection("overview");
         history.replaceState(null, "", "#overview");
@@ -3496,6 +3695,16 @@
         }
       } else if (action === "edit-job") {
         openJobDrawer(id);
+      } else if (action === "complete-job") {
+        try {
+          setDashboardState("Marking visit complete...");
+          await updateStatus("scheduled_jobs", id, "Completed");
+          await refreshDashboard();
+          openJobDrawer(id);
+          setDashboardState("");
+        } catch (error) {
+          setDashboardState(error.message || "Unable to complete visit.", "error");
+        }
       } else if (action === "cancel-job") {
         const ok = window.confirm("Delete this scheduled visit?");
         if (!ok) return;
@@ -3877,6 +4086,7 @@
     els.dashboardState = qs("[data-dashboard-state]");
     els.search = qs("[data-dashboard-search]");
     els.globalSearch = qs("[data-global-search]");
+    els.clientSearch = qs("[data-client-search]");
     els.propertyFilter = qs("[data-property-filter]");
     els.pipeline = qs("[data-pipeline]");
     els.documents = qs("[data-documents]");

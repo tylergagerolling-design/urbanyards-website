@@ -11,10 +11,10 @@
     <link rel="icon" href="/favicon.ico" sizes="any">
     <link rel="apple-touch-icon" href="/apple-touch-icon.png">
     <link rel="manifest" href="/dashboard.webmanifest">
-    <link rel="stylesheet" href="dashboard.css?v=20260623-5">
+    <link rel="stylesheet" href="dashboard.css?v=20260623-6">
     <link rel="stylesheet" href="dashboard-mobile-fix.css?v=20260622-3">
     <script src="dashboard-config.js?v=20260623-1" defer></script>
-    <script src="dashboard.js?v=20260623-6" defer></script>
+    <script src="dashboard.js?v=20260623-7" defer></script>
   </head>
   <body>
     <main class="dashboard-shell" aria-labelledby="dashboard-title">
@@ -93,6 +93,7 @@
               <button type="button" data-action="quick-add-invoice-reminder"><span class="button-icon" aria-hidden="true">$</span><span>Invoice</span></button>
               <button type="button" data-new-note><span class="button-icon" aria-hidden="true">+</span><span>Note</span></button>
               <button type="button" data-action="quick-add-operation"><span class="button-icon" aria-hidden="true">+</span><span>Task</span></button>
+              <a class="quick-action-link" href="https://voice.google.com/" target="_blank" rel="noopener noreferrer"><span class="button-icon" aria-hidden="true">GV</span><span>Google Voice</span></a>
             </div>
             <div class="dashboard-alerts" data-dashboard-alerts></div>
             <div class="operations-health" data-operations-health></div>
@@ -406,19 +407,20 @@
             <div class="panel">
               <div class="panel-heading">
                 <div>
-                  <h3>Clients</h3>
-                  <p>Client cards with contact details and related work signals.</p>
+                  <h3>Client / Property Profiles</h3>
+                  <p>One place per client with contact info, property details, notes, jobs, quotes, invoices, route history, and follow-ups.</p>
                 </div>
                 <button class="inline-action" type="button" data-action="quick-add-client">Add Client</button>
               </div>
               <div class="toolbar">
+                <input data-client-search type="search" aria-label="Search client profiles" placeholder="Search clients, properties, email, phone...">
                 <button type="button" data-export="contacts"><span class="button-icon" aria-hidden="true">CSV</span><span>Export Contacts</span></button>
               </div>
               <form class="client-form" data-client-form>
                 <input name="name" placeholder="Client name" required>
                 <input name="email" type="email" placeholder="Email">
                 <input name="phone" placeholder="Phone">
-                <input name="city" placeholder="Property / area" autocomplete="street-address" data-address-autocomplete>
+                <input name="city" placeholder="Property address / area" autocomplete="street-address" data-address-autocomplete>
                 <input name="contact_type" placeholder="Client type">
                 <button type="submit"><span class="button-icon" aria-hidden="true">+</span><span>Add Client</span></button>
               </form>

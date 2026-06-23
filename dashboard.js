@@ -1410,6 +1410,12 @@
     ].some((value) => String(value || "").toLowerCase().includes(query));
   }
 
+  function matchesSearchValues(values) {
+    const query = state.search.trim().toLowerCase();
+    if (!query) return true;
+    return values.some((value) => String(value || "").toLowerCase().includes(query));
+  }
+
   function filteredSubmissions() {
     return state.data.submissions.filter((item) => {
       const statusMatches = state.statusFilter === "All" || item.status === state.statusFilter;
@@ -1432,6 +1438,10 @@
 
   function filteredDocuments() {
     return state.data.documents.filter(matchesSearch);
+  }
+
+  function filteredRouteStops(stops) {
+    return stops.filter((stop) => matchesSearchValues([stop.clientName, stop.address, stop.serviceType, stop.notes, stop.status, stop.routeDate]));
   }
 
   function filteredReminders() {
@@ -1914,7 +1924,7 @@
   }
 
   function renderUpcoming(data) {
-    const todayJobs = data.jobs.filter((job) => job.dateRaw === todayKey());
+    const todayJobs = data.jobs.filter((job) => job.dateRaw === todayKey() && matchesSearch(job));
     if (!todayJobs.length) {
       els.upcoming.innerHTML = emptyState("No jobs scheduled for today.");
       return;
@@ -1935,7 +1945,7 @@
 
   function renderHomeReminders(data) {
     if (!els.homeReminders) return;
-    const reminders = data.reminders.filter((item) => item.status !== "Completed").slice(0, 5);
+    const reminders = data.reminders.filter((item) => item.status !== "Completed" && matchesSearch(item)).slice(0, 5);
     if (!reminders.length) {
       els.homeReminders.innerHTML = emptyState("No active follow-ups right now.");
       return;
@@ -1955,7 +1965,7 @@
 
   function renderHomeNotes(data) {
     if (!els.homeNotes) return;
-    const notes = data.notes.slice(0, 4);
+    const notes = data.notes.filter(matchesSearch).slice(0, 4);
     if (!notes.length) {
       els.homeNotes.innerHTML = emptyState("No job notes yet.");
       return;
@@ -1974,7 +1984,7 @@
   function renderTodayRouteSnapshot(data) {
     if (!els.todayRouteSnapshot) return;
     const today = todayKey();
-    const stops = data.routeStops
+    const stops = filteredRouteStops(data.routeStops)
       .filter((stop) => stop.routeDate === today)
       .sort((a, b) => a.stopOrder - b.stopOrder || a.createdAt.localeCompare(b.createdAt));
     if (!stops.length) {
@@ -2202,10 +2212,12 @@
         source: "reminder"
       }));
 
+    const commandMatchesSearch = (item) => matchesSearchValues([item.label, item.title, item.detail, item.dueDate, item.priority, item.status, item.type]);
     const todayItems = [
       ...savedItems.filter((item) => (item.dueDateRaw && item.dueDateRaw <= today) || item.priority === "High"),
       ...commandItems.filter((item) => item.priority === "High")
     ]
+      .filter(commandMatchesSearch)
       .sort((a, b) => {
         const dateSort = String(a.dueDateRaw || "9999").localeCompare(String(b.dueDateRaw || "9999"));
         if (dateSort) return dateSort;
@@ -2216,13 +2228,13 @@
       ...savedItems.filter((item) => item.status === "Waiting" || ["client", "payment"].includes(item.type)),
       ...waitingQuoteItems,
       ...paymentItems
-    ].slice(0, 10);
+    ].filter(commandMatchesSearch).slice(0, 10);
     const deadlineItems = [
       ...savedItems.filter((item) => item.dueDateRaw && item.dueDateRaw >= today && item.dueDateRaw <= next30),
       ...reminderDeadlineItems.filter((item) => item.dueDateRaw && item.dueDateRaw >= today && item.dueDateRaw <= next30),
       ...paymentItems.filter((item) => item.dueDateRaw && item.dueDateRaw >= today && item.dueDateRaw <= next30)
-    ].sort((a, b) => String(a.dueDateRaw || "9999").localeCompare(String(b.dueDateRaw || "9999"))).slice(0, 12);
-    const equipmentItems = savedItems.filter((item) => item.type === "equipment").slice(0, 10);
+    ].filter(commandMatchesSearch).sort((a, b) => String(a.dueDateRaw || "9999").localeCompare(String(b.dueDateRaw || "9999"))).slice(0, 12);
+    const equipmentItems = savedItems.filter((item) => item.type === "equipment").filter(commandMatchesSearch).slice(0, 10);
 
     const healthCards = [
       ["Tasks Due Today", todayItems.length, "Priority items for today"],
@@ -2283,7 +2295,7 @@
       return;
     }
 
-    const stops = selectedRouteStops();
+    const stops = filteredRouteStops(selectedRouteStops());
     const minutes = stops.reduce((sum, stop) => sum + (stop.estimatedMinutes || 0), 0);
     els.routeSummary.textContent = stops.length
       ? `${stops.length} stop${stops.length === 1 ? "" : "s"} / ${minutes || 0} min estimated`
@@ -2535,6 +2547,9 @@
   function renderCalendar(data) {
     if (!els.calendarList) return;
     let events = buildCalendarEvents(data);
+    if (state.search.trim()) {
+      events = events.filter((event) => matchesSearchValues([event.title, event.client, event.property, event.time, event.status, event.type, event.date]));
+    }
     if (state.calendarFilter !== "All") {
       events = events.filter((event) => event.type === state.calendarFilter);
     }

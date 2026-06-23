@@ -18,7 +18,7 @@
     <link rel="icon" href="/android-chrome-512x512.png" type="image/png" sizes="512x512">
     <link rel="apple-touch-icon" href="/apple-touch-icon.png">
     <link rel="manifest" href="/site.webmanifest">
-    <link rel="stylesheet" href="style.css?v=20260623-4">
+    <link rel="stylesheet" href="style.css?v=20260623-6">
     <script src="portfolio.js?v=20260617-8" defer></script>
     <script src="assistant.js?v=20260617-12" defer></script>
   </head>
@@ -56,8 +56,17 @@
           </div>
           <div class="portfolio-grid">
             <article class="card portfolio-card" data-category="landscape">
-              <div class="placeholder portfolio-image"><span>Project Photography</span><small>Landscape improvement</small></div>
-              <div class="portfolio-card-body"><p class="eyebrow">Landscape Improvements</p><h3>Apartment Community Refresh</h3><p>Designed for before-and-after photos, planting notes, and curb appeal outcomes.</p><span class="portfolio-tag">Ready for Photos</span></div>
+              <div class="portfolio-image portfolio-comparison" aria-label="Apartment community landscape before and after">
+                <figure>
+                  <img src="images/apartment-community-refresh-before.jpeg" alt="Apartment community frontage before landscape improvements" loading="lazy">
+                  <figcaption>Before</figcaption>
+                </figure>
+                <figure>
+                  <img src="images/apartment-community-refresh-after.jpeg" alt="Apartment community frontage after new planting beds and mulch" loading="lazy">
+                  <figcaption>After</figcaption>
+                </figure>
+              </div>
+              <div class="portfolio-card-body"><p class="eyebrow">Landscape Improvements</p><h3>Apartment Community Refresh</h3><p>Overgrown frontage transformed into clean planting beds with new shrubs, ornamental grasses, and fresh mulch.</p><span class="portfolio-tag">Before &amp; After</span></div>
             </article>
             <article class="card portfolio-card" data-category="groundskeeping">
               <div class="placeholder portfolio-image"><span>Project Photography</span><small>Groundskeeping care</small></div>
@@ -72,8 +81,8 @@
               <div class="portfolio-card-body"><p class="eyebrow">Landscape Improvements</p><h3>Shared Courtyard Update</h3><p>Structured for shared-space upgrades, resident experience notes, and material choices.</p><span class="portfolio-tag">Ready for Photos</span></div>
             </article>
             <article class="card portfolio-card" data-category="groundskeeping">
-              <div class="placeholder portfolio-image"><span>Project Photography</span><small>Seasonal cleanup</small></div>
-              <div class="portfolio-card-body"><p class="eyebrow">Groundskeeping</p><h3>Seasonal Property Cleanup</h3><p>Ready for leaf cleanup, storm debris, bed reset, and seasonal recovery examples.</p><span class="portfolio-tag">Ready for Photos</span></div>
+              <img class="portfolio-image portfolio-project-photo" src="images/seasonal-property-cleanup.jpeg" alt="Seasonal property cleanup project showing a maintained lawn and shaded backyard" loading="lazy">
+              <div class="portfolio-card-body"><p class="eyebrow">Groundskeeping</p><h3>Seasonal Property Cleanup</h3><p>Ready for leaf cleanup, storm debris, bed reset, and seasonal recovery examples.</p><span class="portfolio-tag">Seasonal Cleanup</span></div>
             </article>
             <article class="card portfolio-card" data-category="ecological">
               <div class="placeholder portfolio-image"><span>Project Photography</span><small>Native planting</small></div>

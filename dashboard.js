@@ -301,13 +301,20 @@
   function isDocumentUnpaid(doc) {
     const squareStatus = String(doc.squareStatus || "").toUpperCase();
     const dashboardStatus = String(doc.status || "").toLowerCase();
-    return doc.type === "invoice" && squareStatus !== "PAID" && dashboardStatus !== "paid" && dashboardStatus !== "void";
+    const hasSquareLink = Boolean(doc.squareInvoiceId || doc.squareInvoiceNumber || doc.squarePaymentUrl || doc.squareStatus);
+    return hasSquareLink && squareStatus !== "PAID" && dashboardStatus !== "paid" && dashboardStatus !== "void";
+  }
+
+  function documentAmountOwedCents(doc) {
+    if (typeof doc.squareAmountDueCents === "number") return doc.squareAmountDueCents;
+    const total = Number(doc.total || 0);
+    return Number.isFinite(total) ? Math.round(total * 100) : 0;
   }
 
   function squareAmountOwedCents(data) {
     return data.documents
       .filter(isDocumentUnpaid)
-      .reduce((sum, doc) => sum + (typeof doc.squareAmountDueCents === "number" ? doc.squareAmountDueCents : 0), 0);
+      .reduce((sum, doc) => sum + documentAmountOwedCents(doc), 0);
   }
 
   function toDateInputValue(value) {
@@ -1452,7 +1459,7 @@
     const notes = data.notes.filter((note) => recordRelatesToContact(contact, [note.title, note.body]));
     const tasks = data.operations.filter((task) => recordRelatesToContact(contact, [task.title, task.clientName, task.propertyAddress, task.description, task.notes]));
     const unpaidDocuments = documents.filter(isDocumentUnpaid);
-    const amountOwedCents = unpaidDocuments.reduce((sum, doc) => sum + (typeof doc.squareAmountDueCents === "number" ? doc.squareAmountDueCents : 0), 0);
+    const amountOwedCents = unpaidDocuments.reduce((sum, doc) => sum + documentAmountOwedCents(doc), 0);
     const upcomingJobs = jobs.filter((job) => job.dateRaw && job.dateRaw >= todayKey()).sort((a, b) => a.dateRaw.localeCompare(b.dateRaw));
     const openFollowUps = reminders.filter((reminder) => reminder.status !== "Completed");
     return {

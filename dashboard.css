@@ -6187,3 +6187,88 @@ td {
   min-width: 104px !important;
   padding-inline: 13px !important;
 }
+
+/* Final compact data density pass: keep real business values from clipping. */
+.metric-grid {
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)) !important;
+  gap: 10px !important;
+}
+
+.metric-card,
+.operations-health-card {
+  min-width: 0 !important;
+  padding: 13px !important;
+  overflow: visible !important;
+}
+
+.metric-card strong,
+.operations-health-card strong {
+  display: block !important;
+  max-width: 100% !important;
+  overflow-wrap: anywhere !important;
+  word-break: normal !important;
+  color: var(--studio-ink, var(--uy-green)) !important;
+  font-size: clamp(1.28rem, 2.6vw, 2.15rem) !important;
+  line-height: 1.02 !important;
+  letter-spacing: 0 !important;
+}
+
+.metric-card span,
+.operations-health-card span {
+  margin-top: 7px !important;
+  font-size: .72rem !important;
+  line-height: 1.2 !important;
+  letter-spacing: .04em !important;
+}
+
+.panel-heading h3,
+.client-profile-identity h4,
+.job-card h4,
+.contact-card h4,
+.document-card h4,
+.submission-card h4,
+.note-card h4,
+.reminder-card h4 {
+  overflow-wrap: anywhere;
+  font-size: clamp(.98rem, 1.25vw, 1.16rem) !important;
+  line-height: 1.16 !important;
+}
+
+.item-body,
+.meta,
+.small,
+.client-profile-snapshot strong,
+.profile-mini-item strong {
+  overflow-wrap: anywhere;
+}
+
+.document-total {
+  font-size: clamp(1rem, 1.8vw, 1.28rem) !important;
+  line-height: 1.15 !important;
+  overflow-wrap: anywhere !important;
+}
+
+.profile-count {
+  min-width: 0 !important;
+  font-size: .76rem !important;
+}
+
+.profile-count strong {
+  font-size: .88rem !important;
+}
+
+@media (max-width: 760px) {
+  .metric-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+  }
+
+  .metric-card strong,
+  .operations-health-card strong {
+    font-size: clamp(1.12rem, 6vw, 1.72rem) !important;
+  }
+
+  .metric-card span,
+  .operations-health-card span {
+    font-size: .66rem !important;
+  }
+}

@@ -3361,6 +3361,19 @@ button:active,
   isolation: isolate;
 }
 
+.route-map .gm-style button {
+  all: revert;
+  box-sizing: border-box;
+}
+
+.route-map .gm-style img {
+  max-width: none;
+}
+
+.route-map .gm-style button img {
+  display: inline-block;
+}
+
 .pac-container {
   z-index: 10050 !important;
   margin-top: 8px;

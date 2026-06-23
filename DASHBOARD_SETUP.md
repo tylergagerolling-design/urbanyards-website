@@ -18,6 +18,7 @@ SQUARE_LOCATION_ID=
 SQUARE_VERSION=2025-06-18
 SQUARE_WEBHOOK_SIGNATURE_KEY=
 SQUARE_WEBHOOK_URL=https://urbanyards.us/api/square-webhook
+GOOGLE_MAPS_API_KEY=
 ```
 
 Optional:
@@ -29,6 +30,8 @@ VITE_DASHBOARD_OWNER_EMAIL=team@urbanyards.us
 Netlify runs `node scripts/build-dashboard-config.js` during deploy. That script generates `dashboard-config.js` from the environment variables.
 
 `SUPABASE_SERVICE_ROLE_KEY` is server-only. It lets the Netlify quote function save public website quote requests into `quote_submissions`. Do not paste the service-role key into frontend code.
+
+`GOOGLE_MAPS_API_KEY` is server-only. It powers Route Planner address lookup through the Netlify geocoding function and should not be exposed in frontend code.
 
 ## Supabase Auth Settings
 
@@ -279,6 +282,7 @@ create table if not exists route_stops (
   updated_at timestamptz not null default now()
 );
 
+-- Run this alter statement on older route_stops tables if saved stops still show "Map pin needed".
 alter table route_stops
   add column if not exists latitude double precision,
   add column if not exists longitude double precision;

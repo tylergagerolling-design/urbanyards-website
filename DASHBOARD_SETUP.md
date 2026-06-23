@@ -19,6 +19,7 @@ SQUARE_VERSION=2025-06-18
 SQUARE_WEBHOOK_SIGNATURE_KEY=
 SQUARE_WEBHOOK_URL=https://urbanyards.us/api/square-webhook
 GOOGLE_MAPS_API_KEY=
+VITE_GOOGLE_MAPS_BROWSER_KEY=
 ```
 
 Optional:
@@ -32,6 +33,8 @@ Netlify runs `node scripts/build-dashboard-config.js` during deploy. That script
 `SUPABASE_SERVICE_ROLE_KEY` is server-only. It lets the Netlify quote function save public website quote requests into `quote_submissions`. Do not paste the service-role key into frontend code.
 
 `GOOGLE_MAPS_API_KEY` is server-only. It powers Route Planner address lookup through the Netlify geocoding function and should not be exposed in frontend code.
+
+`VITE_GOOGLE_MAPS_BROWSER_KEY` is browser-facing. It powers the embedded Google map in Route Planner. Use a separate Google API key for this value, restrict it by website referrer to `https://urbanyards.us/*`, and restrict it to the Maps JavaScript API.
 
 ## Supabase Auth Settings
 

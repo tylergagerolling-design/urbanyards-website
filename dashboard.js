@@ -10,7 +10,8 @@
   const config = window.URBAN_YARDS_DASHBOARD_CONFIG || {
     supabaseUrl: "",
     supabaseAnonKey: "",
-    ownerEmail: "team@urbanyards.us"
+    ownerEmail: "team@urbanyards.us",
+    googleMapsBrowserKey: ""
   };
 
   const state = {
@@ -47,7 +48,12 @@
   let demoIdCount = 100;
   let routeMap = null;
   let routeLayer = null;
+  let googleRouteMap = null;
+  let googleRouteLine = null;
+  let googleMapsLoadPromise = null;
+  let googleRouteMarkers = [];
   const routeGeocodingIds = new Set();
+  const PORTLAND_CENTER = { lat: 45.5152, lng: -122.6784 };
 
   function qs(selector) {
     return document.querySelector(selector);
@@ -1349,6 +1355,15 @@
         }
       }, 80);
     }
+    if (state.activeSection === "route-planner" && googleRouteMap && window.google?.maps) {
+      setTimeout(() => {
+        window.google.maps.event.trigger(googleRouteMap, "resize");
+        if (!selectedRouteStops().some(hasRouteCoordinates)) {
+          googleRouteMap.setCenter(PORTLAND_CENTER);
+          googleRouteMap.setZoom(11);
+        }
+      }, 80);
+    }
   }
 
   function matchesSearch(item) {
@@ -1519,6 +1534,56 @@
     return typeof stop.latitude === "number" && typeof stop.longitude === "number";
   }
 
+  function getGoogleMapsBrowserKey() {
+    return String(config.googleMapsBrowserKey || "").trim();
+  }
+
+  function canUseGoogleRouteMap() {
+    return Boolean(getGoogleMapsBrowserKey());
+  }
+
+  function loadGoogleMapsScript() {
+    if (window.google?.maps) return Promise.resolve(window.google.maps);
+    if (googleMapsLoadPromise) return googleMapsLoadPromise;
+    const key = getGoogleMapsBrowserKey();
+    if (!key) return Promise.reject(new Error("Google Maps browser key is not configured."));
+
+    googleMapsLoadPromise = new Promise((resolve, reject) => {
+      const existing = document.querySelector("script[data-google-maps-route]");
+      if (existing) {
+        existing.addEventListener("load", () => resolve(window.google.maps), { once: true });
+        existing.addEventListener("error", () => reject(new Error("Google Maps failed to load.")), { once: true });
+        return;
+      }
+      const script = document.createElement("script");
+      script.src = `https://maps.googleapis.com/maps/api/js?key=${encodeURIComponent(key)}&v=weekly`;
+      script.async = true;
+      script.defer = true;
+      script.dataset.googleMapsRoute = "true";
+      script.addEventListener("load", () => resolve(window.google.maps), { once: true });
+      script.addEventListener("error", () => reject(new Error("Google Maps failed to load.")), { once: true });
+      document.head.appendChild(script);
+    });
+
+    return googleMapsLoadPromise;
+  }
+
+  async function ensureGoogleRouteMap() {
+    if (!els.routeMap) return null;
+    await loadGoogleMapsScript();
+    if (googleRouteMap) return googleRouteMap;
+    googleRouteMap = new window.google.maps.Map(els.routeMap, {
+      center: PORTLAND_CENTER,
+      zoom: 11,
+      mapTypeControl: false,
+      streetViewControl: false,
+      fullscreenControl: true,
+      clickableIcons: false,
+      gestureHandling: "greedy"
+    });
+    return googleRouteMap;
+  }
+
   function ensureRouteMap() {
     if (!els.routeMap || !window.L) return null;
     if (routeMap) return routeMap;
@@ -1538,8 +1603,89 @@
     return routeMap;
   }
 
+  async function renderGoogleRouteMap(stops) {
+    if (!els.routeMapStatus) return;
+    try {
+      const map = await ensureGoogleRouteMap();
+      if (!map) {
+        els.routeMapStatus.textContent = "Route map is loading.";
+        return;
+      }
+
+      googleRouteMarkers.forEach((marker) => marker.setMap(null));
+      googleRouteMarkers = [];
+      if (googleRouteLine) {
+        googleRouteLine.setMap(null);
+        googleRouteLine = null;
+      }
+
+      const pinnedStops = stops.filter(hasRouteCoordinates);
+      const missingPins = stops.filter((stop) => stop.address && !hasRouteCoordinates(stop));
+      if (!stops.length) {
+        els.routeMapStatus.textContent = "Add stops to preview today's route.";
+        map.setCenter(PORTLAND_CENTER);
+        map.setZoom(11);
+        return;
+      }
+      if (!pinnedStops.length) {
+        els.routeMapStatus.textContent = "Map pin needed.";
+        map.setCenter(PORTLAND_CENTER);
+        map.setZoom(11);
+        return;
+      }
+
+      els.routeMapStatus.textContent = missingPins.length
+        ? `${pinnedStops.length} pinned / ${missingPins.length} need pins.`
+        : `${pinnedStops.length} stop${pinnedStops.length === 1 ? "" : "s"} mapped with Google Maps.`;
+
+      const bounds = new window.google.maps.LatLngBounds();
+      const path = pinnedStops.map((stop) => ({ lat: stop.latitude, lng: stop.longitude }));
+      pinnedStops.forEach((stop) => {
+        const stopIndex = stops.findIndex((item) => item.id === stop.id) + 1;
+        const position = { lat: stop.latitude, lng: stop.longitude };
+        bounds.extend(position);
+        const marker = new window.google.maps.Marker({
+          position,
+          map,
+          label: String(stopIndex),
+          title: stop.clientName || stop.address
+        });
+        marker.addListener("click", () => {
+          state.selectedRouteStopId = stop.id;
+          renderRoutePlanner();
+          const card = qs(`[data-route-stop-card][data-id="${cssEscape(stop.id)}"]`);
+          if (card) card.scrollIntoView({ behavior: "smooth", block: "center" });
+        });
+        googleRouteMarkers.push(marker);
+      });
+
+      if (path.length > 1) {
+        googleRouteLine = new window.google.maps.Polyline({
+          path,
+          map,
+          strokeColor: "#2f6b4f",
+          strokeOpacity: .82,
+          strokeWeight: 4
+        });
+      }
+
+      if (path.length === 1) {
+        map.setCenter(path[0]);
+        map.setZoom(13);
+      } else {
+        map.fitBounds(bounds, 52);
+      }
+    } catch (error) {
+      els.routeMapStatus.textContent = error.message || "Google Maps could not load.";
+    }
+  }
+
   function renderRouteMap(stops) {
     if (!els.routeMapStatus) return;
+    if (canUseGoogleRouteMap()) {
+      renderGoogleRouteMap(stops);
+      return;
+    }
     const map = ensureRouteMap();
     if (!map || !routeLayer) {
       els.routeMapStatus.textContent = "Route map is loading.";

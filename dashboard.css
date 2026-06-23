@@ -3194,27 +3194,6 @@ button:active,
   background: rgba(235, 244, 229, .75);
 }
 
-.route-map .leaflet-container,
-.leaflet-container.route-map {
-  display: block;
-  width: 100%;
-  height: 100%;
-  border-radius: inherit;
-}
-
-.route-map .leaflet-map-pane,
-.route-map .leaflet-tile-pane,
-.route-map .leaflet-overlay-pane,
-.route-map .leaflet-marker-pane,
-.route-map .leaflet-shadow-pane {
-  width: 100%;
-  height: 100%;
-}
-
-.route-map .leaflet-tile {
-  max-width: none !important;
-}
-
 .route-number-marker {
   display: grid;
   place-items: center;

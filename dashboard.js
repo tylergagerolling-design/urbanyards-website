@@ -45,8 +45,6 @@
 
   const els = {};
   let demoIdCount = 100;
-  let routeMap = null;
-  let routeLayer = null;
   let googleRouteMap = null;
   let googleRouteLine = null;
   let googleMapsLoadPromise = null;
@@ -1347,14 +1345,6 @@
         node.removeAttribute("aria-current");
       }
     });
-    if (state.activeSection === "route-planner" && routeMap) {
-      setTimeout(() => {
-        routeMap.invalidateSize();
-        if (!selectedRouteStops().some(hasRouteCoordinates)) {
-          routeMap.setView([45.5152, -122.6784], 11);
-        }
-      }, 80);
-    }
     if (state.activeSection === "route-planner" && googleRouteMap && window.google?.maps) {
       setTimeout(() => {
         window.google.maps.event.trigger(googleRouteMap, "resize");
@@ -1550,10 +1540,6 @@
     return googleMapsBrowserKeyPromise;
   }
 
-  function canUseGoogleRouteMap() {
-    return true;
-  }
-
   async function loadGoogleMapsScript() {
     if (window.google?.maps) return Promise.resolve(window.google.maps);
     if (googleMapsLoadPromise) return googleMapsLoadPromise;
@@ -1594,25 +1580,6 @@
       gestureHandling: "greedy"
     });
     return googleRouteMap;
-  }
-
-  function ensureRouteMap() {
-    if (!els.routeMap || !window.L) return null;
-    if (routeMap) return routeMap;
-    routeMap = window.L.map(els.routeMap, {
-      scrollWheelZoom: false,
-      zoomControl: true
-    }).setView([45.5152, -122.6784], 11);
-    window.L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
-      maxZoom: 19,
-      attribution: "&copy; OpenStreetMap contributors"
-    }).addTo(routeMap);
-    routeLayer = window.L.layerGroup().addTo(routeMap);
-    setTimeout(() => {
-      routeMap.invalidateSize();
-      routeMap.setView([45.5152, -122.6784], 11);
-    }, 80);
-    return routeMap;
   }
 
   async function renderGoogleRouteMap(stops) {
@@ -1694,72 +1661,7 @@
 
   function renderRouteMap(stops) {
     if (!els.routeMapStatus) return;
-    if (canUseGoogleRouteMap()) {
-      renderGoogleRouteMap(stops);
-      return;
-    }
-    const map = ensureRouteMap();
-    if (!map || !routeLayer) {
-      els.routeMapStatus.textContent = "Route map is loading.";
-      return;
-    }
-    routeLayer.clearLayers();
-    const pinnedStops = stops.filter(hasRouteCoordinates);
-    const missingPins = stops.filter((stop) => stop.address && !hasRouteCoordinates(stop));
-    if (!stops.length) {
-      els.routeMapStatus.textContent = "Add stops to preview today's route.";
-      map.setView([45.5152, -122.6784], 11);
-      setTimeout(() => map.invalidateSize(), 80);
-      return;
-    }
-    if (!pinnedStops.length) {
-      els.routeMapStatus.textContent = "Map pin needed.";
-      map.setView([45.5152, -122.6784], 11);
-      setTimeout(() => map.invalidateSize(), 80);
-      return;
-    }
-    els.routeMapStatus.textContent = missingPins.length
-      ? `${pinnedStops.length} pinned / ${missingPins.length} need pins.`
-      : `${pinnedStops.length} stop${pinnedStops.length === 1 ? "" : "s"} mapped.`;
-    const latLngs = pinnedStops.map((stop) => [stop.latitude, stop.longitude]);
-    pinnedStops.forEach((stop) => {
-      const stopIndex = stops.findIndex((item) => item.id === stop.id) + 1;
-      const marker = window.L.marker([stop.latitude, stop.longitude], {
-        icon: window.L.divIcon({
-          className: `route-number-marker ${state.selectedRouteStopId === stop.id ? "is-selected" : ""}`,
-          html: `<span>${stopIndex}</span>`,
-          iconSize: [34, 34],
-          iconAnchor: [17, 17]
-        })
-      }).addTo(routeLayer);
-      marker.on("click", () => {
-        state.selectedRouteStopId = stop.id;
-        renderRoutePlanner();
-        const card = qs(`[data-route-stop-card][data-id="${cssEscape(stop.id)}"]`);
-        if (card) card.scrollIntoView({ behavior: "smooth", block: "center" });
-      });
-    });
-    if (latLngs.length > 1) {
-      window.L.polyline(latLngs, {
-        color: "#2f6b4f",
-        weight: 4,
-        opacity: .75
-      }).addTo(routeLayer);
-    }
-    map.invalidateSize();
-    if (latLngs.length === 1) {
-      map.setView(latLngs[0], 12);
-    } else {
-      map.fitBounds(window.L.latLngBounds(latLngs).pad(.18), { maxZoom: 12 });
-    }
-    setTimeout(() => {
-      map.invalidateSize();
-      if (latLngs.length === 1) {
-        map.setView(latLngs[0], 12);
-      } else {
-        map.fitBounds(window.L.latLngBounds(latLngs).pad(.18), { maxZoom: 12 });
-      }
-    }, 120);
+    renderGoogleRouteMap(stops);
   }
 
   function populatePropertyFilter(data) {

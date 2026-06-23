@@ -261,6 +261,79 @@
     return date.toISOString().slice(0, 10);
   }
 
+  function addMonthsKey(value, count) {
+    const source = new Date(`${value}T12:00:00`);
+    const day = source.getDate();
+    const target = new Date(source.getFullYear(), source.getMonth() + count, 1, 12);
+    const lastDay = new Date(target.getFullYear(), target.getMonth() + 1, 0, 12).getDate();
+    target.setDate(Math.min(day, lastDay));
+    return target.toISOString().slice(0, 10);
+  }
+
+  function nextRecurringDate(value, interval, unit) {
+    if (unit === "months") return addMonthsKey(value, interval);
+    return addDaysKey(value, interval * (unit === "weeks" ? 7 : 1));
+  }
+
+  function scheduledJobPayloads(formData, basePayload) {
+    if (String(formData.get("is_recurring") || "") !== "on") return [basePayload];
+
+    const interval = Number(formData.get("recurrence_interval") || 1);
+    const unit = String(formData.get("recurrence_unit") || "weeks");
+    const endDate = String(formData.get("recurrence_end_date") || "");
+    if (!Number.isInteger(interval) || interval < 1 || interval > 365) {
+      throw new Error("Choose a repeat interval between 1 and 365.");
+    }
+    if (!["days", "weeks", "months"].includes(unit)) {
+      throw new Error("Choose days, weeks, or months for the recurring visit.");
+    }
+    if (!endDate || endDate < basePayload.visit_date) {
+      throw new Error("Choose a repeat-until date on or after the first visit.");
+    }
+
+    const jobs = [];
+    let visitDate = basePayload.visit_date;
+    let occurrence = 0;
+    while (visitDate <= endDate && jobs.length < 120) {
+      jobs.push({ ...basePayload, visit_date: visitDate });
+      occurrence += 1;
+      const nextDate = unit === "months"
+        ? addMonthsKey(basePayload.visit_date, interval * occurrence)
+        : nextRecurringDate(basePayload.visit_date, interval * occurrence, unit);
+      if (!nextDate || nextDate <= visitDate) break;
+      visitDate = nextDate;
+    }
+    if (visitDate <= endDate) {
+      throw new Error("This series creates more than 120 visits. Use a shorter date range or a larger interval.");
+    }
+    return jobs;
+  }
+
+  function recurringFieldsMarkup() {
+    return `
+      <label class="recurring-toggle">
+        <input name="is_recurring" type="checkbox" data-recurring-toggle>
+        <span>Recurring visit</span>
+      </label>
+      <div class="recurring-controls" data-recurring-controls hidden>
+        <label>Repeat every
+          <input name="recurrence_interval" type="number" min="1" max="365" value="1" inputmode="numeric">
+        </label>
+        <label>Frequency
+          <select name="recurrence_unit">
+            <option value="days">Days</option>
+            <option value="weeks" selected>Weeks</option>
+            <option value="months">Months</option>
+          </select>
+        </label>
+        <label>Repeat until
+          <input name="recurrence_end_date" type="date">
+        </label>
+        <p>Each occurrence is saved as its own visit.</p>
+      </div>
+    `;
+  }
+
   function monthLabel(value) {
     const date = new Date(`${value}T12:00:00`);
     return date.toLocaleDateString("en-US", { month: "long", year: "numeric" });
@@ -756,18 +829,23 @@
   }
 
   async function insertScheduledJob(payload) {
+    const jobs = await insertScheduledJobs([payload]);
+    return jobs[0];
+  }
+
+  async function insertScheduledJobs(payloads) {
     if (isDemoMode()) {
-      const job = normalizeJob({ id: nextDemoId("job"), ...payload });
-      state.data.jobs.unshift(job);
-      return job;
+      const jobs = payloads.map((payload) => normalizeJob({ id: nextDemoId("job"), ...payload }));
+      state.data.jobs.unshift(...jobs);
+      return jobs;
     }
 
     const rows = await supabaseRestRequest("scheduled_jobs", {
       method: "POST",
       headers: { Prefer: "return=representation" },
-      body: JSON.stringify(payload)
+      body: JSON.stringify(payloads)
     });
-    return normalizeJob(rows[0]);
+    return rows.map(normalizeJob);
   }
 
   async function deleteRow(table, id) {
@@ -2826,6 +2904,7 @@
           <input name="visit_date" type="date" required>
           <input name="visit_window" placeholder="Visit window, e.g. 9 AM - 11 AM">
           <input name="service" value="${escapeHtml(item.service)}" placeholder="Service">
+          ${recurringFieldsMarkup()}
           <div class="drawer-actions">
             <button type="submit">${buttonContent("Create Job", "quick-add-job")}</button>
             <button type="button" data-action="create-reminder" data-id="${escapeHtml(item.id)}">${buttonContent("Follow-Up", "create-reminder")}</button>
@@ -3430,6 +3509,30 @@
       const target = event.target;
       if (!target) return;
 
+      if (target.matches("[data-recurring-toggle]")) {
+        const form = target.closest("form");
+        const controls = form?.querySelector("[data-recurring-controls]");
+        const endDate = controls?.querySelector("input[name='recurrence_end_date']");
+        const firstDate = form?.querySelector("input[name='visit_date']");
+        if (controls) controls.hidden = !target.checked;
+        if (endDate) {
+          endDate.required = target.checked;
+          if (target.checked && !endDate.value && firstDate?.value) {
+            endDate.value = addMonthsKey(firstDate.value, 12);
+          }
+        }
+        return;
+      }
+
+      if (target.matches("input[name='visit_date']")) {
+        const form = target.closest("form");
+        const toggle = form?.querySelector("[data-recurring-toggle]");
+        const endDate = form?.querySelector("input[name='recurrence_end_date']");
+        if (toggle?.checked && endDate && !endDate.value && target.value) {
+          endDate.value = addMonthsKey(target.value, 12);
+        }
+      }
+
       if (target.matches("[data-route-status-id]")) {
         try {
           setDashboardState("Updating route stop...");
@@ -3880,7 +3983,7 @@
         const formData = new FormData(event.target);
         try {
           setDashboardState("Creating job...");
-          await insertScheduledJob({
+          const payloads = scheduledJobPayloads(formData, {
             visit_date: String(formData.get("visit_date") || ""),
             visit_window: String(formData.get("visit_window") || ""),
             site_name: item.name,
@@ -3888,10 +3991,11 @@
             service: String(formData.get("service") || item.service),
             status: "Scheduled"
           });
+          await insertScheduledJobs(payloads);
           await updateStatus("quote_submissions", item.id, "Scheduled");
           await refreshDashboard();
           openSubmissionDrawer(item.id);
-          setDashboardState("");
+          setDashboardState(payloads.length > 1 ? `${payloads.length} recurring visits created.` : "");
         } catch (error) {
           setDashboardState(error.message || "Unable to create job.", "error");
         }
@@ -3940,7 +4044,7 @@
         const formData = new FormData(event.target);
         try {
           setDashboardState("Adding visit...");
-          await insertScheduledJob({
+          const payloads = scheduledJobPayloads(formData, {
             visit_date: String(formData.get("visit_date") || ""),
             visit_window: String(formData.get("visit_window") || ""),
             site_name: String(formData.get("site_name") || ""),
@@ -3948,9 +4052,12 @@
             service: String(formData.get("service") || ""),
             status: "Scheduled"
           });
+          await insertScheduledJobs(payloads);
           event.target.reset();
+          const controls = event.target.querySelector("[data-recurring-controls]");
+          if (controls) controls.hidden = true;
           await refreshDashboard();
-          setDashboardState("");
+          setDashboardState(payloads.length > 1 ? `${payloads.length} recurring visits created.` : "");
         } catch (error) {
           setDashboardState(error.message || "Unable to add visit.", "error");
         }

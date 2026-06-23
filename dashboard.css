@@ -926,6 +926,71 @@ td {
   grid-template-columns: repeat(6, minmax(120px, 1fr));
 }
 
+.recurring-toggle {
+  display: inline-flex;
+  grid-column: 1 / -1;
+  align-items: center;
+  justify-self: start;
+  gap: 9px;
+  min-height: 38px;
+  padding: 7px 10px;
+  border: 1px solid rgba(18, 63, 49, 0.12);
+  border-radius: 8px;
+  background: rgba(255, 252, 239, 0.8);
+  color: var(--uy-green);
+  font-weight: 800;
+}
+
+.recurring-toggle input {
+  width: 18px;
+  height: 18px;
+  margin: 0;
+  accent-color: var(--uy-green-2);
+}
+
+.recurring-controls {
+  display: grid;
+  grid-column: 1 / -1;
+  grid-template-columns: repeat(3, minmax(130px, 1fr));
+  gap: 10px;
+  padding: 12px;
+  border: 1px solid rgba(47, 107, 79, 0.18);
+  border-radius: 8px;
+  background: rgba(229, 239, 225, 0.72);
+}
+
+.recurring-controls[hidden] {
+  display: none;
+}
+
+.recurring-controls label {
+  display: grid;
+  min-width: 0;
+  gap: 6px;
+  color: var(--uy-green);
+  font-size: 0.78rem;
+  font-weight: 800;
+}
+
+.recurring-controls input,
+.recurring-controls select {
+  width: 100%;
+  max-width: 100%;
+  box-sizing: border-box;
+}
+
+.recurring-controls p {
+  grid-column: 1 / -1;
+  margin: 0;
+  color: var(--uy-muted);
+  font-size: 0.78rem;
+}
+
+.schedule-form .recurring-toggle,
+.schedule-form .recurring-controls {
+  grid-column: auto;
+}
+
 .document-card {
   border: 1px solid var(--uy-line);
   border-radius: 8px;
@@ -3975,6 +4040,10 @@ button.profile-mini-item {
 }
 
 @media (max-width: 640px) {
+  .recurring-controls {
+    grid-template-columns: 1fr;
+  }
+
   body {
     background: var(--uy-paper);
   }

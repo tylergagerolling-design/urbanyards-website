@@ -11,10 +11,10 @@
     <link rel="icon" href="/favicon.ico" sizes="any">
     <link rel="apple-touch-icon" href="/apple-touch-icon.png">
     <link rel="manifest" href="/dashboard.webmanifest">
-    <link rel="stylesheet" href="dashboard.css?v=20260623-11">
+    <link rel="stylesheet" href="dashboard.css?v=20260623-12">
     <link rel="stylesheet" href="dashboard-mobile-fix.css?v=20260622-3">
     <script src="dashboard-config.js?v=20260623-1" defer></script>
-    <script src="dashboard.js?v=20260623-12" defer></script>
+    <script src="dashboard.js?v=20260623-13" defer></script>
   </head>
   <body>
     <main class="dashboard-shell" aria-labelledby="dashboard-title">
@@ -261,6 +261,26 @@
                 <input name="city" placeholder="Property / area" autocomplete="street-address" data-address-autocomplete>
                 <input name="service" placeholder="Job, task, or reminder" required>
                 <button type="submit"><span class="button-icon" aria-hidden="true">+</span><span>Add Visit</span></button>
+                <label class="recurring-toggle">
+                  <input name="is_recurring" type="checkbox" data-recurring-toggle>
+                  <span>Recurring visit</span>
+                </label>
+                <div class="recurring-controls" data-recurring-controls hidden>
+                  <label>Repeat every
+                    <input name="recurrence_interval" type="number" min="1" max="365" value="1" inputmode="numeric">
+                  </label>
+                  <label>Frequency
+                    <select name="recurrence_unit">
+                      <option value="days">Days</option>
+                      <option value="weeks" selected>Weeks</option>
+                      <option value="months">Months</option>
+                    </select>
+                  </label>
+                  <label>Repeat until
+                    <input name="recurrence_end_date" type="date">
+                  </label>
+                  <p>Each occurrence is saved as its own visit so it can be edited or completed separately.</p>
+                </div>
               </form>
               <div class="calendar-list" data-calendar-list></div>
             </div>

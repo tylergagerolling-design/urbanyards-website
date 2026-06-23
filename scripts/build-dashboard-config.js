@@ -13,8 +13,7 @@ function readExistingValue(key) {
 const config = {
   supabaseUrl: process.env.VITE_SUPABASE_URL || readExistingValue("supabaseUrl"),
   supabaseAnonKey: process.env.VITE_SUPABASE_ANON_KEY || readExistingValue("supabaseAnonKey"),
-  ownerEmail: process.env.VITE_DASHBOARD_OWNER_EMAIL || readExistingValue("ownerEmail") || "team@urbanyards.us",
-  googleMapsBrowserKey: process.env.VITE_GOOGLE_MAPS_BROWSER_KEY || ""
+  ownerEmail: process.env.VITE_DASHBOARD_OWNER_EMAIL || readExistingValue("ownerEmail") || "team@urbanyards.us"
 };
 
 const file = `// Owner dashboard configuration.

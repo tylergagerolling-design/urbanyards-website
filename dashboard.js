@@ -10,8 +10,7 @@
   const config = window.URBAN_YARDS_DASHBOARD_CONFIG || {
     supabaseUrl: "",
     supabaseAnonKey: "",
-    ownerEmail: "team@urbanyards.us",
-    googleMapsBrowserKey: ""
+    ownerEmail: "team@urbanyards.us"
   };
 
   const state = {
@@ -51,6 +50,7 @@
   let googleRouteMap = null;
   let googleRouteLine = null;
   let googleMapsLoadPromise = null;
+  let googleMapsBrowserKeyPromise = null;
   let googleRouteMarkers = [];
   const routeGeocodingIds = new Set();
   const PORTLAND_CENTER = { lat: 45.5152, lng: -122.6784 };
@@ -1534,18 +1534,30 @@
     return typeof stop.latitude === "number" && typeof stop.longitude === "number";
   }
 
-  function getGoogleMapsBrowserKey() {
-    return String(config.googleMapsBrowserKey || "").trim();
+  async function getGoogleMapsBrowserKey() {
+    if (googleMapsBrowserKeyPromise) return googleMapsBrowserKeyPromise;
+    googleMapsBrowserKeyPromise = fetch("/.netlify/functions/google-maps-browser-key", {
+      method: "GET",
+      headers: { "Accept": "application/json" }
+    })
+      .then(async (response) => {
+        const payload = await response.json().catch(() => ({}));
+        if (!response.ok || !payload.key) {
+          throw new Error(payload.error || "Google Maps browser key is not configured.");
+        }
+        return String(payload.key);
+      });
+    return googleMapsBrowserKeyPromise;
   }
 
   function canUseGoogleRouteMap() {
-    return Boolean(getGoogleMapsBrowserKey());
+    return true;
   }
 
-  function loadGoogleMapsScript() {
+  async function loadGoogleMapsScript() {
     if (window.google?.maps) return Promise.resolve(window.google.maps);
     if (googleMapsLoadPromise) return googleMapsLoadPromise;
-    const key = getGoogleMapsBrowserKey();
+    const key = await getGoogleMapsBrowserKey();
     if (!key) return Promise.reject(new Error("Google Maps browser key is not configured."));
 
     googleMapsLoadPromise = new Promise((resolve, reject) => {

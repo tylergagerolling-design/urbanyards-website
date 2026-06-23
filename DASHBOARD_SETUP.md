@@ -34,7 +34,7 @@ Netlify runs `node scripts/build-dashboard-config.js` during deploy. That script
 
 `GOOGLE_MAPS_API_KEY` is server-only. It powers Route Planner address lookup through the Netlify geocoding function and should not be exposed in frontend code.
 
-`VITE_GOOGLE_MAPS_BROWSER_KEY` is browser-facing. It powers the embedded Google map in Route Planner. Use a separate Google API key for this value, restrict it by website referrer to `https://urbanyards.us/*`, and restrict it to the Maps JavaScript API.
+`VITE_GOOGLE_MAPS_BROWSER_KEY` is browser-facing. It powers the embedded Google map in Route Planner through the runtime Netlify function `google-maps-browser-key`. Use a separate Google API key for this value, restrict it by website referrer to `https://urbanyards.us/*`, and restrict it to the Maps JavaScript API. This value is not written into `dashboard-config.js` during the build.
 
 ## Supabase Auth Settings
 

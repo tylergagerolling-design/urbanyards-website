@@ -14,7 +14,7 @@ const config = {
   supabaseUrl: process.env.VITE_SUPABASE_URL || readExistingValue("supabaseUrl"),
   supabaseAnonKey: process.env.VITE_SUPABASE_ANON_KEY || readExistingValue("supabaseAnonKey"),
   ownerEmail: process.env.VITE_DASHBOARD_OWNER_EMAIL || readExistingValue("ownerEmail") || "team@urbanyards.us",
-  googleMapsBrowserKey: process.env.VITE_GOOGLE_MAPS_BROWSER_KEY || process.env.GOOGLE_MAPS_BROWSER_KEY || readExistingValue("googleMapsBrowserKey")
+  googleMapsBrowserKey: process.env.VITE_GOOGLE_MAPS_BROWSER_KEY || ""
 };
 
 const file = `// Owner dashboard configuration.

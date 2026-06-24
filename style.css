@@ -783,6 +783,23 @@ a:focus-visible, button:focus-visible, input:focus-visible, select:focus-visible
 .quote-layout { display: grid; grid-template-columns: .8fr 1.2fr; align-items: start; gap: 48px; }
 .quote-copy p { max-width: 460px; }
 .placeholder-detail { min-height: 150px; margin-top: 22px; background: rgba(255, 253, 247, .55); }
+.quote-illustration {
+  width: 100%;
+  height: clamp(360px, 42vw, 520px);
+  margin-top: 22px;
+  overflow: hidden;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: #e6eadb;
+  box-shadow: 0 14px 30px rgba(18, 63, 49, .08);
+}
+.quote-illustration img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: center;
+}
 .quote-form {
   display: grid;
   grid-template-columns: 1fr 1fr;
@@ -2394,7 +2411,10 @@ input:focus, select:focus, textarea:focus { outline: 0; }
   .calendar-controls { padding: 0 0 15px; }
   .calendar-side { grid-template-columns: 1fr; }
   .calendar-detail-grid, #calendar-service-list { grid-template-columns: 1fr; }
-  .quote-copy .placeholder-detail { display: none; }
+  .quote-illustration {
+    height: clamp(220px, 62vw, 280px);
+    margin-top: 18px;
+  }
   .quote-form { padding: 16px; }
   .quote-form-heading, .quote-submit-row { display: grid; gap: 9px; }
   .quote-form-heading .required-note { max-width: none; padding-top: 0; text-align: left; }

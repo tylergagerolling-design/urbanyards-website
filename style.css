@@ -780,12 +780,15 @@ a:focus-visible, button:focus-visible, input:focus-visible, select:focus-visible
 .trust-strip h3 { margin: 13px 0 5px; font-size: 1.05rem; }
 .trust-strip p { margin: 0; color: var(--muted); font-size: .82rem; }
 .quote-section { position: relative; background: var(--sage-soft); }
-.quote-layout { display: grid; grid-template-columns: .8fr 1.2fr; align-items: start; gap: 48px; }
+.quote-layout { display: grid; grid-template-columns: .8fr 1.2fr; align-items: stretch; gap: 48px; }
+.quote-copy { display: flex; min-width: 0; flex-direction: column; }
 .quote-copy p { max-width: 460px; }
 .placeholder-detail { min-height: 150px; margin-top: 22px; background: rgba(255, 253, 247, .55); }
 .quote-illustration {
+  display: flex;
+  flex: 1;
+  min-height: 0;
   width: 100%;
-  height: clamp(360px, 42vw, 520px);
   margin-top: 22px;
   overflow: hidden;
   border: 1px solid var(--line);
@@ -802,6 +805,7 @@ a:focus-visible, button:focus-visible, input:focus-visible, select:focus-visible
 }
 .quote-form {
   display: grid;
+  height: 100%;
   grid-template-columns: 1fr 1fr;
   gap: 10px;
   padding: 20px;
@@ -2336,6 +2340,7 @@ input:focus, select:focus, textarea:focus { outline: 0; }
   .section { padding: 64px 0; }
   .hero { padding: 52px 0 94px; }
   .hero-grid, .quote-layout { grid-template-columns: 1fr; gap: 28px; }
+  .quote-copy { display: block; }
   .home-flow-grid { grid-template-columns: 1fr; }
   .portfolio-toolbar { display: block; }
   .portfolio-filters { justify-content: flex-start; margin-top: 20px; }
@@ -2413,6 +2418,7 @@ input:focus, select:focus, textarea:focus { outline: 0; }
   .calendar-detail-grid, #calendar-service-list { grid-template-columns: 1fr; }
   .quote-illustration {
     height: clamp(220px, 62vw, 280px);
+    min-height: auto;
     margin-top: 18px;
   }
   .quote-form { padding: 16px; }

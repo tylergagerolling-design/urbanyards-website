@@ -68,7 +68,7 @@
       "title": "Home",
       "url": "/",
       "keywords": ["tagline", "first impressions", "home", "groundskeeping", "services", "property types"],
-      "text": "Urban Yards Groundskeeping tagline: First Impressions Start Here. Hero message: Groundskeeping for Homes, Multifamily, and Community Properties. Urban Yards provides practical care for better properties. Services highlighted on the home page include Groundskeeping, Landscape Improvements, Property Support, and Ecological Enhancements. Groundskeeping includes mowing and edging, weed control, seasonal cleanup, and property upkeep. Landscape Improvements include plant installations, mulch refreshes, privacy screens, and irrigation checks. Property Support includes day porter services, trash area care, routine maintenance, and site support. Ecological Enhancements include native plantings, pollinator habitat, low-water landscapes, and urban greening. Property types served include homeowners, apartment communities, HOAs, and property managers."
+      "text": "Urban Yards Groundskeeping tagline: First Impressions Start Here. Hero message: Groundskeeping for Homes, Multifamily, and Community Properties. Urban Yards provides practical care for better properties. Services highlighted on the home page include Groundskeeping, Landscape Improvements, Property Management Care, and Ecological Enhancements. Groundskeeping includes mowing and edging, weed control, seasonal cleanup, and property upkeep. Landscape Improvements include plant installations, mulch refreshes, privacy screens, and irrigation checks. Property Management Care includes day porter services, trash area care, routine maintenance, site support, apartment turnover cleaning, and light repair support. Ecological Enhancements include native plantings, pollinator habitat, low-water landscapes, and urban greening. Property types served include homeowners, apartment communities, HOAs, and property managers."
     },
     {
       "id": "homeowner-services",
@@ -81,15 +81,15 @@
       "id": "property-management-services",
       "title": "Property Management Services",
       "url": "/property-management-services",
-      "keywords": ["apartment", "apartments", "multifamily", "condominium", "condominiums", "hoa", "hoas", "property manager", "property management", "pressure", "washing", "day porter", "trash", "common area"],
-      "text": "Property Management Services page title: Dependable Groundskeeping for Multifamily and Community Properties. Urban Yards provides professional service for apartment communities, condominium associations, HOAs, property management companies, and multifamily properties. Property support includes common area upkeep, trash area care, and appearance audits. Services listed for property management include day porter services, trash and recycling enclosure care, property appearance audits, pressure washing, seasonal cleanup, recurring groundskeeping, and resident-facing landscape care. The page invites property managers to request a free quote."
+      "keywords": ["apartment", "apartments", "multifamily", "condominium", "condominiums", "hoa", "hoas", "property manager", "property management", "pressure", "washing", "day porter", "trash", "common area", "turnover", "move-out", "cleaning", "light repair", "patching", "touch-up paint"],
+      "text": "Property Management Services page title: Dependable Groundskeeping for Multifamily and Community Properties. Urban Yards provides professional service for apartment communities, condominium associations, HOAs, property management companies, and multifamily properties. Property management care includes common area upkeep, trash area care, appearance audits, apartment turnover cleaning, debris removal, and light repair support between residents. Turnover examples include surface wipe-downs, entry and hallway cleaning, light wall patching, touch-up paint, minor hardware fixes, caulking touch-ups, bulb replacement, and general reset tasks. Urban Yards does not present itself as a licensed contractor for plumbing, electrical, HVAC, structural, or other licensed trade work."
     },
     {
       "id": "services",
       "title": "Services Overview",
       "url": "/services",
       "keywords": ["services", "service explorer", "calendar", "weekly", "biweekly", "monthly", "one-time", "groundskeeping", "landscape improvements", "ecological"],
-      "text": "The Services page includes a Service Explorer, Portland Property Care Calendar, detailed services, and maintenance rhythm options. Service details include Groundskeeping: mowing, edging, weeds, and seasonal upkeep for homes, apartments, HOAs, and community properties. Landscape Improvements include better beds, planting, mulch, and curb appeal updates. Property Support includes clean common areas and practical site support for apartment communities, HOAs, condominium associations, and properties with regular resident-facing traffic. Ecological Enhancements include native planting and lower-water landscape direction. Maintenance cadence options include weekly, biweekly, monthly, and one-time service depending on property needs. The seasonal calendar helps property owners plan maintenance throughout the year."
+      "text": "The Services page includes a Service Explorer, Portland Property Care Calendar, detailed services, and maintenance rhythm options. Service details include Groundskeeping: mowing, edging, weeds, and seasonal upkeep for homes, apartments, HOAs, and community properties. Landscape Improvements include better beds, planting, mulch, and curb appeal updates. Property Management Care includes clean common areas, practical site support, apartment turnover cleaning, debris removal, touch-up tasks, and light repair support for rentals and small multifamily properties. Ecological Enhancements include native planting and lower-water landscape direction. Maintenance cadence options include weekly, biweekly, monthly, and one-time service depending on property needs. The seasonal calendar helps property owners plan maintenance throughout the year."
     },
     {
       "id": "about",
@@ -125,7 +125,7 @@
       "id": "services-offered",
       "question": "What services do you offer?",
       "keywords": ["services", "offer", "do", "groundskeeping", "maintenance"],
-      "answer": "Urban Yards lists groundskeeping, landscape improvements, property support, and ecological enhancements. Specific services on the site include mowing, edging, weed management, seasonal cleanup, garden bed maintenance, mulching, shrub trimming, plant installations, trash area care, day porter services, pressure washing, native plantings, pollinator habitat, and low-water landscape direction."
+      "answer": "Urban Yards lists groundskeeping, landscape improvements, property management care, and ecological enhancements. Specific services on the site include mowing, edging, weed management, seasonal cleanup, garden bed maintenance, mulching, shrub trimming, plant installations, trash area care, day porter services, apartment turnover cleaning, light repair support, pressure washing, native plantings, pollinator habitat, and low-water landscape direction."
     },
     {
       "id": "service-areas",

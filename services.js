@@ -57,11 +57,11 @@ const serviceRecommendations = {
     },
     cleanup: {
       label: "Property Management Services",
-      title: "Common area reset",
-      copy: "Useful for leaf buildup, trash and recycling areas, move-out exterior cleanup, and other high-use spaces.",
-      items: ["Seasonal cleanup", "Trash and recycling area maintenance", "Move-out exterior cleanup", "Day porter services"],
+      title: "Common area and turnover reset",
+      copy: "Useful for leaf buildup, trash and recycling areas, move-out cleanup, apartment turnover cleaning, light repair support, and other high-use spaces.",
+      items: ["Seasonal cleanup", "Trash and recycling area maintenance", "Apartment turnover support", "Day porter services"],
       href: "#property-support",
-      quote: "Property Management Landscaping"
+      quote: "Apartment Turnover Support"
     },
     improvement: {
       label: "Property Management Services",
@@ -108,8 +108,8 @@ const propertyTypes = {
   },
   propertyManagement: {
     label: "Property Management Services",
-    note: "Focus on reliable communication, consistent appearance, resident satisfaction, first impressions, and long-term property presentation.",
-    emphasis: ["apartment groundskeeping", "HOA landscape maintenance", "common area care", "trash areas", "pressure washing"]
+    note: "Focus on reliable communication, consistent appearance, resident satisfaction, first impressions, turnover support, and long-term property presentation.",
+    emphasis: ["apartment groundskeeping", "HOA landscape maintenance", "common area care", "trash areas", "turnover support"]
   }
 };
 

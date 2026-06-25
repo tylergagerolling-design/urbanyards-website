@@ -190,7 +190,7 @@ function hasLeadIntent(text) {
 function nextLeadPrompt(lead = {}) {
   if (!lead.propertyType) return "What type of property is it: a home, apartment community, HOA, condominium, or another property type?";
   if (!lead.city && !lead.propertyLocation) return "What city or general area is the property in?";
-  if (!lead.service && !lead.serviceRequested) return "What service are you looking for: mowing, cleanup, landscape maintenance, pressure washing, property support, or something else listed on the site?";
+  if (!lead.service && !lead.serviceRequested) return "What service are you looking for: mowing, cleanup, landscape maintenance, pressure washing, apartment turnover support, property management care, or something else listed on the site?";
   if (!lead.phone && !lead.email) return "What is the best phone number or email for Urban Yards to follow up?";
   return "";
 }
@@ -228,7 +228,7 @@ function answerFromSiteKnowledge(query = "", lead = {}, history = []) {
     return `The site lists Beaverton, Portland, and Vancouver as the core service area. If you are near those areas, Urban Yards can confirm through a quote request.\n\n${CONTACT.phone}. ${CONTACT.email}.`;
   }
   if (intent.id === "property_management") {
-    return `Urban Yards works with apartment communities, condominium associations, HOAs, property management companies, and multifamily properties. Services listed include common area upkeep, trash and recycling enclosure care, day porter services, pressure washing, seasonal cleanup, recurring groundskeeping, and property appearance audits.${leadFollowUp || "\n\nIs this an apartment community, HOA, condominium, or another type of property?"}`;
+    return `Urban Yards works with apartment communities, condominium associations, HOAs, property management companies, and multifamily properties. Services listed include common area upkeep, trash and recycling enclosure care, day porter services, apartment turnover cleaning, light repair support, pressure washing, seasonal cleanup, recurring groundskeeping, and property appearance audits. Larger repairs and licensed plumbing, electrical, HVAC, or structural work are outside Urban Yards' stated scope.${leadFollowUp || "\n\nIs this an apartment community, HOA, condominium, or another type of property?"}`;
   }
   if (text.includes("pressure wash") || text.includes("pressure washing") || text.includes("wash")) {
     return `Yes. Pressure Washing is listed in the site footer services and on the Property Management Services page. ${quotePrompt}`;

@@ -659,20 +659,6 @@ a:focus-visible, button:focus-visible, input:focus-visible, select:focus-visible
   padding-right: 18px;
   border-right: 1px solid rgba(18, 63, 49, .12);
 }
-.promotion-number {
-  display: inline-grid;
-  width: 44px;
-  height: 32px;
-  margin-bottom: 4px;
-  border: 1px solid rgba(18, 63, 49, .14);
-  border-radius: 999px;
-  place-items: center;
-  background: rgba(227, 234, 219, .72);
-  color: var(--forest);
-  font-family: Georgia, serif;
-  font-size: .9rem;
-  font-weight: 800;
-}
 .promotion-label {
   color: var(--forest);
   font-size: .65rem;
@@ -991,7 +977,6 @@ a:focus-visible, button:focus-visible, input:focus-visible, select:focus-visible
 .about-section { background: #fffaf0; }
 .trust-strip { display: grid; grid-template-columns: repeat(4, 1fr); border-top: 1px solid var(--line); border-left: 1px solid var(--line); }
 .trust-strip article { position: relative; min-height: 151px; padding: 18px; border-right: 1px solid var(--line); border-bottom: 1px solid var(--line); }
-.trust-number { color: #9b7220; font-size: .68rem; font-weight: bold; letter-spacing: .12em; }
 .trust-icon {
   display: grid;
   width: 31px;
@@ -2615,7 +2600,6 @@ input:focus, select:focus, textarea:focus { outline: 0; }
     border-right: 0;
     border-bottom: 1px solid rgba(18, 63, 49, .12);
   }
-  .promotion-number { grid-row: 1 / 3; margin: 0; align-self: center; }
   .promotion-helper { max-width: none; }
   .promotion-card-content h3 { font-size: clamp(1.65rem, 8vw, 2.15rem); }
   .promotion-card-content p { margin-bottom: 18px; line-height: 1.62; }
@@ -3588,12 +3572,6 @@ body:not(.feral-page) .trust-icon {
   background: rgba(255, 253, 247, .55);
 }
 
-body:not(.feral-page) .trust-number {
-  display: inline-flex;
-  margin-left: 2px;
-  font-size: .62rem;
-}
-
 body:not(.feral-page) .trust-strip h3 {
   margin: 9px 0 4px;
   font-size: .98rem;
@@ -3843,32 +3821,6 @@ body:not(.feral-page) .quote-section::after {
   background: radial-gradient(circle, rgba(226, 170, 33, .105), transparent 68%);
 }
 
-body:not(.feral-page) .home-promotions .section-heading,
-body:not(.feral-page) .services .section-heading,
-body:not(.feral-page) .about-section .section-heading {
-  position: relative;
-}
-
-body:not(.feral-page) .home-promotions .section-heading::before,
-body:not(.feral-page) .services .section-heading::before,
-body:not(.feral-page) .about-section .section-heading::before {
-  display: inline-flex;
-  margin-bottom: 8px;
-  padding: 3px 8px;
-  border: 1px solid rgba(18, 63, 49, .1);
-  border-radius: 999px;
-  background: rgba(255, 253, 247, .62);
-  color: rgba(18, 63, 49, .62);
-  font-size: .56rem;
-  font-weight: 850;
-  letter-spacing: .12em;
-  line-height: 1;
-}
-
-body:not(.feral-page) .home-promotions .section-heading::before { content: "01 / Offers"; }
-body:not(.feral-page) .services .section-heading::before { content: "02 / Services"; }
-body:not(.feral-page) .about-section .section-heading::before { content: "03 / Process"; }
-
 body:not(.feral-page) .home-promotions {
   padding-block: 44px;
 }
@@ -3937,17 +3889,6 @@ body:not(.feral-page) .promotion-card-header {
   padding: 0 0 14px;
   border-right: 0;
   border-bottom: 1px solid rgba(18, 63, 49, .1);
-}
-
-body:not(.feral-page) .promotion-number {
-  width: auto;
-  height: auto;
-  grid-row: auto;
-  margin: 0;
-  border: 0;
-  background: transparent;
-  color: rgba(18, 63, 49, .54);
-  font-size: .68rem;
 }
 
 body:not(.feral-page) .promotion-helper {
@@ -4074,10 +4015,6 @@ body:not(.feral-page) .about-values-strip article {
 
 body:not(.feral-page) .about-values-strip .trust-icon {
   grid-row: 1 / 4;
-}
-
-body:not(.feral-page) .about-values-strip .trust-number {
-  align-self: center;
 }
 
 body:not(.feral-page) .quote-form-trust {

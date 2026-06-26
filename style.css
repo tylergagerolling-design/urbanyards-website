@@ -3810,3 +3810,370 @@ body:not(.feral-page) .calendar-side .plan-ahead-item {
 body:not(.feral-page) .calendar-side #calendar-best-list li::before {
   color: #8a6518;
 }
+
+/* Site polish pass: shared rhythm, elevation, and navigation refinement */
+body:not(.feral-page) {
+  --radius: 12px;
+  --muted: #586d64;
+  --line: rgba(18, 63, 49, .12);
+  --shadow: 0 14px 34px rgba(18, 63, 49, .075);
+  --elevation-soft: 0 10px 24px rgba(18, 63, 49, .06);
+  --elevation-card: 0 16px 40px rgba(18, 63, 49, .085);
+  --elevation-card-hover: 0 22px 54px rgba(18, 63, 49, .12);
+}
+
+body:not(.feral-page) p,
+body:not(.feral-page) .section-heading > p:last-child,
+body:not(.feral-page) .service-detail-card p:not(.eyebrow),
+body:not(.feral-page) .portfolio-card-body p:not(.eyebrow),
+body:not(.feral-page) .about-section-heading p:not(.eyebrow) {
+  color: var(--muted);
+}
+
+body:not(.feral-page) .site-header {
+  gap: 18px;
+  min-height: 72px;
+  padding-top: 10px;
+  padding-bottom: 10px;
+  border-bottom-color: rgba(18, 63, 49, .085);
+  box-shadow: 0 8px 22px rgba(18, 63, 49, .045);
+}
+
+body:not(.feral-page) .site-header.is-compact {
+  min-height: 64px;
+  box-shadow: 0 10px 26px rgba(18, 63, 49, .07);
+}
+
+body:not(.feral-page) .brand {
+  gap: 10px;
+}
+
+body:not(.feral-page) .brand-mark {
+  width: 56px;
+  height: 46px;
+}
+
+body:not(.feral-page) .brand > span:last-child {
+  min-height: 44px;
+}
+
+body:not(.feral-page) .brand strong {
+  font-size: 1.01rem;
+}
+
+body:not(.feral-page) .brand small {
+  font-size: .55rem;
+  letter-spacing: .14em;
+}
+
+body:not(.feral-page) .primary-nav {
+  gap: 2px;
+  padding: 4px;
+  border-color: rgba(18, 63, 49, .08);
+  background: rgba(255, 255, 255, .48);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, .72),
+    0 8px 20px rgba(18, 63, 49, .035);
+}
+
+body:not(.feral-page) .primary-nav a,
+body:not(.feral-page) .nav-dropdown-toggle {
+  min-height: 34px;
+  padding: 7px 10px;
+  font-size: clamp(.6rem, .64vw, .68rem);
+  letter-spacing: .055em;
+}
+
+body:not(.feral-page) .primary-nav a:not(.button)::before,
+body:not(.feral-page) .nav-dropdown-toggle::before {
+  position: absolute;
+  right: 12px;
+  bottom: 5px;
+  left: 12px;
+  height: 1px;
+  background: currentColor;
+  content: "";
+  opacity: 0;
+  transform: scaleX(.5);
+  transform-origin: center;
+  transition: opacity .18s ease, transform .18s ease;
+}
+
+body:not(.feral-page) .primary-nav a:not(.button):hover::before,
+body:not(.feral-page) .nav-dropdown-toggle:hover::before {
+  opacity: .35;
+  transform: scaleX(1);
+}
+
+body:not(.feral-page) .primary-nav a[aria-current="page"]:not(.button),
+body:not(.feral-page) .nav-dropdown-toggle.is-current {
+  background: rgba(18, 63, 49, .075);
+  color: #123f31;
+  box-shadow: inset 0 0 0 1px rgba(18, 63, 49, .06);
+}
+
+body:not(.feral-page) .nav-indicator {
+  height: 1px;
+  background: rgba(226, 170, 33, .72);
+}
+
+body:not(.feral-page) .nav-dropdown-menu {
+  top: calc(100% + 8px);
+  min-width: 220px;
+  padding: 7px;
+  border-color: rgba(18, 63, 49, .1);
+  border-radius: 10px;
+  box-shadow:
+    0 1px 0 rgba(255, 255, 255, .8) inset,
+    0 16px 36px rgba(18, 63, 49, .13);
+}
+
+body:not(.feral-page) .nav-dropdown-menu a {
+  min-height: 36px;
+  padding: 9px 11px;
+  border-radius: 7px;
+}
+
+body:not(.feral-page) .eyebrow {
+  color: #4f754f;
+  font-size: .62rem;
+  font-weight: 850;
+  letter-spacing: .135em;
+  line-height: 1.25;
+}
+
+body:not(.feral-page) h2,
+body:not(.feral-page) .about-section-heading h1,
+body:not(.feral-page) .pay-copy h1,
+body:not(.feral-page) .service-detail-section #property-management-title {
+  letter-spacing: -.035em;
+}
+
+body:not(.feral-page) .about-section-heading h1,
+body:not(.feral-page) .pay-copy h1,
+body:not(.feral-page) .service-detail-section #property-management-title {
+  font-size: clamp(2.25rem, 4vw, 4.1rem);
+  line-height: 1.02;
+}
+
+body:not(.feral-page) .section {
+  padding-block: 62px;
+}
+
+body:not(.feral-page) .section-heading {
+  max-width: 620px;
+  margin-bottom: 22px;
+}
+
+body:not(.feral-page) .section-heading > p:last-child,
+body:not(.feral-page) .about-section-heading p:not(.eyebrow),
+body:not(.feral-page) .service-explorer-result p,
+body:not(.feral-page) .service-frequency-grid span {
+  max-width: 66ch;
+  line-height: 1.58;
+}
+
+body:not(.feral-page) .services,
+body:not(.feral-page) .service-detail-section,
+body:not(.feral-page) .portfolio-section,
+body:not(.feral-page) .about-story-section {
+  background:
+    radial-gradient(circle at 88% 8%, rgba(226, 170, 33, .055), transparent 28%),
+    linear-gradient(180deg, rgba(255, 253, 247, .82), rgba(241, 246, 235, .62));
+}
+
+body:not(.feral-page) .home-promotions,
+body:not(.feral-page) .service-frequency-section,
+body:not(.feral-page) .portfolio-cta {
+  background:
+    radial-gradient(circle at 12% 8%, rgba(255, 253, 247, .62), transparent 28%),
+    linear-gradient(180deg, rgba(227, 234, 219, .92), rgba(247, 241, 227, .76));
+}
+
+body:not(.feral-page) .card,
+body:not(.feral-page) .promotion-card,
+body:not(.feral-page) .service-card,
+body:not(.feral-page) .service-detail-card,
+body:not(.feral-page) .portfolio-card,
+body:not(.feral-page) .quote-form,
+body:not(.feral-page) .pay-card,
+body:not(.feral-page) .lower-card,
+body:not(.feral-page) .service-explorer,
+body:not(.feral-page) .calendar-panel,
+body:not(.feral-page) .about-section-heading,
+body:not(.feral-page) .about-expect-card,
+body:not(.feral-page) .about-difference-grid article,
+body:not(.feral-page) .about-brand-card,
+body:not(.feral-page) .footer-quote-panel {
+  border-color: rgba(18, 63, 49, .11);
+  border-radius: var(--radius);
+  box-shadow: var(--elevation-card);
+}
+
+body:not(.feral-page) .promotion-card:hover,
+body:not(.feral-page) .service-card:hover,
+body:not(.feral-page) .service-detail-card:hover,
+body:not(.feral-page) .portfolio-card:hover {
+  box-shadow: var(--elevation-card-hover);
+}
+
+body:not(.feral-page) .promotion-card.is-featured::before,
+body:not(.feral-page) .promotion-discount::before {
+  width: 3px;
+  background: rgba(226, 170, 33, .88);
+}
+
+body:not(.feral-page) .service-detail-card .service-scope-note,
+body:not(.feral-page) .promotions-scope-note {
+  border-left-width: 2px;
+  border-left-color: rgba(155, 114, 32, .42);
+  background: rgba(255, 253, 247, .72);
+}
+
+body:not(.feral-page) .service-explorer,
+body:not(.feral-page) .service-frequency,
+body:not(.feral-page) .service-detail-section .section-heading,
+body:not(.feral-page) .portfolio-toolbar,
+body:not(.feral-page) .about-section-heading {
+  margin-bottom: 22px;
+}
+
+body:not(.feral-page) .service-detail-card {
+  padding: 22px;
+  gap: 12px;
+}
+
+body:not(.feral-page) .service-detail-card h3 {
+  font-size: clamp(1.35rem, 2.2vw, 1.55rem);
+}
+
+body:not(.feral-page) .service-detail-card p:not(.eyebrow) {
+  max-width: 68ch;
+  line-height: 1.58;
+}
+
+body:not(.feral-page) .portfolio-grid {
+  gap: 16px;
+}
+
+body:not(.feral-page) .portfolio-image,
+body:not(.feral-page) .portfolio-project-photo,
+body:not(.feral-page) .portfolio-comparison {
+  height: 220px;
+  min-height: 220px;
+}
+
+body:not(.feral-page) .portfolio-image {
+  position: relative;
+  overflow: hidden;
+  border-bottom: 1px solid rgba(18, 63, 49, .09);
+  background: #e6eadb;
+}
+
+body:not(.feral-page) .portfolio-image::after {
+  position: absolute;
+  inset: 0;
+  background:
+    linear-gradient(180deg, rgba(255, 253, 247, .06), rgba(18, 63, 49, .16)),
+    radial-gradient(circle at 22% 14%, rgba(226, 170, 33, .1), transparent 32%);
+  content: "";
+  pointer-events: none;
+}
+
+body:not(.feral-page) .portfolio-project-photo,
+body:not(.feral-page) .portfolio-comparison img {
+  object-fit: cover;
+}
+
+body:not(.feral-page) .portfolio-card-body {
+  padding: 18px;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, .78), rgba(255, 253, 247, .96));
+}
+
+body:not(.feral-page) .portfolio-card-body h3 {
+  margin-bottom: 7px;
+  font-size: 1.18rem;
+}
+
+body:not(.feral-page) .portfolio-card-body p:not(.eyebrow) {
+  margin-bottom: 10px;
+  font-size: .84rem;
+  line-height: 1.52;
+}
+
+body:not(.feral-page) .portfolio-tag {
+  padding: 4px 8px;
+  background: rgba(226, 170, 33, .1);
+  color: #785818;
+  font-size: .6rem;
+}
+
+body:not(.feral-page) .uy-assistant {
+  right: 20px;
+  bottom: 20px;
+}
+
+body:not(.feral-page) .uy-assistant-toggle {
+  width: 56px;
+  height: 56px;
+  box-shadow: 0 14px 34px rgba(10, 48, 39, .26);
+}
+
+body:not(.feral-page) .uy-assistant-toggle-icon {
+  width: 25px;
+  height: 20px;
+}
+
+@media (max-width: 1100px) {
+  body:not(.feral-page) .brand-mark {
+    width: 52px;
+    height: 43px;
+  }
+
+  body:not(.feral-page) .site-header {
+    gap: 14px;
+  }
+}
+
+@media (max-width: 760px) {
+  body:not(.feral-page) .site-header,
+  body:not(.feral-page) .site-header.is-compact {
+    min-height: 70px;
+  }
+
+  body:not(.feral-page) .brand-mark {
+    width: 52px;
+    height: 43px;
+  }
+
+  body:not(.feral-page) .primary-nav.is-open {
+    padding: 14px;
+    border-radius: 0 0 12px 12px;
+  }
+
+  body:not(.feral-page) .nav-dropdown-menu {
+    border-radius: 9px;
+  }
+
+  body:not(.feral-page) .section {
+    padding-block: 54px;
+  }
+
+  body:not(.feral-page) .portfolio-image,
+  body:not(.feral-page) .portfolio-project-photo,
+  body:not(.feral-page) .portfolio-comparison {
+    height: 210px;
+    min-height: 210px;
+  }
+
+  body:not(.feral-page) .uy-assistant {
+    right: 14px;
+    bottom: 72px;
+  }
+
+  body:not(.feral-page) .uy-assistant-toggle {
+    width: 56px;
+    height: 56px;
+  }
+}

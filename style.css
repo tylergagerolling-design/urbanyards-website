@@ -1,4 +1,4 @@
-﻿:root {
+:root {
   --cream: #f7f1e3;
   --paper: #fffdf7;
   --forest: #123f31;
@@ -1903,7 +1903,7 @@ input:focus, select:focus, textarea:focus { outline: 0; }
   border-radius: 50%;
   background: var(--forest);
   color: #fffdf7;
-  content: "âœ“";
+  content: "✓";
   font-size: .72rem;
   font-weight: 900;
 }

@@ -1866,9 +1866,12 @@ input:focus, select:focus, textarea:focus { outline: 0; }
   gap: 12px;
 }
 .about-check-grid span {
-  position: relative;
+  display: grid;
+  grid-template-columns: 20px minmax(0, 1fr);
+  column-gap: 12px;
+  align-items: start;
   min-height: 58px;
-  padding: 15px 16px 15px 44px;
+  padding: 15px 16px;
   border: 1px solid rgba(18, 63, 49, .12);
   border-radius: 8px;
   background:
@@ -1879,9 +1882,6 @@ input:focus, select:focus, textarea:focus { outline: 0; }
   line-height: 1.25;
 }
 .about-check-grid span::before {
-  position: absolute;
-  top: 15px;
-  left: 16px;
   display: grid;
   width: 18px;
   height: 18px;
@@ -5051,7 +5051,9 @@ body:not(.feral-page) .about-check-grid {
 }
 
 body:not(.feral-page) .about-check-grid span {
-  padding: 10px;
+  grid-template-columns: 20px minmax(0, 1fr);
+  column-gap: 10px;
+  padding: 10px 12px;
   font-size: .8rem;
   line-height: 1.35;
 }

@@ -3369,6 +3369,434 @@ body:not(.feral-page) .calendar-side .calendar-highlight-card:first-child {
     linear-gradient(145deg, rgba(232, 240, 226, .96), rgba(248, 246, 238, .98));
 }
 
+/* Homepage polish pass: compact rhythm, refined cards, and cleaner form surfaces */
+body:not(.feral-page) {
+  --home-card-line: rgba(18, 63, 49, .12);
+  --home-card-shadow: 0 18px 42px rgba(18, 63, 49, .085);
+  --home-card-shadow-hover: 0 22px 54px rgba(18, 63, 49, .12);
+}
+
+body:not(.feral-page) .section {
+  padding-block: 66px;
+}
+
+body:not(.feral-page) .section-heading {
+  margin-bottom: 24px;
+}
+
+body:not(.feral-page) .section-heading h2,
+body:not(.feral-page) .quote-copy h2,
+body:not(.feral-page) .lower-card h2 {
+  font-size: clamp(1.9rem, 3vw, 2.75rem);
+  line-height: 1.04;
+}
+
+body:not(.feral-page) .hero {
+  min-height: clamp(520px, 66vh, 690px);
+  align-items: center;
+  padding: 66px 0 78px;
+}
+
+body:not(.feral-page) .hero-background-overlay {
+  background:
+    radial-gradient(ellipse at 22% 50%, rgba(8, 32, 25, .88) 0%, rgba(8, 32, 25, .66) 34%, rgba(8, 32, 25, .2) 66%, rgba(8, 32, 25, .08) 100%),
+    linear-gradient(180deg, rgba(8, 32, 25, .18), rgba(8, 32, 25, .5));
+}
+
+body:not(.feral-page) .hero-copy {
+  position: relative;
+  width: fit-content;
+  max-width: 720px;
+  padding: 24px 28px 26px;
+  isolation: isolate;
+}
+
+body:not(.feral-page) .hero-copy::before {
+  position: absolute;
+  inset: -10px -18px -12px -18px;
+  z-index: -1;
+  border-radius: 18px;
+  background:
+    linear-gradient(90deg, rgba(9, 38, 30, .56), rgba(9, 38, 30, .28) 72%, transparent),
+    radial-gradient(circle at 16% 20%, rgba(226, 170, 33, .13), transparent 32%);
+  box-shadow: 0 28px 70px rgba(5, 24, 19, .18);
+  content: "";
+}
+
+body:not(.feral-page) .hero-copy .eyebrow {
+  margin-bottom: 9px;
+  color: rgba(255, 253, 247, .78);
+  font-size: .58rem;
+  letter-spacing: .18em;
+  line-height: 1.2;
+}
+
+body:not(.feral-page) .hero-copy h1 {
+  max-width: 680px;
+  margin-bottom: 16px;
+}
+
+body:not(.feral-page) .hero-text {
+  max-width: 540px;
+  margin-bottom: 18px;
+  line-height: 1.5;
+}
+
+body:not(.feral-page) .hero-copy .button {
+  margin-right: 10px;
+}
+
+body:not(.feral-page) .hero-copy .text-link {
+  margin-left: 0;
+}
+
+body:not(.feral-page) .button,
+body:not(.feral-page) .submit-button {
+  min-height: 44px;
+  padding: 11px 18px;
+  border-radius: 999px;
+  border-width: 1px;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, .52),
+    0 10px 20px rgba(126, 93, 24, .14);
+}
+
+body:not(.feral-page) .primary-nav .button,
+body:not(.feral-page) .button-small {
+  min-height: 36px;
+  padding: 8px 14px;
+}
+
+body:not(.feral-page) .button:hover,
+body:not(.feral-page) .submit-button:hover {
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, .6),
+    0 15px 28px rgba(126, 93, 24, .18);
+}
+
+body:not(.feral-page) .home-promotions,
+body:not(.feral-page) .home-flow-section,
+body:not(.feral-page) .quote-section,
+body:not(.feral-page) .lower-section {
+  padding-block: 56px;
+}
+
+body:not(.feral-page) .services {
+  padding-block: 62px 58px;
+  border-top: 1px solid rgba(18, 63, 49, .07);
+  border-bottom: 1px solid rgba(18, 63, 49, .07);
+}
+
+body:not(.feral-page) .service-grid {
+  gap: 14px;
+}
+
+body:not(.feral-page) .service-card,
+body:not(.feral-page) .home-flow-card,
+body:not(.feral-page) .lower-card,
+body:not(.feral-page) .quote-form,
+body:not(.feral-page) .trust-strip article {
+  border-color: var(--home-card-line);
+  box-shadow: var(--home-card-shadow);
+}
+
+body:not(.feral-page) .service-card {
+  min-height: 0;
+}
+
+body:not(.feral-page) .service-card:hover,
+body:not(.feral-page) .home-flow-card:hover,
+body:not(.feral-page) .trust-strip article:hover {
+  box-shadow: var(--home-card-shadow-hover);
+}
+
+body:not(.feral-page) .service-card-media {
+  position: relative;
+  height: auto;
+  aspect-ratio: 1.35 / 1;
+  isolation: isolate;
+}
+
+body:not(.feral-page) .service-card-media::after {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  background:
+    linear-gradient(180deg, rgba(255, 253, 247, .08), rgba(18, 63, 49, .2)),
+    radial-gradient(circle at 22% 18%, rgba(226, 170, 33, .13), transparent 34%);
+  content: "";
+  mix-blend-mode: multiply;
+  pointer-events: none;
+}
+
+body:not(.feral-page) .service-card-image {
+  filter: saturate(.9) contrast(.96) brightness(1.02);
+}
+
+body:not(.feral-page) .service-card:hover .service-card-image {
+  filter: saturate(.98) contrast(.98) brightness(1.03);
+}
+
+body:not(.feral-page) .card-body {
+  padding: 20px 18px 19px;
+}
+
+body:not(.feral-page) .card-body h3 {
+  min-height: 40px;
+  margin-bottom: 8px;
+}
+
+body:not(.feral-page) .card-body ul {
+  display: grid;
+  gap: 5px;
+  font-size: .82rem;
+  line-height: 1.35;
+}
+
+body:not(.feral-page) .card-body li::before {
+  margin-right: 7px;
+}
+
+body:not(.feral-page) .service-card-link {
+  margin-top: 13px;
+  color: #815f19;
+  font-size: .62rem;
+  letter-spacing: .075em;
+}
+
+body:not(.feral-page) .service-card-link::after {
+  margin-left: 7px;
+  content: ">";
+}
+
+body:not(.feral-page) .home-flow-card {
+  min-height: 0;
+  gap: 8px;
+  padding: 24px;
+  background:
+    linear-gradient(145deg, rgba(255, 255, 255, .9), rgba(248, 250, 241, .96));
+}
+
+body:not(.feral-page) .home-flow-card h2 {
+  font-size: clamp(1.65rem, 2.6vw, 2.25rem);
+}
+
+body:not(.feral-page) .home-flow-card p:not(.eyebrow) {
+  margin-bottom: 4px;
+  line-height: 1.55;
+}
+
+body:not(.feral-page) .trust-strip {
+  border-color: rgba(18, 63, 49, .09);
+}
+
+body:not(.feral-page) .trust-strip article {
+  min-height: 132px;
+  padding: 16px;
+}
+
+body:not(.feral-page) .trust-icon {
+  width: 28px;
+  height: 28px;
+  margin-bottom: 9px;
+  border-style: solid;
+  border-color: rgba(18, 63, 49, .2);
+  background: rgba(255, 253, 247, .55);
+}
+
+body:not(.feral-page) .trust-number {
+  display: inline-flex;
+  margin-left: 2px;
+  font-size: .62rem;
+}
+
+body:not(.feral-page) .trust-strip h3 {
+  margin: 9px 0 4px;
+  font-size: .98rem;
+}
+
+body:not(.feral-page) .trust-strip p {
+  font-size: .78rem;
+  line-height: 1.45;
+}
+
+body:not(.feral-page) .quote-layout {
+  gap: 34px;
+  align-items: start;
+}
+
+body:not(.feral-page) .quote-form {
+  gap: 10px;
+  padding: 22px;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, .94), rgba(255, 253, 247, .98));
+}
+
+body:not(.feral-page) .quote-form-heading {
+  padding-bottom: 10px;
+}
+
+body:not(.feral-page) .quote-form label {
+  border-color: rgba(18, 63, 49, .16);
+  background: rgba(255, 255, 255, .88);
+}
+
+body:not(.feral-page) .quote-form label:focus-within {
+  border-color: rgba(18, 63, 49, .46);
+  box-shadow:
+    0 0 0 3px rgba(226, 170, 33, .16),
+    0 12px 26px rgba(18, 63, 49, .08);
+}
+
+body:not(.feral-page) .quote-illustration {
+  margin-top: 18px;
+  box-shadow: var(--home-card-shadow);
+}
+
+body:not(.feral-page) .lower-section {
+  padding-block: 48px 50px;
+  background:
+    linear-gradient(180deg, #fffaf0, rgba(238, 244, 229, .62));
+}
+
+body:not(.feral-page) .lower-grid {
+  gap: 14px;
+}
+
+body:not(.feral-page) .lower-card {
+  min-height: 218px;
+}
+
+body:not(.feral-page) .lower-card > div:first-child,
+body:not(.feral-page) .lower-card:has(.map-embed) > div:first-child {
+  padding: 18px;
+}
+
+body:not(.feral-page) .lower-card:has(.map-embed) h2 {
+  font-size: 1.48rem;
+}
+
+body:not(.feral-page) .lower-card p {
+  margin-bottom: 12px;
+  line-height: 1.5;
+}
+
+body:not(.feral-page) .map-embed,
+body:not(.feral-page) .map-embed .leaflet-service-map {
+  min-height: 218px;
+}
+
+body:not(.feral-page) .payment-list {
+  gap: 7px;
+  padding: 0 18px 18px;
+}
+
+body:not(.feral-page) .payment-list span {
+  min-height: 86px;
+  gap: 7px;
+}
+
+body:not(.feral-page) .payment-list i {
+  width: 44px;
+  height: 44px;
+}
+
+body:not(.feral-page) .payment-list svg {
+  width: 27px;
+  height: 27px;
+}
+
+body:not(.feral-page) .site-footer {
+  padding: 32px 0 16px;
+}
+
+body:not(.feral-page) .footer-grid {
+  gap: 18px;
+}
+
+body:not(.feral-page) .footer-grid h2 {
+  margin-bottom: 8px;
+  font-size: .92rem;
+}
+
+body:not(.feral-page) .footer-nav-group {
+  gap: 5px;
+}
+
+body:not(.feral-page) .footer-nav-group a {
+  font-size: .72rem;
+  line-height: 1.35;
+}
+
+body:not(.feral-page) .footer-quote-panel {
+  padding: 15px;
+}
+
+body:not(.feral-page) .footer-bottom {
+  margin-top: 18px;
+  padding-top: 12px;
+}
+
+@media (max-width: 760px) {
+  body:not(.feral-page) .section,
+  body:not(.feral-page) .home-promotions,
+  body:not(.feral-page) .home-flow-section,
+  body:not(.feral-page) .quote-section,
+  body:not(.feral-page) .lower-section {
+    padding-block: 54px;
+  }
+
+  body:not(.feral-page) .hero {
+    min-height: 500px;
+    padding: 56px 0 78px;
+  }
+
+  body:not(.feral-page) .hero-copy {
+    width: auto;
+    padding: 18px 18px 20px;
+  }
+
+  body:not(.feral-page) .hero-copy::before {
+    inset: -6px -8px -8px;
+    border-radius: 14px;
+  }
+
+  body:not(.feral-page) .hero-copy .button {
+    margin-right: 0;
+    margin-bottom: 10px;
+  }
+
+  body:not(.feral-page) .service-card-media {
+    aspect-ratio: 1.55 / 1;
+  }
+
+  body:not(.feral-page) .quote-form {
+    padding: 16px;
+  }
+
+  body:not(.feral-page) .lower-card,
+  body:not(.feral-page) .map-embed,
+  body:not(.feral-page) .map-embed .leaflet-service-map {
+    min-height: 220px;
+  }
+}
+
+@media (max-width: 520px) {
+  body:not(.feral-page) .section-heading h2,
+  body:not(.feral-page) .quote-copy h2,
+  body:not(.feral-page) .lower-card h2 {
+    font-size: clamp(1.65rem, 8vw, 2.05rem);
+  }
+
+  body:not(.feral-page) .trust-strip article {
+    padding: 15px;
+  }
+
+  body:not(.feral-page) .payment-list {
+    grid-template-columns: 1fr;
+  }
+}
+
 body:not(.feral-page) .calendar-side .calendar-highlight-card:nth-child(2) {
   background:
     linear-gradient(145deg, rgba(250, 240, 216, .9), rgba(248, 246, 238, .98));

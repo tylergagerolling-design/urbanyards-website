@@ -4480,3 +4480,339 @@ body:not(.feral-page) .uy-assistant-toggle-icon {
     height: 56px;
   }
 }
+
+/* Homepage compactness pass: final cascade layer */
+body:not(.feral-page) .section {
+  padding-block: 62px;
+}
+
+body:not(.feral-page) .hero {
+  min-height: clamp(430px, 54vh, 570px);
+  padding: 42px 0 52px;
+}
+
+body:not(.feral-page) .hero-grid {
+  max-width: min(calc(100% - 48px), 760px);
+}
+
+body:not(.feral-page) .hero-copy .eyebrow {
+  margin-bottom: 7px;
+  font-size: .55rem;
+}
+
+body:not(.feral-page) .hero-copy h1 {
+  max-width: 640px;
+  margin-bottom: 12px;
+  font-size: clamp(3.35rem, 5.2vw, 5.35rem);
+  line-height: .98;
+}
+
+body:not(.feral-page) .hero-text {
+  max-width: 500px;
+  margin-bottom: 14px;
+  font-size: clamp(.98rem, 1.2vw, 1.1rem);
+  line-height: 1.42;
+}
+
+body:not(.feral-page) .hero-copy .button {
+  margin-right: 8px;
+}
+
+body:not(.feral-page) .home-promotions {
+  padding-block: 38px;
+}
+
+body:not(.feral-page) .promotions-shell {
+  padding: 20px;
+}
+
+body:not(.feral-page) .promotions-intro {
+  gap: 18px;
+  margin-bottom: 18px;
+}
+
+body:not(.feral-page) .promotions-heading h2 {
+  max-width: 580px;
+  margin-bottom: 8px;
+  font-size: clamp(2rem, 3vw, 2.85rem);
+}
+
+body:not(.feral-page) .promotions-heading > p:last-child {
+  max-width: 58ch;
+  line-height: 1.5;
+}
+
+body:not(.feral-page) .promotion-discount {
+  min-height: 58px;
+  padding: 11px 14px;
+  gap: 11px;
+}
+
+body:not(.feral-page) .promotions-credit {
+  width: 42px;
+  height: 42px;
+  font-size: 1.02rem;
+}
+
+body:not(.feral-page) .promotion-discount-copy strong {
+  font-size: .92rem;
+}
+
+body:not(.feral-page) .promotion-discount-copy small {
+  font-size: .64rem;
+  line-height: 1.3;
+}
+
+body:not(.feral-page) .promotions-grid {
+  gap: 12px;
+}
+
+body:not(.feral-page) .promotion-card {
+  gap: 11px;
+  padding: 16px;
+}
+
+body:not(.feral-page) .promotion-card-header {
+  gap: 3px;
+  padding-bottom: 10px;
+}
+
+body:not(.feral-page) .promotion-label {
+  font-size: .6rem;
+}
+
+body:not(.feral-page) .promotion-helper {
+  font-size: .65rem;
+  line-height: 1.34;
+}
+
+body:not(.feral-page) .promotion-card-content h3 {
+  max-width: 13ch;
+  margin-bottom: 6px;
+  font-size: clamp(1.28rem, 1.7vw, 1.62rem);
+  line-height: 1.04;
+}
+
+body:not(.feral-page) .promotion-card-content p {
+  max-width: 48ch;
+  margin-bottom: 11px;
+  font-size: .78rem;
+  line-height: 1.43;
+}
+
+body:not(.feral-page) .services .section-heading,
+body:not(.feral-page) .about-section .section-heading {
+  margin-bottom: 26px;
+}
+
+body:not(.feral-page) .service-grid {
+  gap: 16px;
+}
+
+body:not(.feral-page) .service-card-media {
+  aspect-ratio: 2.05 / 1;
+}
+
+body:not(.feral-page) .service-card .card-body {
+  min-height: 198px;
+  padding: 15px;
+  grid-template-rows: auto auto 1fr auto;
+}
+
+body:not(.feral-page) .service-card .card-body::before {
+  margin-bottom: 8px;
+  padding: 3px 7px;
+  font-size: .52rem;
+}
+
+body:not(.feral-page) .service-toggle {
+  font-size: 1rem;
+}
+
+body:not(.feral-page) .service-card .card-body ul {
+  gap: 5px;
+  margin: 8px 0 10px;
+}
+
+body:not(.feral-page) .service-card .card-body li {
+  font-size: .82rem;
+  line-height: 1.28;
+}
+
+body:not(.feral-page) .service-card-link {
+  font-size: .7rem;
+}
+
+body:not(.feral-page) .property-types {
+  margin-top: 14px;
+}
+
+body:not(.feral-page) .home-flow-section {
+  padding-block: 42px;
+}
+
+body:not(.feral-page) .home-flow-grid {
+  gap: 14px;
+}
+
+body:not(.feral-page) .home-flow-card {
+  padding: 18px;
+  gap: 8px;
+}
+
+body:not(.feral-page) .home-flow-card h2 {
+  max-width: 460px;
+  font-size: clamp(1.45rem, 2.2vw, 2rem);
+}
+
+body:not(.feral-page) .home-flow-card p:not(.eyebrow) {
+  margin-bottom: 2px;
+  font-size: .84rem;
+  line-height: 1.48;
+}
+
+body:not(.feral-page) .trust-strip {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+body:not(.feral-page) .trust-strip article {
+  min-height: 0;
+  padding: 15px;
+}
+
+body:not(.feral-page) .trust-icon {
+  width: 26px;
+  height: 26px;
+  margin-bottom: 7px;
+}
+
+body:not(.feral-page) .trust-strip h3 {
+  margin: 5px 0 4px;
+  font-size: .92rem;
+  line-height: 1.15;
+}
+
+body:not(.feral-page) .trust-strip p {
+  font-size: .76rem;
+  line-height: 1.38;
+}
+
+body:not(.feral-page) .quote-section {
+  padding-block: 54px;
+}
+
+body:not(.feral-page) .quote-layout {
+  gap: 28px;
+}
+
+body:not(.feral-page) .quote-copy p:not(.eyebrow) {
+  max-width: 48ch;
+  line-height: 1.5;
+}
+
+body:not(.feral-page) .quote-form {
+  gap: 9px;
+  padding: 20px;
+}
+
+body:not(.feral-page) .quote-form-heading {
+  padding-bottom: 8px;
+}
+
+body:not(.feral-page) .quote-submit-row {
+  padding-top: 2px;
+}
+
+body:not(.feral-page) .lower-section {
+  padding-block: 48px;
+}
+
+body:not(.feral-page) .lower-grid {
+  gap: 14px;
+}
+
+body:not(.feral-page) .lower-card {
+  min-height: 218px;
+}
+
+body:not(.feral-page) .lower-card > div:first-child,
+body:not(.feral-page) .lower-card:has(.map-embed) > div:first-child {
+  padding: 18px;
+}
+
+body:not(.feral-page) .lower-card p {
+  margin-bottom: 12px;
+  line-height: 1.48;
+}
+
+body:not(.feral-page) .map-embed,
+body:not(.feral-page) .map-embed .leaflet-service-map {
+  min-height: 218px;
+}
+
+@media (max-width: 960px) {
+  body:not(.feral-page) .section {
+    padding-block: 54px;
+  }
+
+  body:not(.feral-page) .promotions-grid,
+  body:not(.feral-page) .trust-strip {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  body:not(.feral-page) .promotion-card-content h3 {
+    max-width: 18ch;
+  }
+
+  body:not(.feral-page) .service-card .card-body {
+    min-height: 0;
+  }
+}
+
+@media (max-width: 760px) {
+  body:not(.feral-page) .section,
+  body:not(.feral-page) .home-promotions,
+  body:not(.feral-page) .home-flow-section,
+  body:not(.feral-page) .quote-section,
+  body:not(.feral-page) .lower-section {
+    padding-block: 46px;
+  }
+
+  body:not(.feral-page) .hero {
+    min-height: 470px;
+    padding: 48px 0 62px;
+  }
+
+  body:not(.feral-page) .hero-copy h1 {
+    font-size: clamp(2.85rem, 14vw, 4.1rem);
+  }
+
+  body:not(.feral-page) .promotions-shell,
+  body:not(.feral-page) .promotion-card,
+  body:not(.feral-page) .home-flow-card {
+    padding: 16px;
+  }
+
+  body:not(.feral-page) .promotions-grid,
+  body:not(.feral-page) .trust-strip {
+    grid-template-columns: 1fr;
+  }
+
+  body:not(.feral-page) .service-card-media {
+    aspect-ratio: 1.58 / 1;
+  }
+
+  body:not(.feral-page) .quote-layout {
+    gap: 22px;
+  }
+
+  body:not(.feral-page) .quote-form {
+    padding: 16px;
+  }
+
+  body:not(.feral-page) .lower-card,
+  body:not(.feral-page) .map-embed,
+  body:not(.feral-page) .map-embed .leaflet-service-map {
+    min-height: 210px;
+  }
+}

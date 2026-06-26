@@ -4931,16 +4931,25 @@ body:not(.feral-page) .service-detail-grid {
 body:not(.feral-page) .service-detail-card {
   gap: 11px;
   padding: 18px;
+  overflow: hidden;
 }
 
 body:not(.feral-page) .service-detail-media {
-  max-height: 220px;
+  display: block;
+  width: calc(100% + 36px);
+  min-width: 0;
+  grid-column: 1 / -1;
+  height: 220px;
+  max-height: none;
   margin: -18px -18px 2px;
-  aspect-ratio: 2.15 / 1;
+  aspect-ratio: auto;
+  overflow: hidden;
 }
 
 body:not(.feral-page) .service-detail-media .service-card-image,
 body:not(.feral-page) .service-detail-media img {
+  display: block;
+  width: 100%;
   height: 100%;
   object-fit: cover;
 }
@@ -5167,7 +5176,7 @@ body:not(.feral-page) .error-card {
   }
 
   body:not(.feral-page) .service-detail-media {
-    max-height: 240px;
+    height: 220px;
   }
 
   body:not(.feral-page) .portfolio-image,
@@ -5229,9 +5238,10 @@ body:not(.feral-page) .error-card {
   }
 
   body:not(.feral-page) .service-detail-media {
-    max-height: 230px;
+    width: calc(100% + 32px);
+    height: 220px;
     margin: -16px -16px 2px;
-    aspect-ratio: 1.55 / 1;
+    aspect-ratio: auto;
   }
 
   body:not(.feral-page) .portfolio-cta-inner,
@@ -5305,7 +5315,8 @@ body:not(.feral-page) .error-card {
   }
 
   body:not(.feral-page) .service-detail-media {
-    max-height: 190px;
+    width: calc(100% + 32px);
+    height: 190px;
     margin: -16px -16px 0;
   }
 

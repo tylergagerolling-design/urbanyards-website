@@ -1,4 +1,4 @@
-:root {
+﻿:root {
   --cream: #f7f1e3;
   --paper: #fffdf7;
   --forest: #123f31;
@@ -538,20 +538,18 @@ a:focus-visible, button:focus-visible, input:focus-visible, select:focus-visible
 }
 .promotions-heading {
   max-width: 790px;
-  margin: 0 0 0 auto;
-  text-align: right;
+  margin: 0;
+  text-align: left;
 }
 .promotions-heading h2 {
   max-width: 760px;
-  margin-left: auto;
   margin-bottom: 18px;
   font-size: clamp(2.4rem, 4.5vw, 4rem);
   line-height: 1;
 }
 .promotions-heading > p:last-child {
   max-width: 720px;
-  margin-left: auto;
-  margin-right: 0;
+  margin-inline: 0;
   color: var(--muted);
   font-size: 1rem;
   line-height: 1.7;
@@ -1905,7 +1903,7 @@ input:focus, select:focus, textarea:focus { outline: 0; }
   border-radius: 50%;
   background: var(--forest);
   color: #fffdf7;
-  content: "✓";
+  content: "âœ“";
   font-size: .72rem;
   font-weight: 900;
 }

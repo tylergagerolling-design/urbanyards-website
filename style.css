@@ -1418,22 +1418,37 @@ input:focus, select:focus, textarea:focus { outline: 0; }
 .uy-assistant-toggle-icon {
   position: relative;
   width: 28px;
-  height: 22px;
+  height: 28px;
   border: 2px solid #fffdf7;
-  border-radius: 11px 11px 11px 3px;
+  border-radius: 82% 18% 70% 30% / 70% 24% 76% 30%;
+  background:
+    linear-gradient(135deg, rgba(255, 253, 247, .12), rgba(226, 170, 33, .18));
+  transform: rotate(-38deg);
 }
 .uy-assistant-toggle-icon:before,
 .uy-assistant-toggle-icon:after {
   position: absolute;
-  top: 8px;
-  width: 4px;
-  height: 4px;
-  border-radius: 50%;
-  background: var(--mustard);
   content: "";
 }
-.uy-assistant-toggle-icon:before { left: 7px; }
-.uy-assistant-toggle-icon:after { right: 7px; }
+.uy-assistant-toggle-icon:before {
+  top: 3px;
+  left: 12px;
+  width: 2px;
+  height: 21px;
+  border-radius: 999px;
+  background: rgba(255, 253, 247, .88);
+  transform: rotate(7deg);
+}
+.uy-assistant-toggle-icon:after {
+  right: 1px;
+  bottom: -6px;
+  width: 13px;
+  height: 2px;
+  border-radius: 999px;
+  background: var(--mustard);
+  transform: rotate(44deg);
+  transform-origin: left center;
+}
 .uy-assistant-panel {
   position: absolute;
   right: 0;

@@ -3934,31 +3934,10 @@ body:not(.feral-page) .promotion-card-header {
   position: relative;
   grid-template-columns: auto minmax(0, 1fr);
   gap: 4px 10px;
-  padding: 0 0 14px 42px;
+  padding: 0 0 14px;
   border-right: 0;
   border-bottom: 1px solid rgba(18, 63, 49, .1);
 }
-
-body:not(.feral-page) .promotion-card-header::before {
-  position: absolute;
-  top: 1px;
-  left: 0;
-  display: grid;
-  width: 30px;
-  height: 30px;
-  place-items: center;
-  border: 1px solid rgba(18, 63, 49, .13);
-  border-radius: 9px;
-  background:
-    linear-gradient(145deg, rgba(255, 253, 247, .86), rgba(227, 234, 219, .72));
-  color: var(--forest);
-  font-size: .82rem;
-  font-weight: 900;
-}
-
-body:not(.feral-page) .promotion-card:nth-child(1) .promotion-card-header::before { content: "W"; }
-body:not(.feral-page) .promotion-card:nth-child(2) .promotion-card-header::before { content: "R"; }
-body:not(.feral-page) .promotion-card:nth-child(3) .promotion-card-header::before { content: "M"; }
 
 body:not(.feral-page) .promotion-number {
   width: auto;
@@ -4074,28 +4053,8 @@ body:not(.feral-page) .property-types span {
 
 body:not(.feral-page) .home-flow-card {
   position: relative;
-  padding-left: 72px;
+  padding-left: 24px;
 }
-
-body:not(.feral-page) .home-flow-card::before {
-  position: absolute;
-  top: 24px;
-  left: 24px;
-  display: grid;
-  width: 34px;
-  height: 34px;
-  place-items: center;
-  border: 1px solid rgba(18, 63, 49, .12);
-  border-radius: 10px;
-  background:
-    linear-gradient(145deg, rgba(255, 253, 247, .9), rgba(227, 234, 219, .72));
-  color: var(--forest);
-  font-size: .86rem;
-  font-weight: 900;
-}
-
-body:not(.feral-page) .home-flow-card:nth-child(1)::before { content: "S"; }
-body:not(.feral-page) .home-flow-card:nth-child(2)::before { content: "P"; }
 
 body:not(.feral-page) .about-values-strip {
   overflow: hidden;
@@ -4210,12 +4169,7 @@ body:not(.feral-page) .site-footer::before {
   }
 
   body:not(.feral-page) .home-flow-card {
-    padding-left: 66px;
-  }
-
-  body:not(.feral-page) .home-flow-card::before {
-    top: 22px;
-    left: 20px;
+    padding-left: 18px;
   }
 
   body:not(.feral-page) .about-values-strip article {

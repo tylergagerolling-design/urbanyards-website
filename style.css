@@ -538,18 +538,20 @@ a:focus-visible, button:focus-visible, input:focus-visible, select:focus-visible
 }
 .promotions-heading {
   max-width: 790px;
-  margin: 0 auto;
-  text-align: center;
+  margin: 0 0 0 auto;
+  text-align: right;
 }
 .promotions-heading h2 {
   max-width: 760px;
+  margin-left: auto;
   margin-bottom: 18px;
   font-size: clamp(2.4rem, 4.5vw, 4rem);
   line-height: 1;
 }
 .promotions-heading > p:last-child {
   max-width: 720px;
-  margin-inline: auto;
+  margin-left: auto;
+  margin-right: 0;
   color: var(--muted);
   font-size: 1rem;
   line-height: 1.7;

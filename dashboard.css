@@ -5328,6 +5328,13 @@ body:has(.dashboard-shell) {
   font-weight: 850;
 }
 
+.outreach-hero-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  justify-content: flex-end;
+}
+
 .outreach-metrics {
   display: grid;
   grid-template-columns: repeat(5, minmax(0, 1fr));
@@ -5463,6 +5470,12 @@ body:has(.dashboard-shell) {
     align-items: stretch;
     flex-direction: column;
     padding: 16px;
+  }
+
+  .outreach-hero-actions {
+    display: grid;
+    grid-template-columns: 1fr;
+    justify-content: stretch;
   }
 
   .outreach-metrics {

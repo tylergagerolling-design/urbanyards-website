@@ -137,6 +137,7 @@
       "go-documents": "$",
       "go-route-planner": "M",
       "go-settings": "-&gt;",
+      "import-outreach-csv": "CSV",
       "mark-route-complete": "OK",
       "mark-outreach-contacted": "OK",
       "move-route-down": "v",
@@ -1289,6 +1290,121 @@
     if (!OUTREACH_STATUSES.includes(payload.status)) throw new Error("Choose a valid outreach status.");
     if (!OUTREACH_PRIORITIES.includes(payload.priority)) throw new Error("Choose a valid priority.");
     return payload;
+  }
+
+  function normalizeCsvHeader(value) {
+    return String(value || "").toLowerCase().replace(/[^a-z0-9]+/g, "_").replace(/^_|_$/g, "");
+  }
+
+  function parseCsv(text) {
+    const rows = [];
+    let row = [];
+    let field = "";
+    let inQuotes = false;
+    const source = String(text || "").replace(/^\uFEFF/, "");
+    for (let index = 0; index < source.length; index += 1) {
+      const char = source[index];
+      const next = source[index + 1];
+      if (char === "\"") {
+        if (inQuotes && next === "\"") {
+          field += "\"";
+          index += 1;
+        } else {
+          inQuotes = !inQuotes;
+        }
+      } else if (char === "," && !inQuotes) {
+        row.push(field);
+        field = "";
+      } else if ((char === "\n" || char === "\r") && !inQuotes) {
+        if (char === "\r" && next === "\n") index += 1;
+        row.push(field);
+        if (row.some((cell) => String(cell).trim())) rows.push(row);
+        row = [];
+        field = "";
+      } else {
+        field += char;
+      }
+    }
+    row.push(field);
+    if (row.some((cell) => String(cell).trim())) rows.push(row);
+    return rows;
+  }
+
+  function csvCell(row, headerMap, names) {
+    for (const name of names) {
+      const index = headerMap.get(normalizeCsvHeader(name));
+      if (index !== undefined) return String(row[index] || "").trim();
+    }
+    return "";
+  }
+
+  function normalizeOutreachStatus(value) {
+    const normalized = normalizeCsvHeader(value);
+    return OUTREACH_STATUSES.find((status) => normalizeCsvHeader(status) === normalized) || "Prospect";
+  }
+
+  function normalizeOutreachPriority(value) {
+    const normalized = normalizeCsvHeader(value);
+    return OUTREACH_PRIORITIES.find((priority) => normalizeCsvHeader(priority) === normalized) || "Normal";
+  }
+
+  function normalizeOptionValue(value, options, fallback) {
+    const normalized = normalizeCsvHeader(value);
+    return options.find((option) => normalizeCsvHeader(option) === normalized) || value || fallback;
+  }
+
+  function outreachPayloadFromCsvRow(row, headerMap) {
+    const payload = {
+      property_name: csvCell(row, headerMap, ["property_name", "property name", "property", "site", "site name", "building"]),
+      management_company: csvCell(row, headerMap, ["management_company", "management company", "company", "management", "owner company"]),
+      contact_name: csvCell(row, headerMap, ["contact_name", "contact name", "contact", "name", "person"]),
+      email: csvCell(row, headerMap, ["email", "email address"]),
+      phone: csvCell(row, headerMap, ["phone", "phone number", "telephone"]),
+      address: csvCell(row, headerMap, ["address", "street address", "property address", "location"]),
+      city: csvCell(row, headerMap, ["city", "area"]),
+      property_type: normalizeOptionValue(csvCell(row, headerMap, ["property_type", "property type", "type"]), OUTREACH_PROPERTY_TYPES, "Other"),
+      service_interest: normalizeOptionValue(csvCell(row, headerMap, ["service_interest", "service interest", "service", "services", "need", "scope"]), OUTREACH_SERVICE_INTERESTS, "General Property Care"),
+      source: csvCell(row, headerMap, ["source", "lead source", "where found"]),
+      status: normalizeOutreachStatus(csvCell(row, headerMap, ["status", "pipeline status", "stage"])),
+      last_contacted_at: csvCell(row, headerMap, ["last_contacted_at", "last contacted", "last contact"]),
+      next_follow_up_at: csvCell(row, headerMap, ["next_follow_up_at", "next follow up", "follow up", "follow-up", "followup", "next follow-up"]),
+      notes: csvCell(row, headerMap, ["notes", "note", "details", "summary"]),
+      priority: normalizeOutreachPriority(csvCell(row, headerMap, ["priority", "importance"]))
+    };
+    Object.keys(payload).forEach((key) => {
+      if (payload[key] === "") payload[key] = null;
+    });
+    const hasName = Boolean(payload.property_name || payload.contact_name);
+    const hasContactOrAddress = Boolean(payload.email || payload.phone || payload.address || payload.city);
+    if (!hasName) throw new Error("missing property_name/contact_name");
+    if (!hasContactOrAddress) throw new Error("missing email/phone/address/city");
+    return payload;
+  }
+
+  async function importOutreachCsvFile(file) {
+    if (!file) return;
+    if (!state.outreachReady) {
+      throw new Error("Create the outreach_prospects table first. See DASHBOARD_OUTREACH_SQL.md.");
+    }
+    const text = await file.text();
+    const rows = parseCsv(text);
+    if (rows.length < 2) throw new Error("CSV needs a header row and at least one prospect row.");
+    const headers = rows[0].map(normalizeCsvHeader);
+    const headerMap = new Map(headers.map((header, index) => [header, index]));
+    let imported = 0;
+    const skipped = [];
+    for (const row of rows.slice(1)) {
+      try {
+        const prospect = await insertOutreachProspect(outreachPayloadFromCsvRow(row, headerMap));
+        if (!isDemoMode()) state.data.outreachProspects.unshift(prospect);
+        imported += 1;
+      } catch (error) {
+        skipped.push(error.message || "invalid row");
+      }
+    }
+    await refreshDashboard();
+    const skippedMessage = skipped.length ? ` Skipped ${skipped.length} row${skipped.length === 1 ? "" : "s"}.` : "";
+    setDashboardState(`Imported ${imported} prospect${imported === 1 ? "" : "s"}.${skippedMessage}`, skipped.length && !imported ? "error" : "");
   }
 
   async function insertOutreachProspect(payload) {
@@ -4025,6 +4141,20 @@
       });
     }
 
+    if (els.outreachImport) {
+      els.outreachImport.addEventListener("change", async () => {
+        const file = els.outreachImport.files && els.outreachImport.files[0];
+        try {
+          setDashboardState("Importing outreach CSV...");
+          await importOutreachCsvFile(file);
+        } catch (error) {
+          setDashboardState(error.message || "Unable to import outreach CSV.", "error");
+        } finally {
+          els.outreachImport.value = "";
+        }
+      });
+    }
+
     if (els.noteForm) {
       els.noteForm.addEventListener("submit", async (event) => {
         event.preventDefault();
@@ -4152,6 +4282,8 @@
         if (input) input.focus();
       } else if (action === "new-outreach-prospect") {
         openOutreachDrawer();
+      } else if (action === "import-outreach-csv") {
+        if (els.outreachImport) els.outreachImport.click();
       } else if (action === "open-outreach-prospect" || action === "edit-outreach-prospect") {
         openOutreachDrawer(id);
       } else if (action === "add-client-job") {
@@ -4863,6 +4995,7 @@
     els.outreachCards = qs("[data-outreach-cards]");
     els.outreachArchive = qs("[data-outreach-archive]");
     els.outreachArchiveCount = qs("[data-outreach-archive-count]");
+    els.outreachImport = qs("[data-outreach-import]");
     els.propertyFilter = qs("[data-property-filter]");
     els.pipeline = qs("[data-pipeline]");
     els.documents = qs("[data-documents]");

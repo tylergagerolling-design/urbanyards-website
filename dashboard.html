@@ -11,10 +11,10 @@
     <link rel="icon" href="/favicon.ico" sizes="any">
     <link rel="apple-touch-icon" href="/apple-touch-icon.png">
     <link rel="manifest" href="/dashboard.webmanifest">
-    <link rel="stylesheet" href="dashboard.css?v=20260629-1">
+    <link rel="stylesheet" href="dashboard.css?v=20260629-2">
     <link rel="stylesheet" href="dashboard-mobile-fix.css?v=20260622-3">
     <script src="dashboard-config.js?v=20260623-1" defer></script>
-    <script src="dashboard.js?v=20260629-1" defer></script>
+    <script src="dashboard.js?v=20260629-2" defer></script>
   </head>
   <body>
     <main class="dashboard-shell" aria-labelledby="dashboard-title">
@@ -235,7 +235,11 @@
                 <h3>Property lead pipeline</h3>
                 <p>Track prospects from first discovery through contact, follow-up, quote, and won or lost status.</p>
               </div>
-              <button type="button" data-action="new-outreach-prospect"><span class="button-icon" aria-hidden="true">+</span><span>Add Prospect</span></button>
+              <div class="outreach-hero-actions">
+                <button type="button" data-action="import-outreach-csv"><span class="button-icon" aria-hidden="true">CSV</span><span>Import CSV</span></button>
+                <button type="button" data-action="new-outreach-prospect"><span class="button-icon" aria-hidden="true">+</span><span>Add Prospect</span></button>
+              </div>
+              <input data-outreach-import type="file" accept=".csv,text/csv" hidden>
             </div>
 
             <div class="outreach-metrics" data-outreach-metrics></div>

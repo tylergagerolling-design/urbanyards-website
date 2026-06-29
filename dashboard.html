@@ -11,10 +11,10 @@
     <link rel="icon" href="/favicon.ico" sizes="any">
     <link rel="apple-touch-icon" href="/apple-touch-icon.png">
     <link rel="manifest" href="/dashboard.webmanifest">
-    <link rel="stylesheet" href="dashboard.css?v=20260629-2">
+    <link rel="stylesheet" href="dashboard.css?v=20260629-3">
     <link rel="stylesheet" href="dashboard-mobile-fix.css?v=20260622-3">
     <script src="dashboard-config.js?v=20260623-1" defer></script>
-    <script src="dashboard.js?v=20260629-2" defer></script>
+    <script src="dashboard.js?v=20260629-3" defer></script>
   </head>
   <body>
     <main class="dashboard-shell" aria-labelledby="dashboard-title">
@@ -301,9 +301,14 @@
                   <option>Low</option>
                 </select>
               </div>
+              <div class="outreach-bulk-bar" data-outreach-bulk-bar hidden>
+                <span data-outreach-selected-count>0 selected</span>
+                <button class="inline-action danger-action" type="button" data-action="delete-selected-outreach">Delete Selected</button>
+                <button class="inline-action" type="button" data-action="clear-outreach-selection">Clear</button>
+              </div>
               <div class="outreach-table-wrap">
                 <table>
-                  <thead><tr><th>Prospect</th><th>Fit</th><th>Status</th><th>Follow-Up</th><th>Actions</th></tr></thead>
+                  <thead><tr><th><input data-outreach-select-all type="checkbox" aria-label="Select all visible prospects"></th><th>Prospect</th><th>Fit</th><th>Status</th><th>Follow-Up</th><th>Actions</th></tr></thead>
                   <tbody data-outreach-table></tbody>
                 </table>
               </div>

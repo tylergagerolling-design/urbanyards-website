@@ -5389,6 +5389,25 @@ body:has(.dashboard-shell) {
   margin-bottom: 12px;
 }
 
+.outreach-bulk-bar {
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 8px;
+  margin-bottom: 12px;
+  padding: 10px 12px;
+  border: 1px solid rgba(18, 63, 49, 0.14);
+  border-radius: 10px;
+  background: rgba(232, 240, 235, 0.72);
+}
+
+.outreach-bulk-bar span {
+  margin-right: auto;
+  color: var(--uy-green);
+  font-size: 0.86rem;
+  font-weight: 850;
+}
+
 .outreach-table-wrap {
   overflow-x: auto;
 }
@@ -5417,6 +5436,20 @@ body:has(.dashboard-shell) {
 
 .outreach-status-select {
   min-width: 144px;
+}
+
+[data-outreach-select],
+[data-outreach-select-all] {
+  width: 18px;
+  min-height: 18px;
+  accent-color: var(--uy-green);
+}
+
+.outreach-card-select-wrap {
+  display: grid;
+  grid-template-columns: 20px minmax(0, 1fr);
+  gap: 10px;
+  align-items: start;
 }
 
 .outreach-mobile-list {
@@ -5497,6 +5530,15 @@ body:has(.dashboard-shell) {
 
   .outreach-actions .inline-action {
     width: 100%;
+  }
+
+  .outreach-bulk-bar {
+    display: grid;
+    grid-template-columns: 1fr;
+  }
+
+  .outreach-bulk-bar span {
+    margin-right: 0;
   }
 
   .outreach-form {

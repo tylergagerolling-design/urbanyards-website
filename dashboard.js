@@ -30,6 +30,7 @@
     outreachServiceFilter: "All",
     outreachPriorityFilter: "All",
     outreachSearch: "",
+    selectedOutreachIds: new Set(),
     routeDate: todayKey(),
     selectedRouteStopId: "",
     search: "",
@@ -3249,12 +3250,16 @@
   }
 
   function renderOutreachCard(item, tone = "") {
+    const checked = state.selectedOutreachIds.has(item.id) ? " checked" : "";
     return `
       <article class="outreach-card ${tone ? `outreach-card-${escapeHtml(tone)}` : ""}">
         <div class="item-topline">
-          <div>
-            <h4>${escapeHtml(outreachTitle(item))}</h4>
-            <div class="meta">${escapeHtml(outreachSubtitle(item))}</div>
+          <div class="outreach-card-select-wrap">
+            <input data-outreach-select type="checkbox" value="${escapeHtml(item.id)}" aria-label="Select ${escapeHtml(outreachTitle(item))}"${checked}>
+            <div>
+              <h4>${escapeHtml(outreachTitle(item))}</h4>
+              <div class="meta">${escapeHtml(outreachSubtitle(item))}</div>
+            </div>
           </div>
           ${outreachStatusSelect(item.id, item.status)}
         </div>
@@ -3292,11 +3297,16 @@
       els.outreachMetrics.innerHTML = "";
       if (els.outreachFollowups) els.outreachFollowups.innerHTML = emptyState(message);
       if (els.outreachHot) els.outreachHot.innerHTML = emptyState("No quote-ready leads.");
-      if (els.outreachTable) els.outreachTable.innerHTML = `<tr><td colspan="5">${emptyState(message)}</td></tr>`;
+      if (els.outreachTable) els.outreachTable.innerHTML = `<tr><td colspan="6">${emptyState(message)}</td></tr>`;
       if (els.outreachCards) els.outreachCards.innerHTML = "";
       if (els.outreachArchive) els.outreachArchive.innerHTML = "";
       return;
     }
+
+    const validIds = new Set(data.outreachProspects.map((item) => item.id));
+    state.selectedOutreachIds.forEach((id) => {
+      if (!validIds.has(id)) state.selectedOutreachIds.delete(id);
+    });
 
     const active = data.outreachProspects.filter((item) => !isClosedOutreach(item));
     const due = outreachDueProspects();
@@ -3318,13 +3328,25 @@
     }
 
     const prospects = filteredOutreachProspects({ activeOnly: true }).filter((item) => !isClosedOutreach(item));
+    const selectedVisibleCount = prospects.filter((item) => state.selectedOutreachIds.has(item.id)).length;
+    if (els.outreachBulkBar) els.outreachBulkBar.hidden = state.selectedOutreachIds.size === 0;
+    if (els.outreachSelectedCount) {
+      const count = state.selectedOutreachIds.size;
+      els.outreachSelectedCount.textContent = `${count} selected`;
+    }
+    if (els.outreachSelectAll) {
+      els.outreachSelectAll.checked = Boolean(prospects.length && selectedVisibleCount === prospects.length);
+      els.outreachSelectAll.indeterminate = Boolean(selectedVisibleCount && selectedVisibleCount < prospects.length);
+      els.outreachSelectAll.disabled = !prospects.length;
+    }
     if (!prospects.length) {
-      if (els.outreachTable) els.outreachTable.innerHTML = `<tr><td colspan="5">${emptyState(active.length ? "No prospects match these filters." : "No prospects yet.")}</td></tr>`;
+      if (els.outreachTable) els.outreachTable.innerHTML = `<tr><td colspan="6">${emptyState(active.length ? "No prospects match these filters." : "No prospects yet.")}</td></tr>`;
       if (els.outreachCards) els.outreachCards.innerHTML = emptyState(active.length ? "No prospects match these filters." : "No prospects yet.");
     } else {
       if (els.outreachTable) {
         els.outreachTable.innerHTML = prospects.map((item) => `
           <tr>
+            <td><input data-outreach-select type="checkbox" value="${escapeHtml(item.id)}" aria-label="Select ${escapeHtml(outreachTitle(item))}"${state.selectedOutreachIds.has(item.id) ? " checked" : ""}></td>
             <td><strong>${escapeHtml(outreachTitle(item))}</strong><br><span class="meta">${escapeHtml(outreachSubtitle(item))}</span></td>
             <td>${escapeHtml(item.propertyType)}<br><span class="meta">${escapeHtml(item.serviceInterest)} / ${escapeHtml(item.priority)}</span></td>
             <td>${outreachStatusSelect(item.id, item.status)}</td>
@@ -4228,6 +4250,29 @@
         return;
       }
 
+      if (target.matches("[data-outreach-select]")) {
+        if (target.checked) {
+          state.selectedOutreachIds.add(target.value);
+        } else {
+          state.selectedOutreachIds.delete(target.value);
+        }
+        await render();
+        return;
+      }
+
+      if (target.matches("[data-outreach-select-all]")) {
+        const visibleProspects = filteredOutreachProspects({ activeOnly: true }).filter((item) => !isClosedOutreach(item));
+        visibleProspects.forEach((item) => {
+          if (target.checked) {
+            state.selectedOutreachIds.add(item.id);
+          } else {
+            state.selectedOutreachIds.delete(item.id);
+          }
+        });
+        await render();
+        return;
+      }
+
       if (!target.matches("[data-status-table][data-status-id]")) return;
 
       try {
@@ -4502,11 +4547,32 @@
         try {
           setDashboardState("Deleting prospect...");
           await deleteRow("outreach_prospects", id);
+          state.selectedOutreachIds.delete(id);
           closeSubmissionDrawer();
           await refreshDashboard();
           setDashboardState("");
         } catch (error) {
           setDashboardState(error.message || "Unable to delete prospect.", "error");
+        }
+      } else if (action === "clear-outreach-selection") {
+        state.selectedOutreachIds.clear();
+        await render();
+      } else if (action === "delete-selected-outreach") {
+        const ids = Array.from(state.selectedOutreachIds);
+        if (!ids.length) return;
+        const ok = window.confirm(`Delete ${ids.length} selected prospect${ids.length === 1 ? "" : "s"}?`);
+        if (!ok) return;
+        try {
+          setDashboardState("Deleting selected prospects...");
+          for (const selectedId of ids) {
+            await deleteRow("outreach_prospects", selectedId);
+          }
+          state.selectedOutreachIds.clear();
+          closeSubmissionDrawer();
+          await refreshDashboard();
+          setDashboardState("");
+        } catch (error) {
+          setDashboardState(error.message || "Unable to delete selected prospects.", "error");
         }
       } else if (action === "refresh-dashboard") {
         await refreshDashboard();
@@ -4995,6 +5061,9 @@
     els.outreachCards = qs("[data-outreach-cards]");
     els.outreachArchive = qs("[data-outreach-archive]");
     els.outreachArchiveCount = qs("[data-outreach-archive-count]");
+    els.outreachBulkBar = qs("[data-outreach-bulk-bar]");
+    els.outreachSelectedCount = qs("[data-outreach-selected-count]");
+    els.outreachSelectAll = qs("[data-outreach-select-all]");
     els.outreachImport = qs("[data-outreach-import]");
     els.propertyFilter = qs("[data-property-filter]");
     els.pipeline = qs("[data-pipeline]");

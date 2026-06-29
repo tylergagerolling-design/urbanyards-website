@@ -308,6 +308,8 @@ create index if not exists route_stops_route_date_order_idx
   on route_stops (route_date, stop_order);
 ```
 
+If you want to use the Outreach / Property Leads page, run the SQL in `DASHBOARD_OUTREACH_SQL.md` after the base dashboard tables are in place. The dashboard will still load without it, but Outreach will show a setup message until the `outreach_prospects` table exists.
+
 ## Current Dashboard Sections
 
 - Quote/contact submissions
@@ -316,4 +318,5 @@ create index if not exists route_stops_route_date_order_idx
 - Job notes
 - Follow-up reminders
 - Route Planner route stops
+- Outreach property leads
 - Status fields: New, Contacted, Scheduled, Completed, Invoiced

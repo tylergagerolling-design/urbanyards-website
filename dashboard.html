@@ -11,10 +11,10 @@
     <link rel="icon" href="/favicon.ico" sizes="any">
     <link rel="apple-touch-icon" href="/apple-touch-icon.png">
     <link rel="manifest" href="/dashboard.webmanifest">
-    <link rel="stylesheet" href="dashboard.css?v=20260623-12">
+    <link rel="stylesheet" href="dashboard.css?v=20260629-1">
     <link rel="stylesheet" href="dashboard-mobile-fix.css?v=20260622-3">
     <script src="dashboard-config.js?v=20260623-1" defer></script>
-    <script src="dashboard.js?v=20260623-13" defer></script>
+    <script src="dashboard.js?v=20260629-1" defer></script>
   </head>
   <body>
     <main class="dashboard-shell" aria-labelledby="dashboard-title">
@@ -51,6 +51,7 @@
           <nav class="dashboard-nav" aria-label="Dashboard navigation">
             <a href="#overview" data-dashboard-link="overview"><span class="nav-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M4 13.5 12 6l8 7.5"/><path d="M6.5 12.5V20h11v-7.5"/><path d="M10 20v-5h4v5"/></svg></span><span class="nav-label">Today</span></a>
             <a href="#calendar" data-dashboard-link="calendar"><span class="nav-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M4 15h12.5"/><path d="M5.5 15l1.6-5.2A2.4 2.4 0 0 1 9.4 8h3.3l1.7 7"/><path d="M12.8 8l1.1-3h2.7"/><path d="M16.5 15h1.7c1 0 1.8-.8 1.8-1.8V12h-2.4"/><path d="M7.5 19a2 2 0 1 0 0-4 2 2 0 0 0 0 4Z"/><path d="M16.5 19a2 2 0 1 0 0-4 2 2 0 0 0 0 4Z"/><path d="M9.6 11.5h2.2"/></svg></span><span class="nav-label">Work</span></a>
+            <a href="#outreach" data-dashboard-link="outreach"><span class="nav-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M4 18V7.5L12 4l8 3.5V18"/><path d="M7 18v-6h10v6"/><path d="M9 9.5h.01"/><path d="M15 9.5h.01"/><path d="M10 18v-3h4v3"/></svg></span><span class="nav-label">Outreach</span></a>
             <a href="#route-planner" data-dashboard-link="route-planner"><span class="nav-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="m4 6 5-2 6 2 5-2v14l-5 2-6-2-5 2V6Z"/><path d="M9 4v14"/><path d="M15 6v14"/><path d="M6.5 8.5c2.4 1 4.6 1.1 7 .2 1.6-.6 2.9-.7 4-.2"/><path d="M6.5 15.5c1.7-.8 3.3-.8 5 0 1.7.8 3.4.8 5 0"/></svg></span><span class="nav-label">Route Planner</span></a>
             <a href="#contacts" data-dashboard-link="contacts"><span class="nav-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M16 19c0-2.2-1.8-4-4-4H8c-2.2 0-4 1.8-4 4"/><path d="M10 11a3 3 0 1 0 0-6 3 3 0 0 0 0 6Z"/><path d="M20 18c0-1.9-1.3-3.4-3-3.9"/><path d="M15.5 5.4a3 3 0 0 1 0 5.2"/></svg></span><span class="nav-label">Clients</span></a>
             <a href="#documents" data-dashboard-link="documents"><span class="nav-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M12 3v18"/><path d="M16.5 7.5c-.8-1.3-2.3-2-4.2-2-2.2 0-3.8 1.1-3.8 2.8 0 1.8 1.6 2.5 4 3.1 2.6.7 4.2 1.5 4.2 3.5s-1.8 3.1-4.4 3.1c-2.1 0-3.8-.8-4.8-2.3"/></svg></span><span class="nav-label">Money</span></a>
@@ -225,6 +226,92 @@
               </div>
               <div class="submission-list" data-submissions></div>
             </div>
+          </section>
+
+          <section class="dashboard-section" id="outreach" data-section="outreach">
+            <div class="outreach-hero">
+              <div>
+                <p class="eyebrow">Outreach</p>
+                <h3>Property lead pipeline</h3>
+                <p>Track prospects from first discovery through contact, follow-up, quote, and won or lost status.</p>
+              </div>
+              <button type="button" data-action="new-outreach-prospect"><span class="button-icon" aria-hidden="true">+</span><span>Add Prospect</span></button>
+            </div>
+
+            <div class="outreach-metrics" data-outreach-metrics></div>
+
+            <div class="outreach-layout">
+              <section class="panel outreach-priority-panel">
+                <div class="panel-heading">
+                  <div>
+                    <h3>Follow-Ups Due</h3>
+                    <p>Prospects with a follow-up date today or overdue.</p>
+                  </div>
+                </div>
+                <div class="outreach-card-list" data-outreach-followups></div>
+              </section>
+
+              <section class="panel outreach-priority-panel">
+                <div class="panel-heading">
+                  <div>
+                    <h3>Interested / Quote Needed</h3>
+                    <p>Warm leads that need the next action.</p>
+                  </div>
+                </div>
+                <div class="outreach-card-list" data-outreach-hot></div>
+              </section>
+            </div>
+
+            <section class="panel outreach-main-panel">
+              <div class="panel-heading">
+                <div>
+                  <h3>Active Prospects</h3>
+                  <p>Search, filter, and move property leads through the pipeline.</p>
+                </div>
+              </div>
+              <div class="outreach-toolbar">
+                <input data-outreach-search type="search" aria-label="Search outreach prospects" placeholder="Search property, contact, company, email, city, address...">
+                <select data-outreach-status-filter aria-label="Filter prospects by status">
+                  <option value="Active">Active Statuses</option>
+                  <option value="All">All Statuses</option>
+                  <option>Prospect</option>
+                  <option>Researched</option>
+                  <option>Contacted</option>
+                  <option>Follow-Up Needed</option>
+                  <option>Interested</option>
+                  <option>Quote Needed</option>
+                  <option>Quoted</option>
+                  <option>Won</option>
+                  <option>Lost / No Fit</option>
+                </select>
+                <select data-outreach-type-filter aria-label="Filter prospects by property type">
+                  <option value="All">All Property Types</option>
+                </select>
+                <select data-outreach-service-filter aria-label="Filter prospects by service interest">
+                  <option value="All">All Services</option>
+                </select>
+                <select data-outreach-priority-filter aria-label="Filter prospects by priority">
+                  <option value="All">All Priorities</option>
+                  <option>High</option>
+                  <option>Normal</option>
+                  <option>Low</option>
+                </select>
+              </div>
+              <div class="outreach-table-wrap">
+                <table>
+                  <thead><tr><th>Prospect</th><th>Fit</th><th>Status</th><th>Follow-Up</th><th>Actions</th></tr></thead>
+                  <tbody data-outreach-table></tbody>
+                </table>
+              </div>
+              <div class="outreach-card-list outreach-mobile-list" data-outreach-cards></div>
+            </section>
+
+            <section class="panel outreach-archive-panel">
+              <details>
+                <summary>Won / Lost Archive <span data-outreach-archive-count>0</span></summary>
+                <div class="outreach-card-list" data-outreach-archive></div>
+              </details>
+            </section>
           </section>
 
           <section class="dashboard-section" id="calendar" data-section="calendar">
@@ -479,6 +566,7 @@
         <nav class="mobile-tabbar" aria-label="Mobile dashboard navigation">
           <a href="#overview" data-dashboard-link="overview">Today</a>
           <a href="#calendar" data-dashboard-link="calendar">Work</a>
+          <a href="#outreach" data-dashboard-link="outreach">Outreach</a>
           <a href="#route-planner" data-dashboard-link="route-planner">Route</a>
           <a href="#contacts" data-dashboard-link="contacts">Clients</a>
           <a href="#documents" data-dashboard-link="documents">Money</a>

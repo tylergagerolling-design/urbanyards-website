@@ -5288,6 +5288,209 @@ body:has(.dashboard-shell) {
   background: var(--studio-ink);
 }
 
+/* Outreach pipeline */
+.outreach-hero {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 18px;
+  margin-bottom: 16px;
+  padding: 20px;
+  border: 1px solid rgba(18, 63, 49, 0.12);
+  border-radius: 12px;
+  background:
+    radial-gradient(circle at 92% 12%, rgba(217, 182, 111, 0.18), transparent 32%),
+    linear-gradient(135deg, rgba(255, 253, 247, 0.94), rgba(232, 240, 235, 0.84));
+  box-shadow: var(--uy-soft-shadow);
+}
+
+.outreach-hero h3 {
+  margin-bottom: 6px;
+  color: var(--uy-green);
+  font-size: clamp(1.6rem, 3vw, 2.35rem);
+  line-height: 1.02;
+}
+
+.outreach-hero p:not(.eyebrow) {
+  max-width: 680px;
+  margin-bottom: 0;
+  color: var(--uy-muted);
+  line-height: 1.5;
+}
+
+.outreach-hero button,
+.outreach-toolbar button {
+  min-height: 42px;
+  border: 0;
+  border-radius: 8px;
+  background: var(--uy-green);
+  color: #fff;
+  font-weight: 850;
+}
+
+.outreach-metrics {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 10px;
+  margin-bottom: 16px;
+}
+
+.outreach-layout {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
+  margin-bottom: 14px;
+}
+
+.outreach-priority-panel,
+.outreach-main-panel,
+.outreach-archive-panel {
+  border-radius: 12px;
+}
+
+.outreach-card-list {
+  display: grid;
+  gap: 10px;
+}
+
+.outreach-card {
+  padding: 12px;
+  border: 1px solid rgba(18, 63, 49, 0.12);
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.72);
+  box-shadow: 0 10px 24px rgba(19, 36, 28, 0.06);
+}
+
+.outreach-card-due {
+  border-color: rgba(143, 47, 34, 0.22);
+  background: linear-gradient(135deg, rgba(255, 245, 242, 0.92), rgba(255, 253, 247, 0.88));
+}
+
+.outreach-card-hot {
+  border-color: rgba(217, 182, 111, 0.42);
+  background: linear-gradient(135deg, rgba(255, 250, 231, 0.9), rgba(255, 253, 247, 0.88));
+}
+
+.outreach-card-archive {
+  opacity: 0.86;
+}
+
+.outreach-toolbar {
+  display: grid;
+  grid-template-columns: minmax(240px, 1.4fr) repeat(4, minmax(140px, 0.8fr));
+  gap: 10px;
+  margin-bottom: 12px;
+}
+
+.outreach-table-wrap {
+  overflow-x: auto;
+}
+
+.outreach-table-wrap table {
+  min-width: 860px;
+}
+
+.outreach-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 7px;
+}
+
+.outreach-actions .inline-action {
+  min-height: 34px;
+  padding: 7px 9px;
+  white-space: nowrap;
+}
+
+.outreach-actions .inline-action:disabled,
+.outreach-drawer button:disabled {
+  cursor: not-allowed;
+  opacity: 0.58;
+}
+
+.outreach-status-select {
+  min-width: 144px;
+}
+
+.outreach-mobile-list {
+  display: none;
+}
+
+.outreach-archive-panel details {
+  display: grid;
+  gap: 12px;
+}
+
+.outreach-archive-panel summary {
+  cursor: pointer;
+  color: var(--uy-green);
+  font-weight: 850;
+}
+
+.outreach-archive-panel summary span {
+  display: inline-grid;
+  min-width: 24px;
+  min-height: 24px;
+  margin-left: 6px;
+  place-items: center;
+  border-radius: 999px;
+  background: var(--uy-green-3);
+  color: var(--uy-green);
+  font-size: 0.78rem;
+}
+
+.outreach-form {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.outreach-form .span-full {
+  grid-column: 1 / -1;
+}
+
+@media (max-width: 1080px) {
+  .outreach-metrics {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  .outreach-layout,
+  .outreach-toolbar {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 760px) {
+  .outreach-hero {
+    align-items: stretch;
+    flex-direction: column;
+    padding: 16px;
+  }
+
+  .outreach-metrics {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .outreach-table-wrap {
+    display: none;
+  }
+
+  .outreach-mobile-list {
+    display: grid;
+  }
+
+  .outreach-actions {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .outreach-actions .inline-action {
+    width: 100%;
+  }
+
+  .outreach-form {
+    grid-template-columns: 1fr;
+  }
+}
+
 .dashboard-shell {
   background:
     linear-gradient(90deg, rgba(6, 27, 21, .96) 0, rgba(6, 27, 21, .96) 76px, transparent 76px),

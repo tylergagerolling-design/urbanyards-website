@@ -3,6 +3,11 @@
 
   const STATUSES = ["New", "Contacted", "Scheduled", "Completed", "Invoiced"];
   const ROUTE_STATUSES = ["Planned", "In Progress", "Complete"];
+  const OUTREACH_STATUSES = ["Prospect", "Researched", "Contacted", "Follow-Up Needed", "Interested", "Quote Needed", "Quoted", "Won", "Lost / No Fit"];
+  const OUTREACH_ACTIVE_STATUSES = OUTREACH_STATUSES.filter((status) => !["Won", "Lost / No Fit"].includes(status));
+  const OUTREACH_PROPERTY_TYPES = ["Apartment", "HOA", "Small Commercial", "Mixed-Use", "Residential", "Property Management", "Other"];
+  const OUTREACH_SERVICE_INTERESTS = ["Seasonal Cleanup", "Trash Area Care", "Day Porter / Groundskeeping", "Mulch / Bed Refresh", "Apartment Turnover Cleaning", "Repair / Touch-Up", "Lawn Care", "Shrub / Hedge Trimming", "General Property Care", "Other"];
+  const OUTREACH_PRIORITIES = ["High", "Normal", "Low"];
   const COMMAND_CATEGORIES = ["task", "client", "payment", "deadline", "equipment"];
   const SESSION_KEY = "urbanYardsDashboardSession";
   const DEMO_QUERY_KEYS = ["demo", "test"];
@@ -20,6 +25,11 @@
     calendarView: "agenda",
     calendarRangeOffset: 0,
     operationsFilter: "All",
+    outreachStatusFilter: "Active",
+    outreachTypeFilter: "All",
+    outreachServiceFilter: "All",
+    outreachPriorityFilter: "All",
+    outreachSearch: "",
     routeDate: todayKey(),
     selectedRouteStopId: "",
     search: "",
@@ -28,6 +38,7 @@
     selectedJobId: "",
     documentsReady: true,
     operationsReady: true,
+    outreachReady: true,
     routeStopsReady: true,
     data: {
       submissions: [],
@@ -37,6 +48,7 @@
       reminders: [],
       documents: [],
       operations: [],
+      outreachProspects: [],
       routeStops: []
     },
     loading: false,
@@ -105,15 +117,18 @@
       "complete-reminder": "OK",
       "create-estimate": "+",
       "create-invoice": "$",
+      "create-outreach-quote": "+",
       "create-reminder": "+",
       "delete-contact": "x",
       "delete-document": "x",
       "delete-note": "x",
       "delete-operation": "x",
       "delete-reminder": "x",
+      "delete-outreach-prospect": "x",
       "delete-route-stop": "x",
       "delete-submission": "x",
       "edit-job": "/",
+      "edit-outreach-prospect": "/",
       "edit-route-stop": "/",
       "export-full-backup": "JSON",
       "find-stop-map": "M",
@@ -123,16 +138,20 @@
       "go-route-planner": "M",
       "go-settings": "-&gt;",
       "mark-route-complete": "OK",
+      "mark-outreach-contacted": "OK",
       "move-route-down": "v",
       "move-route-up": "^",
+      "new-outreach-prospect": "+",
       "open-route-map": "M",
       "open-contact": "-&gt;",
       "open-document": "-&gt;",
+      "open-outreach-prospect": "-&gt;",
       "open-submission": "-&gt;",
       "print-document": "PDF",
       "quick-add-job": "+",
       "quick-add-operation": "+",
       "quick-add-quote": "+",
+      "route-outreach-prospect": "M",
       "sync-contact": "~",
       "sync-square-document": "~"
     };
@@ -508,6 +527,37 @@
     };
   }
 
+  function normalizeOutreachProspect(row) {
+    const status = OUTREACH_STATUSES.includes(row.status) ? row.status : "Prospect";
+    const priority = OUTREACH_PRIORITIES.includes(row.priority) ? row.priority : "Normal";
+    return {
+      id: row.id,
+      createdAtRaw: row.created_at || "",
+      updatedAtRaw: row.updated_at || "",
+      createdAt: formatDate(row.created_at),
+      updatedAt: formatDate(row.updated_at),
+      propertyName: row.property_name || "",
+      managementCompany: row.management_company || "",
+      contactName: row.contact_name || "",
+      email: row.email || "",
+      phone: row.phone || "",
+      address: row.address || "",
+      city: row.city || "",
+      propertyType: row.property_type || "Other",
+      serviceInterest: row.service_interest || "General Property Care",
+      source: row.source || "",
+      status,
+      lastContactedAtRaw: dateKey(row.last_contacted_at),
+      lastContactedAt: formatDate(row.last_contacted_at),
+      nextFollowUpAtRaw: dateKey(row.next_follow_up_at),
+      nextFollowUpAt: formatDate(row.next_follow_up_at),
+      notes: row.notes || "",
+      priority,
+      routeAdded: Boolean(row.route_added),
+      convertedToQuote: Boolean(row.converted_to_quote)
+    };
+  }
+
   function normalizeDocument(row) {
     const total = Number(row.total || 0);
     const lineItems = Array.isArray(row.line_items) ? row.line_items : [];
@@ -657,6 +707,63 @@
         normalizeOperation({ id: "demo-operation-2", record_type: "deadline", title: "Friday recurring visit checklist", description: "Courtyard and frontage", due_date: daysFromToday(4), status: "Open", priority: "Normal", notes: "Mow, edge, blow, weeds at entry, check pressure wash stain.", created_at: now }),
         normalizeOperation({ id: "demo-operation-3", record_type: "equipment", title: "Sharpen mower blades", description: "Equipment", due_date: daysFromToday(2), status: "Open", priority: "Normal", notes: "Do before next full mowing route.", created_at: now })
       ],
+      outreachProspects: [
+        normalizeOutreachProspect({
+          id: "demo-outreach-1",
+          created_at: daysFromToday(-12),
+          updated_at: now,
+          property_name: "Cedar Court Apartments",
+          management_company: "Northbank Property Group",
+          contact_name: "Erin Wallace",
+          email: "erin@example.com",
+          phone: "(503) 555-0134",
+          address: "SE 52nd Ave, Portland, OR",
+          city: "Portland",
+          property_type: "Apartment",
+          service_interest: "Day Porter / Groundskeeping",
+          source: "Drive-by",
+          status: "Follow-Up Needed",
+          last_contacted_at: daysFromToday(-8),
+          next_follow_up_at: today,
+          priority: "High",
+          notes: "Trash enclosure and entry beds look like a good fit for recurring care."
+        }),
+        normalizeOutreachProspect({
+          id: "demo-outreach-2",
+          created_at: daysFromToday(-6),
+          updated_at: now,
+          property_name: "Maple Grove HOA",
+          management_company: "Board managed",
+          contact_name: "",
+          email: "",
+          phone: "",
+          address: "Vancouver, WA",
+          city: "Vancouver",
+          property_type: "HOA",
+          service_interest: "Mulch / Bed Refresh",
+          source: "Referral",
+          status: "Interested",
+          next_follow_up_at: daysFromToday(2),
+          priority: "Normal",
+          notes: "Shared frontage and mailbox beds need a spring reset."
+        }),
+        normalizeOutreachProspect({
+          id: "demo-outreach-3",
+          created_at: daysFromToday(-18),
+          updated_at: now,
+          property_name: "Hawthorne Duplex",
+          contact_name: "Sam Patel",
+          phone: "(971) 555-0199",
+          address: "Hawthorne Blvd, Portland, OR",
+          city: "Portland",
+          property_type: "Residential",
+          service_interest: "Seasonal Cleanup",
+          source: "Neighborhood list",
+          status: "Prospect",
+          priority: "Low",
+          notes: "Possible one-time cleanup before rental photos."
+        })
+      ],
       routeStops: [
         normalizeRouteStop({ id: "demo-route-1", route_date: today, client_name: "Hannah Edge", address: "SE Division St, Portland, OR", service_type: "Groundskeeping", estimated_minutes: 75, notes: "Start with courtyard before residents return.", status: "Planned", stop_order: 1, latitude: 45.5045, longitude: -122.6235, created_at: now, updated_at: now }),
         normalizeRouteStop({ id: "demo-route-2", route_date: today, client_name: "Mason Lee", address: "Beaverton, OR", service_type: "Cleanup estimate", estimated_minutes: 45, notes: "Take photos and measure bed edges.", status: "In Progress", stop_order: 2, latitude: 45.4871, longitude: -122.8037, created_at: now, updated_at: now }),
@@ -750,11 +857,12 @@
     if (isDemoMode()) {
       state.documentsReady = true;
       state.operationsReady = true;
+      state.outreachReady = true;
       state.routeStopsReady = true;
       return demoDashboardData();
     }
 
-    const [submissions, contacts, jobs, notes, reminders, documents, operations, routeStops] = await Promise.all([
+    const [submissions, contacts, jobs, notes, reminders, documents, operations, outreachProspects, routeStops] = await Promise.all([
       supabaseRestRequest("quote_submissions?select=*&order=created_at.desc", { method: "GET" }),
       supabaseRestRequest("contacts?select=*&order=created_at.desc", { method: "GET" }),
       supabaseRestRequest("scheduled_jobs?select=*&order=visit_date.asc", { method: "GET" }),
@@ -762,6 +870,7 @@
       supabaseRestRequest("follow_up_reminders?select=*&order=due_date.asc", { method: "GET" }),
       loadSalesDocuments(),
       loadOperationsRecords(),
+      loadOutreachProspects(),
       loadRouteStops()
     ]);
 
@@ -773,6 +882,7 @@
       reminders: reminders.map(normalizeReminder),
       documents,
       operations,
+      outreachProspects,
       routeStops
     };
   }
@@ -806,6 +916,17 @@
       return rows.map(normalizeRouteStop);
     } catch (error) {
       state.routeStopsReady = false;
+      return [];
+    }
+  }
+
+  async function loadOutreachProspects() {
+    try {
+      const rows = await supabaseRestRequest("outreach_prospects?select=*&order=next_follow_up_at.asc.nullslast,updated_at.desc", { method: "GET" });
+      state.outreachReady = true;
+      return rows.map(normalizeOutreachProspect);
+    } catch (error) {
+      state.outreachReady = false;
       return [];
     }
   }
@@ -858,6 +979,7 @@
         follow_up_reminders: "reminders",
         sales_documents: "documents",
         operations_records: "operations",
+        outreach_prospects: "outreachProspects",
         route_stops: "routeStops"
       };
       const key = map[table];
@@ -1139,6 +1261,170 @@
       });
     }
     return normalizeOperation(rows[0]);
+  }
+
+  function outreachPayloadFromForm(form) {
+    const formData = new FormData(form);
+    const payload = {
+      property_name: String(formData.get("property_name") || "").trim() || null,
+      management_company: String(formData.get("management_company") || "").trim() || null,
+      contact_name: String(formData.get("contact_name") || "").trim() || null,
+      email: String(formData.get("email") || "").trim() || null,
+      phone: String(formData.get("phone") || "").trim() || null,
+      address: String(formData.get("address") || "").trim() || null,
+      city: String(formData.get("city") || "").trim() || null,
+      property_type: String(formData.get("property_type") || "Other"),
+      service_interest: String(formData.get("service_interest") || "General Property Care"),
+      source: String(formData.get("source") || "").trim() || null,
+      status: String(formData.get("status") || "Prospect"),
+      last_contacted_at: String(formData.get("last_contacted_at") || "") || null,
+      next_follow_up_at: String(formData.get("next_follow_up_at") || "") || null,
+      notes: String(formData.get("notes") || "").trim() || null,
+      priority: String(formData.get("priority") || "Normal")
+    };
+    const hasName = Boolean(payload.property_name || payload.contact_name);
+    const hasContactOrAddress = Boolean(payload.email || payload.phone || payload.address || payload.city);
+    if (!hasName) throw new Error("Add either a property name or contact name.");
+    if (!hasContactOrAddress) throw new Error("Add at least one email, phone, address, or city.");
+    if (!OUTREACH_STATUSES.includes(payload.status)) throw new Error("Choose a valid outreach status.");
+    if (!OUTREACH_PRIORITIES.includes(payload.priority)) throw new Error("Choose a valid priority.");
+    return payload;
+  }
+
+  async function insertOutreachProspect(payload) {
+    if (!state.outreachReady) {
+      throw new Error("Create the outreach_prospects table first. See DASHBOARD_OUTREACH_SQL.md.");
+    }
+    if (isDemoMode()) {
+      const prospect = normalizeOutreachProspect({
+        id: nextDemoId("outreach"),
+        ...payload,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString()
+      });
+      state.data.outreachProspects.unshift(prospect);
+      return prospect;
+    }
+    const rows = await supabaseRestRequest("outreach_prospects", {
+      method: "POST",
+      headers: { Prefer: "return=representation" },
+      body: JSON.stringify(payload)
+    });
+    return normalizeOutreachProspect(rows[0]);
+  }
+
+  async function updateOutreachProspect(id, payload) {
+    if (isDemoMode()) {
+      const existing = state.data.outreachProspects.find((prospect) => prospect.id === id);
+      const index = state.data.outreachProspects.findIndex((prospect) => prospect.id === id);
+      if (index >= 0) {
+        const merged = {
+          property_name: existing.propertyName,
+          management_company: existing.managementCompany,
+          contact_name: existing.contactName,
+          email: existing.email,
+          phone: existing.phone,
+          address: existing.address,
+          city: existing.city,
+          property_type: existing.propertyType,
+          service_interest: existing.serviceInterest,
+          source: existing.source,
+          status: existing.status,
+          last_contacted_at: existing.lastContactedAtRaw || null,
+          next_follow_up_at: existing.nextFollowUpAtRaw || null,
+          notes: existing.notes,
+          priority: existing.priority,
+          route_added: existing.routeAdded,
+          converted_to_quote: existing.convertedToQuote,
+          ...payload
+        };
+        state.data.outreachProspects[index] = normalizeOutreachProspect({
+          id,
+          created_at: existing?.createdAtRaw || new Date().toISOString(),
+          ...merged,
+          updated_at: new Date().toISOString()
+        });
+      }
+      return state.data.outreachProspects[index];
+    }
+    const rows = await supabaseRestRequest(`outreach_prospects?id=eq.${encodeURIComponent(id)}`, {
+      method: "PATCH",
+      headers: { Prefer: "return=representation" },
+      body: JSON.stringify({ ...payload, updated_at: new Date().toISOString() })
+    });
+    return normalizeOutreachProspect(rows[0]);
+  }
+
+  async function markOutreachContacted(id) {
+    const prospect = findOutreachProspect(id);
+    if (!prospect) return null;
+    const nextStatus = ["Prospect", "Researched"].includes(prospect.status) ? "Contacted" : prospect.status;
+    return updateOutreachProspect(id, {
+      status: nextStatus,
+      last_contacted_at: todayKey(),
+      next_follow_up_at: prospect.nextFollowUpAtRaw || daysFromToday(7)
+    });
+  }
+
+  function outreachQuotePayload(prospect) {
+    const notes = [
+      prospect.propertyName ? `Property: ${prospect.propertyName}` : "",
+      prospect.managementCompany ? `Management company: ${prospect.managementCompany}` : "",
+      prospect.address ? `Address: ${prospect.address}` : "",
+      prospect.notes || ""
+    ].filter(Boolean).join("\n");
+    return {
+      name: prospect.contactName || prospect.propertyName || "Outreach lead",
+      email: prospect.email || null,
+      phone: prospect.phone || null,
+      property_type: prospect.propertyType || null,
+      city: prospect.city || null,
+      service: prospect.serviceInterest || null,
+      source: "Outreach",
+      status: "New",
+      notes
+    };
+  }
+
+  async function createQuoteFromOutreach(id) {
+    const prospect = findOutreachProspect(id);
+    if (!prospect) return null;
+    if (prospect.convertedToQuote) {
+      throw new Error("This prospect has already been converted to a quote lead.");
+    }
+    if (isDemoMode()) {
+      const quote = normalizeSubmission({
+        id: nextDemoId("quote"),
+        ...outreachQuotePayload(prospect),
+        created_at: new Date().toISOString()
+      });
+      state.data.submissions.unshift(quote);
+      await updateOutreachProspect(id, { converted_to_quote: true, status: prospect.status === "Won" ? "Won" : "Quote Needed" });
+      return quote;
+    }
+    const rows = await supabaseRestRequest("quote_submissions", {
+      method: "POST",
+      headers: { Prefer: "return=representation" },
+      body: JSON.stringify(outreachQuotePayload(prospect))
+    });
+    await updateOutreachProspect(id, { converted_to_quote: true, status: prospect.status === "Won" ? "Won" : "Quote Needed" });
+    return normalizeSubmission(rows[0]);
+  }
+
+  async function addOutreachToRoute(id) {
+    const prospect = findOutreachProspect(id);
+    if (!prospect) return null;
+    if (!prospect.address && !prospect.city) throw new Error("Add an address or city before adding this prospect to the route.");
+    const stop = await insertRouteStop({
+      client_name: prospect.propertyName || prospect.contactName || "Outreach prospect",
+      address: prospect.address || prospect.city,
+      service_type: prospect.serviceInterest || "General Property Care",
+      estimated_minutes: 30,
+      status: "Planned",
+      notes: `Outreach prospect${prospect.managementCompany ? ` / ${prospect.managementCompany}` : ""}. ${prospect.notes || ""}`.trim()
+    });
+    await updateOutreachProspect(id, { route_added: true });
+    return stop;
   }
 
   function selectedRouteStops() {
@@ -1520,6 +1806,45 @@
 
   function filteredRouteStops(stops) {
     return stops.filter((stop) => matchesSearchValues([stop.clientName, stop.address, stop.serviceType, stop.notes, stop.status, stop.routeDate]));
+  }
+
+  function findOutreachProspect(id) {
+    return state.data.outreachProspects.find((item) => item.id === id);
+  }
+
+  function outreachMatchesSearch(item) {
+    const query = (state.outreachSearch || state.search || "").trim().toLowerCase();
+    if (!query) return true;
+    return [
+      item.propertyName,
+      item.contactName,
+      item.managementCompany,
+      item.email,
+      item.phone,
+      item.city,
+      item.address,
+      item.propertyType,
+      item.serviceInterest,
+      item.source,
+      item.status,
+      item.notes
+    ].some((value) => String(value || "").toLowerCase().includes(query));
+  }
+
+  function isClosedOutreach(item) {
+    return ["Won", "Lost / No Fit"].includes(item.status);
+  }
+
+  function filteredOutreachProspects(options = {}) {
+    return state.data.outreachProspects.filter((item) => {
+      const statusMatches = state.outreachStatusFilter === "All"
+        || (state.outreachStatusFilter === "Active" ? OUTREACH_ACTIVE_STATUSES.includes(item.status) : item.status === state.outreachStatusFilter);
+      const typeMatches = state.outreachTypeFilter === "All" || item.propertyType === state.outreachTypeFilter;
+      const serviceMatches = state.outreachServiceFilter === "All" || item.serviceInterest === state.outreachServiceFilter;
+      const priorityMatches = state.outreachPriorityFilter === "All" || item.priority === state.outreachPriorityFilter;
+      const archiveMatches = options.archive ? isClosedOutreach(item) : !options.activeOnly || !isClosedOutreach(item);
+      return archiveMatches && statusMatches && typeMatches && serviceMatches && priorityMatches && outreachMatchesSearch(item);
+    });
   }
 
   function filteredReminders() {
@@ -2484,6 +2809,23 @@
         deleteAction: "delete-reminder"
       });
     });
+    data.outreachProspects.forEach((prospect) => {
+      if (prospect.nextFollowUpAtRaw && !isClosedOutreach(prospect)) {
+        events.push({
+          id: `outreach-${prospect.id}`,
+          sourceId: prospect.id,
+          type: "follow-up",
+          date: prospect.nextFollowUpAtRaw,
+          title: outreachTitle(prospect),
+          client: "Outreach",
+          property: prospect.city || prospect.propertyType,
+          time: prospect.serviceInterest,
+          status: prospect.status,
+          action: "open-outreach-prospect",
+          actionLabel: "Open"
+        });
+      }
+    });
     data.documents.forEach((doc) => {
       if (doc.dueDateRaw) {
         events.push({
@@ -2742,6 +3084,184 @@
       </article>
     `;
     }).join("");
+  }
+
+  function optionList(options, selected) {
+    return options.map((option) => `<option value="${escapeHtml(option)}"${option === selected ? " selected" : ""}>${escapeHtml(option)}</option>`).join("");
+  }
+
+  function outreachStatusSelect(id, status) {
+    const safeStatus = OUTREACH_STATUSES.includes(status) ? status : "Prospect";
+    return `<select class="status-select outreach-status-select" data-outreach-status-id="${escapeHtml(id)}" aria-label="Update outreach status">${optionList(OUTREACH_STATUSES, safeStatus)}</select>`;
+  }
+
+  function outreachTitle(item) {
+    return item.propertyName || item.contactName || item.managementCompany || "Unnamed prospect";
+  }
+
+  function outreachSubtitle(item) {
+    return [item.managementCompany, item.contactName, item.city].filter(Boolean).join(" / ") || "No contact details yet";
+  }
+
+  function outreachDueProspects() {
+    const today = todayKey();
+    return state.data.outreachProspects
+      .filter((item) => !isClosedOutreach(item) && item.nextFollowUpAtRaw && item.nextFollowUpAtRaw <= today && outreachMatchesSearch(item))
+      .sort((a, b) => a.nextFollowUpAtRaw.localeCompare(b.nextFollowUpAtRaw));
+  }
+
+  function outreachHotProspects() {
+    return state.data.outreachProspects
+      .filter((item) => ["Interested", "Quote Needed"].includes(item.status) && outreachMatchesSearch(item))
+      .sort((a, b) => {
+        const prioritySort = OUTREACH_PRIORITIES.indexOf(a.priority) - OUTREACH_PRIORITIES.indexOf(b.priority);
+        if (prioritySort) return prioritySort;
+        return String(a.nextFollowUpAtRaw || "9999").localeCompare(String(b.nextFollowUpAtRaw || "9999"));
+      });
+  }
+
+  function renderOutreachActions(item, compact = false) {
+    const routeDisabled = state.routeStopsReady ? "" : " disabled title=\"Create the route_stops table first\"";
+    return `
+      <div class="outreach-actions">
+        ${actionButton(compact ? "Open" : "Edit", "open-outreach-prospect", item.id)}
+        ${actionButton("Contacted", "mark-outreach-contacted", item.id)}
+        <button class="inline-action" type="button" data-action="create-outreach-quote" data-id="${escapeHtml(item.id)}"${item.convertedToQuote ? " disabled" : ""}>${buttonContent(item.convertedToQuote ? "Quote Created" : "Create Quote", "create-outreach-quote")}</button>
+        <button class="inline-action" type="button" data-action="route-outreach-prospect" data-id="${escapeHtml(item.id)}"${routeDisabled}>${buttonContent(item.routeAdded ? "Route Added" : "Add Route", "route-outreach-prospect")}</button>
+      </div>
+    `;
+  }
+
+  function renderOutreachCard(item, tone = "") {
+    return `
+      <article class="outreach-card ${tone ? `outreach-card-${escapeHtml(tone)}` : ""}">
+        <div class="item-topline">
+          <div>
+            <h4>${escapeHtml(outreachTitle(item))}</h4>
+            <div class="meta">${escapeHtml(outreachSubtitle(item))}</div>
+          </div>
+          ${outreachStatusSelect(item.id, item.status)}
+        </div>
+        <p class="item-body">${escapeHtml(item.serviceInterest)} / ${escapeHtml(item.propertyType)}</p>
+        <p class="small">Follow-up: ${escapeHtml(item.nextFollowUpAt)} / Last contacted: ${escapeHtml(item.lastContactedAt)}</p>
+        ${item.notes ? `<p class="small">${escapeHtml(item.notes)}</p>` : ""}
+        ${renderOutreachActions(item, true)}
+      </article>
+    `;
+  }
+
+  function populateOutreachFilters(data) {
+    if (!els.outreachTypeFilter || !els.outreachServiceFilter) return;
+    const typeCurrent = state.outreachTypeFilter;
+    const serviceCurrent = state.outreachServiceFilter;
+    const types = Array.from(new Set([...OUTREACH_PROPERTY_TYPES, ...data.outreachProspects.map((item) => item.propertyType).filter(Boolean)])).sort();
+    const services = Array.from(new Set([...OUTREACH_SERVICE_INTERESTS, ...data.outreachProspects.map((item) => item.serviceInterest).filter(Boolean)])).sort();
+    els.outreachTypeFilter.innerHTML = `<option value="All">All Property Types</option>${types.map((item) => `<option value="${escapeHtml(item)}">${escapeHtml(item)}</option>`).join("")}`;
+    els.outreachServiceFilter.innerHTML = `<option value="All">All Services</option>${services.map((item) => `<option value="${escapeHtml(item)}">${escapeHtml(item)}</option>`).join("")}`;
+    els.outreachTypeFilter.value = types.includes(typeCurrent) ? typeCurrent : "All";
+    els.outreachServiceFilter.value = services.includes(serviceCurrent) ? serviceCurrent : "All";
+    state.outreachTypeFilter = els.outreachTypeFilter.value;
+    state.outreachServiceFilter = els.outreachServiceFilter.value;
+  }
+
+  function renderOutreach(data) {
+    if (!els.outreachMetrics) return;
+    populateOutreachFilters(data);
+    if (els.outreachSearch && els.outreachSearch.value !== state.outreachSearch) els.outreachSearch.value = state.outreachSearch;
+    if (els.outreachStatusFilter) els.outreachStatusFilter.value = state.outreachStatusFilter;
+    if (els.outreachPriorityFilter) els.outreachPriorityFilter.value = state.outreachPriorityFilter;
+
+    if (!state.outreachReady) {
+      const message = "Outreach needs the outreach_prospects table. Run DASHBOARD_OUTREACH_SQL.md, then refresh.";
+      els.outreachMetrics.innerHTML = "";
+      if (els.outreachFollowups) els.outreachFollowups.innerHTML = emptyState(message);
+      if (els.outreachHot) els.outreachHot.innerHTML = emptyState("No quote-ready leads.");
+      if (els.outreachTable) els.outreachTable.innerHTML = `<tr><td colspan="5">${emptyState(message)}</td></tr>`;
+      if (els.outreachCards) els.outreachCards.innerHTML = "";
+      if (els.outreachArchive) els.outreachArchive.innerHTML = "";
+      return;
+    }
+
+    const active = data.outreachProspects.filter((item) => !isClosedOutreach(item));
+    const due = outreachDueProspects();
+    const hot = outreachHotProspects();
+    const metrics = [
+      ["Total Prospects", data.outreachProspects.length],
+      ["Follow-Ups Due", due.length],
+      ["Interested", data.outreachProspects.filter((item) => item.status === "Interested").length],
+      ["Quotes Needed", data.outreachProspects.filter((item) => item.status === "Quote Needed").length],
+      ["Won Clients", data.outreachProspects.filter((item) => item.status === "Won").length]
+    ];
+    els.outreachMetrics.innerHTML = metrics.map(([label, value]) => `<article class="metric-card"><strong>${escapeHtml(value)}</strong><span>${escapeHtml(label)}</span></article>`).join("");
+
+    if (els.outreachFollowups) {
+      els.outreachFollowups.innerHTML = due.length ? due.slice(0, 6).map((item) => renderOutreachCard(item, "due")).join("") : emptyState("No follow-ups due.");
+    }
+    if (els.outreachHot) {
+      els.outreachHot.innerHTML = hot.length ? hot.slice(0, 6).map((item) => renderOutreachCard(item, "hot")).join("") : emptyState("No quote-ready leads.");
+    }
+
+    const prospects = filteredOutreachProspects({ activeOnly: true }).filter((item) => !isClosedOutreach(item));
+    if (!prospects.length) {
+      if (els.outreachTable) els.outreachTable.innerHTML = `<tr><td colspan="5">${emptyState(active.length ? "No prospects match these filters." : "No prospects yet.")}</td></tr>`;
+      if (els.outreachCards) els.outreachCards.innerHTML = emptyState(active.length ? "No prospects match these filters." : "No prospects yet.");
+    } else {
+      if (els.outreachTable) {
+        els.outreachTable.innerHTML = prospects.map((item) => `
+          <tr>
+            <td><strong>${escapeHtml(outreachTitle(item))}</strong><br><span class="meta">${escapeHtml(outreachSubtitle(item))}</span></td>
+            <td>${escapeHtml(item.propertyType)}<br><span class="meta">${escapeHtml(item.serviceInterest)} / ${escapeHtml(item.priority)}</span></td>
+            <td>${outreachStatusSelect(item.id, item.status)}</td>
+            <td>${escapeHtml(item.nextFollowUpAt)}<br><span class="meta">Last: ${escapeHtml(item.lastContactedAt)}</span></td>
+            <td>${renderOutreachActions(item)}</td>
+          </tr>
+        `).join("");
+      }
+      if (els.outreachCards) els.outreachCards.innerHTML = prospects.map((item) => renderOutreachCard(item)).join("");
+    }
+
+    const archive = data.outreachProspects.filter(isClosedOutreach).filter(outreachMatchesSearch);
+    if (els.outreachArchiveCount) els.outreachArchiveCount.textContent = archive.length;
+    if (els.outreachArchive) {
+      els.outreachArchive.innerHTML = archive.length ? archive.map((item) => renderOutreachCard(item, "archive")).join("") : emptyState("No won or lost prospects yet.");
+    }
+  }
+
+  function openOutreachDrawer(id = "") {
+    if (!els.detailDrawer || !els.detailContent) return;
+    const item = id ? findOutreachProspect(id) : null;
+    const title = item ? "Edit Prospect" : "Add Prospect";
+    els.detailDrawer.hidden = false;
+    els.detailContent.innerHTML = `
+      <div class="drawer-content outreach-drawer">
+        <p class="eyebrow">Outreach</p>
+        <h3>${escapeHtml(title)}</h3>
+        <form class="drawer-form outreach-form" data-outreach-form data-id="${escapeHtml(item?.id || "")}">
+          <label>Property name<input name="property_name" value="${escapeHtml(item?.propertyName || "")}" placeholder="Example: Cedar Court Apartments"></label>
+          <label>Management company<input name="management_company" value="${escapeHtml(item?.managementCompany || "")}" placeholder="Company or owner group"></label>
+          <label>Contact name<input name="contact_name" value="${escapeHtml(item?.contactName || "")}" placeholder="Primary contact"></label>
+          <label>Email<input name="email" type="email" value="${escapeHtml(item?.email || "")}"></label>
+          <label>Phone<input name="phone" value="${escapeHtml(item?.phone || "")}"></label>
+          <label>Address<input name="address" value="${escapeHtml(item?.address || "")}" autocomplete="street-address" data-address-autocomplete></label>
+          <label>City<input name="city" value="${escapeHtml(item?.city || "")}"></label>
+          <label>Property type<select name="property_type">${optionList(OUTREACH_PROPERTY_TYPES, item?.propertyType || "Apartment")}</select></label>
+          <label>Service interest<select name="service_interest">${optionList(OUTREACH_SERVICE_INTERESTS, item?.serviceInterest || "General Property Care")}</select></label>
+          <label>Source<input name="source" value="${escapeHtml(item?.source || "")}" placeholder="Drive-by, referral, web search..."></label>
+          <label>Status<select name="status">${optionList(OUTREACH_STATUSES, item?.status || "Prospect")}</select></label>
+          <label>Priority<select name="priority">${optionList(OUTREACH_PRIORITIES, item?.priority || "Normal")}</select></label>
+          <label>Last contacted<input name="last_contacted_at" type="date" value="${escapeHtml(item?.lastContactedAtRaw || "")}"></label>
+          <label>Next follow-up<input name="next_follow_up_at" type="date" value="${escapeHtml(item?.nextFollowUpAtRaw || "")}"></label>
+          <label class="span-full">Notes<textarea name="notes" rows="5">${escapeHtml(item?.notes || "")}</textarea></label>
+          <div class="drawer-actions">
+            <button type="submit">${buttonContent(item ? "Save Prospect" : "Add Prospect", "new-outreach-prospect")}</button>
+            ${item ? `<button type="button" data-action="mark-outreach-contacted" data-id="${escapeHtml(item.id)}">${buttonContent("Mark Contacted", "mark-outreach-contacted")}</button>` : ""}
+            ${item ? `<button type="button" data-action="create-outreach-quote" data-id="${escapeHtml(item.id)}"${item.convertedToQuote ? " disabled" : ""}>${buttonContent(item.convertedToQuote ? "Quote Created" : "Create Quote Lead", "create-outreach-quote")}</button>` : ""}
+            ${item ? `<button type="button" data-action="route-outreach-prospect" data-id="${escapeHtml(item.id)}"${state.routeStopsReady ? "" : " disabled"}>${buttonContent(item.routeAdded ? "Route Added" : "Add to Route", "route-outreach-prospect")}</button>` : ""}
+            ${item ? `<button type="button" class="danger-action" data-action="delete-outreach-prospect" data-id="${escapeHtml(item.id)}">${buttonContent("Delete Prospect", "delete-outreach-prospect")}</button>` : ""}
+          </div>
+        </form>
+      </div>
+    `;
   }
 
   function renderJobs(data) {
@@ -3253,6 +3773,7 @@
     renderPipeline(data);
     renderDocuments(data);
     renderContacts(data);
+    renderOutreach(data);
     renderJobs(data);
     renderNotes();
     renderReminders(data);
@@ -3442,6 +3963,26 @@
       });
     }
 
+    if (els.outreachSearch) {
+      els.outreachSearch.addEventListener("input", async () => {
+        state.outreachSearch = els.outreachSearch.value;
+        await render();
+      });
+    }
+
+    [
+      [els.outreachStatusFilter, "outreachStatusFilter"],
+      [els.outreachTypeFilter, "outreachTypeFilter"],
+      [els.outreachServiceFilter, "outreachServiceFilter"],
+      [els.outreachPriorityFilter, "outreachPriorityFilter"]
+    ].forEach(([element, key]) => {
+      if (!element) return;
+      element.addEventListener("change", async () => {
+        state[key] = element.value;
+        await render();
+      });
+    });
+
     if (els.propertyFilter) {
       els.propertyFilter.addEventListener("change", async () => {
         state.propertyFilter = els.propertyFilter.value;
@@ -3545,6 +4086,18 @@
         return;
       }
 
+      if (target.matches("[data-outreach-status-id]")) {
+        try {
+          setDashboardState("Updating prospect...");
+          await updateOutreachProspect(target.dataset.outreachStatusId, { status: target.value });
+          await refreshDashboard();
+          setDashboardState("");
+        } catch (error) {
+          setDashboardState(error.message || "Unable to update prospect.", "error");
+        }
+        return;
+      }
+
       if (!target.matches("[data-status-table][data-status-id]")) return;
 
       try {
@@ -3597,6 +4150,10 @@
         history.replaceState(null, "", "#contacts");
         const input = qs("[data-client-form] input[name='name']");
         if (input) input.focus();
+      } else if (action === "new-outreach-prospect") {
+        openOutreachDrawer();
+      } else if (action === "open-outreach-prospect" || action === "edit-outreach-prospect") {
+        openOutreachDrawer(id);
       } else if (action === "add-client-job") {
         const contact = state.data.contacts.find((item) => item.id === id);
         if (!contact) return;
@@ -3764,6 +4321,60 @@
           setDashboardState("");
         } catch (error) {
           setDashboardState(error.message || "Unable to delete route stop.", "error");
+        }
+      } else if (action === "mark-outreach-contacted") {
+        try {
+          setDashboardState("Marking prospect contacted...");
+          await markOutreachContacted(id);
+          await refreshDashboard();
+          if (!els.detailDrawer.hidden) openOutreachDrawer(id);
+          setDashboardState("");
+        } catch (error) {
+          setDashboardState(error.message || "Unable to update prospect.", "error");
+        }
+      } else if (action === "create-outreach-quote") {
+        try {
+          setDashboardState("Creating quote lead...");
+          const quote = await createQuoteFromOutreach(id);
+          await refreshDashboard();
+          if (quote) {
+            setActiveSection("documents");
+            history.replaceState(null, "", "#documents");
+            openSubmissionDrawer(quote.id);
+          }
+          setDashboardState("");
+        } catch (error) {
+          setDashboardState(error.message || "Unable to create quote lead.", "error");
+        }
+      } else if (action === "route-outreach-prospect") {
+        try {
+          setDashboardState("Adding prospect to route...");
+          const stop = await addOutreachToRoute(id);
+          if (stop?.address && !hasRouteCoordinates(stop)) {
+            try {
+              await geocodeAndStoreRouteStop(stop);
+            } catch (error) {
+              setDashboardState(error.message || "Route stop added, but map pin lookup failed.", "error");
+            }
+          }
+          await refreshDashboard();
+          setActiveSection("route-planner");
+          history.replaceState(null, "", "#route-planner");
+          setDashboardState("");
+        } catch (error) {
+          setDashboardState(error.message || "Unable to add route stop.", "error");
+        }
+      } else if (action === "delete-outreach-prospect") {
+        const ok = window.confirm("Delete this outreach prospect?");
+        if (!ok) return;
+        try {
+          setDashboardState("Deleting prospect...");
+          await deleteRow("outreach_prospects", id);
+          closeSubmissionDrawer();
+          await refreshDashboard();
+          setDashboardState("");
+        } catch (error) {
+          setDashboardState(error.message || "Unable to delete prospect.", "error");
         }
       } else if (action === "refresh-dashboard") {
         await refreshDashboard();
@@ -4039,6 +4650,19 @@
         } catch (error) {
           setDashboardState(error.message || "Unable to create document.", "error");
         }
+      } else if (event.target.matches("[data-outreach-form]")) {
+        event.preventDefault();
+        const id = event.target.dataset.id;
+        try {
+          setDashboardState(id ? "Saving prospect..." : "Adding prospect...");
+          const payload = outreachPayloadFromForm(event.target);
+          const prospect = id ? await updateOutreachProspect(id, payload) : await insertOutreachProspect(payload);
+          await refreshDashboard();
+          openOutreachDrawer(prospect?.id || id);
+          setDashboardState("");
+        } catch (error) {
+          setDashboardState(error.message || "Unable to save prospect.", "error");
+        }
       } else if (event.target.matches("[data-job-create-form]")) {
         event.preventDefault();
         const formData = new FormData(event.target);
@@ -4227,6 +4851,18 @@
     els.search = qs("[data-dashboard-search]");
     els.globalSearch = qs("[data-global-search]");
     els.clientSearch = qs("[data-client-search]");
+    els.outreachSearch = qs("[data-outreach-search]");
+    els.outreachStatusFilter = qs("[data-outreach-status-filter]");
+    els.outreachTypeFilter = qs("[data-outreach-type-filter]");
+    els.outreachServiceFilter = qs("[data-outreach-service-filter]");
+    els.outreachPriorityFilter = qs("[data-outreach-priority-filter]");
+    els.outreachMetrics = qs("[data-outreach-metrics]");
+    els.outreachFollowups = qs("[data-outreach-followups]");
+    els.outreachHot = qs("[data-outreach-hot]");
+    els.outreachTable = qs("[data-outreach-table]");
+    els.outreachCards = qs("[data-outreach-cards]");
+    els.outreachArchive = qs("[data-outreach-archive]");
+    els.outreachArchiveCount = qs("[data-outreach-archive-count]");
     els.propertyFilter = qs("[data-property-filter]");
     els.pipeline = qs("[data-pipeline]");
     els.documents = qs("[data-documents]");

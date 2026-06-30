@@ -39,6 +39,7 @@
     outreachMissingAddressOnly: false,
     outreachMissingCoordinatesOnly: false,
     selectedOutreachIds: new Set(),
+    pendingOutreachImport: null,
     routeDate: todayKey(),
     selectedRouteStopId: "",
     search: "",
@@ -1571,13 +1572,31 @@
     return options.find((option) => normalizeCsvHeader(option) === normalized) || value || fallback;
   }
 
+  function validatedOptionValue(value, options, fallback, label, errors) {
+    const trimmed = String(value || "").trim();
+    if (!trimmed) return fallback;
+    const normalized = normalizeCsvHeader(trimmed);
+    const match = options.find((option) => normalizeCsvHeader(option) === normalized);
+    if (match) return match;
+    errors.push(`${label}: ${trimmed}`);
+    return fallback;
+  }
+
+  function parseIntegerCell(value) {
+    const trimmed = String(value || "").trim();
+    if (!trimmed) return null;
+    const parsed = Number.parseInt(trimmed.replace(/,/g, ""), 10);
+    return Number.isFinite(parsed) ? parsed : null;
+  }
+
   function normalizeDedupeKey(value) {
     return String(value || "").toLowerCase().replace(/[^a-z0-9]+/g, " ").replace(/\s+/g, " ").trim();
   }
 
   function isPropertyLocationCsv(headers) {
     const set = new Set(headers.map(normalizeCsvHeader));
-    return set.has("property_name") && set.has("company") && (set.has("visible_needs") || set.has("service_fit") || set.has("google_maps_url"));
+    const propertySignals = ["state", "zip", "neighborhood", "service_fit", "visible_needs", "source_url", "google_maps_url", "verified_at"];
+    return set.has("company") && (set.has("property_name") || set.has("property")) && propertySignals.some((field) => set.has(field));
   }
 
   function outreachPayloadFromCsvRow(row, headerMap) {
@@ -1610,16 +1629,21 @@
 
   async function importOutreachCsvFile(file) {
     if (!file) return;
-    if (!state.outreachReady) {
-      throw new Error("Create the outreach_prospects table first. See DASHBOARD_OUTREACH_SQL.md.");
-    }
     const text = await file.text();
     const rows = parseCsv(text);
     if (rows.length < 2) throw new Error("CSV needs a header row and at least one prospect row.");
     const headers = rows[0].map(normalizeCsvHeader);
     const headerMap = new Map(headers.map((header, index) => [header, index]));
     if (isPropertyLocationCsv(headers)) {
-      return importOutreachPropertyCsvRows(rows.slice(1), headerMap);
+      if (!state.outreachCompaniesReady || !state.outreachPropertiesReady) {
+        throw new Error("Create outreach_companies and outreach_properties first. See DASHBOARD_OUTREACH_SQL.md.");
+      }
+      state.pendingOutreachImport = buildOutreachPropertyImportPreview(rows.slice(1), headerMap);
+      openOutreachImportPreview();
+      return;
+    }
+    if (!state.outreachReady) {
+      throw new Error("Create the outreach_prospects table first. See DASHBOARD_OUTREACH_SQL.md.");
     }
     let imported = 0;
     const skipped = [];
@@ -1640,6 +1664,7 @@
   function outreachCompanyPayloadFromCsvRow(row, headerMap) {
     const company = csvCell(row, headerMap, ["company", "management_company", "management company"]);
     if (!company) throw new Error("missing company");
+    const errors = [];
     return {
       company,
       contact: csvCell(row, headerMap, ["contact", "contact_name", "contact name"]) || null,
@@ -1649,47 +1674,123 @@
       city: csvCell(row, headerMap, ["city"]) || null,
       service_area: csvCell(row, headerMap, ["service_area", "service area"]) || null,
       type: "Property Management",
-      service: normalizeOptionValue(csvCell(row, headerMap, ["service"]), OUTREACH_SERVICE_INTERESTS, "General Property Care"),
+      service: validatedOptionValue(csvCell(row, headerMap, ["service"]), OUTREACH_SERVICE_INTERESTS, "General Property Care", "service", errors),
       source: csvCell(row, headerMap, ["source"]) || "CSV import",
       source_url: csvCell(row, headerMap, ["source_url", "source url"]) || null,
-      status: normalizeOutreachStatus(csvCell(row, headerMap, ["status"])),
+      status: validatedOptionValue(csvCell(row, headerMap, ["status"]), OUTREACH_STATUSES, "Prospect", "status", errors),
       follow_up: csvCell(row, headerMap, ["follow_up", "follow up"]) || null,
       notes: csvCell(row, headerMap, ["notes"]) || null,
-      priority: normalizeOutreachPriority(csvCell(row, headerMap, ["priority"]))
+      priority: validatedOptionValue(csvCell(row, headerMap, ["priority"]), OUTREACH_PRIORITIES, "Normal", "priority", errors)
     };
   }
 
-  function outreachPropertyPayloadFromCsvRow(row, headerMap, companyId) {
+  function outreachPropertyPayloadFromCsvRow(row, headerMap, companyId, validationErrors = []) {
     const propertyName = csvCell(row, headerMap, ["property_name", "property name"]);
     const company = csvCell(row, headerMap, ["company"]);
-    if (!propertyName) throw new Error("missing property name");
-    if (!company) throw new Error("missing company");
+    const email = csvCell(row, headerMap, ["email", "email address"]);
+    const phone = csvCell(row, headerMap, ["phone", "phone number"]);
+    const address = csvCell(row, headerMap, ["address"]);
+    const city = csvCell(row, headerMap, ["city"]);
+    if (!propertyName && !company) throw new Error("missing property name/company");
+    if (!address && !city && !email && !phone) throw new Error("missing address/city/email/phone");
     return {
       company_id: companyId || null,
-      company,
-      property_name: propertyName,
-      address: csvCell(row, headerMap, ["address"]) || null,
-      city: csvCell(row, headerMap, ["city"]) || null,
+      company: company || null,
+      property_name: propertyName || null,
+      address: address || null,
+      city: city || null,
       state: csvCell(row, headerMap, ["state"]) || null,
       zip: csvCell(row, headerMap, ["zip", "zipcode", "postal code"]) || null,
       neighborhood: csvCell(row, headerMap, ["neighborhood"]) || null,
-      property_type: normalizeOptionValue(csvCell(row, headerMap, ["type", "property_type", "property type"]), OUTREACH_PROPERTY_TYPES, "Other"),
-      estimated_units: csvCell(row, headerMap, ["estimated_units", "estimated units", "units"]) || null,
+      property_type: validatedOptionValue(csvCell(row, headerMap, ["type", "property_type", "property type"]), OUTREACH_PROPERTY_TYPES, "Other", "type", validationErrors),
+      estimated_units: parseIntegerCell(csvCell(row, headerMap, ["estimated_units", "estimated units", "units"])),
       service_fit: csvCell(row, headerMap, ["service_fit", "service fit"]) || null,
-      service: normalizeOptionValue(csvCell(row, headerMap, ["service"]), OUTREACH_SERVICE_INTERESTS, "General Property Care"),
+      service: validatedOptionValue(csvCell(row, headerMap, ["service"]), OUTREACH_SERVICE_INTERESTS, "General Property Care", "service", validationErrors),
       visible_needs: csvCell(row, headerMap, ["visible_needs", "visible needs"]) || null,
       source: csvCell(row, headerMap, ["source"]) || "CSV import",
       source_url: csvCell(row, headerMap, ["source_url", "source url"]) || null,
       google_maps_url: csvCell(row, headerMap, ["google_maps_url", "google maps url"]) || null,
       verified_at: csvCell(row, headerMap, ["verified_at", "verified at"]) || null,
-      status: normalizeOutreachStatus(csvCell(row, headerMap, ["status"])),
+      status: validatedOptionValue(csvCell(row, headerMap, ["status"]), OUTREACH_STATUSES, "Prospect", "status", validationErrors),
       follow_up: csvCell(row, headerMap, ["follow_up", "follow up"]) || null,
       notes: csvCell(row, headerMap, ["notes"]) || null,
-      priority: normalizeOutreachPriority(csvCell(row, headerMap, ["priority"]))
+      priority: validatedOptionValue(csvCell(row, headerMap, ["priority"]), OUTREACH_PRIORITIES, "Normal", "priority", validationErrors)
     };
   }
 
-  async function importOutreachPropertyCsvRows(rows, headerMap) {
+  function buildOutreachPropertyImportPreview(rows, headerMap) {
+    const companyByName = new Map(state.data.outreachCompanies.map((company) => [normalizeDedupeKey(company.company), company]));
+    const propertyByAddress = new Map(state.data.outreachProperties.filter((item) => item.address).map((item) => [normalizeDedupeKey(item.address), item]));
+    const propertyByNameCompany = new Map(state.data.outreachProperties.map((item) => [normalizeDedupeKey(`${item.propertyName} ${item.company}`), item]));
+    const seenCompanies = new Set();
+    const seenAddresses = new Set();
+    const seenNameCompany = new Set();
+    const validRows = [];
+    const invalidRows = [];
+    let rowsMissingAddress = 0;
+    let possibleDuplicates = 0;
+    let newProperties = 0;
+
+    rows.forEach((row, index) => {
+      const errors = [];
+      let companyPayload = null;
+      let propertyPayload = null;
+      try {
+        const company = csvCell(row, headerMap, ["company", "management_company", "management company"]);
+        if (company) companyPayload = outreachCompanyPayloadFromCsvRow(row, headerMap);
+        propertyPayload = outreachPropertyPayloadFromCsvRow(row, headerMap, null, errors);
+        if (errors.length) throw new Error(errors.join("; "));
+
+        const companyKey = normalizeDedupeKey(company);
+        const addressKey = normalizeDedupeKey(propertyPayload.address);
+        const fallbackKey = normalizeDedupeKey(`${propertyPayload.property_name || ""} ${propertyPayload.company || ""}`);
+        const duplicate = addressKey
+          ? propertyByAddress.has(addressKey) || seenAddresses.has(addressKey)
+          : propertyByNameCompany.has(fallbackKey) || seenNameCompany.has(fallbackKey);
+
+        if (!propertyPayload.address) rowsMissingAddress += 1;
+        if (duplicate) {
+          possibleDuplicates += 1;
+        } else {
+          newProperties += 1;
+        }
+        if (companyKey && !companyByName.has(companyKey)) seenCompanies.add(companyKey);
+        if (addressKey) seenAddresses.add(addressKey);
+        if (fallbackKey) seenNameCompany.add(fallbackKey);
+        validRows.push({
+          rowNumber: index + 2,
+          companyKey,
+          addressKey,
+          fallbackKey,
+          duplicate,
+          companyPayload,
+          propertyPayload
+        });
+      } catch (error) {
+        const address = csvCell(row, headerMap, ["address"]);
+        if (!address) rowsMissingAddress += 1;
+        invalidRows.push({
+          rowNumber: index + 2,
+          message: error.message || "invalid row",
+          label: csvCell(row, headerMap, ["property_name", "property name"]) || csvCell(row, headerMap, ["company"]) || `Row ${index + 2}`
+        });
+      }
+    });
+
+    return {
+      type: "property",
+      totalRows: rows.length,
+      newCompanies: seenCompanies.size,
+      newProperties,
+      possibleDuplicates,
+      rowsMissingAddress,
+      invalidRows,
+      validRows
+    };
+  }
+
+  async function commitOutreachPropertyImport(preview) {
+    if (!preview || preview.type !== "property") return;
     if (!state.outreachCompaniesReady || !state.outreachPropertiesReady) {
       throw new Error("Create outreach_companies and outreach_properties first. See DASHBOARD_OUTREACH_SQL.md.");
     }
@@ -1700,19 +1801,21 @@
     const propertyByAddress = new Map(state.data.outreachProperties.filter((item) => item.address).map((item) => [normalizeDedupeKey(item.address), item]));
     const propertyByNameCompany = new Map(state.data.outreachProperties.map((item) => [normalizeDedupeKey(`${item.propertyName} ${item.company}`), item]));
 
-    for (const row of rows) {
+    for (const item of preview.validRows) {
       try {
-        const companyPayload = outreachCompanyPayloadFromCsvRow(row, headerMap);
-        const companyKey = normalizeDedupeKey(companyPayload.company);
-        let company = companyByName.get(companyKey);
-        if (!company) {
-          company = await insertOutreachCompany(companyPayload);
-          companyByName.set(companyKey, company);
+        let company = item.companyKey ? companyByName.get(item.companyKey) : null;
+        if (!company && item.companyPayload) {
+          company = await insertOutreachCompany(item.companyPayload);
+          companyByName.set(item.companyKey, company);
           if (!isDemoMode()) state.data.outreachCompanies.unshift(company);
         }
-        const propertyPayload = outreachPropertyPayloadFromCsvRow(row, headerMap, company.id);
+
+        const propertyPayload = {
+          ...item.propertyPayload,
+          company_id: company?.id || null
+        };
         const addressKey = normalizeDedupeKey(propertyPayload.address);
-        const fallbackKey = normalizeDedupeKey(`${propertyPayload.property_name} ${propertyPayload.company}`);
+        const fallbackKey = normalizeDedupeKey(`${propertyPayload.property_name || ""} ${propertyPayload.company || ""}`);
         const existing = addressKey ? propertyByAddress.get(addressKey) : propertyByNameCompany.get(fallbackKey);
         let saved = null;
         if (existing) {
@@ -1728,12 +1831,16 @@
         if (saved?.address) propertyByAddress.set(normalizeDedupeKey(saved.address), saved);
         propertyByNameCompany.set(normalizeDedupeKey(`${saved.propertyName} ${saved.company}`), saved);
       } catch (error) {
-        skipped.push(error.message || "invalid row");
+        skipped.push(`row ${item.rowNumber}: ${error.message || "invalid row"}`);
       }
     }
+
+    state.pendingOutreachImport = null;
+    state.outreachView = "properties";
     await refreshDashboard();
-    const skippedMessage = skipped.length ? ` Skipped ${skipped.length} row${skipped.length === 1 ? "" : "s"}.` : "";
-    setDashboardState(`Imported ${imported} propert${imported === 1 ? "y" : "ies"} and updated ${updated}.${skippedMessage}`, skipped.length && !imported && !updated ? "error" : "");
+    const skippedTotal = skipped.length + preview.invalidRows.length;
+    const skippedMessage = skippedTotal ? ` Skipped ${skippedTotal} row${skippedTotal === 1 ? "" : "s"}.` : "";
+    setDashboardState(`Imported ${imported} propert${imported === 1 ? "y" : "ies"} and updated ${updated}.${skippedMessage}`, skippedTotal && !imported && !updated ? "error" : "");
   }
 
   async function insertOutreachProspect(payload) {
@@ -4003,6 +4110,45 @@
     `;
   }
 
+  function openOutreachImportPreview() {
+    const preview = state.pendingOutreachImport;
+    if (!preview || !els.detailDrawer || !els.detailContent) return;
+    const invalidItems = preview.invalidRows.slice(0, 8).map((row) => `
+      <div class="drawer-field">
+        <span>Row ${escapeHtml(row.rowNumber)}</span>
+        ${escapeHtml(row.label)} - ${escapeHtml(row.message)}
+      </div>
+    `).join("");
+    els.detailDrawer.hidden = false;
+    els.detailContent.innerHTML = `
+      <div class="drawer-content outreach-drawer">
+        <p class="eyebrow">Outreach Import Preview</p>
+        <h3>Property CSV ready to review</h3>
+        <div class="drawer-grid">
+          <div class="drawer-field"><span>Total rows</span>${escapeHtml(preview.totalRows)}</div>
+          <div class="drawer-field"><span>New companies</span>${escapeHtml(preview.newCompanies)}</div>
+          <div class="drawer-field"><span>New properties</span>${escapeHtml(preview.newProperties)}</div>
+          <div class="drawer-field"><span>Possible duplicates</span>${escapeHtml(preview.possibleDuplicates)}</div>
+          <div class="drawer-field"><span>Rows missing address</span>${escapeHtml(preview.rowsMissingAddress)}</div>
+          <div class="drawer-field"><span>Rows with invalid values</span>${escapeHtml(preview.invalidRows.length)}</div>
+        </div>
+        <p class="item-body">${escapeHtml(preview.validRows.length)} valid row${preview.validRows.length === 1 ? "" : "s"} will be imported. Duplicate matches will update the existing property record.</p>
+        ${preview.invalidRows.length ? `
+          <h4>Rows to skip</h4>
+          <div class="drawer-grid">
+            ${invalidItems}
+          </div>
+          ${preview.invalidRows.length > 8 ? `<p class="meta">Showing 8 of ${escapeHtml(preview.invalidRows.length)} skipped rows.</p>` : ""}
+        ` : ""}
+        <div class="drawer-actions">
+          <button type="button" data-action="confirm-outreach-import"${preview.validRows.length ? "" : " disabled"}>${buttonContent("Import Valid Rows", "import-outreach-csv")}</button>
+          <button type="button" class="secondary-action" data-action="cancel-outreach-import">${buttonContent("Cancel Import", "delete-outreach-prospect")}</button>
+        </div>
+      </div>
+    `;
+    setDashboardState(`Preview ready: ${preview.validRows.length} valid row${preview.validRows.length === 1 ? "" : "s"}, ${preview.invalidRows.length} invalid.`);
+  }
+
   function openOutreachCompanyDrawer(id) {
     const company = state.data.outreachCompanies.find((item) => item.id === id);
     if (!company || !els.detailDrawer || !els.detailContent) return;
@@ -5053,6 +5199,18 @@
         openOutreachDrawer();
       } else if (action === "import-outreach-csv") {
         if (els.outreachImport) els.outreachImport.click();
+      } else if (action === "confirm-outreach-import") {
+        try {
+          setDashboardState("Importing property CSV...");
+          await commitOutreachPropertyImport(state.pendingOutreachImport);
+          closeSubmissionDrawer();
+        } catch (error) {
+          setDashboardState(error.message || "Unable to import property CSV.", "error");
+        }
+      } else if (action === "cancel-outreach-import") {
+        state.pendingOutreachImport = null;
+        closeSubmissionDrawer();
+        setDashboardState("Property CSV import canceled.");
       } else if (action === "open-outreach-prospect" || action === "edit-outreach-prospect") {
         openOutreachDrawer(id);
       } else if (action === "open-outreach-company") {

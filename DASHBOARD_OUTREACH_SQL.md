@@ -40,7 +40,7 @@ create table if not exists outreach_properties (
   id uuid primary key default gen_random_uuid(),
   company_id uuid references outreach_companies(id) on delete set null,
   company text,
-  property_name text not null,
+  property_name text,
   address text,
   city text,
   state text,
@@ -76,6 +76,8 @@ create table if not exists outreach_properties (
   )),
   constraint outreach_properties_priority_check check (priority in ('High', 'Normal', 'Low'))
 );
+
+alter table outreach_properties alter column property_name drop not null;
 
 create table if not exists outreach_prospects (
   id uuid primary key default gen_random_uuid(),

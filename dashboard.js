@@ -39,6 +39,8 @@
     outreachMissingAddressOnly: false,
     outreachMissingCoordinatesOnly: false,
     selectedOutreachIds: new Set(),
+    selectedOutreachCompanyIds: new Set(),
+    selectedOutreachPropertyIds: new Set(),
     pendingOutreachImport: null,
     routeDate: todayKey(),
     selectedRouteStopId: "",
@@ -137,6 +139,8 @@
       "delete-document": "x",
       "delete-note": "x",
       "delete-operation": "x",
+      "delete-outreach-company": "x",
+      "delete-outreach-property": "x",
       "delete-reminder": "x",
       "delete-outreach-prospect": "x",
       "delete-route-stop": "x",
@@ -3909,18 +3913,32 @@
     if (!els.outreachCompanyTable) return;
     if (!state.outreachCompaniesReady) {
       const message = "Companies need the outreach_companies table. Run DASHBOARD_OUTREACH_SQL.md, then refresh.";
-      els.outreachCompanyTable.innerHTML = `<tr><td colspan="9">${emptyState(message)}</td></tr>`;
+      els.outreachCompanyTable.innerHTML = `<tr><td colspan="10">${emptyState(message)}</td></tr>`;
       if (els.outreachCompanyCards) els.outreachCompanyCards.innerHTML = emptyState(message);
       return;
     }
     const companies = filteredOutreachCompanies();
+    const validIds = new Set(companies.map((company) => company.id));
+    state.selectedOutreachCompanyIds.forEach((id) => {
+      if (!validIds.has(id)) state.selectedOutreachCompanyIds.delete(id);
+    });
+    if (els.outreachCompanyBulkBar) els.outreachCompanyBulkBar.hidden = state.selectedOutreachCompanyIds.size === 0;
+    if (els.outreachCompanySelectedCount) {
+      const count = state.selectedOutreachCompanyIds.size;
+      els.outreachCompanySelectedCount.textContent = `${count} selected`;
+    }
+    if (els.outreachCompanySelectAll) {
+      els.outreachCompanySelectAll.checked = companies.length > 0 && companies.every((company) => state.selectedOutreachCompanyIds.has(company.id));
+      els.outreachCompanySelectAll.indeterminate = companies.some((company) => state.selectedOutreachCompanyIds.has(company.id)) && !els.outreachCompanySelectAll.checked;
+    }
     if (!companies.length) {
-      els.outreachCompanyTable.innerHTML = `<tr><td colspan="9">${emptyState("No companies match this view yet.")}</td></tr>`;
+      els.outreachCompanyTable.innerHTML = `<tr><td colspan="10">${emptyState("No companies match this view yet.")}</td></tr>`;
       if (els.outreachCompanyCards) els.outreachCompanyCards.innerHTML = emptyState("No companies match this view yet.");
       return;
     }
     els.outreachCompanyTable.innerHTML = companies.map((company) => `
       <tr>
+        <td><input data-outreach-company-select type="checkbox" value="${escapeHtml(company.id)}" aria-label="Select ${escapeHtml(company.company)}"${state.selectedOutreachCompanyIds.has(company.id) ? " checked" : ""}></td>
         <td><strong>${escapeHtml(company.company)}</strong><br><span class="meta">${escapeHtml(company.website || company.sourceUrl || "No website")}</span></td>
         <td>${escapeHtml(company.serviceArea || company.city || "Not set")}</td>
         <td>${escapeHtml(company.contact || "No contact")}<br><span class="meta">${escapeHtml(company.email || "No email")}<br>${escapeHtml(company.phone || "No phone")}</span></td>
@@ -3929,16 +3947,16 @@
         <td>${escapeHtml(company.priority)}</td>
         <td>${escapeHtml(outreachCompanyPropertyCount(company))}</td>
         <td>${escapeHtml(company.notes)}</td>
-        <td>${actionButton("Open", "open-outreach-company", company.id)}</td>
+        <td><div class="outreach-actions">${actionButton("Open", "open-outreach-company", company.id)}${actionButton("Delete", "delete-outreach-company", company.id).replace("inline-action", "inline-action danger-action")}</div></td>
       </tr>
     `).join("");
     if (els.outreachCompanyCards) {
       els.outreachCompanyCards.innerHTML = companies.map((company) => `
         <article class="outreach-card">
-          <div class="item-topline"><div><h4>${escapeHtml(company.company)}</h4><div class="meta">${escapeHtml(company.serviceArea || company.city || "No service area")}</div></div><span class="status">${escapeHtml(company.status)}</span></div>
+          <div class="item-topline"><div class="outreach-card-select-wrap"><input data-outreach-company-select type="checkbox" value="${escapeHtml(company.id)}" aria-label="Select ${escapeHtml(company.company)}"${state.selectedOutreachCompanyIds.has(company.id) ? " checked" : ""}><div><h4>${escapeHtml(company.company)}</h4><div class="meta">${escapeHtml(company.serviceArea || company.city || "No service area")}</div></div></div><span class="status">${escapeHtml(company.status)}</span></div>
           <p class="item-body">${escapeHtml(company.contact || "No contact")} / ${escapeHtml(company.email || company.phone || "No contact info")}</p>
           <p class="small">${escapeHtml(outreachCompanyPropertyCount(company))} managed properties / ${escapeHtml(company.priority)} priority</p>
-          ${actionButton("Open", "open-outreach-company", company.id)}
+          <div class="outreach-actions">${actionButton("Open", "open-outreach-company", company.id)}${actionButton("Delete", "delete-outreach-company", company.id).replace("inline-action", "inline-action danger-action")}</div>
         </article>
       `).join("");
     }
@@ -3948,18 +3966,32 @@
     if (!els.outreachPropertyTable) return;
     if (!state.outreachPropertiesReady) {
       const message = "Managed properties need the outreach_properties table. Run DASHBOARD_OUTREACH_SQL.md, then refresh.";
-      els.outreachPropertyTable.innerHTML = `<tr><td colspan="11">${emptyState(message)}</td></tr>`;
+      els.outreachPropertyTable.innerHTML = `<tr><td colspan="12">${emptyState(message)}</td></tr>`;
       if (els.outreachPropertyCards) els.outreachPropertyCards.innerHTML = emptyState(message);
       return;
     }
     const properties = filteredOutreachProperties();
+    const validIds = new Set(properties.map((property) => property.id));
+    state.selectedOutreachPropertyIds.forEach((id) => {
+      if (!validIds.has(id)) state.selectedOutreachPropertyIds.delete(id);
+    });
+    if (els.outreachPropertyBulkBar) els.outreachPropertyBulkBar.hidden = state.selectedOutreachPropertyIds.size === 0;
+    if (els.outreachPropertySelectedCount) {
+      const count = state.selectedOutreachPropertyIds.size;
+      els.outreachPropertySelectedCount.textContent = `${count} selected`;
+    }
+    if (els.outreachPropertySelectAll) {
+      els.outreachPropertySelectAll.checked = properties.length > 0 && properties.every((property) => state.selectedOutreachPropertyIds.has(property.id));
+      els.outreachPropertySelectAll.indeterminate = properties.some((property) => state.selectedOutreachPropertyIds.has(property.id)) && !els.outreachPropertySelectAll.checked;
+    }
     if (!properties.length) {
-      els.outreachPropertyTable.innerHTML = `<tr><td colspan="11">${emptyState("No managed properties match this view yet.")}</td></tr>`;
+      els.outreachPropertyTable.innerHTML = `<tr><td colspan="12">${emptyState("No managed properties match this view yet.")}</td></tr>`;
       if (els.outreachPropertyCards) els.outreachPropertyCards.innerHTML = emptyState("No managed properties match this view yet.");
       return;
     }
     els.outreachPropertyTable.innerHTML = properties.map((property) => `
       <tr>
+        <td><input data-outreach-property-select type="checkbox" value="${escapeHtml(property.id)}" aria-label="Select ${escapeHtml(property.propertyName)}"${state.selectedOutreachPropertyIds.has(property.id) ? " checked" : ""}></td>
         <td><strong>${escapeHtml(property.propertyName)}</strong><br><span class="meta">${escapeHtml(property.propertyType)}</span></td>
         <td>${escapeHtml(property.company)}</td>
         <td>${escapeHtml([property.address, property.city, property.state, property.zip].filter(Boolean).join(", "))}</td>
@@ -3970,16 +4002,16 @@
         <td>${escapeHtml(property.followUp)}</td>
         <td>${escapeHtml(property.priority)}</td>
         <td>${escapeHtml(property.verifiedAt)}</td>
-        <td>${actionButton("Open", "open-outreach-property", property.id)}</td>
+        <td><div class="outreach-actions">${actionButton("Open", "open-outreach-property", property.id)}${actionButton("Delete", "delete-outreach-property", property.id).replace("inline-action", "inline-action danger-action")}</div></td>
       </tr>
     `).join("");
     if (els.outreachPropertyCards) {
       els.outreachPropertyCards.innerHTML = properties.map((property) => `
         <article class="outreach-card">
-          <div class="item-topline"><div><h4>${escapeHtml(property.propertyName)}</h4><div class="meta">${escapeHtml(property.company)} / ${escapeHtml(property.city)}</div></div><span class="status">${escapeHtml(property.status)}</span></div>
+          <div class="item-topline"><div class="outreach-card-select-wrap"><input data-outreach-property-select type="checkbox" value="${escapeHtml(property.id)}" aria-label="Select ${escapeHtml(property.propertyName)}"${state.selectedOutreachPropertyIds.has(property.id) ? " checked" : ""}><div><h4>${escapeHtml(property.propertyName)}</h4><div class="meta">${escapeHtml(property.company)} / ${escapeHtml(property.city)}</div></div></div><span class="status">${escapeHtml(property.status)}</span></div>
           <p class="item-body">${escapeHtml(property.serviceFit || property.service)}</p>
           <p class="small">${escapeHtml(property.visibleNeeds || "No visible needs noted")} / ${escapeHtml(property.priority)} priority</p>
-          ${actionButton("Open", "open-outreach-property", property.id)}
+          <div class="outreach-actions">${actionButton("Open", "open-outreach-property", property.id)}${actionButton("Delete", "delete-outreach-property", property.id).replace("inline-action", "inline-action danger-action")}</div>
         </article>
       `).join("");
     }
@@ -4172,6 +4204,7 @@
         <div class="drawer-actions">
           <button type="button" data-action="prefill-outreach-property" data-id="${escapeHtml(company.id)}">${buttonContent("Add Property", "new-outreach-prospect")}</button>
           <button type="button" data-action="import-outreach-csv">${buttonContent("Import Properties", "import-outreach-csv")}</button>
+          <button type="button" class="danger-action" data-action="delete-outreach-company" data-id="${escapeHtml(company.id)}">${buttonContent("Delete Company", "delete-outreach-company")}</button>
         </div>
         <h4>Managed properties (${properties.length})</h4>
         <div class="profile-mini-list">
@@ -4216,6 +4249,7 @@
         <div class="drawer-actions">
           <button type="button" data-action="route-outreach-property" data-id="${escapeHtml(property.id)}">${buttonContent("Add to Route", "route-outreach-prospect")}</button>
           <button type="button" data-action="geocode-outreach-property" data-id="${escapeHtml(property.id)}">${buttonContent("Find Map Pin", "find-stop-map")}</button>
+          <button type="button" class="danger-action" data-action="delete-outreach-property" data-id="${escapeHtml(property.id)}">${buttonContent("Delete Property", "delete-outreach-property")}</button>
         </div>
       </div>
     `;
@@ -5143,6 +5177,52 @@
         return;
       }
 
+      if (target.matches("[data-outreach-company-select]")) {
+        if (target.checked) {
+          state.selectedOutreachCompanyIds.add(target.value);
+        } else {
+          state.selectedOutreachCompanyIds.delete(target.value);
+        }
+        await render();
+        return;
+      }
+
+      if (target.matches("[data-outreach-company-select-all]")) {
+        const visibleCompanies = filteredOutreachCompanies();
+        visibleCompanies.forEach((item) => {
+          if (target.checked) {
+            state.selectedOutreachCompanyIds.add(item.id);
+          } else {
+            state.selectedOutreachCompanyIds.delete(item.id);
+          }
+        });
+        await render();
+        return;
+      }
+
+      if (target.matches("[data-outreach-property-select]")) {
+        if (target.checked) {
+          state.selectedOutreachPropertyIds.add(target.value);
+        } else {
+          state.selectedOutreachPropertyIds.delete(target.value);
+        }
+        await render();
+        return;
+      }
+
+      if (target.matches("[data-outreach-property-select-all]")) {
+        const visibleProperties = filteredOutreachProperties();
+        visibleProperties.forEach((item) => {
+          if (target.checked) {
+            state.selectedOutreachPropertyIds.add(item.id);
+          } else {
+            state.selectedOutreachPropertyIds.delete(item.id);
+          }
+        });
+        await render();
+        return;
+      }
+
       if (!target.matches("[data-status-table][data-status-id]")) return;
 
       try {
@@ -5483,8 +5563,42 @@
         } catch (error) {
           setDashboardState(error.message || "Unable to delete prospect.", "error");
         }
+      } else if (action === "delete-outreach-company") {
+        const company = state.data.outreachCompanies.find((item) => item.id === id);
+        const propertyCount = company ? outreachCompanyPropertyCount(company) : 0;
+        const ok = window.confirm(`Delete this outreach company?${propertyCount ? ` Its ${propertyCount} linked propert${propertyCount === 1 ? "y will stay" : "ies will stay"} in Properties.` : ""}`);
+        if (!ok) return;
+        try {
+          setDashboardState("Deleting company...");
+          await deleteRow("outreach_companies", id);
+          state.selectedOutreachCompanyIds.delete(id);
+          closeSubmissionDrawer();
+          await refreshDashboard();
+          setDashboardState("");
+        } catch (error) {
+          setDashboardState(error.message || "Unable to delete company.", "error");
+        }
+      } else if (action === "delete-outreach-property") {
+        const ok = window.confirm("Delete this managed property?");
+        if (!ok) return;
+        try {
+          setDashboardState("Deleting property...");
+          await deleteRow("outreach_properties", id);
+          state.selectedOutreachPropertyIds.delete(id);
+          closeSubmissionDrawer();
+          await refreshDashboard();
+          setDashboardState("");
+        } catch (error) {
+          setDashboardState(error.message || "Unable to delete property.", "error");
+        }
       } else if (action === "clear-outreach-selection") {
         state.selectedOutreachIds.clear();
+        await render();
+      } else if (action === "clear-outreach-company-selection") {
+        state.selectedOutreachCompanyIds.clear();
+        await render();
+      } else if (action === "clear-outreach-property-selection") {
+        state.selectedOutreachPropertyIds.clear();
         await render();
       } else if (action === "delete-selected-outreach") {
         const ids = Array.from(state.selectedOutreachIds);
@@ -5502,6 +5616,40 @@
           setDashboardState("");
         } catch (error) {
           setDashboardState(error.message || "Unable to delete selected prospects.", "error");
+        }
+      } else if (action === "delete-selected-outreach-companies") {
+        const ids = Array.from(state.selectedOutreachCompanyIds);
+        if (!ids.length) return;
+        const ok = window.confirm(`Delete ${ids.length} selected compan${ids.length === 1 ? "y" : "ies"}? Linked properties will stay in Properties.`);
+        if (!ok) return;
+        try {
+          setDashboardState("Deleting selected companies...");
+          for (const selectedId of ids) {
+            await deleteRow("outreach_companies", selectedId);
+          }
+          state.selectedOutreachCompanyIds.clear();
+          closeSubmissionDrawer();
+          await refreshDashboard();
+          setDashboardState("");
+        } catch (error) {
+          setDashboardState(error.message || "Unable to delete selected companies.", "error");
+        }
+      } else if (action === "delete-selected-outreach-properties") {
+        const ids = Array.from(state.selectedOutreachPropertyIds);
+        if (!ids.length) return;
+        const ok = window.confirm(`Delete ${ids.length} selected propert${ids.length === 1 ? "y" : "ies"}?`);
+        if (!ok) return;
+        try {
+          setDashboardState("Deleting selected properties...");
+          for (const selectedId of ids) {
+            await deleteRow("outreach_properties", selectedId);
+          }
+          state.selectedOutreachPropertyIds.clear();
+          closeSubmissionDrawer();
+          await refreshDashboard();
+          setDashboardState("");
+        } catch (error) {
+          setDashboardState(error.message || "Unable to delete selected properties.", "error");
         }
       } else if (action === "refresh-dashboard") {
         await refreshDashboard();
@@ -6002,8 +6150,14 @@
     els.outreachHot = qs("[data-outreach-hot]");
     els.outreachCompanyTable = qs("[data-outreach-company-table]");
     els.outreachCompanyCards = qs("[data-outreach-company-cards]");
+    els.outreachCompanyBulkBar = qs("[data-outreach-company-bulk-bar]");
+    els.outreachCompanySelectedCount = qs("[data-outreach-company-selected-count]");
+    els.outreachCompanySelectAll = qs("[data-outreach-company-select-all]");
     els.outreachPropertyTable = qs("[data-outreach-property-table]");
     els.outreachPropertyCards = qs("[data-outreach-property-cards]");
+    els.outreachPropertyBulkBar = qs("[data-outreach-property-bulk-bar]");
+    els.outreachPropertySelectedCount = qs("[data-outreach-property-selected-count]");
+    els.outreachPropertySelectAll = qs("[data-outreach-property-select-all]");
     els.outreachTable = qs("[data-outreach-table]");
     els.outreachCards = qs("[data-outreach-cards]");
     els.outreachArchive = qs("[data-outreach-archive]");

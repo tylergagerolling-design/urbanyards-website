@@ -5342,6 +5342,29 @@ body:has(.dashboard-shell) {
   margin-bottom: 16px;
 }
 
+.outreach-view-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 14px;
+}
+
+.outreach-view-tabs button {
+  min-height: 38px;
+  padding: 8px 13px;
+  border: 1px solid rgba(18, 63, 49, 0.16);
+  border-radius: 999px;
+  background: rgba(255, 253, 247, 0.84);
+  color: var(--uy-green);
+  font-weight: 850;
+}
+
+.outreach-view-tabs button.is-active {
+  border-color: var(--uy-green);
+  background: var(--uy-green);
+  color: #fff;
+}
+
 .outreach-layout {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -5387,6 +5410,30 @@ body:has(.dashboard-shell) {
   grid-template-columns: minmax(240px, 1.4fr) repeat(4, minmax(140px, 0.8fr));
   gap: 10px;
   margin-bottom: 12px;
+}
+
+.outreach-property-toolbar {
+  grid-template-columns: minmax(220px, 1.3fr) repeat(4, minmax(130px, .8fr));
+}
+
+.outreach-filter-check {
+  display: flex;
+  min-height: 42px;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 10px;
+  border: 1px solid var(--uy-line);
+  border-radius: 8px;
+  background: #fff;
+  color: var(--uy-green);
+  font-size: 0.84rem;
+  font-weight: 800;
+}
+
+.outreach-filter-check input {
+  width: 18px;
+  min-height: 18px;
+  accent-color: var(--uy-green);
 }
 
 .outreach-bulk-bar {
@@ -5493,7 +5540,8 @@ body:has(.dashboard-shell) {
   }
 
   .outreach-layout,
-  .outreach-toolbar {
+  .outreach-toolbar,
+  .outreach-property-toolbar {
     grid-template-columns: 1fr;
   }
 }

@@ -11,10 +11,10 @@
     <link rel="icon" href="/favicon.ico" sizes="any">
     <link rel="apple-touch-icon" href="/apple-touch-icon.png">
     <link rel="manifest" href="/dashboard.webmanifest">
-    <link rel="stylesheet" href="dashboard.css?v=20260629-3">
+    <link rel="stylesheet" href="dashboard.css?v=20260629-4">
     <link rel="stylesheet" href="dashboard-mobile-fix.css?v=20260622-3">
     <script src="dashboard-config.js?v=20260623-1" defer></script>
-    <script src="dashboard.js?v=20260629-3" defer></script>
+    <script src="dashboard.js?v=20260629-4" defer></script>
   </head>
   <body>
     <main class="dashboard-shell" aria-labelledby="dashboard-title">
@@ -232,8 +232,8 @@
             <div class="outreach-hero">
               <div>
                 <p class="eyebrow">Outreach</p>
-                <h3>Property lead pipeline</h3>
-                <p>Track prospects from first discovery through contact, follow-up, quote, and won or lost status.</p>
+                <h3>Company and property outreach</h3>
+                <p>Track management companies, the specific properties they manage, and the locations that look like good Urban Yards fits.</p>
               </div>
               <div class="outreach-hero-actions">
                 <button type="button" data-action="import-outreach-csv"><span class="button-icon" aria-hidden="true">CSV</span><span>Import CSV</span></button>
@@ -243,6 +243,12 @@
             </div>
 
             <div class="outreach-metrics" data-outreach-metrics></div>
+
+            <div class="outreach-view-tabs" role="tablist" aria-label="Outreach views">
+              <button type="button" data-outreach-view="companies">Companies</button>
+              <button type="button" data-outreach-view="properties">Properties</button>
+              <button type="button" data-outreach-view="prospects">Prospects</button>
+            </div>
 
             <div class="outreach-layout">
               <section class="panel outreach-priority-panel">
@@ -266,11 +272,105 @@
               </section>
             </div>
 
-            <section class="panel outreach-main-panel">
+            <section class="panel outreach-main-panel" data-outreach-view-panel="companies">
+              <div class="panel-heading">
+                <div>
+                  <h3>Companies</h3>
+                  <p>Property management companies and owner groups connected to managed locations.</p>
+                </div>
+              </div>
+              <div class="outreach-toolbar">
+                <input data-outreach-company-search type="search" aria-label="Search outreach companies" placeholder="Search company, contact, service area, notes...">
+                <select data-outreach-company-status-filter aria-label="Filter companies by status">
+                  <option value="All">All Statuses</option>
+                  <option>Prospect</option>
+                  <option>Researched</option>
+                  <option>Contacted</option>
+                  <option>Follow-Up Needed</option>
+                  <option>Interested</option>
+                  <option>Quote Needed</option>
+                  <option>Quoted</option>
+                  <option>Won</option>
+                  <option>Lost / No Fit</option>
+                </select>
+                <select data-outreach-company-priority-filter aria-label="Filter companies by priority">
+                  <option value="All">All Priorities</option>
+                  <option>High</option>
+                  <option>Normal</option>
+                  <option>Low</option>
+                </select>
+              </div>
+              <div class="outreach-table-wrap">
+                <table>
+                  <thead><tr><th>Company</th><th>Service Area</th><th>Contact</th><th>Status</th><th>Follow-Up</th><th>Priority</th><th>Properties</th><th>Notes</th><th>Actions</th></tr></thead>
+                  <tbody data-outreach-company-table></tbody>
+                </table>
+              </div>
+              <div class="outreach-card-list outreach-mobile-list" data-outreach-company-cards></div>
+            </section>
+
+            <section class="panel outreach-main-panel" data-outreach-view-panel="properties">
+              <div class="panel-heading">
+                <div>
+                  <h3>Managed Properties</h3>
+                  <p>Individual apartment buildings, communities, and locations connected to outreach companies.</p>
+                </div>
+              </div>
+              <div class="outreach-toolbar outreach-property-toolbar">
+                <input data-outreach-property-search type="search" aria-label="Search outreach properties" placeholder="Search property, company, address, visible needs, notes...">
+                <select data-outreach-property-company-filter aria-label="Filter properties by company">
+                  <option value="All">All Companies</option>
+                </select>
+                <select data-outreach-property-city-filter aria-label="Filter properties by city">
+                  <option value="All">All Cities</option>
+                </select>
+                <select data-outreach-property-neighborhood-filter aria-label="Filter properties by neighborhood">
+                  <option value="All">All Neighborhoods</option>
+                </select>
+                <select data-outreach-property-service-filter aria-label="Filter properties by service">
+                  <option value="All">All Services</option>
+                </select>
+                <select data-outreach-property-status-filter aria-label="Filter properties by status">
+                  <option value="All">All Statuses</option>
+                  <option>Prospect</option>
+                  <option>Researched</option>
+                  <option>Contacted</option>
+                  <option>Follow-Up Needed</option>
+                  <option>Interested</option>
+                  <option>Quote Needed</option>
+                  <option>Quoted</option>
+                  <option>Won</option>
+                  <option>Lost / No Fit</option>
+                </select>
+                <select data-outreach-property-priority-filter aria-label="Filter properties by priority">
+                  <option value="All">All Priorities</option>
+                  <option>High</option>
+                  <option>Normal</option>
+                  <option>Low</option>
+                </select>
+                <input data-outreach-property-needs-filter type="search" aria-label="Filter by visible needs" placeholder="Visible needs contains...">
+                <select data-outreach-property-verified-filter aria-label="Filter properties by verified date">
+                  <option value="All">Any verified date</option>
+                  <option value="Verified">Verified only</option>
+                  <option value="Unverified">Missing verified date</option>
+                </select>
+                <label class="outreach-filter-check"><input data-outreach-property-missing-address type="checkbox"> Missing address</label>
+                <label class="outreach-filter-check"><input data-outreach-property-missing-coordinates type="checkbox"> No lat/lng</label>
+              </div>
+              <div class="outreach-table-wrap">
+                <table>
+                  <thead><tr><th>Property Name</th><th>Company</th><th>Address</th><th>Neighborhood</th><th>Service Fit</th><th>Visible Needs</th><th>Status</th><th>Follow-Up</th><th>Priority</th><th>Verified</th><th>Actions</th></tr></thead>
+                  <tbody data-outreach-property-table></tbody>
+                </table>
+              </div>
+              <div class="outreach-card-list outreach-mobile-list" data-outreach-property-cards></div>
+            </section>
+
+            <section class="panel outreach-main-panel" data-outreach-view-panel="prospects">
               <div class="panel-heading">
                 <div>
                   <h3>Active Prospects</h3>
-                  <p>Search, filter, and move property leads through the pipeline.</p>
+                  <p>Legacy/simple prospect records from manual entry or older imports.</p>
                 </div>
               </div>
               <div class="outreach-toolbar">

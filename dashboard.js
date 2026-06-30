@@ -30,6 +30,14 @@
     outreachServiceFilter: "All",
     outreachPriorityFilter: "All",
     outreachSearch: "",
+    outreachView: "companies",
+    outreachCompanyFilter: "All",
+    outreachCityFilter: "All",
+    outreachNeighborhoodFilter: "All",
+    outreachVisibleNeedsFilter: "",
+    outreachVerifiedFilter: "All",
+    outreachMissingAddressOnly: false,
+    outreachMissingCoordinatesOnly: false,
     selectedOutreachIds: new Set(),
     routeDate: todayKey(),
     selectedRouteStopId: "",
@@ -40,6 +48,8 @@
     documentsReady: true,
     operationsReady: true,
     outreachReady: true,
+    outreachCompaniesReady: true,
+    outreachPropertiesReady: true,
     routeStopsReady: true,
     data: {
       submissions: [],
@@ -50,6 +60,8 @@
       documents: [],
       operations: [],
       outreachProspects: [],
+      outreachCompanies: [],
+      outreachProperties: [],
       routeStops: []
     },
     loading: false,
@@ -560,6 +572,73 @@
     };
   }
 
+  function normalizeOutreachCompany(row) {
+    const status = OUTREACH_STATUSES.includes(row.status) ? row.status : "Prospect";
+    const priority = OUTREACH_PRIORITIES.includes(row.priority) ? row.priority : "Normal";
+    return {
+      id: row.id,
+      company: row.company || "Unnamed company",
+      contact: row.contact || "",
+      email: row.email || "",
+      phone: row.phone || "",
+      website: row.website || "",
+      city: row.city || "",
+      serviceArea: row.service_area || "",
+      type: row.type || "Property Management",
+      service: row.service || "General Property Care",
+      source: row.source || "",
+      sourceUrl: row.source_url || "",
+      status,
+      followUpRaw: dateKey(row.follow_up),
+      followUp: formatDate(row.follow_up),
+      notes: row.notes || "",
+      priority,
+      createdAtRaw: row.created_at || "",
+      updatedAtRaw: row.updated_at || "",
+      createdAt: formatDate(row.created_at),
+      updatedAt: formatDate(row.updated_at)
+    };
+  }
+
+  function normalizeOutreachProperty(row) {
+    const status = OUTREACH_STATUSES.includes(row.status) ? row.status : "Prospect";
+    const priority = OUTREACH_PRIORITIES.includes(row.priority) ? row.priority : "Normal";
+    const latitude = Number(row.lat);
+    const longitude = Number(row.lng);
+    return {
+      id: row.id,
+      companyId: row.company_id || "",
+      company: row.company || "",
+      propertyName: row.property_name || "Unnamed property",
+      address: row.address || "",
+      city: row.city || "",
+      state: row.state || "",
+      zip: row.zip || "",
+      neighborhood: row.neighborhood || "",
+      propertyType: row.property_type || "Other",
+      estimatedUnits: row.estimated_units || "",
+      serviceFit: row.service_fit || "",
+      service: row.service || "General Property Care",
+      visibleNeeds: row.visible_needs || "",
+      notes: row.notes || "",
+      source: row.source || "",
+      sourceUrl: row.source_url || "",
+      googleMapsUrl: row.google_maps_url || "",
+      verifiedAtRaw: dateKey(row.verified_at),
+      verifiedAt: formatDate(row.verified_at),
+      status,
+      followUpRaw: dateKey(row.follow_up),
+      followUp: formatDate(row.follow_up),
+      priority,
+      lat: Number.isFinite(latitude) ? latitude : null,
+      lng: Number.isFinite(longitude) ? longitude : null,
+      createdAtRaw: row.created_at || "",
+      updatedAtRaw: row.updated_at || "",
+      createdAt: formatDate(row.created_at),
+      updatedAt: formatDate(row.updated_at)
+    };
+  }
+
   function normalizeDocument(row) {
     const total = Number(row.total || 0);
     const lineItems = Array.isArray(row.line_items) ? row.line_items : [];
@@ -766,6 +845,116 @@
           notes: "Possible one-time cleanup before rental photos."
         })
       ],
+      outreachCompanies: [
+        normalizeOutreachCompany({
+          id: "demo-company-1",
+          company: "Princeton Property Management",
+          contact: "Leasing office",
+          email: "info@example.com",
+          phone: "(503) 555-0120",
+          website: "https://example.com",
+          city: "Portland",
+          service_area: "Portland, North Portland, Vancouver",
+          type: "Property Management",
+          service: "General Property Care",
+          source: "ChatGPT research",
+          source_url: "https://example.com/properties",
+          status: "Researched",
+          follow_up: today,
+          notes: "Several managed apartment locations look like good exterior-care fits.",
+          priority: "High",
+          created_at: now,
+          updated_at: now
+        }),
+        normalizeOutreachCompany({
+          id: "demo-company-2",
+          company: "Northbank Property Group",
+          contact: "Erin Wallace",
+          email: "erin@example.com",
+          phone: "(503) 555-0134",
+          city: "Vancouver",
+          service_area: "Vancouver, North Portland",
+          type: "Property Management",
+          service: "Trash Area Care",
+          source: "Referral",
+          status: "Follow-Up Needed",
+          follow_up: daysFromToday(1),
+          notes: "Focus pitch on trash enclosure care and recurring walks.",
+          priority: "Normal",
+          created_at: now,
+          updated_at: now
+        })
+      ],
+      outreachProperties: [
+        normalizeOutreachProperty({
+          id: "demo-property-1",
+          company_id: "demo-company-1",
+          company: "Princeton Property Management",
+          property_name: "Example Apartments",
+          address: "123 Main St",
+          city: "Portland",
+          state: "OR",
+          zip: "97211",
+          neighborhood: "North Portland",
+          property_type: "Apartment",
+          estimated_units: 42,
+          service_fit: "Entry cleanup, trash area care, mulch refresh, and recurring exterior walks.",
+          service: "Day Porter / Groundskeeping",
+          visible_needs: "Trash area care, entry cleanup, mulch refresh",
+          source: "ChatGPT research",
+          source_url: "https://example.com/properties/example-apartments",
+          google_maps_url: "https://maps.google.com/",
+          verified_at: today,
+          status: "Researched",
+          follow_up: daysFromToday(2),
+          priority: "High",
+          lat: 45.558,
+          lng: -122.682,
+          created_at: now,
+          updated_at: now
+        }),
+        normalizeOutreachProperty({
+          id: "demo-property-2",
+          company_id: "demo-company-1",
+          company: "Princeton Property Management",
+          property_name: "Example Court Apartments",
+          address: "456 N Example Ave",
+          city: "Portland",
+          state: "OR",
+          zip: "97217",
+          neighborhood: "Kenton",
+          property_type: "Apartment",
+          service_fit: "Possible shrub trimming, leaf cleanup, and courtyard cleanup.",
+          service: "Shrub / Hedge Trimming",
+          visible_needs: "Shrub trimming, leaf cleanup, courtyard cleanup",
+          source: "ChatGPT research",
+          verified_at: today,
+          status: "Prospect",
+          priority: "Normal",
+          created_at: now,
+          updated_at: now
+        }),
+        normalizeOutreachProperty({
+          id: "demo-property-3",
+          company_id: "demo-company-2",
+          company: "Northbank Property Group",
+          property_name: "River Gate Flats",
+          address: "Vancouver, WA",
+          city: "Vancouver",
+          state: "WA",
+          neighborhood: "Downtown Vancouver",
+          property_type: "Mixed-Use",
+          service_fit: "Recurring trash area care and storefront/entry cleanup.",
+          service: "Trash Area Care",
+          visible_needs: "Trash enclosure, entry cleanup",
+          source: "Referral",
+          status: "Interested",
+          follow_up: daysFromToday(1),
+          priority: "Normal",
+          created_at: now,
+          updated_at: now
+        })
+      ],
       routeStops: [
         normalizeRouteStop({ id: "demo-route-1", route_date: today, client_name: "Hannah Edge", address: "SE Division St, Portland, OR", service_type: "Groundskeeping", estimated_minutes: 75, notes: "Start with courtyard before residents return.", status: "Planned", stop_order: 1, latitude: 45.5045, longitude: -122.6235, created_at: now, updated_at: now }),
         normalizeRouteStop({ id: "demo-route-2", route_date: today, client_name: "Mason Lee", address: "Beaverton, OR", service_type: "Cleanup estimate", estimated_minutes: 45, notes: "Take photos and measure bed edges.", status: "In Progress", stop_order: 2, latitude: 45.4871, longitude: -122.8037, created_at: now, updated_at: now }),
@@ -860,11 +1049,13 @@
       state.documentsReady = true;
       state.operationsReady = true;
       state.outreachReady = true;
+      state.outreachCompaniesReady = true;
+      state.outreachPropertiesReady = true;
       state.routeStopsReady = true;
       return demoDashboardData();
     }
 
-    const [submissions, contacts, jobs, notes, reminders, documents, operations, outreachProspects, routeStops] = await Promise.all([
+    const [submissions, contacts, jobs, notes, reminders, documents, operations, outreachProspects, outreachCompanies, outreachProperties, routeStops] = await Promise.all([
       supabaseRestRequest("quote_submissions?select=*&order=created_at.desc", { method: "GET" }),
       supabaseRestRequest("contacts?select=*&order=created_at.desc", { method: "GET" }),
       supabaseRestRequest("scheduled_jobs?select=*&order=visit_date.asc", { method: "GET" }),
@@ -873,6 +1064,8 @@
       loadSalesDocuments(),
       loadOperationsRecords(),
       loadOutreachProspects(),
+      loadOutreachCompanies(),
+      loadOutreachProperties(),
       loadRouteStops()
     ]);
 
@@ -885,6 +1078,8 @@
       documents,
       operations,
       outreachProspects,
+      outreachCompanies,
+      outreachProperties,
       routeStops
     };
   }
@@ -929,6 +1124,28 @@
       return rows.map(normalizeOutreachProspect);
     } catch (error) {
       state.outreachReady = false;
+      return [];
+    }
+  }
+
+  async function loadOutreachCompanies() {
+    try {
+      const rows = await supabaseRestRequest("outreach_companies?select=*&order=company.asc", { method: "GET" });
+      state.outreachCompaniesReady = true;
+      return rows.map(normalizeOutreachCompany);
+    } catch (error) {
+      state.outreachCompaniesReady = false;
+      return [];
+    }
+  }
+
+  async function loadOutreachProperties() {
+    try {
+      const rows = await supabaseRestRequest("outreach_properties?select=*&order=company.asc,property_name.asc", { method: "GET" });
+      state.outreachPropertiesReady = true;
+      return rows.map(normalizeOutreachProperty);
+    } catch (error) {
+      state.outreachPropertiesReady = false;
       return [];
     }
   }
@@ -1354,6 +1571,15 @@
     return options.find((option) => normalizeCsvHeader(option) === normalized) || value || fallback;
   }
 
+  function normalizeDedupeKey(value) {
+    return String(value || "").toLowerCase().replace(/[^a-z0-9]+/g, " ").replace(/\s+/g, " ").trim();
+  }
+
+  function isPropertyLocationCsv(headers) {
+    const set = new Set(headers.map(normalizeCsvHeader));
+    return set.has("property_name") && set.has("company") && (set.has("visible_needs") || set.has("service_fit") || set.has("google_maps_url"));
+  }
+
   function outreachPayloadFromCsvRow(row, headerMap) {
     const payload = {
       property_name: csvCell(row, headerMap, ["property_name", "property name", "property", "site", "site name", "building"]),
@@ -1392,6 +1618,9 @@
     if (rows.length < 2) throw new Error("CSV needs a header row and at least one prospect row.");
     const headers = rows[0].map(normalizeCsvHeader);
     const headerMap = new Map(headers.map((header, index) => [header, index]));
+    if (isPropertyLocationCsv(headers)) {
+      return importOutreachPropertyCsvRows(rows.slice(1), headerMap);
+    }
     let imported = 0;
     const skipped = [];
     for (const row of rows.slice(1)) {
@@ -1406,6 +1635,105 @@
     await refreshDashboard();
     const skippedMessage = skipped.length ? ` Skipped ${skipped.length} row${skipped.length === 1 ? "" : "s"}.` : "";
     setDashboardState(`Imported ${imported} prospect${imported === 1 ? "" : "s"}.${skippedMessage}`, skipped.length && !imported ? "error" : "");
+  }
+
+  function outreachCompanyPayloadFromCsvRow(row, headerMap) {
+    const company = csvCell(row, headerMap, ["company", "management_company", "management company"]);
+    if (!company) throw new Error("missing company");
+    return {
+      company,
+      contact: csvCell(row, headerMap, ["contact", "contact_name", "contact name"]) || null,
+      email: csvCell(row, headerMap, ["email", "email address"]) || null,
+      phone: csvCell(row, headerMap, ["phone", "phone number"]) || null,
+      website: csvCell(row, headerMap, ["website", "site"]) || null,
+      city: csvCell(row, headerMap, ["city"]) || null,
+      service_area: csvCell(row, headerMap, ["service_area", "service area"]) || null,
+      type: "Property Management",
+      service: normalizeOptionValue(csvCell(row, headerMap, ["service"]), OUTREACH_SERVICE_INTERESTS, "General Property Care"),
+      source: csvCell(row, headerMap, ["source"]) || "CSV import",
+      source_url: csvCell(row, headerMap, ["source_url", "source url"]) || null,
+      status: normalizeOutreachStatus(csvCell(row, headerMap, ["status"])),
+      follow_up: csvCell(row, headerMap, ["follow_up", "follow up"]) || null,
+      notes: csvCell(row, headerMap, ["notes"]) || null,
+      priority: normalizeOutreachPriority(csvCell(row, headerMap, ["priority"]))
+    };
+  }
+
+  function outreachPropertyPayloadFromCsvRow(row, headerMap, companyId) {
+    const propertyName = csvCell(row, headerMap, ["property_name", "property name"]);
+    const company = csvCell(row, headerMap, ["company"]);
+    if (!propertyName) throw new Error("missing property name");
+    if (!company) throw new Error("missing company");
+    return {
+      company_id: companyId || null,
+      company,
+      property_name: propertyName,
+      address: csvCell(row, headerMap, ["address"]) || null,
+      city: csvCell(row, headerMap, ["city"]) || null,
+      state: csvCell(row, headerMap, ["state"]) || null,
+      zip: csvCell(row, headerMap, ["zip", "zipcode", "postal code"]) || null,
+      neighborhood: csvCell(row, headerMap, ["neighborhood"]) || null,
+      property_type: normalizeOptionValue(csvCell(row, headerMap, ["type", "property_type", "property type"]), OUTREACH_PROPERTY_TYPES, "Other"),
+      estimated_units: csvCell(row, headerMap, ["estimated_units", "estimated units", "units"]) || null,
+      service_fit: csvCell(row, headerMap, ["service_fit", "service fit"]) || null,
+      service: normalizeOptionValue(csvCell(row, headerMap, ["service"]), OUTREACH_SERVICE_INTERESTS, "General Property Care"),
+      visible_needs: csvCell(row, headerMap, ["visible_needs", "visible needs"]) || null,
+      source: csvCell(row, headerMap, ["source"]) || "CSV import",
+      source_url: csvCell(row, headerMap, ["source_url", "source url"]) || null,
+      google_maps_url: csvCell(row, headerMap, ["google_maps_url", "google maps url"]) || null,
+      verified_at: csvCell(row, headerMap, ["verified_at", "verified at"]) || null,
+      status: normalizeOutreachStatus(csvCell(row, headerMap, ["status"])),
+      follow_up: csvCell(row, headerMap, ["follow_up", "follow up"]) || null,
+      notes: csvCell(row, headerMap, ["notes"]) || null,
+      priority: normalizeOutreachPriority(csvCell(row, headerMap, ["priority"]))
+    };
+  }
+
+  async function importOutreachPropertyCsvRows(rows, headerMap) {
+    if (!state.outreachCompaniesReady || !state.outreachPropertiesReady) {
+      throw new Error("Create outreach_companies and outreach_properties first. See DASHBOARD_OUTREACH_SQL.md.");
+    }
+    let imported = 0;
+    let updated = 0;
+    const skipped = [];
+    const companyByName = new Map(state.data.outreachCompanies.map((company) => [normalizeDedupeKey(company.company), company]));
+    const propertyByAddress = new Map(state.data.outreachProperties.filter((item) => item.address).map((item) => [normalizeDedupeKey(item.address), item]));
+    const propertyByNameCompany = new Map(state.data.outreachProperties.map((item) => [normalizeDedupeKey(`${item.propertyName} ${item.company}`), item]));
+
+    for (const row of rows) {
+      try {
+        const companyPayload = outreachCompanyPayloadFromCsvRow(row, headerMap);
+        const companyKey = normalizeDedupeKey(companyPayload.company);
+        let company = companyByName.get(companyKey);
+        if (!company) {
+          company = await insertOutreachCompany(companyPayload);
+          companyByName.set(companyKey, company);
+          if (!isDemoMode()) state.data.outreachCompanies.unshift(company);
+        }
+        const propertyPayload = outreachPropertyPayloadFromCsvRow(row, headerMap, company.id);
+        const addressKey = normalizeDedupeKey(propertyPayload.address);
+        const fallbackKey = normalizeDedupeKey(`${propertyPayload.property_name} ${propertyPayload.company}`);
+        const existing = addressKey ? propertyByAddress.get(addressKey) : propertyByNameCompany.get(fallbackKey);
+        let saved = null;
+        if (existing) {
+          saved = await updateOutreachProperty(existing.id, propertyPayload);
+          updated += 1;
+        } else {
+          saved = await insertOutreachProperty(propertyPayload);
+          imported += 1;
+        }
+        if (saved?.address && (saved.lat === null || saved.lng === null)) {
+          geocodeAndStoreOutreachProperty(saved).catch(() => {});
+        }
+        if (saved?.address) propertyByAddress.set(normalizeDedupeKey(saved.address), saved);
+        propertyByNameCompany.set(normalizeDedupeKey(`${saved.propertyName} ${saved.company}`), saved);
+      } catch (error) {
+        skipped.push(error.message || "invalid row");
+      }
+    }
+    await refreshDashboard();
+    const skippedMessage = skipped.length ? ` Skipped ${skipped.length} row${skipped.length === 1 ? "" : "s"}.` : "";
+    setDashboardState(`Imported ${imported} propert${imported === 1 ? "y" : "ies"} and updated ${updated}.${skippedMessage}`, skipped.length && !imported && !updated ? "error" : "");
   }
 
   async function insertOutreachProspect(payload) {
@@ -1428,6 +1756,125 @@
       body: JSON.stringify(payload)
     });
     return normalizeOutreachProspect(rows[0]);
+  }
+
+  async function insertOutreachCompany(payload) {
+    if (!state.outreachCompaniesReady) throw new Error("Create the outreach_companies table first. See DASHBOARD_OUTREACH_SQL.md.");
+    if (isDemoMode()) {
+      const company = normalizeOutreachCompany({ id: nextDemoId("company"), ...payload, created_at: new Date().toISOString(), updated_at: new Date().toISOString() });
+      state.data.outreachCompanies.unshift(company);
+      return company;
+    }
+    const rows = await supabaseRestRequest("outreach_companies", {
+      method: "POST",
+      headers: { Prefer: "return=representation" },
+      body: JSON.stringify(payload)
+    });
+    return normalizeOutreachCompany(rows[0]);
+  }
+
+  async function updateOutreachCompany(id, payload) {
+    if (isDemoMode()) {
+      const index = state.data.outreachCompanies.findIndex((company) => company.id === id);
+      const existing = state.data.outreachCompanies[index];
+      if (index >= 0) {
+        state.data.outreachCompanies[index] = normalizeOutreachCompany({
+          id,
+          created_at: existing.createdAtRaw,
+          company: existing.company,
+          contact: existing.contact,
+          email: existing.email,
+          phone: existing.phone,
+          website: existing.website,
+          city: existing.city,
+          service_area: existing.serviceArea,
+          type: existing.type,
+          service: existing.service,
+          source: existing.source,
+          source_url: existing.sourceUrl,
+          status: existing.status,
+          follow_up: existing.followUpRaw || null,
+          notes: existing.notes,
+          priority: existing.priority,
+          ...payload,
+          updated_at: new Date().toISOString()
+        });
+      }
+      return state.data.outreachCompanies[index];
+    }
+    const rows = await supabaseRestRequest(`outreach_companies?id=eq.${encodeURIComponent(id)}`, {
+      method: "PATCH",
+      headers: { Prefer: "return=representation" },
+      body: JSON.stringify({ ...payload, updated_at: new Date().toISOString() })
+    });
+    return normalizeOutreachCompany(rows[0]);
+  }
+
+  async function insertOutreachProperty(payload) {
+    if (!state.outreachPropertiesReady) throw new Error("Create the outreach_properties table first. See DASHBOARD_OUTREACH_SQL.md.");
+    if (isDemoMode()) {
+      const property = normalizeOutreachProperty({ id: nextDemoId("property"), ...payload, created_at: new Date().toISOString(), updated_at: new Date().toISOString() });
+      state.data.outreachProperties.unshift(property);
+      return property;
+    }
+    const rows = await supabaseRestRequest("outreach_properties", {
+      method: "POST",
+      headers: { Prefer: "return=representation" },
+      body: JSON.stringify(payload)
+    });
+    return normalizeOutreachProperty(rows[0]);
+  }
+
+  async function updateOutreachProperty(id, payload) {
+    if (isDemoMode()) {
+      const index = state.data.outreachProperties.findIndex((property) => property.id === id);
+      const existing = state.data.outreachProperties[index];
+      if (index >= 0) {
+        state.data.outreachProperties[index] = normalizeOutreachProperty({
+          id,
+          created_at: existing.createdAtRaw,
+          company_id: existing.companyId,
+          company: existing.company,
+          property_name: existing.propertyName,
+          address: existing.address,
+          city: existing.city,
+          state: existing.state,
+          zip: existing.zip,
+          neighborhood: existing.neighborhood,
+          property_type: existing.propertyType,
+          estimated_units: existing.estimatedUnits,
+          service_fit: existing.serviceFit,
+          service: existing.service,
+          visible_needs: existing.visibleNeeds,
+          notes: existing.notes,
+          source: existing.source,
+          source_url: existing.sourceUrl,
+          google_maps_url: existing.googleMapsUrl,
+          verified_at: existing.verifiedAtRaw || null,
+          status: existing.status,
+          follow_up: existing.followUpRaw || null,
+          priority: existing.priority,
+          lat: existing.lat,
+          lng: existing.lng,
+          ...payload,
+          updated_at: new Date().toISOString()
+        });
+      }
+      return state.data.outreachProperties[index];
+    }
+    const rows = await supabaseRestRequest(`outreach_properties?id=eq.${encodeURIComponent(id)}`, {
+      method: "PATCH",
+      headers: { Prefer: "return=representation" },
+      body: JSON.stringify({ ...payload, updated_at: new Date().toISOString() })
+    });
+    return normalizeOutreachProperty(rows[0]);
+  }
+
+  async function geocodeAndStoreOutreachProperty(property) {
+    if (!property?.address) return null;
+    const lookup = [property.address, property.city, property.state, property.zip].filter(Boolean).join(", ");
+    const coordinates = await geocodeRouteAddress(lookup);
+    return updateOutreachProperty(property.id, { lat: coordinates.lat, lng: coordinates.lng });
   }
 
   async function updateOutreachProspect(id, payload) {
@@ -1961,6 +2408,52 @@
       const priorityMatches = state.outreachPriorityFilter === "All" || item.priority === state.outreachPriorityFilter;
       const archiveMatches = options.archive ? isClosedOutreach(item) : !options.activeOnly || !isClosedOutreach(item);
       return archiveMatches && statusMatches && typeMatches && serviceMatches && priorityMatches && outreachMatchesSearch(item);
+    });
+  }
+
+  function outreachCompanyPropertyCount(company) {
+    const key = normalizeDedupeKey(company.company);
+    return state.data.outreachProperties.filter((item) => item.companyId === company.id || normalizeDedupeKey(item.company) === key).length;
+  }
+
+  function companyMatchesSearch(company) {
+    const query = (state.outreachSearch || state.search || "").trim().toLowerCase();
+    if (!query) return true;
+    return [company.company, company.contact, company.email, company.phone, company.website, company.city, company.serviceArea, company.service, company.source, company.notes]
+      .some((value) => String(value || "").toLowerCase().includes(query));
+  }
+
+  function propertyMatchesSearch(property) {
+    const query = (state.outreachSearch || state.search || "").trim().toLowerCase();
+    if (!query) return true;
+    return [property.company, property.propertyName, property.address, property.city, property.neighborhood, property.visibleNeeds, property.serviceFit, property.notes, property.service]
+      .some((value) => String(value || "").toLowerCase().includes(query));
+  }
+
+  function filteredOutreachCompanies() {
+    return state.data.outreachCompanies.filter((company) => {
+      const statusMatches = state.outreachStatusFilter === "All"
+        || (state.outreachStatusFilter === "Active" ? OUTREACH_ACTIVE_STATUSES.includes(company.status) : company.status === state.outreachStatusFilter);
+      const priorityMatches = state.outreachPriorityFilter === "All" || company.priority === state.outreachPriorityFilter;
+      return statusMatches && priorityMatches && companyMatchesSearch(company);
+    });
+  }
+
+  function filteredOutreachProperties() {
+    return state.data.outreachProperties.filter((property) => {
+      const companyMatches = state.outreachCompanyFilter === "All" || property.company === state.outreachCompanyFilter;
+      const cityMatches = state.outreachCityFilter === "All" || property.city === state.outreachCityFilter;
+      const neighborhoodMatches = state.outreachNeighborhoodFilter === "All" || property.neighborhood === state.outreachNeighborhoodFilter;
+      const serviceMatches = state.outreachServiceFilter === "All" || property.service === state.outreachServiceFilter;
+      const statusMatches = state.outreachStatusFilter === "All"
+        || (state.outreachStatusFilter === "Active" ? OUTREACH_ACTIVE_STATUSES.includes(property.status) : property.status === state.outreachStatusFilter);
+      const priorityMatches = state.outreachPriorityFilter === "All" || property.priority === state.outreachPriorityFilter;
+      const needsMatches = !state.outreachVisibleNeedsFilter || property.visibleNeeds.toLowerCase().includes(state.outreachVisibleNeedsFilter.toLowerCase());
+      const verifiedMatches = state.outreachVerifiedFilter === "All"
+        || (state.outreachVerifiedFilter === "Verified" ? Boolean(property.verifiedAtRaw) : !property.verifiedAtRaw);
+      const addressMatches = !state.outreachMissingAddressOnly || !property.address;
+      const coordinateMatches = !state.outreachMissingCoordinatesOnly || property.lat === null || property.lng === null;
+      return companyMatches && cityMatches && neighborhoodMatches && serviceMatches && statusMatches && priorityMatches && needsMatches && verifiedMatches && addressMatches && coordinateMatches && propertyMatchesSearch(property);
     });
   }
 
@@ -3283,14 +3776,119 @@
     els.outreachServiceFilter.value = services.includes(serviceCurrent) ? serviceCurrent : "All";
     state.outreachTypeFilter = els.outreachTypeFilter.value;
     state.outreachServiceFilter = els.outreachServiceFilter.value;
+
+    const populateSelect = (element, label, values, current) => {
+      if (!element) return "All";
+      const unique = Array.from(new Set(values.filter(Boolean))).sort();
+      element.innerHTML = `<option value="All">${escapeHtml(label)}</option>${unique.map((item) => `<option value="${escapeHtml(item)}">${escapeHtml(item)}</option>`).join("")}`;
+      element.value = unique.includes(current) ? current : "All";
+      return element.value;
+    };
+    state.outreachCompanyFilter = populateSelect(els.outreachPropertyCompanyFilter, "All Companies", data.outreachCompanies.map((item) => item.company).concat(data.outreachProperties.map((item) => item.company)), state.outreachCompanyFilter);
+    state.outreachCityFilter = populateSelect(els.outreachPropertyCityFilter, "All Cities", data.outreachProperties.map((item) => item.city), state.outreachCityFilter);
+    state.outreachNeighborhoodFilter = populateSelect(els.outreachPropertyNeighborhoodFilter, "All Neighborhoods", data.outreachProperties.map((item) => item.neighborhood), state.outreachNeighborhoodFilter);
+  }
+
+  function setOutreachViewVisibility() {
+    qsa("[data-outreach-view]").forEach((button) => {
+      button.classList.toggle("is-active", button.dataset.outreachView === state.outreachView);
+    });
+    qsa("[data-outreach-view-panel]").forEach((panel) => {
+      panel.hidden = panel.dataset.outreachViewPanel !== state.outreachView;
+    });
+  }
+
+  function renderOutreachCompanies() {
+    if (!els.outreachCompanyTable) return;
+    if (!state.outreachCompaniesReady) {
+      const message = "Companies need the outreach_companies table. Run DASHBOARD_OUTREACH_SQL.md, then refresh.";
+      els.outreachCompanyTable.innerHTML = `<tr><td colspan="9">${emptyState(message)}</td></tr>`;
+      if (els.outreachCompanyCards) els.outreachCompanyCards.innerHTML = emptyState(message);
+      return;
+    }
+    const companies = filteredOutreachCompanies();
+    if (!companies.length) {
+      els.outreachCompanyTable.innerHTML = `<tr><td colspan="9">${emptyState("No companies match this view yet.")}</td></tr>`;
+      if (els.outreachCompanyCards) els.outreachCompanyCards.innerHTML = emptyState("No companies match this view yet.");
+      return;
+    }
+    els.outreachCompanyTable.innerHTML = companies.map((company) => `
+      <tr>
+        <td><strong>${escapeHtml(company.company)}</strong><br><span class="meta">${escapeHtml(company.website || company.sourceUrl || "No website")}</span></td>
+        <td>${escapeHtml(company.serviceArea || company.city || "Not set")}</td>
+        <td>${escapeHtml(company.contact || "No contact")}<br><span class="meta">${escapeHtml(company.email || "No email")}<br>${escapeHtml(company.phone || "No phone")}</span></td>
+        <td>${escapeHtml(company.status)}</td>
+        <td>${escapeHtml(company.followUp)}</td>
+        <td>${escapeHtml(company.priority)}</td>
+        <td>${escapeHtml(outreachCompanyPropertyCount(company))}</td>
+        <td>${escapeHtml(company.notes)}</td>
+        <td>${actionButton("Open", "open-outreach-company", company.id)}</td>
+      </tr>
+    `).join("");
+    if (els.outreachCompanyCards) {
+      els.outreachCompanyCards.innerHTML = companies.map((company) => `
+        <article class="outreach-card">
+          <div class="item-topline"><div><h4>${escapeHtml(company.company)}</h4><div class="meta">${escapeHtml(company.serviceArea || company.city || "No service area")}</div></div><span class="status">${escapeHtml(company.status)}</span></div>
+          <p class="item-body">${escapeHtml(company.contact || "No contact")} / ${escapeHtml(company.email || company.phone || "No contact info")}</p>
+          <p class="small">${escapeHtml(outreachCompanyPropertyCount(company))} managed properties / ${escapeHtml(company.priority)} priority</p>
+          ${actionButton("Open", "open-outreach-company", company.id)}
+        </article>
+      `).join("");
+    }
+  }
+
+  function renderOutreachProperties() {
+    if (!els.outreachPropertyTable) return;
+    if (!state.outreachPropertiesReady) {
+      const message = "Managed properties need the outreach_properties table. Run DASHBOARD_OUTREACH_SQL.md, then refresh.";
+      els.outreachPropertyTable.innerHTML = `<tr><td colspan="11">${emptyState(message)}</td></tr>`;
+      if (els.outreachPropertyCards) els.outreachPropertyCards.innerHTML = emptyState(message);
+      return;
+    }
+    const properties = filteredOutreachProperties();
+    if (!properties.length) {
+      els.outreachPropertyTable.innerHTML = `<tr><td colspan="11">${emptyState("No managed properties match this view yet.")}</td></tr>`;
+      if (els.outreachPropertyCards) els.outreachPropertyCards.innerHTML = emptyState("No managed properties match this view yet.");
+      return;
+    }
+    els.outreachPropertyTable.innerHTML = properties.map((property) => `
+      <tr>
+        <td><strong>${escapeHtml(property.propertyName)}</strong><br><span class="meta">${escapeHtml(property.propertyType)}</span></td>
+        <td>${escapeHtml(property.company)}</td>
+        <td>${escapeHtml([property.address, property.city, property.state, property.zip].filter(Boolean).join(", "))}</td>
+        <td>${escapeHtml(property.neighborhood)}</td>
+        <td>${escapeHtml(property.serviceFit)}</td>
+        <td>${escapeHtml(property.visibleNeeds)}</td>
+        <td>${escapeHtml(property.status)}</td>
+        <td>${escapeHtml(property.followUp)}</td>
+        <td>${escapeHtml(property.priority)}</td>
+        <td>${escapeHtml(property.verifiedAt)}</td>
+        <td>${actionButton("Open", "open-outreach-property", property.id)}</td>
+      </tr>
+    `).join("");
+    if (els.outreachPropertyCards) {
+      els.outreachPropertyCards.innerHTML = properties.map((property) => `
+        <article class="outreach-card">
+          <div class="item-topline"><div><h4>${escapeHtml(property.propertyName)}</h4><div class="meta">${escapeHtml(property.company)} / ${escapeHtml(property.city)}</div></div><span class="status">${escapeHtml(property.status)}</span></div>
+          <p class="item-body">${escapeHtml(property.serviceFit || property.service)}</p>
+          <p class="small">${escapeHtml(property.visibleNeeds || "No visible needs noted")} / ${escapeHtml(property.priority)} priority</p>
+          ${actionButton("Open", "open-outreach-property", property.id)}
+        </article>
+      `).join("");
+    }
   }
 
   function renderOutreach(data) {
     if (!els.outreachMetrics) return;
     populateOutreachFilters(data);
+    setOutreachViewVisibility();
     if (els.outreachSearch && els.outreachSearch.value !== state.outreachSearch) els.outreachSearch.value = state.outreachSearch;
     if (els.outreachStatusFilter) els.outreachStatusFilter.value = state.outreachStatusFilter;
     if (els.outreachPriorityFilter) els.outreachPriorityFilter.value = state.outreachPriorityFilter;
+    if (els.outreachPropertyNeedsFilter && els.outreachPropertyNeedsFilter.value !== state.outreachVisibleNeedsFilter) els.outreachPropertyNeedsFilter.value = state.outreachVisibleNeedsFilter;
+    if (els.outreachPropertyVerifiedFilter) els.outreachPropertyVerifiedFilter.value = state.outreachVerifiedFilter;
+    if (els.outreachPropertyMissingAddress) els.outreachPropertyMissingAddress.checked = state.outreachMissingAddressOnly;
+    if (els.outreachPropertyMissingCoordinates) els.outreachPropertyMissingCoordinates.checked = state.outreachMissingCoordinatesOnly;
 
     if (!state.outreachReady) {
       const message = "Outreach needs the outreach_prospects table. Run DASHBOARD_OUTREACH_SQL.md, then refresh.";
@@ -3312,13 +3910,16 @@
     const due = outreachDueProspects();
     const hot = outreachHotProspects();
     const metrics = [
+      ["Companies", data.outreachCompanies.length],
+      ["Properties", data.outreachProperties.length],
       ["Total Prospects", data.outreachProspects.length],
       ["Follow-Ups Due", due.length],
-      ["Interested", data.outreachProspects.filter((item) => item.status === "Interested").length],
-      ["Quotes Needed", data.outreachProspects.filter((item) => item.status === "Quote Needed").length],
-      ["Won Clients", data.outreachProspects.filter((item) => item.status === "Won").length]
+      ["Interested", data.outreachProspects.filter((item) => item.status === "Interested").length + data.outreachCompanies.filter((item) => item.status === "Interested").length + data.outreachProperties.filter((item) => item.status === "Interested").length]
     ];
     els.outreachMetrics.innerHTML = metrics.map(([label, value]) => `<article class="metric-card"><strong>${escapeHtml(value)}</strong><span>${escapeHtml(label)}</span></article>`).join("");
+
+    renderOutreachCompanies();
+    renderOutreachProperties();
 
     if (els.outreachFollowups) {
       els.outreachFollowups.innerHTML = due.length ? due.slice(0, 6).map((item) => renderOutreachCard(item, "due")).join("") : emptyState("No follow-ups due.");
@@ -3398,6 +3999,78 @@
             ${item ? `<button type="button" class="danger-action" data-action="delete-outreach-prospect" data-id="${escapeHtml(item.id)}">${buttonContent("Delete Prospect", "delete-outreach-prospect")}</button>` : ""}
           </div>
         </form>
+      </div>
+    `;
+  }
+
+  function openOutreachCompanyDrawer(id) {
+    const company = state.data.outreachCompanies.find((item) => item.id === id);
+    if (!company || !els.detailDrawer || !els.detailContent) return;
+    const properties = state.data.outreachProperties.filter((property) => property.companyId === company.id || normalizeDedupeKey(property.company) === normalizeDedupeKey(company.company));
+    els.detailDrawer.hidden = false;
+    els.detailContent.innerHTML = `
+      <div class="drawer-content outreach-drawer">
+        <p class="eyebrow">Outreach Company</p>
+        <h3>${escapeHtml(company.company)}</h3>
+        <div class="drawer-grid">
+          <div class="drawer-field"><span>Contact</span>${escapeHtml(company.contact || "Not set")}</div>
+          <div class="drawer-field"><span>Email</span>${escapeHtml(company.email || "Not set")}</div>
+          <div class="drawer-field"><span>Phone</span>${escapeHtml(company.phone || "Not set")}</div>
+          <div class="drawer-field"><span>Website</span>${company.website ? `<a href="${escapeHtml(company.website)}" target="_blank" rel="noopener noreferrer">${escapeHtml(company.website)}</a>` : "Not set"}</div>
+          <div class="drawer-field"><span>Service area</span>${escapeHtml(company.serviceArea || company.city || "Not set")}</div>
+          <div class="drawer-field"><span>Follow-up</span>${escapeHtml(company.followUp)}</div>
+          <div class="drawer-field"><span>Status</span>${escapeHtml(company.status)}</div>
+          <div class="drawer-field"><span>Priority</span>${escapeHtml(company.priority)}</div>
+        </div>
+        <p class="item-body">${escapeHtml(company.notes || "No company notes yet.")}</p>
+        <div class="drawer-actions">
+          <button type="button" data-action="prefill-outreach-property" data-id="${escapeHtml(company.id)}">${buttonContent("Add Property", "new-outreach-prospect")}</button>
+          <button type="button" data-action="import-outreach-csv">${buttonContent("Import Properties", "import-outreach-csv")}</button>
+        </div>
+        <h4>Managed properties (${properties.length})</h4>
+        <div class="profile-mini-list">
+          ${properties.length ? properties.map((property) => `
+            <button class="profile-mini-item" type="button" data-action="open-outreach-property" data-id="${escapeHtml(property.id)}">
+              <strong>${escapeHtml(property.propertyName)}</strong>
+              <span>${escapeHtml([property.address, property.city, property.neighborhood].filter(Boolean).join(" / "))}</span>
+            </button>
+          `).join("") : emptyState("No managed properties attached yet.")}
+        </div>
+      </div>
+    `;
+  }
+
+  function openOutreachPropertyDrawer(id) {
+    const property = state.data.outreachProperties.find((item) => item.id === id);
+    if (!property || !els.detailDrawer || !els.detailContent) return;
+    els.detailDrawer.hidden = false;
+    els.detailContent.innerHTML = `
+      <div class="drawer-content outreach-drawer">
+        <p class="eyebrow">Managed Property</p>
+        <h3>${escapeHtml(property.propertyName)}</h3>
+        <div class="drawer-grid">
+          <div class="drawer-field"><span>Company</span>${escapeHtml(property.company || "Not set")}</div>
+          <div class="drawer-field"><span>Address</span>${escapeHtml([property.address, property.city, property.state, property.zip].filter(Boolean).join(", ") || "Not set")}</div>
+          <div class="drawer-field"><span>Neighborhood</span>${escapeHtml(property.neighborhood || "Not set")}</div>
+          <div class="drawer-field"><span>Type / Units</span>${escapeHtml(property.propertyType)}${property.estimatedUnits ? ` / ${escapeHtml(property.estimatedUnits)} units` : ""}</div>
+          <div class="drawer-field"><span>Status</span>${escapeHtml(property.status)}</div>
+          <div class="drawer-field"><span>Follow-up</span>${escapeHtml(property.followUp)}</div>
+          <div class="drawer-field"><span>Priority</span>${escapeHtml(property.priority)}</div>
+          <div class="drawer-field"><span>Verified</span>${escapeHtml(property.verifiedAt)}</div>
+          <div class="drawer-field"><span>Map pin</span>${property.lat !== null && property.lng !== null ? `${escapeHtml(property.lat)}, ${escapeHtml(property.lng)}` : "No lat/lng"}</div>
+          <div class="drawer-field"><span>Google Maps</span>${property.googleMapsUrl ? `<a href="${escapeHtml(property.googleMapsUrl)}" target="_blank" rel="noopener noreferrer">Open map</a>` : "Not set"}</div>
+          <div class="drawer-field"><span>Source</span>${property.sourceUrl ? `<a href="${escapeHtml(property.sourceUrl)}" target="_blank" rel="noopener noreferrer">${escapeHtml(property.source || "Source")}</a>` : escapeHtml(property.source || "Not set")}</div>
+        </div>
+        <h4>Service fit</h4>
+        <p class="item-body">${escapeHtml(property.serviceFit || property.service || "No service fit noted.")}</p>
+        <h4>Visible needs</h4>
+        <p class="item-body">${escapeHtml(property.visibleNeeds || "No visible needs noted.")}</p>
+        <h4>Notes</h4>
+        <p class="item-body">${escapeHtml(property.notes || "No property notes yet.")}</p>
+        <div class="drawer-actions">
+          <button type="button" data-action="route-outreach-property" data-id="${escapeHtml(property.id)}">${buttonContent("Add to Route", "route-outreach-prospect")}</button>
+          <button type="button" data-action="geocode-outreach-property" data-id="${escapeHtml(property.id)}">${buttonContent("Find Map Pin", "find-stop-map")}</button>
+        </div>
       </div>
     `;
   }
@@ -4108,11 +4781,27 @@
       });
     }
 
+    qsa("[data-outreach-view]").forEach((button) => {
+      button.addEventListener("click", async () => {
+        state.outreachView = button.dataset.outreachView || "companies";
+        await render();
+      });
+    });
+
     [
       [els.outreachStatusFilter, "outreachStatusFilter"],
       [els.outreachTypeFilter, "outreachTypeFilter"],
       [els.outreachServiceFilter, "outreachServiceFilter"],
-      [els.outreachPriorityFilter, "outreachPriorityFilter"]
+      [els.outreachPriorityFilter, "outreachPriorityFilter"],
+      [els.outreachCompanyStatusFilter, "outreachStatusFilter"],
+      [els.outreachCompanyPriorityFilter, "outreachPriorityFilter"],
+      [els.outreachPropertyCompanyFilter, "outreachCompanyFilter"],
+      [els.outreachPropertyCityFilter, "outreachCityFilter"],
+      [els.outreachPropertyNeighborhoodFilter, "outreachNeighborhoodFilter"],
+      [els.outreachPropertyServiceFilter, "outreachServiceFilter"],
+      [els.outreachPropertyStatusFilter, "outreachStatusFilter"],
+      [els.outreachPropertyPriorityFilter, "outreachPriorityFilter"],
+      [els.outreachPropertyVerifiedFilter, "outreachVerifiedFilter"]
     ].forEach(([element, key]) => {
       if (!element) return;
       element.addEventListener("change", async () => {
@@ -4120,6 +4809,41 @@
         await render();
       });
     });
+
+    if (els.outreachCompanySearch) {
+      els.outreachCompanySearch.addEventListener("input", async () => {
+        state.outreachSearch = els.outreachCompanySearch.value;
+        await render();
+      });
+    }
+
+    if (els.outreachPropertySearch) {
+      els.outreachPropertySearch.addEventListener("input", async () => {
+        state.outreachSearch = els.outreachPropertySearch.value;
+        await render();
+      });
+    }
+
+    if (els.outreachPropertyNeedsFilter) {
+      els.outreachPropertyNeedsFilter.addEventListener("input", async () => {
+        state.outreachVisibleNeedsFilter = els.outreachPropertyNeedsFilter.value;
+        await render();
+      });
+    }
+
+    if (els.outreachPropertyMissingAddress) {
+      els.outreachPropertyMissingAddress.addEventListener("change", async () => {
+        state.outreachMissingAddressOnly = els.outreachPropertyMissingAddress.checked;
+        await render();
+      });
+    }
+
+    if (els.outreachPropertyMissingCoordinates) {
+      els.outreachPropertyMissingCoordinates.addEventListener("change", async () => {
+        state.outreachMissingCoordinatesOnly = els.outreachPropertyMissingCoordinates.checked;
+        await render();
+      });
+    }
 
     if (els.propertyFilter) {
       els.propertyFilter.addEventListener("change", async () => {
@@ -4331,6 +5055,53 @@
         if (els.outreachImport) els.outreachImport.click();
       } else if (action === "open-outreach-prospect" || action === "edit-outreach-prospect") {
         openOutreachDrawer(id);
+      } else if (action === "open-outreach-company") {
+        openOutreachCompanyDrawer(id);
+      } else if (action === "open-outreach-property") {
+        openOutreachPropertyDrawer(id);
+      } else if (action === "prefill-outreach-property") {
+        const company = state.data.outreachCompanies.find((item) => item.id === id);
+        if (!company) return;
+        setDashboardState("Use Import CSV to add properties for this company, or import a row with this company name.");
+      } else if (action === "route-outreach-property") {
+        const property = state.data.outreachProperties.find((item) => item.id === id);
+        if (!property) return;
+        try {
+          setDashboardState("Adding property to route...");
+          const stop = await insertRouteStop({
+            client_name: property.propertyName,
+            address: [property.address, property.city, property.state, property.zip].filter(Boolean).join(", "),
+            service_type: property.service || "General Property Care",
+            estimated_minutes: 30,
+            status: "Planned",
+            notes: `Managed by ${property.company}. ${property.serviceFit || property.visibleNeeds || property.notes || ""}`.trim()
+          });
+          if (stop?.address && !hasRouteCoordinates(stop)) {
+            try {
+              await geocodeAndStoreRouteStop(stop);
+            } catch (error) {
+              setDashboardState(error.message || "Route stop added, but map pin lookup failed.", "error");
+            }
+          }
+          await refreshDashboard();
+          setActiveSection("route-planner");
+          history.replaceState(null, "", "#route-planner");
+          setDashboardState("");
+        } catch (error) {
+          setDashboardState(error.message || "Unable to add property to route.", "error");
+        }
+      } else if (action === "geocode-outreach-property") {
+        const property = state.data.outreachProperties.find((item) => item.id === id);
+        if (!property) return;
+        try {
+          setDashboardState("Finding property map pin...");
+          const updated = await geocodeAndStoreOutreachProperty(property);
+          await refreshDashboard();
+          if (updated) openOutreachPropertyDrawer(updated.id);
+          setDashboardState("");
+        } catch (error) {
+          setDashboardState(error.message || "Unable to find property map pin.", "error");
+        }
       } else if (action === "add-client-job") {
         const contact = state.data.contacts.find((item) => item.id === id);
         if (!contact) return;
@@ -5050,13 +5821,31 @@
     els.globalSearch = qs("[data-global-search]");
     els.clientSearch = qs("[data-client-search]");
     els.outreachSearch = qs("[data-outreach-search]");
+    els.outreachCompanySearch = qs("[data-outreach-company-search]");
+    els.outreachPropertySearch = qs("[data-outreach-property-search]");
     els.outreachStatusFilter = qs("[data-outreach-status-filter]");
     els.outreachTypeFilter = qs("[data-outreach-type-filter]");
     els.outreachServiceFilter = qs("[data-outreach-service-filter]");
     els.outreachPriorityFilter = qs("[data-outreach-priority-filter]");
+    els.outreachCompanyStatusFilter = qs("[data-outreach-company-status-filter]");
+    els.outreachCompanyPriorityFilter = qs("[data-outreach-company-priority-filter]");
+    els.outreachPropertyCompanyFilter = qs("[data-outreach-property-company-filter]");
+    els.outreachPropertyCityFilter = qs("[data-outreach-property-city-filter]");
+    els.outreachPropertyNeighborhoodFilter = qs("[data-outreach-property-neighborhood-filter]");
+    els.outreachPropertyServiceFilter = qs("[data-outreach-property-service-filter]");
+    els.outreachPropertyStatusFilter = qs("[data-outreach-property-status-filter]");
+    els.outreachPropertyPriorityFilter = qs("[data-outreach-property-priority-filter]");
+    els.outreachPropertyNeedsFilter = qs("[data-outreach-property-needs-filter]");
+    els.outreachPropertyVerifiedFilter = qs("[data-outreach-property-verified-filter]");
+    els.outreachPropertyMissingAddress = qs("[data-outreach-property-missing-address]");
+    els.outreachPropertyMissingCoordinates = qs("[data-outreach-property-missing-coordinates]");
     els.outreachMetrics = qs("[data-outreach-metrics]");
     els.outreachFollowups = qs("[data-outreach-followups]");
     els.outreachHot = qs("[data-outreach-hot]");
+    els.outreachCompanyTable = qs("[data-outreach-company-table]");
+    els.outreachCompanyCards = qs("[data-outreach-company-cards]");
+    els.outreachPropertyTable = qs("[data-outreach-property-table]");
+    els.outreachPropertyCards = qs("[data-outreach-property-cards]");
     els.outreachTable = qs("[data-outreach-table]");
     els.outreachCards = qs("[data-outreach-cards]");
     els.outreachArchive = qs("[data-outreach-archive]");

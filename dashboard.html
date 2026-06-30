@@ -11,10 +11,10 @@
     <link rel="icon" href="/favicon.ico" sizes="any">
     <link rel="apple-touch-icon" href="/apple-touch-icon.png">
     <link rel="manifest" href="/dashboard.webmanifest">
-    <link rel="stylesheet" href="dashboard.css?v=20260630-1">
+    <link rel="stylesheet" href="dashboard.css?v=20260630-2">
     <link rel="stylesheet" href="dashboard-mobile-fix.css?v=20260622-3">
     <script src="dashboard-config.js?v=20260623-1" defer></script>
-    <script src="dashboard.js?v=20260630-1" defer></script>
+    <script src="dashboard.js?v=20260630-2" defer></script>
   </head>
   <body>
     <main class="dashboard-shell" aria-labelledby="dashboard-title">
@@ -459,11 +459,11 @@
                 <input name="site_name" placeholder="Client / title" required>
                 <input name="city" placeholder="Property / area" autocomplete="street-address" data-address-autocomplete>
                 <input name="service" placeholder="Job, task, or reminder" required>
-                <button type="submit"><span class="button-icon" aria-hidden="true">+</span><span>Add Visit</span></button>
                 <label class="recurring-toggle">
                   <input name="is_recurring" type="checkbox" data-recurring-toggle>
                   <span>Recurring visit</span>
                 </label>
+                <button type="submit"><span class="button-icon" aria-hidden="true">+</span><span>Add Visit</span></button>
                 <div class="recurring-controls" data-recurring-controls hidden>
                   <label>Repeat every
                     <input name="recurrence_interval" type="number" min="1" max="365" value="1" inputmode="numeric">

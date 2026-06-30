@@ -923,7 +923,16 @@ td {
 }
 
 .schedule-create-form {
-  grid-template-columns: repeat(6, minmax(120px, 1fr));
+  grid-template-columns:
+    minmax(120px, 0.9fr)
+    minmax(120px, 0.9fr)
+    minmax(150px, 1.15fr)
+    minmax(150px, 1.15fr)
+    minmax(170px, 1.25fr)
+    max-content
+    max-content;
+  align-items: center;
+  gap: 8px;
 }
 
 .recurring-toggle {
@@ -989,6 +998,22 @@ td {
 .schedule-form .recurring-toggle,
 .schedule-form .recurring-controls {
   grid-column: auto;
+}
+
+.schedule-create-form .recurring-toggle {
+  grid-column: auto;
+  width: max-content;
+  min-height: 38px;
+  white-space: nowrap;
+}
+
+.schedule-create-form .recurring-controls {
+  grid-column: 1 / -1;
+}
+
+.schedule-create-form button[type="submit"] {
+  justify-self: end;
+  white-space: nowrap;
 }
 
 .document-card {
@@ -4043,7 +4068,6 @@ button.profile-mini-item {
   .document-form,
   .client-form,
   .operations-form,
-  .schedule-create-form,
   .drawer-grid,
   .note-form {
     grid-template-columns: 1fr;
@@ -4051,6 +4075,16 @@ button.profile-mini-item {
 }
 
 @media (max-width: 640px) {
+  .schedule-create-form {
+    grid-template-columns: 1fr;
+  }
+
+  .schedule-create-form .recurring-toggle,
+  .schedule-create-form button[type="submit"] {
+    justify-self: stretch;
+    width: 100%;
+  }
+
   .recurring-controls {
     grid-template-columns: 1fr;
   }

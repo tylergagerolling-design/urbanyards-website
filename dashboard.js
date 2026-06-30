@@ -36,8 +36,6 @@
     outreachNeighborhoodFilter: "All",
     outreachVisibleNeedsFilter: "",
     outreachVerifiedFilter: "All",
-    outreachMissingAddressOnly: false,
-    outreachMissingCoordinatesOnly: false,
     selectedOutreachIds: new Set(),
     selectedOutreachCompanyIds: new Set(),
     selectedOutreachPropertyIds: new Set(),
@@ -2562,9 +2560,7 @@
       const needsMatches = !state.outreachVisibleNeedsFilter || property.visibleNeeds.toLowerCase().includes(state.outreachVisibleNeedsFilter.toLowerCase());
       const verifiedMatches = state.outreachVerifiedFilter === "All"
         || (state.outreachVerifiedFilter === "Verified" ? Boolean(property.verifiedAtRaw) : !property.verifiedAtRaw);
-      const addressMatches = !state.outreachMissingAddressOnly || !property.address;
-      const coordinateMatches = !state.outreachMissingCoordinatesOnly || property.lat === null || property.lng === null;
-      return companyMatches && cityMatches && neighborhoodMatches && serviceMatches && statusMatches && priorityMatches && needsMatches && verifiedMatches && addressMatches && coordinateMatches && propertyMatchesSearch(property);
+      return companyMatches && cityMatches && neighborhoodMatches && serviceMatches && statusMatches && priorityMatches && needsMatches && verifiedMatches && propertyMatchesSearch(property);
     });
   }
 
@@ -4026,8 +4022,6 @@
     if (els.outreachPriorityFilter) els.outreachPriorityFilter.value = state.outreachPriorityFilter;
     if (els.outreachPropertyNeedsFilter && els.outreachPropertyNeedsFilter.value !== state.outreachVisibleNeedsFilter) els.outreachPropertyNeedsFilter.value = state.outreachVisibleNeedsFilter;
     if (els.outreachPropertyVerifiedFilter) els.outreachPropertyVerifiedFilter.value = state.outreachVerifiedFilter;
-    if (els.outreachPropertyMissingAddress) els.outreachPropertyMissingAddress.checked = state.outreachMissingAddressOnly;
-    if (els.outreachPropertyMissingCoordinates) els.outreachPropertyMissingCoordinates.checked = state.outreachMissingCoordinatesOnly;
 
     if (!state.outreachReady) {
       const message = "Outreach needs the outreach_prospects table. Run DASHBOARD_OUTREACH_SQL.md, then refresh.";
@@ -5007,20 +5001,6 @@
     if (els.outreachPropertyNeedsFilter) {
       els.outreachPropertyNeedsFilter.addEventListener("input", async () => {
         state.outreachVisibleNeedsFilter = els.outreachPropertyNeedsFilter.value;
-        await render();
-      });
-    }
-
-    if (els.outreachPropertyMissingAddress) {
-      els.outreachPropertyMissingAddress.addEventListener("change", async () => {
-        state.outreachMissingAddressOnly = els.outreachPropertyMissingAddress.checked;
-        await render();
-      });
-    }
-
-    if (els.outreachPropertyMissingCoordinates) {
-      els.outreachPropertyMissingCoordinates.addEventListener("change", async () => {
-        state.outreachMissingCoordinatesOnly = els.outreachPropertyMissingCoordinates.checked;
         await render();
       });
     }
@@ -6143,8 +6123,6 @@
     els.outreachPropertyPriorityFilter = qs("[data-outreach-property-priority-filter]");
     els.outreachPropertyNeedsFilter = qs("[data-outreach-property-needs-filter]");
     els.outreachPropertyVerifiedFilter = qs("[data-outreach-property-verified-filter]");
-    els.outreachPropertyMissingAddress = qs("[data-outreach-property-missing-address]");
-    els.outreachPropertyMissingCoordinates = qs("[data-outreach-property-missing-coordinates]");
     els.outreachMetrics = qs("[data-outreach-metrics]");
     els.outreachFollowups = qs("[data-outreach-followups]");
     els.outreachHot = qs("[data-outreach-hot]");

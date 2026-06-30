@@ -37,7 +37,6 @@
     outreachVisibleNeedsFilter: "",
     outreachVerifiedFilter: "All",
     selectedOutreachIds: new Set(),
-    selectedOutreachCompanyIds: new Set(),
     selectedOutreachPropertyIds: new Set(),
     pendingOutreachImport: null,
     routeDate: todayKey(),
@@ -137,7 +136,6 @@
       "delete-document": "x",
       "delete-note": "x",
       "delete-operation": "x",
-      "delete-outreach-company": "x",
       "delete-outreach-property": "x",
       "delete-reminder": "x",
       "delete-outreach-prospect": "x",
@@ -1511,6 +1509,106 @@
     if (!OUTREACH_STATUSES.includes(payload.status)) throw new Error("Choose a valid outreach status.");
     if (!OUTREACH_PRIORITIES.includes(payload.priority)) throw new Error("Choose a valid priority.");
     return payload;
+  }
+
+  function outreachCompanyPayloadFromForm(form) {
+    const formData = new FormData(form);
+    const payload = {
+      company: String(formData.get("company") || "").trim(),
+      contact: String(formData.get("contact") || "").trim() || null,
+      email: String(formData.get("email") || "").trim() || null,
+      phone: String(formData.get("phone") || "").trim() || null,
+      website: String(formData.get("website") || "").trim() || null,
+      service_area: String(formData.get("service_area") || "").trim() || null,
+      follow_up: String(formData.get("follow_up") || "") || null,
+      status: String(formData.get("status") || "Prospect"),
+      priority: String(formData.get("priority") || "Normal"),
+      notes: String(formData.get("notes") || "").trim() || null
+    };
+    if (!payload.company) throw new Error("Add a company name.");
+    if (!OUTREACH_STATUSES.includes(payload.status)) throw new Error("Choose a valid company status.");
+    if (!OUTREACH_PRIORITIES.includes(payload.priority)) throw new Error("Choose a valid priority.");
+    return payload;
+  }
+
+  function outreachPropertyPayloadFromForm(form, company) {
+    const formData = new FormData(form);
+    const propertyName = String(formData.get("property_name") || "").trim();
+    const address = String(formData.get("address") || "").trim();
+    const city = String(formData.get("city") || "").trim();
+    if (!propertyName && !address) throw new Error("Add a property name or address.");
+    return {
+      company_id: company.id,
+      company: company.company,
+      property_name: propertyName || null,
+      address: address || null,
+      city: city || company.serviceArea || company.city || null,
+      neighborhood: String(formData.get("neighborhood") || "").trim() || null,
+      notes: String(formData.get("notes") || "").trim() || null,
+      status: "Prospect",
+      priority: company.priority || "Normal"
+    };
+  }
+
+  function prospectMatchesCompany(prospect, company) {
+    const companyKey = normalizeDedupeKey(company.company);
+    const prospectCompanyKey = normalizeDedupeKey(prospect.managementCompany || prospect.propertyName);
+    if (!companyKey || companyKey !== prospectCompanyKey) return false;
+    const emailMatches = company.email && prospect.email && normalizeDedupeKey(company.email) === normalizeDedupeKey(prospect.email);
+    const phoneMatches = company.phone && prospect.phone && normalizeDedupeKey(company.phone) === normalizeDedupeKey(prospect.phone);
+    return emailMatches || phoneMatches || (!company.email && !company.phone);
+  }
+
+  function prospectMatchesProperty(prospect, property) {
+    const nameMatches = normalizeDedupeKey(prospect.propertyName) === normalizeDedupeKey(property.propertyName);
+    const addressMatches = normalizeDedupeKey(prospect.address) === normalizeDedupeKey(property.address);
+    return Boolean(property.propertyName && property.address && nameMatches && addressMatches);
+  }
+
+  function companyProspectPayload(company) {
+    return {
+      property_name: company.company,
+      management_company: company.company,
+      contact_name: company.contact || null,
+      email: company.email || null,
+      phone: company.phone || null,
+      address: null,
+      city: company.serviceArea || company.city || null,
+      property_type: "Property Management",
+      service_interest: company.service || "General Property Care",
+      source: "Outreach Company",
+      status: "Prospect",
+      last_contacted_at: null,
+      next_follow_up_at: company.followUpRaw || null,
+      notes: company.notes || null,
+      priority: company.priority || "Normal"
+    };
+  }
+
+  function propertyProspectPayload(property, company) {
+    const notes = [
+      company.notes ? `Company notes: ${company.notes}` : "",
+      property.serviceFit ? `Service fit: ${property.serviceFit}` : "",
+      property.visibleNeeds ? `Visible needs: ${property.visibleNeeds}` : "",
+      property.notes ? `Property notes: ${property.notes}` : ""
+    ].filter(Boolean).join("\n");
+    return {
+      property_name: property.propertyName,
+      management_company: company.company || property.company,
+      contact_name: company.contact || null,
+      email: company.email || null,
+      phone: company.phone || null,
+      address: property.address || null,
+      city: property.city || company.serviceArea || company.city || null,
+      property_type: "Managed Property",
+      service_interest: property.service || company.service || "General Property Care",
+      source: "Outreach Property",
+      status: "Prospect",
+      last_contacted_at: null,
+      next_follow_up_at: company.followUpRaw || null,
+      notes: notes || null,
+      priority: company.priority || property.priority || "Normal"
+    };
   }
 
   function normalizeCsvHeader(value) {
@@ -3909,32 +4007,18 @@
     if (!els.outreachCompanyTable) return;
     if (!state.outreachCompaniesReady) {
       const message = "Companies need the outreach_companies table. Run DASHBOARD_OUTREACH_SQL.md, then refresh.";
-      els.outreachCompanyTable.innerHTML = `<tr><td colspan="10">${emptyState(message)}</td></tr>`;
+      els.outreachCompanyTable.innerHTML = `<tr><td colspan="9">${emptyState(message)}</td></tr>`;
       if (els.outreachCompanyCards) els.outreachCompanyCards.innerHTML = emptyState(message);
       return;
     }
     const companies = filteredOutreachCompanies();
-    const validIds = new Set(companies.map((company) => company.id));
-    state.selectedOutreachCompanyIds.forEach((id) => {
-      if (!validIds.has(id)) state.selectedOutreachCompanyIds.delete(id);
-    });
-    if (els.outreachCompanyBulkBar) els.outreachCompanyBulkBar.hidden = state.selectedOutreachCompanyIds.size === 0;
-    if (els.outreachCompanySelectedCount) {
-      const count = state.selectedOutreachCompanyIds.size;
-      els.outreachCompanySelectedCount.textContent = `${count} selected`;
-    }
-    if (els.outreachCompanySelectAll) {
-      els.outreachCompanySelectAll.checked = companies.length > 0 && companies.every((company) => state.selectedOutreachCompanyIds.has(company.id));
-      els.outreachCompanySelectAll.indeterminate = companies.some((company) => state.selectedOutreachCompanyIds.has(company.id)) && !els.outreachCompanySelectAll.checked;
-    }
     if (!companies.length) {
-      els.outreachCompanyTable.innerHTML = `<tr><td colspan="10">${emptyState("No companies match this view yet.")}</td></tr>`;
+      els.outreachCompanyTable.innerHTML = `<tr><td colspan="9">${emptyState("No companies match this view yet.")}</td></tr>`;
       if (els.outreachCompanyCards) els.outreachCompanyCards.innerHTML = emptyState("No companies match this view yet.");
       return;
     }
     els.outreachCompanyTable.innerHTML = companies.map((company) => `
       <tr>
-        <td><input data-outreach-company-select type="checkbox" value="${escapeHtml(company.id)}" aria-label="Select ${escapeHtml(company.company)}"${state.selectedOutreachCompanyIds.has(company.id) ? " checked" : ""}></td>
         <td><strong>${escapeHtml(company.company)}</strong><br><span class="meta">${escapeHtml(company.website || company.sourceUrl || "No website")}</span></td>
         <td>${escapeHtml(company.serviceArea || company.city || "Not set")}</td>
         <td>${escapeHtml(company.contact || "No contact")}<br><span class="meta">${escapeHtml(company.email || "No email")}<br>${escapeHtml(company.phone || "No phone")}</span></td>
@@ -3943,16 +4027,16 @@
         <td>${escapeHtml(company.priority)}</td>
         <td>${escapeHtml(outreachCompanyPropertyCount(company))}</td>
         <td>${escapeHtml(company.notes)}</td>
-        <td><div class="outreach-actions">${actionButton("Open", "open-outreach-company", company.id)}${actionButton("Delete", "delete-outreach-company", company.id).replace("inline-action", "inline-action danger-action")}</div></td>
+        <td>${actionButton("Open", "open-outreach-company", company.id)}</td>
       </tr>
     `).join("");
     if (els.outreachCompanyCards) {
       els.outreachCompanyCards.innerHTML = companies.map((company) => `
         <article class="outreach-card">
-          <div class="item-topline"><div class="outreach-card-select-wrap"><input data-outreach-company-select type="checkbox" value="${escapeHtml(company.id)}" aria-label="Select ${escapeHtml(company.company)}"${state.selectedOutreachCompanyIds.has(company.id) ? " checked" : ""}><div><h4>${escapeHtml(company.company)}</h4><div class="meta">${escapeHtml(company.serviceArea || company.city || "No service area")}</div></div></div><span class="status">${escapeHtml(company.status)}</span></div>
+          <div class="item-topline"><div><h4>${escapeHtml(company.company)}</h4><div class="meta">${escapeHtml(company.serviceArea || company.city || "No service area")}</div></div><span class="status">${escapeHtml(company.status)}</span></div>
           <p class="item-body">${escapeHtml(company.contact || "No contact")} / ${escapeHtml(company.email || company.phone || "No contact info")}</p>
           <p class="small">${escapeHtml(outreachCompanyPropertyCount(company))} managed properties / ${escapeHtml(company.priority)} priority</p>
-          <div class="outreach-actions">${actionButton("Open", "open-outreach-company", company.id)}${actionButton("Delete", "delete-outreach-company", company.id).replace("inline-action", "inline-action danger-action")}</div>
+          ${actionButton("Open", "open-outreach-company", company.id)}
         </article>
       `).join("");
     }
@@ -4175,40 +4259,62 @@
     setDashboardState(`Preview ready: ${preview.validRows.length} valid row${preview.validRows.length === 1 ? "" : "s"}, ${preview.invalidRows.length} invalid.`);
   }
 
-  function openOutreachCompanyDrawer(id) {
+  function openOutreachCompanyDrawer(id, editingPropertyId = "") {
     const company = state.data.outreachCompanies.find((item) => item.id === id);
     if (!company || !els.detailDrawer || !els.detailContent) return;
     const properties = state.data.outreachProperties.filter((property) => property.companyId === company.id || normalizeDedupeKey(property.company) === normalizeDedupeKey(company.company));
+    const propertyForm = (property = null) => `
+      <form class="drawer-form outreach-property-inline-form" data-outreach-property-form data-id="${escapeHtml(property?.id || "")}" data-company-id="${escapeHtml(company.id)}">
+        <label>Property name<input name="property_name" value="${escapeHtml(property?.propertyName || "")}" placeholder="Managed property name"></label>
+        <label>Address<input name="address" value="${escapeHtml(property?.address || "")}" placeholder="Street address"></label>
+        <label>City<input name="city" value="${escapeHtml(property?.city || "")}" placeholder="City or service area"></label>
+        <label>Neighborhood<input name="neighborhood" value="${escapeHtml(property?.neighborhood || "")}" placeholder="Neighborhood / location notes"></label>
+        <label class="span-full">Notes<textarea name="notes" rows="3">${escapeHtml(property?.notes || "")}</textarea></label>
+        <div class="drawer-actions span-full">
+          <button type="submit">${buttonContent(property ? "Save Property" : "Add Managed Property", "complete-reminder")}</button>
+          ${property ? `<button type="button" class="secondary-action" data-action="cancel-managed-property-edit" data-id="${escapeHtml(company.id)}">${buttonContent("Cancel", "delete-outreach-prospect")}</button>` : ""}
+        </div>
+      </form>
+    `;
     els.detailDrawer.hidden = false;
     els.detailContent.innerHTML = `
       <div class="drawer-content outreach-drawer">
         <p class="eyebrow">Outreach Company</p>
         <h3>${escapeHtml(company.company)}</h3>
-        <div class="drawer-grid">
-          <div class="drawer-field"><span>Contact</span>${escapeHtml(company.contact || "Not set")}</div>
-          <div class="drawer-field"><span>Email</span>${escapeHtml(company.email || "Not set")}</div>
-          <div class="drawer-field"><span>Phone</span>${escapeHtml(company.phone || "Not set")}</div>
-          <div class="drawer-field"><span>Website</span>${company.website ? `<a href="${escapeHtml(company.website)}" target="_blank" rel="noopener noreferrer">${escapeHtml(company.website)}</a>` : "Not set"}</div>
-          <div class="drawer-field"><span>Service area</span>${escapeHtml(company.serviceArea || company.city || "Not set")}</div>
-          <div class="drawer-field"><span>Follow-up</span>${escapeHtml(company.followUp)}</div>
-          <div class="drawer-field"><span>Status</span>${escapeHtml(company.status)}</div>
-          <div class="drawer-field"><span>Priority</span>${escapeHtml(company.priority)}</div>
-        </div>
-        <p class="item-body">${escapeHtml(company.notes || "No company notes yet.")}</p>
-        <div class="drawer-actions">
-          <button type="button" data-action="prefill-outreach-property" data-id="${escapeHtml(company.id)}">${buttonContent("Add Property", "new-outreach-prospect")}</button>
-          <button type="button" data-action="import-outreach-csv">${buttonContent("Import Properties", "import-outreach-csv")}</button>
-          <button type="button" class="danger-action" data-action="delete-outreach-company" data-id="${escapeHtml(company.id)}">${buttonContent("Delete Company", "delete-outreach-company")}</button>
-        </div>
+        <form class="drawer-form outreach-form" data-outreach-company-form data-id="${escapeHtml(company.id)}">
+          <label>Company name<input name="company" value="${escapeHtml(company.company)}" required></label>
+          <label>Contact<input name="contact" value="${escapeHtml(company.contact || "")}"></label>
+          <label>Email<input name="email" type="email" value="${escapeHtml(company.email || "")}"></label>
+          <label>Phone<input name="phone" value="${escapeHtml(company.phone || "")}"></label>
+          <label>Website<input name="website" value="${escapeHtml(company.website || "")}"></label>
+          <label>Service area<input name="service_area" value="${escapeHtml(company.serviceArea || company.city || "")}"></label>
+          <label>Follow-up date<input name="follow_up" type="date" value="${escapeHtml(company.followUpRaw || "")}"></label>
+          <label>Status<select name="status">${optionList(OUTREACH_STATUSES, company.status || "Prospect")}</select></label>
+          <label>Priority<select name="priority">${optionList(OUTREACH_PRIORITIES, company.priority || "Normal")}</select></label>
+          <label class="span-full">Notes<textarea name="notes" rows="4">${escapeHtml(company.notes || "")}</textarea></label>
+          <div class="drawer-actions span-full">
+            <button type="submit">${buttonContent("Save Changes", "complete-reminder")}</button>
+            <button type="button" class="secondary-action" data-action="open-outreach-company" data-id="${escapeHtml(company.id)}">${buttonContent("Cancel", "delete-outreach-prospect")}</button>
+            <button type="button" data-action="add-company-as-prospect" data-id="${escapeHtml(company.id)}">${buttonContent("Add Company as Prospect", "new-outreach-prospect")}</button>
+          </div>
+        </form>
         <h4>Managed properties (${properties.length})</h4>
         <div class="profile-mini-list">
           ${properties.length ? properties.map((property) => `
-            <button class="profile-mini-item" type="button" data-action="open-outreach-property" data-id="${escapeHtml(property.id)}">
-              <strong>${escapeHtml(property.propertyName)}</strong>
-              <span>${escapeHtml([property.address, property.city, property.neighborhood].filter(Boolean).join(" / "))}</span>
-            </button>
+            ${editingPropertyId === property.id ? propertyForm(property) : `
+              <div class="profile-mini-item outreach-managed-property">
+                <strong>${escapeHtml(property.propertyName)}</strong>
+                <span>${escapeHtml([property.address, property.city, property.neighborhood].filter(Boolean).join(" / ") || "No location details")}</span>
+                <div class="outreach-actions">
+                  <button class="inline-action" type="button" data-action="edit-managed-property" data-id="${escapeHtml(property.id)}" data-company-id="${escapeHtml(company.id)}">${buttonContent("Edit", "edit-outreach-prospect")}</button>
+                  <button class="inline-action" type="button" data-action="add-property-as-prospect" data-id="${escapeHtml(property.id)}" data-company-id="${escapeHtml(company.id)}">${buttonContent("Add as Prospect", "new-outreach-prospect")}</button>
+                </div>
+              </div>
+            `}
           `).join("") : emptyState("No managed properties attached yet.")}
         </div>
+        <h4>Add managed property</h4>
+        ${propertyForm()}
       </div>
     `;
   }
@@ -5157,29 +5263,6 @@
         return;
       }
 
-      if (target.matches("[data-outreach-company-select]")) {
-        if (target.checked) {
-          state.selectedOutreachCompanyIds.add(target.value);
-        } else {
-          state.selectedOutreachCompanyIds.delete(target.value);
-        }
-        await render();
-        return;
-      }
-
-      if (target.matches("[data-outreach-company-select-all]")) {
-        const visibleCompanies = filteredOutreachCompanies();
-        visibleCompanies.forEach((item) => {
-          if (target.checked) {
-            state.selectedOutreachCompanyIds.add(item.id);
-          } else {
-            state.selectedOutreachCompanyIds.delete(item.id);
-          }
-        });
-        await render();
-        return;
-      }
-
       if (target.matches("[data-outreach-property-select]")) {
         if (target.checked) {
           state.selectedOutreachPropertyIds.add(target.value);
@@ -5281,6 +5364,46 @@
         const company = state.data.outreachCompanies.find((item) => item.id === id);
         if (!company) return;
         setDashboardState("Use Import CSV to add properties for this company, or import a row with this company name.");
+      } else if (action === "edit-managed-property") {
+        const companyId = target.dataset.companyId || "";
+        if (!companyId) return;
+        openOutreachCompanyDrawer(companyId, id);
+      } else if (action === "cancel-managed-property-edit") {
+        openOutreachCompanyDrawer(id);
+      } else if (action === "add-company-as-prospect") {
+        const company = state.data.outreachCompanies.find((item) => item.id === id);
+        if (!company) return;
+        if (state.data.outreachProspects.some((prospect) => prospectMatchesCompany(prospect, company))) {
+          setDashboardState("A matching prospect already exists for this company.", "error");
+          return;
+        }
+        try {
+          setDashboardState("Adding company as prospect...");
+          await insertOutreachProspect(companyProspectPayload(company));
+          await refreshDashboard();
+          openOutreachCompanyDrawer(id);
+          setDashboardState("Company added as prospect.");
+        } catch (error) {
+          setDashboardState(error.message || "Unable to add company as prospect.", "error");
+        }
+      } else if (action === "add-property-as-prospect") {
+        const companyId = target.dataset.companyId || "";
+        const company = state.data.outreachCompanies.find((item) => item.id === companyId);
+        const property = state.data.outreachProperties.find((item) => item.id === id);
+        if (!company || !property) return;
+        if (state.data.outreachProspects.some((prospect) => prospectMatchesProperty(prospect, property))) {
+          setDashboardState("A matching prospect already exists for this property.", "error");
+          return;
+        }
+        try {
+          setDashboardState("Adding property as prospect...");
+          await insertOutreachProspect(propertyProspectPayload(property, company));
+          await refreshDashboard();
+          openOutreachCompanyDrawer(company.id);
+          setDashboardState("Property added as prospect.");
+        } catch (error) {
+          setDashboardState(error.message || "Unable to add property as prospect.", "error");
+        }
       } else if (action === "route-outreach-property") {
         const property = state.data.outreachProperties.find((item) => item.id === id);
         if (!property) return;
@@ -5543,21 +5666,6 @@
         } catch (error) {
           setDashboardState(error.message || "Unable to delete prospect.", "error");
         }
-      } else if (action === "delete-outreach-company") {
-        const company = state.data.outreachCompanies.find((item) => item.id === id);
-        const propertyCount = company ? outreachCompanyPropertyCount(company) : 0;
-        const ok = window.confirm(`Delete this outreach company?${propertyCount ? ` Its ${propertyCount} linked propert${propertyCount === 1 ? "y will stay" : "ies will stay"} in Properties.` : ""}`);
-        if (!ok) return;
-        try {
-          setDashboardState("Deleting company...");
-          await deleteRow("outreach_companies", id);
-          state.selectedOutreachCompanyIds.delete(id);
-          closeSubmissionDrawer();
-          await refreshDashboard();
-          setDashboardState("");
-        } catch (error) {
-          setDashboardState(error.message || "Unable to delete company.", "error");
-        }
       } else if (action === "delete-outreach-property") {
         const ok = window.confirm("Delete this managed property?");
         if (!ok) return;
@@ -5573,9 +5681,6 @@
         }
       } else if (action === "clear-outreach-selection") {
         state.selectedOutreachIds.clear();
-        await render();
-      } else if (action === "clear-outreach-company-selection") {
-        state.selectedOutreachCompanyIds.clear();
         await render();
       } else if (action === "clear-outreach-property-selection") {
         state.selectedOutreachPropertyIds.clear();
@@ -5596,23 +5701,6 @@
           setDashboardState("");
         } catch (error) {
           setDashboardState(error.message || "Unable to delete selected prospects.", "error");
-        }
-      } else if (action === "delete-selected-outreach-companies") {
-        const ids = Array.from(state.selectedOutreachCompanyIds);
-        if (!ids.length) return;
-        const ok = window.confirm(`Delete ${ids.length} selected compan${ids.length === 1 ? "y" : "ies"}? Linked properties will stay in Properties.`);
-        if (!ok) return;
-        try {
-          setDashboardState("Deleting selected companies...");
-          for (const selectedId of ids) {
-            await deleteRow("outreach_companies", selectedId);
-          }
-          state.selectedOutreachCompanyIds.clear();
-          closeSubmissionDrawer();
-          await refreshDashboard();
-          setDashboardState("");
-        } catch (error) {
-          setDashboardState(error.message || "Unable to delete selected companies.", "error");
         }
       } else if (action === "delete-selected-outreach-properties") {
         const ids = Array.from(state.selectedOutreachPropertyIds);
@@ -5905,6 +5993,46 @@
         } catch (error) {
           setDashboardState(error.message || "Unable to create document.", "error");
         }
+      } else if (event.target.matches("[data-outreach-company-form]")) {
+        event.preventDefault();
+        const id = event.target.dataset.id;
+        try {
+          setDashboardState("Saving company...");
+          const existingCompany = state.data.outreachCompanies.find((item) => item.id === id);
+          const payload = outreachCompanyPayloadFromForm(event.target);
+          const updated = await updateOutreachCompany(id, payload);
+          const oldCompanyKey = normalizeDedupeKey(existingCompany?.company || "");
+          const linkedProperties = state.data.outreachProperties.filter((property) => property.companyId === id || normalizeDedupeKey(property.company) === oldCompanyKey);
+          for (const property of linkedProperties) {
+            if (property.company !== payload.company || property.companyId !== id) {
+              await updateOutreachProperty(property.id, { company: payload.company, company_id: id });
+            }
+          }
+          await refreshDashboard();
+          openOutreachCompanyDrawer(updated?.id || id);
+          setDashboardState("Company updated.");
+        } catch (error) {
+          setDashboardState(error.message || "Unable to save company.", "error");
+        }
+      } else if (event.target.matches("[data-outreach-property-form]")) {
+        event.preventDefault();
+        const id = event.target.dataset.id || "";
+        const companyId = event.target.dataset.companyId || "";
+        const company = state.data.outreachCompanies.find((item) => item.id === companyId);
+        if (!company) return;
+        try {
+          setDashboardState(id ? "Saving property..." : "Adding property...");
+          const payload = outreachPropertyPayloadFromForm(event.target, company);
+          const saved = id ? await updateOutreachProperty(id, payload) : await insertOutreachProperty(payload);
+          if (saved?.address && (saved.lat === null || saved.lng === null)) {
+            geocodeAndStoreOutreachProperty(saved).catch(() => {});
+          }
+          await refreshDashboard();
+          openOutreachCompanyDrawer(company.id);
+          setDashboardState(id ? "Managed property updated." : "Managed property added.");
+        } catch (error) {
+          setDashboardState(error.message || "Unable to save managed property.", "error");
+        }
       } else if (event.target.matches("[data-outreach-form]")) {
         event.preventDefault();
         const id = event.target.dataset.id;
@@ -6128,9 +6256,6 @@
     els.outreachHot = qs("[data-outreach-hot]");
     els.outreachCompanyTable = qs("[data-outreach-company-table]");
     els.outreachCompanyCards = qs("[data-outreach-company-cards]");
-    els.outreachCompanyBulkBar = qs("[data-outreach-company-bulk-bar]");
-    els.outreachCompanySelectedCount = qs("[data-outreach-company-selected-count]");
-    els.outreachCompanySelectAll = qs("[data-outreach-company-select-all]");
     els.outreachPropertyTable = qs("[data-outreach-property-table]");
     els.outreachPropertyCards = qs("[data-outreach-property-cards]");
     els.outreachPropertyBulkBar = qs("[data-outreach-property-bulk-bar]");

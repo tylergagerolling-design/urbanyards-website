@@ -3888,6 +3888,17 @@ button.profile-mini-item {
   letter-spacing: 0;
 }
 
+.outreach-managed-property {
+  gap: 8px;
+}
+
+.outreach-property-inline-form {
+  padding: 12px;
+  border: 1px solid rgba(18, 63, 49, 0.1);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.82);
+}
+
 .drawer-field {
   border: 1px solid var(--uy-line);
   border-radius: 8px;

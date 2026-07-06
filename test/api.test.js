@@ -72,19 +72,15 @@ test("valid quote fails honestly when no delivery integration is configured", as
   Object.entries(original).forEach(([key, value]) => value === undefined ? delete process.env[key] : process.env[key] = value);
 });
 
-test("assistant answers from site knowledge by default without paid AI", async () => {
+test("assistant requires a server-side OpenAI key", async () => {
   const key = process.env.OPENAI_API_KEY;
-  const useExternalAi = process.env.ASSISTANT_USE_EXTERNAL_AI;
-  process.env.OPENAI_API_KEY = "configured-key";
-  delete process.env.ASSISTANT_USE_EXTERNAL_AI;
+  delete process.env.OPENAI_API_KEY;
   const res = mockResponse();
   await assistantHandler(request("POST", { message: "Do you mow lawns?" }), res);
-  assert.equal(res.statusCode, 200);
-  assert.match(res.payload.reply, /lawn mowing/i);
-  assert.equal(res.payload.source, "site-knowledge");
+  assert.equal(res.statusCode, 503);
+  assert.match(res.payload.error, /AI helper is not available/i);
   assert.equal("OPENAI_API_KEY" in res.payload, false);
   key === undefined ? delete process.env.OPENAI_API_KEY : process.env.OPENAI_API_KEY = key;
-  useExternalAi === undefined ? delete process.env.ASSISTANT_USE_EXTERNAL_AI : process.env.ASSISTANT_USE_EXTERNAL_AI = useExternalAi;
 });
 
 test("site knowledge retrieves relevant website sections", () => {
@@ -140,33 +136,27 @@ test("site knowledge retrieves FAQ answers and asks one lead question", () => {
   assert.doesNotMatch(reply, /What service are you looking for.*best phone number/s);
 });
 
-test("assistant falls back to site knowledge if the model request fails", async () => {
+test("assistant returns a graceful error if the model request fails", async () => {
   const originalKey = process.env.OPENAI_API_KEY;
-  const originalUseExternalAi = process.env.ASSISTANT_USE_EXTERNAL_AI;
   const originalFetch = global.fetch;
   process.env.OPENAI_API_KEY = "test-key";
-  process.env.ASSISTANT_USE_EXTERNAL_AI = "true";
   global.fetch = async () => ({ ok: false, status: 500 });
   try {
     const res = mockResponse();
     await assistantHandler(request("POST", { message: "How do I get a quote?" }), res);
-    assert.equal(res.statusCode, 200);
-    assert.match(res.payload.reply, /free quote/i);
-    assert.equal(res.payload.source, "site-knowledge-fallback");
+    assert.equal(res.statusCode, 502);
+    assert.match(res.payload.error, /AI helper is not available/i);
   } finally {
     global.fetch = originalFetch;
     originalKey === undefined ? delete process.env.OPENAI_API_KEY : process.env.OPENAI_API_KEY = originalKey;
-    originalUseExternalAi === undefined ? delete process.env.ASSISTANT_USE_EXTERNAL_AI : process.env.ASSISTANT_USE_EXTERNAL_AI = originalUseExternalAi;
   }
 });
 
 test("assistant sends relevant site knowledge to the model", async () => {
   const originalKey = process.env.OPENAI_API_KEY;
-  const originalUseExternalAi = process.env.ASSISTANT_USE_EXTERNAL_AI;
   const originalFetch = global.fetch;
   let capturedBody;
   process.env.OPENAI_API_KEY = "test-key";
-  process.env.ASSISTANT_USE_EXTERNAL_AI = "true";
   global.fetch = async (url, options) => {
     assert.equal(url, "https://api.openai.com/v1/chat/completions");
     capturedBody = JSON.parse(options.body);
@@ -189,7 +179,6 @@ test("assistant sends relevant site knowledge to the model", async () => {
   } finally {
     global.fetch = originalFetch;
     originalKey === undefined ? delete process.env.OPENAI_API_KEY : process.env.OPENAI_API_KEY = originalKey;
-    originalUseExternalAi === undefined ? delete process.env.ASSISTANT_USE_EXTERNAL_AI : process.env.ASSISTANT_USE_EXTERNAL_AI = originalUseExternalAi;
   }
 });
 

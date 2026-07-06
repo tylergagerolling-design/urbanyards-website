@@ -18,11 +18,13 @@ Rules:
 - If a question is unrelated to Urban Yards services, landscaping, groundskeeping, property maintenance, or quote/contact details, say you specialize in Urban Yards website and service questions.
 `;
 
-const { answerFromSiteKnowledge, buildSiteContext } = require("./lib/site-knowledge");
+const { buildSiteContext } = require("./lib/site-knowledge");
 
 const {
   allowedOrigin, clientIp, rateLimit, requestId, setApiHeaders, text
 } = require("./lib/security");
+
+const UNAVAILABLE_REPLY = "Sorry, the AI helper is not available right now. You can still request a free quote.";
 
 function cleanMessages(history = []) {
   return history
@@ -35,7 +37,7 @@ function cleanMessages(history = []) {
 }
 
 function shouldUseExternalAi() {
-  return process.env.ASSISTANT_USE_EXTERNAL_AI === "true" && Boolean(process.env.OPENAI_API_KEY);
+  return Boolean(process.env.OPENAI_API_KEY);
 }
 
 async function handler(req, res) {
@@ -47,7 +49,7 @@ async function handler(req, res) {
   }
 
   if (!allowedOrigin(req)) return res.status(403).json({ error: "Origin not allowed", requestId: id });
-  const limit = rateLimit(`assistant:${clientIp(req)}`, 20, 10 * 60 * 1000);
+  const limit = rateLimit(`assistant:${clientIp(req)}`, 12, 10 * 60 * 1000);
   if (!limit.allowed) {
     res.setHeader("Retry-After", String(limit.retryAfter));
     return res.status(429).json({ error: "Too many assistant requests. Please try again shortly.", requestId: id });
@@ -60,12 +62,12 @@ async function handler(req, res) {
     return res.status(400).json({ error: "Message is required", requestId: id });
   }
 
+  if (String(message || "").length > 1400) {
+    return res.status(400).json({ error: "Please keep messages under 1400 characters.", requestId: id });
+  }
+
   if (!shouldUseExternalAi()) {
-    return res.status(200).json({
-      reply: answerFromSiteKnowledge(userMessage, lead, history),
-      requestId: id,
-      source: "site-knowledge"
-    });
+    return res.status(503).json({ error: UNAVAILABLE_REPLY, requestId: id });
   }
 
   const leadContext = [
@@ -113,11 +115,7 @@ async function handler(req, res) {
     });
   } catch (error) {
     console.error(JSON.stringify({ event: "assistant_error", requestId: id, message: error.message }));
-    return res.status(200).json({
-      reply: answerFromSiteKnowledge(userMessage, lead, history),
-      requestId: id,
-      source: "site-knowledge-fallback"
-    });
+    return res.status(502).json({ error: UNAVAILABLE_REPLY, requestId: id });
   }
 }
 

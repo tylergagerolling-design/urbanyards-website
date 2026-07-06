@@ -4,7 +4,7 @@
   "private": true,
   "scripts": {
     "test": "node --test",
-    "check": "node --check script.js && node --check assistant.js && node --check dashboard.js && node --check pay.js && node --check scripts/build-dashboard-config.js && node --check netlify/functions/find-square-invoices.js && node --check netlify/functions/google-maps-browser-key.js && node --check netlify/functions/route-directions.js && node --check netlify/functions/route-geocode.js && node --check netlify/functions/sync-square-invoice.js && node --check netlify/functions/square-webhook.js && node --check netlify/functions/lib/square-invoices.js && node --check netlify/functions/lib/dashboard-auth.js && node --check api/assistant.js && node --check api/quote.js && node --check api/retention-cleanup.js",
+    "check": "node --check script.js && node --check assistant.js && node --check dashboard.js && node --check pay.js && node --check scripts/build-dashboard-config.js && node --check netlify/functions/ai-helper.js && node --check netlify/functions/find-square-invoices.js && node --check netlify/functions/google-maps-browser-key.js && node --check netlify/functions/route-directions.js && node --check netlify/functions/route-geocode.js && node --check netlify/functions/sync-square-invoice.js && node --check netlify/functions/square-webhook.js && node --check netlify/functions/lib/square-invoices.js && node --check netlify/functions/lib/dashboard-auth.js && node --check api/assistant.js && node --check api/quote.js && node --check api/retention-cleanup.js",
     "dev": "netlify dev"
   },
   "engines": { "node": ">=20" }

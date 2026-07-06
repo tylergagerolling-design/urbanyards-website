@@ -1,10 +1,11 @@
 (() => {
   const storageKey = "urbanYardsAssistantConversation";
   const maxStoredMessages = 18;
+  const maxMessageLength = 1400;
+  const requestCooldownMs = 2500;
+  const unavailableReply = "Sorry, the AI helper is not available right now. You can still request a free quote.";
   const leadSignals = ["quote", "estimate", "price", "cost", "hire", "schedule", "book", "service", "cleanup", "mowing", "mulch", "trim", "porter", "address", "property"];
   const quickActions = ["Request a Free Quote", "Homeowner Services", "Property Management Services", "Service Areas", "Contact Urban Yards"];
-  const siteContact = "Phone: (971) 258-1109. Email: team@urbanyards.us.";
-  const quotePrompt = "The best next step is to request a free quote through the website form with your property address or general area, service needed, timeline, details, and photos if useful.";
   const cityPatterns = [
     { value: "Beaverton", pattern: /\bbeaverton\b/i },
     { value: "Portland", pattern: /\bportland\b/i },
@@ -27,7 +28,7 @@
     content: "Hi, I am The Groundskeeper. I can help with service questions, seasonal property care, and preparing details for Urban Yards to review."
   }];
 
-  const state = { open: false, busy: false, messages: loadMessages() };
+  const state = { open: false, busy: false, messages: loadMessages(), lastRequestAt: 0 };
 
   function loadMessages() {
     try {
@@ -223,85 +224,42 @@
 
   async function requestAssistantReply(message) {
     const payload = {
-      message,
+      message: message.slice(0, maxMessageLength),
       page: document.title,
       lead: getLeadDetails(),
       history: state.messages.slice(-10)
     };
-    const endpoints = ["/api/assistant"];
-
-    for (const endpoint of endpoints) {
-      try {
-        const response = await fetch(endpoint, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(payload),
-          signal: AbortSignal.timeout(15000)
-        });
-        if (!response.ok) continue;
-        const result = await response.json();
-        if (result?.reply) return result.reply;
-      } catch (error) {
-        continue;
-      }
+    try {
+      const response = await fetch("/.netlify/functions/ai-helper", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+        signal: AbortSignal.timeout(15000)
+      });
+      const result = await response.json().catch(() => ({}));
+      if (response.ok && result?.reply) return result.reply;
+      return result?.error || unavailableReply;
+    } catch (error) {
+      return unavailableReply;
     }
-
-    return fallbackReply(message);
-  }
-
-  function fallbackReply(message) {
-    const text = message.toLowerCase();
-    const intent = detectIntent(message);
-    const lead = getLeadDetails();
-    const leadPrompt = shouldShowLeadCapture(message) ? nextLeadPrompt(lead) : "";
-    const leadFollowUp = leadPrompt ? `\n\n${leadPrompt}` : "";
-    if (intent.id === "casual") {
-      return "Hi, I can help with Urban Yards services, service areas, property care questions, or getting ready for a quote. What are you looking at on your property?";
-    }
-    if (intent.id === "cleanup") {
-      return "Sounds like it may be time for a cleanup. Urban Yards lists seasonal cleanup, weed management, property upkeep, and garden bed maintenance.\n\nIs it mostly overgrown grass, weeds, shrubs, or a little bit of everything?";
-    }
-    if (intent.id === "trimming") {
-      return "Urban Yards lists shrub trimming and landscape refreshes for outdoor spaces that need steady care.\n\nAre the shrubs simply overgrown, or are you looking for more shaping and cleanup around the beds too?";
-    }
-    if (intent.id === "property_improvement") {
-      return "I can help with that. Urban Yards lists landscape improvements like planting, mulch refreshes, better beds, privacy screens, and curb appeal updates.\n\nWhat kind of property is it, and what are you hoping to improve?";
-    }
-    if (text.includes("owner") || text.includes("who owns") || text.includes("owned by") || text.includes("owner operated")) {
-      return `Yes. Urban Yards is owner-operated by Tyler Gage. The About page describes the business as practical, eco-conscious, reliable, and focused on healthier, more welcoming outdoor spaces.\n\n${quotePrompt}`;
-    }
-    if (intent.id === "quote") {
-      const propertyNote = lead.propertyType ? ` for the ${lead.propertyType.toLowerCase()}` : "";
-      return `You can request a free quote${propertyNote} through the website form. It asks for your name, email, phone, property address or general area, service needed, optional photos, and additional details. Final pricing and scheduling require property review.${leadFollowUp || `\n\n${siteContact}`}`;
-    }
-    if (intent.id === "service_area") {
-      return `The site lists Beaverton, Portland, and Vancouver as the core service area. If you are near those areas, Urban Yards can confirm through a quote request.\n\n${siteContact}`;
-    }
-    if (intent.id === "property_management") {
-      return `Urban Yards works with apartment communities, condominium associations, HOAs, property management companies, and multifamily properties. Services listed include common area upkeep, trash and recycling enclosure care, day porter services, apartment turnover cleaning, light repair support, pressure washing, seasonal cleanup, recurring groundskeeping, and property appearance audits. Larger repairs and licensed plumbing, electrical, HVAC, or structural work are outside Urban Yards' stated scope.${leadFollowUp || "\n\nIs this an apartment community, HOA, condominium, or another type of property?"}`;
-    }
-    if (text.includes("pressure wash") || text.includes("pressure washing") || text.includes("wash")) {
-      return `Yes. Pressure Washing is listed in the footer services and on the Property Management Services page. ${quotePrompt}`;
-    }
-    if (intent.id === "lawn_care") {
-      return "Yes. Urban Yards lists lawn mowing, edging, weed management, garden bed maintenance, seasonal cleanup, and routine groundskeeping for homeowners and other property types.\n\nAre you looking for recurring maintenance or a one-time service?";
-    }
-    if (text.includes("mulch") || text.includes("bed") || text.includes("plant") || text.includes("native") || text.includes("pollinator") || text.includes("low-water") || text.includes("ecological")) {
-      return `Yes. The site lists landscape improvements such as plant installations, mulch refreshes, privacy screens, and ecological enhancements like native plantings, pollinator habitat, low-water landscapes, and urban greening.\n\n${quotePrompt}`;
-    }
-    if (text.includes("season") || text.includes("spring") || text.includes("fall") || text.includes("winter") || text.includes("summer")) {
-      return `The Services page includes a Portland Property Care Calendar for seasonal planning. The site points visitors toward routine care, seasonal cleanup, bed refreshes, mowing, edging, irrigation checks, leaf cleanup, storm cleanup, and similar property care depending on the season.\n\n${quotePrompt}`;
-    }
-    if (intent.id === "contact") {
-      return `You can contact Urban Yards through the quote form, by phone, or by email. ${siteContact}`;
-    }
-    return `I don't see that listed on the site, but you can request a quote and Urban Yards can confirm. ${siteContact}${leadFollowUp}`;
   }
 
   async function submitMessage() {
     const message = input.value.trim();
     if (!message || state.busy) return;
+    const now = Date.now();
+    if (now - state.lastRequestAt < requestCooldownMs) {
+      state.messages.push({ role: "assistant", content: "Please wait a moment before sending another message." });
+      renderMessages();
+      return;
+    }
+    if (message.length > maxMessageLength) {
+      state.messages.push({ role: "assistant", content: `Please keep messages under ${maxMessageLength} characters.` });
+      renderMessages();
+      return;
+    }
     state.busy = true;
+    state.lastRequestAt = now;
     input.value = "";
     rememberLeadDetails(message);
     state.messages.push({ role: "user", content: message });

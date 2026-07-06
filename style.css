@@ -4954,6 +4954,22 @@ body:not(.feral-page) .service-detail-media img {
   object-fit: cover;
 }
 
+body:not(.feral-page) .service-image-mower {
+  object-position: 66% center;
+}
+
+body:not(.feral-page) .service-image-bed-refresh {
+  object-position: center center;
+}
+
+body:not(.feral-page) .service-image-blower {
+  object-position: 50% center;
+}
+
+body:not(.feral-page) .service-image-trash {
+  object-position: 43% center;
+}
+
 body:not(.feral-page) .service-detail-card h3 {
   font-size: clamp(1.3rem, 2vw, 1.5rem);
   line-height: 1.08;

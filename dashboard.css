@@ -454,6 +454,72 @@ textarea:focus {
   padding: 0 12px;
 }
 
+.overdue-jobs-alert {
+  margin: 0 0 14px;
+}
+
+.overdue-jobs-alert[hidden] {
+  display: none;
+}
+
+.overdue-jobs-card {
+  display: grid;
+  gap: 10px;
+  padding: 12px;
+  border: 1px solid rgba(143, 47, 34, 0.24);
+  border-radius: 8px;
+  background: linear-gradient(135deg, #fff8ef, #fffdf6);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.78);
+}
+
+.overdue-jobs-heading strong,
+.overdue-job-item strong {
+  display: block;
+  color: #765014;
+}
+
+.overdue-jobs-heading span,
+.overdue-job-item span {
+  color: rgba(55, 40, 24, 0.68);
+  font-size: 0.84rem;
+  line-height: 1.4;
+}
+
+.overdue-jobs-list {
+  display: grid;
+  gap: 8px;
+}
+
+.overdue-job-item {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 10px;
+  align-items: center;
+  padding: 10px;
+  border: 1px solid rgba(143, 47, 34, 0.14);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.72);
+}
+
+.overdue-job-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+.job-card-overdue {
+  border-color: rgba(143, 47, 34, 0.24);
+  background: linear-gradient(135deg, #fffdf8, #fff8ef);
+}
+
+.job-overdue-note {
+  margin: 10px 0 0;
+  color: #765014;
+  font-size: 0.84rem;
+  font-weight: 800;
+}
+
 .quick-actions button,
 .settings-grid button {
   min-height: 44px;
@@ -4075,6 +4141,14 @@ button.profile-mini-item {
 }
 
 @media (max-width: 640px) {
+  .overdue-job-item {
+    grid-template-columns: 1fr;
+  }
+
+  .overdue-job-actions {
+    justify-content: flex-start;
+  }
+
   .schedule-create-form {
     grid-template-columns: 1fr;
   }

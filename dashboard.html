@@ -11,10 +11,10 @@
     <link rel="icon" href="/favicon.ico" sizes="any">
     <link rel="apple-touch-icon" href="/apple-touch-icon.png">
     <link rel="manifest" href="/dashboard.webmanifest">
-    <link rel="stylesheet" href="dashboard.css?v=20260630-2">
+    <link rel="stylesheet" href="dashboard.css?v=20260706-1">
     <link rel="stylesheet" href="dashboard-mobile-fix.css?v=20260622-3">
     <script src="dashboard-config.js?v=20260623-1" defer></script>
-    <script src="dashboard.js?v=20260630-2" defer></script>
+    <script src="dashboard.js?v=20260706-1" defer></script>
   </head>
   <body>
     <main class="dashboard-shell" aria-labelledby="dashboard-title">
@@ -97,6 +97,7 @@
               <a class="quick-action-link" href="https://voice.google.com/" target="_blank" rel="noopener noreferrer"><span class="button-icon" aria-hidden="true">GV</span><span>Google Voice</span></a>
             </div>
             <div class="dashboard-alerts" data-dashboard-alerts></div>
+            <div class="overdue-jobs-alert" data-overdue-jobs></div>
             <div class="operations-health" data-operations-health></div>
             <div class="split-grid">
               <article class="panel">
@@ -453,6 +454,7 @@
                 <span data-calendar-range-label></span>
                 <button class="inline-action" type="button" data-action="next-30-days">Next 30 Days</button>
               </div>
+              <div class="overdue-jobs-alert" data-calendar-overdue-jobs></div>
               <form class="schedule-create-form calendar-create-form" data-job-create-form>
                 <input name="visit_date" type="date" required>
                 <input name="visit_window" placeholder="Time window">

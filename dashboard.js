@@ -166,6 +166,7 @@
       "quick-add-job": "+",
       "quick-add-operation": "+",
       "quick-add-quote": "+",
+      "reschedule-job": "R",
       "route-outreach-prospect": "M",
       "sync-contact": "~",
       "sync-square-document": "~"
@@ -2571,6 +2572,21 @@
     return state.data.jobs.filter(matchesSearch);
   }
 
+  function isIncompleteJob(job) {
+    return job.status !== "Completed";
+  }
+
+  function isOverdueJob(job) {
+    return Boolean(job.dateRaw && job.dateRaw < todayKey() && isIncompleteJob(job));
+  }
+
+  function overdueJobs(data = state.data) {
+    return data.jobs
+      .filter(isOverdueJob)
+      .filter(matchesSearch)
+      .sort((a, b) => a.dateRaw.localeCompare(b.dateRaw));
+  }
+
   function filteredDocuments() {
     return state.data.documents.filter(matchesSearch);
   }
@@ -3155,7 +3171,7 @@
       return;
     }
     els.upcoming.innerHTML = todayJobs.slice(0, 5).map((job) => `
-      <article class="job-card">
+      <article class="job-card ${isOverdueJob(job) ? "job-card-overdue" : ""}">
         <div class="item-topline">
           <div>
             <h4>${escapeHtml(job.site)}</h4>
@@ -3164,6 +3180,7 @@
           ${statusBadge(job.status)}
         </div>
         <p class="item-body">${escapeHtml(job.service)} in ${escapeHtml(job.city)}</p>
+        ${isOverdueJob(job) ? `<p class="job-overdue-note">Overdue: reschedule or mark complete.</p>` : ""}
       </article>
     `).join("");
   }
@@ -3230,12 +3247,14 @@
     if (!els.dashboardAlerts) return;
     const today = todayKey();
     const soon = daysFromToday(7);
+    const overdueVisits = overdueJobs(data);
     const overdueReminders = data.reminders.filter((item) => item.dueRaw && item.dueRaw < today && item.status !== "Completed");
     const overdueInvoices = data.documents.filter((item) => item.type === "invoice" && item.dueDateRaw && item.dueDateRaw < today && item.status !== "paid");
     const dueInvoices = data.documents.filter((item) => item.type === "invoice" && item.dueDateRaw && item.dueDateRaw <= soon && item.status !== "paid");
     const unsentQuotes = data.documents.filter((item) => item.type === "quote" && ["draft", "Draft", "New"].includes(item.status));
     const newQuotes = data.submissions.filter((item) => item.status === "New");
     const alerts = [
+      overdueVisits.length ? `${overdueVisits.length} incomplete visit${overdueVisits.length === 1 ? "" : "s"} overdue` : "",
       overdueReminders.length ? `${overdueReminders.length} incomplete follow-up${overdueReminders.length === 1 ? "" : "s"} overdue` : "",
       overdueInvoices.length ? `${overdueInvoices.length} overdue invoice${overdueInvoices.length === 1 ? "" : "s"}` : "",
       !overdueInvoices.length && dueInvoices.length ? `${dueInvoices.length} invoice${dueInvoices.length === 1 ? "" : "s"} due soon` : "",
@@ -3247,6 +3266,41 @@
       return;
     }
     els.dashboardAlerts.innerHTML = alerts.map((alert) => `<button type="button" data-action="quick-add-follow-up">${buttonContent(alert, "quick-add-quote")}</button>`).join("");
+  }
+
+  function renderOverdueJobAlerts(data) {
+    const jobs = overdueJobs(data);
+    const targets = [els.overdueJobs, els.calendarOverdueJobs].filter(Boolean);
+    if (!targets.length) return;
+    const html = jobs.length ? `
+      <article class="overdue-jobs-card">
+        <div class="overdue-jobs-heading">
+          <div>
+            <strong>${jobs.length} overdue visit${jobs.length === 1 ? "" : "s"}</strong>
+            <span>Past scheduled date and not marked complete.</span>
+          </div>
+        </div>
+        <div class="overdue-jobs-list">
+          ${jobs.slice(0, 6).map((job) => `
+            <div class="overdue-job-item">
+              <div>
+                <strong>${escapeHtml(job.site)}</strong>
+                <span>${escapeHtml(job.date)} / ${escapeHtml(job.window)} / ${escapeHtml(job.service)}</span>
+              </div>
+              <div class="overdue-job-actions">
+                <button class="inline-action" type="button" data-action="reschedule-job" data-id="${escapeHtml(job.id)}">${buttonContent("Reschedule", "reschedule-job")}</button>
+                <button class="inline-action" type="button" data-action="complete-job" data-id="${escapeHtml(job.id)}">${buttonContent("Complete", "complete-reminder")}</button>
+              </div>
+            </div>
+          `).join("")}
+        </div>
+        ${jobs.length > 6 ? `<p class="small">Showing 6 of ${escapeHtml(jobs.length)} overdue visits.</p>` : ""}
+      </article>
+    ` : "";
+    targets.forEach((target) => {
+      target.innerHTML = html;
+      target.hidden = !jobs.length;
+    });
   }
 
   function operationTypeLabel(value) {
@@ -3587,8 +3641,9 @@
         client: job.site,
         property: job.city,
         time: job.window,
-        status: job.status,
-        action: "edit-job"
+        status: isOverdueJob(job) ? "Overdue" : job.status,
+        action: isOverdueJob(job) ? "reschedule-job" : "edit-job",
+        actionLabel: isOverdueJob(job) ? "Reschedule" : "Open"
       });
     });
     data.submissions.forEach((item) => {
@@ -4363,7 +4418,7 @@
       return;
     }
     els.jobs.innerHTML = jobs.map((job) => `
-      <article class="job-card">
+      <article class="job-card ${isOverdueJob(job) ? "job-card-overdue" : ""}">
         <div class="item-topline">
           <div>
             <h4>${escapeHtml(job.site)}</h4>
@@ -4372,8 +4427,10 @@
           ${statusSelect("scheduled_jobs", job.id, job.status)}
         </div>
         <p class="item-body">${escapeHtml(job.service)}<br>${escapeHtml(job.city)}</p>
+        ${isOverdueJob(job) ? `<p class="job-overdue-note">Overdue: this visit passed its scheduled date and is not complete.</p>` : ""}
         <div class="job-actions">
           ${job.status !== "Completed" ? actionButton("Complete", "complete-job", job.id) : ""}
+          ${isOverdueJob(job) ? actionButton("Reschedule", "reschedule-job", job.id) : ""}
           ${actionButton("Edit", "edit-job", job.id)}
           ${actionButton("Delete", "cancel-job", job.id).replace("inline-action", "inline-action danger-action")}
         </div>
@@ -4591,18 +4648,21 @@
     `;
   }
 
-  function openJobDrawer(id) {
+  function openJobDrawer(id, options = {}) {
     const job = state.data.jobs.find((item) => item.id === id);
     if (!job || !els.detailDrawer || !els.detailContent) return;
     state.selectedJobId = id;
+    const isReschedule = Boolean(options.reschedule);
+    const visitDateValue = isReschedule && isOverdueJob(job) ? todayKey() : toDateInputValue(job.dateRaw);
     els.detailDrawer.hidden = false;
     els.detailContent.innerHTML = `
       <div class="drawer-content">
-        <p class="eyebrow">Schedule Detail</p>
-        <h3>${escapeHtml(job.site)}</h3>
+        <p class="eyebrow">${isReschedule ? "Overdue Visit" : "Schedule Detail"}</p>
+        <h3>${escapeHtml(isReschedule ? `Reschedule ${job.site}` : job.site)}</h3>
+        ${isOverdueJob(job) ? `<p class="job-overdue-note">This visit was scheduled for ${escapeHtml(job.date)} and is not marked complete.</p>` : ""}
         <form class="drawer-form" data-job-edit-form>
           <label>Visit date
-            <input name="visit_date" type="date" value="${escapeHtml(toDateInputValue(job.dateRaw))}" required>
+            <input name="visit_date" type="date" value="${escapeHtml(visitDateValue)}" required>
           </label>
           <label>Visit window
             <input name="visit_window" value="${escapeHtml(job.window === "Window not set" ? "" : job.window)}">
@@ -4620,7 +4680,7 @@
             <select name="status">${STATUSES.map((status) => `<option value="${status}"${status === job.status ? " selected" : ""}>${status}</option>`).join("")}</select>
           </label>
           <div class="drawer-actions">
-            <button type="submit">${buttonContent("Save Visit", "complete-reminder")}</button>
+            <button type="submit">${buttonContent(isReschedule ? "Save New Date" : "Save Visit", "complete-reminder")}</button>
             ${job.status !== "Completed" ? `<button type="button" data-action="complete-job" data-id="${escapeHtml(job.id)}">${buttonContent("Mark Complete", "complete-reminder")}</button>` : ""}
             <button type="button" class="danger-action" data-action="cancel-job" data-id="${escapeHtml(job.id)}">${buttonContent("Cancel Visit", "cancel-job")}</button>
           </div>
@@ -4855,6 +4915,7 @@
     populatePropertyFilter(data);
     renderMetrics(data);
     renderDashboardAlerts(data);
+    renderOverdueJobAlerts(data);
     renderSubmissions(data);
     renderUpcoming(data);
     renderHomeReminders(data);
@@ -5313,6 +5374,8 @@
         openSubmissionDrawer(id);
       } else if (action === "open-contact") {
         openContactDrawer(id);
+      } else if (action === "reschedule-job") {
+        openJobDrawer(id, { reschedule: true });
       } else if (action === "quick-add-job") {
         setActiveSection("calendar");
         history.replaceState(null, "", "#calendar");
@@ -6299,6 +6362,8 @@
     els.homeNotes = qs("[data-home-notes]");
     els.todayRouteSnapshot = qs("[data-today-route-snapshot]");
     els.dashboardAlerts = qs("[data-dashboard-alerts]");
+    els.overdueJobs = qs("[data-overdue-jobs]");
+    els.calendarOverdueJobs = qs("[data-calendar-overdue-jobs]");
     els.todayChip = qs("[data-today-chip]");
     els.detailDrawer = qs("[data-detail-drawer]");
     els.detailContent = qs("[data-detail-content]");

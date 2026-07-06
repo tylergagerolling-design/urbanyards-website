@@ -52,8 +52,18 @@
     root.className = "uy-assistant";
     root.setAttribute("aria-label", "The Groundskeeper website assistant");
     root.innerHTML = `
-      <button class="uy-assistant-toggle" type="button" aria-expanded="false" aria-controls="uy-assistant-panel">
-        <span class="uy-assistant-toggle-icon" aria-hidden="true"></span>
+      <button class="uy-assistant-toggle" type="button" aria-label="Open The Groundskeeper assistant" aria-expanded="false" aria-controls="uy-assistant-panel">
+        <svg class="uy-assistant-toggle-icon" viewBox="0 0 64 64" aria-hidden="true" focusable="false">
+          <path class="uy-helper-hex-fill" d="M32 5.8 54.5 18.9v26.2L32 58.2 9.5 45.1V18.9L32 5.8Z"/>
+          <path class="uy-helper-hex-outline" d="M32 5.8 54.5 18.9v26.2L32 58.2 9.5 45.1V18.9L32 5.8Z"/>
+          <path class="uy-helper-hex-inner" d="M32 11.5 49.5 21.7v20.6L32 52.5 14.5 42.3V21.7L32 11.5Z"/>
+          <path class="uy-helper-leaf" d="M22.6 38.8C24 27.2 33.4 19.3 43 17.8c1.2 10.5-3.6 19.3-13.5 23.2-2.5 1-5.2.1-6.9-2.2Z"/>
+          <path class="uy-helper-leaf-line" d="M21.9 41.2c4.6-9 10.2-14.7 17.2-18.7M30.4 31.8l8.3-.9"/>
+          <path class="uy-helper-bubble" d="M39.1 34.4h9.2c4.9 0 8.8 3.6 8.8 8.2s-3.9 8.2-8.8 8.2h-2.7l-6.6 4.4.8-5.1c-3.3-1.2-5.5-4-5.5-7.5 0-4.6 3.9-8.2 8.8-8.2Z"/>
+          <circle class="uy-helper-dot" cx="42.7" cy="42.5" r="1.45"/>
+          <circle class="uy-helper-dot" cx="47.2" cy="42.5" r="1.45"/>
+          <circle class="uy-helper-dot" cx="51.7" cy="42.5" r="1.45"/>
+        </svg>
         <span class="sr-only">Open The Groundskeeper assistant</span>
       </button>
       <div class="uy-assistant-panel" id="uy-assistant-panel" role="dialog" aria-modal="false" aria-labelledby="uy-assistant-title" hidden>

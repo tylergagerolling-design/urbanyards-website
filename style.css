@@ -5410,7 +5410,8 @@ body:not(.feral-page) .error-card {
 }
 
 @media (min-width: 761px) {
-  body:not(.feral-page) .homeowner-service-media {
+  body:not(.feral-page) .homeowner-service-media,
+  body:not(.feral-page) .property-management-service-media {
     height: clamp(260px, 24vw, 360px);
   }
 }

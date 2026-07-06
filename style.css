@@ -4982,6 +4982,10 @@ body:not(.feral-page) .service-image-mower {
   object-position: 66% center;
 }
 
+body:not(.feral-page) .homeowner-mower-crop {
+  object-position: center 62%;
+}
+
 body:not(.feral-page) .service-image-bed-refresh {
   object-position: center center;
 }

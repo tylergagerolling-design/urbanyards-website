@@ -4983,7 +4983,7 @@ body:not(.feral-page) .service-image-mower {
 }
 
 body:not(.feral-page) .homeowner-mower-crop {
-  object-position: center 62%;
+  object-position: center 60%;
 }
 
 body:not(.feral-page) .service-image-bed-refresh {
@@ -5406,5 +5406,11 @@ body:not(.feral-page) .error-card {
 
   body:not(.feral-page) .error-main {
     min-height: min(540px, calc(100vh - 74px));
+  }
+}
+
+@media (min-width: 761px) {
+  body:not(.feral-page) .homeowner-service-media {
+    height: clamp(260px, 24vw, 360px);
   }
 }

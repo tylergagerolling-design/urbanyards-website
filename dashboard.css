@@ -7573,3 +7573,148 @@ body.is-login-screen .app-view {
     padding: 18px !important;
   }
 }
+
+/* Desktop dashboard fit pass: keep the main dashboard from page-scrolling. */
+@media (min-width: 901px) {
+  body:not(.is-login-screen),
+  body:not(.is-login-screen) .dashboard-shell {
+    height: 100vh !important;
+    overflow: hidden !important;
+  }
+
+  body:not(.is-login-screen) .app-view {
+    height: 100vh !important;
+    min-height: 100vh !important;
+    overflow: hidden !important;
+  }
+
+  body:not(.is-login-screen) .dashboard-main {
+    display: flex !important;
+    flex-direction: column !important;
+    height: 100vh !important;
+    min-height: 0 !important;
+    gap: 10px !important;
+    padding: 12px clamp(14px, 1.8vw, 28px) 14px !important;
+    overflow: hidden !important;
+  }
+
+  body:not(.is-login-screen) .dashboard-topbar {
+    position: relative !important;
+    top: auto !important;
+    flex: 0 0 auto !important;
+    gap: 10px !important;
+    padding: 9px 12px !important;
+  }
+
+  body:not(.is-login-screen) .dashboard-topbar h2 {
+    font-size: clamp(1.14rem, 1.45vw, 1.55rem) !important;
+  }
+
+  body:not(.is-login-screen) .dashboard-topbar .eyebrow {
+    margin-bottom: 1px !important;
+    font-size: 0.56rem !important;
+  }
+
+  body:not(.is-login-screen) .topbar-actions {
+    max-width: 430px !important;
+    padding: 4px !important;
+  }
+
+  body:not(.is-login-screen) .topbar-actions input,
+  body:not(.is-login-screen) .topbar-actions button {
+    min-height: 34px !important;
+    font-size: 0.78rem !important;
+  }
+
+  body:not(.is-login-screen) .dashboard-section.is-active {
+    display: flex !important;
+    flex: 1 1 auto !important;
+    flex-direction: column !important;
+    min-height: 0 !important;
+    gap: 10px !important;
+    overflow: hidden !important;
+  }
+
+  body:not(.is-login-screen) .home-hero,
+  body:not(.is-login-screen) .outreach-hero,
+  body:not(.is-login-screen) .route-hero,
+  body:not(.is-login-screen) .groundskeeper-ai-hero {
+    flex: 0 0 auto !important;
+    min-height: 0 !important;
+    padding: 14px 16px !important;
+  }
+
+  body:not(.is-login-screen) .home-hero h3,
+  body:not(.is-login-screen) .outreach-hero h3,
+  body:not(.is-login-screen) .route-hero h3,
+  body:not(.is-login-screen) .groundskeeper-ai-hero h3 {
+    font-size: clamp(1.45rem, 2.4vw, 2.8rem) !important;
+    line-height: 0.94 !important;
+  }
+
+  body:not(.is-login-screen) .home-hero p:last-child,
+  body:not(.is-login-screen) .outreach-hero p,
+  body:not(.is-login-screen) .route-hero p,
+  body:not(.is-login-screen) .groundskeeper-ai-hero p:not(.eyebrow) {
+    margin-top: 6px !important;
+    font-size: 0.86rem !important;
+    line-height: 1.35 !important;
+  }
+
+  body:not(.is-login-screen) .metric-grid {
+    flex: 0 0 auto !important;
+    gap: 8px !important;
+  }
+
+  body:not(.is-login-screen) .metric-card,
+  body:not(.is-login-screen) .operations-health-card {
+    padding: 10px !important;
+  }
+
+  body:not(.is-login-screen) .metric-card strong,
+  body:not(.is-login-screen) .operations-health-card strong {
+    font-size: clamp(1.05rem, 1.8vw, 1.55rem) !important;
+  }
+
+  body:not(.is-login-screen) .panel,
+  body:not(.is-login-screen) .document-card,
+  body:not(.is-login-screen) .contact-card,
+  body:not(.is-login-screen) .job-card,
+  body:not(.is-login-screen) .note-card,
+  body:not(.is-login-screen) .reminder-card,
+  body:not(.is-login-screen) .submission-card {
+    padding: 12px !important;
+  }
+
+  body:not(.is-login-screen) .panel-heading {
+    padding-bottom: 8px !important;
+    margin-bottom: 8px !important;
+  }
+
+  body:not(.is-login-screen) .overview-grid,
+  body:not(.is-login-screen) .dashboard-grid,
+  body:not(.is-login-screen) .outreach-layout,
+  body:not(.is-login-screen) .route-planner-shell,
+  body:not(.is-login-screen) .groundskeeper-ai-layout,
+  body:not(.is-login-screen) .groundskeeper-ai-grid {
+    flex: 1 1 auto !important;
+    min-height: 0 !important;
+    gap: 10px !important;
+    overflow: hidden !important;
+  }
+
+  body:not(.is-login-screen) .panel,
+  body:not(.is-login-screen) .table-wrap,
+  body:not(.is-login-screen) .outreach-table-wrap,
+  body:not(.is-login-screen) .route-stops,
+  body:not(.is-login-screen) .groundskeeper-ai-list,
+  body:not(.is-login-screen) .groundskeeper-ai-chat,
+  body:not(.is-login-screen) .drawer-panel {
+    min-height: 0 !important;
+    overflow: auto !important;
+  }
+
+  body:not(.is-login-screen) .calendar-grid {
+    min-height: 0 !important;
+  }
+}

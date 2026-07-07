@@ -7504,3 +7504,72 @@ body.is-login-screen .dashboard-shell {
     text-shadow: 0 2px 12px rgba(6, 27, 21, 0.45);
   }
 }
+
+/* Login hard reset: prevent dashboard rail/layout layers from bleeding into auth. */
+html:has(body.is-login-screen),
+body.is-login-screen {
+  width: 100% !important;
+  height: auto !important;
+  min-height: 100% !important;
+  overflow-x: hidden !important;
+  overflow-y: auto !important;
+  background: #f5f0e3 !important;
+}
+
+body.is-login-screen .dashboard-shell {
+  display: block !important;
+  width: 100vw !important;
+  max-width: none !important;
+  min-height: 100vh !important;
+  min-height: 100svh !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  overflow: visible !important;
+  background: #f5f0e3 !important;
+}
+
+body.is-login-screen .login-view {
+  position: relative !important;
+  z-index: 0 !important;
+  display: grid !important;
+  width: 100vw !important;
+  max-width: none !important;
+  min-height: 100vh !important;
+  min-height: 100svh !important;
+  margin: 0 !important;
+  margin-left: 0 !important;
+  padding: clamp(24px, 4.8vw, 60px) !important;
+  overflow: hidden !important;
+  isolation: isolate !important;
+  opacity: 1 !important;
+}
+
+body.is-login-screen .login-view::before,
+body.is-login-screen .login-view::after {
+  z-index: -1 !important;
+  pointer-events: none !important;
+}
+
+body.is-login-screen .login-panel,
+body.is-login-screen .login-tagline {
+  position: relative !important;
+  z-index: 2 !important;
+  opacity: 1 !important;
+}
+
+body.is-login-screen .dashboard-sidebar,
+body.is-login-screen .sidebar-scrim,
+body.is-login-screen .mobile-tabbar,
+body.is-login-screen .pull-refresh,
+body.is-login-screen .app-view {
+  display: none !important;
+  visibility: hidden !important;
+  opacity: 0 !important;
+  pointer-events: none !important;
+}
+
+@media (max-width: 640px) {
+  body.is-login-screen .login-view {
+    padding: 18px !important;
+  }
+}

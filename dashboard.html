@@ -11,10 +11,10 @@
     <link rel="icon" href="/favicon.ico" sizes="any">
     <link rel="apple-touch-icon" href="/apple-touch-icon.png">
     <link rel="manifest" href="/dashboard.webmanifest">
-    <link rel="stylesheet" href="dashboard.css?v=20260707-call-1">
+    <link rel="stylesheet" href="dashboard.css?v=20260707-ai-workspace-1">
     <link rel="stylesheet" href="dashboard-mobile-fix.css?v=20260622-3">
     <script src="dashboard-config.js?v=20260623-1" defer></script>
-    <script src="dashboard.js?v=20260707-call-1" defer></script>
+    <script src="dashboard.js?v=20260707-ai-workspace-1" defer></script>
   </head>
   <body>
     <main class="dashboard-shell" aria-labelledby="dashboard-title">
@@ -766,13 +766,14 @@
           </section>
 
           <section class="dashboard-section" id="groundskeeper-ai" data-section="groundskeeper-ai">
-            <div class="groundskeeper-ai-hero">
+            <div class="groundskeeper-ai-hero groundskeeper-ai-command-header">
               <div>
                 <p class="eyebrow">Groundskeeper AI</p>
                 <h3>The shared Urban Yards AI brain</h3>
-                <p>Manage public website knowledge, internal dashboard guidance, saved answers, rules, FAQs, and visitor question logs.</p>
+                <p>Manage public website knowledge, internal dashboard guidance, FAQs, rules, saved answers, and visitor question logs.</p>
               </div>
-              <div class="groundskeeper-ai-actions">
+              <div class="groundskeeper-ai-toolbar">
+                <input data-ai-search type="search" aria-label="Search AI knowledge" placeholder="Search AI knowledge...">
                 <button type="button" data-action="refresh-groundskeeper-ai"><span class="button-icon" aria-hidden="true">R</span><span>Refresh AI</span></button>
                 <button type="button" data-action="publish-groundskeeper-ai"><span class="button-icon" aria-hidden="true">OK</span><span>Publish AI Updates</span></button>
               </div>
@@ -780,90 +781,9 @@
 
             <div class="groundskeeper-ai-status" data-groundskeeper-ai-status></div>
 
-            <div class="groundskeeper-ai-layout">
-              <section class="panel groundskeeper-ai-chat-panel">
-                <div class="panel-heading">
-                  <div>
-                    <h3>Dashboard Assistant</h3>
-                    <p>Ask for follow-up drafts, lead summaries, copy ideas, or outreach planning. Dashboard mode can use internal AI knowledge.</p>
-                  </div>
-                </div>
-                <div class="groundskeeper-ai-chat" data-groundskeeper-chat></div>
-                <form class="groundskeeper-ai-chat-form" data-groundskeeper-chat-form>
-                  <textarea name="message" rows="3" placeholder="Ask The Groundskeeper to draft a follow-up, summarize a lead, or improve website copy..."></textarea>
-                  <button type="submit"><span class="button-icon" aria-hidden="true">-&gt;</span><span>Ask</span></button>
-                </form>
-              </section>
-
-              <section class="panel groundskeeper-ai-editor-panel">
-                <div class="panel-heading">
-                  <div>
-                    <h3>Add Knowledge</h3>
-                    <p>Draft first, then publish when it should affect the public website helper.</p>
-                  </div>
-                </div>
-                <form class="groundskeeper-ai-form" data-groundskeeper-entry-form>
-                  <label>Content Type
-                    <select name="table">
-                      <option value="ai_knowledge">Knowledge</option>
-                      <option value="ai_faqs">Website FAQ</option>
-                      <option value="ai_rules">AI Rule</option>
-                      <option value="ai_saved_answers">Saved Answer</option>
-                      <option value="ai_settings">Business Fact / Setting</option>
-                    </select>
-                  </label>
-                  <label>Title / Question / Key
-                    <input name="title" required placeholder="Example: Pricing Guidance">
-                  </label>
-                  <label>Category / Label
-                    <input name="category" placeholder="Business Facts, Services, Quote Process...">
-                  </label>
-                  <label>Visibility
-                    <select name="visibility">
-                      <option value="public">Public Website</option>
-                      <option value="internal">Internal Only</option>
-                    </select>
-                  </label>
-                  <label>Status
-                    <select name="status">
-                      <option value="draft">Draft</option>
-                      <option value="published">Published</option>
-                      <option value="archived">Archived</option>
-                    </select>
-                  </label>
-                  <label class="span-full">Content / Answer / Rule
-                    <textarea name="content" rows="5" required placeholder="Write the approved fact, FAQ answer, rule, or saved response..."></textarea>
-                  </label>
-                  <button type="submit"><span class="button-icon" aria-hidden="true">+</span><span>Save AI Entry</span></button>
-                </form>
-              </section>
-            </div>
-
-            <div class="groundskeeper-ai-grid">
-              <section class="panel">
-                <div class="panel-heading"><h3>Business Facts</h3><p>Settings, service area, contact info, tone, quote and payment process.</p></div>
-                <div class="groundskeeper-ai-list" data-ai-settings-list></div>
-              </section>
-              <section class="panel">
-                <div class="panel-heading"><h3>Services & Knowledge</h3><p>Published and draft knowledge entries.</p></div>
-                <div class="groundskeeper-ai-list" data-ai-knowledge-list></div>
-              </section>
-              <section class="panel">
-                <div class="panel-heading"><h3>Website FAQ</h3><p>Questions and approved answers for the public helper.</p></div>
-                <div class="groundskeeper-ai-list" data-ai-faq-list></div>
-              </section>
-              <section class="panel">
-                <div class="panel-heading"><h3>AI Rules</h3><p>Behavior rules, boundaries, tone, and fallback guidance.</p></div>
-                <div class="groundskeeper-ai-list" data-ai-rules-list></div>
-              </section>
-              <section class="panel">
-                <div class="panel-heading"><h3>Saved Answers</h3><p>Reusable answers that can become official knowledge after review.</p></div>
-                <div class="groundskeeper-ai-list" data-ai-saved-answers-list></div>
-              </section>
-              <section class="panel">
-                <div class="panel-heading"><h3>Visitor Question Logs</h3><p>Recent public and dashboard questions for review. Use Save as Knowledge or Save as Rule before publishing.</p></div>
-                <div class="groundskeeper-ai-list" data-ai-logs-list></div>
-              </section>
+            <div class="groundskeeper-ai-workspace">
+              <aside class="groundskeeper-ai-sidebar" aria-label="Groundskeeper AI sections" data-ai-nav></aside>
+              <main class="groundskeeper-ai-main" data-ai-main></main>
             </div>
           </section>
 

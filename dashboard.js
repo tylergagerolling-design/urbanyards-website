@@ -57,6 +57,8 @@
     equipmentStatusFilter: "All",
     equipmentConditionFilter: "All",
     equipmentPriorityFilter: "All",
+    groundskeeperAiView: "assistant",
+    groundskeeperAiSearch: "",
     selectedOutreachIds: new Set(),
     selectedOutreachPropertyIds: new Set(),
     pendingOutreachImport: null,
@@ -5860,6 +5862,247 @@
     `).join("")}${hiddenLogCount > 0 ? `<div class="groundskeeper-ai-more">Showing ${visibleLogs.length} of ${logs.length} recent questions.</div>` : ""}`;
   }
 
+  const AI_SECTIONS = [
+    { id: "assistant", icon: "AI", title: "Dashboard Assistant", table: "", type: "", description: "Ask for follow-up drafts, lead summaries, copy ideas, or outreach planning. Dashboard mode can use internal AI knowledge." },
+    { id: "settings", icon: "BF", title: "Business Facts", table: "ai_settings", type: "settings", description: "Settings, service area, contact info, tone, quote process, and payment process." },
+    { id: "knowledge", icon: "SK", title: "Services & Knowledge", table: "ai_knowledge", type: "knowledge", description: "Published and draft knowledge entries for services, site content, and business context." },
+    { id: "faqs", icon: "FAQ", title: "Website FAQ", table: "ai_faqs", type: "faqs", description: "Visitor-facing questions and approved answers for the public helper." },
+    { id: "rules", icon: "R", title: "AI Rules", table: "ai_rules", type: "rules", description: "Behavior rules, boundaries, tone, fallback guidance, and safety instructions." },
+    { id: "savedAnswers", icon: "SA", title: "Saved Answers", table: "ai_saved_answers", type: "savedAnswers", description: "Reusable answers that can become official knowledge after review." },
+    { id: "logs", icon: "IN", title: "Visitor Question Logs", table: "", type: "logs", description: "Review recent questions and turn good answers into official AI knowledge." }
+  ];
+
+  function aiSectionById(id) {
+    return AI_SECTIONS.find((section) => section.id === id) || AI_SECTIONS[0];
+  }
+
+  function aiItemsForSection(ai, section) {
+    if (section.id === "logs") return ai.logs || [];
+    if (section.id === "settings") return ai.settings || [];
+    if (section.id === "knowledge") return ai.knowledge || [];
+    if (section.id === "faqs") return ai.faqs || [];
+    if (section.id === "rules") return ai.rules || [];
+    if (section.id === "savedAnswers") return ai.savedAnswers || [];
+    return [];
+  }
+
+  function aiItemText(item, type) {
+    return [itemTitle(item, type), item.category, item.label, item.value, item.content, item.answer, item.question, item.notes, item.page, item.source_url].filter(Boolean).join(" ");
+  }
+
+  function filteredAiItems(ai, section) {
+    const search = normalizeLookup(state.groundskeeperAiSearch);
+    const items = aiItemsForSection(ai, section);
+    if (!search) return items;
+    return items.filter((item) => normalizeLookup(aiItemText(item, section.type)).includes(search));
+  }
+
+  function renderAiNav(ai) {
+    if (!els.aiNav) return;
+    els.aiNav.innerHTML = AI_SECTIONS.map((section) => {
+      const count = section.id === "assistant" ? state.groundskeeperMessages.length : aiItemsForSection(ai, section).length;
+      const active = state.groundskeeperAiView === section.id ? " is-active" : "";
+      return `<button type="button" class="ai-nav-item${active}" data-ai-view="${escapeHtml(section.id)}">
+        <span class="ai-nav-icon">${escapeHtml(section.icon)}</span>
+        <span>${escapeHtml(section.title)}</span>
+        ${count ? `<strong>${escapeHtml(count)}</strong>` : ""}
+      </button>`;
+    }).join("");
+  }
+
+  function aiEditorDefaults(section) {
+    return {
+      table: section.table || "ai_knowledge",
+      title: "",
+      category: section.title,
+      visibility: section.id === "rules" ? "internal" : "public",
+      status: "draft",
+      content: ""
+    };
+  }
+
+  function aiFormValuesFromItem(item, section, overrides = {}) {
+    const values = aiEditorDefaults(section);
+    values.title = overrides.title || itemTitle(item, section.type);
+    values.category = item.category || item.label || item.notes || section.title;
+    values.visibility = item.visibility || values.visibility;
+    values.status = overrides.status || item.status || values.status;
+    values.content = overrides.content || item.content || item.value || item.answer || "";
+    return values;
+  }
+
+  function renderAiEditorForm(section, values = aiEditorDefaults(section)) {
+    return `<form class="groundskeeper-ai-form ai-command-editor" data-groundskeeper-entry-form>
+      <label>Content Type
+        <select name="table">
+          <option value="ai_settings"${values.table === "ai_settings" ? " selected" : ""}>Business Fact / Setting</option>
+          <option value="ai_knowledge"${values.table === "ai_knowledge" ? " selected" : ""}>Knowledge</option>
+          <option value="ai_faqs"${values.table === "ai_faqs" ? " selected" : ""}>Website FAQ</option>
+          <option value="ai_rules"${values.table === "ai_rules" ? " selected" : ""}>AI Rule</option>
+          <option value="ai_saved_answers"${values.table === "ai_saved_answers" ? " selected" : ""}>Saved Answer</option>
+        </select>
+      </label>
+      <label>Title / Question / Key
+        <input name="title" required value="${escapeHtml(values.title)}" placeholder="Example: Pricing Guidance">
+      </label>
+      <label>Category / Label
+        <input name="category" value="${escapeHtml(values.category)}" placeholder="Business Facts, Services, Quote Process...">
+      </label>
+      <label>Visibility
+        <select name="visibility">
+          <option value="public"${values.visibility === "public" ? " selected" : ""}>Public Website</option>
+          <option value="internal"${values.visibility === "internal" ? " selected" : ""}>Internal Only</option>
+        </select>
+      </label>
+      <label>Status
+        <select name="status">
+          <option value="draft"${values.status === "draft" ? " selected" : ""}>Draft</option>
+          <option value="published"${values.status === "published" ? " selected" : ""}>Published</option>
+          <option value="archived"${values.status === "archived" ? " selected" : ""}>Archived</option>
+        </select>
+      </label>
+      <label class="span-full">Content / Answer / Rule
+        <textarea name="content" rows="10" required placeholder="Write the approved fact, FAQ answer, rule, or saved response...">${escapeHtml(values.content)}</textarea>
+      </label>
+      <div class="ai-editor-actions span-full">
+        <button type="submit" data-ai-save-status="draft"><span class="button-icon" aria-hidden="true">+</span><span>Save Draft</span></button>
+        <button type="submit" data-ai-save-status="published"><span class="button-icon" aria-hidden="true">OK</span><span>Publish</span></button>
+      </div>
+    </form>`;
+  }
+
+  function renderAiEntryRows(items, section) {
+    if (!items.length) return emptyState(state.groundskeeperAiSearch ? "No entries match that search." : "No entries saved yet.");
+    return `<div class="ai-entry-list">
+      ${items.map((item, index) => {
+        const title = itemTitle(item, section.type);
+        const body = item.content || item.value || item.answer || "";
+        return `<article class="ai-entry-row">
+          <div>
+            <strong>${escapeHtml(title)}</strong>
+            <p>${escapeHtml(body || "No content saved yet.")}</p>
+          </div>
+          <span>${escapeHtml(item.category || item.label || item.notes || section.title)}</span>
+          <span>${aiBadge(item.visibility === "internal" ? "Internal Only" : "Public Website", "Public Website")}</span>
+          <span>${aiBadge(item.status, "draft")}</span>
+          <time>${escapeHtml(item.updated_at ? formatDate(item.updated_at) : "")}</time>
+          <div class="ai-entry-actions">
+            <button class="inline-action" type="button" data-action="edit-ai-entry" data-section="${escapeHtml(section.id)}" data-index="${escapeHtml(index)}">Edit</button>
+            <button class="inline-action" type="button" data-action="duplicate-ai-entry" data-section="${escapeHtml(section.id)}" data-index="${escapeHtml(index)}">Duplicate</button>
+            <button class="inline-action" type="button" data-action="archive-ai-entry" data-section="${escapeHtml(section.id)}" data-index="${escapeHtml(index)}">Archive</button>
+          </div>
+        </article>`;
+      }).join("")}
+    </div>`;
+  }
+
+  function renderAssistantWorkspace() {
+    if (!els.aiMain) return;
+    els.aiMain.innerHTML = `
+      <section class="panel groundskeeper-ai-chat-panel ai-command-panel">
+        <div class="panel-heading">
+          <div>
+            <h3>Dashboard Assistant</h3>
+            <p>Internal copilot for follow-ups, lead summaries, website copy, and AI knowledge cleanup.</p>
+          </div>
+        </div>
+        <div class="ai-quick-actions">
+          ${["Draft follow-up", "Summarize lead", "Improve website copy", "Create FAQ answer", "Review visitor question", "Add service rule"].map((label) => `<button type="button" data-action="ai-quick-prompt" data-prompt="${escapeHtml(label)}">${escapeHtml(label)}</button>`).join("")}
+        </div>
+        <div class="groundskeeper-ai-chat" data-groundskeeper-chat></div>
+        <form class="groundskeeper-ai-chat-form ai-command-chat-form" data-groundskeeper-chat-form>
+          <textarea name="message" rows="5" placeholder="Ask The Groundskeeper to draft a follow-up, summarize a lead, improve website copy, or turn a visitor question into reusable knowledge..."></textarea>
+          <button type="submit"><span class="button-icon" aria-hidden="true">-&gt;</span><span>Ask</span></button>
+        </form>
+      </section>`;
+    els.groundskeeperChat = qs("[data-groundskeeper-chat]");
+    renderGroundskeeperChat();
+  }
+
+  function renderKnowledgeWorkspace(ai, section) {
+    if (!els.aiMain) return;
+    const items = filteredAiItems(ai, section);
+    els.aiMain.innerHTML = `
+      <section class="panel ai-command-panel">
+        <div class="ai-workspace-heading">
+          <div>
+            <p class="eyebrow">${escapeHtml(section.title)}</p>
+            <h3>${escapeHtml(section.title)}</h3>
+            <p>${escapeHtml(section.description)}</p>
+          </div>
+          <button type="button" data-action="new-ai-entry" data-section="${escapeHtml(section.id)}"><span class="button-icon" aria-hidden="true">+</span><span>New Entry</span></button>
+        </div>
+        ${renderAiEditorForm(section)}
+        <div class="ai-entry-table-heading">
+          <h4>Existing Entries</h4>
+          <span>${escapeHtml(items.length)} shown</span>
+        </div>
+        ${renderAiEntryRows(items, section)}
+      </section>`;
+  }
+
+  function renderLogWorkspace(ai) {
+    if (!els.aiMain) return;
+    const section = aiSectionById("logs");
+    const logs = filteredAiItems(ai, section);
+    els.aiMain.innerHTML = `
+      <section class="panel ai-command-panel ai-log-queue">
+        <div class="ai-workspace-heading">
+          <div>
+            <p class="eyebrow">Review Queue</p>
+            <h3>Visitor Question Logs</h3>
+            <p>Review recent public and dashboard questions, then save useful answers as official AI knowledge.</p>
+          </div>
+        </div>
+        <div class="ai-log-list">
+          ${logs.length ? logs.map((log) => `
+            <article class="ai-log-item">
+              <div>
+                <strong>${escapeHtml(log.question || "Question")}</strong>
+                <p>${escapeHtml(log.answer || "No suggested answer saved.")}</p>
+                <small>${escapeHtml([log.page, log.mode, log.created_at ? formatDate(log.created_at) : ""].filter(Boolean).join(" / "))}</small>
+              </div>
+              <div class="ai-log-actions">
+                <button class="inline-action" type="button" data-action="save-ai-log-faq" data-id="${escapeHtml(log.id)}">Save as FAQ</button>
+                <button class="inline-action" type="button" data-action="save-ai-log-rule" data-id="${escapeHtml(log.id)}">Save as Rule</button>
+                <button class="inline-action" type="button" data-action="save-ai-log-knowledge" data-id="${escapeHtml(log.id)}">Save as Knowledge</button>
+                <button class="inline-action" type="button" data-action="dismiss-ai-log" data-id="${escapeHtml(log.id)}">Dismiss</button>
+              </div>
+            </article>
+          `).join("") : emptyState(state.groundskeeperAiSearch ? "No logs match that search." : "No AI questions logged yet.")}
+        </div>
+      </section>`;
+  }
+
+  function renderAiWorkspace(ai) {
+    renderAiNav(ai);
+    const section = aiSectionById(state.groundskeeperAiView);
+    if (section.id === "assistant") renderAssistantWorkspace();
+    else if (section.id === "logs") renderLogWorkspace(ai);
+    else renderKnowledgeWorkspace(ai, section);
+  }
+
+  function aiItemFromAction(sectionId, index) {
+    const section = aiSectionById(sectionId);
+    const items = filteredAiItems(state.data.groundskeeperAi || {}, section);
+    return { section, item: items[Number(index)] || null };
+  }
+
+  function fillAiEditor(section, item, overrides = {}) {
+    state.groundskeeperAiView = section.id;
+    renderAiWorkspace(state.data.groundskeeperAi || {});
+    const form = qs("[data-groundskeeper-entry-form]");
+    if (!form) return;
+    const values = item ? aiFormValuesFromItem(item, section, overrides) : { ...aiEditorDefaults(section), ...overrides };
+    form.table.value = values.table;
+    form.title.value = values.title;
+    form.category.value = values.category;
+    form.visibility.value = values.visibility;
+    form.status.value = values.status;
+    form.content.value = values.content;
+    form.title.focus();
+  }
+
   function renderGroundskeeperAi(data = state.data) {
     const ai = data.groundskeeperAi || {};
     const lastPublished = (ai.settings || []).find((item) => item.setting_key === "last_published_at");
@@ -5868,13 +6111,8 @@
         ? `<span>${aiBadge("Shared Endpoint", "Shared Endpoint")} Public helper and dashboard assistant use <code>/.netlify/functions/groundskeeper-ai</code>.</span><span>Last published: ${escapeHtml(lastPublished?.value ? formatDate(lastPublished.value) : "Not published from dashboard yet")}</span>`
         : `<span>${aiBadge("Setup Needed", "Setup Needed")} Run <code>DASHBOARD_GROUNDSKEEPER_AI_SQL.md</code> in Supabase, then refresh. The public helper still uses bundled website knowledge until tables exist.</span>`;
     }
-    renderGroundskeeperChat();
-    renderAiList(els.aiSettingsList, ai.settings || [], "settings", "No business facts saved in Supabase yet.");
-    renderAiList(els.aiKnowledgeList, ai.knowledge || [], "knowledge", "No AI knowledge entries saved yet.");
-    renderAiList(els.aiFaqList, ai.faqs || [], "faqs", "No AI FAQs saved yet.");
-    renderAiList(els.aiRulesList, ai.rules || [], "rules", "No AI rules saved yet.");
-    renderAiList(els.aiSavedAnswersList, ai.savedAnswers || [], "savedAnswers", "No saved answers yet.");
-    renderAiLogs(ai.logs || []);
+    if (els.aiSearch && els.aiSearch.value !== state.groundskeeperAiSearch) els.aiSearch.value = state.groundskeeperAiSearch;
+    renderAiWorkspace(ai);
   }
 
   function aiEntryPayloadFromForm(form) {
@@ -5912,6 +6150,19 @@
           title: `Rule from ${formatDate(log.created_at)}`,
           content: log.answer || log.question,
           visibility: "internal",
+          status: "draft"
+        }
+      });
+      return;
+    }
+    if (table === "ai_faqs") {
+      await groundskeeperRequest("upsert", {
+        table,
+        record: {
+          question: log.question || "Visitor question",
+          answer: log.answer || "",
+          category: "Visitor Question Logs",
+          visibility: "public",
           status: "draft"
         }
       });
@@ -6193,6 +6444,13 @@
       });
     }
 
+    if (els.aiSearch) {
+      els.aiSearch.addEventListener("input", async () => {
+        state.groundskeeperAiSearch = els.aiSearch.value;
+        await render();
+      });
+    }
+
     qsa("[data-equipment-view]").forEach((button) => {
       button.addEventListener("click", async () => {
         state.equipmentView = button.dataset.equipmentView || "inventory";
@@ -6422,6 +6680,64 @@
 
       if (target.dataset.export) {
         exportData(target.dataset.export);
+        return;
+      }
+
+      if (target.matches("[data-ai-view]")) {
+        state.groundskeeperAiView = target.dataset.aiView || "assistant";
+        await render();
+        return;
+      }
+
+      if (action === "ai-quick-prompt") {
+        const promptMap = {
+          "Draft follow-up": "Draft a concise follow-up message for a lead. Ask me for any missing lead details first.",
+          "Summarize lead": "Summarize this lead into key details, likely service fit, next step, and follow-up priority.",
+          "Improve website copy": "Improve this Urban Yards website copy while keeping the tone practical, local, owner-operated, and clear.",
+          "Create FAQ answer": "Create a public website FAQ answer using Urban Yards service area, quote process, and brand voice.",
+          "Review visitor question": "Review this visitor question and suggest whether it should become a FAQ, rule, or knowledge entry.",
+          "Add service rule": "Draft a clear AI rule for how The Groundskeeper should answer service-related questions."
+        };
+        const textarea = qs("[data-groundskeeper-chat-form] textarea[name='message']");
+        if (textarea) {
+          textarea.value = promptMap[target.dataset.prompt] || target.dataset.prompt || "";
+          textarea.focus();
+        }
+        return;
+      }
+
+      if (action === "new-ai-entry") {
+        const section = aiSectionById(target.dataset.section || state.groundskeeperAiView);
+        fillAiEditor(section, null);
+        return;
+      }
+
+      if (action === "edit-ai-entry" || action === "duplicate-ai-entry" || action === "archive-ai-entry") {
+        const { section, item } = aiItemFromAction(target.dataset.section, target.dataset.index);
+        if (!item) return;
+        const overrides = {};
+        if (action === "duplicate-ai-entry") overrides.title = `${itemTitle(item, section.type)} Copy`;
+        if (action === "archive-ai-entry") overrides.status = "archived";
+        fillAiEditor(section, item, overrides);
+        if (action === "archive-ai-entry") setDashboardState("Review this archived status, then save to confirm.");
+        return;
+      }
+
+      if (action === "save-ai-log-faq") {
+        try {
+          setDashboardState("Saving log as draft FAQ...");
+          await saveAiEntryFromLog(id, "ai_faqs");
+          state.data.groundskeeperAi = await loadGroundskeeperAi();
+          await render();
+          setDashboardState("Saved as draft FAQ. Review and publish when ready.");
+        } catch (error) {
+          setDashboardState(error.message || "Unable to save AI FAQ.", "error");
+        }
+        return;
+      }
+
+      if (action === "dismiss-ai-log") {
+        setDashboardState("Log dismissed for now. No source data was changed.");
         return;
       }
 
@@ -7432,6 +7748,8 @@
         event.preventDefault();
         try {
           setDashboardState("Saving Groundskeeper AI entry...");
+          const requestedStatus = event.submitter?.dataset.aiSaveStatus;
+          if (requestedStatus && event.target.elements.status) event.target.elements.status.value = requestedStatus;
           const payload = aiEntryPayloadFromForm(event.target);
           await groundskeeperRequest("upsert", payload);
           event.target.reset();
@@ -7781,6 +8099,9 @@
     els.routeMapStatus = qs("[data-route-map-status]");
     els.importBackup = qs("[data-import-backup]");
     els.groundskeeperAiStatus = qs("[data-groundskeeper-ai-status]");
+    els.aiNav = qs("[data-ai-nav]");
+    els.aiMain = qs("[data-ai-main]");
+    els.aiSearch = qs("[data-ai-search]");
     els.groundskeeperChat = qs("[data-groundskeeper-chat]");
     els.groundskeeperChatForm = qs("[data-groundskeeper-chat-form]");
     els.groundskeeperEntryForm = qs("[data-groundskeeper-entry-form]");

@@ -26,6 +26,13 @@
   const SESSION_KEY = "urbanYardsDashboardSession";
   const CALL_METHOD_KEY = "urbanYardsPreferredCallMethod";
   const DEMO_QUERY_KEYS = ["demo", "test"];
+  const DASHBOARD_ICON_PATH = "images/dashboard-icons/";
+  const SIDEBAR_QUICK_ACTIONS = [
+    { label: "New Job", action: "quick-add-job", icon: "plus.svg" },
+    { label: "Log Time", action: "quick-add-operation", icon: "log-time-clock.svg" },
+    { label: "New Lead", action: "new-outreach-prospect", icon: "new-lead-user.svg" },
+    { label: "Add Property", action: "quick-add-client", icon: "add-property-building.svg" }
+  ];
 
   const config = window.URBAN_YARDS_DASHBOARD_CONFIG || {
     supabaseUrl: "",
@@ -223,6 +230,10 @@
 
   function actionButton(label, action, id) {
     return `<button class="inline-action" type="button" data-action="${escapeHtml(action)}" data-id="${escapeHtml(id)}">${buttonContent(label, action)}</button>`;
+  }
+
+  function dashboardIcon(name) {
+    return `${DASHBOARD_ICON_PATH}${escapeHtml(name)}`;
   }
 
   function emptyState(message) {
@@ -3708,49 +3719,138 @@
     state.propertyFilter = els.propertyFilter.value;
   }
 
+  function renderSidebarQuickActions() {
+    if (!els.sidebarQuickActions) return;
+    els.sidebarQuickActions.innerHTML = SIDEBAR_QUICK_ACTIONS.map((item) => `
+      <button class="sidebar-quick-action" type="button" data-action="${escapeHtml(item.action)}">
+        <span class="nav-icon" aria-hidden="true"><img src="${dashboardIcon(item.icon)}" alt=""></span>
+        <span>${escapeHtml(item.label)}</span>
+      </button>
+    `).join("");
+  }
+
   function renderMetrics(data) {
     const today = todayKey();
-    const weekEnd = daysFromToday(7);
-    const jobsThisWeek = data.jobs.filter((item) => item.dateRaw >= today && item.dateRaw <= weekEnd).length;
-    const quotesPending = data.submissions.filter((item) => ["New", "Contacted"].includes(item.status)).length;
-    const invoicesDue = data.documents.filter((item) => item.type === "invoice" && item.status !== "paid").length;
-    const followUps = data.reminders.filter((item) => item.status !== "Completed").length;
-    const openTasks = data.notes.length;
-    const squareOwed = squareAmountOwedCents(data);
+    const todayJobs = data.jobs.filter((item) => item.dateRaw === today && matchesSearch(item));
+    const activeProperties = data.contacts.filter(matchesSearch).length + data.outreachProperties.filter((item) => matchesSearchValues([item.propertyName, item.address, item.city, item.company, item.neighborhood])).length;
+    const upcomingItems = data.jobs
+      .filter((item) => item.dateRaw >= today && matchesSearch(item))
+      .sort((a, b) => a.dateRaw.localeCompare(b.dateRaw) || a.window.localeCompare(b.window));
+    const nextJob = upcomingItems[0];
     const metrics = [
-      ["Jobs this week", jobsThisWeek],
-      ["Quotes pending", quotesPending],
-      ["Square owed", formatCurrency(squareOwed, "USD")],
-      ["Invoices due", invoicesDue],
-      ["Follow-ups needed", followUps],
-      ["Open tasks", openTasks]
+      {
+        label: "Today's Jobs",
+        value: todayJobs.length,
+        detail: todayJobs[0] ? `${todayJobs[0].site} / ${todayJobs[0].window}` : "No visits scheduled",
+        icon: "calendar.svg",
+        action: "go-calendar",
+        link: "View all jobs"
+      },
+      {
+        label: "Active Properties",
+        value: activeProperties,
+        detail: "Clients and managed properties",
+        icon: "properties-building.svg",
+        action: "go-contacts",
+        link: "View all properties"
+      },
+      {
+        label: "Upcoming",
+        value: nextJob ? nextJob.service : "Clear",
+        detail: nextJob ? `${nextJob.site} / ${nextJob.date}` : "No upcoming job found",
+        icon: "upcoming-clock.svg",
+        action: "go-calendar",
+        link: "View schedule"
+      }
     ];
 
     els.metrics.innerHTML = metrics
-      .map(([label, value]) => `<article class="metric-card"><strong>${value}</strong><span>${label}</span></article>`)
+      .map((metric) => `
+        <article class="metric-card overview-summary-card">
+          <div class="overview-summary-icon" aria-hidden="true"><img src="${dashboardIcon(metric.icon)}" alt=""></div>
+          <div class="overview-summary-body">
+            <span>${escapeHtml(metric.label)}</span>
+            <strong>${escapeHtml(metric.value)}</strong>
+            <p>${escapeHtml(metric.detail)}</p>
+            <button type="button" data-action="${escapeHtml(metric.action)}">${escapeHtml(metric.link)} <img src="${dashboardIcon("chevron-right.svg")}" alt="" aria-hidden="true"></button>
+          </div>
+        </article>
+      `)
       .join("");
   }
 
   function renderSubmissions(data) {
-    const items = filteredSubmissions();
-    if (!items.length) {
-      els.submissions.innerHTML = emptyState("No quote/contact submissions match this view yet.");
+    const activities = [
+      ...data.jobs.filter((job) => job.dateRaw >= todayKey()).slice(0, 3).map((job) => ({
+        title: job.site,
+        detail: `${job.service} / ${job.window}`,
+        context: job.city || "Work",
+        action: "edit-job",
+        id: job.id,
+        icon: "calendar.svg"
+      })),
+      ...filteredSubmissions().slice(0, 3).map((item) => ({
+        title: `${item.name} requested ${item.service}`,
+        detail: `${item.city} / ${item.propertyType}`,
+        context: "Quote",
+        action: "open-submission",
+        id: item.id,
+        icon: "new-lead-user.svg"
+      })),
+      ...data.contacts.filter(matchesSearch).slice(0, 2).map((contact) => ({
+        title: contact.name,
+        detail: contact.propertyType || contact.address || "Client profile",
+        context: "Property",
+        action: "open-contact",
+        id: contact.id,
+        icon: "properties-building.svg"
+      }))
+    ].slice(0, 5);
+    if (!activities.length) {
+      els.submissions.innerHTML = emptyState("No recent activity matches this view yet.");
       return;
     }
-    els.submissions.innerHTML = items.map((item) => `
-      <article class="submission-card">
-        <div class="item-topline">
-          <div>
-            <h4>${escapeHtml(item.name)}</h4>
-            <div class="meta">${escapeHtml(item.city)} / ${escapeHtml(item.propertyType)} / ${escapeHtml(item.receivedAt)}</div>
-          </div>
-          ${statusBadge(item.status)}
-        </div>
-        <p class="item-body">${escapeHtml(item.service)}. ${escapeHtml(item.notes)}</p>
-        <p class="small">Follow-up: ${escapeHtml(item.followUp)} / ${escapeHtml(item.email)}</p>
-        ${renderPhoneActions(item.phone, { leadId: item.id, leadType: "quote_submission", compact: true, helper: false })}
-      </article>
+    els.submissions.innerHTML = activities.map((item) => `
+      <button class="overview-activity-row" type="button" data-action="${escapeHtml(item.action)}" data-id="${escapeHtml(item.id)}">
+        <span class="overview-row-icon" aria-hidden="true"><img src="${dashboardIcon(item.icon)}" alt=""></span>
+        <span class="overview-row-main">
+          <strong>${escapeHtml(item.title)}</strong>
+          <small>${escapeHtml(item.detail)}</small>
+        </span>
+        <span class="overview-row-context">${escapeHtml(item.context)}</span>
+        <img class="overview-row-chevron" src="${dashboardIcon("chevron-right.svg")}" alt="" aria-hidden="true">
+      </button>
     `).join("");
+  }
+
+  function taskDashboardCounts(data) {
+    const completed = data.operations.filter((item) => item.status === "Done").length + data.reminders.filter((item) => item.status === "Completed").length;
+    const inProgress = data.operations.filter((item) => item.status === "Waiting").length;
+    const todo = data.operations.filter((item) => item.status === "Open").length + data.reminders.filter((item) => item.status !== "Completed").length + data.notes.length;
+    return { completed, inProgress, todo };
+  }
+
+  function renderTaskDonut(counts) {
+    const total = Math.max(counts.completed + counts.inProgress + counts.todo, 1);
+    const completedDeg = Math.round((counts.completed / total) * 360);
+    const progressDeg = Math.round(((counts.completed + counts.inProgress) / total) * 360);
+    return `
+      <div class="overview-task-donut" style="--completed-deg:${completedDeg}deg; --progress-deg:${progressDeg}deg">
+        <strong>${escapeHtml(counts.completed)}</strong>
+        <span>Completed</span>
+      </div>
+    `;
+  }
+
+  function renderTaskLegend(counts) {
+    return `
+      <div class="overview-task-legend">
+        <span><i class="is-completed"></i>Completed <strong>${escapeHtml(counts.completed)}</strong></span>
+        <span><i class="is-progress"></i>In Progress <strong>${escapeHtml(counts.inProgress)}</strong></span>
+        <span><i class="is-todo"></i>To Do <strong>${escapeHtml(counts.todo)}</strong></span>
+      </div>
+      <button class="overview-task-link" type="button" data-action="quick-add-operation">View all tasks <img src="${dashboardIcon("chevron-right.svg")}" alt="" aria-hidden="true"></button>
+    `;
   }
 
   function renderUpcoming(data) {
@@ -3776,22 +3876,11 @@
 
   function renderHomeReminders(data) {
     if (!els.homeReminders) return;
-    const reminders = data.reminders.filter((item) => item.status !== "Completed" && matchesSearch(item)).slice(0, 5);
-    if (!reminders.length) {
-      els.homeReminders.innerHTML = emptyState("No active follow-ups right now.");
-      return;
-    }
-    els.homeReminders.innerHTML = reminders.map((reminder) => `
-      <article class="reminder-card">
-        <div class="item-topline">
-          <div>
-            <h4>${escapeHtml(reminder.task)}</h4>
-            <div class="meta">Due: ${escapeHtml(reminder.due)}</div>
-          </div>
-          ${statusBadge(reminder.status)}
-        </div>
-      </article>
-    `).join("");
+    const counts = taskDashboardCounts(data);
+    els.homeReminders.innerHTML = `
+      ${renderTaskDonut(counts)}
+      ${renderTaskLegend(counts)}
+    `;
   }
 
   function renderHomeNotes(data) {
@@ -6182,6 +6271,7 @@
 
   async function render() {
     const data = state.data;
+    renderSidebarQuickActions();
     populatePropertyFilter(data);
     renderMetrics(data);
     renderDashboardAlerts(data);
@@ -6213,12 +6303,9 @@
     state.error = "";
     setDashboardState("Loading dashboard records...");
     els.metrics.innerHTML = [
-      ["Jobs this week", "..."],
-      ["Quotes pending", "..."],
-      ["Square owed", "..."],
-      ["Invoices due", "..."],
-      ["Follow-ups needed", "..."],
-      ["Open tasks", "..."]
+      ["Today's Jobs", "..."],
+      ["Active Properties", "..."],
+      ["Upcoming", "..."]
     ].map(([label, value]) => `<article class="metric-card"><strong>${value}</strong><span>${label}</span></article>`).join("");
     els.submissions.innerHTML = loadingState("Loading submissions...");
     els.upcoming.innerHTML = loadingState("Loading visits...");
@@ -6365,6 +6452,7 @@
         state.search = els.search.value;
         if (els.globalSearch && els.globalSearch.value !== state.search) els.globalSearch.value = state.search;
         if (els.clientSearch && els.clientSearch.value !== state.search) els.clientSearch.value = state.search;
+        if (els.overviewSearch && els.overviewSearch.value !== state.search) els.overviewSearch.value = state.search;
         await render();
       });
     }
@@ -6373,6 +6461,17 @@
       els.globalSearch.addEventListener("input", async () => {
         state.search = els.globalSearch.value;
         if (els.search && els.search.value !== state.search) els.search.value = state.search;
+        if (els.clientSearch && els.clientSearch.value !== state.search) els.clientSearch.value = state.search;
+        if (els.overviewSearch && els.overviewSearch.value !== state.search) els.overviewSearch.value = state.search;
+        await render();
+      });
+    }
+
+    if (els.overviewSearch) {
+      els.overviewSearch.addEventListener("input", async () => {
+        state.search = els.overviewSearch.value;
+        if (els.search && els.search.value !== state.search) els.search.value = state.search;
+        if (els.globalSearch && els.globalSearch.value !== state.search) els.globalSearch.value = state.search;
         if (els.clientSearch && els.clientSearch.value !== state.search) els.clientSearch.value = state.search;
         await render();
       });
@@ -6383,6 +6482,7 @@
         state.search = els.clientSearch.value;
         if (els.search && els.search.value !== state.search) els.search.value = state.search;
         if (els.globalSearch && els.globalSearch.value !== state.search) els.globalSearch.value = state.search;
+        if (els.overviewSearch && els.overviewSearch.value !== state.search) els.overviewSearch.value = state.search;
         await render();
       });
     }
@@ -8025,6 +8125,7 @@
     els.dashboardState = qs("[data-dashboard-state]");
     els.search = qs("[data-dashboard-search]");
     els.globalSearch = qs("[data-global-search]");
+    els.overviewSearch = qs("[data-overview-search]");
     els.clientSearch = qs("[data-client-search]");
     els.outreachSearch = qs("[data-outreach-search]");
     els.outreachCompanySearch = qs("[data-outreach-company-search]");
@@ -8124,6 +8225,7 @@
     els.pullRefresh = qs("[data-pull-refresh]");
     els.demoBadge = qs("[data-demo-badge]");
     els.metrics = qs("[data-metrics]");
+    els.sidebarQuickActions = qs("[data-sidebar-quick-actions]");
     els.statusFilter = qs("[data-status-filter]");
     els.submissions = qs("[data-submissions]");
     els.upcoming = qs("[data-upcoming]");

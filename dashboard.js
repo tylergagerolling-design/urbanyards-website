@@ -5570,7 +5570,21 @@
 
   function renderAiList(element, items, type, emptyMessage) {
     if (!element) return;
-    element.innerHTML = items.length ? items.map((item) => renderAiRecord(item, type)).join("") : emptyState(emptyMessage);
+    if (!items.length) {
+      element.innerHTML = emptyState(emptyMessage);
+      return;
+    }
+    const limits = {
+      settings: 5,
+      knowledge: 5,
+      faqs: 4,
+      rules: 4,
+      savedAnswers: 4
+    };
+    const limit = limits[type] || 5;
+    const visibleItems = items.slice(0, limit);
+    const hiddenCount = items.length - visibleItems.length;
+    element.innerHTML = `${visibleItems.map((item) => renderAiRecord(item, type)).join("")}${hiddenCount > 0 ? `<div class="groundskeeper-ai-more">Showing ${visibleItems.length} of ${items.length} entries.</div>` : ""}`;
   }
 
   function renderGroundskeeperChat() {
@@ -5591,7 +5605,9 @@
       els.aiLogsList.innerHTML = emptyState(state.groundskeeperAiReady ? "No AI questions logged yet." : "Create the Groundskeeper AI tables, then refresh this panel.");
       return;
     }
-    els.aiLogsList.innerHTML = logs.slice(0, 30).map((log) => `
+    const visibleLogs = logs.slice(0, 6);
+    const hiddenLogCount = logs.length - visibleLogs.length;
+    els.aiLogsList.innerHTML = `${visibleLogs.map((log) => `
       <article class="groundskeeper-ai-record">
         <div class="groundskeeper-ai-record-head">
           <strong>${escapeHtml(log.question || "Question")}</strong>
@@ -5604,7 +5620,7 @@
           <button class="inline-action" type="button" data-action="save-ai-log-rule" data-id="${escapeHtml(log.id)}">Save as Rule</button>
         </div>
       </article>
-    `).join("");
+    `).join("")}${hiddenLogCount > 0 ? `<div class="groundskeeper-ai-more">Showing ${visibleLogs.length} of ${logs.length} recent questions.</div>` : ""}`;
   }
 
   function renderGroundskeeperAi(data = state.data) {

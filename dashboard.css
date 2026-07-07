@@ -8048,3 +8048,296 @@ body.is-login-screen .app-view {
     display: none;
   }
 }
+
+/* Compact Groundskeeper AI workspace */
+body:not(.is-login-screen) #groundskeeper-ai {
+  gap: 8px;
+}
+
+body:not(.is-login-screen) #groundskeeper-ai .groundskeeper-ai-hero {
+  position: relative;
+  overflow: hidden;
+  min-height: 0;
+  padding: 12px 14px !important;
+  border-radius: 14px;
+  background:
+    radial-gradient(circle at 92% 6%, rgba(201, 217, 130, 0.28), transparent 28%),
+    linear-gradient(135deg, rgba(255, 252, 244, 0.96), rgba(226, 235, 217, 0.88));
+}
+
+body:not(.is-login-screen) #groundskeeper-ai .groundskeeper-ai-hero::after {
+  content: "";
+  position: absolute;
+  inset: auto 18px -34px auto;
+  width: 150px;
+  height: 150px;
+  border-radius: 999px;
+  background: rgba(18, 63, 49, 0.08);
+  pointer-events: none;
+}
+
+body:not(.is-login-screen) #groundskeeper-ai .groundskeeper-ai-hero h3 {
+  margin: 0;
+  font-size: clamp(1.25rem, 1.7vw, 1.9rem) !important;
+  line-height: 1;
+}
+
+body:not(.is-login-screen) #groundskeeper-ai .groundskeeper-ai-hero p:not(.eyebrow) {
+  max-width: 780px;
+  margin-top: 4px !important;
+  font-size: 0.84rem !important;
+}
+
+body:not(.is-login-screen) #groundskeeper-ai .groundskeeper-ai-actions {
+  position: relative;
+  z-index: 1;
+  gap: 7px;
+}
+
+body:not(.is-login-screen) #groundskeeper-ai .groundskeeper-ai-actions button,
+body:not(.is-login-screen) #groundskeeper-ai .groundskeeper-ai-form button,
+body:not(.is-login-screen) #groundskeeper-ai .groundskeeper-ai-chat-form button {
+  min-height: 34px;
+  padding: 8px 12px;
+  border-radius: 999px;
+}
+
+body:not(.is-login-screen) #groundskeeper-ai .groundskeeper-ai-status {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 7px;
+  min-height: 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+}
+
+body:not(.is-login-screen) #groundskeeper-ai .groundskeeper-ai-status span {
+  flex: 1 1 260px;
+  padding: 7px 10px;
+  border: 1px solid rgba(18, 63, 49, 0.1);
+  border-radius: 12px;
+  background: rgba(255, 252, 244, 0.78);
+  font-size: 0.78rem;
+  line-height: 1.3;
+}
+
+body:not(.is-login-screen) #groundskeeper-ai .groundskeeper-ai-layout {
+  grid-template-columns: minmax(280px, 0.92fr) minmax(380px, 1.08fr);
+  flex: 0 0 auto !important;
+  min-height: 0;
+  max-height: 34vh;
+}
+
+body:not(.is-login-screen) #groundskeeper-ai .groundskeeper-ai-layout > .panel {
+  display: flex;
+  min-height: 0;
+  overflow: hidden !important;
+  flex-direction: column;
+}
+
+body:not(.is-login-screen) #groundskeeper-ai .panel-heading {
+  gap: 6px;
+  padding-bottom: 6px !important;
+  margin-bottom: 7px !important;
+}
+
+body:not(.is-login-screen) #groundskeeper-ai .panel-heading h3 {
+  font-size: 1rem;
+}
+
+body:not(.is-login-screen) #groundskeeper-ai .panel-heading p {
+  max-width: 62rem;
+  font-size: 0.76rem;
+  line-height: 1.3;
+}
+
+body:not(.is-login-screen) #groundskeeper-ai .groundskeeper-ai-chat {
+  flex: 1 1 auto;
+  min-height: 112px;
+  max-height: none;
+  gap: 7px;
+  padding: 8px;
+  border-radius: 12px;
+}
+
+body:not(.is-login-screen) #groundskeeper-ai .groundskeeper-chat-message {
+  padding: 8px 10px;
+  border-radius: 12px;
+  font-size: 0.82rem;
+  line-height: 1.35;
+}
+
+body:not(.is-login-screen) #groundskeeper-ai .groundskeeper-ai-chat-form {
+  margin-top: 7px;
+  gap: 7px;
+}
+
+body:not(.is-login-screen) #groundskeeper-ai .groundskeeper-ai-chat-form textarea {
+  min-height: 38px;
+  max-height: 76px;
+}
+
+body:not(.is-login-screen) #groundskeeper-ai .groundskeeper-ai-form {
+  display: grid;
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+  gap: 7px;
+  align-items: end;
+}
+
+body:not(.is-login-screen) #groundskeeper-ai .groundskeeper-ai-form label:nth-child(1),
+body:not(.is-login-screen) #groundskeeper-ai .groundskeeper-ai-form label:nth-child(4),
+body:not(.is-login-screen) #groundskeeper-ai .groundskeeper-ai-form label:nth-child(5) {
+  grid-column: span 2;
+}
+
+body:not(.is-login-screen) #groundskeeper-ai .groundskeeper-ai-form label:nth-child(2),
+body:not(.is-login-screen) #groundskeeper-ai .groundskeeper-ai-form label:nth-child(3) {
+  grid-column: span 3;
+}
+
+body:not(.is-login-screen) #groundskeeper-ai .groundskeeper-ai-form .span-full {
+  grid-column: 1 / -2;
+}
+
+body:not(.is-login-screen) #groundskeeper-ai .groundskeeper-ai-form button {
+  grid-column: auto;
+  justify-self: stretch;
+}
+
+body:not(.is-login-screen) #groundskeeper-ai .groundskeeper-ai-form input,
+body:not(.is-login-screen) #groundskeeper-ai .groundskeeper-ai-form select,
+body:not(.is-login-screen) #groundskeeper-ai .groundskeeper-ai-form textarea {
+  min-height: 34px;
+  padding: 8px 10px;
+}
+
+body:not(.is-login-screen) #groundskeeper-ai .groundskeeper-ai-form textarea {
+  min-height: 56px;
+  max-height: 90px;
+}
+
+body:not(.is-login-screen) #groundskeeper-ai .groundskeeper-ai-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  flex: 1 1 auto !important;
+  min-height: 0;
+  overflow: hidden !important;
+}
+
+body:not(.is-login-screen) #groundskeeper-ai .groundskeeper-ai-grid > .panel {
+  display: flex;
+  min-width: 0;
+  min-height: 0;
+  overflow: hidden !important;
+  flex-direction: column;
+}
+
+body:not(.is-login-screen) #groundskeeper-ai .groundskeeper-ai-list {
+  flex: 1 1 auto;
+  min-height: 0;
+  gap: 6px;
+  overflow: auto !important;
+  padding-right: 2px;
+}
+
+body:not(.is-login-screen) #groundskeeper-ai .groundskeeper-ai-record {
+  gap: 4px;
+  padding: 8px 9px;
+  border-radius: 11px;
+  background: rgba(255, 252, 244, 0.84);
+}
+
+body:not(.is-login-screen) #groundskeeper-ai .groundskeeper-ai-record-head {
+  align-items: flex-start;
+  gap: 7px;
+}
+
+body:not(.is-login-screen) #groundskeeper-ai .groundskeeper-ai-record-head strong {
+  min-width: 0;
+  color: var(--green);
+  font-size: 0.86rem;
+  line-height: 1.2;
+}
+
+body:not(.is-login-screen) #groundskeeper-ai .groundskeeper-ai-record-head span {
+  flex: 0 0 auto;
+}
+
+body:not(.is-login-screen) #groundskeeper-ai .groundskeeper-ai-record p {
+  display: -webkit-box;
+  margin: 0;
+  overflow: hidden;
+  color: rgba(18, 63, 49, 0.68);
+  font-size: 0.78rem;
+  line-height: 1.34;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 3;
+}
+
+body:not(.is-login-screen) #groundskeeper-ai .groundskeeper-ai-record small,
+body:not(.is-login-screen) #groundskeeper-ai .groundskeeper-ai-record time {
+  font-size: 0.68rem;
+  line-height: 1.25;
+}
+
+body:not(.is-login-screen) #groundskeeper-ai .groundskeeper-ai-record-actions {
+  justify-content: flex-start;
+  gap: 5px;
+  padding-top: 2px;
+}
+
+body:not(.is-login-screen) #groundskeeper-ai .groundskeeper-ai-record-actions .inline-action {
+  min-height: 26px;
+  padding: 4px 7px;
+  font-size: 0.68rem;
+}
+
+body:not(.is-login-screen) #groundskeeper-ai .ai-badge {
+  min-height: 19px;
+  padding: 2px 6px;
+  font-size: 0.62rem;
+}
+
+.groundskeeper-ai-more {
+  padding: 7px 8px;
+  border: 1px dashed rgba(18, 63, 49, 0.18);
+  border-radius: 10px;
+  background: rgba(229, 239, 225, 0.44);
+  color: rgba(18, 63, 49, 0.68);
+  font-size: 0.72rem;
+  font-weight: 800;
+}
+
+@media (max-width: 1180px) and (min-width: 901px) {
+  body:not(.is-login-screen) #groundskeeper-ai .groundskeeper-ai-layout {
+    grid-template-columns: 1fr;
+    max-height: 40vh;
+  }
+
+  body:not(.is-login-screen) #groundskeeper-ai .groundskeeper-ai-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 900px) {
+  body:not(.is-login-screen) #groundskeeper-ai .groundskeeper-ai-layout,
+  body:not(.is-login-screen) #groundskeeper-ai .groundskeeper-ai-grid,
+  body:not(.is-login-screen) #groundskeeper-ai .groundskeeper-ai-form {
+    grid-template-columns: 1fr;
+    max-height: none;
+    overflow: visible !important;
+  }
+
+  body:not(.is-login-screen) #groundskeeper-ai .groundskeeper-ai-layout > .panel,
+  body:not(.is-login-screen) #groundskeeper-ai .groundskeeper-ai-grid > .panel,
+  body:not(.is-login-screen) #groundskeeper-ai .groundskeeper-ai-list {
+    overflow: visible !important;
+  }
+
+  body:not(.is-login-screen) #groundskeeper-ai .groundskeeper-ai-form label,
+  body:not(.is-login-screen) #groundskeeper-ai .groundskeeper-ai-form .span-full,
+  body:not(.is-login-screen) #groundskeeper-ai .groundskeeper-ai-form button {
+    grid-column: 1 / -1 !important;
+  }
+}

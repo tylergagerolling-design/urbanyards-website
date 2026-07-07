@@ -2594,11 +2594,13 @@
   }
 
   function showLogin() {
+    document.body.classList.add("is-login-screen");
     els.loginView.hidden = false;
     els.appView.hidden = true;
   }
 
   async function showApp() {
+    document.body.classList.remove("is-login-screen");
     els.loginView.hidden = true;
     els.appView.hidden = false;
     if (els.ownerEmail) els.ownerEmail.textContent = isDemoMode() ? "Demo mode" : getOwnerEmail();

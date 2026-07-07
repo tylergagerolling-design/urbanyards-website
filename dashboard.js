@@ -14,7 +14,17 @@
   const EQUIPMENT_PRIORITIES = ["High", "Normal", "Low"];
   const HARDWARE_STATUSES = ["Researching", "Recommended", "Bought", "Not Chosen"];
   const COMMAND_CATEGORIES = ["task", "client", "payment", "deadline", "equipment"];
+  const CALL_OUTCOMES = ["not_set", "left_voicemail", "no_answer", "spoke_with_contact", "bad_number", "follow_up_later"];
+  const CALL_OUTCOME_LABELS = {
+    not_set: "Not set",
+    left_voicemail: "Left voicemail",
+    no_answer: "No answer",
+    spoke_with_contact: "Spoke with contact",
+    bad_number: "Bad number",
+    follow_up_later: "Follow up later"
+  };
   const SESSION_KEY = "urbanYardsDashboardSession";
+  const CALL_METHOD_KEY = "urbanYardsPreferredCallMethod";
   const DEMO_QUERY_KEYS = ["demo", "test"];
 
   const config = window.URBAN_YARDS_DASHBOARD_CONFIG || {
@@ -66,6 +76,8 @@
     equipmentMaintenanceReady: true,
     hardwareGuideReady: true,
     groundskeeperAiReady: false,
+    leadActivityReady: true,
+    preferredCallMethod: localStorage.getItem(CALL_METHOD_KEY) || "browser_tel",
     groundskeeperMessages: [],
     data: {
       submissions: [],
@@ -82,6 +94,7 @@
       equipmentItems: [],
       equipmentMaintenance: [],
       hardwareGuide: [],
+      leadActivity: [],
       groundskeeperAi: {
         settings: [],
         knowledge: [],
@@ -154,9 +167,11 @@
   function buttonContent(label, action) {
     const icons = {
       "cancel-job": "x",
+      "call-lead": "TEL",
       "clear-demo-data": "x",
       "complete-operation": "OK",
       "complete-reminder": "OK",
+      "copy-phone": "Copy",
       "create-estimate": "+",
       "create-invoice": "$",
       "create-outreach-quote": "+",
@@ -480,6 +495,126 @@
     if (!normalizedNeedles.length) return false;
     const normalizedHaystacks = haystacks.map(normalizeLookup).filter(Boolean);
     return normalizedNeedles.some((needle) => normalizedHaystacks.some((haystack) => haystack === needle || haystack.includes(needle) || needle.includes(haystack)));
+  }
+
+  function phoneInfo(value) {
+    const raw = String(value || "").trim();
+    const digits = raw.replace(/[^\d]/g, "");
+    const usDigits = digits.length === 11 && digits.startsWith("1") ? digits.slice(1) : digits;
+    if (usDigits.length !== 10) {
+      return { valid: false, display: raw && !/no phone/i.test(raw) ? raw : "No valid phone number.", href: "", e164: "" };
+    }
+    return {
+      valid: true,
+      e164: `+1${usDigits}`,
+      href: `tel:+1${usDigits}`,
+      display: `(${usDigits.slice(0, 3)}) ${usDigits.slice(3, 6)}-${usDigits.slice(6)}`
+    };
+  }
+
+  function renderPhoneActions(phone, options = {}) {
+    const info = phoneInfo(phone);
+    const leadId = options.leadId || "";
+    const leadType = options.leadType || "lead";
+    const compactClass = options.compact ? " phone-call-control-compact" : "";
+    if (!info.valid) {
+      return `<div class="phone-call-control phone-call-control-invalid${compactClass}"><span>No valid phone number.</span><button class="inline-action" type="button" disabled>${buttonContent("Call", "call-lead")}</button></div>`;
+    }
+    return `
+      <div class="phone-call-control${compactClass}">
+        <a class="phone-call-link" href="${escapeHtml(info.href)}">${escapeHtml(info.display)}</a>
+        <button class="inline-action phone-call-button" type="button" data-action="call-lead" data-id="${escapeHtml(leadId)}" data-lead-type="${escapeHtml(leadType)}" data-phone="${escapeHtml(info.e164)}">${buttonContent("Call", "call-lead")}</button>
+        <button class="inline-action" type="button" data-action="copy-phone" data-phone="${escapeHtml(info.e164)}">${buttonContent("Copy number", "copy-phone")}</button>
+        ${options.helper === false ? "" : `<small>Uses your browser/Google Voice click-to-call settings. <a href="https://voice.google.com/" target="_blank" rel="noopener noreferrer">Open Google Voice</a></small>`}
+      </div>
+    `;
+  }
+
+  function normalizeLeadActivity(row) {
+    const outcome = CALL_OUTCOMES.includes(row.outcome) ? row.outcome : "not_set";
+    return {
+      id: row.id,
+      leadId: row.lead_id || "",
+      leadType: row.lead_type || "lead",
+      phoneNumber: row.phone_number || "",
+      phoneDisplay: phoneInfo(row.phone_number).display,
+      type: row.type || "call_attempt",
+      outcome,
+      outcomeLabel: CALL_OUTCOME_LABELS[outcome] || outcome,
+      notes: row.notes || "",
+      followUpDateRaw: dateKey(row.follow_up_date),
+      followUpDate: formatDate(row.follow_up_date),
+      createdAtRaw: row.created_at || "",
+      createdAt: row.created_at ? new Date(row.created_at).toLocaleString("en-US", { dateStyle: "medium", timeStyle: "short" }) : ""
+    };
+  }
+
+  function callHistoryFor(leadId) {
+    return state.data.leadActivity
+      .filter((activity) => activity.leadId === leadId)
+      .sort((a, b) => String(b.createdAtRaw).localeCompare(String(a.createdAtRaw)));
+  }
+
+  function renderCallHistory(leadId) {
+    const history = callHistoryFor(leadId);
+    if (!history.length) {
+      return `<section class="call-history"><h4>Call History</h4>${emptyState(state.leadActivityReady ? "No call attempts logged yet." : "Run DASHBOARD_CALL_ACTIVITY_SQL.md to enable call history.")}</section>`;
+    }
+    return `
+      <section class="call-history">
+        <h4>Call History</h4>
+        <div class="call-history-list">
+          ${history.map((activity) => `
+            <article class="call-history-item">
+              <strong>${escapeHtml(activity.createdAt || formatDate(activity.createdAtRaw))}</strong>
+              <span>${escapeHtml(activity.phoneDisplay)} / ${escapeHtml(activity.outcomeLabel)}</span>
+              ${activity.notes ? `<p>${escapeHtml(activity.notes)}</p>` : ""}
+              ${activity.followUpDateRaw ? `<small>Follow-up: ${escapeHtml(activity.followUpDate)}</small>` : ""}
+            </article>
+          `).join("")}
+        </div>
+      </section>
+    `;
+  }
+
+  function renderCallSettingsPanel() {
+    const checked = state.preferredCallMethod === "browser_tel" ? " checked" : "";
+    return `
+      <section class="call-settings-panel">
+        <label><input type="checkbox" data-call-method-setting value="browser_tel"${checked}> Use browser click-to-call / Google Voice</label>
+        <p>Google Voice must be configured in your browser as the phone handler. <a href="https://voice.google.com/" target="_blank" rel="noopener noreferrer">Open Google Voice</a></p>
+      </section>
+    `;
+  }
+
+  function renderCallOutcomePanel(activity) {
+    return `
+      <section class="call-outcome-panel" data-call-outcome-panel>
+        <div class="panel-heading">
+          <div>
+            <h4>Log call outcome</h4>
+            <p>${escapeHtml(activity.phoneDisplay || phoneInfo(activity.phoneNumber).display)}</p>
+          </div>
+        </div>
+        <form class="call-outcome-form" data-call-outcome-form data-id="${escapeHtml(activity.id)}" data-lead-id="${escapeHtml(activity.leadId)}" data-lead-type="${escapeHtml(activity.leadType)}">
+          <div class="call-outcome-options">
+            ${CALL_OUTCOMES.filter((outcome) => outcome !== "not_set").map((outcome) => `
+              <label><input type="radio" name="outcome" value="${escapeHtml(outcome)}"${outcome === activity.outcome ? " checked" : ""}> ${escapeHtml(CALL_OUTCOME_LABELS[outcome])}</label>
+            `).join("")}
+          </div>
+          <label>Notes<textarea name="notes" rows="3" placeholder="Quick notes from the call">${escapeHtml(activity.notes || "")}</textarea></label>
+          <label>Follow-up date<input name="follow_up_date" type="date" value="${escapeHtml(activity.followUpDateRaw || "")}"></label>
+          <button type="submit">${buttonContent("Save Call Outcome", "complete-reminder")}</button>
+        </form>
+      </section>
+    `;
+  }
+
+  function openLeadDrawerByType(leadType, leadId) {
+    if (leadType === "quote_submission") openSubmissionDrawer(leadId);
+    else if (leadType === "contact") openContactDrawer(leadId);
+    else if (leadType === "outreach_prospect") openOutreachDrawer(leadId);
+    else if (leadType === "outreach_company") openOutreachCompanyDrawer(leadId);
   }
 
   function isDocumentUnpaid(doc) {
@@ -1134,7 +1269,8 @@
         logs: [],
         feedback: [],
         fallback: {}
-      }
+      },
+      leadActivity: []
     };
   }
 
@@ -1231,10 +1367,11 @@
       state.equipmentMaintenanceReady = true;
       state.hardwareGuideReady = true;
       state.groundskeeperAiReady = true;
+      state.leadActivityReady = true;
       return demoDashboardData();
     }
 
-    const [submissions, contacts, jobs, notes, reminders, documents, operations, outreachProspects, outreachCompanies, outreachProperties, routeStops, equipmentItems, equipmentMaintenance, hardwareGuide, groundskeeperAi] = await Promise.all([
+    const [submissions, contacts, jobs, notes, reminders, documents, operations, outreachProspects, outreachCompanies, outreachProperties, routeStops, equipmentItems, equipmentMaintenance, hardwareGuide, groundskeeperAi, leadActivity] = await Promise.all([
       supabaseRestRequest("quote_submissions?select=*&order=created_at.desc", { method: "GET" }),
       supabaseRestRequest("contacts?select=*&order=created_at.desc", { method: "GET" }),
       supabaseRestRequest("scheduled_jobs?select=*&order=visit_date.asc", { method: "GET" }),
@@ -1249,7 +1386,8 @@
       loadEquipmentItems(),
       loadEquipmentMaintenance(),
       loadHardwareGuide(),
-      loadGroundskeeperAi()
+      loadGroundskeeperAi(),
+      loadLeadActivity()
     ]);
 
     return {
@@ -1267,8 +1405,20 @@
       equipmentItems,
       equipmentMaintenance,
       hardwareGuide,
-      groundskeeperAi
+      groundskeeperAi,
+      leadActivity
     };
+  }
+
+  async function loadLeadActivity() {
+    try {
+      const rows = await supabaseRestRequest("lead_activity?select=*&order=created_at.desc&limit=500", { method: "GET" });
+      state.leadActivityReady = true;
+      return rows.map(normalizeLeadActivity);
+    } catch (error) {
+      state.leadActivityReady = false;
+      return [];
+    }
   }
 
   async function loadGroundskeeperAi() {
@@ -1758,6 +1908,75 @@
       body: JSON.stringify(payload)
     });
     return normalizeReminder(rows[0]);
+  }
+
+  async function insertLeadActivity(payload) {
+    const phone = phoneInfo(payload.phone_number);
+    if (!phone.valid) throw new Error("No valid phone number.");
+    const recordPayload = {
+      lead_id: payload.lead_id,
+      lead_type: payload.lead_type || "lead",
+      phone_number: phone.e164,
+      type: payload.type || "call_attempt",
+      outcome: payload.outcome || "not_set",
+      notes: payload.notes || "",
+      follow_up_date: payload.follow_up_date || null
+    };
+    if (isDemoMode()) {
+      const activity = normalizeLeadActivity({
+        id: nextDemoId("call"),
+        ...recordPayload,
+        created_at: new Date().toISOString()
+      });
+      state.data.leadActivity.unshift(activity);
+      return activity;
+    }
+    if (!state.leadActivityReady) throw new Error("Run DASHBOARD_CALL_ACTIVITY_SQL.md to enable call logging.");
+    const rows = await supabaseRestRequest("lead_activity", {
+      method: "POST",
+      headers: { Prefer: "return=representation" },
+      body: JSON.stringify(recordPayload)
+    });
+    const activity = normalizeLeadActivity(rows[0]);
+    state.data.leadActivity.unshift(activity);
+    return activity;
+  }
+
+  async function updateLeadActivity(id, payload) {
+    const safeOutcome = CALL_OUTCOMES.includes(payload.outcome) ? payload.outcome : "not_set";
+    const recordPayload = {
+      outcome: safeOutcome,
+      notes: payload.notes || "",
+      follow_up_date: payload.follow_up_date || null
+    };
+    if (isDemoMode()) {
+      const index = state.data.leadActivity.findIndex((activity) => activity.id === id);
+      if (index >= 0) {
+        const existing = state.data.leadActivity[index];
+        state.data.leadActivity[index] = normalizeLeadActivity({
+          id: existing.id,
+          lead_id: existing.leadId,
+          lead_type: existing.leadType,
+          phone_number: existing.phoneNumber,
+          type: existing.type,
+          created_at: existing.createdAtRaw,
+          ...recordPayload
+        });
+      }
+      return state.data.leadActivity[index] || null;
+    }
+    if (!state.leadActivityReady) throw new Error("Run DASHBOARD_CALL_ACTIVITY_SQL.md to enable call logging.");
+    const rows = await supabaseRestRequest(`lead_activity?id=eq.${encodeURIComponent(id)}`, {
+      method: "PATCH",
+      headers: { Prefer: "return=representation" },
+      body: JSON.stringify(recordPayload)
+    });
+    const activity = rows?.[0] ? normalizeLeadActivity(rows[0]) : null;
+    if (activity) {
+      const index = state.data.leadActivity.findIndex((item) => item.id === id);
+      if (index >= 0) state.data.leadActivity[index] = activity;
+    }
+    return activity;
   }
 
   async function insertContact(payload) {
@@ -3526,7 +3745,8 @@
           ${statusBadge(item.status)}
         </div>
         <p class="item-body">${escapeHtml(item.service)}. ${escapeHtml(item.notes)}</p>
-        <p class="small">Follow-up: ${escapeHtml(item.followUp)} / ${escapeHtml(item.phone)} / ${escapeHtml(item.email)}</p>
+        <p class="small">Follow-up: ${escapeHtml(item.followUp)} / ${escapeHtml(item.email)}</p>
+        ${renderPhoneActions(item.phone, { leadId: item.id, leadType: "quote_submission", compact: true, helper: false })}
       </article>
     `).join("");
   }
@@ -4243,7 +4463,7 @@
     }
     els.quoteTable.innerHTML = items.map((item) => `
       <tr>
-        <td><strong>${escapeHtml(item.name)}</strong><br><span class="meta">${escapeHtml(item.email)}<br>${escapeHtml(item.phone)}</span></td>
+        <td><strong>${escapeHtml(item.name)}</strong><br><span class="meta">${escapeHtml(item.email)}</span>${renderPhoneActions(item.phone, { leadId: item.id, leadType: "quote_submission", compact: true, helper: false })}</td>
         <td>${escapeHtml(item.service)}<br><span class="meta">${escapeHtml(item.source)} / ${escapeHtml(item.receivedAt)}</span></td>
         <td>${escapeHtml(item.propertyType)}<br><span class="meta">${escapeHtml(item.city)}</span></td>
         <td>${statusSelect("quote_submissions", item.id, item.status)}</td>
@@ -4298,7 +4518,7 @@
         </div>
         <div class="client-profile-contact-line">
           <span>${escapeHtml(contact.email)}</span>
-          <span>${escapeHtml(contact.phone)}</span>
+          ${renderPhoneActions(contact.phone, { leadId: contact.id, leadType: "contact", compact: true, helper: false })}
         </div>
         <div class="client-profile-counts">
           ${miniCount("jobs", profile.jobs.length)}
@@ -4362,6 +4582,7 @@
     return `
       <div class="outreach-actions">
         ${actionButton(compact ? "Open" : "Edit", "open-outreach-prospect", item.id)}
+        ${renderPhoneActions(item.phone, { leadId: item.id, leadType: "outreach_prospect", compact: true, helper: false })}
         ${actionButton("Contacted", "mark-outreach-contacted", item.id)}
         <button class="inline-action" type="button" data-action="create-outreach-quote" data-id="${escapeHtml(item.id)}"${item.convertedToQuote ? " disabled" : ""}>${buttonContent(item.convertedToQuote ? "Quote Created" : "Create Quote", "create-outreach-quote")}</button>
         <button class="inline-action" type="button" data-action="route-outreach-prospect" data-id="${escapeHtml(item.id)}"${routeDisabled}>${buttonContent(item.routeAdded ? "Route Added" : "Add Route", "route-outreach-prospect")}</button>
@@ -4443,7 +4664,7 @@
       <tr>
         <td><strong>${escapeHtml(company.company)}</strong><br><span class="meta">${escapeHtml(company.website || company.sourceUrl || "No website")}</span></td>
         <td>${escapeHtml(company.serviceArea || company.city || "Not set")}</td>
-        <td>${escapeHtml(company.contact || "No contact")}<br><span class="meta">${escapeHtml(company.email || "No email")}<br>${escapeHtml(company.phone || "No phone")}</span></td>
+        <td>${escapeHtml(company.contact || "No contact")}<br><span class="meta">${escapeHtml(company.email || "No email")}</span>${renderPhoneActions(company.phone, { leadId: company.id, leadType: "outreach_company", compact: true, helper: false })}</td>
         <td>${escapeHtml(company.status)}</td>
         <td>${escapeHtml(company.followUp)}</td>
         <td>${escapeHtml(company.priority)}</td>
@@ -4456,7 +4677,8 @@
       els.outreachCompanyCards.innerHTML = companies.map((company) => `
         <article class="outreach-card">
           <div class="item-topline"><div><h4>${escapeHtml(company.company)}</h4><div class="meta">${escapeHtml(company.serviceArea || company.city || "No service area")}</div></div><span class="status">${escapeHtml(company.status)}</span></div>
-          <p class="item-body">${escapeHtml(company.contact || "No contact")} / ${escapeHtml(company.email || company.phone || "No contact info")}</p>
+          <p class="item-body">${escapeHtml(company.contact || "No contact")} / ${escapeHtml(company.email || "No email")}</p>
+          ${renderPhoneActions(company.phone, { leadId: company.id, leadType: "outreach_company", compact: true, helper: false })}
           <p class="small">${escapeHtml(outreachCompanyPropertyCount(company))} managed properties / ${escapeHtml(company.priority)} priority</p>
           ${actionButton("Open", "open-outreach-company", company.id)}
         </article>
@@ -4638,6 +4860,9 @@
             ${item ? `<button type="button" class="danger-action" data-action="delete-outreach-prospect" data-id="${escapeHtml(item.id)}">${buttonContent("Delete Prospect", "delete-outreach-prospect")}</button>` : ""}
           </div>
         </form>
+        ${item ? renderPhoneActions(item.phone, { leadId: item.id, leadType: "outreach_prospect" }) : ""}
+        ${item ? renderCallSettingsPanel() : ""}
+        ${item ? `<div data-call-outcome-slot></div>${renderCallHistory(item.id)}` : ""}
       </div>
     `;
   }
@@ -4720,6 +4945,10 @@
             <button type="button" data-action="add-company-as-prospect" data-id="${escapeHtml(company.id)}">${buttonContent("Add Company as Prospect", "new-outreach-prospect")}</button>
           </div>
         </form>
+        ${renderPhoneActions(company.phone, { leadId: company.id, leadType: "outreach_company" })}
+        ${renderCallSettingsPanel()}
+        <div data-call-outcome-slot></div>
+        ${renderCallHistory(company.id)}
         <h4>Managed properties (${properties.length})</h4>
         <div class="profile-mini-list">
           ${properties.length ? properties.map((property) => `
@@ -4908,7 +5137,7 @@
         ${statusBadge(item.status)}
         <div class="drawer-grid">
           <div class="drawer-field"><span>Email</span>${escapeHtml(item.email)}</div>
-          <div class="drawer-field"><span>Phone</span>${escapeHtml(item.phone)}</div>
+          <div class="drawer-field drawer-phone-field"><span>Phone</span>${renderPhoneActions(item.phone, { leadId: item.id, leadType: "quote_submission" })}</div>
           <div class="drawer-field"><span>City</span>${escapeHtml(item.city)}</div>
           <div class="drawer-field"><span>Property</span>${escapeHtml(item.propertyType)}</div>
           <div class="drawer-field"><span>Service</span>${escapeHtml(item.service)}</div>
@@ -4933,6 +5162,10 @@
             <button type="button" class="danger-action" data-action="delete-submission" data-id="${escapeHtml(item.id)}">${buttonContent("Delete Quote", "delete-submission")}</button>
           </div>
         </form>
+
+        ${renderCallSettingsPanel()}
+        <div data-call-outcome-slot></div>
+        ${renderCallHistory(item.id)}
 
         <form class="schedule-form" data-schedule-form>
           <h4>Create scheduled job/visit</h4>
@@ -4985,6 +5218,10 @@
             <button type="button" class="danger-action" data-action="delete-contact" data-id="${escapeHtml(contact.id)}">${buttonContent("Delete Client", "delete-contact")}</button>
           </div>
         </form>
+        ${renderPhoneActions(contact.phone, { leadId: contact.id, leadType: "contact" })}
+        ${renderCallSettingsPanel()}
+        <div data-call-outcome-slot></div>
+        ${renderCallHistory(contact.id)}
         <div class="profile-drawer-grid">
           <section>
             <h4>Jobs / Visits</h4>
@@ -6088,6 +6325,13 @@
         }
       }
 
+      if (target.matches("[data-call-method-setting]")) {
+        state.preferredCallMethod = target.checked ? "browser_tel" : "browser_tel";
+        localStorage.setItem(CALL_METHOD_KEY, state.preferredCallMethod);
+        setDashboardState("Call setting saved. Google Voice must be configured as your browser phone handler.");
+        return;
+      }
+
       if (target.matches("[data-route-status-id]")) {
         try {
           setDashboardState("Updating route stop...");
@@ -6178,6 +6422,54 @@
 
       if (target.dataset.export) {
         exportData(target.dataset.export);
+        return;
+      }
+
+      if (action === "copy-phone") {
+        const phone = target.dataset.phone || "";
+        try {
+          await navigator.clipboard.writeText(phone);
+          setDashboardState("Phone number copied.");
+        } catch (error) {
+          setDashboardState(`Copy this number: ${phone}`, "error");
+        }
+        return;
+      }
+
+      if (action === "call-lead") {
+        const phone = phoneInfo(target.dataset.phone || "");
+        if (!phone.valid) {
+          setDashboardState("No valid phone number.", "error");
+          return;
+        }
+        window.location.href = phone.href;
+        try {
+          const activity = await insertLeadActivity({
+            lead_id: id,
+            lead_type: target.dataset.leadType || "lead",
+            phone_number: phone.e164,
+            type: "call_attempt",
+            outcome: "not_set",
+            notes: ""
+          });
+          const slot = qs("[data-call-outcome-slot]");
+          const panel = renderCallOutcomePanel(activity);
+          const existingPanel = qs("[data-call-outcome-panel]");
+          if (existingPanel) existingPanel.remove();
+          let outcomeSlot = slot;
+          if (!outcomeSlot || els.detailDrawer?.hidden) {
+            openLeadDrawerByType(activity.leadType, activity.leadId);
+            outcomeSlot = qs("[data-call-outcome-slot]");
+          }
+          if (outcomeSlot) {
+            outcomeSlot.innerHTML = panel;
+          } else if (els.detailContent) {
+            els.detailContent.insertAdjacentHTML("afterbegin", panel);
+          }
+          setDashboardState("Call attempt logged.");
+        } catch (error) {
+          setDashboardState(error.message || "Call opened, but the activity log could not be saved.", "error");
+        }
         return;
       }
 
@@ -6979,8 +7271,30 @@
       }
     });
 
-    els.appView.addEventListener("submit", async (event) => {
-      if (event.target.matches("[data-submission-edit]")) {
+  els.appView.addEventListener("submit", async (event) => {
+      if (event.target.matches("[data-call-outcome-form]")) {
+        event.preventDefault();
+        const formData = new FormData(event.target);
+        const activityId = event.target.dataset.id || "";
+        const leadId = event.target.dataset.leadId || "";
+        const leadType = event.target.dataset.leadType || "";
+        try {
+          setDashboardState("Saving call outcome...");
+          await updateLeadActivity(activityId, {
+            outcome: String(formData.get("outcome") || "not_set"),
+            notes: String(formData.get("notes") || ""),
+            follow_up_date: String(formData.get("follow_up_date") || "") || null
+          });
+          await refreshDashboard();
+          if (leadType === "quote_submission") openSubmissionDrawer(leadId);
+          else if (leadType === "contact") openContactDrawer(leadId);
+          else if (leadType === "outreach_prospect") openOutreachDrawer(leadId);
+          else if (leadType === "outreach_company") openOutreachCompanyDrawer(leadId);
+          setDashboardState("Call outcome saved.");
+        } catch (error) {
+          setDashboardState(error.message || "Unable to save call outcome.", "error");
+        }
+      } else if (event.target.matches("[data-submission-edit]")) {
         event.preventDefault();
         const item = findSubmission(state.selectedSubmissionId);
         if (!item) return;

@@ -113,6 +113,13 @@
       "text": "The quote section heading says: Ready to Improve Your Property? Visitors can request a free quote through the website form. The quote form asks for name, email, phone, property address or general area, service needed, optional photos, and additional details. Photo uploads can include up to 3 JPG, PNG, HEIC, or HEIF images, and they are compressed before sending. The site says there is no obligation and Urban Yards will review the request and respond as soon as possible. Contact phone: (971) 258-1109. Contact email: team@urbanyards.us."
     },
     {
+      "id": "payments",
+      "title": "Payments",
+      "url": "/pay",
+      "keywords": ["pay", "payment", "payments", "invoice", "invoices", "square", "card", "cards", "billing"],
+      "text": "The Pay Invoice page lets visitors look up and pay open Urban Yards invoices securely through Square. Payments are completed through Square payment links. The site says no card details are collected by the Urban Yards website, and the invoice lookup only returns open invoices with Square payment links. If an invoice does not appear, visitors can email team@urbanyards.us for invoice help."
+    },
+    {
       "id": "footer",
       "title": "Footer",
       "url": "/#contact",
@@ -156,6 +163,18 @@
       "question": "How do I request a quote?",
       "keywords": ["quote", "estimate", "price", "cost", "request"],
       "answer": "You can request a free quote through the website form. The form asks for name, email, phone, property address or general area, service needed, optional photos, and additional details."
+    },
+    {
+      "id": "pricing",
+      "question": "How much does service cost?",
+      "keywords": ["pricing", "price", "cost", "how much", "estimate", "quote"],
+      "answer": "Pricing depends on property size, scope, condition, access, and service frequency. Urban Yards does not list flat pricing on the site. The best next step is to request a free quote with property details and photos if available."
+    },
+    {
+      "id": "payments",
+      "question": "How do payments work?",
+      "keywords": ["pay", "payment", "payments", "invoice", "invoices", "square", "card"],
+      "answer": "Urban Yards handles invoices and payments through Square. The website can help look up open invoices and return Square payment links, but it does not collect card details."
     },
     {
       "id": "contact",

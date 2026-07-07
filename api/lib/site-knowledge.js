@@ -22,6 +22,11 @@ const INTENTS = [
     keywords: ["quote", "estimate", "price", "cost", "hire", "schedule", "book", "how much", "what would it cost"]
   },
   {
+    id: "service_recommendation",
+    leadIntent: true,
+    keywords: ["what service", "which service", "what do i need", "which option", "where should i start", "not sure what i need"]
+  },
+  {
     id: "property_management",
     leadIntent: true,
     keywords: ["apartment", "apartments", "multifamily", "hoa", "condo", "condominium", "property manager", "property management", "community", "building", "complex"]
@@ -195,6 +200,10 @@ function nextLeadPrompt(lead = {}) {
   return "";
 }
 
+function serviceRecommendationPrompt() {
+  return "To point you toward the right Urban Yards service, it helps to know the property type, approximate size, current issue, whether you have photos, your timeline, and whether this is a one-time visit or recurring care.";
+}
+
 function answerFromSiteKnowledge(query = "", lead = {}, history = []) {
   const text = String(query).toLowerCase();
   const context = inferConversationContext(query, history, lead);
@@ -222,7 +231,13 @@ function answerFromSiteKnowledge(query = "", lead = {}, history = []) {
   }
   if (intent.id === "quote") {
     const propertyNote = rememberedLead.propertyType ? ` for the ${rememberedLead.propertyType.toLowerCase()}` : "";
+    if (/\b(price|pricing|cost|how much|rate|rates|estimate)\b/i.test(text)) {
+      return `Pricing depends on property size, scope, condition, access, and service frequency. Urban Yards does not list flat pricing on the site, so the best next step is to request a free quote${propertyNote} with property details and photos if available.${leadFollowUp || `\n\n${quotePrompt}`}`;
+    }
     return `You can request a free quote${propertyNote} through the website form. It asks for name, email, phone, property address or general area, service needed, optional photos, and additional details. Final pricing and scheduling require property review.${leadFollowUp || `\n\n${quotePrompt}`}`;
+  }
+  if (intent.id === "service_recommendation") {
+    return `${serviceRecommendationPrompt()}\n\nUrban Yards can help with lawn mowing, edging, weed control, seasonal cleanup, mulch refreshes, landscape maintenance, pressure washing, apartment groundskeeping, HOA landscape maintenance, trash area care, property management support, apartment turnover support, and light property-care tasks.${leadFollowUp || "\n\nWhat type of property are you working with?"}`;
   }
   if (intent.id === "service_area") {
     return `The main service area is Portland, Vancouver & Beaverton. Serving Portland, Vancouver, Beaverton, and nearby communities. If you are near those areas, Urban Yards can confirm through a quote request.\n\n${CONTACT.phone}. ${CONTACT.email}.`;

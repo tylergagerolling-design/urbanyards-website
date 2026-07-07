@@ -91,6 +91,8 @@ test("site knowledge retrieves relevant website sections", () => {
   assert.match(buildSiteContext("Do you do pressure washing?"), /Pressure Washing/i);
   assert.match(buildSiteContext("What areas do you serve?"), /Portland, Vancouver & Beaverton/i);
   assert.match(buildSiteContext("How do I get a quote?"), /name, email, phone, property address/i);
+  assert.match(buildSiteContext("How do payments work?"), /Square payment links/i);
+  assert.match(buildSiteContext("How do payments work?"), /does not collect card details/i);
   assert.match(buildSiteContext("Are you owner operated?"), /owner-operated by Tyler Gage/i);
 });
 
@@ -98,6 +100,8 @@ test("site knowledge fallback answers common visitor questions", () => {
   assert.match(answerFromSiteKnowledge("Do you work with apartments?"), /apartment communities/i);
   assert.match(answerFromSiteKnowledge("Do you do pressure washing?"), /Pressure Washing/i);
   assert.match(answerFromSiteKnowledge("What areas do you serve?"), /Portland/i);
+  assert.match(answerFromSiteKnowledge("How much does mowing cost?"), /property size, scope, condition, access, and service frequency/i);
+  assert.match(answerFromSiteKnowledge("How do payments work?"), /Square/i);
   assert.match(answerFromSiteKnowledge("Are you owner operated?"), /Tyler Gage/i);
   assert.match(answerFromSiteKnowledge("Do you install fountains?"), /I don't see that listed on the site/i);
 });
@@ -107,6 +111,7 @@ test("assistant recognizes conversational visitor intent", () => {
   assert.equal(detectIntent("My HOA needs somebody.").id, "property_management");
   assert.equal(detectIntent("Do you work in Vancouver?").id, "service_area");
   assert.equal(detectIntent("How much would something like that cost?").id, "quote");
+  assert.equal(detectIntent("What service do I need?").id, "service_recommendation");
   assert.equal(detectIntent("My weeds are getting crazy.").id, "cleanup");
 });
 
@@ -126,6 +131,8 @@ test("assistant asks natural follow-up questions for broad requests", () => {
   assert.match(answerFromSiteKnowledge("I need landscaping."), /what are you hoping to improve/i);
   assert.match(answerFromSiteKnowledge("My shrubs need work."), /overgrown/i);
   assert.match(answerFromSiteKnowledge("I need lawn care."), /recurring maintenance or a one-time service/i);
+  assert.match(answerFromSiteKnowledge("What service do I need?"), /property type, approximate size, current issue/i);
+  assert.match(answerFromSiteKnowledge("What service do I need?"), /one-time visit or recurring care/i);
 });
 
 test("site knowledge retrieves FAQ answers and asks one lead question", () => {
@@ -173,9 +180,13 @@ test("assistant sends relevant site knowledge to the model", async () => {
     assert.equal(res.statusCode, 200);
     assert.match(res.payload.reply, /Pressure Washing/i);
     const siteMessage = capturedBody.messages.find((message) => message.content.startsWith("Urban Yards website knowledge source"));
+    const businessMessage = capturedBody.messages.find((message) => message.content.includes("Core Urban Yards facts"));
     assert.ok(siteMessage);
+    assert.ok(businessMessage);
     assert.match(siteMessage.content, /Pressure Washing/i);
     assert.match(siteMessage.content, /request a quote/i);
+    assert.match(businessMessage.content, /Portland, Vancouver & Beaverton/i);
+    assert.match(businessMessage.content, /Square invoices/i);
   } finally {
     global.fetch = originalFetch;
     originalKey === undefined ? delete process.env.OPENAI_API_KEY : process.env.OPENAI_API_KEY = originalKey;

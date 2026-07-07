@@ -7822,3 +7822,229 @@ body.is-login-screen .app-view {
     padding: 9px !important;
   }
 }
+
+/* Equipment dashboard page */
+.equipment-section {
+  gap: 12px;
+}
+
+.equipment-hero {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 16px;
+  align-items: center;
+  padding: 18px;
+  border: 1px solid rgba(6, 27, 21, .13);
+  border-radius: 8px;
+  background:
+    radial-gradient(circle at 92% 0%, rgba(201, 217, 130, .22), transparent 30%),
+    linear-gradient(135deg, rgba(255, 252, 239, .96), rgba(232, 239, 223, .9));
+}
+
+.equipment-hero h3 {
+  margin: 0;
+  color: var(--uy-green);
+  font-size: clamp(1.7rem, 3vw, 3.2rem);
+  line-height: .95;
+}
+
+.equipment-hero p:not(.eyebrow) {
+  max-width: 54rem;
+  margin: 8px 0 0;
+  color: rgba(19, 36, 28, .68);
+}
+
+.equipment-tabs,
+.equipment-toolbar,
+.equipment-form-actions,
+.equipment-actions,
+.equipment-card-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.equipment-tabs {
+  justify-content: flex-end;
+}
+
+.equipment-tabs button,
+.equipment-toolbar input,
+.equipment-toolbar select {
+  min-height: 40px;
+}
+
+.equipment-tabs button {
+  border: 1px solid rgba(18, 63, 49, .12);
+  background: rgba(255, 252, 239, .82);
+  color: var(--uy-green);
+}
+
+.equipment-tabs button.is-active {
+  background: var(--uy-green);
+  color: #fffcef;
+}
+
+.equipment-toolbar {
+  align-items: center;
+  padding: 10px;
+  border: 1px solid rgba(18, 63, 49, .1);
+  border-radius: 8px;
+  background: rgba(255, 252, 239, .78);
+}
+
+.equipment-toolbar input {
+  flex: 1 1 260px;
+}
+
+.equipment-toolbar select {
+  flex: 1 1 150px;
+}
+
+.equipment-layout {
+  display: grid;
+  grid-template-columns: minmax(280px, 360px) minmax(0, 1fr);
+  gap: 12px;
+  min-height: 0;
+}
+
+.equipment-form,
+.equipment-maintenance-form,
+.hardware-guide-form {
+  display: grid;
+  gap: 9px;
+}
+
+.equipment-form,
+.hardware-guide-form {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.equipment-form textarea,
+.hardware-guide-form textarea,
+.equipment-form-actions {
+  grid-column: 1 / -1;
+}
+
+.equipment-maintenance-form {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  margin-bottom: 12px;
+}
+
+.equipment-maintenance-form textarea,
+.equipment-maintenance-form button {
+  grid-column: span 3;
+}
+
+.equipment-table-wrap {
+  overflow: auto;
+}
+
+.equipment-table-wrap table {
+  min-width: 900px;
+}
+
+.equipment-table-wrap small,
+.equipment-card small {
+  display: block;
+  margin-top: 3px;
+  color: rgba(19, 36, 28, .58);
+  font-size: .76rem;
+}
+
+.equipment-card-list {
+  display: grid;
+  gap: 9px;
+}
+
+.equipment-card {
+  padding: 12px;
+  border: 1px solid rgba(18, 63, 49, .1);
+  border-radius: 8px;
+  background: rgba(255, 252, 239, .88);
+}
+
+.equipment-card.is-due {
+  border-color: rgba(143, 47, 34, .24);
+  background: #fff8ef;
+}
+
+.equipment-card-head {
+  display: flex;
+  gap: 10px;
+  align-items: start;
+  justify-content: space-between;
+}
+
+.equipment-card p {
+  margin: 8px 0;
+  color: rgba(19, 36, 28, .72);
+  font-size: .9rem;
+  line-height: 1.45;
+}
+
+.equipment-card-meta span {
+  padding: 5px 8px;
+  border-radius: 999px;
+  background: rgba(18, 63, 49, .08);
+  color: var(--uy-green);
+  font-size: .75rem;
+  font-weight: 800;
+}
+
+.equipment-actions {
+  margin-top: 10px;
+}
+
+.equipment-card-list h4 {
+  margin: 10px 0 2px;
+  color: var(--uy-green);
+}
+
+@media (min-width: 901px) {
+  body:not(.is-login-screen) .equipment-hero {
+    padding: 10px 12px !important;
+  }
+
+  body:not(.is-login-screen) .equipment-layout {
+    flex: 1 1 auto !important;
+    min-height: 0 !important;
+    overflow: hidden !important;
+  }
+
+  body:not(.is-login-screen) .equipment-form-panel,
+  body:not(.is-login-screen) .equipment-main-panel {
+    min-height: 0 !important;
+    overflow: auto !important;
+  }
+}
+
+@media (max-width: 900px) {
+  .equipment-hero,
+  .equipment-layout {
+    grid-template-columns: 1fr;
+  }
+
+  .equipment-tabs {
+    justify-content: stretch;
+  }
+
+  .equipment-tabs button {
+    flex: 1 1 140px;
+  }
+
+  .equipment-form,
+  .hardware-guide-form,
+  .equipment-maintenance-form {
+    grid-template-columns: 1fr;
+  }
+
+  .equipment-maintenance-form textarea,
+  .equipment-maintenance-form button {
+    grid-column: auto;
+  }
+
+  .equipment-table-wrap {
+    display: none;
+  }
+}

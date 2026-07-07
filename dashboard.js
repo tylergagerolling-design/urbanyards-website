@@ -8,6 +8,11 @@
   const OUTREACH_PROPERTY_TYPES = ["Apartment", "HOA", "Small Commercial", "Mixed-Use", "Residential", "Property Management", "Other"];
   const OUTREACH_SERVICE_INTERESTS = ["Seasonal Cleanup", "Trash Area Care", "Day Porter / Groundskeeping", "Mulch / Bed Refresh", "Apartment Turnover Cleaning", "Repair / Touch-Up", "Lawn Care", "Shrub / Hedge Trimming", "General Property Care", "Other"];
   const OUTREACH_PRIORITIES = ["High", "Normal", "Low"];
+  const EQUIPMENT_CATEGORIES = ["Mowers", "String trimmers", "Edgers", "Blowers", "Hedge trimmers", "Chainsaws / pole saws", "Pressure washing", "Hand tools", "Batteries", "Chargers", "PPE / safety gear", "Cleaning supplies", "Vehicle / transport", "Irrigation / watering", "Mulch / soil tools", "Miscellaneous"];
+  const EQUIPMENT_CONDITIONS = ["New", "Good", "Fair", "Needs Repair", "Replace Soon", "Retired"];
+  const EQUIPMENT_STATUSES = ["Ready", "In Use", "Needs Maintenance", "Needs Repair", "Missing", "Retired"];
+  const EQUIPMENT_PRIORITIES = ["High", "Normal", "Low"];
+  const HARDWARE_STATUSES = ["Researching", "Recommended", "Bought", "Not Chosen"];
   const COMMAND_CATEGORIES = ["task", "client", "payment", "deadline", "equipment"];
   const SESSION_KEY = "urbanYardsDashboardSession";
   const DEMO_QUERY_KEYS = ["demo", "test"];
@@ -36,6 +41,12 @@
     outreachNeighborhoodFilter: "All",
     outreachVisibleNeedsFilter: "",
     outreachVerifiedFilter: "All",
+    equipmentView: "inventory",
+    equipmentSearch: "",
+    equipmentCategoryFilter: "All",
+    equipmentStatusFilter: "All",
+    equipmentConditionFilter: "All",
+    equipmentPriorityFilter: "All",
     selectedOutreachIds: new Set(),
     selectedOutreachPropertyIds: new Set(),
     pendingOutreachImport: null,
@@ -51,6 +62,9 @@
     outreachCompaniesReady: true,
     outreachPropertiesReady: true,
     routeStopsReady: true,
+    equipmentReady: true,
+    equipmentMaintenanceReady: true,
+    hardwareGuideReady: true,
     groundskeeperAiReady: false,
     groundskeeperMessages: [],
     data: {
@@ -65,6 +79,9 @@
       outreachCompanies: [],
       outreachProperties: [],
       routeStops: [],
+      equipmentItems: [],
+      equipmentMaintenance: [],
+      hardwareGuide: [],
       groundskeeperAi: {
         settings: [],
         knowledge: [],
@@ -602,6 +619,78 @@
     };
   }
 
+  function normalizeEquipmentItem(row) {
+    const condition = EQUIPMENT_CONDITIONS.includes(row.condition) ? row.condition : "Good";
+    const status = EQUIPMENT_STATUSES.includes(row.status) ? row.status : "Ready";
+    const priority = EQUIPMENT_PRIORITIES.includes(row.replacement_priority) ? row.replacement_priority : "Normal";
+    return {
+      id: row.id,
+      name: row.name || "Unnamed item",
+      category: row.category || "Miscellaneous",
+      brand: row.brand || "",
+      model: row.model || "",
+      serialNumber: row.serial_number || "",
+      quantity: Number(row.quantity || 1),
+      condition,
+      status,
+      storageLocation: row.storage_location || "",
+      purchaseDateRaw: dateKey(row.purchase_date),
+      purchaseDate: formatDate(row.purchase_date),
+      purchasePrice: Number(row.purchase_price || 0),
+      supplier: row.supplier || "",
+      productUrl: row.product_url || "",
+      imageUrl: row.image_url || "",
+      notes: row.notes || "",
+      lastMaintenanceRaw: dateKey(row.last_maintenance_date),
+      lastMaintenance: formatDate(row.last_maintenance_date),
+      nextMaintenanceRaw: dateKey(row.next_maintenance_date),
+      nextMaintenance: formatDate(row.next_maintenance_date),
+      replacementPriority: priority,
+      createdAt: formatDate(row.created_at),
+      updatedAt: formatDate(row.updated_at)
+    };
+  }
+
+  function normalizeEquipmentMaintenance(row) {
+    const item = state.data.equipmentItems.find((equipment) => equipment.id === row.equipment_id);
+    return {
+      id: row.id,
+      equipmentId: row.equipment_id || "",
+      equipmentName: item?.name || row.equipment_name || "Equipment item",
+      maintenanceDateRaw: dateKey(row.maintenance_date),
+      maintenanceDate: formatDate(row.maintenance_date),
+      maintenanceType: row.maintenance_type || "Maintenance",
+      notes: row.notes || "",
+      cost: Number(row.cost || 0),
+      performedBy: row.performed_by || "",
+      nextMaintenanceRaw: dateKey(row.next_maintenance_date),
+      nextMaintenance: formatDate(row.next_maintenance_date),
+      createdAt: formatDate(row.created_at)
+    };
+  }
+
+  function normalizeHardwareGuideItem(row) {
+    const priority = EQUIPMENT_PRIORITIES.includes(row.priority) ? row.priority : "Normal";
+    const status = HARDWARE_STATUSES.includes(row.status) ? row.status : "Researching";
+    return {
+      id: row.id,
+      name: row.name || "Unnamed guide item",
+      category: row.category || "Miscellaneous",
+      recommendedUse: row.recommended_use || "",
+      brand: row.brand || "",
+      model: row.model || "",
+      estimatedPrice: Number(row.estimated_price || 0),
+      priority,
+      productUrl: row.product_url || "",
+      supplier: row.supplier || "",
+      notes: row.notes || "",
+      status,
+      goodFor: row.good_for || "",
+      createdAt: formatDate(row.created_at),
+      updatedAt: formatDate(row.updated_at)
+    };
+  }
+
   function normalizeOutreachProspect(row) {
     const status = OUTREACH_STATUSES.includes(row.status) ? row.status : "Prospect";
     const priority = OUTREACH_PRIORITIES.includes(row.priority) ? row.priority : "Normal";
@@ -1021,6 +1110,12 @@
         normalizeRouteStop({ id: "demo-route-2", route_date: today, client_name: "Mason Lee", address: "Beaverton, OR", service_type: "Cleanup estimate", estimated_minutes: 45, notes: "Take photos and measure bed edges.", status: "In Progress", stop_order: 2, latitude: 45.4871, longitude: -122.8037, created_at: now, updated_at: now }),
         normalizeRouteStop({ id: "demo-route-3", route_date: today, client_name: "River Court HOA", address: "Vancouver, WA", service_type: "Site walk", estimated_minutes: 60, notes: "Review frontage and shared pond edge.", status: "Planned", stop_order: 3, latitude: 45.628, longitude: -122.672, created_at: now, updated_at: now })
       ],
+      equipmentItems: [],
+      equipmentMaintenance: [],
+      hardwareGuide: [
+        normalizeHardwareGuideItem({ id: "demo-guide-1", name: "Commercial battery mower", category: "Mowers", recommended_use: "Quiet mowing for homeowner and small multifamily properties.", brand: "", model: "", estimated_price: 0, priority: "High", supplier: "", product_url: "", good_for: "Mowing, homeowner jobs, apartments", status: "Researching", notes: "Add preferred model and supplier link when ready.", created_at: now, updated_at: now }),
+        normalizeHardwareGuideItem({ id: "demo-guide-2", name: "Compact pressure washer", category: "Pressure washing", recommended_use: "Walkways, bins, entries, and common areas.", brand: "", model: "", estimated_price: 0, priority: "Normal", supplier: "", product_url: "", good_for: "Pressure washing, trash area care, apartments", status: "Researching", notes: "Manual price/link only for now.", created_at: now, updated_at: now })
+      ],
       groundskeeperAi: {
         settings: [
           { setting_key: "business_name", label: "Business name", value: "Urban Yards Groundskeeping", visibility: "public", status: "published", updated_at: now },
@@ -1132,11 +1227,14 @@
       state.outreachCompaniesReady = true;
       state.outreachPropertiesReady = true;
       state.routeStopsReady = true;
+      state.equipmentReady = true;
+      state.equipmentMaintenanceReady = true;
+      state.hardwareGuideReady = true;
       state.groundskeeperAiReady = true;
       return demoDashboardData();
     }
 
-    const [submissions, contacts, jobs, notes, reminders, documents, operations, outreachProspects, outreachCompanies, outreachProperties, routeStops, groundskeeperAi] = await Promise.all([
+    const [submissions, contacts, jobs, notes, reminders, documents, operations, outreachProspects, outreachCompanies, outreachProperties, routeStops, equipmentItems, equipmentMaintenance, hardwareGuide, groundskeeperAi] = await Promise.all([
       supabaseRestRequest("quote_submissions?select=*&order=created_at.desc", { method: "GET" }),
       supabaseRestRequest("contacts?select=*&order=created_at.desc", { method: "GET" }),
       supabaseRestRequest("scheduled_jobs?select=*&order=visit_date.asc", { method: "GET" }),
@@ -1148,6 +1246,9 @@
       loadOutreachCompanies(),
       loadOutreachProperties(),
       loadRouteStops(),
+      loadEquipmentItems(),
+      loadEquipmentMaintenance(),
+      loadHardwareGuide(),
       loadGroundskeeperAi()
     ]);
 
@@ -1163,6 +1264,9 @@
       outreachCompanies,
       outreachProperties,
       routeStops,
+      equipmentItems,
+      equipmentMaintenance,
+      hardwareGuide,
       groundskeeperAi
     };
   }
@@ -1225,6 +1329,39 @@
       return rows.map(normalizeRouteStop);
     } catch (error) {
       state.routeStopsReady = false;
+      return [];
+    }
+  }
+
+  async function loadEquipmentItems() {
+    try {
+      const rows = await supabaseRestRequest("equipment_items?select=*&order=category.asc,name.asc", { method: "GET" });
+      state.equipmentReady = true;
+      return rows.map(normalizeEquipmentItem);
+    } catch (error) {
+      state.equipmentReady = false;
+      return [];
+    }
+  }
+
+  async function loadEquipmentMaintenance() {
+    try {
+      const rows = await supabaseRestRequest("equipment_maintenance?select=*&order=maintenance_date.desc,created_at.desc", { method: "GET" });
+      state.equipmentMaintenanceReady = true;
+      return rows.map(normalizeEquipmentMaintenance);
+    } catch (error) {
+      state.equipmentMaintenanceReady = false;
+      return [];
+    }
+  }
+
+  async function loadHardwareGuide() {
+    try {
+      const rows = await supabaseRestRequest("hardware_guide?select=*&order=priority.asc,name.asc", { method: "GET" });
+      state.hardwareGuideReady = true;
+      return rows.map(normalizeHardwareGuideItem);
+    } catch (error) {
+      state.hardwareGuideReady = false;
       return [];
     }
   }
@@ -1311,7 +1448,10 @@
         sales_documents: "documents",
         operations_records: "operations",
         outreach_prospects: "outreachProspects",
-        route_stops: "routeStops"
+        route_stops: "routeStops",
+        equipment_items: "equipmentItems",
+        equipment_maintenance: "equipmentMaintenance",
+        hardware_guide: "hardwareGuide"
       };
       const key = map[table];
       if (key && Array.isArray(state.data[key])) {
@@ -1324,6 +1464,121 @@
       method: "DELETE",
       headers: { Prefer: "return=minimal" }
     });
+  }
+
+  async function insertEquipmentItem(payload) {
+    if (!state.equipmentReady) throw new Error("Create the equipment_items table first. Use DASHBOARD_EQUIPMENT_SQL.md.");
+    if (isDemoMode()) {
+      const item = normalizeEquipmentItem({ id: nextDemoId("equipment"), ...payload, created_at: new Date().toISOString(), updated_at: new Date().toISOString() });
+      state.data.equipmentItems.unshift(item);
+      return item;
+    }
+    const rows = await supabaseRestRequest("equipment_items", {
+      method: "POST",
+      headers: { Prefer: "return=representation" },
+      body: JSON.stringify(payload)
+    });
+    return normalizeEquipmentItem(rows[0]);
+  }
+
+  async function updateEquipmentItem(id, payload) {
+    if (isDemoMode()) {
+      const index = state.data.equipmentItems.findIndex((item) => item.id === id);
+      if (index >= 0) {
+        const existing = state.data.equipmentItems[index];
+        state.data.equipmentItems[index] = normalizeEquipmentItem({
+          id,
+          name: payload.name ?? existing.name,
+          category: payload.category ?? existing.category,
+          brand: payload.brand ?? existing.brand,
+          model: payload.model ?? existing.model,
+          serial_number: payload.serial_number ?? existing.serialNumber,
+          quantity: payload.quantity ?? existing.quantity,
+          condition: payload.condition ?? existing.condition,
+          status: payload.status ?? existing.status,
+          storage_location: payload.storage_location ?? existing.storageLocation,
+          purchase_date: payload.purchase_date ?? existing.purchaseDateRaw,
+          purchase_price: payload.purchase_price ?? existing.purchasePrice,
+          supplier: payload.supplier ?? existing.supplier,
+          product_url: payload.product_url ?? existing.productUrl,
+          image_url: payload.image_url ?? existing.imageUrl,
+          notes: payload.notes ?? existing.notes,
+          last_maintenance_date: payload.last_maintenance_date ?? existing.lastMaintenanceRaw,
+          next_maintenance_date: payload.next_maintenance_date ?? existing.nextMaintenanceRaw,
+          replacement_priority: payload.replacement_priority ?? existing.replacementPriority,
+          updated_at: new Date().toISOString()
+        });
+      }
+      return state.data.equipmentItems[index] || null;
+    }
+    const rows = await supabaseRestRequest(`equipment_items?id=eq.${encodeURIComponent(id)}`, {
+      method: "PATCH",
+      headers: { Prefer: "return=representation" },
+      body: JSON.stringify({ ...payload, updated_at: new Date().toISOString() })
+    });
+    return rows?.[0] ? normalizeEquipmentItem(rows[0]) : null;
+  }
+
+  async function insertEquipmentMaintenance(payload) {
+    if (!state.equipmentMaintenanceReady) throw new Error("Create the equipment_maintenance table first. Use DASHBOARD_EQUIPMENT_SQL.md.");
+    if (isDemoMode()) {
+      const record = normalizeEquipmentMaintenance({ id: nextDemoId("equipment-maintenance"), ...payload, created_at: new Date().toISOString() });
+      state.data.equipmentMaintenance.unshift(record);
+      return record;
+    }
+    const rows = await supabaseRestRequest("equipment_maintenance", {
+      method: "POST",
+      headers: { Prefer: "return=representation" },
+      body: JSON.stringify(payload)
+    });
+    return normalizeEquipmentMaintenance(rows[0]);
+  }
+
+  async function insertHardwareGuideItem(payload) {
+    if (!state.hardwareGuideReady) throw new Error("Create the hardware_guide table first. Use DASHBOARD_EQUIPMENT_SQL.md.");
+    if (isDemoMode()) {
+      const item = normalizeHardwareGuideItem({ id: nextDemoId("hardware"), ...payload, created_at: new Date().toISOString(), updated_at: new Date().toISOString() });
+      state.data.hardwareGuide.unshift(item);
+      return item;
+    }
+    const rows = await supabaseRestRequest("hardware_guide", {
+      method: "POST",
+      headers: { Prefer: "return=representation" },
+      body: JSON.stringify(payload)
+    });
+    return normalizeHardwareGuideItem(rows[0]);
+  }
+
+  async function updateHardwareGuideItem(id, payload) {
+    if (isDemoMode()) {
+      const index = state.data.hardwareGuide.findIndex((item) => item.id === id);
+      if (index >= 0) {
+        const existing = state.data.hardwareGuide[index];
+        state.data.hardwareGuide[index] = normalizeHardwareGuideItem({
+          id,
+          name: payload.name ?? existing.name,
+          category: payload.category ?? existing.category,
+          recommended_use: payload.recommended_use ?? existing.recommendedUse,
+          brand: payload.brand ?? existing.brand,
+          model: payload.model ?? existing.model,
+          estimated_price: payload.estimated_price ?? existing.estimatedPrice,
+          priority: payload.priority ?? existing.priority,
+          product_url: payload.product_url ?? existing.productUrl,
+          supplier: payload.supplier ?? existing.supplier,
+          notes: payload.notes ?? existing.notes,
+          status: payload.status ?? existing.status,
+          good_for: payload.good_for ?? existing.goodFor,
+          updated_at: new Date().toISOString()
+        });
+      }
+      return state.data.hardwareGuide[index] || null;
+    }
+    const rows = await supabaseRestRequest(`hardware_guide?id=eq.${encodeURIComponent(id)}`, {
+      method: "PATCH",
+      headers: { Prefer: "return=representation" },
+      body: JSON.stringify({ ...payload, updated_at: new Date().toISOString() })
+    });
+    return rows?.[0] ? normalizeHardwareGuideItem(rows[0]) : null;
   }
 
   async function updateScheduledJob(id, payload) {
@@ -2658,8 +2913,8 @@
     ].some((value) => String(value || "").toLowerCase().includes(query));
   }
 
-  function matchesSearchValues(values) {
-    const query = state.search.trim().toLowerCase();
+  function matchesSearchValues(values, overrideQuery) {
+    const query = String(overrideQuery ?? state.search).trim().toLowerCase();
     if (!query) return true;
     return values.some((value) => String(value || "").toLowerCase().includes(query));
   }
@@ -5035,6 +5290,270 @@
     return `<span class="ai-badge ai-badge-${escapeHtml(tone)}">${escapeHtml(textValue)}</span>`;
   }
 
+  function formatDollars(value) {
+    const amount = Number(value || 0);
+    if (!amount) return "";
+    return new Intl.NumberFormat("en-US", { style: "currency", currency: "USD" }).format(amount);
+  }
+
+  function equipmentOptions(items, selected = "") {
+    return items.map((item) => `<option value="${escapeHtml(item)}"${item === selected ? " selected" : ""}>${escapeHtml(item)}</option>`).join("");
+  }
+
+  function populateEquipmentControls(data) {
+    qsa("[data-equipment-category-options], [data-hardware-category-options]").forEach((select) => {
+      const current = select.value || "Miscellaneous";
+      select.innerHTML = equipmentOptions(EQUIPMENT_CATEGORIES, current);
+    });
+    qsa(".equipment-form select[name='condition']").forEach((select) => {
+      const current = select.value || "Good";
+      select.innerHTML = equipmentOptions(EQUIPMENT_CONDITIONS, current);
+    });
+    qsa(".equipment-form select[name='status']").forEach((select) => {
+      const current = select.value || "Ready";
+      select.innerHTML = equipmentOptions(EQUIPMENT_STATUSES, current);
+    });
+    qsa(".equipment-form select[name='replacement_priority'], .hardware-guide-form select[name='priority']").forEach((select) => {
+      const current = select.value || "Normal";
+      select.innerHTML = equipmentOptions(EQUIPMENT_PRIORITIES, current);
+    });
+    qsa(".hardware-guide-form select[name='status']").forEach((select) => {
+      const current = select.value || "Researching";
+      select.innerHTML = equipmentOptions(HARDWARE_STATUSES, current);
+    });
+    if (els.equipmentCategoryFilter) {
+      els.equipmentCategoryFilter.innerHTML = `<option value="All">All Categories</option>${equipmentOptions(EQUIPMENT_CATEGORIES, state.equipmentCategoryFilter)}`;
+      els.equipmentCategoryFilter.value = state.equipmentCategoryFilter;
+    }
+    if (els.equipmentStatusFilter) {
+      els.equipmentStatusFilter.innerHTML = `<option value="All">All Statuses</option>${equipmentOptions(EQUIPMENT_STATUSES, state.equipmentStatusFilter)}`;
+      els.equipmentStatusFilter.value = state.equipmentStatusFilter;
+    }
+    if (els.equipmentConditionFilter) {
+      els.equipmentConditionFilter.innerHTML = `<option value="All">All Conditions</option>${equipmentOptions(EQUIPMENT_CONDITIONS, state.equipmentConditionFilter)}`;
+      els.equipmentConditionFilter.value = state.equipmentConditionFilter;
+    }
+    if (els.equipmentPriorityFilter) {
+      els.equipmentPriorityFilter.innerHTML = `<option value="All">All Priorities</option>${equipmentOptions(EQUIPMENT_PRIORITIES, state.equipmentPriorityFilter)}`;
+      els.equipmentPriorityFilter.value = state.equipmentPriorityFilter;
+    }
+    if (els.equipmentMaintenanceItemOptions) {
+      els.equipmentMaintenanceItemOptions.innerHTML = data.equipmentItems.length
+        ? data.equipmentItems.map((item) => `<option value="${escapeHtml(item.id)}">${escapeHtml(item.name)}</option>`).join("")
+        : `<option value="">Add inventory first</option>`;
+    }
+  }
+
+  function equipmentStatusBadge(value) {
+    return `<span class="ai-badge ai-badge-${escapeHtml(slug(value || "status"))}">${escapeHtml(value || "None")}</span>`;
+  }
+
+  function filteredEquipmentItems() {
+    return state.data.equipmentItems.filter((item) => {
+      const searchMatch = matchesSearchValues([item.name, item.category, item.brand, item.model, item.serialNumber, item.storageLocation, item.supplier, item.notes], state.equipmentSearch);
+      return searchMatch
+        && (state.equipmentCategoryFilter === "All" || item.category === state.equipmentCategoryFilter)
+        && (state.equipmentStatusFilter === "All" || item.status === state.equipmentStatusFilter)
+        && (state.equipmentConditionFilter === "All" || item.condition === state.equipmentConditionFilter)
+        && (state.equipmentPriorityFilter === "All" || item.replacementPriority === state.equipmentPriorityFilter);
+    });
+  }
+
+  function equipmentItemMeta(item) {
+    return [item.brand, item.model, item.storageLocation, item.supplier].filter(Boolean).join(" · ");
+  }
+
+  function renderEquipmentActions(item) {
+    return `<div class="equipment-actions">
+      ${actionButton("Edit", "edit-equipment-item", item.id)}
+      ${item.status !== "Ready" ? actionButton("Ready", "mark-equipment-ready", item.id) : ""}
+      ${item.status !== "Needs Maintenance" ? actionButton("Needs Maint.", "mark-equipment-maintenance", item.id) : ""}
+      ${actionButton("Delete", "delete-equipment-item", item.id)}
+    </div>`;
+  }
+
+  function renderEquipmentCard(item) {
+    return `<article class="equipment-card">
+      <div class="equipment-card-head">
+        <div><strong>${escapeHtml(item.name)}</strong><small>${escapeHtml(equipmentItemMeta(item) || item.category)}</small></div>
+        <span>${equipmentStatusBadge(item.status)}</span>
+      </div>
+      <p>${escapeHtml(item.notes || "No notes saved.")}</p>
+      <div class="equipment-card-meta">
+        <span>${escapeHtml(item.category)}</span>
+        <span>${escapeHtml(item.condition)}</span>
+        <span>Next: ${escapeHtml(item.nextMaintenanceRaw ? item.nextMaintenance : "Not set")}</span>
+        <span>${escapeHtml(item.replacementPriority)} priority</span>
+      </div>
+      ${item.productUrl ? `<a href="${escapeHtml(item.productUrl)}" target="_blank" rel="noopener noreferrer">Open product link</a>` : ""}
+      ${renderEquipmentActions(item)}
+    </article>`;
+  }
+
+  function renderEquipmentInventory() {
+    if (!els.equipmentTable || !els.equipmentCards) return;
+    if (!state.equipmentReady) {
+      const setup = "Create the equipment_items table with DASHBOARD_EQUIPMENT_SQL.md, then refresh.";
+      els.equipmentTable.innerHTML = `<tr><td colspan="8">${emptyState(setup)}</td></tr>`;
+      els.equipmentCards.innerHTML = emptyState(setup);
+      return;
+    }
+    const items = filteredEquipmentItems();
+    if (!items.length) {
+      els.equipmentTable.innerHTML = `<tr><td colspan="8">${emptyState("No equipment matches this view yet.")}</td></tr>`;
+      els.equipmentCards.innerHTML = emptyState("No equipment matches this view yet.");
+      return;
+    }
+    els.equipmentTable.innerHTML = items.map((item) => `<tr>
+      <td><strong>${escapeHtml(item.name)}</strong><small>${escapeHtml(equipmentItemMeta(item))}</small></td>
+      <td>${escapeHtml(item.category)}</td>
+      <td>${equipmentStatusBadge(item.condition)}</td>
+      <td>${equipmentStatusBadge(item.status)}</td>
+      <td>${escapeHtml(item.nextMaintenanceRaw ? item.nextMaintenance : "Not set")}</td>
+      <td>${equipmentStatusBadge(item.replacementPriority)}</td>
+      <td>${item.productUrl ? `<a href="${escapeHtml(item.productUrl)}" target="_blank" rel="noopener noreferrer">Open</a>` : "-"}</td>
+      <td>${renderEquipmentActions(item)}</td>
+    </tr>`).join("");
+    els.equipmentCards.innerHTML = items.map(renderEquipmentCard).join("");
+  }
+
+  function renderEquipmentMaintenance() {
+    if (!els.equipmentMaintenanceList) return;
+    if (!state.equipmentMaintenanceReady) {
+      els.equipmentMaintenanceList.innerHTML = emptyState("Create the equipment_maintenance table with DASHBOARD_EQUIPMENT_SQL.md, then refresh.");
+      return;
+    }
+    const soon = daysFromToday(14);
+    const dueItems = state.data.equipmentItems.filter((item) => ["Needs Maintenance", "Needs Repair"].includes(item.status) || (item.nextMaintenanceRaw && item.nextMaintenanceRaw <= soon));
+    const records = state.data.equipmentMaintenance.slice(0, 20);
+    const dueHtml = dueItems.length ? dueItems.map((item) => `<article class="equipment-card is-due">
+      <div class="equipment-card-head"><div><strong>${escapeHtml(item.name)}</strong><small>${escapeHtml(item.category)}</small></div>${equipmentStatusBadge(item.status)}</div>
+      <p>${escapeHtml(item.nextMaintenanceRaw ? `Next maintenance: ${item.nextMaintenance}` : "No next maintenance date set.")}</p>
+      ${renderEquipmentActions(item)}
+    </article>`).join("") : emptyState("No equipment is due for maintenance in the next two weeks.");
+    const historyHtml = records.length ? records.map((record) => {
+      const item = state.data.equipmentItems.find((equipment) => equipment.id === record.equipmentId);
+      return `<article class="equipment-card">
+        <div class="equipment-card-head"><div><strong>${escapeHtml(item?.name || record.equipmentName)}</strong><small>${escapeHtml(record.maintenanceType)} · ${escapeHtml(record.maintenanceDate)}</small></div><span>${escapeHtml(formatDollars(record.cost))}</span></div>
+        <p>${escapeHtml(record.notes || "No notes saved.")}</p>
+        <div class="equipment-card-meta"><span>${escapeHtml(record.performedBy || "Performed by not set")}</span><span>Next: ${escapeHtml(record.nextMaintenanceRaw ? record.nextMaintenance : "Not set")}</span></div>
+      </article>`;
+    }).join("") : emptyState("No maintenance history yet.");
+    els.equipmentMaintenanceList.innerHTML = `<h4>Due / Repair Needed</h4>${dueHtml}<h4>Maintenance History</h4>${historyHtml}`;
+  }
+
+  function renderHardwareGuide() {
+    if (!els.hardwareGuideList) return;
+    if (!state.hardwareGuideReady) {
+      els.hardwareGuideList.innerHTML = emptyState("Create the hardware_guide table with DASHBOARD_EQUIPMENT_SQL.md, then refresh.");
+      return;
+    }
+    const items = state.data.hardwareGuide.filter((item) => matchesSearchValues([item.name, item.category, item.brand, item.model, item.recommendedUse, item.goodFor, item.notes], state.equipmentSearch));
+    els.hardwareGuideList.innerHTML = items.length ? items.map((item) => `<article class="equipment-card">
+      <div class="equipment-card-head"><div><strong>${escapeHtml(item.name)}</strong><small>${escapeHtml([item.brand, item.model, item.supplier].filter(Boolean).join(" · ") || item.category)}</small></div>${equipmentStatusBadge(item.priority)}</div>
+      <p>${escapeHtml(item.recommendedUse || item.notes || "No recommendation notes saved.")}</p>
+      <div class="equipment-card-meta"><span>${escapeHtml(item.status)}</span><span>${escapeHtml(item.goodFor || "Use not set")}</span><span>${escapeHtml(formatDollars(item.estimatedPrice))}</span></div>
+      <div class="equipment-actions">
+        ${item.productUrl ? `<a class="inline-action" href="${escapeHtml(item.productUrl)}" target="_blank" rel="noopener noreferrer">Open Link</a>` : ""}
+        ${actionButton("Edit", "edit-hardware-guide", item.id)}
+        ${actionButton("Bought", "mark-hardware-bought", item.id)}
+        ${actionButton("To Inventory", "convert-hardware-inventory", item.id)}
+        ${actionButton("Delete", "delete-hardware-guide", item.id)}
+      </div>
+    </article>`).join("") : emptyState("No hardware guide items match this view yet.");
+  }
+
+  function renderEquipmentWishlist() {
+    if (!els.equipmentWishlist) return;
+    const guide = state.data.hardwareGuide.filter((item) => item.priority === "High" || item.status === "Recommended");
+    const replacements = state.data.equipmentItems.filter((item) => item.condition === "Replace Soon" || item.replacementPriority === "High");
+    const guideHtml = guide.map((item) => `<article class="equipment-card">
+      <div class="equipment-card-head"><div><strong>${escapeHtml(item.name)}</strong><small>${escapeHtml(item.category)}</small></div>${equipmentStatusBadge(item.priority)}</div>
+      <p>${escapeHtml(item.recommendedUse || item.notes || "Needed soon.")}</p>
+      <div class="equipment-card-meta"><span>${escapeHtml(formatDollars(item.estimatedPrice))}</span><span>${escapeHtml(item.status)}</span></div>
+      <div class="equipment-actions">${item.productUrl ? `<a class="inline-action" href="${escapeHtml(item.productUrl)}" target="_blank" rel="noopener noreferrer">Open Link</a>` : ""}${actionButton("To Inventory", "convert-hardware-inventory", item.id)}</div>
+    </article>`);
+    const replaceHtml = replacements.map((item) => `<article class="equipment-card">
+      <div class="equipment-card-head"><div><strong>${escapeHtml(item.name)}</strong><small>${escapeHtml(item.category)}</small></div>${equipmentStatusBadge("Replace Soon")}</div>
+      <p>${escapeHtml(item.notes || "Marked for replacement planning.")}</p>
+      ${renderEquipmentActions(item)}
+    </article>`);
+    els.equipmentWishlist.innerHTML = guideHtml.concat(replaceHtml).join("") || emptyState("No high-priority purchases or replacement needs yet.");
+  }
+
+  function setEquipmentViewVisibility() {
+    qsa("[data-equipment-view]").forEach((button) => button.classList.toggle("is-active", button.dataset.equipmentView === state.equipmentView));
+    qsa("[data-equipment-panel]").forEach((panel) => {
+      panel.hidden = panel.dataset.equipmentPanel !== state.equipmentView;
+    });
+  }
+
+  function renderEquipment(data = state.data) {
+    if (!els.equipmentTable) return;
+    populateEquipmentControls(data);
+    setEquipmentViewVisibility();
+    if (els.equipmentSearch && els.equipmentSearch.value !== state.equipmentSearch) els.equipmentSearch.value = state.equipmentSearch;
+    renderEquipmentInventory();
+    renderEquipmentMaintenance();
+    renderHardwareGuide();
+    renderEquipmentWishlist();
+  }
+
+  function equipmentPayloadFromForm(form) {
+    const data = new FormData(form);
+    return {
+      name: String(data.get("name") || "").trim(),
+      category: String(data.get("category") || "Miscellaneous"),
+      brand: String(data.get("brand") || "").trim() || null,
+      model: String(data.get("model") || "").trim() || null,
+      serial_number: String(data.get("serial_number") || "").trim() || null,
+      quantity: Number(data.get("quantity") || 1) || 1,
+      condition: String(data.get("condition") || "Good"),
+      status: String(data.get("status") || "Ready"),
+      storage_location: String(data.get("storage_location") || "").trim() || null,
+      purchase_date: String(data.get("purchase_date") || "") || null,
+      purchase_price: Number(data.get("purchase_price") || 0) || null,
+      supplier: String(data.get("supplier") || "").trim() || null,
+      product_url: String(data.get("product_url") || "").trim() || null,
+      image_url: String(data.get("image_url") || "").trim() || null,
+      notes: String(data.get("notes") || "").trim() || null,
+      last_maintenance_date: String(data.get("last_maintenance_date") || "") || null,
+      next_maintenance_date: String(data.get("next_maintenance_date") || "") || null,
+      replacement_priority: String(data.get("replacement_priority") || "Normal")
+    };
+  }
+
+  function maintenancePayloadFromForm(form) {
+    const data = new FormData(form);
+    return {
+      equipment_id: String(data.get("equipment_id") || ""),
+      maintenance_date: String(data.get("maintenance_date") || todayKey()),
+      maintenance_type: String(data.get("maintenance_type") || "Maintenance"),
+      notes: String(data.get("notes") || "").trim() || null,
+      cost: Number(data.get("cost") || 0) || null,
+      performed_by: String(data.get("performed_by") || "").trim() || null,
+      next_maintenance_date: String(data.get("next_maintenance_date") || "") || null
+    };
+  }
+
+  function hardwarePayloadFromForm(form) {
+    const data = new FormData(form);
+    return {
+      name: String(data.get("name") || "").trim(),
+      category: String(data.get("category") || "Miscellaneous"),
+      recommended_use: String(data.get("recommended_use") || "").trim() || null,
+      brand: String(data.get("brand") || "").trim() || null,
+      model: String(data.get("model") || "").trim() || null,
+      estimated_price: Number(data.get("estimated_price") || 0) || null,
+      priority: String(data.get("priority") || "Normal"),
+      product_url: String(data.get("product_url") || "").trim() || null,
+      supplier: String(data.get("supplier") || "").trim() || null,
+      notes: String(data.get("notes") || "").trim() || null,
+      status: String(data.get("status") || "Researching"),
+      good_for: String(data.get("good_for") || "").trim() || null
+    };
+  }
+
   function renderAiRecord(item, type) {
     const body = item.content || item.value || item.answer || "";
     const meta = [item.category, item.source_url].filter(Boolean).join(" · ");
@@ -5173,6 +5692,7 @@
     renderDocuments(data);
     renderContacts(data);
     renderOutreach(data);
+    renderEquipment(data);
     renderJobs(data);
     renderNotes();
     renderReminders(data);
@@ -5420,6 +5940,33 @@
       });
     }
 
+    qsa("[data-equipment-view]").forEach((button) => {
+      button.addEventListener("click", async () => {
+        state.equipmentView = button.dataset.equipmentView || "inventory";
+        await render();
+      });
+    });
+
+    if (els.equipmentSearch) {
+      els.equipmentSearch.addEventListener("input", async () => {
+        state.equipmentSearch = els.equipmentSearch.value;
+        await render();
+      });
+    }
+
+    [
+      [els.equipmentCategoryFilter, "equipmentCategoryFilter"],
+      [els.equipmentStatusFilter, "equipmentStatusFilter"],
+      [els.equipmentConditionFilter, "equipmentConditionFilter"],
+      [els.equipmentPriorityFilter, "equipmentPriorityFilter"]
+    ].forEach(([element, key]) => {
+      if (!element) return;
+      element.addEventListener("change", async () => {
+        state[key] = element.value;
+        await render();
+      });
+    });
+
     if (els.propertyFilter) {
       els.propertyFilter.addEventListener("change", async () => {
         state.propertyFilter = els.propertyFilter.value;
@@ -5615,6 +6162,161 @@
 
       if (target.dataset.export) {
         exportData(target.dataset.export);
+        return;
+      }
+
+      if (action === "clear-equipment-form") {
+        const form = qs("[data-equipment-form]");
+        if (form) {
+          form.reset();
+          form.elements.id.value = "";
+        }
+        return;
+      }
+
+      if (action === "clear-hardware-form") {
+        const form = qs("[data-hardware-guide-form]");
+        if (form) {
+          form.reset();
+          form.elements.id.value = "";
+        }
+        return;
+      }
+
+      if (action === "edit-equipment-item") {
+        const item = state.data.equipmentItems.find((entry) => entry.id === id);
+        const form = qs("[data-equipment-form]");
+        if (!item || !form) return;
+        form.elements.id.value = item.id;
+        form.elements.name.value = item.name;
+        form.elements.category.value = item.category;
+        form.elements.brand.value = item.brand;
+        form.elements.model.value = item.model;
+        form.elements.serial_number.value = item.serialNumber;
+        form.elements.quantity.value = item.quantity || 1;
+        form.elements.condition.value = item.condition;
+        form.elements.status.value = item.status;
+        form.elements.storage_location.value = item.storageLocation;
+        form.elements.purchase_date.value = item.purchaseDateRaw;
+        form.elements.purchase_price.value = item.purchasePrice || "";
+        form.elements.supplier.value = item.supplier;
+        form.elements.product_url.value = item.productUrl;
+        form.elements.image_url.value = item.imageUrl;
+        form.elements.last_maintenance_date.value = item.lastMaintenanceRaw;
+        form.elements.next_maintenance_date.value = item.nextMaintenanceRaw;
+        form.elements.replacement_priority.value = item.replacementPriority;
+        form.elements.notes.value = item.notes;
+        state.equipmentView = "inventory";
+        await render();
+        form.scrollIntoView({ behavior: "smooth", block: "start" });
+        return;
+      }
+
+      if (action === "mark-equipment-ready" || action === "mark-equipment-maintenance") {
+        try {
+          setDashboardState("Updating equipment...");
+          await updateEquipmentItem(id, { status: action === "mark-equipment-ready" ? "Ready" : "Needs Maintenance" });
+          await refreshDashboard();
+          setActiveSection("equipment");
+          setDashboardState("");
+        } catch (error) {
+          setDashboardState(error.message || "Unable to update equipment.", "error");
+        }
+        return;
+      }
+
+      if (action === "delete-equipment-item") {
+        if (!window.confirm("Delete this equipment item?")) return;
+        try {
+          setDashboardState("Deleting equipment...");
+          await deleteRow("equipment_items", id);
+          await refreshDashboard();
+          setActiveSection("equipment");
+          setDashboardState("");
+        } catch (error) {
+          setDashboardState(error.message || "Unable to delete equipment.", "error");
+        }
+        return;
+      }
+
+      if (action === "edit-hardware-guide") {
+        const item = state.data.hardwareGuide.find((entry) => entry.id === id);
+        const form = qs("[data-hardware-guide-form]");
+        if (!item || !form) return;
+        form.elements.id.value = item.id;
+        form.elements.name.value = item.name;
+        form.elements.category.value = item.category;
+        form.elements.recommended_use.value = item.recommendedUse;
+        form.elements.brand.value = item.brand;
+        form.elements.model.value = item.model;
+        form.elements.estimated_price.value = item.estimatedPrice || "";
+        form.elements.priority.value = item.priority;
+        form.elements.supplier.value = item.supplier;
+        form.elements.product_url.value = item.productUrl;
+        form.elements.good_for.value = item.goodFor;
+        form.elements.status.value = item.status;
+        form.elements.notes.value = item.notes;
+        state.equipmentView = "guide";
+        await render();
+        form.scrollIntoView({ behavior: "smooth", block: "start" });
+        return;
+      }
+
+      if (action === "mark-hardware-bought") {
+        try {
+          setDashboardState("Marking guide item bought...");
+          await updateHardwareGuideItem(id, { status: "Bought" });
+          state.equipmentView = "guide";
+          await refreshDashboard();
+          setActiveSection("equipment");
+          setDashboardState("");
+        } catch (error) {
+          setDashboardState(error.message || "Unable to update guide item.", "error");
+        }
+        return;
+      }
+
+      if (action === "convert-hardware-inventory") {
+        const item = state.data.hardwareGuide.find((entry) => entry.id === id);
+        if (!item) return;
+        try {
+          setDashboardState("Adding guide item to inventory...");
+          await insertEquipmentItem({
+            name: item.name,
+            category: item.category,
+            brand: item.brand || null,
+            model: item.model || null,
+            quantity: 1,
+            condition: "New",
+            status: "Ready",
+            purchase_price: item.estimatedPrice || null,
+            supplier: item.supplier || null,
+            product_url: item.productUrl || null,
+            notes: item.notes || item.recommendedUse || null,
+            replacement_priority: "Normal"
+          });
+          await updateHardwareGuideItem(id, { status: "Bought" });
+          state.equipmentView = "inventory";
+          await refreshDashboard();
+          setActiveSection("equipment");
+          setDashboardState("Guide item added to inventory.");
+        } catch (error) {
+          setDashboardState(error.message || "Unable to add guide item to inventory.", "error");
+        }
+        return;
+      }
+
+      if (action === "delete-hardware-guide") {
+        if (!window.confirm("Delete this hardware guide item?")) return;
+        try {
+          setDashboardState("Deleting guide item...");
+          await deleteRow("hardware_guide", id);
+          await refreshDashboard();
+          setActiveSection("equipment");
+          setDashboardState("");
+        } catch (error) {
+          setDashboardState(error.message || "Unable to delete guide item.", "error");
+        }
         return;
       }
 
@@ -6491,6 +7193,66 @@
         } catch (error) {
           setDashboardState(error.message || "Unable to save operation.", "error");
         }
+      } else if (event.target.matches("[data-equipment-form]")) {
+        event.preventDefault();
+        const id = String(new FormData(event.target).get("id") || "");
+        try {
+          setDashboardState(id ? "Saving equipment..." : "Adding equipment...");
+          const payload = equipmentPayloadFromForm(event.target);
+          if (!payload.name) return;
+          if (id) {
+            await updateEquipmentItem(id, payload);
+          } else {
+            await insertEquipmentItem(payload);
+          }
+          event.target.reset();
+          state.equipmentView = "inventory";
+          await refreshDashboard();
+          setActiveSection("equipment");
+          setDashboardState(id ? "Equipment updated." : "Equipment added.");
+        } catch (error) {
+          setDashboardState(error.message || "Unable to save equipment.", "error");
+        }
+      } else if (event.target.matches("[data-equipment-maintenance-form]")) {
+        event.preventDefault();
+        try {
+          setDashboardState("Saving maintenance...");
+          const payload = maintenancePayloadFromForm(event.target);
+          if (!payload.equipment_id) throw new Error("Add an inventory item first.");
+          await insertEquipmentMaintenance(payload);
+          await updateEquipmentItem(payload.equipment_id, {
+            last_maintenance_date: payload.maintenance_date,
+            next_maintenance_date: payload.next_maintenance_date,
+            status: "Ready"
+          });
+          event.target.reset();
+          state.equipmentView = "maintenance";
+          await refreshDashboard();
+          setActiveSection("equipment");
+          setDashboardState("Maintenance saved.");
+        } catch (error) {
+          setDashboardState(error.message || "Unable to save maintenance.", "error");
+        }
+      } else if (event.target.matches("[data-hardware-guide-form]")) {
+        event.preventDefault();
+        const id = String(new FormData(event.target).get("id") || "");
+        try {
+          setDashboardState(id ? "Saving guide item..." : "Adding guide item...");
+          const payload = hardwarePayloadFromForm(event.target);
+          if (!payload.name) return;
+          if (id) {
+            await updateHardwareGuideItem(id, payload);
+          } else {
+            await insertHardwareGuideItem(payload);
+          }
+          event.target.reset();
+          state.equipmentView = "guide";
+          await refreshDashboard();
+          setActiveSection("equipment");
+          setDashboardState(id ? "Guide item updated." : "Guide item added.");
+        } catch (error) {
+          setDashboardState(error.message || "Unable to save guide item.", "error");
+        }
       } else if (event.target.matches("[data-route-form]")) {
         event.preventDefault();
         const payload = routeStopFormPayload(event.target);
@@ -6651,6 +7413,17 @@
     els.outreachSelectedCount = qs("[data-outreach-selected-count]");
     els.outreachSelectAll = qs("[data-outreach-select-all]");
     els.outreachImport = qs("[data-outreach-import]");
+    els.equipmentSearch = qs("[data-equipment-search]");
+    els.equipmentCategoryFilter = qs("[data-equipment-category-filter]");
+    els.equipmentStatusFilter = qs("[data-equipment-status-filter]");
+    els.equipmentConditionFilter = qs("[data-equipment-condition-filter]");
+    els.equipmentPriorityFilter = qs("[data-equipment-priority-filter]");
+    els.equipmentTable = qs("[data-equipment-table]");
+    els.equipmentCards = qs("[data-equipment-cards]");
+    els.equipmentMaintenanceItemOptions = qs("[data-equipment-maintenance-item-options]");
+    els.equipmentMaintenanceList = qs("[data-equipment-maintenance-list]");
+    els.hardwareGuideList = qs("[data-hardware-guide-list]");
+    els.equipmentWishlist = qs("[data-equipment-wishlist]");
     els.propertyFilter = qs("[data-property-filter]");
     els.pipeline = qs("[data-pipeline]");
     els.documents = qs("[data-documents]");

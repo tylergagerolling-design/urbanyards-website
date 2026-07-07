@@ -11,10 +11,10 @@
     <link rel="icon" href="/favicon.ico" sizes="any">
     <link rel="apple-touch-icon" href="/apple-touch-icon.png">
     <link rel="manifest" href="/dashboard.webmanifest">
-    <link rel="stylesheet" href="dashboard.css?v=20260707-dashboard-fit-2">
+    <link rel="stylesheet" href="dashboard.css?v=20260707-equipment-1">
     <link rel="stylesheet" href="dashboard-mobile-fix.css?v=20260622-3">
     <script src="dashboard-config.js?v=20260623-1" defer></script>
-    <script src="dashboard.js?v=20260706-1" defer></script>
+    <script src="dashboard.js?v=20260707-equipment-1" defer></script>
   </head>
   <body>
     <main class="dashboard-shell" aria-labelledby="dashboard-title">
@@ -56,6 +56,7 @@
             <a href="#calendar" data-dashboard-link="calendar"><span class="nav-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M4 15h12.5"/><path d="M5.5 15l1.6-5.2A2.4 2.4 0 0 1 9.4 8h3.3l1.7 7"/><path d="M12.8 8l1.1-3h2.7"/><path d="M16.5 15h1.7c1 0 1.8-.8 1.8-1.8V12h-2.4"/><path d="M7.5 19a2 2 0 1 0 0-4 2 2 0 0 0 0 4Z"/><path d="M16.5 19a2 2 0 1 0 0-4 2 2 0 0 0 0 4Z"/><path d="M9.6 11.5h2.2"/></svg></span><span class="nav-label">Work</span></a>
             <a href="#outreach" data-dashboard-link="outreach"><span class="nav-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M4 18V7.5L12 4l8 3.5V18"/><path d="M7 18v-6h10v6"/><path d="M9 9.5h.01"/><path d="M15 9.5h.01"/><path d="M10 18v-3h4v3"/></svg></span><span class="nav-label">Outreach</span></a>
             <a href="#route-planner" data-dashboard-link="route-planner"><span class="nav-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="m4 6 5-2 6 2 5-2v14l-5 2-6-2-5 2V6Z"/><path d="M9 4v14"/><path d="M15 6v14"/><path d="M6.5 8.5c2.4 1 4.6 1.1 7 .2 1.6-.6 2.9-.7 4-.2"/><path d="M6.5 15.5c1.7-.8 3.3-.8 5 0 1.7.8 3.4.8 5 0"/></svg></span><span class="nav-label">Route Planner</span></a>
+            <a href="#equipment" data-dashboard-link="equipment"><span class="nav-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M14.7 6.3a4 4 0 0 0-5.4 5.4L4 17l3 3 5.3-5.3a4 4 0 0 0 5.4-5.4l-2.4 2.4-2.8-2.8 2.2-2.6Z"/><path d="m5.5 18.5 2-2"/></svg></span><span class="nav-label">Equipment</span></a>
             <a href="#contacts" data-dashboard-link="contacts"><span class="nav-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M16 19c0-2.2-1.8-4-4-4H8c-2.2 0-4 1.8-4 4"/><path d="M10 11a3 3 0 1 0 0-6 3 3 0 0 0 0 6Z"/><path d="M20 18c0-1.9-1.3-3.4-3-3.9"/><path d="M15.5 5.4a3 3 0 0 1 0 5.2"/></svg></span><span class="nav-label">Clients</span></a>
             <a href="#documents" data-dashboard-link="documents"><span class="nav-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M12 3v18"/><path d="M16.5 7.5c-.8-1.3-2.3-2-4.2-2-2.2 0-3.8 1.1-3.8 2.8 0 1.8 1.6 2.5 4 3.1 2.6.7 4.2 1.5 4.2 3.5s-1.8 3.1-4.4 3.1c-2.1 0-3.8-.8-4.8-2.3"/></svg></span><span class="nav-label">Money</span></a>
             <a href="#groundskeeper-ai" data-dashboard-link="groundskeeper-ai"><span class="nav-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M12 3 20 7.5v9L12 21l-8-4.5v-9L12 3Z"/><path d="M8 14c1.4-4 4.4-6.5 8.4-7.2.4 4.3-1.4 7.4-5.1 8.8-1.1.4-2.4-.1-3.3-1.6Z"/><path d="M8 16c1.8-3.4 4-5.4 6.8-6.8"/></svg></span><span class="nav-label">AI</span></a>
@@ -575,6 +576,111 @@
             </div>
           </section>
 
+          <section class="dashboard-section equipment-section" id="equipment" data-section="equipment">
+            <div class="equipment-hero">
+              <div>
+                <p class="eyebrow">Equipment</p>
+                <h3>Tools, maintenance, and buying plan</h3>
+                <p>Track owned equipment, service needs, replacement priorities, and recommended hardware links.</p>
+              </div>
+              <div class="equipment-tabs" role="tablist" aria-label="Equipment views">
+                <button type="button" data-equipment-view="inventory">Current Inventory</button>
+                <button type="button" data-equipment-view="maintenance">Maintenance</button>
+                <button type="button" data-equipment-view="guide">Hardware Guide</button>
+                <button type="button" data-equipment-view="wishlist">Wishlist</button>
+              </div>
+            </div>
+
+            <div class="equipment-toolbar">
+              <input data-equipment-search type="search" aria-label="Search equipment" placeholder="Search name, brand, model, notes...">
+              <select data-equipment-category-filter aria-label="Filter equipment by category"><option value="All">All Categories</option></select>
+              <select data-equipment-status-filter aria-label="Filter equipment by status"><option value="All">All Statuses</option></select>
+              <select data-equipment-condition-filter aria-label="Filter equipment by condition"><option value="All">All Conditions</option></select>
+              <select data-equipment-priority-filter aria-label="Filter equipment by priority"><option value="All">All Priorities</option></select>
+            </div>
+
+            <div class="equipment-layout">
+              <section class="panel equipment-form-panel">
+                <div class="panel-heading"><h3>Add / Edit Equipment</h3><p>Save owned tools, supplies, and replacement details.</p></div>
+                <form class="equipment-form" data-equipment-form>
+                  <input name="id" type="hidden">
+                  <input name="name" placeholder="Item name" required>
+                  <select name="category" data-equipment-category-options required></select>
+                  <input name="brand" placeholder="Brand">
+                  <input name="model" placeholder="Model">
+                  <input name="serial_number" placeholder="Serial #">
+                  <input name="quantity" type="number" min="1" step="1" placeholder="Qty">
+                  <select name="condition"></select>
+                  <select name="status"></select>
+                  <input name="storage_location" placeholder="Storage location">
+                  <input name="purchase_date" type="date" aria-label="Purchase date">
+                  <input name="purchase_price" type="number" min="0" step="0.01" placeholder="Purchase price">
+                  <input name="supplier" placeholder="Supplier / store">
+                  <input name="product_url" type="url" placeholder="Product link">
+                  <input name="image_url" type="url" placeholder="Photo / image URL">
+                  <input name="last_maintenance_date" type="date" aria-label="Last maintenance date">
+                  <input name="next_maintenance_date" type="date" aria-label="Next maintenance date">
+                  <select name="replacement_priority"></select>
+                  <textarea name="notes" rows="3" placeholder="Notes, repairs, receipt info, or condition details"></textarea>
+                  <div class="equipment-form-actions">
+                    <button type="submit"><span class="button-icon" aria-hidden="true">+</span><span>Save Item</span></button>
+                    <button class="inline-action" type="button" data-action="clear-equipment-form">Clear</button>
+                  </div>
+                </form>
+              </section>
+
+              <section class="panel equipment-main-panel" data-equipment-panel="inventory">
+                <div class="panel-heading"><h3>Current Inventory</h3><p>Owned equipment, condition, storage, and replacement priority.</p></div>
+                <div class="equipment-table-wrap"><table><thead><tr><th>Item</th><th>Category</th><th>Condition</th><th>Status</th><th>Next Maintenance</th><th>Priority</th><th>Link</th><th>Actions</th></tr></thead><tbody data-equipment-table></tbody></table></div>
+                <div class="equipment-card-list" data-equipment-cards></div>
+              </section>
+
+              <section class="panel equipment-main-panel" data-equipment-panel="maintenance">
+                <div class="panel-heading"><h3>Maintenance</h3><p>Items due soon, repair needs, and maintenance history.</p></div>
+                <form class="equipment-maintenance-form" data-equipment-maintenance-form>
+                  <select name="equipment_id" required data-equipment-maintenance-item-options></select>
+                  <input name="maintenance_date" type="date" required aria-label="Maintenance date">
+                  <input name="maintenance_type" placeholder="Type">
+                  <input name="cost" type="number" min="0" step="0.01" placeholder="Cost">
+                  <input name="performed_by" placeholder="Performed by">
+                  <input name="next_maintenance_date" type="date" aria-label="Next maintenance date">
+                  <textarea name="notes" rows="2" placeholder="Notes"></textarea>
+                  <button type="submit"><span class="button-icon" aria-hidden="true">+</span><span>Add Maintenance</span></button>
+                </form>
+                <div class="equipment-card-list" data-equipment-maintenance-list></div>
+              </section>
+
+              <section class="panel equipment-main-panel" data-equipment-panel="guide">
+                <div class="panel-heading"><h3>Hardware Guide</h3><p>Recommended equipment links and buying research. Prices are manually entered.</p></div>
+                <form class="hardware-guide-form" data-hardware-guide-form>
+                  <input name="id" type="hidden">
+                  <input name="name" placeholder="Item name" required>
+                  <select name="category" data-hardware-category-options required></select>
+                  <input name="recommended_use" placeholder="Recommended use">
+                  <input name="brand" placeholder="Brand">
+                  <input name="model" placeholder="Model">
+                  <input name="estimated_price" type="number" min="0" step="0.01" placeholder="Estimated price">
+                  <select name="priority"></select>
+                  <input name="supplier" placeholder="Supplier / store">
+                  <input name="product_url" type="url" placeholder="Product link">
+                  <input name="good_for" placeholder="Good for">
+                  <select name="status"></select>
+                  <textarea name="notes" rows="3" placeholder="Notes"></textarea>
+                  <div class="equipment-form-actions">
+                    <button type="submit"><span class="button-icon" aria-hidden="true">+</span><span>Save Guide Item</span></button>
+                    <button class="inline-action" type="button" data-action="clear-hardware-form">Clear</button>
+                  </div>
+                </form>
+                <div class="equipment-card-list" data-hardware-guide-list></div>
+              </section>
+
+              <section class="panel equipment-main-panel" data-equipment-panel="wishlist">
+                <div class="panel-heading"><h3>Wishlist / Needed Soon</h3><p>High-priority guide items and owned equipment marked replace soon.</p></div>
+                <div class="equipment-card-list" data-equipment-wishlist></div>
+              </section>
+            </div>
+          </section>
+
           <section class="dashboard-section" id="documents" data-section="documents">
             <div class="panel">
               <div class="panel-heading">
@@ -788,6 +894,7 @@
           <a href="#calendar" data-dashboard-link="calendar">Work</a>
           <a href="#outreach" data-dashboard-link="outreach">Outreach</a>
           <a href="#route-planner" data-dashboard-link="route-planner">Route</a>
+          <a href="#equipment" data-dashboard-link="equipment">Equipment</a>
           <a href="#contacts" data-dashboard-link="contacts">Clients</a>
           <a href="#documents" data-dashboard-link="documents">Money</a>
           <a href="#groundskeeper-ai" data-dashboard-link="groundskeeper-ai">AI</a>

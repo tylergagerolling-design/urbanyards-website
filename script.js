@@ -233,7 +233,7 @@ const serviceCalendar = [
   },
   {
     services: ["Native plant installation", "Shrub and tree planting", "Leaf cleanup", "Mulch installation", "Storm preparation"],
-    why: "Fall is one of the best planting windows in Portland.",
+    why: "Fall is one of the best planting windows across Portland, Vancouver & Beaverton.",
     schedule: "Reserve planting and storm prep before leaf cleanup season fills the calendar."
   },
   {

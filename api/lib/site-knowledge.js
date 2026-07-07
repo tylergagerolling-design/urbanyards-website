@@ -225,7 +225,7 @@ function answerFromSiteKnowledge(query = "", lead = {}, history = []) {
     return `You can request a free quote${propertyNote} through the website form. It asks for name, email, phone, property address or general area, service needed, optional photos, and additional details. Final pricing and scheduling require property review.${leadFollowUp || `\n\n${quotePrompt}`}`;
   }
   if (intent.id === "service_area") {
-    return `The site lists Beaverton, Portland, and Vancouver as the core service area. If you are near those areas, Urban Yards can confirm through a quote request.\n\n${CONTACT.phone}. ${CONTACT.email}.`;
+    return `The main service area is Portland, Vancouver & Beaverton. Serving Portland, Vancouver, Beaverton, and nearby communities. If you are near those areas, Urban Yards can confirm through a quote request.\n\n${CONTACT.phone}. ${CONTACT.email}.`;
   }
   if (intent.id === "property_management") {
     return `Urban Yards works with apartment communities, condominium associations, HOAs, property management companies, and multifamily properties. Services listed include common area upkeep, trash and recycling enclosure care, day porter services, apartment turnover cleaning, light repair support, pressure washing, seasonal cleanup, recurring groundskeeping, and property appearance audits. Larger repairs and licensed plumbing, electrical, HVAC, or structural work are outside Urban Yards' stated scope.${leadFollowUp || "\n\nIs this an apartment community, HOA, condominium, or another type of property?"}`;

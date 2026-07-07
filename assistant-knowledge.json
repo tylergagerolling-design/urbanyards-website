@@ -10,9 +10,9 @@
   "quoteCTA": "Request a Free Quote",
   "quotePath": "/#quote",
   "serviceAreas": [
-    "Beaverton",
     "Portland",
-    "Vancouver"
+    "Vancouver",
+    "Beaverton"
   ],
   "responseStyle": [
     "helpful",
@@ -89,7 +89,7 @@
       "title": "Services Overview",
       "url": "/services",
       "keywords": ["services", "service explorer", "calendar", "weekly", "biweekly", "monthly", "one-time", "groundskeeping", "landscape improvements", "ecological"],
-      "text": "The Services page includes a Service Explorer, Portland Property Care Calendar, detailed services, and maintenance rhythm options. Service details include Groundskeeping: mowing, edging, weeds, and seasonal upkeep for homes, apartments, HOAs, and community properties. Landscape Improvements include better beds, planting, mulch, and curb appeal updates. Property Management Care includes clean common areas, practical site support, apartment turnover cleaning, debris removal, touch-up tasks, and light repair support for rentals and small multifamily properties. Ecological Enhancements include native planting and lower-water landscape direction. Maintenance cadence options include weekly, biweekly, monthly, and one-time service depending on property needs. The seasonal calendar helps property owners plan maintenance throughout the year."
+      "text": "The Services page includes a Service Explorer, Portland, Vancouver & Beaverton Property Care Calendar, detailed services, and maintenance rhythm options. Service details include Groundskeeping: mowing, edging, weeds, and seasonal upkeep for homes, apartments, HOAs, and community properties. Landscape Improvements include better beds, planting, mulch, and curb appeal updates. Property Management Care includes clean common areas, practical site support, apartment turnover cleaning, debris removal, touch-up tasks, and light repair support for rentals and small multifamily properties. Ecological Enhancements include native planting and lower-water landscape direction. Maintenance cadence options include weekly, biweekly, monthly, and one-time service depending on property needs. The seasonal calendar helps property owners plan maintenance throughout the year."
     },
     {
       "id": "about",
@@ -103,7 +103,7 @@
       "title": "Service Areas",
       "url": "/#service-area",
       "keywords": ["service area", "service areas", "areas", "serve", "served", "where", "location", "beaverton", "portland", "vancouver", "north portland"],
-      "text": "The site describes the service area as Beaverton, Portland, and Vancouver. The service area section says Urban Yards serves local homes, multifamily properties, HOAs, and community landscapes. The core service area listed on the site is Portland, Vancouver, and Beaverton. If a visitor is outside or near those areas, Urban Yards should confirm through the quote form."
+      "text": "The main service area is Portland, Vancouver & Beaverton. Serving Portland, Vancouver, Beaverton, and nearby communities. If a visitor is outside or near those areas, Urban Yards should confirm through the quote form."
     },
     {
       "id": "contact-quote",
@@ -117,7 +117,7 @@
       "title": "Footer",
       "url": "/#contact",
       "keywords": ["footer", "quick links", "phone", "email", "contact"],
-      "text": "Footer tagline: First Impressions Start Here. Footer quick links include Home, Services, Homeowner Services, Property Management Services, Portfolio, About, and Contact. Footer services include Lawn Mowing, Landscape Maintenance, Seasonal Cleanup, Pressure Washing, Apartment Groundskeeping, and HOA Landscape Maintenance. Footer property types include Homeowners, Apartment Communities, HOAs, Condominiums, and Property Managers. Footer contact phone: (971) 258-1109. Footer contact email: team@urbanyards.us. Footer next step: Talk through your property. Most replies within 1 business day for Portland and Vancouver properties."
+      "text": "Footer tagline: First Impressions Start Here. Footer quick links include Home, Services, Homeowner Services, Property Management Services, Portfolio, About, and Contact. Footer services include Lawn Mowing, Landscape Maintenance, Seasonal Cleanup, Pressure Washing, Apartment Groundskeeping, and HOA Landscape Maintenance. Footer property types include Homeowners, Apartment Communities, HOAs, Condominiums, and Property Managers. Footer contact phone: (971) 258-1109. Footer contact email: team@urbanyards.us. Footer next step: Talk through your property. Serving Portland, Vancouver, Beaverton, and nearby communities."
     }
   ],
   "faqs": [
@@ -131,7 +131,7 @@
       "id": "service-areas",
       "question": "What areas do you serve?",
       "keywords": ["area", "areas", "serve", "location", "where"],
-      "answer": "The site lists Beaverton, Portland, and Vancouver as the service area. If a property is near those areas, Urban Yards can confirm through the quote form."
+      "answer": "The main service area is Portland, Vancouver & Beaverton. Serving Portland, Vancouver, Beaverton, and nearby communities. If a property is near those areas, Urban Yards can confirm through the quote form."
     },
     {
       "id": "owner-operated",

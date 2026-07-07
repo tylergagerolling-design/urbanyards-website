@@ -187,6 +187,20 @@ function buildSiteContext(query = "", currentPage = "") {
   ].join("\n\n");
 }
 
+function publicKnowledgeSnapshot() {
+  return {
+    businessName: ASSISTANT_KNOWLEDGE.businessName,
+    assistantName: ASSISTANT_KNOWLEDGE.assistantName,
+    tagline: ASSISTANT_KNOWLEDGE.tagline,
+    serviceAreas: ASSISTANT_KNOWLEDGE.serviceAreas,
+    phone: CONTACT.phone,
+    email: CONTACT.email,
+    quoteCTA: ASSISTANT_KNOWLEDGE.quoteCTA,
+    contentChunks: SITE_KNOWLEDGE,
+    faqs: FAQS
+  };
+}
+
 function hasLeadIntent(text) {
   const intent = detectIntent(text);
   return Boolean(intent.leadIntent) || ASSISTANT_KNOWLEDGE.leadQualification.intentSignals.some((signal) => text.includes(signal));
@@ -272,5 +286,6 @@ module.exports = {
   detectIntent,
   inferConversationContext,
   getRelevantFaqs,
-  getRelevantKnowledge
+  getRelevantKnowledge,
+  publicKnowledgeSnapshot
 };

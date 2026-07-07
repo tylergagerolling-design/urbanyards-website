@@ -230,7 +230,7 @@
       history: state.messages.slice(-10)
     };
     try {
-      const response = await fetch("/.netlify/functions/ai-helper", {
+      const response = await fetch("/.netlify/functions/groundskeeper-ai", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload),

@@ -51,6 +51,8 @@
     outreachCompaniesReady: true,
     outreachPropertiesReady: true,
     routeStopsReady: true,
+    groundskeeperAiReady: false,
+    groundskeeperMessages: [],
     data: {
       submissions: [],
       contacts: [],
@@ -62,7 +64,17 @@
       outreachProspects: [],
       outreachCompanies: [],
       outreachProperties: [],
-      routeStops: []
+      routeStops: [],
+      groundskeeperAi: {
+        settings: [],
+        knowledge: [],
+        faqs: [],
+        rules: [],
+        savedAnswers: [],
+        logs: [],
+        feedback: [],
+        fallback: {}
+      }
     },
     loading: false,
     error: ""
@@ -261,6 +273,53 @@
     }
 
     return payload;
+  }
+
+  async function groundskeeperRequest(action, payload = {}) {
+    const session = getSession();
+    if (!session || !session.accessToken) throw new Error("Please sign in again.");
+    const response = await fetch("/.netlify/functions/groundskeeper-ai", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${session.accessToken}`
+      },
+      body: JSON.stringify({
+        action,
+        mode: "dashboard",
+        payload
+      })
+    });
+    const result = await response.json().catch(() => ({}));
+    if (!response.ok) throw new Error(result.error || "Groundskeeper AI request failed.");
+    return result;
+  }
+
+  async function groundskeeperChat(message) {
+    const session = getSession();
+    if (!session || !session.accessToken) throw new Error("Please sign in again.");
+    const response = await fetch("/.netlify/functions/groundskeeper-ai", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${session.accessToken}`
+      },
+      body: JSON.stringify({
+        mode: "dashboard",
+        message,
+        page: "Urban Yards Owner Dashboard",
+        history: state.groundskeeperMessages.slice(-10),
+        context: {
+          activeSection: state.activeSection,
+          openQuotes: state.data.submissions.filter((item) => item.status !== "Completed").length,
+          dueFollowUps: state.data.reminders.filter((item) => item.dueRaw && item.dueRaw <= todayKey() && item.status !== "Done").length,
+          activeOutreachProspects: state.data.outreachProspects.filter((item) => OUTREACH_ACTIVE_STATUSES.includes(item.status)).length
+        }
+      })
+    });
+    const result = await response.json().catch(() => ({}));
+    if (!response.ok) throw new Error(result.error || "The Groundskeeper is unavailable.");
+    return result.reply;
   }
 
   function formatDate(value) {
@@ -961,7 +1020,26 @@
         normalizeRouteStop({ id: "demo-route-1", route_date: today, client_name: "Hannah Edge", address: "SE Division St, Portland, OR", service_type: "Groundskeeping", estimated_minutes: 75, notes: "Start with courtyard before residents return.", status: "Planned", stop_order: 1, latitude: 45.5045, longitude: -122.6235, created_at: now, updated_at: now }),
         normalizeRouteStop({ id: "demo-route-2", route_date: today, client_name: "Mason Lee", address: "Beaverton, OR", service_type: "Cleanup estimate", estimated_minutes: 45, notes: "Take photos and measure bed edges.", status: "In Progress", stop_order: 2, latitude: 45.4871, longitude: -122.8037, created_at: now, updated_at: now }),
         normalizeRouteStop({ id: "demo-route-3", route_date: today, client_name: "River Court HOA", address: "Vancouver, WA", service_type: "Site walk", estimated_minutes: 60, notes: "Review frontage and shared pond edge.", status: "Planned", stop_order: 3, latitude: 45.628, longitude: -122.672, created_at: now, updated_at: now })
-      ]
+      ],
+      groundskeeperAi: {
+        settings: [
+          { setting_key: "business_name", label: "Business name", value: "Urban Yards Groundskeeping", visibility: "public", status: "published", updated_at: now },
+          { setting_key: "service_area", label: "Service area", value: "Portland, Vancouver & Beaverton", visibility: "public", status: "published", updated_at: now }
+        ],
+        knowledge: [
+          { title: "Main Services", category: "Services", content: "Lawn mowing, edging, weed control, seasonal cleanup, mulch refreshes, landscape maintenance, pressure washing, apartment groundskeeping, HOA landscape maintenance, trash area care, property management support, apartment turnover support, and light property-care tasks.", visibility: "public", status: "published", updated_at: now }
+        ],
+        faqs: [
+          { question: "How much does service cost?", answer: "Pricing depends on property size, condition, access, frequency, and scope. Request a free quote for property-specific pricing.", visibility: "public", status: "published", updated_at: now }
+        ],
+        rules: [
+          { title: "Do not invent pricing", content: "Never give final pricing. Explain the variables and guide visitors to Request a Free Quote.", visibility: "public", status: "published", updated_at: now }
+        ],
+        savedAnswers: [],
+        logs: [],
+        feedback: [],
+        fallback: {}
+      }
     };
   }
 
@@ -1054,10 +1132,11 @@
       state.outreachCompaniesReady = true;
       state.outreachPropertiesReady = true;
       state.routeStopsReady = true;
+      state.groundskeeperAiReady = true;
       return demoDashboardData();
     }
 
-    const [submissions, contacts, jobs, notes, reminders, documents, operations, outreachProspects, outreachCompanies, outreachProperties, routeStops] = await Promise.all([
+    const [submissions, contacts, jobs, notes, reminders, documents, operations, outreachProspects, outreachCompanies, outreachProperties, routeStops, groundskeeperAi] = await Promise.all([
       supabaseRestRequest("quote_submissions?select=*&order=created_at.desc", { method: "GET" }),
       supabaseRestRequest("contacts?select=*&order=created_at.desc", { method: "GET" }),
       supabaseRestRequest("scheduled_jobs?select=*&order=visit_date.asc", { method: "GET" }),
@@ -1068,7 +1147,8 @@
       loadOutreachProspects(),
       loadOutreachCompanies(),
       loadOutreachProperties(),
-      loadRouteStops()
+      loadRouteStops(),
+      loadGroundskeeperAi()
     ]);
 
     return {
@@ -1082,8 +1162,38 @@
       outreachProspects,
       outreachCompanies,
       outreachProperties,
-      routeStops
+      routeStops,
+      groundskeeperAi
     };
+  }
+
+  async function loadGroundskeeperAi() {
+    try {
+      const snapshot = await groundskeeperRequest("admin-list");
+      state.groundskeeperAiReady = true;
+      return {
+        settings: snapshot.settings || [],
+        knowledge: snapshot.knowledge || [],
+        faqs: snapshot.faqs || [],
+        rules: snapshot.rules || [],
+        savedAnswers: snapshot.savedAnswers || [],
+        logs: snapshot.logs || [],
+        feedback: snapshot.feedback || [],
+        fallback: snapshot.fallback || {}
+      };
+    } catch (error) {
+      state.groundskeeperAiReady = false;
+      return {
+        settings: [],
+        knowledge: [],
+        faqs: [],
+        rules: [],
+        savedAnswers: [],
+        logs: [],
+        feedback: [],
+        fallback: {}
+      };
+    }
   }
 
   async function loadSalesDocuments() {
@@ -4904,10 +5014,145 @@
       reminders: Array.isArray(imported.reminders) ? imported.reminders : [],
       documents: Array.isArray(imported.documents) ? imported.documents : [],
       operations: Array.isArray(imported.operations) ? imported.operations : [],
-      routeStops: Array.isArray(imported.routeStops) ? imported.routeStops : []
+      routeStops: Array.isArray(imported.routeStops) ? imported.routeStops : [],
+      groundskeeperAi: imported.groundskeeperAi || demoDashboardData().groundskeeperAi
     };
     await render();
     setDashboardState("Backup imported into demo mode.");
+  }
+
+  function itemTitle(item, type) {
+    if (type === "settings") return item.label || item.setting_key || "Business fact";
+    if (type === "faqs" || type === "savedAnswers") return item.question || "Saved question";
+    return item.title || item.category || "AI entry";
+  }
+
+  function aiBadge(value, fallback) {
+    const textValue = value || fallback;
+    const tone = String(textValue || "").toLowerCase().replace(/\s+/g, "-");
+    return `<span class="ai-badge ai-badge-${escapeHtml(tone)}">${escapeHtml(textValue)}</span>`;
+  }
+
+  function renderAiRecord(item, type) {
+    const body = item.content || item.value || item.answer || "";
+    const meta = [item.category, item.source_url].filter(Boolean).join(" · ");
+    return `<article class="groundskeeper-ai-record">
+      <div class="groundskeeper-ai-record-head">
+        <strong>${escapeHtml(itemTitle(item, type))}</strong>
+        <span>${aiBadge(item.status, "draft")}${aiBadge(item.visibility === "internal" ? "Internal Only" : "Public Website", "Public Website")}</span>
+      </div>
+      ${meta ? `<small>${escapeHtml(meta)}</small>` : ""}
+      <p>${escapeHtml(body || "No content saved yet.")}</p>
+      <time>${escapeHtml(item.updated_at ? `Updated ${formatDate(item.updated_at)}` : "")}</time>
+    </article>`;
+  }
+
+  function renderAiList(element, items, type, emptyMessage) {
+    if (!element) return;
+    element.innerHTML = items.length ? items.map((item) => renderAiRecord(item, type)).join("") : emptyState(emptyMessage);
+  }
+
+  function renderGroundskeeperChat() {
+    if (!els.groundskeeperChat) return;
+    if (!state.groundskeeperMessages.length) {
+      els.groundskeeperChat.innerHTML = `<article class="groundskeeper-chat-message is-assistant">Ask me to draft follow-ups, summarize leads, improve AI knowledge, or plan outreach. Dashboard mode can use internal-only knowledge.</article>`;
+      return;
+    }
+    els.groundskeeperChat.innerHTML = state.groundskeeperMessages.map((message) => (
+      `<article class="groundskeeper-chat-message is-${escapeHtml(message.role)}">${escapeHtml(message.content)}</article>`
+    )).join("");
+    els.groundskeeperChat.scrollTop = els.groundskeeperChat.scrollHeight;
+  }
+
+  function renderAiLogs(logs) {
+    if (!els.aiLogsList) return;
+    if (!logs.length) {
+      els.aiLogsList.innerHTML = emptyState(state.groundskeeperAiReady ? "No AI questions logged yet." : "Create the Groundskeeper AI tables, then refresh this panel.");
+      return;
+    }
+    els.aiLogsList.innerHTML = logs.slice(0, 30).map((log) => `
+      <article class="groundskeeper-ai-record">
+        <div class="groundskeeper-ai-record-head">
+          <strong>${escapeHtml(log.question || "Question")}</strong>
+          <span>${aiBadge(log.mode || "public", "public")}</span>
+        </div>
+        <small>${escapeHtml([log.page, log.created_at ? formatDate(log.created_at) : ""].filter(Boolean).join(" · "))}</small>
+        <p>${escapeHtml(log.answer || "No answer saved.")}</p>
+        <div class="groundskeeper-ai-record-actions">
+          <button class="inline-action" type="button" data-action="save-ai-log-knowledge" data-id="${escapeHtml(log.id)}">Save as Knowledge</button>
+          <button class="inline-action" type="button" data-action="save-ai-log-rule" data-id="${escapeHtml(log.id)}">Save as Rule</button>
+        </div>
+      </article>
+    `).join("");
+  }
+
+  function renderGroundskeeperAi(data = state.data) {
+    const ai = data.groundskeeperAi || {};
+    const lastPublished = (ai.settings || []).find((item) => item.setting_key === "last_published_at");
+    if (els.groundskeeperAiStatus) {
+      els.groundskeeperAiStatus.innerHTML = state.groundskeeperAiReady
+        ? `<span>${aiBadge("Shared Endpoint", "Shared Endpoint")} Public helper and dashboard assistant use <code>/.netlify/functions/groundskeeper-ai</code>.</span><span>Last published: ${escapeHtml(lastPublished?.value ? formatDate(lastPublished.value) : "Not published from dashboard yet")}</span>`
+        : `<span>${aiBadge("Setup Needed", "Setup Needed")} Run <code>DASHBOARD_GROUNDSKEEPER_AI_SQL.md</code> in Supabase, then refresh. The public helper still uses bundled website knowledge until tables exist.</span>`;
+    }
+    renderGroundskeeperChat();
+    renderAiList(els.aiSettingsList, ai.settings || [], "settings", "No business facts saved in Supabase yet.");
+    renderAiList(els.aiKnowledgeList, ai.knowledge || [], "knowledge", "No AI knowledge entries saved yet.");
+    renderAiList(els.aiFaqList, ai.faqs || [], "faqs", "No AI FAQs saved yet.");
+    renderAiList(els.aiRulesList, ai.rules || [], "rules", "No AI rules saved yet.");
+    renderAiList(els.aiSavedAnswersList, ai.savedAnswers || [], "savedAnswers", "No saved answers yet.");
+    renderAiLogs(ai.logs || []);
+  }
+
+  function aiEntryPayloadFromForm(form) {
+    const data = new FormData(form);
+    const table = String(data.get("table") || "ai_knowledge");
+    const title = String(data.get("title") || "").trim();
+    const category = String(data.get("category") || "").trim();
+    const content = String(data.get("content") || "").trim();
+    const base = {
+      visibility: String(data.get("visibility") || "public"),
+      status: String(data.get("status") || "draft")
+    };
+    if (table === "ai_settings") {
+      return { table, record: { ...base, setting_key: slug(title || category || "setting"), label: title || category || "Business Fact", value: content, notes: category } };
+    }
+    if (table === "ai_faqs") {
+      return { table, record: { ...base, question: title, answer: content, category: category || "Website FAQ" } };
+    }
+    if (table === "ai_rules") {
+      return { table, record: { ...base, title, content } };
+    }
+    if (table === "ai_saved_answers") {
+      return { table, record: { ...base, question: title, answer: content } };
+    }
+    return { table, record: { ...base, title, category: category || "General", content } };
+  }
+
+  async function saveAiEntryFromLog(logId, table) {
+    const log = (state.data.groundskeeperAi.logs || []).find((item) => item.id === logId);
+    if (!log) return;
+    if (table === "ai_rules") {
+      await groundskeeperRequest("upsert", {
+        table,
+        record: {
+          title: `Rule from ${formatDate(log.created_at)}`,
+          content: log.answer || log.question,
+          visibility: "internal",
+          status: "draft"
+        }
+      });
+      return;
+    }
+    await groundskeeperRequest("upsert", {
+      table,
+      record: {
+        title: log.question || "Visitor question",
+        category: "Visitor Question Logs",
+        content: `Question: ${log.question}\n\nAnswer: ${log.answer || ""}`,
+        visibility: "public",
+        status: "draft"
+      }
+    });
   }
 
   async function render() {
@@ -4932,6 +5177,7 @@
     renderCalendar(data);
     renderOperations(data);
     renderRoutePlanner(data);
+    renderGroundskeeperAi(data);
     if (els.todayChip) els.todayChip.textContent = new Date().toLocaleDateString("en-US", { weekday: "long", month: "short", day: "numeric" });
     setActiveSection(state.activeSection);
   }
@@ -5784,6 +6030,45 @@
         }
       } else if (action === "refresh-dashboard") {
         await refreshDashboard();
+      } else if (action === "refresh-groundskeeper-ai") {
+        try {
+          setDashboardState("Refreshing Groundskeeper AI...");
+          state.data.groundskeeperAi = await loadGroundskeeperAi();
+          await render();
+          setDashboardState("Groundskeeper AI refreshed.");
+        } catch (error) {
+          setDashboardState(error.message || "Unable to refresh Groundskeeper AI.", "error");
+        }
+      } else if (action === "publish-groundskeeper-ai") {
+        try {
+          setDashboardState("Publishing Groundskeeper AI updates...");
+          await groundskeeperRequest("publish");
+          state.data.groundskeeperAi = await loadGroundskeeperAi();
+          await render();
+          setDashboardState("Groundskeeper AI updates published.");
+        } catch (error) {
+          setDashboardState(error.message || "Unable to publish AI updates.", "error");
+        }
+      } else if (action === "save-ai-log-knowledge") {
+        try {
+          setDashboardState("Saving log as draft knowledge...");
+          await saveAiEntryFromLog(id, "ai_knowledge");
+          state.data.groundskeeperAi = await loadGroundskeeperAi();
+          await render();
+          setDashboardState("Saved as draft knowledge. Review and publish when ready.");
+        } catch (error) {
+          setDashboardState(error.message || "Unable to save AI knowledge.", "error");
+        }
+      } else if (action === "save-ai-log-rule") {
+        try {
+          setDashboardState("Saving log as draft rule...");
+          await saveAiEntryFromLog(id, "ai_rules");
+          state.data.groundskeeperAi = await loadGroundskeeperAi();
+          await render();
+          setDashboardState("Saved as draft rule. Review and publish when ready.");
+        } catch (error) {
+          setDashboardState(error.message || "Unable to save AI rule.", "error");
+        }
       } else if (action === "export-full-backup") {
         exportFullBackup();
       } else if (action === "import-backup") {
@@ -6109,6 +6394,38 @@
         } catch (error) {
           setDashboardState(error.message || "Unable to save prospect.", "error");
         }
+      } else if (event.target.matches("[data-groundskeeper-entry-form]")) {
+        event.preventDefault();
+        try {
+          setDashboardState("Saving Groundskeeper AI entry...");
+          const payload = aiEntryPayloadFromForm(event.target);
+          await groundskeeperRequest("upsert", payload);
+          event.target.reset();
+          state.data.groundskeeperAi = await loadGroundskeeperAi();
+          await render();
+          setDashboardState("Groundskeeper AI entry saved. Publish when it should affect the public helper.");
+        } catch (error) {
+          setDashboardState(error.message || "Unable to save AI entry.", "error");
+        }
+      } else if (event.target.matches("[data-groundskeeper-chat-form]")) {
+        event.preventDefault();
+        const formData = new FormData(event.target);
+        const message = String(formData.get("message") || "").trim();
+        if (!message) return;
+        try {
+          state.groundskeeperMessages.push({ role: "user", content: message });
+          event.target.reset();
+          renderGroundskeeperChat();
+          const reply = await groundskeeperChat(message);
+          state.groundskeeperMessages.push({ role: "assistant", content: reply });
+          state.data.groundskeeperAi = await loadGroundskeeperAi();
+          await render();
+          setDashboardState("");
+        } catch (error) {
+          state.groundskeeperMessages.push({ role: "assistant", content: error.message || "The Groundskeeper is unavailable." });
+          renderGroundskeeperChat();
+          setDashboardState(error.message || "Unable to ask The Groundskeeper.", "error");
+        }
       } else if (event.target.matches("[data-job-create-form]")) {
         event.preventDefault();
         const formData = new FormData(event.target);
@@ -6358,6 +6675,16 @@
     els.routeMap = qs("[data-route-map]");
     els.routeMapStatus = qs("[data-route-map-status]");
     els.importBackup = qs("[data-import-backup]");
+    els.groundskeeperAiStatus = qs("[data-groundskeeper-ai-status]");
+    els.groundskeeperChat = qs("[data-groundskeeper-chat]");
+    els.groundskeeperChatForm = qs("[data-groundskeeper-chat-form]");
+    els.groundskeeperEntryForm = qs("[data-groundskeeper-entry-form]");
+    els.aiSettingsList = qs("[data-ai-settings-list]");
+    els.aiKnowledgeList = qs("[data-ai-knowledge-list]");
+    els.aiFaqList = qs("[data-ai-faq-list]");
+    els.aiRulesList = qs("[data-ai-rules-list]");
+    els.aiSavedAnswersList = qs("[data-ai-saved-answers-list]");
+    els.aiLogsList = qs("[data-ai-logs-list]");
     els.homeReminders = qs("[data-home-reminders]");
     els.homeNotes = qs("[data-home-notes]");
     els.todayRouteSnapshot = qs("[data-today-route-snapshot]");

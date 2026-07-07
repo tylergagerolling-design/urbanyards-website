@@ -5653,6 +5653,209 @@ body:has(.dashboard-shell) {
   grid-column: 1 / -1;
 }
 
+/* Groundskeeper AI */
+.groundskeeper-ai-hero,
+.groundskeeper-ai-status,
+.groundskeeper-ai-layout,
+.groundskeeper-ai-grid {
+  display: grid;
+  gap: 18px;
+}
+
+.groundskeeper-ai-hero {
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  padding: 22px;
+  border: 1px solid rgba(18, 63, 49, 0.12);
+  border-radius: 18px;
+  background: linear-gradient(135deg, rgba(245, 239, 224, 0.96), rgba(223, 232, 211, 0.8));
+  box-shadow: 0 18px 45px rgba(18, 63, 49, 0.08);
+}
+
+.groundskeeper-ai-hero h3 {
+  margin: 0 0 6px;
+  font-size: clamp(1.5rem, 2vw, 2.1rem);
+}
+
+.groundskeeper-ai-hero p:not(.eyebrow) {
+  margin: 0;
+  color: var(--muted);
+  max-width: 760px;
+}
+
+.groundskeeper-ai-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  justify-content: flex-end;
+}
+
+.groundskeeper-ai-status {
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  padding: 12px 14px;
+  border: 1px solid rgba(18, 63, 49, 0.12);
+  border-radius: 14px;
+  background: rgba(255, 252, 244, 0.74);
+  color: var(--muted);
+  font-size: 0.9rem;
+}
+
+.groundskeeper-ai-status code {
+  color: var(--green);
+  font-weight: 800;
+}
+
+.groundskeeper-ai-layout {
+  grid-template-columns: minmax(320px, 0.9fr) minmax(360px, 1.1fr);
+}
+
+.groundskeeper-ai-grid {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.groundskeeper-ai-chat {
+  display: grid;
+  align-content: start;
+  gap: 10px;
+  min-height: 220px;
+  max-height: 420px;
+  overflow: auto;
+  padding: 12px;
+  border-radius: 14px;
+  background: rgba(18, 63, 49, 0.05);
+}
+
+.groundskeeper-chat-message {
+  padding: 10px 12px;
+  border-radius: 14px;
+  max-width: 88%;
+  font-size: 0.92rem;
+  line-height: 1.45;
+}
+
+.groundskeeper-chat-message.is-user {
+  justify-self: end;
+  background: var(--green);
+  color: #fffaf0;
+}
+
+.groundskeeper-chat-message.is-assistant {
+  justify-self: start;
+  background: #fffaf0;
+  border: 1px solid rgba(18, 63, 49, 0.12);
+  color: var(--green);
+}
+
+.groundskeeper-ai-chat-form,
+.groundskeeper-ai-form {
+  display: grid;
+  gap: 12px;
+}
+
+.groundskeeper-ai-chat-form {
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: end;
+  margin-top: 12px;
+}
+
+.groundskeeper-ai-form {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.groundskeeper-ai-form .span-full {
+  grid-column: 1 / -1;
+}
+
+.groundskeeper-ai-form button {
+  justify-self: start;
+}
+
+.groundskeeper-ai-list {
+  display: grid;
+  gap: 10px;
+}
+
+.groundskeeper-ai-record {
+  display: grid;
+  gap: 7px;
+  padding: 13px;
+  border: 1px solid rgba(18, 63, 49, 0.12);
+  border-radius: 14px;
+  background: rgba(255, 252, 244, 0.78);
+}
+
+.groundskeeper-ai-record-head,
+.groundskeeper-ai-record-actions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.groundskeeper-ai-record-head span,
+.groundskeeper-ai-record-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.groundskeeper-ai-record p {
+  margin: 0;
+  color: var(--muted);
+  line-height: 1.45;
+}
+
+.groundskeeper-ai-record small,
+.groundskeeper-ai-record time {
+  color: rgba(18, 63, 49, 0.58);
+  font-size: 0.78rem;
+}
+
+.ai-badge {
+  display: inline-flex;
+  align-items: center;
+  min-height: 22px;
+  padding: 3px 8px;
+  border-radius: 999px;
+  background: rgba(18, 63, 49, 0.08);
+  color: var(--green);
+  font-size: 0.72rem;
+  font-weight: 850;
+}
+
+.ai-badge-published,
+.ai-badge-public,
+.ai-badge-public-website,
+.ai-badge-shared-endpoint {
+  background: rgba(48, 113, 75, 0.12);
+}
+
+.ai-badge-draft,
+.ai-badge-setup-needed {
+  background: rgba(238, 194, 82, 0.2);
+}
+
+.ai-badge-internal,
+.ai-badge-internal-only {
+  background: rgba(18, 63, 49, 0.14);
+}
+
+@media (max-width: 980px) {
+  .groundskeeper-ai-hero,
+  .groundskeeper-ai-status,
+  .groundskeeper-ai-layout,
+  .groundskeeper-ai-grid,
+  .groundskeeper-ai-chat-form,
+  .groundskeeper-ai-form {
+    grid-template-columns: 1fr;
+  }
+
+  .groundskeeper-ai-actions {
+    justify-content: flex-start;
+  }
+}
+
 @media (max-width: 1080px) {
   .outreach-metrics {
     grid-template-columns: repeat(3, minmax(0, 1fr));

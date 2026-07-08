@@ -28,6 +28,7 @@
   const DEMO_QUERY_KEYS = ["demo", "test"];
   const DASHBOARD_ICON_PATH = "images/dashboard-icons/";
   const HOME_DASHBOARD_ICON_PATH = "images/home-dashboard/";
+  const WORK_DASHBOARD_ICON_PATH = "images/work-dashboard/";
   const SIDEBAR_QUICK_ACTIONS = [
     { label: "New Job", action: "quick-add-job", icon: "plus.svg" },
     { label: "Log Time", action: "quick-add-operation", icon: "log-time-clock.svg" },
@@ -239,6 +240,10 @@
 
   function homeDashboardIcon(name) {
     return `${HOME_DASHBOARD_ICON_PATH}${escapeHtml(name)}`;
+  }
+
+  function workDashboardIcon(name) {
+    return `${WORK_DASHBOARD_ICON_PATH}${escapeHtml(name)}`;
   }
 
   function emptyState(message) {
@@ -4565,8 +4570,187 @@
     return parts.join("");
   }
 
+  function renderWorkEmptyState(icon, title, detail, actionLabel, action) {
+    return `
+      <div class="work-empty-state">
+        <img src="${workDashboardIcon(icon)}" alt="" aria-hidden="true">
+        <strong>${escapeHtml(title)}</strong>
+        ${detail ? `<p>${escapeHtml(detail)}</p>` : ""}
+        ${actionLabel && action ? `<button class="inline-action" type="button" data-action="${escapeHtml(action)}">${escapeHtml(actionLabel)}</button>` : ""}
+      </div>
+    `;
+  }
+
+  function renderWorkSnapshot(data) {
+    if (!els.workSnapshot) return;
+    const today = todayKey();
+    const weekEnd = addDaysKey(today, 7);
+    const todayJobs = data.jobs.filter((job) => job.dateRaw === today && matchesSearch(job));
+    const inProgressJobs = data.jobs.filter((job) => job.status === "In Progress" && matchesSearch(job));
+    const completedJobs = data.jobs.filter((job) => job.status === "Completed" && matchesSearch(job));
+    const followUps = [
+      ...data.reminders.filter((item) => item.status !== "Completed" && item.dueRaw && item.dueRaw <= weekEnd),
+      ...data.operations.filter((item) => item.type === "client" && isOperationOpen(item) && (!item.dueDateRaw || item.dueDateRaw <= weekEnd))
+    ].filter((item) => matchesSearchValues([item.task, item.title, item.description, item.due, item.dueDate, item.status]));
+    const metrics = [
+      ["Jobs Today", todayJobs.length, todayJobs[0] ? `${todayJobs[0].site} / ${todayJobs[0].window}` : "No visits scheduled", "work-jobs-today.svg"],
+      ["In Progress", inProgressJobs.length, "Jobs on the go", "work-in-progress.svg"],
+      ["Completed", completedJobs.length, "Jobs completed", "work-completed.svg"],
+      ["Follow-Ups", followUps.length, "Due this week", "work-follow-up.svg"]
+    ];
+    els.workSnapshot.innerHTML = metrics.map(([label, value, detail, icon]) => `
+      <article class="work-snapshot-metric">
+        <span class="work-metric-icon" aria-hidden="true"><img src="${workDashboardIcon(icon)}" alt=""></span>
+        <div>
+          <strong>${escapeHtml(value)}</strong>
+          <span>${escapeHtml(label)}</span>
+          <p>${escapeHtml(detail)}</p>
+        </div>
+      </article>
+    `).join("");
+  }
+
+  function renderWorkSchedule(data) {
+    if (!els.workSchedule) return;
+    const jobs = data.jobs
+      .filter((job) => job.dateRaw === todayKey() && matchesSearch(job))
+      .sort((a, b) => a.window.localeCompare(b.window));
+    if (!jobs.length) {
+      els.workSchedule.innerHTML = renderWorkEmptyState("schedule-empty.svg", "No jobs scheduled for today.", "Add a job or schedule one for later.", "Add Job", "quick-add-job");
+      return;
+    }
+    els.workSchedule.innerHTML = jobs.slice(0, 5).map((job) => `
+      <button class="work-list-row" type="button" data-action="edit-job" data-id="${escapeHtml(job.id)}">
+        <span class="work-row-icon" aria-hidden="true"><img src="${workDashboardIcon("activity-job-scheduled.svg")}" alt=""></span>
+        <span>
+          <strong>${escapeHtml(job.site)}</strong>
+          <small>${escapeHtml(job.service)} / ${escapeHtml(job.window || "Time TBD")}</small>
+        </span>
+        <em>${escapeHtml(job.status)}</em>
+      </button>
+    `).join("");
+  }
+
+  function renderWorkRoute(data) {
+    if (!els.workRoute) return;
+    const stops = filteredRouteStops(data.routeStops)
+      .filter((stop) => stop.routeDate === todayKey())
+      .sort((a, b) => a.stopOrder - b.stopOrder || a.createdAt.localeCompare(b.createdAt));
+    if (!stops.length) {
+      els.workRoute.innerHTML = `
+        <div class="work-route-map" aria-hidden="true"><img src="${workDashboardIcon("route-placeholder-map.svg")}" alt=""></div>
+        ${renderWorkEmptyState("route.svg", "No route stops planned.", "Add stops to build your route.", "Open Route", "go-route-planner")}
+      `;
+      return;
+    }
+    const openStops = stops.filter((stop) => stop.status !== "Complete");
+    els.workRoute.innerHTML = `
+      <div class="work-route-map" aria-hidden="true"><img src="${workDashboardIcon("route-placeholder-map.svg")}" alt=""></div>
+      <button class="work-route-summary" type="button" data-action="go-route-planner">
+        <strong>${escapeHtml(openStops.length)} open / ${escapeHtml(stops.length)} total</strong>
+        <span>${escapeHtml(stops.slice(0, 3).map((stop) => stop.clientName).join(" / "))}${stops.length > 3 ? " / ..." : ""}</span>
+      </button>
+    `;
+  }
+
+  function renderWorkPipeline(data) {
+    if (!els.workPipeline) return;
+    const walkthrough = data.submissions.filter((item) => ["New", "Contacted"].includes(item.status) && matchesSearchValues([item.name, item.service, item.city, item.status]));
+    const estimates = data.documents.filter((doc) => doc.type === "estimate" && doc.status !== "accepted" && matchesSearchValues([doc.clientName, doc.number, doc.status]));
+    const scheduled = data.jobs.filter((job) => job.status === "Scheduled" && matchesSearch(job));
+    const inProgress = data.jobs.filter((job) => job.status === "In Progress" && matchesSearch(job));
+    const completed = data.jobs.filter((job) => job.status === "Completed" && matchesSearch(job));
+    const rows = [
+      ["Walkthrough", walkthrough, "Open quote requests", "pipeline-walkthrough.svg"],
+      ["Estimate", estimates, "Quotes and estimates", "pipeline-estimate.svg"],
+      ["Scheduled", scheduled, "Upcoming field work", "pipeline-scheduled.svg"],
+      ["In Progress", inProgress, "Active visits", "work-in-progress.svg"],
+      ["Completed", completed, "Finished work", "pipeline-completed.svg"]
+    ];
+    els.workPipeline.innerHTML = rows.map(([label, items, detail, icon]) => `
+      <button class="work-pipeline-row" type="button" data-action="go-calendar">
+        <span class="work-row-icon" aria-hidden="true"><img src="${workDashboardIcon(icon)}" alt=""></span>
+        <span>
+          <strong>${escapeHtml(label)}</strong>
+          <small>${escapeHtml(items[0]?.site || items[0]?.clientName || items[0]?.name || detail)}</small>
+        </span>
+        <em>${escapeHtml(items.length)} jobs</em>
+      </button>
+    `).join("");
+  }
+
+  function renderWorkTasks(data) {
+    if (!els.workTasks) return;
+    const counts = taskDashboardCounts(data);
+    els.workTasks.innerHTML = `
+      ${renderTaskDonut(counts)}
+      ${renderTaskLegend(counts)}
+    `;
+  }
+
+  function renderWorkActivity(data) {
+    if (!els.workActivity) return;
+    const today = todayKey();
+    const activities = [
+      ...data.jobs.filter((job) => job.status === "Completed").slice(0, 1).map((job) => ({
+        title: "Walkthrough completed",
+        detail: job.site,
+        time: job.date || "Recently",
+        icon: "activity-walkthrough.svg",
+        action: "edit-job",
+        id: job.id
+      })),
+      ...data.jobs.filter((job) => job.dateRaw >= today).slice(0, 1).map((job) => ({
+        title: "Job scheduled",
+        detail: job.site,
+        time: job.date,
+        icon: "activity-job-scheduled.svg",
+        action: "edit-job",
+        id: job.id
+      })),
+      ...data.documents.filter((doc) => doc.type === "invoice").slice(0, 1).map((doc) => ({
+        title: "Invoice sent",
+        detail: doc.clientName || doc.number || "Invoice",
+        time: doc.issueDate || "Recently",
+        icon: "activity-invoice.svg",
+        action: "open-document",
+        id: doc.id
+      })),
+      ...data.reminders.filter((item) => item.status !== "Completed").slice(0, 1).map((item) => ({
+        title: "Follow-up added",
+        detail: item.task,
+        time: item.due || "Due soon",
+        icon: "activity-follow-up.svg",
+        action: "go-settings",
+        id: item.id
+      }))
+    ].slice(0, 4);
+    if (!activities.length) {
+      els.workActivity.innerHTML = renderWorkEmptyState("activity-job-scheduled.svg", "No recent work activity yet.", "Scheduled jobs and completed work will show here.", "", "");
+      return;
+    }
+    els.workActivity.innerHTML = activities.map((item) => `
+      <button class="work-activity-item" type="button" data-action="${escapeHtml(item.action)}" data-id="${escapeHtml(item.id)}">
+        <span class="work-row-icon" aria-hidden="true"><img src="${workDashboardIcon(item.icon)}" alt=""></span>
+        <strong>${escapeHtml(item.title)}</strong>
+        <small>${escapeHtml(item.detail)}</small>
+        <em>${escapeHtml(item.time)}</em>
+      </button>
+    `).join("");
+  }
+
+  function renderWorkPage(data) {
+    renderWorkSnapshot(data);
+    renderWorkSchedule(data);
+    renderWorkRoute(data);
+    renderWorkPipeline(data);
+    renderWorkTasks(data);
+    renderWorkActivity(data);
+  }
+
   function renderCalendar(data) {
     if (!els.calendarList) return;
+    renderWorkPage(data);
     let events = buildCalendarEvents(data);
     if (state.search.trim()) {
       events = events.filter((event) => matchesSearchValues([event.title, event.client, event.property, event.time, event.status, event.type, event.date]));
@@ -6521,6 +6705,18 @@
         if (els.search && els.search.value !== state.search) els.search.value = state.search;
         if (els.globalSearch && els.globalSearch.value !== state.search) els.globalSearch.value = state.search;
         if (els.clientSearch && els.clientSearch.value !== state.search) els.clientSearch.value = state.search;
+        if (els.workSearch && els.workSearch.value !== state.search) els.workSearch.value = state.search;
+        await render();
+      });
+    }
+
+    if (els.workSearch) {
+      els.workSearch.addEventListener("input", async () => {
+        state.search = els.workSearch.value;
+        if (els.search && els.search.value !== state.search) els.search.value = state.search;
+        if (els.globalSearch && els.globalSearch.value !== state.search) els.globalSearch.value = state.search;
+        if (els.overviewSearch && els.overviewSearch.value !== state.search) els.overviewSearch.value = state.search;
+        if (els.clientSearch && els.clientSearch.value !== state.search) els.clientSearch.value = state.search;
         await render();
       });
     }
@@ -6531,6 +6727,7 @@
         if (els.search && els.search.value !== state.search) els.search.value = state.search;
         if (els.globalSearch && els.globalSearch.value !== state.search) els.globalSearch.value = state.search;
         if (els.overviewSearch && els.overviewSearch.value !== state.search) els.overviewSearch.value = state.search;
+        if (els.workSearch && els.workSearch.value !== state.search) els.workSearch.value = state.search;
         await render();
       });
     }
@@ -8196,6 +8393,7 @@
     els.search = qs("[data-dashboard-search]");
     els.globalSearch = qs("[data-global-search]");
     els.overviewSearch = qs("[data-overview-search]");
+    els.workSearch = qs("[data-work-search]");
     els.clientSearch = qs("[data-client-search]");
     els.outreachSearch = qs("[data-outreach-search]");
     els.outreachCompanySearch = qs("[data-outreach-company-search]");
@@ -8249,6 +8447,12 @@
     els.calendarFilter = qs("[data-calendar-filter]");
     els.calendarRangeControls = qs("[data-calendar-range-controls]");
     els.calendarRangeLabel = qs("[data-calendar-range-label]");
+    els.workSnapshot = qs("[data-work-snapshot]");
+    els.workSchedule = qs("[data-work-schedule]");
+    els.workRoute = qs("[data-work-route]");
+    els.workPipeline = qs("[data-work-pipeline]");
+    els.workTasks = qs("[data-work-tasks]");
+    els.workActivity = qs("[data-work-activity]");
     els.operationsFilter = qs("[data-operations-filter]");
     els.calendarList = qs("[data-calendar-list]");
     els.operationsSummary = qs("[data-operations-summary]");

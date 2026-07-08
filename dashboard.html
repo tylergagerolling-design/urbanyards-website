@@ -11,10 +11,10 @@
     <link rel="icon" href="/favicon.ico" sizes="any">
     <link rel="apple-touch-icon" href="/apple-touch-icon.png">
     <link rel="manifest" href="/dashboard.webmanifest">
-    <link rel="stylesheet" href="dashboard.css?v=20260707-home-overview-1">
+    <link rel="stylesheet" href="dashboard.css?v=20260707-work-page-1">
     <link rel="stylesheet" href="dashboard-mobile-fix.css?v=20260622-3">
     <script src="dashboard-config.js?v=20260623-1" defer></script>
-    <script src="dashboard.js?v=20260707-home-overview-1" defer></script>
+    <script src="dashboard.js?v=20260707-work-page-1" defer></script>
   </head>
   <body>
     <main class="dashboard-shell" aria-labelledby="dashboard-title">
@@ -488,64 +488,133 @@
             </section>
           </section>
 
-          <section class="dashboard-section" id="calendar" data-section="calendar">
-            <div class="panel">
+          <section class="dashboard-section work-page" id="calendar" data-section="calendar">
+            <div class="work-command-header">
+              <div>
+                <h3>Work</h3>
+                <p>Manage jobs, tasks, routes, and field work.</p>
+              </div>
+              <div class="work-header-actions">
+                <label class="work-search">
+                  <img src="images/work-dashboard/search.svg" alt="" aria-hidden="true">
+                  <input data-work-search type="search" aria-label="Search jobs, properties, contacts" placeholder="Search jobs, properties, contacts...">
+                </label>
+                <button class="work-primary-action" type="button" data-action="quick-add-job">
+                  <img src="images/work-dashboard/plus.svg" alt="" aria-hidden="true">
+                  <span>New Job</span>
+                </button>
+              </div>
+            </div>
+
+            <article class="panel work-snapshot-card" aria-labelledby="work-snapshot-title">
               <div class="panel-heading">
                 <div>
-                  <h3>Work Calendar</h3>
-                  <p>Jobs, quote follow-ups, invoice due dates, reminders, and tasks.</p>
+                  <h3 id="work-snapshot-title">Today's Snapshot</h3>
                 </div>
-                <select data-calendar-filter aria-label="Filter calendar by type">
-                  <option value="All">All Types</option>
-                  <option value="job">Jobs</option>
-                  <option value="quote">Quotes</option>
-                  <option value="follow-up">Follow-ups</option>
-                  <option value="invoice">Invoices</option>
-                  <option value="task">Tasks</option>
-                </select>
               </div>
-              <div class="calendar-tabs" role="tablist" aria-label="Calendar views">
-                <button type="button" data-calendar-view="today">Today</button>
-                <button type="button" data-calendar-view="agenda">Agenda</button>
-                <button type="button" data-calendar-view="week">Week</button>
-                <button type="button" data-calendar-view="thirty">30 Days</button>
-              </div>
-              <div class="calendar-range-controls" data-calendar-range-controls hidden>
-                <button class="inline-action" type="button" data-action="previous-30-days">Previous 30 Days</button>
-                <span data-calendar-range-label></span>
-                <button class="inline-action" type="button" data-action="next-30-days">Next 30 Days</button>
-              </div>
-              <div class="overdue-jobs-alert" data-calendar-overdue-jobs></div>
-              <form class="schedule-create-form calendar-create-form" data-job-create-form>
-                <input name="visit_date" type="date" required>
-                <input name="visit_window" placeholder="Time window">
-                <input name="site_name" placeholder="Client / title" required>
-                <input name="city" placeholder="Property / area" autocomplete="street-address" data-address-autocomplete>
-                <input name="service" placeholder="Job, task, or reminder" required>
-                <label class="recurring-toggle">
-                  <input name="is_recurring" type="checkbox" data-recurring-toggle>
-                  <span>Recurring visit</span>
-                </label>
-                <button type="submit"><span class="button-icon" aria-hidden="true">+</span><span>Add Visit</span></button>
-                <div class="recurring-controls" data-recurring-controls hidden>
-                  <label>Repeat every
-                    <input name="recurrence_interval" type="number" min="1" max="365" value="1" inputmode="numeric">
-                  </label>
-                  <label>Frequency
-                    <select name="recurrence_unit">
-                      <option value="days">Days</option>
-                      <option value="weeks" selected>Weeks</option>
-                      <option value="months">Months</option>
-                    </select>
-                  </label>
-                  <label>Repeat until
-                    <input name="recurrence_end_date" type="date">
-                  </label>
-                  <p>Each occurrence is saved as its own visit so it can be edited or completed separately.</p>
+              <div class="work-snapshot-grid" data-work-snapshot></div>
+            </article>
+
+            <div class="work-two-column">
+              <article class="panel work-dashboard-card work-schedule-card">
+                <div class="panel-heading">
+                  <h3>Today's Schedule</h3>
+                  <button class="inline-action" type="button" data-action="quick-add-job">Add Job</button>
                 </div>
-              </form>
-              <div class="calendar-list" data-calendar-list></div>
+                <div class="work-card-body" data-work-schedule></div>
+              </article>
+              <article class="panel work-dashboard-card work-route-card">
+                <div class="panel-heading">
+                  <h3>Route</h3>
+                  <button class="inline-action" type="button" data-action="go-route-planner">Open Route</button>
+                </div>
+                <div class="work-card-body" data-work-route></div>
+              </article>
             </div>
+
+            <div class="work-two-column work-pipeline-task-grid">
+              <article class="panel work-dashboard-card work-pipeline-card">
+                <div class="panel-heading">
+                  <h3>Job Pipeline</h3>
+                  <button class="inline-action" type="button" data-action="go-calendar">View all jobs</button>
+                </div>
+                <div class="work-pipeline-list" data-work-pipeline></div>
+              </article>
+              <article class="panel work-dashboard-card work-tasks-card">
+                <div class="panel-heading">
+                  <h3>Tasks</h3>
+                </div>
+                <div class="work-task-summary" data-work-tasks></div>
+              </article>
+            </div>
+
+            <article class="panel work-dashboard-card work-recent-card">
+              <div class="panel-heading">
+                <h3>Recent Activity</h3>
+                <button class="inline-action" type="button" data-action="go-calendar">View all</button>
+              </div>
+              <div class="work-activity-grid" data-work-activity></div>
+            </article>
+
+            <details class="work-secondary-tools">
+              <summary>
+                <span>Calendar tools</span>
+                <small>Add visits, filter the full calendar, and review the agenda.</small>
+              </summary>
+              <div class="work-calendar-tools">
+                <div class="work-filter-row">
+                  <select data-calendar-filter aria-label="Filter calendar by type">
+                    <option value="All">All Types</option>
+                    <option value="job">Jobs</option>
+                    <option value="quote">Quotes</option>
+                    <option value="follow-up">Follow-ups</option>
+                    <option value="invoice">Invoices</option>
+                    <option value="task">Tasks</option>
+                  </select>
+                  <div class="calendar-tabs" role="tablist" aria-label="Calendar views">
+                    <button type="button" data-calendar-view="today">Today</button>
+                    <button type="button" data-calendar-view="agenda">Agenda</button>
+                    <button type="button" data-calendar-view="week">Week</button>
+                    <button type="button" data-calendar-view="thirty">30 Days</button>
+                  </div>
+                </div>
+                <div class="calendar-range-controls" data-calendar-range-controls hidden>
+                  <button class="inline-action" type="button" data-action="previous-30-days">Previous 30 Days</button>
+                  <span data-calendar-range-label></span>
+                  <button class="inline-action" type="button" data-action="next-30-days">Next 30 Days</button>
+                </div>
+                <div class="overdue-jobs-alert" data-calendar-overdue-jobs></div>
+                <form class="schedule-create-form calendar-create-form" data-job-create-form>
+                  <input name="visit_date" type="date" required>
+                  <input name="visit_window" placeholder="Time window">
+                  <input name="site_name" placeholder="Client / title" required>
+                  <input name="city" placeholder="Property / area" autocomplete="street-address" data-address-autocomplete>
+                  <input name="service" placeholder="Job, task, or reminder" required>
+                  <label class="recurring-toggle">
+                    <input name="is_recurring" type="checkbox" data-recurring-toggle>
+                    <span>Recurring visit</span>
+                  </label>
+                  <button type="submit"><span class="button-icon" aria-hidden="true">+</span><span>Add Visit</span></button>
+                  <div class="recurring-controls" data-recurring-controls hidden>
+                    <label>Repeat every
+                      <input name="recurrence_interval" type="number" min="1" max="365" value="1" inputmode="numeric">
+                    </label>
+                    <label>Frequency
+                      <select name="recurrence_unit">
+                        <option value="days">Days</option>
+                        <option value="weeks" selected>Weeks</option>
+                        <option value="months">Months</option>
+                      </select>
+                    </label>
+                    <label>Repeat until
+                      <input name="recurrence_end_date" type="date">
+                    </label>
+                    <p>Each occurrence is saved as its own visit so it can be edited or completed separately.</p>
+                  </div>
+                </form>
+                <div class="calendar-list" data-calendar-list></div>
+              </div>
+            </details>
           </section>
 
           <section class="dashboard-section" id="route-planner" data-section="route-planner">

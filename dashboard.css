@@ -11009,3 +11009,463 @@ body:not(.is-login-screen) #overview .home-secondary-tools .overview-operations-
     flex-wrap: wrap !important;
   }
 }
+
+/* Work page field-operations redesign. Scoped to the Work tab body only. */
+body:not(.is-login-screen) #calendar.work-page {
+  display: grid !important;
+  gap: 18px !important;
+  max-width: 100% !important;
+  padding-bottom: 28px !important;
+}
+
+body:not(.is-login-screen) #calendar .work-command-header {
+  display: grid !important;
+  grid-template-columns: minmax(280px, 1fr) minmax(360px, 620px) !important;
+  align-items: center !important;
+  gap: 24px !important;
+}
+
+body:not(.is-login-screen) #calendar .work-command-header h3 {
+  margin: 0 0 4px !important;
+  color: #102f25 !important;
+  font-size: clamp(2.2rem, 4vw, 3rem) !important;
+  font-weight: 900 !important;
+  line-height: .96 !important;
+  letter-spacing: 0 !important;
+}
+
+body:not(.is-login-screen) #calendar .work-command-header p {
+  margin: 0 !important;
+  color: #697469 !important;
+  font-size: .98rem !important;
+  line-height: 1.4 !important;
+}
+
+body:not(.is-login-screen) #calendar .work-header-actions {
+  display: grid !important;
+  grid-template-columns: minmax(220px, 1fr) auto !important;
+  align-items: center !important;
+  gap: 14px !important;
+}
+
+body:not(.is-login-screen) #calendar .work-search {
+  display: grid !important;
+  grid-template-columns: 22px minmax(0, 1fr) !important;
+  align-items: center !important;
+  gap: 12px !important;
+  min-height: 52px !important;
+  padding: 0 18px !important;
+  border: 1px solid rgba(23, 54, 43, .12) !important;
+  border-radius: 17px !important;
+  background: rgba(255, 253, 247, .86) !important;
+  box-shadow: 0 10px 24px rgba(23, 54, 43, .045) !important;
+}
+
+body:not(.is-login-screen) #calendar .work-search img,
+body:not(.is-login-screen) #calendar .work-primary-action img,
+body:not(.is-login-screen) #calendar .work-metric-icon img,
+body:not(.is-login-screen) #calendar .work-row-icon img {
+  width: 20px !important;
+  height: 20px !important;
+  object-fit: contain !important;
+}
+
+body:not(.is-login-screen) #calendar .work-search input {
+  width: 100% !important;
+  min-width: 0 !important;
+  border: 0 !important;
+  background: transparent !important;
+  color: #102f25 !important;
+  font-size: .92rem !important;
+  outline: 0 !important;
+}
+
+body:not(.is-login-screen) #calendar .work-primary-action {
+  display: inline-grid !important;
+  grid-template-columns: 18px auto !important;
+  align-items: center !important;
+  gap: 10px !important;
+  min-height: 52px !important;
+  padding: 0 22px !important;
+  border: 0 !important;
+  border-radius: 17px !important;
+  background: linear-gradient(180deg, #6b8f55, #416b36) !important;
+  color: #fff !important;
+  font-weight: 900 !important;
+  box-shadow: 0 14px 28px rgba(65, 107, 54, .24) !important;
+}
+
+body:not(.is-login-screen) #calendar .panel,
+body:not(.is-login-screen) #calendar .work-dashboard-card,
+body:not(.is-login-screen) #calendar .work-snapshot-card,
+body:not(.is-login-screen) #calendar .work-secondary-tools {
+  border: 1px solid rgba(23, 54, 43, .1) !important;
+  border-radius: 24px !important;
+  background:
+    radial-gradient(circle at 100% 0%, rgba(230, 238, 219, .34), transparent 34%),
+    rgba(255, 253, 247, .9) !important;
+  box-shadow: 0 18px 42px rgba(23, 54, 43, .075) !important;
+}
+
+body:not(.is-login-screen) #calendar .panel-heading {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: space-between !important;
+  gap: 14px !important;
+  margin: 0 0 14px !important;
+  padding: 0 !important;
+  border: 0 !important;
+}
+
+body:not(.is-login-screen) #calendar .panel-heading h3 {
+  margin: 0 !important;
+  color: #102f25 !important;
+  font-size: 1.08rem !important;
+  line-height: 1.15 !important;
+}
+
+body:not(.is-login-screen) #calendar .inline-action {
+  min-height: 38px !important;
+  padding: 0 13px !important;
+  border: 1px solid rgba(23, 54, 43, .12) !important;
+  border-radius: 999px !important;
+  background: rgba(255, 255, 255, .72) !important;
+  color: #234c2d !important;
+  font-size: .82rem !important;
+  font-weight: 850 !important;
+  box-shadow: 0 8px 18px rgba(23, 54, 43, .045) !important;
+}
+
+body:not(.is-login-screen) #calendar .work-snapshot-card {
+  padding: 22px 24px !important;
+}
+
+body:not(.is-login-screen) #calendar .work-snapshot-grid {
+  display: grid !important;
+  grid-template-columns: repeat(4, minmax(0, 1fr)) !important;
+  gap: 0 !important;
+}
+
+body:not(.is-login-screen) #calendar .work-snapshot-metric {
+  display: grid !important;
+  grid-template-columns: 44px minmax(0, 1fr) !important;
+  gap: 13px !important;
+  min-width: 0 !important;
+  padding: 14px 18px !important;
+  border-right: 1px solid rgba(23, 54, 43, .1) !important;
+}
+
+body:not(.is-login-screen) #calendar .work-snapshot-metric:last-child {
+  border-right: 0 !important;
+}
+
+body:not(.is-login-screen) #calendar .work-metric-icon,
+body:not(.is-login-screen) #calendar .work-row-icon {
+  display: inline-grid !important;
+  place-items: center !important;
+  width: 42px !important;
+  height: 42px !important;
+  border-radius: 14px !important;
+  background: #e6efdc !important;
+}
+
+body:not(.is-login-screen) #calendar .work-snapshot-metric strong {
+  display: block !important;
+  color: #102f25 !important;
+  font-size: clamp(1.65rem, 3vw, 2.25rem) !important;
+  line-height: .95 !important;
+}
+
+body:not(.is-login-screen) #calendar .work-snapshot-metric span:not(.work-metric-icon) {
+  display: block !important;
+  margin-top: 6px !important;
+  color: #59645b !important;
+  font-size: .75rem !important;
+  font-weight: 850 !important;
+}
+
+body:not(.is-login-screen) #calendar .work-snapshot-metric p {
+  margin: 6px 0 0 !important;
+  color: #737b70 !important;
+  font-size: .8rem !important;
+  line-height: 1.35 !important;
+}
+
+body:not(.is-login-screen) #calendar .work-two-column {
+  display: grid !important;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) !important;
+  gap: 18px !important;
+}
+
+body:not(.is-login-screen) #calendar .work-dashboard-card {
+  min-height: 260px !important;
+  padding: 22px !important;
+}
+
+body:not(.is-login-screen) #calendar .work-card-body,
+body:not(.is-login-screen) #calendar .work-pipeline-list,
+body:not(.is-login-screen) #calendar .work-task-summary,
+body:not(.is-login-screen) #calendar .work-activity-grid {
+  display: grid !important;
+  gap: 0 !important;
+}
+
+body:not(.is-login-screen) #calendar .work-empty-state {
+  display: grid !important;
+  place-items: center !important;
+  min-height: 170px !important;
+  padding: 22px !important;
+  border: 1px dashed rgba(23, 54, 43, .13) !important;
+  border-radius: 20px !important;
+  background: rgba(250, 248, 240, .68) !important;
+  color: #102f25 !important;
+  text-align: center !important;
+}
+
+body:not(.is-login-screen) #calendar .work-empty-state img {
+  width: 52px !important;
+  height: 52px !important;
+  margin-bottom: 10px !important;
+  opacity: .82 !important;
+}
+
+body:not(.is-login-screen) #calendar .work-empty-state strong {
+  color: #102f25 !important;
+  font-size: .98rem !important;
+}
+
+body:not(.is-login-screen) #calendar .work-empty-state p {
+  max-width: 34ch !important;
+  margin: 6px auto 0 !important;
+  color: #737b70 !important;
+  font-size: .84rem !important;
+  line-height: 1.45 !important;
+}
+
+body:not(.is-login-screen) #calendar .work-empty-state .inline-action {
+  margin-top: 14px !important;
+}
+
+body:not(.is-login-screen) #calendar .work-list-row,
+body:not(.is-login-screen) #calendar .work-pipeline-row {
+  display: grid !important;
+  grid-template-columns: 42px minmax(0, 1fr) auto !important;
+  align-items: center !important;
+  gap: 12px !important;
+  min-height: 62px !important;
+  padding: 12px 0 !important;
+  border: 0 !important;
+  border-top: 1px solid rgba(23, 54, 43, .08) !important;
+  background: transparent !important;
+  color: #102f25 !important;
+  text-align: left !important;
+}
+
+body:not(.is-login-screen) #calendar .work-list-row:first-child,
+body:not(.is-login-screen) #calendar .work-pipeline-row:first-child {
+  border-top: 0 !important;
+}
+
+body:not(.is-login-screen) #calendar .work-list-row strong,
+body:not(.is-login-screen) #calendar .work-pipeline-row strong,
+body:not(.is-login-screen) #calendar .work-route-summary strong {
+  display: block !important;
+  color: #102f25 !important;
+  font-size: .94rem !important;
+}
+
+body:not(.is-login-screen) #calendar .work-list-row small,
+body:not(.is-login-screen) #calendar .work-pipeline-row small,
+body:not(.is-login-screen) #calendar .work-route-summary span {
+  display: block !important;
+  margin-top: 4px !important;
+  color: #737b70 !important;
+  font-size: .8rem !important;
+}
+
+body:not(.is-login-screen) #calendar .work-list-row em,
+body:not(.is-login-screen) #calendar .work-pipeline-row em {
+  color: #59645b !important;
+  font-size: .78rem !important;
+  font-style: normal !important;
+  font-weight: 850 !important;
+  white-space: nowrap !important;
+}
+
+body:not(.is-login-screen) #calendar .work-route-map {
+  display: block !important;
+  width: 100% !important;
+  min-height: 112px !important;
+  margin-bottom: 14px !important;
+  overflow: hidden !important;
+  border: 1px solid rgba(23, 54, 43, .09) !important;
+  border-radius: 18px !important;
+  background: linear-gradient(135deg, #edf4e7, #fbf9f1) !important;
+}
+
+body:not(.is-login-screen) #calendar .work-route-map img {
+  display: block !important;
+  width: 100% !important;
+  height: 132px !important;
+  object-fit: cover !important;
+  opacity: .82 !important;
+}
+
+body:not(.is-login-screen) #calendar .work-route-summary {
+  width: 100% !important;
+  padding: 0 !important;
+  border: 0 !important;
+  background: transparent !important;
+  text-align: left !important;
+}
+
+body:not(.is-login-screen) #calendar .work-tasks-card .work-task-summary {
+  justify-items: stretch !important;
+  gap: 14px !important;
+}
+
+body:not(.is-login-screen) #calendar .work-tasks-card .overview-task-donut {
+  width: 142px !important;
+  height: 142px !important;
+  margin: 4px auto 2px !important;
+  border-radius: 50% !important;
+}
+
+body:not(.is-login-screen) #calendar .work-activity-grid {
+  grid-template-columns: repeat(4, minmax(0, 1fr)) !important;
+  gap: 12px !important;
+}
+
+body:not(.is-login-screen) #calendar .work-activity-item {
+  display: grid !important;
+  justify-items: start !important;
+  gap: 8px !important;
+  min-height: 138px !important;
+  padding: 16px !important;
+  border: 1px solid rgba(23, 54, 43, .08) !important;
+  border-radius: 18px !important;
+  background: rgba(255, 255, 255, .52) !important;
+  color: #102f25 !important;
+  text-align: left !important;
+}
+
+body:not(.is-login-screen) #calendar .work-activity-item strong {
+  color: #102f25 !important;
+  font-size: .9rem !important;
+}
+
+body:not(.is-login-screen) #calendar .work-activity-item small,
+body:not(.is-login-screen) #calendar .work-activity-item em {
+  color: #737b70 !important;
+  font-size: .78rem !important;
+  font-style: normal !important;
+  line-height: 1.35 !important;
+}
+
+body:not(.is-login-screen) #calendar .work-secondary-tools {
+  padding: 0 !important;
+  overflow: hidden !important;
+}
+
+body:not(.is-login-screen) #calendar .work-secondary-tools > summary {
+  display: grid !important;
+  grid-template-columns: minmax(0, 1fr) auto !important;
+  gap: 12px !important;
+  align-items: center !important;
+  padding: 18px 22px !important;
+  cursor: pointer !important;
+  color: #102f25 !important;
+  font-weight: 900 !important;
+  list-style: none !important;
+}
+
+body:not(.is-login-screen) #calendar .work-secondary-tools > summary::-webkit-details-marker {
+  display: none !important;
+}
+
+body:not(.is-login-screen) #calendar .work-secondary-tools > summary::after {
+  content: "+" !important;
+  display: grid !important;
+  place-items: center !important;
+  width: 34px !important;
+  height: 34px !important;
+  border-radius: 50% !important;
+  background: #e6efdc !important;
+  color: #123f31 !important;
+}
+
+body:not(.is-login-screen) #calendar .work-secondary-tools[open] > summary::after {
+  content: "-" !important;
+}
+
+body:not(.is-login-screen) #calendar .work-secondary-tools small {
+  display: block !important;
+  margin-top: 4px !important;
+  color: #737b70 !important;
+  font-size: .8rem !important;
+  font-weight: 650 !important;
+}
+
+body:not(.is-login-screen) #calendar .work-calendar-tools {
+  display: grid !important;
+  gap: 14px !important;
+  padding: 0 22px 22px !important;
+}
+
+body:not(.is-login-screen) #calendar .work-filter-row {
+  display: flex !important;
+  flex-wrap: wrap !important;
+  align-items: center !important;
+  gap: 10px !important;
+}
+
+body:not(.is-login-screen) #calendar .work-filter-row select {
+  min-height: 40px !important;
+  border-radius: 999px !important;
+}
+
+@media (max-width: 1180px) {
+  body:not(.is-login-screen) #calendar .work-snapshot-grid,
+  body:not(.is-login-screen) #calendar .work-activity-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+  }
+
+  body:not(.is-login-screen) #calendar .work-snapshot-metric:nth-child(2) {
+    border-right: 0 !important;
+  }
+
+  body:not(.is-login-screen) #calendar .work-snapshot-metric:nth-child(n+3) {
+    border-top: 1px solid rgba(23, 54, 43, .08) !important;
+  }
+}
+
+@media (max-width: 900px) {
+  body:not(.is-login-screen) #calendar .work-command-header,
+  body:not(.is-login-screen) #calendar .work-header-actions,
+  body:not(.is-login-screen) #calendar .work-two-column {
+    grid-template-columns: 1fr !important;
+  }
+}
+
+@media (max-width: 640px) {
+  body:not(.is-login-screen) #calendar .work-snapshot-grid,
+  body:not(.is-login-screen) #calendar .work-activity-grid {
+    grid-template-columns: 1fr !important;
+  }
+
+  body:not(.is-login-screen) #calendar .work-snapshot-metric,
+  body:not(.is-login-screen) #calendar .work-snapshot-metric:nth-child(2) {
+    border-right: 0 !important;
+    border-top: 1px solid rgba(23, 54, 43, .08) !important;
+  }
+
+  body:not(.is-login-screen) #calendar .work-snapshot-metric:first-child {
+    border-top: 0 !important;
+  }
+
+  body:not(.is-login-screen) #calendar .work-dashboard-card,
+  body:not(.is-login-screen) #calendar .work-snapshot-card {
+    padding: 18px !important;
+    border-radius: 20px !important;
+  }
+}

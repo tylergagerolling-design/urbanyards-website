@@ -4269,20 +4269,23 @@
       return;
     }
 
-    els.commandToday.innerHTML = renderCommandList(todayItems, "No priority tasks for today.");
-    if (els.commandWaiting) els.commandWaiting.innerHTML = renderCommandList(waitingItems, "Nothing waiting right now.");
-    if (els.commandDeadlines) els.commandDeadlines.innerHTML = renderCommandList(deadlineItems, "No upcoming deadlines.");
-    if (els.commandEquipment) els.commandEquipment.innerHTML = renderCommandList(equipmentItems, "No equipment reminders.");
+    els.commandToday.innerHTML = renderCommandList(todayItems, "No priority tasks for today.", 4);
+    if (els.commandWaiting) els.commandWaiting.innerHTML = renderCommandList(waitingItems, "Nothing waiting right now.", 4);
+    if (els.commandDeadlines) els.commandDeadlines.innerHTML = renderCommandList(deadlineItems, "No upcoming deadlines.", 5);
+    if (els.commandEquipment) els.commandEquipment.innerHTML = renderCommandList(equipmentItems, "No equipment reminders.", 4);
   }
 
-  function renderCommandList(items, emptyMessage) {
+  function renderCommandList(items, emptyMessage, limit = 5) {
     if (!items.length) return `
       <div class="home-empty-state compact">
         <img src="${homeDashboardIcon("activity-check.svg")}" alt="" aria-hidden="true">
         <strong>${escapeHtml(emptyMessage)}</strong>
       </div>
     `;
-    return items.map((item) => `
+    const visibleItems = items.slice(0, limit);
+    const hiddenCount = Math.max(0, items.length - visibleItems.length);
+    return `
+      ${visibleItems.map((item) => `
       <article class="operations-command-item priority-${slug(item.priority || "Normal")}">
         <div>
           <p class="eyebrow">${escapeHtml(operationTypeLabel(item.label || item.type || "task"))}</p>
@@ -4296,7 +4299,9 @@
           ${item.source === "operation" ? actionButton("Delete", "delete-operation", item.id).replace("inline-action", "inline-action danger-action") : ""}
         </div>
       </article>
-    `).join("");
+      `).join("")}
+      ${hiddenCount ? `<p class="dashboard-preview-note">${escapeHtml(hiddenCount)} more item${hiddenCount === 1 ? "" : "s"} in the full dashboard view.</p>` : ""}
+    `;
   }
 
   function renderRoutePlanner() {

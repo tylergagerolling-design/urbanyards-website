@@ -11532,6 +11532,23 @@ body:not(.is-login-screen) #overview .operations-command-item-actions {
   flex-wrap: wrap !important;
 }
 
+body:not(.is-login-screen) #overview .operations-command-list {
+  gap: 0 !important;
+}
+
+body:not(.is-login-screen) #overview .dashboard-preview-note {
+  margin: 10px 0 0 !important;
+  padding-top: 12px !important;
+  border-top: 1px solid rgba(23, 54, 43, .08) !important;
+  color: #667567 !important;
+  font-size: .78rem !important;
+  line-height: 1.35 !important;
+}
+
+body:not(.is-login-screen) #overview .home-command-grid .home-dashboard-card {
+  min-height: 0 !important;
+}
+
 body:not(.is-login-screen) #overview .operations-command-item > div:first-child,
 body:not(.is-login-screen) #overview .operations-command-item p,
 body:not(.is-login-screen) #overview .operations-command-item h4 {

@@ -67,7 +67,6 @@ body:not(.is-login-screen) .dashboard-main {
 }
 
 body:not(.is-login-screen) .dashboard-section.is-active {
-  display: grid !important;
   align-content: start !important;
   gap: clamp(14px, 1.6vw, 22px) !important;
   height: auto !important;
@@ -177,6 +176,17 @@ body:not(.is-login-screen) .dashboard-sidebar-inner {
   overflow-y: auto !important;
 }
 
+/* Keep each dashboard page on its intended layout model after the no-scroll pass. */
+body:not(.is-login-screen) #overview.dashboard-section.is-active,
+body:not(.is-login-screen) #calendar.dashboard-section.is-active {
+  display: grid !important;
+}
+
+body:not(.is-login-screen) .dashboard-section.is-active:not(#overview):not(#calendar) {
+  display: flex !important;
+  flex-direction: column !important;
+}
+
 /* Final dashboard flow pass: one app, one natural page scroll.
    Detail drawers, modals, and explicit table wrappers are the only normal
    places that should create their own scrollbars. */
@@ -219,7 +229,6 @@ body:not(.is-login-screen) .dashboard-main {
 }
 
 body:not(.is-login-screen) .dashboard-section.is-active {
-  display: grid !important;
   align-content: start !important;
   gap: clamp(14px, 1.6vw, 22px) !important;
   height: auto !important;

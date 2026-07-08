@@ -9193,6 +9193,121 @@ body:not(.is-login-screen) #groundskeeper-ai .ai-badge {
   margin-top: 2px;
 }
 
+.call-helper-panel {
+  display: grid;
+  gap: 13px;
+  margin-top: 14px;
+  padding: 16px;
+  border: 1px solid rgba(18, 63, 49, .1);
+  border-radius: 18px;
+  background:
+    radial-gradient(circle at top right, rgba(198, 218, 178, .22), transparent 34%),
+    rgba(255, 253, 247, .86);
+  box-shadow: 0 14px 36px rgba(18, 63, 49, .08);
+}
+
+.call-helper-head,
+.call-helper-phone-row {
+  display: flex;
+  gap: 14px;
+  align-items: flex-start;
+  justify-content: space-between;
+}
+
+.call-helper-head h4 {
+  margin: 2px 0 3px;
+  color: var(--uy-green);
+  font-size: 1.08rem;
+}
+
+.call-helper-head span,
+.call-helper-note,
+.call-helper-phone-row small,
+.call-helper-number small {
+  color: rgba(19, 36, 28, .62);
+  font-size: .78rem;
+  line-height: 1.35;
+}
+
+.call-helper-number {
+  min-width: 150px;
+  padding: 9px 11px;
+  border: 1px solid rgba(18, 63, 49, .08);
+  border-radius: 14px;
+  background: rgba(255, 255, 255, .66);
+  text-align: right;
+}
+
+.call-helper-number strong {
+  display: block;
+  margin-top: 2px;
+  color: var(--uy-green);
+  font-size: .9rem;
+}
+
+.call-helper-phone-row {
+  align-items: center;
+  padding: 12px;
+  border: 1px solid rgba(18, 63, 49, .08);
+  border-radius: 16px;
+  background: rgba(255, 255, 255, .72);
+}
+
+.call-helper-phone-row > div:first-child {
+  display: grid;
+  gap: 3px;
+  min-width: 0;
+}
+
+.call-helper-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 7px;
+  justify-content: flex-end;
+}
+
+.call-helper-actions button,
+.call-panel-form button {
+  min-height: 38px;
+}
+
+.phone-call-invalid {
+  color: rgba(19, 36, 28, .58);
+  font-weight: 800;
+}
+
+.call-helper-note {
+  margin: -2px 0 0;
+}
+
+.call-panel-form {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(130px, .6fr);
+  gap: 10px;
+}
+
+.call-panel-form label {
+  display: grid;
+  gap: 5px;
+  color: rgba(19, 36, 28, .72);
+  font-size: .78rem;
+  font-weight: 850;
+}
+
+.call-panel-form select,
+.call-panel-form input,
+.call-panel-form textarea {
+  width: 100%;
+  border: 1px solid rgba(18, 63, 49, .14);
+  border-radius: 12px;
+  background: rgba(255, 255, 255, .84);
+  color: var(--uy-ink);
+}
+
+.call-panel-form textarea {
+  resize: vertical;
+}
+
 .call-settings-panel,
 .call-outcome-panel,
 .call-history {
@@ -9305,6 +9420,27 @@ body:not(.is-login-screen) #groundskeeper-ai .ai-badge {
   .phone-call-control .inline-action,
   .phone-call-button {
     flex: 1 1 120px;
+    justify-content: center;
+  }
+
+  .call-helper-head,
+  .call-helper-phone-row,
+  .call-panel-form {
+    display: grid;
+    grid-template-columns: 1fr;
+  }
+
+  .call-helper-number {
+    min-width: 0;
+    text-align: left;
+  }
+
+  .call-helper-actions {
+    justify-content: stretch;
+  }
+
+  .call-helper-actions button {
+    flex: 1 1 150px;
     justify-content: center;
   }
 }

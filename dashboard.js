@@ -14,19 +14,24 @@
   const EQUIPMENT_PRIORITIES = ["High", "Normal", "Low"];
   const HARDWARE_STATUSES = ["Researching", "Recommended", "Bought", "Not Chosen"];
   const COMMAND_CATEGORIES = ["task", "client", "payment", "deadline", "equipment"];
-  const CALL_OUTCOMES = ["not_set", "left_voicemail", "no_answer", "spoke_with_contact", "bad_number", "follow_up_later"];
+  const CALL_OUTCOMES = ["not_set", "no_answer", "left_voicemail", "spoke_with_contact", "follow_up_needed", "not_interested", "wrong_number", "bad_number", "follow_up_later"];
+  const CALL_PANEL_OUTCOMES = ["no_answer", "left_voicemail", "spoke_with_contact", "follow_up_needed", "not_interested", "wrong_number"];
   const CALL_OUTCOME_LABELS = {
     not_set: "Not set",
-    left_voicemail: "Left voicemail",
     no_answer: "No answer",
+    left_voicemail: "Voicemail left",
     spoke_with_contact: "Spoke with contact",
-    bad_number: "Bad number",
-    follow_up_later: "Follow up later"
+    follow_up_needed: "Follow-up needed",
+    not_interested: "Not interested",
+    wrong_number: "Wrong number",
+    bad_number: "Wrong number",
+    follow_up_later: "Follow-up needed"
   };
   const SESSION_KEY = "urbanYardsDashboardSession";
   const CALL_METHOD_KEY = "urbanYardsPreferredCallMethod";
   const GOOGLE_VOICE_HOME_URL = "https://voice.google.com/";
   const GOOGLE_VOICE_CALLS_URL = "https://voice.google.com/u/0/calls";
+  const URBAN_YARDS_GOOGLE_VOICE_NUMBER = "(971) 258-1109";
   const AI_TRAINING_CATEGORIES = {
     tone: "Tone & Voice",
     services: "Services",
@@ -610,17 +615,23 @@
     return `${GOOGLE_VOICE_CALLS_URL}?a=nc,${encodeURIComponent(info.e164)}`;
   }
 
-  function copyPhoneSilently(phone) {
+  async function copyPhoneSilently(phone) {
     const info = phoneInfo(phone);
-    if (!info.valid || !navigator.clipboard?.writeText) return;
-    navigator.clipboard.writeText(info.e164).catch(() => {});
+    if (!info.valid || !navigator.clipboard?.writeText) return false;
+    try {
+      await navigator.clipboard.writeText(info.e164);
+      return true;
+    } catch (error) {
+      return false;
+    }
   }
 
   function openGoogleVoiceCall(phone) {
     const url = googleVoiceCallUrl(phone);
-    const opened = window.open(url, "_blank");
+    const opened = window.open(url, "urbanYardsGoogleVoice", "width=520,height=720,menubar=no,toolbar=no,location=yes,status=no,scrollbars=yes,resizable=yes");
     if (opened) {
       opened.opener = null;
+      opened.focus();
       return true;
     }
     window.location.href = url;
@@ -646,7 +657,8 @@
   }
 
   function normalizeLeadActivity(row) {
-    const outcome = CALL_OUTCOMES.includes(row.outcome) ? row.outcome : "not_set";
+    const rawOutcome = CALL_OUTCOMES.includes(row.outcome) ? row.outcome : "not_set";
+    const outcome = rawOutcome === "bad_number" ? "wrong_number" : rawOutcome === "follow_up_later" ? "follow_up_needed" : rawOutcome;
     return {
       id: row.id,
       leadId: row.lead_id || "",
@@ -702,7 +714,107 @@
     `;
   }
 
+  function callPanelContext(leadType, leadId) {
+    if (leadType === "quote_submission") {
+      const item = findSubmission(leadId);
+      if (!item) return null;
+      return {
+        leadId: item.id,
+        leadType,
+        leadName: item.name,
+        companyProperty: [item.propertyType, item.city, item.service].filter(Boolean).join(" / "),
+        phone: item.phone
+      };
+    }
+    if (leadType === "contact") {
+      const item = state.data.contacts.find((contact) => contact.id === leadId);
+      if (!item) return null;
+      return {
+        leadId: item.id,
+        leadType,
+        leadName: item.name,
+        companyProperty: [item.type, item.city].filter(Boolean).join(" / "),
+        phone: item.phone
+      };
+    }
+    if (leadType === "outreach_prospect") {
+      const item = findOutreachProspect(leadId);
+      if (!item) return null;
+      return {
+        leadId: item.id,
+        leadType,
+        leadName: item.contactName || item.propertyName || "Outreach prospect",
+        companyProperty: [item.managementCompany, item.propertyName, item.city].filter(Boolean).join(" / "),
+        phone: item.phone
+      };
+    }
+    if (leadType === "outreach_company") {
+      const item = state.data.outreachCompanies.find((company) => company.id === leadId);
+      if (!item) return null;
+      return {
+        leadId: item.id,
+        leadType,
+        leadName: item.contact || item.company || "Outreach company",
+        companyProperty: [item.company, item.serviceArea || item.city].filter(Boolean).join(" / "),
+        phone: item.phone
+      };
+    }
+    return null;
+  }
+
+  function renderCallPanel(context, activity = null) {
+    const info = phoneInfo(context?.phone || "");
+    const recent = activity || callHistoryFor(context?.leadId || "")[0] || null;
+    const selectedOutcome = CALL_PANEL_OUTCOMES.includes(recent?.outcome) ? recent.outcome : "";
+    return `
+      <section class="call-helper-panel" data-call-panel-slot data-lead-id="${escapeHtml(context?.leadId || "")}" data-lead-type="${escapeHtml(context?.leadType || "lead")}" data-lead-name="${escapeHtml(context?.leadName || "Lead")}" data-company-property="${escapeHtml(context?.companyProperty || "No company or property set")}" data-phone="${escapeHtml(info.e164 || context?.phone || "")}">
+        <div class="call-helper-head">
+          <div>
+            <p class="eyebrow">Google Voice Call Panel</p>
+            <h4>${escapeHtml(context?.leadName || "Lead")}</h4>
+            <span>${escapeHtml(context?.companyProperty || "No company or property set")}</span>
+          </div>
+          <div class="call-helper-number">
+            <small>Urban Yards Google Voice</small>
+            <strong>${escapeHtml(URBAN_YARDS_GOOGLE_VOICE_NUMBER)}</strong>
+          </div>
+        </div>
+        <div class="call-helper-phone-row">
+          <div>
+            <small>Selected phone</small>
+            ${info.valid ? `<a class="phone-call-link" href="${escapeHtml(info.href)}">${escapeHtml(info.display)}</a>` : `<span class="phone-call-invalid">No valid phone number.</span>`}
+          </div>
+          <div class="call-helper-actions">
+            <button type="button" data-action="call-lead" data-id="${escapeHtml(context?.leadId || "")}" data-lead-type="${escapeHtml(context?.leadType || "lead")}" data-phone="${escapeHtml(info.e164 || "")}"${info.valid ? "" : " disabled"}>${buttonContent("Call", "call-lead")}</button>
+            <button class="inline-action" type="button" data-action="copy-phone" data-phone="${escapeHtml(info.e164 || "")}"${info.valid ? "" : " disabled"}>${buttonContent("Copy number", "copy-phone")}</button>
+            <button class="inline-action" type="button" data-action="open-google-voice-call" data-phone="${escapeHtml(info.e164 || "")}">${buttonContent("Open Google Voice", "call-lead")}</button>
+          </div>
+        </div>
+        <p class="call-helper-note">This opens Google Voice in a small browser window when possible and copies the number as backup. Calls still happen in Google Voice, not inside the dashboard.</p>
+        <form class="call-panel-form" data-call-panel-form data-id="${escapeHtml(recent?.id || "")}" data-lead-id="${escapeHtml(context?.leadId || "")}" data-lead-type="${escapeHtml(context?.leadType || "lead")}" data-phone="${escapeHtml(info.e164 || "")}">
+          <label>Outcome
+            <select name="outcome">
+              <option value="not_set"${selectedOutcome ? "" : " selected"}>Choose outcome</option>
+              ${CALL_PANEL_OUTCOMES.map((outcome) => `<option value="${escapeHtml(outcome)}"${selectedOutcome === outcome ? " selected" : ""}>${escapeHtml(CALL_OUTCOME_LABELS[outcome])}</option>`).join("")}
+            </select>
+          </label>
+          <label>Follow-up date
+            <input name="follow_up_date" type="date" value="${escapeHtml(recent?.followUpDateRaw || "")}">
+          </label>
+          <label class="span-full">Call notes
+            <textarea name="notes" rows="3" placeholder="Notes from the call, voicemail, or next step...">${escapeHtml(recent?.notes || "")}</textarea>
+          </label>
+          <div class="drawer-actions span-full">
+            <button type="submit">${buttonContent("Save call note", "complete-reminder")}</button>
+          </div>
+        </form>
+      </section>
+    `;
+  }
+
   function renderCallOutcomePanel(activity) {
+    const context = callPanelContext(activity.leadType, activity.leadId);
+    if (context) return renderCallPanel(context, activity);
     return `
       <section class="call-outcome-panel" data-call-outcome-panel>
         <div class="panel-heading">
@@ -713,7 +825,7 @@
         </div>
         <form class="call-outcome-form" data-call-outcome-form data-id="${escapeHtml(activity.id)}" data-lead-id="${escapeHtml(activity.leadId)}" data-lead-type="${escapeHtml(activity.leadType)}">
           <div class="call-outcome-options">
-            ${CALL_OUTCOMES.filter((outcome) => outcome !== "not_set").map((outcome) => `
+            ${CALL_PANEL_OUTCOMES.map((outcome) => `
               <label><input type="radio" name="outcome" value="${escapeHtml(outcome)}"${outcome === activity.outcome ? " checked" : ""}> ${escapeHtml(CALL_OUTCOME_LABELS[outcome])}</label>
             `).join("")}
           </div>
@@ -5423,8 +5535,7 @@
             ${item ? `<button type="button" class="danger-action" data-action="delete-outreach-prospect" data-id="${escapeHtml(item.id)}">${buttonContent("Delete Prospect", "delete-outreach-prospect")}</button>` : ""}
           </div>
         </form>
-        ${item ? renderPhoneActions(item.phone, { leadId: item.id, leadType: "outreach_prospect" }) : ""}
-        ${item ? renderCallSettingsPanel() : ""}
+        ${item ? renderCallPanel(callPanelContext("outreach_prospect", item.id)) : ""}
         ${item ? `<div data-call-outcome-slot></div>${renderCallHistory(item.id)}` : ""}
       </div>
     `;
@@ -5508,8 +5619,7 @@
             <button type="button" data-action="add-company-as-prospect" data-id="${escapeHtml(company.id)}">${buttonContent("Add Company as Prospect", "new-outreach-prospect")}</button>
           </div>
         </form>
-        ${renderPhoneActions(company.phone, { leadId: company.id, leadType: "outreach_company" })}
-        ${renderCallSettingsPanel()}
+        ${renderCallPanel(callPanelContext("outreach_company", company.id))}
         <div data-call-outcome-slot></div>
         ${renderCallHistory(company.id)}
         <h4>Managed properties (${properties.length})</h4>
@@ -5700,7 +5810,7 @@
         ${statusBadge(item.status)}
         <div class="drawer-grid">
           <div class="drawer-field"><span>Email</span>${escapeHtml(item.email)}</div>
-          <div class="drawer-field drawer-phone-field"><span>Phone</span>${renderPhoneActions(item.phone, { leadId: item.id, leadType: "quote_submission" })}</div>
+          <div class="drawer-field drawer-phone-field"><span>Phone</span>${escapeHtml(phoneInfo(item.phone).display)}</div>
           <div class="drawer-field"><span>City</span>${escapeHtml(item.city)}</div>
           <div class="drawer-field"><span>Property</span>${escapeHtml(item.propertyType)}</div>
           <div class="drawer-field"><span>Service</span>${escapeHtml(item.service)}</div>
@@ -5726,7 +5836,7 @@
           </div>
         </form>
 
-        ${renderCallSettingsPanel()}
+        ${renderCallPanel(callPanelContext("quote_submission", item.id))}
         <div data-call-outcome-slot></div>
         ${renderCallHistory(item.id)}
 
@@ -5781,8 +5891,7 @@
             <button type="button" class="danger-action" data-action="delete-contact" data-id="${escapeHtml(contact.id)}">${buttonContent("Delete Client", "delete-contact")}</button>
           </div>
         </form>
-        ${renderPhoneActions(contact.phone, { leadId: contact.id, leadType: "contact" })}
-        ${renderCallSettingsPanel()}
+        ${renderCallPanel(callPanelContext("contact", contact.id))}
         <div data-call-outcome-slot></div>
         ${renderCallHistory(contact.id)}
         <div class="profile-drawer-grid">
@@ -7746,12 +7855,20 @@
 
       if (action === "copy-phone") {
         const phone = target.dataset.phone || "";
-        try {
-          await navigator.clipboard.writeText(phone);
-          setDashboardState("Phone number copied.");
-        } catch (error) {
+        const copied = await copyPhoneSilently(phone);
+        if (copied) {
+          setDashboardState("Phone number copied. Paste into Google Voice to call.");
+        } else {
           setDashboardState(`Copy this number: ${phone}`, "error");
         }
+        return;
+      }
+
+      if (action === "open-google-voice-call") {
+        const phone = phoneInfo(target.dataset.phone || "");
+        if (phone.valid) await copyPhoneSilently(phone.e164);
+        openGoogleVoiceCall(phone.valid ? phone.e164 : "");
+        setDashboardState(phone.valid ? "Phone number copied. Paste into Google Voice to call." : "Google Voice opened.");
         return;
       }
 
@@ -7761,8 +7878,8 @@
           setDashboardState("No valid phone number.", "error");
           return;
         }
-        copyPhoneSilently(phone.e164);
         openGoogleVoiceCall(phone.e164);
+        const copied = await copyPhoneSilently(phone.e164);
         try {
           const activity = await insertLeadActivity({
             lead_id: id,
@@ -7772,10 +7889,16 @@
             outcome: "not_set",
             notes: ""
           });
-          const slot = qs("[data-call-outcome-slot]");
           const panel = renderCallOutcomePanel(activity);
-          const existingPanel = qs("[data-call-outcome-panel]");
-          if (existingPanel) existingPanel.remove();
+          const existingPanel = qs(`[data-call-panel-slot][data-lead-id="${cssEscape(activity.leadId)}"][data-lead-type="${cssEscape(activity.leadType)}"]`);
+          const existingOutcomePanel = qs("[data-call-outcome-panel]");
+          if (existingPanel) existingPanel.outerHTML = panel;
+          const slot = qs("[data-call-outcome-slot]");
+          if (existingOutcomePanel) existingOutcomePanel.remove();
+          if (existingPanel) {
+            setDashboardState(copied ? "Phone number copied. Paste into Google Voice to call. Call attempt logged." : "Google Voice opened. Call attempt logged.");
+            return;
+          }
           let outcomeSlot = slot;
           if (!outcomeSlot || els.detailDrawer?.hidden) {
             openLeadDrawerByType(activity.leadType, activity.leadId);
@@ -7786,7 +7909,7 @@
           } else if (els.detailContent) {
             els.detailContent.insertAdjacentHTML("afterbegin", panel);
           }
-          setDashboardState("Google Voice opened. Number copied as backup. Call attempt logged.");
+          setDashboardState(copied ? "Phone number copied. Paste into Google Voice to call. Call attempt logged." : "Google Voice opened. Call attempt logged.");
         } catch (error) {
           setDashboardState(error.message || "Google Voice opened, but the activity log could not be saved.", "error");
         }
@@ -8600,7 +8723,40 @@
     });
 
   els.appView.addEventListener("submit", async (event) => {
-      if (event.target.matches("[data-call-outcome-form]")) {
+      if (event.target.matches("[data-call-panel-form]")) {
+        event.preventDefault();
+        const formData = new FormData(event.target);
+        const activityId = event.target.dataset.id || "";
+        const leadId = event.target.dataset.leadId || "";
+        const leadType = event.target.dataset.leadType || "";
+        const phone = phoneInfo(event.target.dataset.phone || "");
+        try {
+          setDashboardState("Saving call note...");
+          if (activityId) {
+            await updateLeadActivity(activityId, {
+              outcome: String(formData.get("outcome") || "not_set"),
+              notes: String(formData.get("notes") || ""),
+              follow_up_date: String(formData.get("follow_up_date") || "") || null
+            });
+          } else {
+            if (!phone.valid) throw new Error("No valid phone number.");
+            await insertLeadActivity({
+              lead_id: leadId,
+              lead_type: leadType || "lead",
+              phone_number: phone.e164,
+              type: "call_attempt",
+              outcome: String(formData.get("outcome") || "not_set"),
+              notes: String(formData.get("notes") || ""),
+              follow_up_date: String(formData.get("follow_up_date") || "") || null
+            });
+          }
+          await refreshDashboard();
+          openLeadDrawerByType(leadType, leadId);
+          setDashboardState("Call note saved.");
+        } catch (error) {
+          setDashboardState(error.message || "Unable to save call note.", "error");
+        }
+      } else if (event.target.matches("[data-call-outcome-form]")) {
         event.preventDefault();
         const formData = new FormData(event.target);
         const activityId = event.target.dataset.id || "";

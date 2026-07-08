@@ -19,11 +19,12 @@ create table if not exists lead_activity (
   constraint lead_activity_type_check check (type in ('call_attempt')),
   constraint lead_activity_outcome_check check (outcome in (
     'not_set',
-    'left_voicemail',
     'no_answer',
+    'left_voicemail',
     'spoke_with_contact',
-    'bad_number',
-    'follow_up_later'
+    'follow_up_needed',
+    'not_interested',
+    'wrong_number'
   )),
   constraint lead_activity_phone_check check (phone_number ~ '^\+1[0-9]{10}$'),
   constraint lead_activity_lead_type_check check (lead_type in (
@@ -35,6 +36,27 @@ create table if not exists lead_activity (
     'lead'
   ))
 );
+
+alter table lead_activity drop constraint if exists lead_activity_outcome_check;
+
+update lead_activity
+set outcome = 'wrong_number'
+where outcome = 'bad_number';
+
+update lead_activity
+set outcome = 'follow_up_needed'
+where outcome = 'follow_up_later';
+
+alter table lead_activity
+  add constraint lead_activity_outcome_check check (outcome in (
+    'not_set',
+    'no_answer',
+    'left_voicemail',
+    'spoke_with_contact',
+    'follow_up_needed',
+    'not_interested',
+    'wrong_number'
+  ));
 
 alter table lead_activity enable row level security;
 

@@ -6685,6 +6685,7 @@
         if (els.globalSearch && els.globalSearch.value !== state.search) els.globalSearch.value = state.search;
         if (els.clientSearch && els.clientSearch.value !== state.search) els.clientSearch.value = state.search;
         if (els.overviewSearch && els.overviewSearch.value !== state.search) els.overviewSearch.value = state.search;
+        if (els.workSearch && els.workSearch.value !== state.search) els.workSearch.value = state.search;
         await render();
       });
     }
@@ -6695,6 +6696,7 @@
         if (els.search && els.search.value !== state.search) els.search.value = state.search;
         if (els.clientSearch && els.clientSearch.value !== state.search) els.clientSearch.value = state.search;
         if (els.overviewSearch && els.overviewSearch.value !== state.search) els.overviewSearch.value = state.search;
+        if (els.workSearch && els.workSearch.value !== state.search) els.workSearch.value = state.search;
         await render();
       });
     }

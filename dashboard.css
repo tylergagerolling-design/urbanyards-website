@@ -11469,3 +11469,38 @@ body:not(.is-login-screen) #calendar .work-filter-row select {
     border-radius: 20px !important;
   }
 }
+
+/* Dashboard stabilization layer: keep page-level sections isolated after the
+   recent visual redesigns. Earlier scoped rules set Overview and Work to grid
+   with !important, which can override the tab visibility state. */
+body:not(.is-login-screen) .dashboard-section:not(.is-active),
+body:not(.is-login-screen) #overview.dashboard-section:not(.is-active),
+body:not(.is-login-screen) #calendar.dashboard-section:not(.is-active) {
+  display: none !important;
+}
+
+body:not(.is-login-screen) #overview.dashboard-section.is-active,
+body:not(.is-login-screen) #calendar.dashboard-section.is-active {
+  display: grid !important;
+  flex: 0 0 auto !important;
+  min-width: 0 !important;
+  max-width: 100% !important;
+  overflow: visible !important;
+}
+
+body:not(.is-login-screen) .dashboard-section.is-active:not(#overview):not(#calendar) {
+  display: flex !important;
+  flex-direction: column !important;
+  min-width: 0 !important;
+  max-width: 100% !important;
+}
+
+body:not(.is-login-screen) #overview .home-secondary-tools:not([open]) > :not(summary),
+body:not(.is-login-screen) #calendar .work-secondary-tools:not([open]) > :not(summary) {
+  display: none !important;
+}
+
+body:not(.is-login-screen) #overview *,
+body:not(.is-login-screen) #calendar * {
+  min-width: 0;
+}

@@ -11524,12 +11524,16 @@ body:not(.is-login-screen) #overview .overview-tasks-card {
 }
 
 body:not(.is-login-screen) #overview .operations-command-item {
-  grid-template-columns: minmax(0, 1fr) !important;
+  grid-template-columns: minmax(0, 1fr) auto !important;
+  gap: 12px !important;
+  align-items: center !important;
+  padding: 10px 0 !important;
 }
 
 body:not(.is-login-screen) #overview .operations-command-item-actions {
-  justify-content: flex-start !important;
+  justify-content: flex-end !important;
   flex-wrap: wrap !important;
+  max-width: 210px !important;
 }
 
 body:not(.is-login-screen) #overview .operations-command-list {
@@ -11565,5 +11569,16 @@ body:not(.is-login-screen) #overview .operations-command-item h4 {
 
   body:not(.is-login-screen) #overview .home-deadline-card {
     grid-row: auto !important;
+  }
+}
+
+@media (max-width: 680px) {
+  body:not(.is-login-screen) #overview .operations-command-item {
+    grid-template-columns: minmax(0, 1fr) !important;
+  }
+
+  body:not(.is-login-screen) #overview .operations-command-item-actions {
+    justify-content: flex-start !important;
+    max-width: none !important;
   }
 }

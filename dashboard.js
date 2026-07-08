@@ -4271,7 +4271,7 @@
 
     els.commandToday.innerHTML = renderCommandList(todayItems, "No priority tasks for today.", 4);
     if (els.commandWaiting) els.commandWaiting.innerHTML = renderCommandList(waitingItems, "Nothing waiting right now.", 4);
-    if (els.commandDeadlines) els.commandDeadlines.innerHTML = renderCommandList(deadlineItems, "No upcoming deadlines.", 5);
+    if (els.commandDeadlines) els.commandDeadlines.innerHTML = renderCommandList(deadlineItems, "No upcoming deadlines.", 4);
     if (els.commandEquipment) els.commandEquipment.innerHTML = renderCommandList(equipmentItems, "No equipment reminders.", 4);
   }
 

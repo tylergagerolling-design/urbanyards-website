@@ -25,6 +25,8 @@
   };
   const SESSION_KEY = "urbanYardsDashboardSession";
   const CALL_METHOD_KEY = "urbanYardsPreferredCallMethod";
+  const GOOGLE_VOICE_HOME_URL = "https://voice.google.com/";
+  const GOOGLE_VOICE_CALLS_URL = "https://voice.google.com/u/0/calls";
   const DEMO_QUERY_KEYS = ["demo", "test"];
   const DASHBOARD_ICON_PATH = "images/dashboard-icons/";
   const HOME_DASHBOARD_ICON_PATH = "images/home-dashboard/";
@@ -192,7 +194,7 @@
   function buttonContent(label, action) {
     const icons = {
       "cancel-job": "x",
-      "call-lead": "TEL",
+      "call-lead": "GV",
       "clear-demo-data": "x",
       "complete-operation": "OK",
       "complete-reminder": "OK",
@@ -549,6 +551,29 @@
     };
   }
 
+  function googleVoiceCallUrl(phone) {
+    const info = phoneInfo(phone);
+    if (!info.valid) return GOOGLE_VOICE_HOME_URL;
+    return `${GOOGLE_VOICE_CALLS_URL}?a=nc,${encodeURIComponent(info.e164)}`;
+  }
+
+  function copyPhoneSilently(phone) {
+    const info = phoneInfo(phone);
+    if (!info.valid || !navigator.clipboard?.writeText) return;
+    navigator.clipboard.writeText(info.e164).catch(() => {});
+  }
+
+  function openGoogleVoiceCall(phone) {
+    const url = googleVoiceCallUrl(phone);
+    const opened = window.open(url, "_blank");
+    if (opened) {
+      opened.opener = null;
+      return true;
+    }
+    window.location.href = url;
+    return false;
+  }
+
   function renderPhoneActions(phone, options = {}) {
     const info = phoneInfo(phone);
     const leadId = options.leadId || "";
@@ -562,7 +587,7 @@
         <a class="phone-call-link" href="${escapeHtml(info.href)}">${escapeHtml(info.display)}</a>
         <button class="inline-action phone-call-button" type="button" data-action="call-lead" data-id="${escapeHtml(leadId)}" data-lead-type="${escapeHtml(leadType)}" data-phone="${escapeHtml(info.e164)}">${buttonContent("Call", "call-lead")}</button>
         <button class="inline-action" type="button" data-action="copy-phone" data-phone="${escapeHtml(info.e164)}">${buttonContent("Copy number", "copy-phone")}</button>
-        ${options.helper === false ? "" : `<small>Uses your browser/Google Voice click-to-call settings. <a href="https://voice.google.com/" target="_blank" rel="noopener noreferrer">Open Google Voice</a></small>`}
+        ${options.helper === false ? "" : `<small>Opens Google Voice with the number ready when supported, and copies the number as backup. <a href="${escapeHtml(GOOGLE_VOICE_HOME_URL)}" target="_blank" rel="noopener noreferrer">Open Google Voice</a></small>`}
       </div>
     `;
   }
@@ -618,8 +643,8 @@
     const checked = state.preferredCallMethod === "browser_tel" ? " checked" : "";
     return `
       <section class="call-settings-panel">
-        <label><input type="checkbox" data-call-method-setting value="browser_tel"${checked}> Use browser click-to-call / Google Voice</label>
-        <p>Google Voice must be configured in your browser as the phone handler. <a href="https://voice.google.com/" target="_blank" rel="noopener noreferrer">Open Google Voice</a></p>
+        <label><input type="checkbox" data-call-method-setting value="browser_tel"${checked}> Use Google Voice browser call flow</label>
+        <p>The Call button opens Google Voice with the number queued when supported, and copies the number as backup. <a href="${escapeHtml(GOOGLE_VOICE_HOME_URL)}" target="_blank" rel="noopener noreferrer">Open Google Voice</a></p>
       </section>
     `;
   }
@@ -7298,7 +7323,8 @@
           setDashboardState("No valid phone number.", "error");
           return;
         }
-        window.location.href = phone.href;
+        copyPhoneSilently(phone.e164);
+        openGoogleVoiceCall(phone.e164);
         try {
           const activity = await insertLeadActivity({
             lead_id: id,
@@ -7322,9 +7348,9 @@
           } else if (els.detailContent) {
             els.detailContent.insertAdjacentHTML("afterbegin", panel);
           }
-          setDashboardState("Call attempt logged.");
+          setDashboardState("Google Voice opened. Number copied as backup. Call attempt logged.");
         } catch (error) {
-          setDashboardState(error.message || "Call opened, but the activity log could not be saved.", "error");
+          setDashboardState(error.message || "Google Voice opened, but the activity log could not be saved.", "error");
         }
         return;
       }

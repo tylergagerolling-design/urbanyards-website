@@ -27,6 +27,7 @@
   const CALL_METHOD_KEY = "urbanYardsPreferredCallMethod";
   const DEMO_QUERY_KEYS = ["demo", "test"];
   const DASHBOARD_ICON_PATH = "images/dashboard-icons/";
+  const HOME_DASHBOARD_ICON_PATH = "images/home-dashboard/";
   const SIDEBAR_QUICK_ACTIONS = [
     { label: "New Job", action: "quick-add-job", icon: "plus.svg" },
     { label: "Log Time", action: "quick-add-operation", icon: "log-time-clock.svg" },
@@ -234,6 +235,10 @@
 
   function dashboardIcon(name) {
     return `${DASHBOARD_ICON_PATH}${escapeHtml(name)}`;
+  }
+
+  function homeDashboardIcon(name) {
+    return `${HOME_DASHBOARD_ICON_PATH}${escapeHtml(name)}`;
   }
 
   function emptyState(message) {
@@ -3745,16 +3750,14 @@
     const today = todayKey();
     const todayJobs = data.jobs.filter((item) => item.dateRaw === today && matchesSearch(item));
     const activeProperties = data.contacts.filter(matchesSearch).length + data.outreachProperties.filter((item) => matchesSearchValues([item.propertyName, item.address, item.city, item.company, item.neighborhood])).length;
-    const upcomingItems = data.jobs
-      .filter((item) => item.dateRaw >= today && matchesSearch(item))
-      .sort((a, b) => a.dateRaw.localeCompare(b.dateRaw) || a.window.localeCompare(b.window));
-    const nextJob = upcomingItems[0];
+    const unpaidInvoices = data.documents.filter((doc) => doc.type === "invoice" && doc.status !== "paid" && matchesSearchValues([doc.clientName, doc.number, doc.status, doc.notes]));
+    const equipmentAlerts = data.operations.filter((item) => item.type === "equipment" && isOperationOpen(item) && matchesSearchValues([item.title, item.description, item.notes, item.status, item.priority])).length;
     const metrics = [
       {
-        label: "Today's Jobs",
+        label: "Jobs Today",
         value: todayJobs.length,
         detail: todayJobs[0] ? `${todayJobs[0].site} / ${todayJobs[0].window}` : "No visits scheduled",
-        icon: "calendar.svg",
+        icon: "jobs-calendar.svg",
         action: "go-calendar",
         link: "View all jobs"
       },
@@ -3767,19 +3770,27 @@
         link: "View all properties"
       },
       {
-        label: "Upcoming",
-        value: nextJob ? nextJob.service : "Clear",
-        detail: nextJob ? `${nextJob.site} / ${nextJob.date}` : "No upcoming job found",
-        icon: "upcoming-clock.svg",
-        action: "go-calendar",
-        link: "View schedule"
+        label: "Waiting on Payment",
+        value: unpaidInvoices.length,
+        detail: unpaidInvoices[0] ? `${unpaidInvoices[0].clientName || "Client"} / ${unpaidInvoices[0].number || "Invoice"}` : "No open unpaid invoices",
+        icon: "waiting-payment.svg",
+        action: "go-documents",
+        link: "Open invoices"
+      },
+      {
+        label: "Equipment Alerts",
+        value: equipmentAlerts,
+        detail: equipmentAlerts ? "Review mower, tools, or supply checks" : "No equipment reminders",
+        icon: "equipment-alert.svg",
+        action: "quick-add-operation",
+        link: "Add reminder"
       }
     ];
 
     els.metrics.innerHTML = metrics
       .map((metric) => `
-        <article class="metric-card overview-summary-card">
-          <div class="overview-summary-icon" aria-hidden="true"><img src="${dashboardIcon(metric.icon)}" alt=""></div>
+        <article class="metric-card overview-summary-card home-snapshot-metric">
+          <div class="overview-summary-icon" aria-hidden="true"><img src="${homeDashboardIcon(metric.icon)}" alt=""></div>
           <div class="overview-summary-body">
             <span>${escapeHtml(metric.label)}</span>
             <strong>${escapeHtml(metric.value)}</strong>
@@ -3868,11 +3879,18 @@
   function renderUpcoming(data) {
     const todayJobs = data.jobs.filter((job) => job.dateRaw === todayKey() && matchesSearch(job));
     if (!todayJobs.length) {
-      els.upcoming.innerHTML = emptyState("No jobs scheduled for today.");
+      els.upcoming.innerHTML = `
+        <div class="home-empty-state home-schedule-empty">
+          <img src="${homeDashboardIcon("empty-schedule.svg")}" alt="" aria-hidden="true">
+          <strong>No jobs scheduled for today.</strong>
+          <p>Use Add Job when a visit needs to land on the calendar.</p>
+          <button class="inline-action" type="button" data-action="quick-add-job">Add Job</button>
+        </div>
+      `;
       return;
     }
     els.upcoming.innerHTML = todayJobs.slice(0, 5).map((job) => `
-      <article class="job-card ${isOverdueJob(job) ? "job-card-overdue" : ""}">
+      <article class="job-card home-schedule-row ${isOverdueJob(job) ? "job-card-overdue" : ""}">
         <div class="item-topline">
           <div>
             <h4>${escapeHtml(job.site)}</h4>
@@ -3920,12 +3938,23 @@
       .filter((stop) => stop.routeDate === today)
       .sort((a, b) => a.stopOrder - b.stopOrder || a.createdAt.localeCompare(b.createdAt));
     if (!stops.length) {
-      els.todayRouteSnapshot.innerHTML = emptyState("No route stops planned for today.");
+      els.todayRouteSnapshot.innerHTML = `
+        <div class="home-route-map" aria-hidden="true">
+          <img src="${homeDashboardIcon("route-map-placeholder.svg")}" alt="">
+        </div>
+        <div class="home-empty-state compact">
+          <strong>No route stops planned for today.</strong>
+          <p>Add stops from a client, lead, or property when the route needs attention.</p>
+        </div>
+      `;
       return;
     }
     const openStops = stops.filter((stop) => stop.status !== "Complete");
     els.todayRouteSnapshot.innerHTML = `
       <article class="route-snapshot-card">
+        <div class="home-route-map" aria-hidden="true">
+          <img src="${homeDashboardIcon("route-map-placeholder.svg")}" alt="">
+        </div>
         <strong>${openStops.length} open / ${stops.length} total</strong>
         <p>${escapeHtml(stops.slice(0, 3).map((stop) => stop.clientName).join(" / "))}${stops.length > 3 ? " / ..." : ""}</p>
         <button class="inline-action" type="button" data-action="go-route-planner">${buttonContent("Open Route Planner", "go-route-planner")}</button>
@@ -4236,7 +4265,12 @@
   }
 
   function renderCommandList(items, emptyMessage) {
-    if (!items.length) return emptyState(emptyMessage);
+    if (!items.length) return `
+      <div class="home-empty-state compact">
+        <img src="${homeDashboardIcon("activity-check.svg")}" alt="" aria-hidden="true">
+        <strong>${escapeHtml(emptyMessage)}</strong>
+      </div>
+    `;
     return items.map((item) => `
       <article class="operations-command-item priority-${slug(item.priority || "Normal")}">
         <div>
@@ -7077,6 +7111,8 @@
       } else if (action === "quick-add-follow-up" || action === "quick-add-invoice-reminder") {
         setActiveSection("overview");
         history.replaceState(null, "", "#overview");
+        const tools = qs(".home-secondary-tools");
+        if (tools) tools.open = true;
         const form = qs("[data-operations-form]");
         if (form) {
           form.record_type.value = action === "quick-add-invoice-reminder" ? "payment" : "client";
@@ -7229,6 +7265,8 @@
         if (!contact) return;
         setActiveSection("overview");
         history.replaceState(null, "", "#overview");
+        const tools = qs(".home-secondary-tools");
+        if (tools) tools.open = true;
         closeSubmissionDrawer();
         const form = qs("[data-operations-form]");
         if (form) {
@@ -7258,6 +7296,8 @@
       } else if (action === "quick-add-operation") {
         setActiveSection("overview");
         history.replaceState(null, "", "#overview");
+        const tools = qs(".home-secondary-tools");
+        if (tools) tools.open = true;
         const input = qs("[data-operations-form] input[name='title']");
         if (input) input.focus();
       } else if (action === "go-route-planner") {
@@ -7284,6 +7324,8 @@
       } else if (action === "prefill-operation") {
         setActiveSection("overview");
         history.replaceState(null, "", "#overview");
+        const tools = qs(".home-secondary-tools");
+        if (tools) tools.open = true;
         const form = qs("[data-operations-form]");
         if (form) {
           form.record_type.value = target.dataset.type || "task";

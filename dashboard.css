@@ -10469,3 +10469,543 @@ body:not(.is-login-screen) .dashboard-shell {
     display: block !important;
   }
 }
+
+/* Home / Overview command-center redesign. Scoped to the dashboard home body only. */
+body:not(.is-login-screen) #overview {
+  display: grid !important;
+  gap: 18px !important;
+  max-width: 100% !important;
+  padding-bottom: 28px !important;
+}
+
+body:not(.is-login-screen) #overview .overview-command-header {
+  display: grid !important;
+  grid-template-columns: minmax(280px, 1fr) minmax(360px, 620px) !important;
+  align-items: center !important;
+  gap: 24px !important;
+  margin: 0 !important;
+}
+
+body:not(.is-login-screen) #overview .overview-command-header h3 {
+  margin: 0 0 4px !important;
+  color: #102f25 !important;
+  font-size: clamp(2.2rem, 4vw, 3rem) !important;
+  font-weight: 900 !important;
+  line-height: .96 !important;
+  letter-spacing: 0 !important;
+}
+
+body:not(.is-login-screen) #overview .overview-command-header p {
+  margin: 0 !important;
+  color: #697469 !important;
+  font-size: .98rem !important;
+  line-height: 1.4 !important;
+}
+
+body:not(.is-login-screen) #overview .overview-header-actions {
+  display: grid !important;
+  grid-template-columns: minmax(220px, 1fr) auto !important;
+  align-items: center !important;
+  gap: 14px !important;
+}
+
+body:not(.is-login-screen) #overview .overview-search {
+  min-height: 52px !important;
+  border: 1px solid rgba(23, 54, 43, .12) !important;
+  border-radius: 17px !important;
+  background: rgba(255, 253, 247, .86) !important;
+  box-shadow: 0 10px 24px rgba(23, 54, 43, .045) !important;
+}
+
+body:not(.is-login-screen) #overview .overview-search input {
+  color: #102f25 !important;
+  font-size: .92rem !important;
+}
+
+body:not(.is-login-screen) #overview .overview-primary-action {
+  min-height: 52px !important;
+  padding: 0 22px !important;
+  border-radius: 17px !important;
+  background: linear-gradient(180deg, #6b8f55, #416b36) !important;
+  box-shadow: 0 14px 28px rgba(65, 107, 54, .24) !important;
+}
+
+body:not(.is-login-screen) #overview .panel,
+body:not(.is-login-screen) #overview .home-dashboard-card,
+body:not(.is-login-screen) #overview .home-snapshot-card,
+body:not(.is-login-screen) #overview .home-secondary-tools {
+  border: 1px solid rgba(23, 54, 43, .1) !important;
+  border-radius: 24px !important;
+  background:
+    radial-gradient(circle at 100% 0%, rgba(230, 238, 219, .36), transparent 34%),
+    rgba(255, 253, 247, .9) !important;
+  box-shadow: 0 18px 42px rgba(23, 54, 43, .075) !important;
+}
+
+body:not(.is-login-screen) #overview .panel-heading {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: space-between !important;
+  gap: 14px !important;
+  min-height: 0 !important;
+  margin: 0 0 14px !important;
+  padding: 0 !important;
+  border: 0 !important;
+}
+
+body:not(.is-login-screen) #overview .panel-heading h3 {
+  margin: 0 !important;
+  color: #102f25 !important;
+  font-size: 1.08rem !important;
+  line-height: 1.15 !important;
+  letter-spacing: 0 !important;
+}
+
+body:not(.is-login-screen) #overview .panel-heading .eyebrow {
+  margin: 0 0 5px !important;
+  color: #70806b !important;
+  font-size: .66rem !important;
+  font-weight: 900 !important;
+  letter-spacing: .14em !important;
+}
+
+body:not(.is-login-screen) #overview .inline-action,
+body:not(.is-login-screen) #overview .overview-task-link {
+  min-height: 38px !important;
+  padding: 0 13px !important;
+  border: 1px solid rgba(23, 54, 43, .12) !important;
+  border-radius: 999px !important;
+  background: rgba(255, 255, 255, .72) !important;
+  color: #234c2d !important;
+  font-size: .82rem !important;
+  font-weight: 850 !important;
+  box-shadow: 0 8px 18px rgba(23, 54, 43, .045) !important;
+}
+
+body:not(.is-login-screen) #overview .home-snapshot-card {
+  padding: 22px 24px !important;
+}
+
+body:not(.is-login-screen) #overview .home-snapshot-card .panel-heading {
+  margin-bottom: 10px !important;
+}
+
+body:not(.is-login-screen) #overview .home-snapshot-grid,
+body:not(.is-login-screen) #overview .metric-grid.home-snapshot-grid {
+  display: grid !important;
+  grid-template-columns: repeat(4, minmax(0, 1fr)) !important;
+  gap: 0 !important;
+  margin: 0 !important;
+}
+
+body:not(.is-login-screen) #overview .metric-card.overview-summary-card.home-snapshot-metric {
+  position: relative !important;
+  display: grid !important;
+  grid-template-columns: 44px minmax(0, 1fr) !important;
+  align-items: start !important;
+  gap: 13px !important;
+  min-height: 0 !important;
+  padding: 14px 18px !important;
+  border: 0 !important;
+  border-right: 1px solid rgba(23, 54, 43, .1) !important;
+  border-radius: 0 !important;
+  background: transparent !important;
+  box-shadow: none !important;
+}
+
+body:not(.is-login-screen) #overview .metric-card.overview-summary-card.home-snapshot-metric:last-child {
+  border-right: 0 !important;
+}
+
+body:not(.is-login-screen) #overview .overview-summary-icon {
+  width: 42px !important;
+  height: 42px !important;
+  border-radius: 14px !important;
+  background: #e6efdc !important;
+}
+
+body:not(.is-login-screen) #overview .overview-summary-icon img {
+  width: 21px !important;
+  height: 21px !important;
+}
+
+body:not(.is-login-screen) #overview .overview-summary-body span {
+  margin: 0 0 7px !important;
+  color: #59645b !important;
+  font-size: .75rem !important;
+  font-weight: 850 !important;
+  line-height: 1.2 !important;
+  letter-spacing: .01em !important;
+  text-transform: none !important;
+}
+
+body:not(.is-login-screen) #overview .overview-summary-body strong {
+  color: #102f25 !important;
+  font-size: clamp(1.75rem, 3vw, 2.35rem) !important;
+  line-height: .95 !important;
+  letter-spacing: 0 !important;
+}
+
+body:not(.is-login-screen) #overview .overview-summary-body p {
+  max-width: 22ch !important;
+  margin: 8px 0 0 !important;
+  color: #737b70 !important;
+  font-size: .8rem !important;
+  line-height: 1.35 !important;
+}
+
+body:not(.is-login-screen) #overview .overview-summary-body button {
+  margin-top: 10px !important;
+  color: #355b30 !important;
+  font-size: .78rem !important;
+}
+
+body:not(.is-login-screen) #overview .home-two-column {
+  display: grid !important;
+  grid-template-columns: minmax(0, 1.35fr) minmax(320px, .85fr) !important;
+  gap: 18px !important;
+}
+
+body:not(.is-login-screen) #overview .home-dashboard-card {
+  min-height: 260px !important;
+  padding: 22px !important;
+}
+
+body:not(.is-login-screen) #overview .schedule-list,
+body:not(.is-login-screen) #overview .route-snapshot-list,
+body:not(.is-login-screen) #overview .submission-list,
+body:not(.is-login-screen) #overview .operations-command-list,
+body:not(.is-login-screen) #overview .reminder-list {
+  display: grid !important;
+  gap: 0 !important;
+}
+
+body:not(.is-login-screen) #overview .home-empty-state {
+  display: grid !important;
+  place-items: center !important;
+  min-height: 170px !important;
+  padding: 22px !important;
+  border: 1px dashed rgba(23, 54, 43, .13) !important;
+  border-radius: 20px !important;
+  background: rgba(250, 248, 240, .68) !important;
+  color: #102f25 !important;
+  text-align: center !important;
+}
+
+body:not(.is-login-screen) #overview .home-empty-state.compact {
+  min-height: 128px !important;
+}
+
+body:not(.is-login-screen) #overview .home-empty-state img {
+  width: 58px !important;
+  height: 58px !important;
+  margin-bottom: 10px !important;
+  opacity: .82 !important;
+}
+
+body:not(.is-login-screen) #overview .home-empty-state strong {
+  color: #102f25 !important;
+  font-size: .98rem !important;
+}
+
+body:not(.is-login-screen) #overview .home-empty-state p {
+  max-width: 34ch !important;
+  margin: 6px auto 0 !important;
+  color: #737b70 !important;
+  font-size: .84rem !important;
+  line-height: 1.45 !important;
+}
+
+body:not(.is-login-screen) #overview .home-empty-state .inline-action {
+  margin-top: 14px !important;
+}
+
+body:not(.is-login-screen) #overview .home-schedule-row,
+body:not(.is-login-screen) #overview .operations-command-item,
+body:not(.is-login-screen) #overview .overview-activity-row {
+  margin: 0 !important;
+  padding: 14px 0 !important;
+  border: 0 !important;
+  border-top: 1px solid rgba(23, 54, 43, .08) !important;
+  border-radius: 0 !important;
+  background: transparent !important;
+  box-shadow: none !important;
+}
+
+body:not(.is-login-screen) #overview .home-schedule-row:first-child,
+body:not(.is-login-screen) #overview .operations-command-item:first-child,
+body:not(.is-login-screen) #overview .overview-activity-row:first-child {
+  border-top: 0 !important;
+}
+
+body:not(.is-login-screen) #overview .home-route-map {
+  display: block !important;
+  width: 100% !important;
+  min-height: 112px !important;
+  margin-bottom: 14px !important;
+  overflow: hidden !important;
+  border: 1px solid rgba(23, 54, 43, .09) !important;
+  border-radius: 18px !important;
+  background: linear-gradient(135deg, #edf4e7, #fbf9f1) !important;
+}
+
+body:not(.is-login-screen) #overview .home-route-map img {
+  display: block !important;
+  width: 100% !important;
+  height: 132px !important;
+  object-fit: cover !important;
+  opacity: .82 !important;
+}
+
+body:not(.is-login-screen) #overview .route-snapshot-card {
+  display: grid !important;
+  gap: 8px !important;
+  padding: 0 !important;
+  border: 0 !important;
+  background: transparent !important;
+}
+
+body:not(.is-login-screen) #overview .route-snapshot-card strong {
+  color: #102f25 !important;
+  font-size: 1.28rem !important;
+}
+
+body:not(.is-login-screen) #overview .route-snapshot-card p {
+  color: #737b70 !important;
+  font-size: .88rem !important;
+}
+
+body:not(.is-login-screen) #overview .home-command-grid {
+  display: grid !important;
+  grid-template-columns: minmax(0, 1.08fr) minmax(0, 1fr) minmax(280px, .72fr) !important;
+  gap: 18px !important;
+  align-items: start !important;
+}
+
+body:not(.is-login-screen) #overview .home-command-grid .home-dashboard-card {
+  min-height: 330px !important;
+}
+
+body:not(.is-login-screen) #overview .operations-command-item {
+  display: grid !important;
+  grid-template-columns: minmax(0, 1fr) auto !important;
+  gap: 14px !important;
+  border-left: 0 !important;
+}
+
+body:not(.is-login-screen) #overview .operations-command-item .eyebrow {
+  margin: 0 0 5px !important;
+  color: #71806f !important;
+  font-size: .64rem !important;
+  letter-spacing: .12em !important;
+}
+
+body:not(.is-login-screen) #overview .operations-command-item h4 {
+  margin: 0 !important;
+  color: #102f25 !important;
+  font-size: .96rem !important;
+  line-height: 1.25 !important;
+}
+
+body:not(.is-login-screen) #overview .operations-command-item p {
+  margin: 4px 0 0 !important;
+  color: #737b70 !important;
+  font-size: .82rem !important;
+  line-height: 1.35 !important;
+}
+
+body:not(.is-login-screen) #overview .operations-command-item-actions {
+  display: flex !important;
+  align-items: center !important;
+  gap: 7px !important;
+}
+
+body:not(.is-login-screen) #overview .overview-activity-row {
+  grid-template-columns: 42px minmax(0, 1fr) auto 16px !important;
+  min-height: 0 !important;
+  text-align: left !important;
+}
+
+body:not(.is-login-screen) #overview .overview-row-icon {
+  width: 38px !important;
+  height: 38px !important;
+  border-radius: 14px !important;
+}
+
+body:not(.is-login-screen) #overview .overview-row-main strong {
+  color: #102f25 !important;
+  font-size: .92rem !important;
+}
+
+body:not(.is-login-screen) #overview .overview-row-main small,
+body:not(.is-login-screen) #overview .overview-row-context {
+  color: #737b70 !important;
+  font-size: .78rem !important;
+}
+
+body:not(.is-login-screen) #overview .overview-tasks-card .reminder-list {
+  justify-items: stretch !important;
+  gap: 14px !important;
+}
+
+body:not(.is-login-screen) #overview .overview-task-donut {
+  width: 142px !important;
+  height: 142px !important;
+  margin: 4px auto 2px !important;
+  border-radius: 50% !important;
+  background:
+    radial-gradient(circle at center, rgba(255, 253, 247, .98) 0 52%, transparent 53%),
+    conic-gradient(#598548 0 var(--completed-deg), #c8d6bb var(--completed-deg) var(--progress-deg), #e7e2d8 var(--progress-deg) 360deg) !important;
+}
+
+body:not(.is-login-screen) #overview .overview-task-legend {
+  gap: 8px !important;
+}
+
+body:not(.is-login-screen) #overview .overview-task-legend span {
+  color: #737b70 !important;
+  font-size: .82rem !important;
+}
+
+body:not(.is-login-screen) #overview .overview-task-link {
+  justify-self: start !important;
+  margin-top: 4px !important;
+}
+
+body:not(.is-login-screen) #overview .home-secondary-tools {
+  padding: 0 !important;
+  overflow: hidden !important;
+}
+
+body:not(.is-login-screen) #overview .home-secondary-tools > summary {
+  display: grid !important;
+  grid-template-columns: minmax(0, 1fr) auto !important;
+  gap: 12px !important;
+  align-items: center !important;
+  padding: 18px 22px !important;
+  cursor: pointer !important;
+  color: #102f25 !important;
+  font-weight: 900 !important;
+  list-style: none !important;
+}
+
+body:not(.is-login-screen) #overview .home-secondary-tools > summary::-webkit-details-marker {
+  display: none !important;
+}
+
+body:not(.is-login-screen) #overview .home-secondary-tools > summary::after {
+  content: "+" !important;
+  display: grid !important;
+  place-items: center !important;
+  width: 34px !important;
+  height: 34px !important;
+  border-radius: 50% !important;
+  background: #e6efdc !important;
+  color: #123f31 !important;
+}
+
+body:not(.is-login-screen) #overview .home-secondary-tools[open] > summary::after {
+  content: "-" !important;
+}
+
+body:not(.is-login-screen) #overview .home-secondary-tools small {
+  display: block !important;
+  margin-top: 4px !important;
+  color: #737b70 !important;
+  font-size: .8rem !important;
+  font-weight: 650 !important;
+}
+
+body:not(.is-login-screen) #overview .home-secondary-tools .overview-operations-band {
+  padding: 0 22px 22px !important;
+}
+
+@media (max-width: 1180px) {
+  body:not(.is-login-screen) #overview .home-snapshot-grid,
+  body:not(.is-login-screen) #overview .metric-grid.home-snapshot-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+    gap: 1px !important;
+  }
+
+  body:not(.is-login-screen) #overview .metric-card.overview-summary-card.home-snapshot-metric {
+    border-right: 0 !important;
+    border-top: 1px solid rgba(23, 54, 43, .08) !important;
+  }
+
+  body:not(.is-login-screen) #overview .metric-card.overview-summary-card.home-snapshot-metric:nth-child(-n+2) {
+    border-top: 0 !important;
+  }
+
+  body:not(.is-login-screen) #overview .metric-card.overview-summary-card.home-snapshot-metric:nth-child(odd) {
+    border-right: 1px solid rgba(23, 54, 43, .08) !important;
+  }
+
+  body:not(.is-login-screen) #overview .home-command-grid {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) !important;
+  }
+
+  body:not(.is-login-screen) #overview .overview-tasks-card {
+    grid-column: span 2 !important;
+  }
+}
+
+@media (max-width: 900px) {
+  body:not(.is-login-screen) #overview .overview-command-header,
+  body:not(.is-login-screen) #overview .overview-header-actions,
+  body:not(.is-login-screen) #overview .home-two-column,
+  body:not(.is-login-screen) #overview .home-command-grid {
+    grid-template-columns: 1fr !important;
+  }
+
+  body:not(.is-login-screen) #overview .overview-tasks-card {
+    grid-column: auto !important;
+  }
+}
+
+@media (max-width: 640px) {
+  body:not(.is-login-screen) #overview {
+    gap: 14px !important;
+  }
+
+  body:not(.is-login-screen) #overview .overview-command-header h3 {
+    font-size: clamp(2rem, 12vw, 2.55rem) !important;
+  }
+
+  body:not(.is-login-screen) #overview .home-snapshot-grid,
+  body:not(.is-login-screen) #overview .metric-grid.home-snapshot-grid {
+    grid-template-columns: 1fr !important;
+  }
+
+  body:not(.is-login-screen) #overview .metric-card.overview-summary-card.home-snapshot-metric,
+  body:not(.is-login-screen) #overview .metric-card.overview-summary-card.home-snapshot-metric:nth-child(odd) {
+    border-right: 0 !important;
+    border-top: 1px solid rgba(23, 54, 43, .08) !important;
+  }
+
+  body:not(.is-login-screen) #overview .metric-card.overview-summary-card.home-snapshot-metric:first-child {
+    border-top: 0 !important;
+  }
+
+  body:not(.is-login-screen) #overview .home-snapshot-card,
+  body:not(.is-login-screen) #overview .home-dashboard-card {
+    padding: 18px !important;
+    border-radius: 20px !important;
+  }
+
+  body:not(.is-login-screen) #overview .overview-activity-row {
+    grid-template-columns: 40px minmax(0, 1fr) 16px !important;
+  }
+
+  body:not(.is-login-screen) #overview .overview-row-context {
+    display: none !important;
+  }
+
+  body:not(.is-login-screen) #overview .operations-command-item {
+    grid-template-columns: 1fr !important;
+  }
+
+  body:not(.is-login-screen) #overview .operations-command-item-actions {
+    justify-content: flex-start !important;
+    flex-wrap: wrap !important;
+  }
+}

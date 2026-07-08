@@ -5422,11 +5422,16 @@
     const routeDisabled = state.routeStopsReady ? "" : " disabled title=\"Create the route_stops table first\"";
     return `
       <div class="outreach-actions">
-        ${actionButton(compact ? "Open" : "Edit", "open-outreach-prospect", item.id)}
         ${renderPhoneActions(item.phone, { leadId: item.id, leadType: "outreach_prospect", compact: true, helper: false })}
-        ${actionButton("Contacted", "mark-outreach-contacted", item.id)}
-        <button class="inline-action" type="button" data-action="create-outreach-quote" data-id="${escapeHtml(item.id)}"${item.convertedToQuote ? " disabled" : ""}>${buttonContent(item.convertedToQuote ? "Quote Lead Created" : "Create Quote Lead", "create-outreach-quote")}</button>
-        <button class="inline-action" type="button" data-action="route-outreach-prospect" data-id="${escapeHtml(item.id)}"${routeDisabled}>${buttonContent(item.routeAdded ? "Route Added" : "Add Route", "route-outreach-prospect")}</button>
+        ${actionButton(compact ? "Open" : "Edit", "open-outreach-prospect", item.id)}
+        <details class="record-more-menu">
+          <summary>More</summary>
+          <div>
+            ${actionButton("Mark Contacted", "mark-outreach-contacted", item.id)}
+            <button class="inline-action" type="button" data-action="create-outreach-quote" data-id="${escapeHtml(item.id)}"${item.convertedToQuote ? " disabled" : ""}>${buttonContent(item.convertedToQuote ? "Quote Lead Created" : "Create Quote Lead", "create-outreach-quote")}</button>
+            <button class="inline-action" type="button" data-action="route-outreach-prospect" data-id="${escapeHtml(item.id)}"${routeDisabled}>${buttonContent(item.routeAdded ? "Route Added" : "Add Route", "route-outreach-prospect")}</button>
+          </div>
+        </details>
       </div>
     `;
   }

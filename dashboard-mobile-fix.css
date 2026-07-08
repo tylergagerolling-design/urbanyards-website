@@ -98,7 +98,8 @@
   .route-actions,
   .drawer-actions {
     max-width: 100% !important;
-    overflow-x: auto;
+    overflow: visible !important;
+    flex-wrap: wrap !important;
   }
 
   .topbar-actions {
@@ -137,13 +138,25 @@
 
   .quote-table,
   .table-scroll,
+  .table-wrap,
+  .outreach-table-wrap,
+  .equipment-table-wrap {
+    min-width: 0 !important;
+    max-width: 100% !important;
+    overflow-x: auto !important;
+    overflow-y: visible !important;
+  }
+
   .document-list,
   .calendar-list,
   .operations-layout,
-  .route-layout {
+  .route-layout,
+  .equipment-card-list,
+  .outreach-card-list {
     min-width: 0 !important;
     max-width: 100% !important;
-    overflow-x: auto;
+    max-height: none !important;
+    overflow: visible !important;
   }
 
   .mobile-tabbar {

@@ -12155,3 +12155,26 @@ body:not(.is-login-screen) .sidebar-notification-more {
     left: 320px !important;
   }
 }
+
+/* Collapsed sidebar active state: highlight the icon, not the full row. */
+@media (min-width: 901px) {
+  body:not(.is-login-screen) .app-view:not(.is-sidebar-open):not(:has(.dashboard-sidebar:hover)):not(:has(.dashboard-sidebar :focus-visible)) .dashboard-nav a.is-active,
+  body:not(.is-login-screen) .app-view:not(.is-sidebar-open):not(:has(.dashboard-sidebar:hover)):not(:has(.dashboard-sidebar :focus-visible)) .dashboard-nav a.is-active:hover {
+    background: transparent !important;
+    border-color: transparent !important;
+    box-shadow: none !important;
+  }
+
+  body:not(.is-login-screen) .app-view:not(.is-sidebar-open):not(:has(.dashboard-sidebar:hover)):not(:has(.dashboard-sidebar :focus-visible)) .dashboard-nav a.is-active .nav-icon {
+    width: 42px !important;
+    height: 42px !important;
+    min-width: 42px !important;
+    border: 1px solid rgba(64, 104, 56, .16) !important;
+    background: linear-gradient(135deg, #e7f0dc, #d9e8cd) !important;
+    box-shadow: 0 10px 22px rgba(74, 101, 57, .12) !important;
+  }
+
+  body:not(.is-login-screen) .app-view:not(.is-sidebar-open):not(:has(.dashboard-sidebar:hover)):not(:has(.dashboard-sidebar :focus-visible)) .dashboard-nav a.is-active:hover .nav-icon {
+    background: linear-gradient(135deg, #e1ecd6, #cfdfc4) !important;
+  }
+}

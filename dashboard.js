@@ -140,6 +140,7 @@
   let googleRouteLine = null;
   let googleMapsLoadPromise = null;
   let googleMapsBrowserKeyPromise = null;
+  let notificationCloseTimer = null;
   const addressAutocompleteInputs = new WeakSet();
   let googleRouteMarkers = [];
   const routeGeocodingIds = new Set();
@@ -790,8 +791,39 @@
   }
 
   function setNotificationsOpen(isOpen) {
+    if (notificationCloseTimer) {
+      clearTimeout(notificationCloseTimer);
+      notificationCloseTimer = null;
+    }
     if (els.notificationPanel) els.notificationPanel.hidden = !isOpen;
     if (els.notificationButton) els.notificationButton.setAttribute("aria-expanded", isOpen ? "true" : "false");
+  }
+
+  function isNotificationsOpen() {
+    return Boolean(els.notificationPanel && !els.notificationPanel.hidden);
+  }
+
+  function pointerIsOverNotifications() {
+    return Boolean(
+      els.notificationButton?.matches(":hover")
+      || els.notificationPanel?.matches(":hover")
+      || els.notificationButton?.contains(document.activeElement)
+      || els.notificationPanel?.contains(document.activeElement)
+    );
+  }
+
+  function scheduleNotificationsClose() {
+    if (!isNotificationsOpen()) return;
+    if (notificationCloseTimer) clearTimeout(notificationCloseTimer);
+    notificationCloseTimer = setTimeout(() => {
+      if (!pointerIsOverNotifications()) setNotificationsOpen(false);
+    }, 260);
+  }
+
+  function cancelNotificationsClose() {
+    if (!notificationCloseTimer) return;
+    clearTimeout(notificationCloseTimer);
+    notificationCloseTimer = null;
   }
 
   function toDateInputValue(value) {
@@ -6779,7 +6811,24 @@
     }
 
     document.addEventListener("keydown", (event) => {
-      if (event.key === "Escape") setSidebarOpen(false);
+      if (event.key === "Escape") {
+        setSidebarOpen(false);
+        setNotificationsOpen(false);
+      }
+    });
+
+    document.addEventListener("click", (event) => {
+      if (!isNotificationsOpen()) return;
+      const target = event.target;
+      if (els.notificationButton?.contains(target) || els.notificationPanel?.contains(target)) return;
+      setNotificationsOpen(false);
+    });
+
+    [els.notificationButton, els.notificationPanel].filter(Boolean).forEach((node) => {
+      node.addEventListener("pointerenter", cancelNotificationsClose);
+      node.addEventListener("pointerleave", scheduleNotificationsClose);
+      node.addEventListener("mouseenter", cancelNotificationsClose);
+      node.addEventListener("mouseleave", scheduleNotificationsClose);
     });
 
     document.addEventListener("focusin", (event) => {

@@ -11,10 +11,10 @@
     <link rel="icon" href="/favicon.ico" sizes="any">
     <link rel="apple-touch-icon" href="/apple-touch-icon.png">
     <link rel="manifest" href="/dashboard.webmanifest">
-    <link rel="stylesheet" href="dashboard.css?v=20260708-dashboard-repair-4">
+    <link rel="stylesheet" href="dashboard.css?v=20260708-dashboard-repair-5">
     <link rel="stylesheet" href="dashboard-mobile-fix.css?v=20260622-3">
     <script src="dashboard-config.js?v=20260623-1" defer></script>
-    <script src="dashboard.js?v=20260708-dashboard-repair-4" defer></script>
+    <script src="dashboard.js?v=20260708-dashboard-repair-5" defer></script>
   </head>
   <body>
     <main class="dashboard-shell" aria-labelledby="dashboard-title">
@@ -68,10 +68,17 @@
               </button>
             </div>
             <div class="sidebar-bottom">
-              <button class="sidebar-notification-button" type="button" aria-label="Notifications">
+              <button class="sidebar-notification-button" type="button" data-action="toggle-notifications" data-notification-button aria-expanded="false" aria-controls="dashboard-notifications-panel" aria-label="Notifications">
                 <img src="images/dashboard-icons/notifications-bell.svg" alt="">
-                <span aria-hidden="true"></span>
+                <span class="notification-count" data-notification-count hidden>0</span>
               </button>
+              <div class="sidebar-notifications-panel" id="dashboard-notifications-panel" data-notification-panel hidden>
+                <div class="sidebar-notifications-heading">
+                  <strong>Notifications</strong>
+                  <span data-notification-summary>No urgent items</span>
+                </div>
+                <div class="sidebar-notifications-list" data-notification-list></div>
+              </div>
               <div class="sidebar-profile">
                 <img src="images/dashboard-icons/profile-avatar.svg" alt="">
                 <span><strong>Tyler Gage</strong><small>Operations Lead</small></span>

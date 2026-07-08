@@ -684,6 +684,116 @@
       .reduce((sum, doc) => sum + documentAmountOwedCents(doc), 0);
   }
 
+  function isOverdueInvoice(doc) {
+    const dashboardStatus = String(doc.status || "").toLowerCase();
+    const squareStatus = String(doc.squareStatus || "").toUpperCase();
+    return doc.type === "invoice"
+      && doc.dueDateRaw
+      && doc.dueDateRaw < todayKey()
+      && dashboardStatus !== "paid"
+      && dashboardStatus !== "void"
+      && squareStatus !== "PAID";
+  }
+
+  function notificationActionAttributes(item) {
+    const attrs = [`data-action="${escapeHtml(item.action)}"`];
+    if (item.id) attrs.push(`data-id="${escapeHtml(item.id)}"`);
+    if (item.leadId) attrs.push(`data-lead-id="${escapeHtml(item.leadId)}"`);
+    if (item.leadType) attrs.push(`data-lead-type="${escapeHtml(item.leadType)}"`);
+    return attrs.join(" ");
+  }
+
+  function buildNotifications(data = state.data) {
+    const websiteRequests = data.submissions
+      .filter((item) => item.status === "New")
+      .map((item) => ({
+        id: item.id,
+        type: "request",
+        label: "Website request",
+        title: `${item.name} requested ${item.service || "service"}`,
+        detail: [item.city, item.source || "Quote form"].filter(Boolean).join(" / "),
+        action: "open-submission",
+        sort: item.receivedAtRaw || item.createdAtRaw || ""
+      }));
+
+    const overduePayments = data.documents
+      .filter(isOverdueInvoice)
+      .map((doc) => ({
+        id: doc.id,
+        type: "payment",
+        label: "Payment overdue",
+        title: `${doc.clientName || "Client"} payment is overdue`,
+        detail: `Due ${doc.dueDate || doc.dueDateRaw}${documentAmountOwedCents(doc) ? ` / ${formatCurrency(documentAmountOwedCents(doc), doc.squareCurrency)}` : ""}`,
+        action: "open-document",
+        sort: doc.dueDateRaw || ""
+      }));
+
+    const rescheduleNeeded = data.jobs
+      .filter(isOverdueJob)
+      .map((job) => ({
+        id: job.id,
+        type: "schedule",
+        label: "Needs reschedule",
+        title: `${job.site} was not completed as scheduled`,
+        detail: [job.date, job.service].filter(Boolean).join(" / "),
+        action: "reschedule-job",
+        sort: job.dateRaw || ""
+      }));
+
+    const voicemails = data.leadActivity
+      .filter((activity) => activity.outcome === "left_voicemail")
+      .map((activity) => ({
+        id: activity.id,
+        leadId: activity.leadId,
+        leadType: activity.leadType,
+        type: "voicemail",
+        label: "Voicemail",
+        title: `Voicemail left for ${activity.phoneDisplay || activity.phoneNumber || "lead"}`,
+        detail: [activity.createdAt, activity.followUpDateRaw ? `Follow up ${activity.followUpDate}` : ""].filter(Boolean).join(" / "),
+        action: "open-call-activity",
+        sort: activity.createdAtRaw || ""
+      }));
+
+    return [...websiteRequests, ...overduePayments, ...rescheduleNeeded, ...voicemails]
+      .sort((a, b) => String(b.sort || "").localeCompare(String(a.sort || "")));
+  }
+
+  function renderNotifications(data = state.data) {
+    const notifications = buildNotifications(data);
+    const count = notifications.length;
+    if (els.notificationCount) {
+      els.notificationCount.hidden = count === 0;
+      els.notificationCount.textContent = count > 99 ? "99+" : String(count);
+    }
+    if (els.notificationButton) {
+      els.notificationButton.classList.toggle("has-notifications", count > 0);
+      els.notificationButton.setAttribute("aria-label", count ? `${count} dashboard notification${count === 1 ? "" : "s"}` : "No dashboard notifications");
+    }
+    if (els.notificationSummary) {
+      els.notificationSummary.textContent = count ? `${count} item${count === 1 ? "" : "s"} need attention` : "No urgent items";
+    }
+    if (!els.notificationList) return;
+    if (!count) {
+      els.notificationList.innerHTML = `<p class="sidebar-notification-empty">No website requests, overdue payments, missed visits, or voicemails right now.</p>`;
+      return;
+    }
+    els.notificationList.innerHTML = notifications.slice(0, 8).map((item) => `
+      <button class="sidebar-notification-item notification-${escapeHtml(item.type)}" type="button" ${notificationActionAttributes(item)}>
+        <span class="notification-dot" aria-hidden="true"></span>
+        <span>
+          <small>${escapeHtml(item.label)}</small>
+          <strong>${escapeHtml(item.title)}</strong>
+          <em>${escapeHtml(item.detail || "Review this item.")}</em>
+        </span>
+      </button>
+    `).join("") + (count > 8 ? `<p class="sidebar-notification-more">${escapeHtml(count - 8)} more notifications in dashboard records.</p>` : "");
+  }
+
+  function setNotificationsOpen(isOpen) {
+    if (els.notificationPanel) els.notificationPanel.hidden = !isOpen;
+    if (els.notificationButton) els.notificationButton.setAttribute("aria-expanded", isOpen ? "true" : "false");
+  }
+
   function toDateInputValue(value) {
     if (!value) return "";
     const date = new Date(value);
@@ -6515,6 +6625,7 @@
   async function render() {
     const data = state.data;
     renderSidebarQuickActions();
+    renderNotifications(data);
     populatePropertyFilter(data);
     renderMetrics(data);
     renderDashboardAlerts(data);
@@ -7038,6 +7149,28 @@
 
       if (target.dataset.export) {
         exportData(target.dataset.export);
+        return;
+      }
+
+      if (action === "toggle-notifications") {
+        const isOpen = els.notificationPanel ? els.notificationPanel.hidden : false;
+        setNotificationsOpen(isOpen);
+        return;
+      }
+
+      if (action !== "toggle-notifications") {
+        setNotificationsOpen(false);
+      }
+
+      if (action === "open-call-activity") {
+        const leadType = target.dataset.leadType || "";
+        const leadId = target.dataset.leadId || "";
+        if (leadId) {
+          openLeadDrawerByType(leadType, leadId);
+          setDashboardState("Opened voicemail lead.");
+        } else {
+          setDashboardState("This voicemail is logged, but it is not linked to a lead record.", "error");
+        }
         return;
       }
 
@@ -8513,6 +8646,11 @@
     els.demoBadge = qs("[data-demo-badge]");
     els.metrics = qs("[data-metrics]");
     els.sidebarQuickActions = qs("[data-sidebar-quick-actions]");
+    els.notificationButton = qs("[data-notification-button]");
+    els.notificationCount = qs("[data-notification-count]");
+    els.notificationPanel = qs("[data-notification-panel]");
+    els.notificationSummary = qs("[data-notification-summary]");
+    els.notificationList = qs("[data-notification-list]");
     els.statusFilter = qs("[data-status-filter]");
     els.submissions = qs("[data-submissions]");
     els.upcoming = qs("[data-upcoming]");

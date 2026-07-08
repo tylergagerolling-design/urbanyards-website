@@ -4,19 +4,26 @@
 
 html:has(body:not(.is-login-screen) .app-view:not([hidden])),
 html:has(body:not(.is-login-screen) .app-view:not([hidden])) body {
-  height: auto !important;
+  height: 100% !important;
   min-height: 100% !important;
-  max-height: none !important;
-  overflow-x: clip !important;
-  overflow-y: auto !important;
+  overflow: hidden !important;
 }
 
 body:not(.is-login-screen) .dashboard-shell,
-body:not(.is-login-screen) .app-view,
+body:not(.is-login-screen) .app-view {
+  height: 100dvh !important;
+  max-height: 100dvh !important;
+  overflow: hidden !important;
+}
+
 body:not(.is-login-screen) .dashboard-main {
-  height: auto !important;
-  max-height: none !important;
-  overflow: visible !important;
+  height: calc(100dvh - 32px) !important;
+  max-height: calc(100dvh - 32px) !important;
+  min-height: 0 !important;
+  overflow-x: hidden !important;
+  overflow-y: auto !important;
+  overscroll-behavior: contain !important;
+  scrollbar-gutter: stable !important;
 }
 
 body:not(.is-login-screen) .dashboard-section:not(.is-active) {
@@ -59,9 +66,48 @@ body:not(.is-login-screen) .table-scroll,
 body:not(.is-login-screen) .quote-table,
 body:not(.is-login-screen) .outreach-table-wrap,
 body:not(.is-login-screen) .equipment-table-wrap {
-  max-height: none !important;
+  max-height: min(72dvh, 760px) !important;
   overflow-x: auto !important;
-  overflow-y: visible !important;
+  overflow-y: auto !important;
+}
+
+body:not(.is-login-screen) .groundskeeper-ai-chat,
+body:not(.is-login-screen) .training-library-list,
+body:not(.is-login-screen) .training-log-list,
+body:not(.is-login-screen) .notification-list,
+body:not(.is-login-screen) .call-history-list {
+  max-height: min(58dvh, 620px) !important;
+  overflow-y: auto !important;
+}
+
+@media (max-width: 900px) {
+  html:has(body:not(.is-login-screen) .app-view:not([hidden])),
+  html:has(body:not(.is-login-screen) .app-view:not([hidden])) body {
+    height: auto !important;
+    overflow-x: hidden !important;
+    overflow-y: auto !important;
+  }
+
+  body:not(.is-login-screen) .dashboard-shell,
+  body:not(.is-login-screen) .app-view,
+  body:not(.is-login-screen) .dashboard-main {
+    height: auto !important;
+    max-height: none !important;
+    overflow: visible !important;
+  }
+
+  body:not(.is-login-screen) .table-wrap,
+  body:not(.is-login-screen) .table-scroll,
+  body:not(.is-login-screen) .quote-table,
+  body:not(.is-login-screen) .outreach-table-wrap,
+  body:not(.is-login-screen) .equipment-table-wrap,
+  body:not(.is-login-screen) .groundskeeper-ai-chat,
+  body:not(.is-login-screen) .training-library-list,
+  body:not(.is-login-screen) .training-log-list {
+    max-height: none !important;
+    overflow-x: auto !important;
+    overflow-y: visible !important;
+  }
 }
 
 @media (min-width: 901px) {

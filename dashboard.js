@@ -1,4 +1,4 @@
-(function () {
+﻿(function () {
   "use strict";
 
   const STATUSES = ["New", "Contacted", "Scheduled", "Completed", "Invoiced"];
@@ -628,6 +628,18 @@
     else if (leadType === "contact") openContactDrawer(leadId);
     else if (leadType === "outreach_prospect") openOutreachDrawer(leadId);
     else if (leadType === "outreach_company") openOutreachCompanyDrawer(leadId);
+  }
+
+  function openDetailDrawer() {
+    if (!els.detailDrawer) return;
+    els.detailDrawer.hidden = false;
+    document.body.classList.add("is-detail-drawer-open");
+    requestAnimationFrame(() => {
+      const panel = els.detailDrawer ? els.detailDrawer.querySelector(".drawer-panel") : null;
+      if (panel) panel.scrollTop = 0;
+      if (els.detailContent) els.detailContent.scrollTop = 0;
+      if (els.closeDetail) els.closeDetail.focus({ preventScroll: true });
+    });
   }
 
   function isDocumentUnpaid(doc) {
@@ -4922,7 +4934,7 @@
     if (!els.detailDrawer || !els.detailContent) return;
     const item = id ? findOutreachProspect(id) : null;
     const title = item ? "Edit Prospect" : "Add Prospect";
-    els.detailDrawer.hidden = false;
+    openDetailDrawer();
     els.detailContent.innerHTML = `
       <div class="drawer-content outreach-drawer">
         <p class="eyebrow">Outreach</p>
@@ -4967,7 +4979,7 @@
         ${escapeHtml(row.label)} - ${escapeHtml(row.message)}
       </div>
     `).join("");
-    els.detailDrawer.hidden = false;
+    openDetailDrawer();
     els.detailContent.innerHTML = `
       <div class="drawer-content outreach-drawer">
         <p class="eyebrow">Outreach Import Preview</p>
@@ -5014,7 +5026,7 @@
         </div>
       </form>
     `;
-    els.detailDrawer.hidden = false;
+    openDetailDrawer();
     els.detailContent.innerHTML = `
       <div class="drawer-content outreach-drawer">
         <p class="eyebrow">Outreach Company</p>
@@ -5064,7 +5076,7 @@
   function openOutreachPropertyDrawer(id) {
     const property = state.data.outreachProperties.find((item) => item.id === id);
     if (!property || !els.detailDrawer || !els.detailContent) return;
-    els.detailDrawer.hidden = false;
+    openDetailDrawer();
     els.detailContent.innerHTML = `
       <div class="drawer-content outreach-drawer">
         <p class="eyebrow">Managed Property</p>
@@ -5220,7 +5232,7 @@
     const item = findSubmission(id);
     if (!item || !els.detailDrawer || !els.detailContent) return;
     state.selectedSubmissionId = id;
-    els.detailDrawer.hidden = false;
+    openDetailDrawer();
     els.detailContent.innerHTML = `
       <div class="drawer-content">
         <p class="eyebrow">Quote Detail</p>
@@ -5280,7 +5292,7 @@
     const contact = state.data.contacts.find((item) => item.id === id);
     if (!contact || !els.detailDrawer || !els.detailContent) return;
     const profile = clientProfile(contact);
-    els.detailDrawer.hidden = false;
+    openDetailDrawer();
     els.detailContent.innerHTML = `
       <div class="drawer-content">
         <p class="eyebrow">Client / Property Profile</p>
@@ -5349,7 +5361,7 @@
     state.selectedJobId = id;
     const isReschedule = Boolean(options.reschedule);
     const visitDateValue = isReschedule && isOverdueJob(job) ? todayKey() : toDateInputValue(job.dateRaw);
-    els.detailDrawer.hidden = false;
+    openDetailDrawer();
     els.detailContent.innerHTML = `
       <div class="drawer-content">
         <p class="eyebrow">${isReschedule ? "Overdue Visit" : "Schedule Detail"}</p>
@@ -5390,7 +5402,7 @@
     const typeLabel = doc.type === "invoice" ? "Invoice" : "Estimate / Quote";
     const squareStatus = doc.squareStatus || "Not synced";
     const amountDue = doc.squareAmountDueCents !== null ? formatCurrency(doc.squareAmountDueCents, doc.squareCurrency) : "Not synced";
-    els.detailDrawer.hidden = false;
+    openDetailDrawer();
     els.detailContent.innerHTML = `
       <div class="drawer-content document-drawer">
         <div class="document-drawer-heading">
@@ -5522,8 +5534,10 @@
 
   function closeSubmissionDrawer() {
     state.selectedSubmissionId = "";
+    state.selectedJobId = "";
     if (els.detailDrawer) els.detailDrawer.hidden = true;
     if (els.detailContent) els.detailContent.innerHTML = "";
+    document.body.classList.remove("is-detail-drawer-open");
   }
 
   function csvValue(value) {
@@ -5688,7 +5702,7 @@
   }
 
   function equipmentItemMeta(item) {
-    return [item.brand, item.model, item.storageLocation, item.supplier].filter(Boolean).join(" · ");
+    return [item.brand, item.model, item.storageLocation, item.supplier].filter(Boolean).join(" Â· ");
   }
 
   function renderEquipmentActions(item) {
@@ -5762,7 +5776,7 @@
     const historyHtml = records.length ? records.map((record) => {
       const item = state.data.equipmentItems.find((equipment) => equipment.id === record.equipmentId);
       return `<article class="equipment-card">
-        <div class="equipment-card-head"><div><strong>${escapeHtml(item?.name || record.equipmentName)}</strong><small>${escapeHtml(record.maintenanceType)} · ${escapeHtml(record.maintenanceDate)}</small></div><span>${escapeHtml(formatDollars(record.cost))}</span></div>
+        <div class="equipment-card-head"><div><strong>${escapeHtml(item?.name || record.equipmentName)}</strong><small>${escapeHtml(record.maintenanceType)} Â· ${escapeHtml(record.maintenanceDate)}</small></div><span>${escapeHtml(formatDollars(record.cost))}</span></div>
         <p>${escapeHtml(record.notes || "No notes saved.")}</p>
         <div class="equipment-card-meta"><span>${escapeHtml(record.performedBy || "Performed by not set")}</span><span>Next: ${escapeHtml(record.nextMaintenanceRaw ? record.nextMaintenance : "Not set")}</span></div>
       </article>`;
@@ -5778,7 +5792,7 @@
     }
     const items = state.data.hardwareGuide.filter((item) => matchesSearchValues([item.name, item.category, item.brand, item.model, item.recommendedUse, item.goodFor, item.notes], state.equipmentSearch));
     els.hardwareGuideList.innerHTML = items.length ? items.map((item) => `<article class="equipment-card">
-      <div class="equipment-card-head"><div><strong>${escapeHtml(item.name)}</strong><small>${escapeHtml([item.brand, item.model, item.supplier].filter(Boolean).join(" · ") || item.category)}</small></div>${equipmentStatusBadge(item.priority)}</div>
+      <div class="equipment-card-head"><div><strong>${escapeHtml(item.name)}</strong><small>${escapeHtml([item.brand, item.model, item.supplier].filter(Boolean).join(" Â· ") || item.category)}</small></div>${equipmentStatusBadge(item.priority)}</div>
       <p>${escapeHtml(item.recommendedUse || item.notes || "No recommendation notes saved.")}</p>
       <div class="equipment-card-meta"><span>${escapeHtml(item.status)}</span><span>${escapeHtml(item.goodFor || "Use not set")}</span><span>${escapeHtml(formatDollars(item.estimatedPrice))}</span></div>
       <div class="equipment-actions">
@@ -5884,7 +5898,7 @@
 
   function renderAiRecord(item, type) {
     const body = item.content || item.value || item.answer || "";
-    const meta = [item.category, item.source_url].filter(Boolean).join(" · ");
+    const meta = [item.category, item.source_url].filter(Boolean).join(" Â· ");
     return `<article class="groundskeeper-ai-record">
       <div class="groundskeeper-ai-record-head">
         <strong>${escapeHtml(itemTitle(item, type))}</strong>
@@ -5941,7 +5955,7 @@
           <strong>${escapeHtml(log.question || "Question")}</strong>
           <span>${aiBadge(log.mode || "public", "public")}</span>
         </div>
-        <small>${escapeHtml([log.page, log.created_at ? formatDate(log.created_at) : ""].filter(Boolean).join(" · "))}</small>
+        <small>${escapeHtml([log.page, log.created_at ? formatDate(log.created_at) : ""].filter(Boolean).join(" Â· "))}</small>
         <p>${escapeHtml(log.answer || "No answer saved.")}</p>
         <div class="groundskeeper-ai-record-actions">
           <button class="inline-action" type="button" data-action="save-ai-log-knowledge" data-id="${escapeHtml(log.id)}">Save as Knowledge</button>
@@ -8092,6 +8106,20 @@
       els.closeDetail.addEventListener("click", closeSubmissionDrawer);
     }
 
+    if (els.detailDrawer) {
+      els.detailDrawer.addEventListener("click", (event) => {
+        if (event.target === els.detailDrawer) {
+          closeSubmissionDrawer();
+        }
+      });
+    }
+
+    document.addEventListener("keydown", (event) => {
+      if (event.key === "Escape" && els.detailDrawer && !els.detailDrawer.hidden) {
+        closeSubmissionDrawer();
+      }
+    });
+
     if (els.refreshDashboard) {
       els.refreshDashboard.addEventListener("click", refreshDashboard);
     }
@@ -8271,3 +8299,4 @@
 
   document.addEventListener("DOMContentLoaded", init);
 })();
+

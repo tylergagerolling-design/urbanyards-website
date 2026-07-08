@@ -9786,3 +9786,260 @@ body:not(.is-login-screen) #groundskeeper-ai .ai-command-editor textarea {
     padding: 24px 26px !important;
   }
 }
+
+/* Stable dashboard detail drawer */
+body.is-detail-drawer-open {
+  overflow: hidden !important;
+}
+
+.detail-drawer[hidden] {
+  display: none !important;
+}
+
+.detail-drawer {
+  position: fixed !important;
+  inset: 0 !important;
+  z-index: 2000 !important;
+  display: grid !important;
+  justify-content: end !important;
+  align-items: stretch !important;
+  padding: 14px !important;
+  background: rgba(9, 24, 18, .34) !important;
+  backdrop-filter: blur(5px) !important;
+}
+
+.drawer-panel {
+  display: grid !important;
+  grid-template-rows: auto minmax(0, 1fr) !important;
+  width: min(720px, calc(100vw - 28px)) !important;
+  height: calc(100vh - 28px) !important;
+  max-height: calc(100vh - 28px) !important;
+  min-height: 0 !important;
+  padding: 0 !important;
+  overflow: hidden !important;
+  border: 1px solid rgba(23, 54, 43, .13) !important;
+  border-radius: 24px !important;
+  background:
+    radial-gradient(circle at 88% 0%, rgba(221, 232, 208, .55), transparent 28%),
+    linear-gradient(180deg, #fffdf7 0%, #f5f5ed 100%) !important;
+  box-shadow: -22px 24px 70px rgba(9, 24, 18, .22) !important;
+}
+
+.drawer-close {
+  position: sticky !important;
+  top: 0 !important;
+  z-index: 4 !important;
+  justify-self: end !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  gap: 8px !important;
+  min-width: 0 !important;
+  min-height: 38px !important;
+  margin: 14px 16px 0 0 !important;
+  padding: 0 13px !important;
+  float: none !important;
+  border: 1px solid rgba(23, 54, 43, .12) !important;
+  border-radius: 999px !important;
+  background: rgba(255, 253, 247, .94) !important;
+  color: var(--uy-app-ink, #102f25) !important;
+  font-size: .84rem !important;
+  font-weight: 850 !important;
+  box-shadow: 0 10px 24px rgba(23, 54, 43, .08) !important;
+}
+
+.drawer-close span[aria-hidden="true"] {
+  font-size: 1.15rem;
+  line-height: 1;
+}
+
+[data-detail-content] {
+  min-height: 0;
+  overflow: auto;
+  padding: 4px 26px 28px;
+}
+
+.drawer-content {
+  display: grid;
+  gap: 16px;
+  min-width: 0;
+  padding-bottom: 8px;
+}
+
+.drawer-content > .eyebrow {
+  margin: 0;
+}
+
+.drawer-content h3 {
+  margin: 0 !important;
+  color: var(--uy-app-ink, #102f25) !important;
+  font-size: clamp(1.45rem, 2.2vw, 2rem) !important;
+  line-height: 1.05 !important;
+}
+
+.drawer-content h4 {
+  margin: 10px 0 0;
+  color: var(--uy-app-ink, #102f25);
+  font-size: 1rem;
+}
+
+.drawer-grid,
+.profile-drawer-metrics {
+  display: grid !important;
+  grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+  gap: 10px !important;
+  margin: 0 !important;
+}
+
+.drawer-field,
+.profile-drawer-grid section,
+.document-sidebar-card,
+.document-edit-form,
+.outreach-property-inline-form,
+.call-settings-panel,
+.call-history {
+  border: 1px solid rgba(23, 54, 43, .1) !important;
+  border-radius: 16px !important;
+  background: rgba(255, 253, 247, .78) !important;
+  box-shadow: 0 10px 24px rgba(23, 54, 43, .045) !important;
+}
+
+.drawer-field {
+  min-width: 0;
+  padding: 12px !important;
+  color: var(--uy-app-ink, #102f25);
+  overflow-wrap: anywhere;
+}
+
+.drawer-field span {
+  margin-bottom: 5px;
+  color: var(--uy-app-muted, #6f776e) !important;
+  font-size: .68rem !important;
+  letter-spacing: .12em;
+}
+
+.drawer-form,
+.schedule-form,
+.document-edit-form {
+  display: grid !important;
+  grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+  gap: 12px !important;
+}
+
+.drawer-form label,
+.document-edit-form label {
+  display: grid !important;
+  gap: 6px !important;
+  min-width: 0 !important;
+  color: var(--uy-app-ink, #102f25) !important;
+  font-size: .78rem !important;
+  font-weight: 850 !important;
+}
+
+.drawer-form input,
+.drawer-form select,
+.drawer-form textarea,
+.document-edit-form input,
+.document-edit-form select,
+.document-edit-form textarea {
+  width: 100% !important;
+  min-width: 0 !important;
+  min-height: 42px !important;
+  border: 1px solid rgba(23, 54, 43, .16) !important;
+  border-radius: 12px !important;
+  background: rgba(255, 255, 255, .88) !important;
+  color: var(--uy-app-ink, #102f25) !important;
+}
+
+.drawer-form textarea,
+.document-edit-form textarea {
+  min-height: 106px !important;
+  resize: vertical;
+}
+
+.drawer-actions {
+  display: flex !important;
+  flex-wrap: wrap !important;
+  align-items: center !important;
+  gap: 9px !important;
+  margin: 6px 0 0 !important;
+}
+
+.drawer-actions button,
+.drawer-actions .button {
+  min-width: 0 !important;
+  min-height: 40px !important;
+  padding: 0 14px !important;
+  border-radius: 999px !important;
+  white-space: normal !important;
+}
+
+.drawer-actions .danger-action,
+.document-delete-action {
+  margin-left: auto !important;
+}
+
+.profile-drawer-grid {
+  display: grid !important;
+  grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+  gap: 12px !important;
+  margin-top: 0 !important;
+}
+
+.profile-mini-item {
+  border-radius: 12px !important;
+}
+
+.document-drawer-heading {
+  padding: 0 !important;
+}
+
+.document-drawer {
+  gap: 14px !important;
+}
+
+.document-printable {
+  max-width: 100%;
+  overflow: auto;
+}
+
+@media (max-width: 760px) {
+  .detail-drawer {
+    padding: 0 !important;
+  }
+
+  .drawer-panel {
+    width: 100vw !important;
+    height: 100vh !important;
+    max-height: 100vh !important;
+    border-radius: 0 !important;
+    border: 0 !important;
+  }
+
+  .drawer-close {
+    margin: 10px 12px 0 0 !important;
+  }
+
+  [data-detail-content] {
+    padding: 4px 16px calc(92px + env(safe-area-inset-bottom)) !important;
+  }
+
+  .drawer-grid,
+  .profile-drawer-metrics,
+  .drawer-form,
+  .schedule-form,
+  .document-edit-form,
+  .profile-drawer-grid {
+    grid-template-columns: 1fr !important;
+  }
+
+  .drawer-actions {
+    display: grid !important;
+    grid-template-columns: 1fr !important;
+  }
+
+  .drawer-actions .danger-action,
+  .document-delete-action {
+    margin-left: 0 !important;
+  }
+}

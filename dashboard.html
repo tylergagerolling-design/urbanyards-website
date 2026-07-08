@@ -11,10 +11,10 @@
     <link rel="icon" href="/favicon.ico" sizes="any">
     <link rel="apple-touch-icon" href="/apple-touch-icon.png">
     <link rel="manifest" href="/dashboard.webmanifest">
-    <link rel="stylesheet" href="dashboard.css?v=20260707-dashboard-apple-2">
+    <link rel="stylesheet" href="dashboard.css?v=20260707-dashboard-drawer-1">
     <link rel="stylesheet" href="dashboard-mobile-fix.css?v=20260622-3">
     <script src="dashboard-config.js?v=20260623-1" defer></script>
-    <script src="dashboard.js?v=20260707-dashboard-apple-2" defer></script>
+    <script src="dashboard.js?v=20260707-dashboard-drawer-1" defer></script>
   </head>
   <body>
     <main class="dashboard-shell" aria-labelledby="dashboard-title">
@@ -851,9 +851,9 @@
           <a href="#settings" data-dashboard-link="settings">More</a>
         </nav>
 
-        <aside class="detail-drawer" data-detail-drawer hidden aria-label="Quote details">
-          <div class="drawer-panel">
-            <button class="drawer-close" type="button" data-close-detail aria-label="Close details">Close</button>
+        <aside class="detail-drawer" data-detail-drawer hidden aria-label="Dashboard details" aria-modal="true" role="dialog">
+          <div class="drawer-panel" role="document">
+            <button class="drawer-close" type="button" data-close-detail aria-label="Close details"><span aria-hidden="true">×</span><span>Close</span></button>
             <div data-detail-content></div>
           </div>
         </aside>

@@ -10043,3 +10043,429 @@ body.is-detail-drawer-open {
     margin-left: 0 !important;
   }
 }
+
+/* Final sidebar polish: keep desktop navigation as one intentional floating panel. */
+body:not(.is-login-screen) .dashboard-shell {
+  background:
+    radial-gradient(circle at 86% 10%, rgba(222, 232, 205, .46), transparent 34%),
+    linear-gradient(135deg, #f6f2e6 0%, #fbf9f1 54%, #f0f4e8 100%) !important;
+}
+
+@media (min-width: 901px) {
+  body:not(.is-login-screen) .app-view,
+  body:not(.is-login-screen) .app-view:has(.dashboard-sidebar:hover),
+  body:not(.is-login-screen) .app-view:has(.dashboard-sidebar:focus-within),
+  body:not(.is-login-screen) .app-view.is-sidebar-open {
+    grid-template-columns: 312px minmax(0, 1fr) !important;
+    gap: 22px !important;
+    width: 100vw !important;
+    height: 100vh !important;
+    padding: 20px 20px 20px 20px !important;
+    background:
+      radial-gradient(circle at 10% 8%, rgba(255, 253, 247, .72), transparent 30%),
+      linear-gradient(135deg, #f3efdf 0%, #fbf9f1 52%, #edf4e7 100%) !important;
+    overflow: hidden !important;
+  }
+
+  body:not(.is-login-screen) .app-view::before {
+    display: none !important;
+  }
+
+  body:not(.is-login-screen) .dashboard-sidebar,
+  body:not(.is-login-screen) .dashboard-sidebar:hover,
+  body:not(.is-login-screen) .dashboard-sidebar:focus-within,
+  body:not(.is-login-screen) .app-view.is-sidebar-open .dashboard-sidebar {
+    position: sticky !important;
+    top: 0 !important;
+    left: auto !important;
+    z-index: 12 !important;
+    display: block !important;
+    width: 292px !important;
+    min-width: 292px !important;
+    max-width: 292px !important;
+    height: calc(100vh - 40px) !important;
+    max-height: calc(100vh - 40px) !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    transform: none !important;
+    overflow: visible !important;
+    border: 1px solid rgba(23, 54, 43, .1) !important;
+    border-radius: 22px !important;
+    background:
+      radial-gradient(circle at 12% 0%, rgba(255, 255, 255, .8), transparent 34%),
+      linear-gradient(155deg, rgba(255, 253, 247, .98), rgba(247, 244, 235, .94)) !important;
+    box-shadow: 0 24px 54px rgba(23, 54, 43, .12), 0 2px 0 rgba(255, 255, 255, .7) inset !important;
+  }
+
+  body:not(.is-login-screen) .dashboard-sidebar-inner {
+    display: flex !important;
+    flex-direction: column !important;
+    height: 100% !important;
+    max-height: 100% !important;
+    min-height: 0 !important;
+    padding: 22px 20px 14px !important;
+    overflow: hidden !important;
+  }
+
+  body:not(.is-login-screen) .dashboard-brand,
+  body:not(.is-login-screen) .dashboard-brand:hover,
+  body:not(.is-login-screen) .dashboard-brand:focus-visible {
+    display: grid !important;
+    grid-template-columns: 52px minmax(0, 1fr) !important;
+    align-items: center !important;
+    gap: 12px !important;
+    min-height: 58px !important;
+    margin: 0 0 22px !important;
+    padding: 0 !important;
+    border: 0 !important;
+    border-radius: 0 !important;
+    background: transparent !important;
+    box-shadow: none !important;
+    color: #102f25 !important;
+    text-decoration: none !important;
+  }
+
+  body:not(.is-login-screen) .dashboard-brand img {
+    width: 52px !important;
+    height: 52px !important;
+    min-width: 52px !important;
+    object-fit: contain !important;
+    border: 0 !important;
+    border-radius: 0 !important;
+    background: transparent !important;
+    box-shadow: none !important;
+    filter: none !important;
+  }
+
+  body:not(.is-login-screen) .dashboard-brand span,
+  body:not(.is-login-screen) .dashboard-brand strong,
+  body:not(.is-login-screen) .dashboard-brand small,
+  body:not(.is-login-screen) .dashboard-sidebar .nav-label,
+  body:not(.is-login-screen) .dashboard-sidebar .sign-out {
+    opacity: 1 !important;
+    pointer-events: auto !important;
+    transform: none !important;
+  }
+
+  body:not(.is-login-screen) .dashboard-brand strong {
+    display: block !important;
+    color: #102f25 !important;
+    font-size: 1.02rem !important;
+    font-weight: 900 !important;
+    line-height: 1 !important;
+    letter-spacing: .08em !important;
+    text-transform: uppercase !important;
+    white-space: nowrap !important;
+  }
+
+  body:not(.is-login-screen) .dashboard-brand small {
+    display: block !important;
+    margin-top: 5px !important;
+    color: #6f7a68 !important;
+    font-size: .66rem !important;
+    font-weight: 900 !important;
+    line-height: 1 !important;
+    letter-spacing: .16em !important;
+    text-transform: uppercase !important;
+    white-space: nowrap !important;
+  }
+
+  body:not(.is-login-screen) .dashboard-nav {
+    display: grid !important;
+    gap: 7px !important;
+    margin: 0 !important;
+    padding: 0 0 18px !important;
+    border: 0 !important;
+    border-bottom: 1px solid rgba(23, 54, 43, .09) !important;
+    background: transparent !important;
+  }
+
+  body:not(.is-login-screen) .dashboard-nav a,
+  body:not(.is-login-screen) .dashboard-nav a:hover,
+  body:not(.is-login-screen) .dashboard-nav a.is-active,
+  body:not(.is-login-screen) .app-view:not(.is-sidebar-open) .dashboard-sidebar:not(:hover):not(:focus-within) .dashboard-nav a,
+  body:not(.is-login-screen) .app-view:not(.is-sidebar-open) .dashboard-sidebar:not(:hover):not(:focus-within) .dashboard-nav a.is-active {
+    display: grid !important;
+    grid-template-columns: 40px minmax(0, 1fr) !important;
+    align-items: center !important;
+    gap: 10px !important;
+    min-height: 50px !important;
+    width: 100% !important;
+    padding: 5px 12px 5px 6px !important;
+    border: 1px solid transparent !important;
+    border-radius: 17px !important;
+    background: transparent !important;
+    color: #123f31 !important;
+    font-size: .92rem !important;
+    font-weight: 850 !important;
+    letter-spacing: 0 !important;
+    text-decoration: none !important;
+    box-shadow: none !important;
+    transform: none !important;
+  }
+
+  body:not(.is-login-screen) .dashboard-nav a:hover {
+    background: rgba(229, 237, 219, .62) !important;
+    border-color: rgba(23, 54, 43, .06) !important;
+  }
+
+  body:not(.is-login-screen) .dashboard-nav a.is-active,
+  body:not(.is-login-screen) .dashboard-nav a.is-active:hover,
+  body:not(.is-login-screen) .app-view:not(.is-sidebar-open) .dashboard-sidebar:not(:hover):not(:focus-within) .dashboard-nav a.is-active {
+    background: linear-gradient(135deg, #e7f0dc, #d9e8cd) !important;
+    border-color: rgba(64, 104, 56, .16) !important;
+    color: #123f31 !important;
+    box-shadow: 0 12px 26px rgba(74, 101, 57, .11) !important;
+  }
+
+  body:not(.is-login-screen) .dashboard-sidebar .nav-icon,
+  body:not(.is-login-screen) .dashboard-sidebar .sidebar-quick-action .nav-icon,
+  body:not(.is-login-screen) .dashboard-sidebar .sidebar-manage-link .nav-icon,
+  body:not(.is-login-screen) .app-view:not(.is-sidebar-open) .dashboard-sidebar:not(:hover):not(:focus-within) .nav-icon {
+    display: inline-grid !important;
+    place-items: center !important;
+    width: 38px !important;
+    height: 38px !important;
+    min-width: 38px !important;
+    border: 0 !important;
+    border-radius: 999px !important;
+    background: rgba(224, 235, 214, .74) !important;
+    color: #123f31 !important;
+    box-shadow: none !important;
+    filter: none !important;
+  }
+
+  body:not(.is-login-screen) .dashboard-sidebar .nav-icon img,
+  body:not(.is-login-screen) .app-view:not(.is-sidebar-open) .dashboard-sidebar:not(:hover):not(:focus-within) .nav-icon img {
+    width: 20px !important;
+    height: 20px !important;
+    object-fit: contain !important;
+    opacity: 1 !important;
+    filter: none !important;
+  }
+
+  body:not(.is-login-screen) .dashboard-sidebar .nav-label {
+    min-width: 0 !important;
+    color: inherit !important;
+    opacity: 1 !important;
+    overflow: hidden !important;
+    text-overflow: ellipsis !important;
+    white-space: nowrap !important;
+  }
+
+  body:not(.is-login-screen) .sidebar-quick-actions {
+    display: grid !important;
+    gap: 10px !important;
+    margin: 16px 0 0 !important;
+    padding: 0 0 14px !important;
+    border-top: 0 !important;
+    border-bottom: 1px solid rgba(23, 54, 43, .09) !important;
+  }
+
+  body:not(.is-login-screen) .sidebar-section-title {
+    margin: 0 0 2px !important;
+    color: #71806f !important;
+    font-size: .68rem !important;
+    font-weight: 900 !important;
+    letter-spacing: .16em !important;
+    line-height: 1 !important;
+    text-transform: uppercase !important;
+  }
+
+  body:not(.is-login-screen) .sidebar-quick-action-list {
+    display: grid !important;
+    gap: 8px !important;
+  }
+
+  body:not(.is-login-screen) .sidebar-quick-action,
+  body:not(.is-login-screen) .sidebar-manage-link {
+    display: grid !important;
+    grid-template-columns: 38px minmax(0, 1fr) !important;
+    align-items: center !important;
+    gap: 10px !important;
+    width: 100% !important;
+    min-height: 48px !important;
+    padding: 5px 12px 5px 6px !important;
+    border: 1px solid rgba(23, 54, 43, .08) !important;
+    border-radius: 15px !important;
+    background: rgba(255, 253, 247, .78) !important;
+    color: #123f31 !important;
+    font-size: .86rem !important;
+    font-weight: 850 !important;
+    text-align: left !important;
+    box-shadow: 0 8px 18px rgba(23, 54, 43, .04) !important;
+  }
+
+  body:not(.is-login-screen) .sidebar-quick-action:hover,
+  body:not(.is-login-screen) .sidebar-manage-link:hover {
+    background: rgba(232, 240, 223, .78) !important;
+    border-color: rgba(64, 104, 56, .16) !important;
+    transform: translateY(-1px) !important;
+  }
+
+  body:not(.is-login-screen) .sidebar-manage-link {
+    margin-top: 2px !important;
+    color: #5f6c60 !important;
+    background: rgba(250, 248, 240, .7) !important;
+    box-shadow: none !important;
+  }
+
+  body:not(.is-login-screen) .sidebar-bottom {
+    display: grid !important;
+    gap: 10px !important;
+    margin-top: auto !important;
+    padding-top: 12px !important;
+    min-height: 0 !important;
+    border-top: 0 !important;
+  }
+
+  body:not(.is-login-screen) .sidebar-notification-button {
+    display: inline-grid !important;
+    place-items: center !important;
+    width: 42px !important;
+    height: 42px !important;
+    min-width: 42px !important;
+    border: 1px solid rgba(23, 54, 43, .08) !important;
+    border-radius: 14px !important;
+    background: rgba(255, 253, 247, .74) !important;
+    color: #123f31 !important;
+    box-shadow: 0 8px 18px rgba(23, 54, 43, .04) !important;
+  }
+
+  body:not(.is-login-screen) .sidebar-notification-button img {
+    width: 20px !important;
+    height: 20px !important;
+    filter: none !important;
+  }
+
+  body:not(.is-login-screen) .sidebar-profile {
+    display: grid !important;
+    grid-template-columns: 42px minmax(0, 1fr) 16px !important;
+    align-items: center !important;
+    gap: 10px !important;
+    min-height: 54px !important;
+    padding: 6px !important;
+    border: 1px solid rgba(23, 54, 43, .08) !important;
+    border-radius: 17px !important;
+    background: rgba(255, 253, 247, .78) !important;
+    color: #102f25 !important;
+    box-shadow: 0 10px 22px rgba(23, 54, 43, .045) !important;
+  }
+
+  body:not(.is-login-screen) .sidebar-profile > img:first-child {
+    width: 42px !important;
+    height: 42px !important;
+    border-radius: 50% !important;
+    background: rgba(224, 235, 214, .82) !important;
+    object-fit: contain !important;
+  }
+
+  body:not(.is-login-screen) .sidebar-profile strong,
+  body:not(.is-login-screen) .sidebar-profile small {
+    display: block !important;
+    min-width: 0 !important;
+    overflow: hidden !important;
+    text-overflow: ellipsis !important;
+    white-space: nowrap !important;
+  }
+
+  body:not(.is-login-screen) .sidebar-profile strong {
+    color: #102f25 !important;
+    font-size: .9rem !important;
+    line-height: 1.1 !important;
+  }
+
+  body:not(.is-login-screen) .sidebar-profile small {
+    margin-top: 3px !important;
+    color: #6f7a68 !important;
+    font-size: .74rem !important;
+    line-height: 1.1 !important;
+  }
+
+  body:not(.is-login-screen) .sidebar-profile-chevron {
+    width: 14px !important;
+    height: 14px !important;
+    opacity: .74 !important;
+  }
+
+  body:not(.is-login-screen) .sign-out {
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    gap: 8px !important;
+    width: 100% !important;
+    min-width: 0 !important;
+    min-height: 40px !important;
+    margin: 0 !important;
+    padding: 8px 12px !important;
+    border: 1px solid rgba(23, 54, 43, .09) !important;
+    border-radius: 15px !important;
+    background: rgba(255, 253, 247, .68) !important;
+    color: #5f6c60 !important;
+    font-size: .84rem !important;
+    font-weight: 850 !important;
+    box-shadow: none !important;
+  }
+
+  body:not(.is-login-screen) .sign-out:hover {
+    background: rgba(232, 240, 223, .76) !important;
+    color: #123f31 !important;
+  }
+
+  body:not(.is-login-screen) .sign-out .button-icon {
+    width: auto !important;
+    min-width: 0 !important;
+    height: auto !important;
+    border: 0 !important;
+    background: transparent !important;
+    color: inherit !important;
+    font-size: .82rem !important;
+    line-height: 1 !important;
+  }
+
+  body:not(.is-login-screen) .dashboard-main {
+    min-width: 0 !important;
+  }
+}
+
+@media (min-width: 901px) and (max-height: 830px) {
+  body:not(.is-login-screen) .dashboard-sidebar-inner {
+    padding: 18px 20px 12px !important;
+  }
+
+  body:not(.is-login-screen) .dashboard-brand {
+    margin-bottom: 14px !important;
+  }
+
+  body:not(.is-login-screen) .dashboard-nav a,
+  body:not(.is-login-screen) .dashboard-nav a:hover,
+  body:not(.is-login-screen) .dashboard-nav a.is-active {
+    min-height: 45px !important;
+  }
+
+  body:not(.is-login-screen) .sidebar-quick-actions {
+    gap: 8px !important;
+    margin-top: 12px !important;
+    padding-bottom: 10px !important;
+  }
+
+  body:not(.is-login-screen) .sidebar-quick-action,
+  body:not(.is-login-screen) .sidebar-manage-link {
+    min-height: 43px !important;
+  }
+
+  body:not(.is-login-screen) .sidebar-bottom {
+    gap: 8px !important;
+    padding-top: 8px !important;
+  }
+}
+
+@media (max-width: 820px) {
+  body:not(.is-login-screen) .dashboard-sidebar {
+    display: none !important;
+  }
+
+  body:not(.is-login-screen) .app-view.is-sidebar-open .dashboard-sidebar {
+    display: block !important;
+  }
+}

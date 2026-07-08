@@ -11505,3 +11505,48 @@ body:not(.is-login-screen) #overview *,
 body:not(.is-login-screen) #calendar * {
   min-width: 0;
 }
+
+/* Dashboard emergency layout repair: keep the Home command grid usable inside
+   the narrowed app shell. Three columns made operation rows collapse to a few
+   pixels wide once action buttons consumed the auto column. */
+body:not(.is-login-screen) #overview .home-command-grid {
+  grid-template-columns: minmax(0, 1.12fr) minmax(280px, .88fr) !important;
+  align-items: start !important;
+}
+
+body:not(.is-login-screen) #overview .home-deadline-card {
+  grid-row: span 2 !important;
+}
+
+body:not(.is-login-screen) #overview .overview-activity-card,
+body:not(.is-login-screen) #overview .overview-tasks-card {
+  min-height: 0 !important;
+}
+
+body:not(.is-login-screen) #overview .operations-command-item {
+  grid-template-columns: minmax(0, 1fr) !important;
+}
+
+body:not(.is-login-screen) #overview .operations-command-item-actions {
+  justify-content: flex-start !important;
+  flex-wrap: wrap !important;
+}
+
+body:not(.is-login-screen) #overview .operations-command-item > div:first-child,
+body:not(.is-login-screen) #overview .operations-command-item p,
+body:not(.is-login-screen) #overview .operations-command-item h4 {
+  width: 100% !important;
+  max-width: 100% !important;
+  overflow-wrap: normal !important;
+  word-break: normal !important;
+}
+
+@media (max-width: 1180px) {
+  body:not(.is-login-screen) #overview .home-command-grid {
+    grid-template-columns: 1fr !important;
+  }
+
+  body:not(.is-login-screen) #overview .home-deadline-card {
+    grid-row: auto !important;
+  }
+}

@@ -312,6 +312,88 @@
     return (config.ownerEmail || "team@urbanyards.us").toLowerCase();
   }
 
+  function profileText(value) {
+    return String(value || "").trim();
+  }
+
+  function firstProfileText(...values) {
+    for (const value of values) {
+      const cleaned = profileText(value);
+      if (cleaned) return cleaned;
+    }
+    return "";
+  }
+
+  function profileFullName(record = {}) {
+    return firstProfileText(
+      record.full_name,
+      record.fullName,
+      record.display_name,
+      record.displayName,
+      record.name,
+      record.preferred_name,
+      record.preferredName,
+      [record.first_name, record.last_name].map(profileText).filter(Boolean).join(" "),
+      [record.firstName, record.lastName].map(profileText).filter(Boolean).join(" ")
+    );
+  }
+
+  function profileRole(record = {}) {
+    const role = firstProfileText(
+      record.title,
+      record.job_title,
+      record.jobTitle,
+      record.position,
+      record.role_title,
+      record.roleTitle,
+      record.role_name,
+      record.roleName,
+      record.role
+    );
+    return role.toLowerCase() === "authenticated" ? "" : role;
+  }
+
+  function authProfileFromUser(user = {}, email = "") {
+    const userMetadata = user.user_metadata || {};
+    const appMetadata = user.app_metadata || {};
+    const name = firstProfileText(
+      profileFullName(userMetadata),
+      profileFullName(appMetadata),
+      profileFullName(user),
+      email
+    );
+    const role = firstProfileText(profileRole(userMetadata), profileRole(user));
+    return { name, role };
+  }
+
+  function displayProfileFromSession(session, profileRecord = null) {
+    const email = profileText(session && session.email);
+    const sessionProfile = session && session.profile ? session.profile : {};
+    const profile = profileRecord || {};
+    return {
+      name: firstProfileText(profileFullName(profile), sessionProfile.name, email, "Dashboard user"),
+      role: firstProfileText(profileRole(profile), sessionProfile.role, "Dashboard user")
+    };
+  }
+
+  function renderSidebarUserProfile(profileRecord = null) {
+    const session = getSession();
+    const display = isDemoMode()
+      ? { name: "Demo mode", role: "Dashboard user" }
+      : displayProfileFromSession(session, profileRecord);
+
+    if (els.sidebarUserName) {
+      els.sidebarUserName.textContent = display.name;
+    }
+    if (els.sidebarUserRole) {
+      els.sidebarUserRole.textContent = display.role || "";
+      els.sidebarUserRole.hidden = !display.role;
+    }
+    if (els.ownerEmail) {
+      els.ownerEmail.textContent = isDemoMode() ? "Demo mode" : firstProfileText(session && session.email, getOwnerEmail());
+    }
+  }
+
   function getSupabaseUrl() {
     return String(config.supabaseUrl || "").replace(/\/$/, "");
   }
@@ -375,6 +457,38 @@
     }
 
     return payload;
+  }
+
+  async function loadCurrentUserProfile(session) {
+    if (isDemoMode() || !session || !session.accessToken) return null;
+
+    const queries = [];
+    if (session.userId) {
+      const userId = encodeURIComponent(session.userId);
+      queries.push(`profiles?select=*&user_id=eq.${userId}&limit=1`);
+      queries.push(`profiles?select=*&id=eq.${userId}&limit=1`);
+    }
+    if (session.email) {
+      queries.push(`profiles?select=*&email=eq.${encodeURIComponent(session.email)}&limit=1`);
+    }
+
+    const seen = new Set();
+    for (const query of queries) {
+      if (seen.has(query)) continue;
+      seen.add(query);
+
+      try {
+        const rows = await supabaseRestRequest(query, { method: "GET" });
+        if (Array.isArray(rows) && rows.length) return rows[0];
+      } catch (error) {
+        const message = String(error && error.message ? error.message : "");
+        if (/relation .*profiles|profiles.*does not exist|could not find the table/i.test(message)) {
+          return null;
+        }
+      }
+    }
+
+    return null;
   }
 
   async function groundskeeperRequest(action, payload = {}) {
@@ -1662,7 +1776,8 @@
   }
 
   function normalizeAuthSession(payload) {
-    const userEmail = String(payload.user && payload.user.email ? payload.user.email : "").toLowerCase();
+    const user = payload.user || {};
+    const userEmail = String(user.email ? user.email : "").toLowerCase();
 
     if (userEmail !== getOwnerEmail()) {
       throw new Error(`Only ${getOwnerEmail()} can access this dashboard.`);
@@ -1674,7 +1789,9 @@
       accessToken: payload.access_token,
       refreshToken: payload.refresh_token,
       expiresAt: Date.now() + expiresIn * 1000,
-      email: userEmail
+      email: userEmail,
+      userId: profileText(user.id),
+      profile: authProfileFromUser(user, userEmail)
     };
   }
 
@@ -1718,11 +1835,17 @@
       headers: { "Content-Type": "application/json" }
     }, session.accessToken);
 
-    if (String(payload.email || "").toLowerCase() !== getOwnerEmail()) {
+    const userEmail = String(payload.email || "").toLowerCase();
+    if (userEmail !== getOwnerEmail()) {
       throw new Error(`Only ${getOwnerEmail()} can access this dashboard.`);
     }
 
-    return session;
+    return {
+      ...session,
+      email: userEmail,
+      userId: profileText(payload.id || session.userId),
+      profile: authProfileFromUser(payload, userEmail)
+    };
   }
 
   async function signOutOwner() {
@@ -3468,8 +3591,10 @@
     document.body.classList.remove("is-login-screen");
     els.loginView.hidden = true;
     els.appView.hidden = false;
-    if (els.ownerEmail) els.ownerEmail.textContent = isDemoMode() ? "Demo mode" : getOwnerEmail();
     if (els.demoBadge) els.demoBadge.hidden = !isDemoMode();
+    renderSidebarUserProfile();
+    const profile = await loadCurrentUserProfile(getSession()).catch(() => null);
+    if (profile) renderSidebarUserProfile(profile);
     await refreshDashboard();
   }
 
@@ -9263,6 +9388,8 @@
     els.loginForm = qs("[data-login-form]");
     els.loginStatus = qs("[data-login-status]");
     els.ownerEmail = qs("[data-owner-email]");
+    els.sidebarUserName = qs("[data-sidebar-user-name]");
+    els.sidebarUserRole = qs("[data-sidebar-user-role]");
     els.signOut = qs("[data-sign-out]");
     els.newNote = qs("[data-new-note]");
     els.refreshDashboard = qs("[data-refresh-dashboard]");

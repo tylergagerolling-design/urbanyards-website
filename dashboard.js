@@ -27,6 +27,25 @@
   const CALL_METHOD_KEY = "urbanYardsPreferredCallMethod";
   const GOOGLE_VOICE_HOME_URL = "https://voice.google.com/";
   const GOOGLE_VOICE_CALLS_URL = "https://voice.google.com/u/0/calls";
+  const AI_TRAINING_CATEGORIES = {
+    tone: "Tone & Voice",
+    services: "Services",
+    service_area: "Service Areas",
+    pricing: "Pricing & Estimates",
+    faq: "FAQs",
+    lead_capture: "Lead Capture",
+    escalation: "Escalation Rules",
+    do_dont: "Do / Don't Rules",
+    website_reference: "Website Content References",
+    other: "Other"
+  };
+  const AI_TRAINING_STATUS_LABELS = {
+    draft: "Draft",
+    approved: "Approved",
+    live: "Live",
+    archived: "Archived",
+    published: "Live"
+  };
   const DEMO_QUERY_KEYS = ["demo", "test"];
   const DASHBOARD_ICON_PATH = "images/dashboard-icons/";
   const HOME_DASHBOARD_ICON_PATH = "images/home-dashboard/";
@@ -68,8 +87,13 @@
     equipmentStatusFilter: "All",
     equipmentConditionFilter: "All",
     equipmentPriorityFilter: "All",
-    groundskeeperAiView: "assistant",
+    groundskeeperAiView: "training",
     groundskeeperAiSearch: "",
+    trainingPreviewMode: "draft",
+    trainingMessages: [],
+    trainingPreviewMessages: [],
+    trainingEditingRuleId: "",
+    trainingPublishModalOpen: false,
     selectedOutreachIds: new Set(),
     selectedOutreachPropertyIds: new Set(),
     pendingOutreachImport: null,
@@ -114,6 +138,8 @@
         faqs: [],
         rules: [],
         savedAnswers: [],
+        trainingRules: [],
+        versions: [],
         logs: [],
         feedback: [],
         fallback: {}
@@ -391,6 +417,33 @@
     const result = await response.json().catch(() => ({}));
     if (!response.ok) throw new Error(result.error || "The Groundskeeper is unavailable.");
     return result.reply;
+  }
+
+  async function groundskeeperTrainingChat(message) {
+    const history = state.trainingMessages
+      .filter((entry) => ["user", "assistant"].includes(entry.role))
+      .slice(-8)
+      .filter((entry, index, items) => !(index === items.length - 1 && entry.role === "user" && entry.content === message))
+      .map((entry) => ({ role: entry.role, content: entry.content }));
+    return groundskeeperRequest("training-chat", { message, history });
+  }
+
+  async function previewWebsiteHelper(message) {
+    const history = state.trainingPreviewMessages
+      .filter((entry) => ["user", "assistant"].includes(entry.role))
+      .slice(-8)
+      .filter((entry, index, items) => !(index === items.length - 1 && entry.role === "user" && entry.content === message))
+      .map((entry) => ({ role: entry.role, content: entry.content }));
+    return groundskeeperRequest("preview-helper", {
+      message,
+      history,
+      version: state.trainingPreviewMode,
+      page: "Dashboard AI Helper Training preview"
+    });
+  }
+
+  async function saveTrainingRule(record) {
+    return groundskeeperRequest("upsert-training-rule", { record });
   }
 
   function formatDate(value) {
@@ -1481,6 +1534,13 @@
           { title: "Do not invent pricing", content: "Never give final pricing. Explain the variables and guide visitors to Request a Free Quote.", visibility: "public", status: "published", updated_at: now }
         ],
         savedAnswers: [],
+        trainingRules: [
+          { id: "demo-training-1", title: "Grounded pricing guidance", category: "pricing", content: "When visitors ask about price, explain that exact pricing depends on property size, condition, access, frequency, and scope. Invite them to request a free quote or walkthrough.", visibility: "public", status: "live", priority: 20, updated_at: now, published_at: now },
+          { id: "demo-training-2", title: "Friendly owner-operated tone", category: "tone", content: "Use practical, friendly, local language. Avoid pushy sales wording, corporate jargon, and overpromising.", visibility: "public", status: "approved", priority: 30, updated_at: now }
+        ],
+        versions: [
+          { id: "demo-version-1", version_name: "Demo live helper version", published_at: now, published_by: "team@urbanyards.us", notes: "Demo training version." }
+        ],
         logs: [],
         feedback: [],
         fallback: {}
@@ -1646,6 +1706,8 @@
         faqs: snapshot.faqs || [],
         rules: snapshot.rules || [],
         savedAnswers: snapshot.savedAnswers || [],
+        trainingRules: snapshot.trainingRules || [],
+        versions: snapshot.versions || [],
         logs: snapshot.logs || [],
         feedback: snapshot.feedback || [],
         fallback: snapshot.fallback || {}
@@ -1658,6 +1720,8 @@
         faqs: [],
         rules: [],
         savedAnswers: [],
+        trainingRules: [],
+        versions: [],
         logs: [],
         feedback: [],
         fallback: {}
@@ -6362,6 +6426,7 @@
   }
 
   const AI_SECTIONS = [
+    { id: "training", icon: "TR", title: "AI Helper Training", table: "ai_training_rules", type: "trainingRules", description: "Train, test, approve, and publish how the public website helper responds to visitors." },
     { id: "assistant", icon: "AI", title: "Dashboard Assistant", table: "", type: "", description: "Ask for follow-up drafts, lead summaries, copy ideas, or outreach planning. Dashboard mode can use internal AI knowledge." },
     { id: "settings", icon: "BF", title: "Business Facts", table: "ai_settings", type: "settings", description: "Settings, service area, contact info, tone, quote process, and payment process." },
     { id: "knowledge", icon: "SK", title: "Services & Knowledge", table: "ai_knowledge", type: "knowledge", description: "Published and draft knowledge entries for services, site content, and business context." },
@@ -6376,6 +6441,7 @@
   }
 
   function aiItemsForSection(ai, section) {
+    if (section.id === "training") return ai.trainingRules || [];
     if (section.id === "logs") return ai.logs || [];
     if (section.id === "settings") return ai.settings || [];
     if (section.id === "knowledge") return ai.knowledge || [];
@@ -6387,6 +6453,32 @@
 
   function aiItemText(item, type) {
     return [itemTitle(item, type), item.category, item.label, item.value, item.content, item.answer, item.question, item.notes, item.page, item.source_url].filter(Boolean).join(" ");
+  }
+
+  function trainingCategoryLabel(category) {
+    return AI_TRAINING_CATEGORIES[String(category || "other").toLowerCase()] || AI_TRAINING_CATEGORIES.other;
+  }
+
+  function trainingStatusLabel(status) {
+    return AI_TRAINING_STATUS_LABELS[String(status || "draft").toLowerCase()] || "Draft";
+  }
+
+  function trainingRulesByCategory(rules = []) {
+    return Object.keys(AI_TRAINING_CATEGORIES).map((category) => ({
+      category,
+      label: trainingCategoryLabel(category),
+      rules: rules.filter((rule) => String(rule.category || "other").toLowerCase() === category)
+    })).filter((group) => group.rules.length);
+  }
+
+  function liveTrainingVersion(ai) {
+    const version = (ai.versions || [])[0];
+    const lastPublished = (ai.settings || []).find((item) => item.setting_key === "last_published_at");
+    const publishedAt = version?.published_at || lastPublished?.value || "";
+    return {
+      label: publishedAt ? `Live helper version: ${formatDate(publishedAt)}${version?.published_at ? ` - ${new Date(version.published_at).toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" })}` : ""}` : "Live helper version: Not published from dashboard yet",
+      notes: version?.notes || "Approved training items become public only after Push to Live."
+    };
   }
 
   function filteredAiItems(ai, section) {
@@ -6576,7 +6668,8 @@
   function renderAiWorkspace(ai) {
     renderAiNav(ai);
     const section = aiSectionById(state.groundskeeperAiView);
-    if (section.id === "assistant") renderAssistantWorkspace();
+    if (section.id === "training") renderTrainingWorkspace(ai);
+    else if (section.id === "assistant") renderAssistantWorkspace();
     else if (section.id === "logs") renderLogWorkspace(ai);
     else renderKnowledgeWorkspace(ai, section);
   }
@@ -6602,12 +6695,228 @@
     form.title.focus();
   }
 
+  function trainingSuggestionActions(messageIndex, suggestionIndex) {
+    const actions = [
+      ["tone", "Save as Tone Rule"],
+      ["faq", "Save as FAQ"],
+      ["other", "Save as Business Rule"],
+      ["do_dont", "Save as Do/Don't Rule"]
+    ];
+    return `<div class="training-suggestion-actions">
+      ${actions.map(([category, label]) => `<button class="inline-action" type="button" data-action="save-training-suggestion" data-message-index="${messageIndex}" data-suggestion-index="${suggestionIndex}" data-category="${category}">${label}</button>`).join("")}
+      <button class="inline-action" type="button" data-action="ignore-training-suggestion" data-message-index="${messageIndex}" data-suggestion-index="${suggestionIndex}">Ignore</button>
+    </div>`;
+  }
+
+  function renderTrainingMessages() {
+    const messages = state.trainingMessages;
+    if (!messages.length) {
+      return `<article class="training-message is-assistant">
+        <p>Tell me how the website helper should behave. I will turn your instruction into clean training rules you can save, approve, test, and push live.</p>
+      </article>`;
+    }
+    return messages.map((message, messageIndex) => `
+      <article class="training-message is-${escapeHtml(message.role)}">
+        <p>${escapeHtml(message.content)}</p>
+        ${message.suggestions?.length ? `<div class="training-suggestion-stack">
+          ${message.suggestions.map((suggestion, suggestionIndex) => suggestion.ignored ? "" : `
+            <div class="training-suggestion-card">
+              <div>
+                <span>${escapeHtml(trainingCategoryLabel(suggestion.category))}</span>
+                <strong>${escapeHtml(suggestion.title || "Training suggestion")}</strong>
+              </div>
+              <p>${escapeHtml(suggestion.content || "")}</p>
+              ${trainingSuggestionActions(messageIndex, suggestionIndex)}
+            </div>
+          `).join("")}
+        </div>` : ""}
+      </article>
+    `).join("");
+  }
+
+  function trainingRuleCard(rule) {
+    const status = String(rule.status || "draft").toLowerCase();
+    return `<article class="training-rule-card">
+      <div class="training-rule-card-head">
+        <div>
+          <strong>${escapeHtml(rule.title || "Training rule")}</strong>
+          <small>${escapeHtml(trainingCategoryLabel(rule.category))} / Updated ${escapeHtml(rule.updated_at ? formatDate(rule.updated_at) : "recently")}</small>
+        </div>
+        <span class="training-status-badge is-${escapeHtml(status)}">${escapeHtml(trainingStatusLabel(status))}</span>
+      </div>
+      <p>${escapeHtml(rule.content || "No rule content saved yet.")}</p>
+      <div class="training-rule-actions">
+        <button class="inline-action" type="button" data-action="edit-training-rule" data-id="${escapeHtml(rule.id)}">Edit</button>
+        ${status !== "approved" && status !== "live" ? `<button class="inline-action" type="button" data-action="approve-training-rule" data-id="${escapeHtml(rule.id)}">Approve</button>` : ""}
+        <button class="inline-action" type="button" data-action="test-training-rule" data-id="${escapeHtml(rule.id)}">Test</button>
+        ${status !== "archived" ? `<button class="inline-action" type="button" data-action="archive-training-rule" data-id="${escapeHtml(rule.id)}">Archive</button>` : ""}
+      </div>
+    </article>`;
+  }
+
+  function renderTrainingLibrary(ai) {
+    const search = normalizeLookup(state.groundskeeperAiSearch);
+    const rules = (ai.trainingRules || []).filter((rule) => {
+      if (!search) return true;
+      return normalizeLookup([rule.title, rule.category, rule.content, rule.status].filter(Boolean).join(" ")).includes(search);
+    });
+    const activeRules = rules.filter((rule) => String(rule.status || "").toLowerCase() !== "archived");
+    const archivedCount = rules.length - activeRules.length;
+    const groups = trainingRulesByCategory(activeRules);
+    if (!groups.length) {
+      return emptyState(search ? "No training rules match that search." : "No training rules saved yet. Use the training chat to create your first draft rule.");
+    }
+    return `${groups.map((group) => `
+      <section class="training-library-group">
+        <div class="training-library-group-head">
+          <h4>${escapeHtml(group.label)}</h4>
+          <span>${escapeHtml(group.rules.length)} item${group.rules.length === 1 ? "" : "s"}</span>
+        </div>
+        ${group.rules.map(trainingRuleCard).join("")}
+      </section>
+    `).join("")}${archivedCount ? `<p class="training-library-footnote">${escapeHtml(archivedCount)} archived item${archivedCount === 1 ? "" : "s"} hidden from the active library.</p>` : ""}`;
+  }
+
+  function renderTrainingPreviewMessages() {
+    if (!state.trainingPreviewMessages.length) {
+      return `<article class="training-preview-message is-assistant">Ask a sample visitor question to see how the public website helper would respond.</article>`;
+    }
+    return state.trainingPreviewMessages.map((message) => (
+      `<article class="training-preview-message is-${escapeHtml(message.role)}">${escapeHtml(message.content)}</article>`
+    )).join("");
+  }
+
+  function renderTrainingEditorModal(ai) {
+    const rule = (ai.trainingRules || []).find((item) => item.id === state.trainingEditingRuleId);
+    if (!rule) return "";
+    return `<div class="ai-training-modal" role="dialog" aria-modal="true" aria-label="Edit training rule">
+      <form class="ai-training-modal-card" data-training-rule-form data-id="${escapeHtml(rule.id)}">
+        <div class="ai-training-modal-head">
+          <div>
+            <p class="eyebrow">Rule Editor</p>
+            <h3>Edit Training Rule</h3>
+          </div>
+          <button class="inline-action" type="button" data-action="close-training-modal">Close</button>
+        </div>
+        <label>Title
+          <input name="title" required value="${escapeHtml(rule.title || "")}">
+        </label>
+        <label>Category
+          <select name="category">
+            ${Object.entries(AI_TRAINING_CATEGORIES).map(([value, label]) => `<option value="${escapeHtml(value)}"${String(rule.category || "other").toLowerCase() === value ? " selected" : ""}>${escapeHtml(label)}</option>`).join("")}
+          </select>
+        </label>
+        <label>Status
+          <select name="status">
+            ${["draft", "approved", "live", "archived"].map((status) => `<option value="${status}"${String(rule.status || "draft").toLowerCase() === status ? " selected" : ""}>${escapeHtml(trainingStatusLabel(status))}</option>`).join("")}
+          </select>
+        </label>
+        <label>Priority
+          <input name="priority" type="number" min="1" max="999" value="${escapeHtml(rule.priority || 50)}">
+        </label>
+        <label class="span-full">Training guidance
+          <textarea name="content" rows="8" required>${escapeHtml(rule.content || "")}</textarea>
+        </label>
+        <div class="ai-training-modal-actions span-full">
+          <button type="submit"><span class="button-icon" aria-hidden="true">OK</span><span>Save Rule</span></button>
+          <button class="inline-action" type="button" data-action="close-training-modal">Cancel</button>
+        </div>
+      </form>
+    </div>`;
+  }
+
+  function renderPublishModal(ai) {
+    if (!state.trainingPublishModalOpen) return "";
+    const approved = (ai.trainingRules || []).filter((rule) => String(rule.status || "").toLowerCase() === "approved");
+    return `<div class="ai-training-modal" role="dialog" aria-modal="true" aria-label="Push AI helper training live">
+      <div class="ai-training-modal-card">
+        <div class="ai-training-modal-head">
+          <div>
+            <p class="eyebrow">Publish Controls</p>
+            <h3>Push Approved Rules Live?</h3>
+          </div>
+          <button class="inline-action" type="button" data-action="close-training-modal">Close</button>
+        </div>
+        <p class="training-publish-copy">This will publish ${escapeHtml(approved.length)} approved training item${approved.length === 1 ? "" : "s"} to the public website helper. Draft items will stay private.</p>
+        <div class="training-publish-list">
+          ${approved.length ? approved.map((rule) => `<span>${escapeHtml(rule.title || "Training rule")}</span>`).join("") : "<span>No approved items are ready to publish.</span>"}
+        </div>
+        <div class="ai-training-modal-actions">
+          <button type="button" data-action="confirm-publish-training" ${approved.length ? "" : "disabled"}><span class="button-icon" aria-hidden="true">OK</span><span>Push to Live</span></button>
+          <button class="inline-action" type="button" data-action="close-training-modal">Cancel</button>
+        </div>
+      </div>
+    </div>`;
+  }
+
+  function renderTrainingWorkspace(ai) {
+    if (!els.aiMain) return;
+    const version = liveTrainingVersion(ai);
+    const approvedCount = (ai.trainingRules || []).filter((rule) => String(rule.status || "").toLowerCase() === "approved").length;
+    els.aiMain.innerHTML = `
+      <div class="ai-training-studio">
+        <section class="panel ai-training-chat-panel">
+          <div class="ai-training-panel-head">
+            <div>
+              <p class="eyebrow">Private Training Room</p>
+              <h3>Conversational Trainer</h3>
+              <p>Give plain-language instructions. The trainer will organize them into rules you can save and approve.</p>
+            </div>
+          </div>
+          <div class="ai-quick-actions">
+            ${["Less salesy", "Pricing disclaimer", "Service area boundary", "Property management support", "Licensing boundary"].map((label) => `<button type="button" data-action="training-quick-prompt" data-prompt="${escapeHtml(label)}">${escapeHtml(label)}</button>`).join("")}
+          </div>
+          <div class="training-chat-log" data-training-chat-log>${renderTrainingMessages()}</div>
+          <form class="training-chat-form" data-training-chat-form>
+            <textarea name="message" rows="5" placeholder="Example: Make sure the AI only says we serve Portland, Vancouver, and Beaverton."></textarea>
+            <button type="submit"><span class="button-icon" aria-hidden="true">-&gt;</span><span>Train</span></button>
+          </form>
+        </section>
+        <aside class="panel ai-training-library-panel">
+          <div class="ai-training-panel-head">
+            <div>
+              <p class="eyebrow">Training Library</p>
+              <h3>Rules & Guidance</h3>
+              <p>${escapeHtml(version.label)}</p>
+            </div>
+            <span class="training-status-badge is-approved">${escapeHtml(approvedCount)} approved</span>
+          </div>
+          <div class="training-version-note">${escapeHtml(version.notes)}</div>
+          <div class="training-library-list">${renderTrainingLibrary(ai)}</div>
+        </aside>
+        <section class="panel ai-training-preview-panel" data-helper-preview-panel>
+          <div class="ai-training-panel-head">
+            <div>
+              <p class="eyebrow">Website Helper Preview</p>
+              <h3>Test Visitor Questions</h3>
+              <p>Preview the public helper with live rules or with drafts included before publishing.</p>
+            </div>
+            <div class="training-preview-toggle" role="group" aria-label="Preview version">
+              <button type="button" class="${state.trainingPreviewMode === "live" ? "is-active" : ""}" data-action="set-preview-mode" data-mode="live">Test Live Version</button>
+              <button type="button" class="${state.trainingPreviewMode === "draft" ? "is-active" : ""}" data-action="set-preview-mode" data-mode="draft">Test Draft Version</button>
+            </div>
+          </div>
+          <div class="ai-quick-actions">
+            ${["How much does mulch cost?", "Do you service Vancouver?", "Can you do apartment trash area cleanup?", "Are you licensed?", "Can I book a walkthrough?"].map((question) => `<button type="button" data-action="preview-sample-question" data-question="${escapeHtml(question)}">${escapeHtml(question)}</button>`).join("")}
+          </div>
+          <div class="training-preview-log" data-training-preview-log>${renderTrainingPreviewMessages()}</div>
+          <form class="training-preview-form" data-training-preview-form>
+            <input name="message" placeholder="Ask a sample visitor question...">
+            <button type="submit"><span class="button-icon" aria-hidden="true">?</span><span>Preview Answer</span></button>
+          </form>
+        </section>
+      </div>
+      ${renderTrainingEditorModal(ai)}
+      ${renderPublishModal(ai)}`;
+  }
+
   function renderGroundskeeperAi(data = state.data) {
     const ai = data.groundskeeperAi || {};
-    const lastPublished = (ai.settings || []).find((item) => item.setting_key === "last_published_at");
+    const liveRules = (ai.trainingRules || []).filter((rule) => String(rule.status || "").toLowerCase() === "live").length;
+    const approvedRules = (ai.trainingRules || []).filter((rule) => String(rule.status || "").toLowerCase() === "approved").length;
     if (els.groundskeeperAiStatus) {
       els.groundskeeperAiStatus.innerHTML = state.groundskeeperAiReady
-        ? `<span>${aiBadge("Shared Endpoint", "Shared Endpoint")} Public helper and dashboard assistant use <code>/.netlify/functions/groundskeeper-ai</code>.</span><span>Last published: ${escapeHtml(lastPublished?.value ? formatDate(lastPublished.value) : "Not published from dashboard yet")}</span>`
+        ? `<span>${aiBadge("Secure Backend", "Secure Backend")} Website helper uses live training through <code>/.netlify/functions/groundskeeper-ai</code>.</span><span>${escapeHtml(liveTrainingVersion(ai).label)} / ${escapeHtml(liveRules)} live / ${escapeHtml(approvedRules)} approved</span>`
         : `<span>${aiBadge("Setup Needed", "Setup Needed")} Run <code>DASHBOARD_GROUNDSKEEPER_AI_SQL.md</code> in Supabase, then refresh. The public helper still uses bundled website knowledge until tables exist.</span>`;
     }
     if (els.aiSearch && els.aiSearch.value !== state.groundskeeperAiSearch) els.aiSearch.value = state.groundskeeperAiSearch;
@@ -7248,6 +7557,33 @@
         return;
       }
 
+      if (action === "publish-groundskeeper-ai" && state.activeSection === "groundskeeper-ai") {
+        state.trainingPublishModalOpen = true;
+        renderGroundskeeperAi(state.data);
+        return;
+      }
+
+      if (action === "close-training-modal") {
+        state.trainingPublishModalOpen = false;
+        state.trainingEditingRuleId = "";
+        renderGroundskeeperAi(state.data);
+        return;
+      }
+
+      if (action === "confirm-publish-training") {
+        try {
+          setDashboardState("Publishing approved AI training rules...");
+          await groundskeeperRequest("publish-training");
+          state.trainingPublishModalOpen = false;
+          state.data.groundskeeperAi = await loadGroundskeeperAi();
+          await render();
+          setDashboardState("Approved AI training rules are now live on the website helper.");
+        } catch (error) {
+          setDashboardState(error.message || "Unable to push AI training live.", "error");
+        }
+        return;
+      }
+
       if (target.matches("[data-ai-view]")) {
         state.groundskeeperAiView = target.dataset.aiView || "assistant";
         await render();
@@ -7268,6 +7604,108 @@
           textarea.value = promptMap[target.dataset.prompt] || target.dataset.prompt || "";
           textarea.focus();
         }
+        return;
+      }
+
+      if (action === "training-quick-prompt") {
+        const promptMap = {
+          "Less salesy": "Make the website AI sound more helpful and less salesy. It should be friendly, practical, and grounded.",
+          "Pricing disclaimer": "When someone asks about pricing, explain that quotes depend on property size, condition, access, frequency, and scope, then invite them to request a free quote or walkthrough.",
+          "Service area boundary": "Make sure the helper only says Urban Yards serves Portland, Vancouver, and Beaverton unless the service area is updated later.",
+          "Property management support": "If someone asks about property management support, mention trash areas, seasonal cleanup, mulch refreshes, apartment groundskeeping, and small exterior property-care tasks.",
+          "Licensing boundary": "Do not claim licensed trade work, legal guarantees, insurance promises, or regulated contractor work unless explicitly approved."
+        };
+        const textarea = qs("[data-training-chat-form] textarea[name='message']");
+        if (textarea) {
+          textarea.value = promptMap[target.dataset.prompt] || target.dataset.prompt || "";
+          textarea.focus();
+        }
+        return;
+      }
+
+      if (action === "save-training-suggestion") {
+        const messageIndex = Number(target.dataset.messageIndex);
+        const suggestionIndex = Number(target.dataset.suggestionIndex);
+        const suggestion = state.trainingMessages[messageIndex]?.suggestions?.[suggestionIndex];
+        if (!suggestion) return;
+        try {
+          setDashboardState("Saving training rule...");
+          await saveTrainingRule({
+            ...suggestion,
+            category: target.dataset.category || suggestion.category || "other",
+            status: "draft"
+          });
+          suggestion.ignored = true;
+          state.data.groundskeeperAi = await loadGroundskeeperAi();
+          await render();
+          setDashboardState("Training rule saved as a draft.");
+        } catch (error) {
+          setDashboardState(error.message || "Unable to save training rule.", "error");
+        }
+        return;
+      }
+
+      if (action === "ignore-training-suggestion") {
+        const messageIndex = Number(target.dataset.messageIndex);
+        const suggestionIndex = Number(target.dataset.suggestionIndex);
+        const suggestion = state.trainingMessages[messageIndex]?.suggestions?.[suggestionIndex];
+        if (suggestion) suggestion.ignored = true;
+        renderGroundskeeperAi(state.data);
+        return;
+      }
+
+      if (action === "approve-training-rule" || action === "archive-training-rule") {
+        try {
+          setDashboardState(action === "approve-training-rule" ? "Approving training rule..." : "Archiving training rule...");
+          await groundskeeperRequest(action, { id });
+          state.data.groundskeeperAi = await loadGroundskeeperAi();
+          await render();
+          setDashboardState(action === "approve-training-rule" ? "Training rule approved. Push to Live when ready." : "Training rule archived.");
+        } catch (error) {
+          setDashboardState(error.message || "Unable to update training rule.", "error");
+        }
+        return;
+      }
+
+      if (action === "edit-training-rule") {
+        state.trainingEditingRuleId = id;
+        state.trainingPublishModalOpen = false;
+        renderGroundskeeperAi(state.data);
+        return;
+      }
+
+      if (action === "test-training-rule") {
+        const rule = (state.data.groundskeeperAi.trainingRules || []).find((item) => item.id === id);
+        const input = qs("[data-training-preview-form] input[name='message']");
+        if (input && rule) {
+          state.trainingPreviewMode = "draft";
+          input.value = `How would you answer a visitor question related to: ${rule.title || "this training rule"}?`;
+          input.focus();
+          input.scrollIntoView({ block: "center", behavior: "smooth" });
+        }
+        return;
+      }
+
+      if (action === "set-preview-mode") {
+        state.trainingPreviewMode = target.dataset.mode === "live" ? "live" : "draft";
+        renderGroundskeeperAi(state.data);
+        return;
+      }
+
+      if (action === "preview-sample-question") {
+        const input = qs("[data-training-preview-form] input[name='message']");
+        if (input) {
+          input.value = target.dataset.question || "";
+          input.focus();
+        }
+        return;
+      }
+
+      if (action === "focus-helper-preview") {
+        state.groundskeeperAiView = "training";
+        renderGroundskeeperAi(state.data);
+        const panel = qs("[data-helper-preview-panel]");
+        if (panel) panel.scrollIntoView({ block: "center", behavior: "smooth" });
         return;
       }
 
@@ -8317,6 +8755,68 @@
           setDashboardState("");
         } catch (error) {
           setDashboardState(error.message || "Unable to save prospect.", "error");
+        }
+      } else if (event.target.matches("[data-training-chat-form]")) {
+        event.preventDefault();
+        const formData = new FormData(event.target);
+        const message = String(formData.get("message") || "").trim();
+        if (!message) return;
+        try {
+          state.trainingMessages.push({ role: "user", content: message });
+          event.target.reset();
+          renderGroundskeeperAi(state.data);
+          const result = await groundskeeperTrainingChat(message);
+          state.trainingMessages.push({
+            role: "assistant",
+            content: result.reply || "I turned that into training guidance you can review.",
+            suggestions: result.suggestions || []
+          });
+          state.data.groundskeeperAi = await loadGroundskeeperAi();
+          await render();
+          setDashboardState("");
+        } catch (error) {
+          state.trainingMessages.push({ role: "assistant", content: error.message || "The training assistant is unavailable right now." });
+          renderGroundskeeperAi(state.data);
+          setDashboardState(error.message || "Unable to train the AI helper.", "error");
+        }
+      } else if (event.target.matches("[data-training-preview-form]")) {
+        event.preventDefault();
+        const formData = new FormData(event.target);
+        const message = String(formData.get("message") || "").trim();
+        if (!message) return;
+        try {
+          state.trainingPreviewMessages.push({ role: "user", content: message });
+          event.target.reset();
+          renderGroundskeeperAi(state.data);
+          const result = await previewWebsiteHelper(message);
+          state.trainingPreviewMessages.push({ role: "assistant", content: result.reply || "No preview response returned." });
+          await render();
+          setDashboardState("");
+        } catch (error) {
+          state.trainingPreviewMessages.push({ role: "assistant", content: error.message || "Preview is unavailable right now." });
+          renderGroundskeeperAi(state.data);
+          setDashboardState(error.message || "Unable to preview the helper.", "error");
+        }
+      } else if (event.target.matches("[data-training-rule-form]")) {
+        event.preventDefault();
+        const formData = new FormData(event.target);
+        try {
+          setDashboardState("Saving training rule...");
+          await saveTrainingRule({
+            id: event.target.dataset.id,
+            title: String(formData.get("title") || "").trim(),
+            category: String(formData.get("category") || "other"),
+            content: String(formData.get("content") || "").trim(),
+            status: String(formData.get("status") || "draft"),
+            priority: Number(formData.get("priority") || 50) || 50,
+            visibility: "public"
+          });
+          state.trainingEditingRuleId = "";
+          state.data.groundskeeperAi = await loadGroundskeeperAi();
+          await render();
+          setDashboardState("Training rule saved.");
+        } catch (error) {
+          setDashboardState(error.message || "Unable to save training rule.", "error");
         }
       } else if (event.target.matches("[data-groundskeeper-entry-form]")) {
         event.preventDefault();

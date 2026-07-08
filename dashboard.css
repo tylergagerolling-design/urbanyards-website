@@ -12465,6 +12465,407 @@ body:not(.is-login-screen) .sidebar-notification-more {
   }
 }
 
+/* AI Helper Training Studio */
+body:not(.is-login-screen) #groundskeeper-ai .groundskeeper-ai-command-header {
+  border: 1px solid rgba(23, 54, 43, .08) !important;
+  background:
+    radial-gradient(circle at 92% 0%, rgba(221, 232, 208, .72), transparent 32%),
+    rgba(255, 253, 247, .84) !important;
+  box-shadow: 0 16px 36px rgba(23, 54, 43, .06) !important;
+}
+
+body:not(.is-login-screen) #groundskeeper-ai .groundskeeper-ai-command-header h3 {
+  letter-spacing: 0 !important;
+}
+
+.ai-training-studio {
+  display: grid;
+  grid-template-columns: minmax(360px, 1.08fr) minmax(340px, .92fr);
+  gap: 14px;
+  align-items: start;
+}
+
+.ai-training-chat-panel,
+.ai-training-library-panel,
+.ai-training-preview-panel {
+  border: 1px solid rgba(23, 54, 43, .08) !important;
+  border-radius: 22px !important;
+  background: rgba(255, 253, 247, .88) !important;
+  box-shadow: 0 16px 38px rgba(23, 54, 43, .06) !important;
+}
+
+.ai-training-preview-panel {
+  grid-column: 1 / -1;
+}
+
+.ai-training-panel-head {
+  display: flex;
+  gap: 14px;
+  align-items: flex-start;
+  justify-content: space-between;
+  margin-bottom: 14px;
+}
+
+.ai-training-panel-head h3 {
+  margin: 0;
+  color: #102f25;
+  font-size: clamp(1.15rem, 1.55vw, 1.55rem);
+  line-height: 1.1;
+}
+
+.ai-training-panel-head p:not(.eyebrow) {
+  max-width: 680px;
+  margin: 5px 0 0;
+  color: rgba(19, 36, 28, .62);
+  font-size: .88rem;
+  line-height: 1.45;
+}
+
+.training-chat-log,
+.training-preview-log {
+  display: grid;
+  gap: 10px;
+  min-height: 300px;
+  max-height: 520px;
+  padding: 12px;
+  overflow: auto;
+  border: 1px solid rgba(23, 54, 43, .08);
+  border-radius: 18px;
+  background: linear-gradient(180deg, rgba(247, 250, 242, .82), rgba(255, 253, 247, .76));
+}
+
+.training-preview-log {
+  min-height: 180px;
+  max-height: 320px;
+}
+
+.training-message,
+.training-preview-message {
+  width: min(88%, 720px);
+  padding: 11px 13px;
+  border-radius: 16px;
+  background: rgba(255, 253, 247, .9);
+  color: #123f31;
+  line-height: 1.45;
+  box-shadow: 0 8px 18px rgba(23, 54, 43, .045);
+}
+
+.training-message p,
+.training-preview-message {
+  margin: 0;
+}
+
+.training-message.is-user,
+.training-preview-message.is-user {
+  justify-self: end;
+  background: linear-gradient(135deg, #dfead3, #eef4e7);
+}
+
+.training-message.is-assistant,
+.training-preview-message.is-assistant {
+  justify-self: start;
+}
+
+.training-suggestion-stack {
+  display: grid;
+  gap: 9px;
+  margin-top: 11px;
+}
+
+.training-suggestion-card {
+  display: grid;
+  gap: 8px;
+  padding: 11px;
+  border: 1px solid rgba(23, 54, 43, .08);
+  border-radius: 15px;
+  background: rgba(247, 250, 242, .88);
+}
+
+.training-suggestion-card span {
+  display: block;
+  color: #71806f;
+  font-size: .66rem;
+  font-weight: 900;
+  letter-spacing: .13em;
+  line-height: 1;
+  text-transform: uppercase;
+}
+
+.training-suggestion-card strong {
+  display: block;
+  margin-top: 4px;
+  color: #102f25;
+}
+
+.training-suggestion-card p {
+  color: rgba(19, 36, 28, .7);
+  font-size: .84rem;
+}
+
+.training-suggestion-actions,
+.training-rule-actions,
+.ai-training-modal-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 7px;
+  align-items: center;
+}
+
+.training-chat-form,
+.training-preview-form {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 10px;
+  align-items: stretch;
+  margin-top: 12px;
+}
+
+.training-chat-form textarea,
+.training-preview-form input,
+.ai-training-modal-card input,
+.ai-training-modal-card select,
+.ai-training-modal-card textarea {
+  border: 1px solid rgba(23, 54, 43, .12);
+  border-radius: 15px;
+  background: rgba(255, 253, 247, .9);
+}
+
+.training-chat-form textarea {
+  min-height: 120px;
+  resize: vertical;
+}
+
+.training-library-list {
+  display: grid;
+  gap: 12px;
+  max-height: 720px;
+  overflow: auto;
+  padding-right: 4px;
+}
+
+.training-library-group {
+  display: grid;
+  gap: 8px;
+}
+
+.training-library-group-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 2px;
+}
+
+.training-library-group-head h4 {
+  margin: 0;
+  color: #102f25;
+  font-size: .92rem;
+}
+
+.training-library-group-head span,
+.training-library-footnote,
+.training-version-note {
+  color: rgba(19, 36, 28, .58);
+  font-size: .76rem;
+}
+
+.training-version-note {
+  margin: -4px 0 12px;
+  padding: 9px 11px;
+  border-radius: 13px;
+  background: rgba(229, 239, 225, .56);
+}
+
+.training-rule-card {
+  display: grid;
+  gap: 9px;
+  padding: 12px;
+  border: 1px solid rgba(23, 54, 43, .08);
+  border-radius: 16px;
+  background: rgba(255, 253, 247, .82);
+}
+
+.training-rule-card-head {
+  display: flex;
+  gap: 10px;
+  align-items: flex-start;
+  justify-content: space-between;
+}
+
+.training-rule-card strong {
+  display: block;
+  color: #102f25;
+  line-height: 1.2;
+}
+
+.training-rule-card small {
+  display: block;
+  margin-top: 4px;
+  color: rgba(19, 36, 28, .52);
+  font-size: .72rem;
+}
+
+.training-rule-card p {
+  display: -webkit-box;
+  margin: 0;
+  overflow: hidden;
+  color: rgba(19, 36, 28, .68);
+  font-size: .82rem;
+  line-height: 1.4;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 4;
+}
+
+.training-status-badge {
+  flex: 0 0 auto;
+  display: inline-grid;
+  place-items: center;
+  min-height: 24px;
+  padding: 4px 8px;
+  border-radius: 999px;
+  background: rgba(229, 239, 225, .74);
+  color: #123f31;
+  font-size: .68rem;
+  font-weight: 900;
+  line-height: 1;
+}
+
+.training-status-badge.is-approved {
+  background: rgba(238, 194, 82, .24);
+}
+
+.training-status-badge.is-live,
+.training-status-badge.is-published {
+  background: rgba(90, 133, 70, .16);
+  color: #2f6426;
+}
+
+.training-status-badge.is-archived {
+  background: rgba(19, 36, 28, .08);
+  color: #6e766d;
+}
+
+.training-preview-toggle {
+  display: inline-flex;
+  padding: 4px;
+  border: 1px solid rgba(23, 54, 43, .08);
+  border-radius: 999px;
+  background: rgba(255, 253, 247, .78);
+}
+
+.training-preview-toggle button {
+  min-height: 32px;
+  padding: 6px 11px;
+  border: 0;
+  border-radius: 999px;
+  background: transparent;
+  color: rgba(19, 36, 28, .62);
+  font-weight: 850;
+}
+
+.training-preview-toggle button.is-active {
+  background: #123f31;
+  color: #fffdf7;
+}
+
+.ai-training-modal {
+  position: fixed;
+  inset: 0;
+  z-index: 3200;
+  display: grid;
+  place-items: center;
+  padding: 24px;
+  background: rgba(16, 47, 37, .24);
+  backdrop-filter: blur(8px);
+}
+
+.ai-training-modal-card {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+  width: min(720px, calc(100vw - 32px));
+  max-height: min(82vh, 760px);
+  padding: 18px;
+  overflow: auto;
+  border: 1px solid rgba(23, 54, 43, .1);
+  border-radius: 24px;
+  background: #fffdf7;
+  box-shadow: 0 32px 90px rgba(23, 54, 43, .22);
+}
+
+.ai-training-modal-head,
+.ai-training-modal-card .span-full,
+.training-publish-copy,
+.training-publish-list,
+.ai-training-modal-actions {
+  grid-column: 1 / -1;
+}
+
+.ai-training-modal-head {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  align-items: flex-start;
+}
+
+.ai-training-modal-head h3 {
+  margin: 0;
+  color: #102f25;
+}
+
+.training-publish-copy {
+  margin: 0;
+  color: rgba(19, 36, 28, .72);
+  line-height: 1.45;
+}
+
+.training-publish-list {
+  display: grid;
+  gap: 7px;
+  padding: 10px;
+  border-radius: 14px;
+  background: rgba(247, 250, 242, .84);
+}
+
+.training-publish-list span {
+  color: #123f31;
+  font-size: .84rem;
+  font-weight: 800;
+}
+
+@media (max-width: 1200px) and (min-width: 901px) {
+  .ai-training-studio {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 900px) {
+  .ai-training-studio,
+  .training-chat-form,
+  .training-preview-form,
+  .ai-training-modal-card {
+    grid-template-columns: 1fr;
+  }
+
+  .training-chat-log,
+  .training-library-list {
+    max-height: none;
+  }
+
+  .ai-training-panel-head,
+  .training-rule-card-head {
+    display: grid;
+    grid-template-columns: 1fr;
+  }
+
+  .training-preview-toggle {
+    width: 100%;
+  }
+
+  .training-preview-toggle button {
+    flex: 1;
+  }
+}
+
 /* Closed sidebar rail fit: keep the icon-only state compact and uncut. */
 @media (min-width: 901px) {
   body:not(.is-login-screen) .app-view:not(.is-sidebar-open):not(:has(.dashboard-sidebar:hover)):not(:has(.dashboard-sidebar :focus-visible)) {

@@ -39,7 +39,44 @@ Rules:
 
 const UNAVAILABLE_REPLY = "Sorry, the AI helper is not available right now. You can still request a free quote.";
 const PUBLIC_TABLES = ["ai_settings", "ai_knowledge", "ai_faqs", "ai_rules", "ai_saved_answers"];
-const ADMIN_TABLES = [...PUBLIC_TABLES, "ai_conversation_logs", "ai_feedback"];
+const ADMIN_TABLES = [...PUBLIC_TABLES, "ai_conversation_logs", "ai_feedback", "ai_training_rules", "ai_helper_versions"];
+const TRAINING_CATEGORIES = new Set([
+  "tone",
+  "services",
+  "service_area",
+  "pricing",
+  "faq",
+  "lead_capture",
+  "escalation",
+  "do_dont",
+  "website_reference",
+  "other"
+]);
+const TRAINING_STATUSES = new Set(["draft", "approved", "live", "archived"]);
+
+const TRAINING_ROOM_CONTEXT = `
+You are helping Tyler train the Urban Yards public website AI helper.
+
+Your job is to turn plain-language instructions into clean, usable assistant guidance.
+Respond conversationally first, then propose structured training rules Tyler can save.
+
+Return JSON only in this shape:
+{
+  "reply": "A short conversational response to Tyler.",
+  "suggestions": [
+    {
+      "title": "Short title",
+      "category": "tone | services | service_area | pricing | faq | lead_capture | escalation | do_dont | website_reference | other",
+      "content": "The exact guidance the public helper should follow.",
+      "visibility": "public",
+      "priority": 50
+    }
+  ]
+}
+
+Keep training suggestions specific, business-safe, and ready for a public-facing website helper after approval.
+Do not mark anything live. New suggestions are draft until Tyler approves and publishes them.
+`;
 
 function cleanMessages(history = []) {
   return history
@@ -63,6 +100,10 @@ function asArray(value) {
   return Array.isArray(value) ? value : [];
 }
 
+function ownerEmail() {
+  return (process.env.VITE_DASHBOARD_OWNER_EMAIL || "team@urbanyards.us").toLowerCase();
+}
+
 function itemText(item) {
   return item.content || item.value || item.answer || item.rule_text || item.summary || "";
 }
@@ -76,6 +117,17 @@ function publicFilter(item) {
     && String(item.visibility || "public").toLowerCase() === "public";
 }
 
+function liveTrainingFilter(item) {
+  return String(item.status || "").toLowerCase() === "live"
+    && String(item.visibility || "public").toLowerCase() === "public";
+}
+
+function trainingDraftFilter(item) {
+  const status = String(item.status || "draft").toLowerCase();
+  return ["draft", "approved", "live"].includes(status)
+    && String(item.visibility || "public").toLowerCase() === "public";
+}
+
 async function tableRows(table, query = "select=*&order=updated_at.desc") {
   try {
     return await supabaseAdminRequest(`${table}?${query}`, { method: "GET" });
@@ -86,12 +138,13 @@ async function tableRows(table, query = "select=*&order=updated_at.desc") {
 }
 
 async function loadAiKnowledge(mode) {
-  const [settings, knowledge, faqs, rules, savedAnswers] = await Promise.all([
+  const [settings, knowledge, faqs, rules, savedAnswers, trainingRules] = await Promise.all([
     tableRows("ai_settings"),
     tableRows("ai_knowledge"),
     tableRows("ai_faqs"),
     tableRows("ai_rules"),
-    tableRows("ai_saved_answers")
+    tableRows("ai_saved_answers"),
+    tableRows("ai_training_rules", "select=*&order=priority.asc,updated_at.desc")
   ]);
   const filter = mode === "public" ? publicFilter : () => true;
   return {
@@ -99,21 +152,38 @@ async function loadAiKnowledge(mode) {
     knowledge: asArray(knowledge).filter(filter),
     faqs: asArray(faqs).filter(filter),
     rules: asArray(rules).filter(filter),
-    savedAnswers: asArray(savedAnswers).filter(filter)
+    savedAnswers: asArray(savedAnswers).filter(filter),
+    trainingRules: asArray(trainingRules).filter(mode === "public" ? liveTrainingFilter : () => true)
+  };
+}
+
+async function loadPreviewKnowledge(version) {
+  const ai = await loadAiKnowledge("dashboard");
+  const useDrafts = version === "draft";
+  return {
+    ...ai,
+    settings: ai.settings.filter(publicFilter),
+    knowledge: ai.knowledge.filter(publicFilter),
+    faqs: ai.faqs.filter(publicFilter),
+    rules: ai.rules.filter(publicFilter),
+    savedAnswers: ai.savedAnswers.filter(publicFilter),
+    trainingRules: ai.trainingRules.filter(useDrafts ? trainingDraftFilter : liveTrainingFilter)
   };
 }
 
 async function adminSnapshot() {
-  const [settings, knowledge, faqs, rules, savedAnswers, logs, feedback] = await Promise.all([
+  const [settings, knowledge, faqs, rules, savedAnswers, logs, feedback, trainingRules, versions] = await Promise.all([
     tableRows("ai_settings"),
     tableRows("ai_knowledge"),
     tableRows("ai_faqs"),
     tableRows("ai_rules"),
     tableRows("ai_saved_answers"),
     tableRows("ai_conversation_logs", "select=*&order=created_at.desc&limit=100"),
-    tableRows("ai_feedback", "select=*&order=created_at.desc&limit=100")
+    tableRows("ai_feedback", "select=*&order=created_at.desc&limit=100"),
+    tableRows("ai_training_rules", "select=*&order=priority.asc,updated_at.desc"),
+    tableRows("ai_helper_versions", "select=*&order=published_at.desc&limit=25")
   ]);
-  return { settings, knowledge, faqs, rules, savedAnswers, logs, feedback, fallback: publicKnowledgeSnapshot() };
+  return { settings, knowledge, faqs, rules, savedAnswers, logs, feedback, trainingRules, versions, fallback: publicKnowledgeSnapshot() };
 }
 
 function buildDynamicContext(ai, mode) {
@@ -126,7 +196,8 @@ function buildDynamicContext(ai, mode) {
     ["Knowledge base", ai.knowledge],
     ["FAQs", ai.faqs],
     ["Approved rules", ai.rules],
-    ["Saved answers", ai.savedAnswers]
+    ["Saved answers", ai.savedAnswers],
+    ["Training studio rules", ai.trainingRules || []]
   ];
   groups.forEach(([label, rows]) => {
     if (!rows.length) return;
@@ -177,9 +248,208 @@ function requireAdmin(req) {
   return verifyOwner({ headers: req.headers || {} });
 }
 
+async function openAiChat(messages, { mode = "dashboard", json = false, maxTokens = 520, temperature = 0.45 } = {}) {
+  if (!shouldUseExternalAi()) {
+    const error = new Error(UNAVAILABLE_REPLY);
+    error.statusCode = 503;
+    throw error;
+  }
+  const response = await fetch("https://api.openai.com/v1/chat/completions", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${process.env.OPENAI_API_KEY}`
+    },
+    body: JSON.stringify({
+      model: process.env.OPENAI_MODEL || "gpt-4.1-mini",
+      messages,
+      temperature,
+      max_tokens: maxTokens,
+      ...(json ? { response_format: { type: "json_object" } } : {})
+    }),
+    signal: AbortSignal.timeout(12000)
+  });
+  if (!response.ok) throw new Error(`OpenAI request failed (${response.status})`);
+  const data = await response.json();
+  const reply = data?.choices?.[0]?.message?.content?.trim();
+  if (!reply) throw new Error(`The Groundskeeper ${mode} response was empty.`);
+  return reply;
+}
+
+function parseTrainingJson(value, fallbackTitle) {
+  try {
+    const parsed = JSON.parse(value);
+    const suggestions = asArray(parsed.suggestions).slice(0, 4).map((item) => ({
+      title: String(item.title || fallbackTitle || "Training note").slice(0, 120),
+      category: TRAINING_CATEGORIES.has(String(item.category || "").toLowerCase()) ? String(item.category).toLowerCase() : "other",
+      content: String(item.content || "").slice(0, 4000),
+      visibility: item.visibility === "internal" ? "internal" : "public",
+      priority: Number(item.priority || 50) || 50,
+      status: "draft"
+    })).filter((item) => item.content);
+    return {
+      reply: String(parsed.reply || "I turned that into training guidance you can review.").slice(0, 1600),
+      suggestions
+    };
+  } catch (error) {
+    return {
+      reply: value.slice(0, 1600),
+      suggestions: [{
+        title: fallbackTitle || "Training note",
+        category: "other",
+        content: value.slice(0, 4000),
+        visibility: "public",
+        priority: 50,
+        status: "draft"
+      }]
+    };
+  }
+}
+
+function normalizeTrainingRule(record = {}) {
+  const now = new Date().toISOString();
+  const category = String(record.category || "other").toLowerCase();
+  const status = String(record.status || "draft").toLowerCase();
+  const body = {
+    ...(record.id ? { id: record.id } : {}),
+    title: String(record.title || "Training rule").slice(0, 160),
+    category: TRAINING_CATEGORIES.has(category) ? category : "other",
+    content: String(record.content || "").slice(0, 5000),
+    visibility: record.visibility === "internal" ? "internal" : "public",
+    status: TRAINING_STATUSES.has(status) ? status : "draft",
+    priority: Number(record.priority || 50) || 50,
+    updated_at: now,
+    ...(status === "archived" ? { archived_at: now } : {}),
+    ...(status === "live" ? { published_at: record.published_at || now } : {})
+  };
+  return body;
+}
+
+async function upsertTrainingRule(record) {
+  const body = normalizeTrainingRule(record);
+  if (!body.content.trim()) throw new Error("Training rule content is required.");
+  const result = await supabaseAdminRequest("ai_training_rules?on_conflict=id", {
+    method: "POST",
+    headers: { Prefer: "resolution=merge-duplicates,return=representation" },
+    body: JSON.stringify(body)
+  });
+  return Array.isArray(result) ? result[0] : result;
+}
+
+async function patchTrainingRule(id, values) {
+  if (!id) throw new Error("Training rule id is required.");
+  const result = await supabaseAdminRequest(`ai_training_rules?id=eq.${encodeURIComponent(id)}`, {
+    method: "PATCH",
+    headers: { Prefer: "return=representation" },
+    body: JSON.stringify({
+      ...values,
+      updated_at: new Date().toISOString()
+    })
+  });
+  return Array.isArray(result) ? result[0] : result;
+}
+
+async function trainingChatAction(payload) {
+  if (String(payload.message || "").length > 1800) {
+    const error = new Error("Please keep training instructions under 1800 characters.");
+    error.statusCode = 400;
+    throw error;
+  }
+  const userMessage = text(payload.message, 1800);
+  if (!userMessage) throw new Error("Training message is required.");
+  const ai = await loadAiKnowledge("dashboard").catch(() => ({ settings: [], knowledge: [], faqs: [], rules: [], savedAnswers: [], trainingRules: [] }));
+  const content = await openAiChat([
+    { role: "system", content: BUSINESS_CONTEXT },
+    { role: "system", content: TRAINING_ROOM_CONTEXT },
+    { role: "system", content: buildDynamicContext(ai, "dashboard") },
+    ...cleanMessages(payload.history),
+    { role: "user", content: userMessage }
+  ], { mode: "training", json: true, maxTokens: 720, temperature: 0.35 });
+  return parseTrainingJson(content, userMessage.slice(0, 80));
+}
+
+async function previewHelperAction(payload) {
+  if (String(payload.message || "").length > 1400) {
+    const error = new Error("Please keep preview questions under 1400 characters.");
+    error.statusCode = 400;
+    throw error;
+  }
+  const userMessage = text(payload.message, 1400);
+  if (!userMessage) throw new Error("Preview message is required.");
+  const version = payload.version === "live" ? "live" : "draft";
+  const aiKnowledge = await loadPreviewKnowledge(version).catch(() => ({ settings: [], knowledge: [], faqs: [], rules: [], savedAnswers: [], trainingRules: [] }));
+  const siteContext = buildSiteContext(userMessage, payload.page || "Dashboard preview");
+  const reply = await openAiChat([
+    { role: "system", content: BUSINESS_CONTEXT },
+    { role: "system", content: "You are previewing exactly how the public website helper should answer a visitor. Do not mention internal dashboard tools, drafts, or training workflow." },
+    { role: "system", content: siteContext },
+    { role: "system", content: buildDynamicContext(aiKnowledge, "public-preview") },
+    ...cleanMessages(payload.history),
+    { role: "user", content: userMessage }
+  ], { mode: "preview", maxTokens: 420, temperature: 0.4 });
+  return { reply, version };
+}
+
+async function publishTrainingRules() {
+  const now = new Date().toISOString();
+  const approved = asArray(await tableRows("ai_training_rules", "select=*&status=eq.approved&order=priority.asc,updated_at.desc"));
+  for (const rule of approved) {
+    await patchTrainingRule(rule.id, {
+      status: "live",
+      published_at: now,
+      archived_at: null
+    });
+  }
+  const liveRules = asArray(await tableRows("ai_training_rules", "select=*&status=eq.live&order=priority.asc,updated_at.desc"));
+  const systemPromptSnapshot = [
+    BUSINESS_CONTEXT,
+    "Live AI Helper Training Rules:",
+    ...liveRules.map((rule) => `- ${rule.title} [${rule.category}]: ${rule.content}`)
+  ].join("\n");
+
+  const versionResult = await supabaseAdminRequest("ai_helper_versions", {
+    method: "POST",
+    headers: { Prefer: "return=representation" },
+    body: JSON.stringify({
+      version_name: `Live helper version ${new Date(now).toLocaleString("en-US", { timeZone: "America/Los_Angeles" })}`,
+      published_at: now,
+      published_by: ownerEmail(),
+      rule_ids: liveRules.map((rule) => rule.id),
+      system_prompt_snapshot: systemPromptSnapshot,
+      notes: `${approved.length} approved training item${approved.length === 1 ? "" : "s"} pushed live.`
+    })
+  });
+
+  await supabaseAdminRequest("ai_settings?on_conflict=setting_key", {
+    method: "POST",
+    headers: { Prefer: "resolution=merge-duplicates,return=representation" },
+    body: JSON.stringify({ setting_key: "last_published_at", label: "Last Published", value: now, visibility: "internal", status: "published" })
+  });
+
+  return {
+    publishedAt: now,
+    publishedCount: approved.length,
+    liveCount: liveRules.length,
+    version: Array.isArray(versionResult) ? versionResult[0] : versionResult
+  };
+}
+
 async function adminAction(req, res, id, action, payload) {
   if (!(await requireAdmin(req))) return res.status(401).json({ error: "Unauthorized", requestId: id });
+  if (action === "training-chat" || action === "preview-helper") {
+    const limit = rateLimit(`groundskeeper-admin:${action}:${clientIp(req)}`, 30, 10 * 60 * 1000);
+    if (!limit.allowed) {
+      res.setHeader("Retry-After", String(limit.retryAfter));
+      return res.status(429).json({ error: "Too many training requests. Please try again shortly.", requestId: id });
+    }
+  }
   if (action === "admin-list") return res.status(200).json({ ...(await adminSnapshot()), requestId: id });
+  if (action === "training-chat") return res.status(200).json({ ...(await trainingChatAction(payload)), requestId: id });
+  if (action === "preview-helper") return res.status(200).json({ ...(await previewHelperAction(payload)), requestId: id });
+  if (action === "upsert-training-rule") return res.status(200).json({ record: await upsertTrainingRule(payload.record || {}), requestId: id });
+  if (action === "approve-training-rule") return res.status(200).json({ record: await patchTrainingRule(payload.id, { status: "approved", archived_at: null }), requestId: id });
+  if (action === "archive-training-rule") return res.status(200).json({ record: await patchTrainingRule(payload.id, { status: "archived", archived_at: new Date().toISOString() }), requestId: id });
+  if (action === "publish-training") return res.status(200).json({ ...(await publishTrainingRules()), requestId: id });
   if (action === "publish") {
     const now = new Date().toISOString();
     await supabaseAdminRequest("ai_settings?on_conflict=setting_key", {
@@ -210,6 +480,20 @@ async function adminAction(req, res, id, action, payload) {
   return res.status(400).json({ error: "Unsupported admin action.", requestId: id });
 }
 
+function isAdminAction(action) {
+  return String(action).startsWith("admin-")
+    || [
+      "upsert",
+      "publish",
+      "training-chat",
+      "preview-helper",
+      "upsert-training-rule",
+      "approve-training-rule",
+      "archive-training-rule",
+      "publish-training"
+    ].includes(action);
+}
+
 async function handler(req, res) {
   const id = requestId(req);
   setApiHeaders(res, id);
@@ -222,12 +506,12 @@ async function handler(req, res) {
   const { action = "chat", mode: rawMode = "public", message = "", history = [], page = "", lead = {}, context = {}, payload = {} } = req.body || {};
   const mode = sanitizeMode(rawMode);
 
-  if (String(action).startsWith("admin-") || action === "upsert" || action === "publish") {
+  if (isAdminAction(action)) {
     try {
       return await adminAction(req, res, id, action, payload);
     } catch (error) {
       console.error(JSON.stringify({ event: "groundskeeper_admin_error", requestId: id, message: error.message }));
-      return res.status(500).json({ error: error.message || "Unable to manage Groundskeeper AI.", requestId: id });
+      return res.status(error.statusCode || 500).json({ error: error.message || "Unable to manage Groundskeeper AI.", requestId: id });
     }
   }
 

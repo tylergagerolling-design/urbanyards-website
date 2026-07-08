@@ -30,6 +30,70 @@ body:not(.is-login-screen) .dashboard-section:not(.is-active) {
   display: none !important;
 }
 
+body:not(.is-login-screen) #outreach [hidden],
+body:not(.is-login-screen) #outreach [data-outreach-view-panel][hidden] {
+  display: none !important;
+}
+
+body:not(.is-login-screen) #outreach.dashboard-section.is-active {
+  display: flex !important;
+  flex-direction: column !important;
+  align-items: stretch !important;
+  gap: 14px !important;
+  height: auto !important;
+  min-height: 0 !important;
+  max-height: none !important;
+  overflow: visible !important;
+}
+
+body:not(.is-login-screen) #outreach [data-outreach-view-panel]:not([hidden]) {
+  display: block !important;
+  position: relative !important;
+  width: 100% !important;
+  min-width: 0 !important;
+  max-width: 100% !important;
+  height: auto !important;
+  max-height: none !important;
+  overflow: visible !important;
+}
+
+body:not(.is-login-screen) #outreach .outreach-pipeline-panel:not([hidden]) {
+  display: flex !important;
+  flex-direction: column !important;
+  gap: 14px !important;
+}
+
+body:not(.is-login-screen) #outreach .outreach-layout,
+body:not(.is-login-screen) #outreach .outreach-secondary-layout {
+  display: grid !important;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)) !important;
+  align-items: start !important;
+  gap: 14px !important;
+  width: 100% !important;
+  min-width: 0 !important;
+  overflow: visible !important;
+}
+
+body:not(.is-login-screen) #outreach .outreach-card-list {
+  display: grid !important;
+  grid-template-columns: 1fr !important;
+  align-items: start !important;
+  gap: 10px !important;
+  min-width: 0 !important;
+  max-height: none !important;
+  overflow: visible !important;
+}
+
+body:not(.is-login-screen) #outreach .outreach-main-panel,
+body:not(.is-login-screen) #outreach .outreach-priority-panel,
+body:not(.is-login-screen) #outreach .outreach-archive-panel,
+body:not(.is-login-screen) #outreach .outreach-card {
+  position: relative !important;
+  min-width: 0 !important;
+  height: auto !important;
+  max-height: none !important;
+}
+
 body:not(.is-login-screen) #overview.dashboard-section.is-active,
 body:not(.is-login-screen) #calendar.dashboard-section.is-active {
   display: grid !important;
@@ -69,6 +133,10 @@ body:not(.is-login-screen) .equipment-table-wrap {
   max-height: min(72dvh, 760px) !important;
   overflow-x: auto !important;
   overflow-y: auto !important;
+}
+
+body:not(.is-login-screen) #outreach .outreach-table-wrap {
+  max-height: min(62dvh, 680px) !important;
 }
 
 body:not(.is-login-screen) .groundskeeper-ai-chat,

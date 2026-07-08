@@ -11752,18 +11752,39 @@ body:not(.is-login-screen) .sidebar-notification-button span.notification-count 
 body:not(.is-login-screen) .sidebar-notifications-panel {
   display: grid !important;
   gap: 10px !important;
-  width: 100% !important;
-  max-height: min(44vh, 360px) !important;
-  padding: 12px !important;
+  position: fixed !important;
+  left: 332px !important;
+  bottom: 28px !important;
+  z-index: 2600 !important;
+  width: min(390px, calc(100vw - 372px)) !important;
+  max-height: min(72vh, 520px) !important;
+  padding: 14px !important;
   overflow: auto !important;
-  border: 1px solid rgba(23, 54, 43, .1) !important;
-  border-radius: 18px !important;
-  background: rgba(255, 253, 247, .94) !important;
-  box-shadow: 0 18px 38px rgba(23, 54, 43, .12) !important;
+  border: 1px solid rgba(23, 54, 43, .12) !important;
+  border-radius: 22px !important;
+  background:
+    radial-gradient(circle at 92% 0%, rgba(221, 232, 208, .7), transparent 34%),
+    rgba(255, 253, 247, .98) !important;
+  box-shadow: 0 24px 70px rgba(23, 54, 43, .22), 0 8px 20px rgba(23, 54, 43, .08) !important;
+  backdrop-filter: blur(18px) saturate(125%) !important;
 }
 
 body:not(.is-login-screen) .sidebar-notifications-panel[hidden] {
   display: none !important;
+}
+
+body:not(.is-login-screen) .sidebar-notifications-panel::before {
+  content: "" !important;
+  position: fixed !important;
+  left: 320px !important;
+  bottom: 46px !important;
+  width: 18px !important;
+  height: 18px !important;
+  border-left: 1px solid rgba(23, 54, 43, .12) !important;
+  border-bottom: 1px solid rgba(23, 54, 43, .12) !important;
+  background: rgba(255, 253, 247, .98) !important;
+  transform: rotate(45deg) !important;
+  box-shadow: -4px 6px 12px rgba(23, 54, 43, .06) !important;
 }
 
 body:not(.is-login-screen) .sidebar-notifications-heading {
@@ -11861,4 +11882,19 @@ body:not(.is-login-screen) .sidebar-notification-more {
   color: #667567 !important;
   font-size: .76rem !important;
   line-height: 1.35 !important;
+}
+
+@media (max-width: 900px) {
+  body:not(.is-login-screen) .sidebar-notifications-panel {
+    left: 16px !important;
+    right: 16px !important;
+    bottom: 16px !important;
+    width: auto !important;
+    max-height: min(72vh, 520px) !important;
+    border-radius: 22px !important;
+  }
+
+  body:not(.is-login-screen) .sidebar-notifications-panel::before {
+    display: none !important;
+  }
 }

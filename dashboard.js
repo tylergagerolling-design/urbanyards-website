@@ -122,6 +122,19 @@
   };
 
   const els = {};
+  const sectionAliases = {
+    home: "overview",
+    work: "calendar",
+    properties: "contacts",
+    more: "settings",
+    quotes: "documents",
+    pipeline: "documents",
+    schedule: "calendar",
+    operations: "overview",
+    "command-center": "overview",
+    notes: "settings",
+    reminders: "settings"
+  };
   let demoIdCount = 100;
   let googleRouteMap = null;
   let googleRouteLine = null;
@@ -3118,16 +3131,9 @@
   }
 
   function setActiveSection(section) {
-    const sectionMap = {
-      quotes: "documents",
-      pipeline: "documents",
-      schedule: "calendar",
-      operations: "overview",
-      "command-center": "overview",
-      notes: "settings",
-      reminders: "settings"
-    };
-    state.activeSection = sectionMap[section] || section || "overview";
+    const requestedSection = sectionAliases[section] || section || "overview";
+    const hasSection = Boolean(qs(`[data-section="${cssEscape(requestedSection)}"]`));
+    state.activeSection = hasSection ? requestedSection : "overview";
     qsa("[data-section]").forEach((node) => {
       node.classList.toggle("is-active", node.dataset.section === state.activeSection);
     });
@@ -8520,7 +8526,7 @@
     cacheElements();
     bindEvents();
     const hashSection = window.location.hash.replace("#", "");
-    if (hashSection) state.activeSection = hashSection === "operations" || hashSection === "command-center" ? "overview" : hashSection;
+    if (hashSection) state.activeSection = sectionAliases[hashSection] || hashSection;
 
     if (isDemoMode()) {
       clearSession();

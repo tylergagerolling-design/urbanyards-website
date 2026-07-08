@@ -11474,6 +11474,7 @@ body:not(.is-login-screen) #calendar .work-filter-row select {
    recent visual redesigns. Earlier scoped rules set Overview and Work to grid
    with !important, which can override the tab visibility state. */
 body:not(.is-login-screen) .dashboard-section:not(.is-active),
+body:not(.is-login-screen) :is(#overview, #outreach, #calendar, #route-planner, #equipment, #documents, #contacts, #groundskeeper-ai, #settings).dashboard-section:not(.is-active),
 body:not(.is-login-screen) #overview.dashboard-section:not(.is-active),
 body:not(.is-login-screen) #calendar.dashboard-section:not(.is-active) {
   display: none !important;

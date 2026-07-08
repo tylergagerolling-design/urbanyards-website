@@ -11582,3 +11582,64 @@ body:not(.is-login-screen) #overview .operations-command-item h4 {
     max-width: none !important;
   }
 }
+
+/* Dashboard route planner containment repair: the route page predates the
+   fixed-height command-center shell, so its sticky form and tall stop list can
+   overflow the active section. Keep the route tools usable within the app. */
+body:not(.is-login-screen) #route-planner.dashboard-section.is-active {
+  overflow: auto !important;
+}
+
+body:not(.is-login-screen) #route-planner .route-planner-shell {
+  gap: 14px !important;
+  min-height: 0 !important;
+}
+
+body:not(.is-login-screen) #route-planner .route-hero {
+  grid-template-columns: minmax(0, 1fr) minmax(240px, 320px) !important;
+  gap: 14px !important;
+  padding: 22px !important;
+  border-radius: 20px !important;
+}
+
+body:not(.is-login-screen) #route-planner .route-hero h3 {
+  font-size: clamp(2rem, 3.8vw, 3.6rem) !important;
+  line-height: .96 !important;
+}
+
+body:not(.is-login-screen) #route-planner .route-layout {
+  grid-template-columns: minmax(280px, 360px) minmax(0, 1fr) !important;
+  gap: 14px !important;
+  align-items: start !important;
+  min-height: 0 !important;
+}
+
+body:not(.is-login-screen) #route-planner .route-form-panel {
+  position: static !important;
+  top: auto !important;
+}
+
+body:not(.is-login-screen) #route-planner .route-list-panel,
+body:not(.is-login-screen) #route-planner .route-map-panel,
+body:not(.is-login-screen) #route-planner .route-form-panel {
+  min-height: 0 !important;
+  border-radius: 20px !important;
+}
+
+body:not(.is-login-screen) #route-planner .route-stop-list {
+  max-height: min(44vh, 430px) !important;
+  overflow: auto !important;
+  padding-right: 4px !important;
+}
+
+body:not(.is-login-screen) #route-planner .route-map {
+  min-height: 260px !important;
+  max-height: 360px !important;
+}
+
+@media (max-width: 980px) {
+  body:not(.is-login-screen) #route-planner .route-hero,
+  body:not(.is-login-screen) #route-planner .route-layout {
+    grid-template-columns: 1fr !important;
+  }
+}

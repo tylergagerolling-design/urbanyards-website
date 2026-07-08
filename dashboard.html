@@ -11,7 +11,7 @@
     <link rel="icon" href="/favicon.ico" sizes="any">
     <link rel="apple-touch-icon" href="/apple-touch-icon.png">
     <link rel="manifest" href="/dashboard.webmanifest">
-    <link rel="stylesheet" href="dashboard.css?v=20260708-dashboard-repair-11">
+    <link rel="stylesheet" href="dashboard.css?v=20260708-dashboard-repair-12">
     <link rel="stylesheet" href="dashboard-mobile-fix.css?v=20260622-3">
     <script src="dashboard-config.js?v=20260623-1" defer></script>
     <script src="dashboard.js?v=20260708-dashboard-repair-11" defer></script>
@@ -32,12 +32,17 @@
             <label>Password
               <input name="password" type="password" autocomplete="current-password" required>
             </label>
-            <button type="submit"><span class="button-icon" aria-hidden="true">L</span><span>Sign In</span></button>
+            <button type="submit">
+              <svg class="login-button-key-icon" aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M2.586 17.414A2 2 0 0 0 2 18.828V21a1 1 0 0 0 1 1h3a1 1 0 0 0 1-1v-1a1 1 0 0 1 1-1h1a1 1 0 0 0 1-1v-1a1 1 0 0 1 1-1h.172a2 2 0 0 0 1.414-.586l.814-.814a6.5 6.5 0 1 0-4-4z"></path>
+                <circle cx="16.5" cy="7.5" r=".5" fill="currentColor"></circle>
+              </svg>
+              <span>Sign In</span>
+            </button>
             <p class="form-note">Protected by Supabase Auth. Public sign-up is not available.</p>
             <p class="form-status" data-login-status role="status"></p>
           </form>
         </div>
-        <p class="login-tagline">First Impressions Start Here</p>
       </section>
 
       <section class="app-view" data-view="app" hidden>

@@ -7729,8 +7729,8 @@ body:not(.is-login-screen) .dashboard-topbar {
   --uy-app-soft-2: #dde8d0;
   --uy-app-ink: #102f25;
   --uy-app-muted: #6f776e;
-  --uy-app-shadow: 0 22px 60px rgba(23, 54, 43, .1);
-  --uy-app-shadow-soft: 0 14px 34px rgba(23, 54, 43, .07);
+  --uy-app-shadow: 0 18px 42px rgba(23, 54, 43, .08);
+  --uy-app-shadow-soft: 0 10px 26px rgba(23, 54, 43, .055);
 }
 
 body:not(.is-login-screen) {
@@ -7743,11 +7743,11 @@ body:not(.is-login-screen) {
 
 body:not(.is-login-screen) .app-view {
   display: grid !important;
-  grid-template-columns: 338px minmax(0, 1fr) !important;
-  gap: 26px !important;
+  grid-template-columns: 292px minmax(0, 1fr) !important;
+  gap: 22px !important;
   min-height: 100vh !important;
   height: 100vh !important;
-  padding: 24px !important;
+  padding: 20px !important;
   overflow: hidden !important;
   background: transparent !important;
 }
@@ -7757,16 +7757,16 @@ body:not(.is-login-screen) .dashboard-sidebar:hover,
 body:not(.is-login-screen) .dashboard-sidebar:focus-within,
 body:not(.is-login-screen) .app-view.is-sidebar-open .dashboard-sidebar {
   position: sticky !important;
-  top: 24px !important;
+  top: 20px !important;
   grid-column: 1 !important;
   width: 100% !important;
   max-width: none !important;
-  height: calc(100vh - 48px) !important;
-  max-height: calc(100vh - 48px) !important;
+  height: calc(100vh - 40px) !important;
+  max-height: calc(100vh - 40px) !important;
   padding: 0 !important;
   overflow: visible !important;
   border: 1px solid rgba(23, 54, 43, .1) !important;
-  border-radius: 28px !important;
+  border-radius: 24px !important;
   background: linear-gradient(145deg, rgba(255, 253, 247, .96), rgba(248, 246, 238, .9)) !important;
   box-shadow: var(--uy-app-shadow) !important;
   color: var(--uy-app-ink) !important;
@@ -7778,14 +7778,14 @@ body:not(.is-login-screen) .app-view.is-sidebar-open .dashboard-sidebar {
   flex-direction: column;
   height: 100%;
   min-height: 0;
-  padding: 24px;
+  padding: 20px;
 }
 
 body:not(.is-login-screen) .dashboard-brand {
-  display: flex !important;
-  align-items: center !important;
-  gap: 12px !important;
-  margin: 0 0 28px !important;
+  display: grid !important;
+  justify-items: start !important;
+  gap: 8px !important;
+  margin: 0 0 22px !important;
   padding: 0 !important;
   border: 0 !important;
   background: transparent !important;
@@ -7794,8 +7794,9 @@ body:not(.is-login-screen) .dashboard-brand {
 }
 
 body:not(.is-login-screen) .dashboard-brand img {
-  width: 72px !important;
-  height: 72px !important;
+  width: 178px !important;
+  height: auto !important;
+  max-height: 74px !important;
   object-fit: contain !important;
   border-radius: 0 !important;
   background: transparent !important;
@@ -7813,7 +7814,7 @@ body:not(.is-login-screen) .sign-out {
 }
 
 body:not(.is-login-screen) .dashboard-brand strong {
-  display: block;
+  display: none;
   color: var(--uy-app-ink) !important;
   font-size: 1.05rem;
   line-height: 1;
@@ -7823,7 +7824,7 @@ body:not(.is-login-screen) .dashboard-brand strong {
 
 body:not(.is-login-screen) .dashboard-brand small {
   display: block;
-  margin-top: 5px;
+  margin-top: 0;
   color: #72806f !important;
   font-size: .66rem;
   font-weight: 800;
@@ -7833,7 +7834,7 @@ body:not(.is-login-screen) .dashboard-brand small {
 
 body:not(.is-login-screen) .dashboard-nav {
   display: grid !important;
-  gap: 10px !important;
+  gap: 7px !important;
   margin: 0 !important;
 }
 
@@ -7844,13 +7845,13 @@ body:not(.is-login-screen) .dashboard-nav a,
   grid-template-columns: 38px minmax(0, 1fr) !important;
   align-items: center !important;
   gap: 12px !important;
-  min-height: 52px !important;
-  padding: 8px 14px !important;
+  min-height: 46px !important;
+  padding: 6px 12px !important;
   border: 1px solid transparent !important;
-  border-radius: 17px !important;
+  border-radius: 15px !important;
   background: transparent !important;
   color: #192c24 !important;
-  font-size: .98rem !important;
+  font-size: .92rem !important;
   font-weight: 750 !important;
   text-decoration: none !important;
   transition: background .18s ease, border-color .18s ease, transform .18s ease, box-shadow .18s ease !important;
@@ -7898,11 +7899,20 @@ body:not(.is-login-screen) .nav-icon img,
   width: 19px;
   height: 19px;
   object-fit: contain;
+  filter: none !important;
+}
+
+body:not(.is-login-screen) .dashboard-nav a.is-active .nav-icon,
+body:not(.is-login-screen) .dashboard-nav a.is-active .nav-icon img,
+body:not(.is-login-screen) .dashboard-nav a:hover .nav-icon,
+body:not(.is-login-screen) .dashboard-nav a:hover .nav-icon img {
+  color: var(--uy-app-ink) !important;
+  filter: none !important;
 }
 
 .sidebar-quick-actions {
-  margin-top: 30px;
-  padding-top: 22px;
+  margin-top: 22px;
+  padding-top: 18px;
   border-top: 1px solid rgba(23, 54, 43, .1);
 }
 
@@ -7917,16 +7927,16 @@ body:not(.is-login-screen) .nav-icon img,
 
 .sidebar-quick-action-list {
   display: grid;
-  gap: 8px;
+  gap: 7px;
 }
 
 .sidebar-quick-action,
 .sidebar-manage-link {
   width: 100%;
-  min-height: 46px !important;
+  min-height: 42px !important;
   border-color: rgba(23, 54, 43, .09) !important;
   background: rgba(255, 253, 247, .68) !important;
-  font-size: .91rem !important;
+  font-size: .86rem !important;
   text-align: left;
 }
 
@@ -7937,9 +7947,9 @@ body:not(.is-login-screen) .nav-icon img,
 
 .sidebar-bottom {
   display: grid;
-  gap: 16px;
+  gap: 12px;
   margin-top: auto;
-  padding-top: 20px;
+  padding-top: 16px;
   border-top: 1px solid rgba(23, 54, 43, .1);
 }
 
@@ -7965,14 +7975,14 @@ body:not(.is-login-screen) .nav-icon img,
 
 .sidebar-profile {
   display: grid;
-  grid-template-columns: 48px minmax(0, 1fr) 16px;
+  grid-template-columns: 42px minmax(0, 1fr) 16px;
   align-items: center;
   gap: 12px;
 }
 
 .sidebar-profile > img:first-child {
-  width: 48px;
-  height: 48px;
+  width: 42px;
+  height: 42px;
   border-radius: 50%;
   background: #eef3e8;
 }
@@ -8015,12 +8025,12 @@ body:not(.is-login-screen) .dashboard-main {
   min-width: 0 !important;
   width: 100% !important;
   max-width: none !important;
-  height: calc(100vh - 48px) !important;
+  height: calc(100vh - 40px) !important;
   margin: 0 !important;
-  padding: 40px 34px !important;
+  padding: 34px 30px !important;
   overflow: auto !important;
   border: 1px solid rgba(23, 54, 43, .08) !important;
-  border-radius: 30px !important;
+  border-radius: 26px !important;
   background: rgba(255, 253, 247, .72) !important;
   box-shadow: var(--uy-app-shadow-soft) !important;
 }
@@ -8041,13 +8051,13 @@ body:not(.is-login-screen) .dashboard-section.is-active {
   display: grid;
   grid-template-columns: minmax(260px, 1fr) minmax(340px, 620px);
   align-items: center;
-  gap: 24px;
+  gap: 20px;
 }
 
 .overview-command-header h3 {
-  margin: 0 0 8px;
+  margin: 0 0 6px;
   color: var(--uy-app-ink);
-  font-size: clamp(2rem, 3vw, 3rem);
+  font-size: clamp(1.9rem, 2.55vw, 2.65rem);
   letter-spacing: 0;
   line-height: 1.02;
 }
@@ -8070,10 +8080,10 @@ body:not(.is-login-screen) .dashboard-section.is-active {
   grid-template-columns: 22px minmax(0, 1fr);
   align-items: center;
   gap: 12px;
-  min-height: 58px;
-  padding: 0 18px;
+  min-height: 50px;
+  padding: 0 16px;
   border: 1px solid rgba(23, 54, 43, .13);
-  border-radius: 18px;
+  border-radius: 16px;
   background: rgba(255, 253, 247, .92);
 }
 
@@ -8091,32 +8101,37 @@ body:not(.is-login-screen) .dashboard-section.is-active {
   grid-template-columns: 18px auto;
   align-items: center;
   gap: 10px;
-  min-height: 58px;
-  padding: 0 22px;
+  min-height: 50px;
+  padding: 0 18px;
   border: 1px solid rgba(20, 56, 41, .15);
-  border-radius: 18px;
+  border-radius: 16px;
   background: linear-gradient(180deg, #6f9458, #446f38);
   color: #fff;
   font-size: 1rem;
   font-weight: 850;
-  box-shadow: 0 16px 28px rgba(54, 92, 43, .2);
+  box-shadow: 0 12px 22px rgba(54, 92, 43, .16);
+}
+
+.overview-primary-action:hover {
+  transform: translateY(-1px);
+  background: linear-gradient(180deg, #668b50, #3d6332);
 }
 
 body:not(.is-login-screen) .metric-grid {
   display: grid !important;
   grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
-  gap: 22px !important;
+  gap: 18px !important;
   margin: 0 !important;
 }
 
 body:not(.is-login-screen) .metric-card.overview-summary-card {
   display: grid !important;
-  grid-template-columns: 64px minmax(0, 1fr) !important;
-  gap: 22px !important;
-  min-height: 178px !important;
-  padding: 32px !important;
+  grid-template-columns: 52px minmax(0, 1fr) !important;
+  gap: 16px !important;
+  min-height: 142px !important;
+  padding: 24px !important;
   border: 1px solid rgba(23, 54, 43, .1) !important;
-  border-radius: 22px !important;
+  border-radius: 20px !important;
   background: var(--uy-app-panel-solid) !important;
   box-shadow: 0 12px 30px rgba(23, 54, 43, .05) !important;
   overflow: hidden !important;
@@ -8130,16 +8145,16 @@ body:not(.is-login-screen) .metric-card.overview-summary-card::before {
 .overview-row-icon {
   display: inline-grid;
   place-items: center;
-  width: 62px;
-  height: 62px;
-  border-radius: 18px;
+  width: 52px;
+  height: 52px;
+  border-radius: 16px;
   background: #e7efdf;
 }
 
 .overview-summary-body span {
-  margin: 0 0 22px !important;
+  margin: 0 0 16px !important;
   color: #424d44 !important;
-  font-size: 1rem !important;
+  font-size: .92rem !important;
   font-weight: 700 !important;
   letter-spacing: 0 !important;
   text-transform: none !important;
@@ -8149,14 +8164,14 @@ body:not(.is-login-screen) .metric-card.overview-summary-card::before {
   display: block;
   max-width: 100%;
   color: var(--uy-app-ink) !important;
-  font-size: clamp(2.25rem, 3.3vw, 3.2rem) !important;
+  font-size: clamp(1.75rem, 2.55vw, 2.55rem) !important;
   font-weight: 600 !important;
   line-height: 1 !important;
   overflow-wrap: anywhere;
 }
 
 .overview-summary-body p {
-  margin: 12px 0 0;
+  margin: 9px 0 0;
   color: var(--uy-app-muted);
   font-size: .92rem;
   line-height: 1.35;
@@ -8166,7 +8181,7 @@ body:not(.is-login-screen) .metric-card.overview-summary-card::before {
   display: inline-flex;
   align-items: center;
   gap: 8px;
-  margin-top: 24px;
+  margin-top: 16px;
   padding: 0;
   border: 0;
   background: transparent;
@@ -8174,31 +8189,38 @@ body:not(.is-login-screen) .metric-card.overview-summary-card::before {
   font-size: .92rem;
   font-weight: 700;
   text-decoration: none;
+  cursor: pointer;
+}
+
+.overview-summary-body button:hover,
+.overview-task-link:hover,
+.overview-activity-card .inline-action:hover {
+  color: #234c2d;
 }
 
 .overview-grid {
   display: grid;
   grid-template-columns: minmax(0, 1.62fr) minmax(280px, .88fr);
-  gap: 24px;
+  gap: 20px;
 }
 
 body:not(.is-login-screen) .panel,
 body:not(.is-login-screen) .overview-activity-card,
 body:not(.is-login-screen) .overview-tasks-card {
   border: 1px solid rgba(23, 54, 43, .1) !important;
-  border-radius: 22px !important;
+  border-radius: 20px !important;
   background: var(--uy-app-panel-solid) !important;
   box-shadow: 0 12px 30px rgba(23, 54, 43, .05) !important;
 }
 
 .overview-activity-card,
 .overview-tasks-card {
-  padding: 28px 32px !important;
+  padding: 24px 26px !important;
 }
 
 .overview-activity-card .panel-heading,
 .overview-tasks-card .panel-heading {
-  margin-bottom: 20px !important;
+  margin-bottom: 16px !important;
   padding: 0 !important;
   border: 0 !important;
 }
@@ -8218,14 +8240,23 @@ body:not(.is-login-screen) .overview-tasks-card {
   display: grid;
   grid-template-columns: 52px minmax(0, 1fr) auto 18px;
   align-items: center;
-  gap: 18px;
+  gap: 14px;
   width: 100%;
-  padding: 18px 0;
+  padding: 14px 0;
   border: 0;
   border-top: 1px solid rgba(23, 54, 43, .09);
   background: transparent;
   color: var(--uy-app-ink);
   text-align: left;
+  cursor: pointer;
+  transition: background .18s ease, padding-inline .18s ease;
+}
+
+.overview-activity-row:hover {
+  margin-inline: -10px;
+  padding-inline: 10px;
+  border-radius: 16px;
+  background: rgba(238, 244, 232, .64);
 }
 
 .overview-activity-row:first-child {
@@ -8267,8 +8298,8 @@ body:not(.is-login-screen) .overview-tasks-card {
   display: grid;
   place-items: center;
   align-content: center;
-  width: 164px;
-  height: 164px;
+  width: 138px;
+  height: 138px;
   border-radius: 50%;
   background:
     radial-gradient(circle, var(--uy-app-panel-solid) 0 52%, transparent 53%),
@@ -8337,6 +8368,15 @@ body:not(.is-login-screen) .overview-tasks-card {
   background: transparent;
   color: #3e5538;
   font-weight: 750;
+  cursor: pointer;
+}
+
+body:not(.is-login-screen) #overview .empty-state,
+body:not(.is-login-screen) #overview .loading-state {
+  border: 1px dashed rgba(23, 54, 43, .14) !important;
+  border-radius: 16px !important;
+  background: rgba(248, 246, 238, .72) !important;
+  color: var(--uy-app-muted) !important;
 }
 
 .overview-operations-band {
@@ -8347,17 +8387,17 @@ body:not(.is-login-screen) .overview-tasks-card {
 
 body:not(.is-login-screen) .quick-actions {
   grid-template-columns: repeat(4, minmax(0, 1fr)) !important;
-  gap: 10px !important;
+  gap: 8px !important;
   margin: 0 !important;
   padding: 10px !important;
   border: 1px solid rgba(23, 54, 43, .1) !important;
-  border-radius: 20px !important;
+  border-radius: 18px !important;
   background: rgba(255, 253, 247, .68) !important;
 }
 
 .settings-nav-grid {
   display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 12px;
   margin-bottom: 18px;
 }
@@ -8381,6 +8421,15 @@ body:not(.is-login-screen) .quick-actions {
   background: #eef4e8;
 }
 
+body:not(.is-login-screen) .settings-grid {
+  grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+  gap: 10px !important;
+  padding: 10px !important;
+  border: 1px solid rgba(23, 54, 43, .1) !important;
+  border-radius: 18px !important;
+  background: rgba(255, 253, 247, .68) !important;
+}
+
 @media (min-width: 1100px) {
   body:not(.is-login-screen) #overview .overview-operations-band,
   body:not(.is-login-screen) #overview > .operations-command-list-panel,
@@ -8392,7 +8441,7 @@ body:not(.is-login-screen) .quick-actions {
 
 @media (max-width: 1180px) {
   body:not(.is-login-screen) .app-view {
-    grid-template-columns: 296px minmax(0, 1fr) !important;
+    grid-template-columns: 270px minmax(0, 1fr) !important;
     gap: 18px !important;
     padding: 16px !important;
   }
@@ -8404,7 +8453,7 @@ body:not(.is-login-screen) .quick-actions {
 
   body:not(.is-login-screen) .dashboard-main {
     height: calc(100vh - 32px) !important;
-    padding: 28px 22px !important;
+    padding: 26px 20px !important;
   }
 
   .overview-command-header,
@@ -8413,7 +8462,12 @@ body:not(.is-login-screen) .quick-actions {
   }
 
   body:not(.is-login-screen) .metric-grid {
-    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+    grid-template-columns: 1fr !important;
+  }
+
+  body:not(.is-login-screen) .metric-card.overview-summary-card {
+    min-height: 0 !important;
+    padding: 20px !important;
   }
 }
 
@@ -8461,6 +8515,10 @@ body:not(.is-login-screen) .quick-actions {
 
   body:not(.is-login-screen) .quick-actions {
     grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+  }
+
+  body:not(.is-login-screen) .settings-grid {
+    grid-template-columns: 1fr !important;
   }
 
   .settings-nav-grid {
@@ -9637,5 +9695,94 @@ body:not(.is-login-screen) #groundskeeper-ai .ai-command-editor textarea {
   .ai-entry-actions,
   .ai-log-actions {
     justify-content: flex-start;
+  }
+}
+
+/* Final visual guard for the Apple-simple dashboard redesign. */
+@media (min-width: 901px) {
+  body:not(.is-login-screen) .app-view,
+  body:not(.is-login-screen) .app-view:has(.dashboard-sidebar:hover),
+  body:not(.is-login-screen) .app-view:has(.dashboard-sidebar:focus-within),
+  body:not(.is-login-screen) .app-view.is-sidebar-open {
+    grid-template-columns: 292px minmax(0, 1fr) !important;
+    gap: 22px !important;
+    padding: 20px !important;
+    background: transparent !important;
+  }
+
+  body:not(.is-login-screen) .dashboard-sidebar,
+  body:not(.is-login-screen) .dashboard-sidebar:hover,
+  body:not(.is-login-screen) .dashboard-sidebar:focus-within,
+  body:not(.is-login-screen) .app-view.is-sidebar-open .dashboard-sidebar {
+    position: sticky !important;
+    top: 20px !important;
+    grid-column: 1 !important;
+    width: 100% !important;
+    height: calc(100vh - 40px) !important;
+    max-height: calc(100vh - 40px) !important;
+    overflow: visible !important;
+    border-radius: 24px !important;
+    background: linear-gradient(145deg, rgba(255, 253, 247, .96), rgba(248, 246, 238, .9)) !important;
+    color: var(--uy-app-ink) !important;
+  }
+
+  body:not(.is-login-screen) .dashboard-sidebar .dashboard-brand span,
+  body:not(.is-login-screen) .dashboard-sidebar .nav-label,
+  body:not(.is-login-screen) .dashboard-sidebar .sign-out,
+  body:not(.is-login-screen) .dashboard-sidebar:hover .dashboard-brand span,
+  body:not(.is-login-screen) .dashboard-sidebar:hover .nav-label,
+  body:not(.is-login-screen) .dashboard-sidebar:hover .sign-out,
+  body:not(.is-login-screen) .dashboard-sidebar:focus-within .dashboard-brand span,
+  body:not(.is-login-screen) .dashboard-sidebar:focus-within .nav-label,
+  body:not(.is-login-screen) .dashboard-sidebar:focus-within .sign-out {
+    opacity: 1 !important;
+    pointer-events: auto !important;
+    transform: none !important;
+  }
+
+  body:not(.is-login-screen) .dashboard-main {
+    grid-column: 2 !important;
+    height: calc(100vh - 40px) !important;
+    max-height: calc(100vh - 40px) !important;
+    padding: 34px 30px !important;
+    gap: 22px !important;
+    overflow: auto !important;
+    border-radius: 26px !important;
+    background: rgba(255, 253, 247, .72) !important;
+  }
+
+  body:not(.is-login-screen) .dashboard-section.is-active {
+    max-height: none !important;
+    gap: 22px !important;
+    overflow: visible !important;
+  }
+
+  body:not(.is-login-screen) .dashboard-nav a,
+  body:not(.is-login-screen) .dashboard-nav a.is-active,
+  body:not(.is-login-screen) .dashboard-nav a:hover {
+    display: grid !important;
+    grid-template-columns: 38px minmax(0, 1fr) !important;
+    min-height: 46px !important;
+    padding: 6px 12px !important;
+    color: var(--uy-app-ink) !important;
+  }
+
+  body:not(.is-login-screen) .panel {
+    padding: 18px !important;
+  }
+
+  body:not(.is-login-screen) .metric-grid,
+  body:not(.is-login-screen) .overview-grid {
+    gap: 18px !important;
+  }
+
+  body:not(.is-login-screen) .metric-card.overview-summary-card {
+    min-height: 142px !important;
+    padding: 24px !important;
+  }
+
+  body:not(.is-login-screen) .overview-activity-card,
+  body:not(.is-login-screen) .overview-tasks-card {
+    padding: 24px 26px !important;
   }
 }

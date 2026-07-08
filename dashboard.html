@@ -11,10 +11,10 @@
     <link rel="icon" href="/favicon.ico" sizes="any">
     <link rel="apple-touch-icon" href="/apple-touch-icon.png">
     <link rel="manifest" href="/dashboard.webmanifest">
-    <link rel="stylesheet" href="dashboard.css?v=20260708-call-panel-1">
+    <link rel="stylesheet" href="dashboard.css?v=20260708-dashboard-polish-1">
     <link rel="stylesheet" href="dashboard-mobile-fix.css?v=20260622-3">
     <script src="dashboard-config.js?v=20260623-1" defer></script>
-    <script src="dashboard.js?v=20260708-profile-user-1" defer></script>
+    <script src="dashboard.js?v=20260708-dashboard-polish-1" defer></script>
   </head>
   <body>
     <main class="dashboard-shell" aria-labelledby="dashboard-title">
@@ -60,9 +60,10 @@
             <nav class="dashboard-nav" aria-label="Dashboard navigation">
               <a href="#overview" data-dashboard-link="overview"><span class="nav-icon" aria-hidden="true"><img src="images/dashboard-icons/home.svg" alt=""></span><span class="nav-label">Home</span></a>
               <a href="#calendar" data-dashboard-link="calendar"><span class="nav-icon" aria-hidden="true"><img src="images/dashboard-icons/work-briefcase.svg" alt=""></span><span class="nav-label">Work</span></a>
-              <a href="#outreach" data-dashboard-link="outreach"><span class="nav-icon" aria-hidden="true"><img src="images/dashboard-icons/outreach-send.svg" alt=""></span><span class="nav-label">Outreach</span></a>
-              <a href="#contacts" data-dashboard-link="contacts"><span class="nav-icon" aria-hidden="true"><img src="images/dashboard-icons/properties-building.svg" alt=""></span><span class="nav-label">Properties</span></a>
-              <a href="#settings" data-dashboard-link="settings"><span class="nav-icon" aria-hidden="true"><img src="images/dashboard-icons/more-horizontal.svg" alt=""></span><span class="nav-label">More</span></a>
+              <a href="#outreach" data-dashboard-link="outreach"><span class="nav-icon" aria-hidden="true"><img src="images/dashboard-icons/outreach-send.svg" alt=""></span><span class="nav-label">Leads</span></a>
+              <a href="#contacts" data-dashboard-link="contacts"><span class="nav-icon" aria-hidden="true"><img src="images/dashboard-icons/properties-building.svg" alt=""></span><span class="nav-label">Clients</span></a>
+              <a href="#documents" data-dashboard-link="documents"><span class="nav-icon" aria-hidden="true"><img src="images/dashboard-icons/tasks-check-square.svg" alt=""></span><span class="nav-label">Money</span></a>
+              <a href="#settings" data-dashboard-link="settings"><span class="nav-icon" aria-hidden="true"><img src="images/dashboard-icons/more-horizontal.svg" alt=""></span><span class="nav-label">Tools</span></a>
             </nav>
             <div class="sidebar-quick-actions" aria-label="Quick actions">
               <div class="sidebar-section-title">Quick Actions</div>
@@ -305,13 +306,13 @@
           <section class="dashboard-section" id="outreach" data-section="outreach">
             <div class="outreach-hero">
               <div>
-                <p class="eyebrow">Outreach</p>
-                <h3>Company and property outreach</h3>
-                <p>Track management companies, the specific properties they manage, and the locations that look like good Urban Yards fits.</p>
+                <p class="eyebrow">LEADS</p>
+                <h3>Lead pipeline and property outreach</h3>
+                <p>Track who needs contact next, which opportunities are closest to work, and the companies or properties behind each lead.</p>
               </div>
               <div class="outreach-hero-actions">
-                <button type="button" data-action="import-outreach-csv"><span class="button-icon" aria-hidden="true">CSV</span><span>Import CSV</span></button>
-                <button type="button" data-action="new-outreach-prospect"><span class="button-icon" aria-hidden="true">+</span><span>Add Prospect</span></button>
+                <button class="outreach-secondary-action" type="button" data-action="import-outreach-csv"><span class="button-icon" aria-hidden="true">CSV</span><span>Import CSV</span></button>
+                <button class="outreach-primary-action" type="button" data-action="new-outreach-prospect"><span class="button-icon" aria-hidden="true">+</span><span>Add Lead</span></button>
               </div>
               <input data-outreach-import type="file" accept=".csv,text/csv" hidden>
             </div>
@@ -319,32 +320,49 @@
             <div class="outreach-metrics" data-outreach-metrics></div>
 
             <div class="outreach-view-tabs" role="tablist" aria-label="Outreach views">
+              <button type="button" data-outreach-view="pipeline">Pipeline</button>
               <button type="button" data-outreach-view="companies">Companies</button>
               <button type="button" data-outreach-view="properties">Properties</button>
               <button type="button" data-outreach-view="prospects">Prospects</button>
             </div>
 
-            <div class="outreach-layout">
-              <section class="panel outreach-priority-panel">
-                <div class="panel-heading">
-                  <div>
-                    <h3>Follow-Ups Due</h3>
-                    <p>Prospects with a follow-up date today or overdue.</p>
-                  </div>
+            <section class="panel outreach-main-panel outreach-pipeline-panel" data-outreach-view-panel="pipeline">
+              <div class="panel-heading">
+                <div>
+                  <h3>Lead pipeline</h3>
+                  <p>Start here for call-today leads, follow-ups, interested prospects, and quote-ready opportunities.</p>
                 </div>
-                <div class="outreach-card-list" data-outreach-followups></div>
-              </section>
+              </div>
+              <div class="outreach-saved-views" aria-label="Saved lead views">
+                <button type="button" data-outreach-view="prospects" data-outreach-preset="call-today">Call Today</button>
+                <button type="button" data-outreach-view="prospects" data-outreach-preset="follow-up-due">Follow-Up Due</button>
+                <button type="button" data-outreach-view="prospects" data-outreach-preset="high-priority">High Priority</button>
+                <button type="button" data-outreach-view="prospects" data-outreach-preset="quote-needed">Quote Needed</button>
+                <button type="button" data-outreach-view="prospects" data-outreach-preset="interested">Interested</button>
+                <button type="button" data-outreach-view="properties" data-outreach-preset="unverified-properties">Unverified Properties</button>
+              </div>
+              <div class="outreach-layout outreach-secondary-layout">
+                <section class="panel outreach-priority-panel">
+                  <div class="panel-heading">
+                    <div>
+                      <h3>Follow-Ups Due</h3>
+                      <p>Prospects with a follow-up date today or overdue.</p>
+                    </div>
+                  </div>
+                  <div class="outreach-card-list" data-outreach-followups></div>
+                </section>
 
-              <section class="panel outreach-priority-panel">
-                <div class="panel-heading">
-                  <div>
-                    <h3>Interested / Quote Needed</h3>
-                    <p>Warm leads that need the next action.</p>
+                <section class="panel outreach-priority-panel">
+                  <div class="panel-heading">
+                    <div>
+                      <h3>Interested / Quote Needed</h3>
+                      <p>Warm leads that need the next action.</p>
+                    </div>
                   </div>
-                </div>
-                <div class="outreach-card-list" data-outreach-hot></div>
-              </section>
-            </div>
+                  <div class="outreach-card-list" data-outreach-hot></div>
+                </section>
+              </div>
+            </section>
 
             <section class="panel outreach-main-panel" data-outreach-view-panel="companies">
               <div class="panel-heading">
@@ -376,7 +394,7 @@
               </div>
               <div class="outreach-table-wrap">
                 <table>
-                  <thead><tr><th>Company</th><th>Service Area</th><th>Contact</th><th>Status</th><th>Follow-Up</th><th>Priority</th><th>Properties</th><th>Notes</th><th>Actions</th></tr></thead>
+                  <thead><tr><th>Company</th><th>Properties</th><th>Prospects</th><th>Follow-ups</th><th>Status</th><th>Priority</th><th>Next Follow-up</th><th>Actions</th></tr></thead>
                   <tbody data-outreach-company-table></tbody>
                 </table>
               </div>
@@ -494,7 +512,7 @@
 
             <section class="panel outreach-archive-panel">
               <details>
-                <summary>Won / Lost Archive <span data-outreach-archive-count>0</span></summary>
+                <summary>Archived outreach <span data-outreach-archive-count>0</span></summary>
                 <div class="outreach-card-list" data-outreach-archive></div>
               </details>
             </section>
@@ -929,14 +947,13 @@
             <div class="panel">
               <div class="panel-heading">
                 <div>
-                  <h3>Settings & Tools</h3>
-                  <p>Exports, backups, account refresh, and data tools.</p>
+                  <h3>Tools & Admin</h3>
+                  <p>Equipment, route tools, AI training, exports, backups, refresh, and demo utilities.</p>
                 </div>
               </div>
               <div class="settings-nav-grid" aria-label="More dashboard tools">
                 <a href="#route-planner" data-dashboard-link="route-planner"><span class="nav-icon" aria-hidden="true"><img src="images/dashboard-icons/menu-grid.svg" alt=""></span><span>Route Planner</span></a>
                 <a href="#equipment" data-dashboard-link="equipment"><span class="nav-icon" aria-hidden="true"><img src="images/dashboard-icons/activity-check-circle.svg" alt=""></span><span>Equipment</span></a>
-                <a href="#documents" data-dashboard-link="documents"><span class="nav-icon" aria-hidden="true"><img src="images/dashboard-icons/tasks-check-square.svg" alt=""></span><span>Money</span></a>
                 <a href="#groundskeeper-ai" data-dashboard-link="groundskeeper-ai"><span class="nav-icon" aria-hidden="true"><img src="images/dashboard-icons/quick-actions-spark.svg" alt=""></span><span>Groundskeeper AI</span></a>
               </div>
               <div class="settings-grid">
@@ -956,9 +973,10 @@
         <nav class="mobile-tabbar" aria-label="Mobile dashboard navigation">
           <a href="#overview" data-dashboard-link="overview">Home</a>
           <a href="#calendar" data-dashboard-link="calendar">Work</a>
-          <a href="#outreach" data-dashboard-link="outreach">Outreach</a>
-          <a href="#contacts" data-dashboard-link="contacts">Properties</a>
-          <a href="#settings" data-dashboard-link="settings">More</a>
+          <a href="#outreach" data-dashboard-link="outreach">Leads</a>
+          <a href="#contacts" data-dashboard-link="contacts">Clients</a>
+          <a href="#documents" data-dashboard-link="documents">Money</a>
+          <a href="#settings" data-dashboard-link="settings">Tools</a>
         </nav>
 
         <aside class="detail-drawer" data-detail-drawer hidden aria-label="Dashboard details" aria-modal="true" role="dialog">

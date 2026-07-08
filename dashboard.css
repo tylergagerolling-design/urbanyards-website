@@ -16,6 +16,17 @@
   --uy-button-shadow: 0 12px 24px rgba(18, 63, 49, 0.18);
 }
 
+@media (max-width: 900px) {
+  body:not(.is-login-screen) .mobile-tabbar {
+    display: grid !important;
+    grid-auto-flow: column !important;
+    grid-auto-columns: minmax(82px, 1fr) !important;
+    grid-template-columns: none !important;
+    overflow-x: auto !important;
+    overscroll-behavior-x: contain !important;
+  }
+}
+
 * {
   box-sizing: border-box;
 }
@@ -5653,6 +5664,210 @@ body:has(.dashboard-shell) {
   grid-column: 1 / -1;
 }
 
+/* Leads command center */
+body:not(.is-login-screen) #outreach {
+  --lead-card-radius: 24px;
+}
+
+body:not(.is-login-screen) #outreach .outreach-hero {
+  align-items: center;
+  margin-bottom: 14px;
+  padding: 22px 24px;
+  border-color: rgba(23, 54, 43, .1);
+  border-radius: var(--lead-card-radius);
+  background:
+    radial-gradient(circle at 92% 4%, rgba(109, 138, 84, .12), transparent 30%),
+    linear-gradient(135deg, rgba(255, 253, 247, .98), rgba(244, 248, 240, .9));
+  box-shadow: 0 20px 55px rgba(16, 47, 37, .08);
+}
+
+body:not(.is-login-screen) #outreach .outreach-hero h3 {
+  margin: 0 0 6px;
+  font-size: clamp(1.7rem, 2.5vw, 2.65rem);
+  letter-spacing: 0;
+}
+
+body:not(.is-login-screen) #outreach .outreach-hero p:not(.eyebrow) {
+  max-width: 660px;
+  font-size: .98rem;
+  line-height: 1.55;
+}
+
+body:not(.is-login-screen) #outreach .outreach-hero-actions button {
+  min-height: 42px;
+  padding: 10px 15px;
+  border-radius: 999px;
+  box-shadow: 0 10px 22px rgba(16, 47, 37, .08);
+}
+
+body:not(.is-login-screen) #outreach .outreach-hero-actions .outreach-secondary-action {
+  border: 1px solid rgba(23, 54, 43, .12);
+  background: rgba(255, 253, 247, .9);
+  color: #123f31;
+}
+
+body:not(.is-login-screen) #outreach .outreach-hero-actions .outreach-primary-action {
+  background: linear-gradient(135deg, #123f31, #4f7b42);
+  color: #fff;
+}
+
+body:not(.is-login-screen) #outreach .outreach-metrics {
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 10px;
+  margin-bottom: 14px;
+}
+
+.outreach-metric-card {
+  display: grid;
+  grid-template-columns: 40px minmax(0, 1fr);
+  column-gap: 10px;
+  align-items: center;
+  min-height: 96px;
+  padding: 14px;
+  border: 1px solid rgba(23, 54, 43, .09);
+  border-radius: 20px;
+  background: rgba(255, 253, 247, .82);
+  box-shadow: 0 14px 36px rgba(16, 47, 37, .055);
+}
+
+.outreach-metric-icon {
+  grid-row: span 3;
+  display: inline-grid;
+  width: 40px;
+  height: 40px;
+  place-items: center;
+  border-radius: 14px;
+  background: rgba(224, 235, 214, .8);
+}
+
+.outreach-metric-icon img {
+  width: 20px;
+  height: 20px;
+}
+
+.outreach-metric-card strong {
+  color: #10372b;
+  font-size: clamp(1.45rem, 2.4vw, 2rem);
+  line-height: 1;
+}
+
+.outreach-metric-card span {
+  color: #143f32;
+  font-size: .8rem;
+  font-weight: 850;
+}
+
+.outreach-metric-card small {
+  color: #6f7a68;
+  font-size: .76rem;
+}
+
+body:not(.is-login-screen) #outreach .outreach-view-tabs {
+  margin-bottom: 12px;
+  padding: 4px;
+  border: 1px solid rgba(23, 54, 43, .08);
+  border-radius: 999px;
+  background: rgba(255, 253, 247, .7);
+  width: fit-content;
+}
+
+body:not(.is-login-screen) #outreach .outreach-view-tabs button {
+  min-height: 36px;
+  border-color: transparent;
+  background: transparent;
+}
+
+body:not(.is-login-screen) #outreach .outreach-view-tabs button.is-active {
+  box-shadow: 0 10px 24px rgba(18, 63, 49, .16);
+}
+
+.outreach-saved-views {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 14px;
+}
+
+.outreach-saved-views button {
+  min-height: 34px;
+  padding: 7px 12px;
+  border: 1px solid rgba(23, 54, 43, .12);
+  border-radius: 999px;
+  background: rgba(255, 253, 247, .86);
+  color: #123f31;
+  font-size: .82rem;
+  font-weight: 800;
+}
+
+body:not(.is-login-screen) #outreach .outreach-main-panel,
+body:not(.is-login-screen) #outreach .outreach-priority-panel,
+body:not(.is-login-screen) #outreach .outreach-archive-panel {
+  border-radius: var(--lead-card-radius);
+  border-color: rgba(23, 54, 43, .09);
+  background: rgba(255, 253, 247, .9);
+  box-shadow: 0 18px 48px rgba(16, 47, 37, .065);
+}
+
+body:not(.is-login-screen) #outreach .outreach-pipeline-panel {
+  margin-bottom: 14px;
+}
+
+body:not(.is-login-screen) #outreach .outreach-layout {
+  gap: 12px;
+  margin-bottom: 0;
+}
+
+body:not(.is-login-screen) #outreach .outreach-toolbar {
+  grid-template-columns: minmax(260px, 1fr) repeat(2, minmax(150px, .42fr));
+  padding: 10px;
+  border: 1px solid rgba(23, 54, 43, .08);
+  border-radius: 18px;
+  background: rgba(244, 248, 240, .55);
+}
+
+body:not(.is-login-screen) #outreach .outreach-table-wrap {
+  border: 1px solid rgba(23, 54, 43, .08);
+  border-radius: 18px;
+  background: rgba(255, 253, 247, .72);
+}
+
+body:not(.is-login-screen) #outreach .outreach-table-wrap table {
+  min-width: 900px;
+}
+
+body:not(.is-login-screen) #outreach .outreach-table-wrap th {
+  background: rgba(244, 248, 240, .86);
+  color: #496052;
+  font-size: .72rem;
+  letter-spacing: .04em;
+  text-transform: uppercase;
+}
+
+body:not(.is-login-screen) #outreach .outreach-table-wrap td {
+  vertical-align: middle;
+}
+
+body:not(.is-login-screen) #outreach .outreach-archive-panel {
+  margin-top: 14px;
+  padding: 14px 16px;
+  box-shadow: none;
+}
+
+body:not(.is-login-screen) #outreach .outreach-archive-panel summary {
+  color: #496052;
+}
+
+@media (max-width: 900px) {
+  body:not(.is-login-screen) .mobile-tabbar {
+    display: grid !important;
+    grid-auto-flow: column !important;
+    grid-auto-columns: minmax(82px, 1fr) !important;
+    grid-template-columns: none !important;
+    overflow-x: auto !important;
+    overscroll-behavior-x: contain !important;
+  }
+}
+
 /* Groundskeeper AI */
 .groundskeeper-ai-hero,
 .groundskeeper-ai-status,
@@ -5868,6 +6083,16 @@ body:has(.dashboard-shell) {
   }
 }
 
+@media (max-width: 1080px) {
+  body:not(.is-login-screen) #outreach .outreach-metrics {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  body:not(.is-login-screen) #outreach .outreach-toolbar {
+    grid-template-columns: 1fr;
+  }
+}
+
 @media (max-width: 760px) {
   .outreach-hero {
     align-items: stretch;
@@ -5883,6 +6108,21 @@ body:has(.dashboard-shell) {
 
   .outreach-metrics {
     grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  body:not(.is-login-screen) #outreach .outreach-metrics {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  body:not(.is-login-screen) #outreach .outreach-view-tabs {
+    width: 100%;
+    overflow-x: auto;
+    flex-wrap: nowrap;
+  }
+
+  body:not(.is-login-screen) #outreach .outreach-view-tabs button,
+  .outreach-saved-views button {
+    flex: 0 0 auto;
   }
 
   .outreach-table-wrap {
@@ -13191,5 +13431,16 @@ body:not(.is-login-screen) #groundskeeper-ai .groundskeeper-ai-command-header h3
   body:not(.is-login-screen) .app-view:not(.is-sidebar-open):not(:has(.dashboard-sidebar:hover)):not(:has(.dashboard-sidebar :focus-visible)) .sidebar-bottom {
     margin-top: 8px !important;
     padding-top: 7px !important;
+  }
+}
+
+@media (max-width: 900px) {
+  body:not(.is-login-screen) .mobile-tabbar {
+    display: grid !important;
+    grid-auto-flow: column !important;
+    grid-auto-columns: minmax(82px, 1fr) !important;
+    grid-template-columns: none !important;
+    overflow-x: auto !important;
+    overscroll-behavior-x: contain !important;
   }
 }

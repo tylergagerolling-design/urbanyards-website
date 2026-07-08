@@ -61,6 +61,23 @@
     { label: "New Lead", action: "new-outreach-prospect", icon: "new-lead-user.svg" },
     { label: "Add Property", action: "quick-add-client", icon: "add-property-building.svg" }
   ];
+  const DASHBOARD_DATA_KEYS = [
+    "submissions",
+    "contacts",
+    "jobs",
+    "notes",
+    "reminders",
+    "documents",
+    "operations",
+    "outreachProspects",
+    "outreachCompanies",
+    "outreachProperties",
+    "routeStops",
+    "equipmentItems",
+    "equipmentMaintenance",
+    "hardwareGuide",
+    "leadActivity"
+  ];
 
   const config = window.URBAN_YARDS_DASHBOARD_CONFIG || {
     supabaseUrl: "",
@@ -80,7 +97,7 @@
     outreachServiceFilter: "All",
     outreachPriorityFilter: "All",
     outreachSearch: "",
-    outreachView: "companies",
+    outreachView: "pipeline",
     outreachCompanyFilter: "All",
     outreachCityFilter: "All",
     outreachNeighborhoodFilter: "All",
@@ -2112,10 +2129,13 @@
         sales_documents: "documents",
         operations_records: "operations",
         outreach_prospects: "outreachProspects",
+        outreach_companies: "outreachCompanies",
+        outreach_properties: "outreachProperties",
         route_stops: "routeStops",
         equipment_items: "equipmentItems",
         equipment_maintenance: "equipmentMaintenance",
-        hardware_guide: "hardwareGuide"
+        hardware_guide: "hardwareGuide",
+        lead_activity: "leadActivity"
       };
       const key = map[table];
       if (key && Array.isArray(state.data[key])) {
@@ -3732,6 +3752,27 @@
   function outreachCompanyPropertyCount(company) {
     const key = normalizeDedupeKey(company.company);
     return state.data.outreachProperties.filter((item) => item.companyId === company.id || normalizeDedupeKey(item.company) === key).length;
+  }
+
+  function outreachCompanyProspects(company) {
+    const key = normalizeDedupeKey(company.company);
+    return state.data.outreachProspects.filter((item) => normalizeDedupeKey(item.managementCompany) === key);
+  }
+
+  function outreachCompanyFollowUps(company) {
+    const today = todayKey();
+    const prospectsDue = outreachCompanyProspects(company).filter((item) => !isClosedOutreach(item) && item.nextFollowUpAtRaw && item.nextFollowUpAtRaw <= today).length;
+    const companyDue = !isClosedOutreach(company) && company.followUpRaw && company.followUpRaw <= today ? 1 : 0;
+    return companyDue + prospectsDue;
+  }
+
+  function outreachCompanyNextAction(company) {
+    const dates = [company.followUpRaw, ...outreachCompanyProspects(company).map((item) => item.nextFollowUpAtRaw)].filter(Boolean).sort();
+    if (dates.length) return formatDate(dates[0]);
+    if (company.status === "Prospect") return "Research / call";
+    if (company.status === "Interested") return "Create estimate";
+    if (company.status === "Quote Needed") return "Send estimate";
+    return "Not set";
   }
 
   function companyMatchesSearch(company) {
@@ -5384,7 +5425,7 @@
         ${actionButton(compact ? "Open" : "Edit", "open-outreach-prospect", item.id)}
         ${renderPhoneActions(item.phone, { leadId: item.id, leadType: "outreach_prospect", compact: true, helper: false })}
         ${actionButton("Contacted", "mark-outreach-contacted", item.id)}
-        <button class="inline-action" type="button" data-action="create-outreach-quote" data-id="${escapeHtml(item.id)}"${item.convertedToQuote ? " disabled" : ""}>${buttonContent(item.convertedToQuote ? "Quote Created" : "Create Quote", "create-outreach-quote")}</button>
+        <button class="inline-action" type="button" data-action="create-outreach-quote" data-id="${escapeHtml(item.id)}"${item.convertedToQuote ? " disabled" : ""}>${buttonContent(item.convertedToQuote ? "Quote Lead Created" : "Create Quote Lead", "create-outreach-quote")}</button>
         <button class="inline-action" type="button" data-action="route-outreach-prospect" data-id="${escapeHtml(item.id)}"${routeDisabled}>${buttonContent(item.routeAdded ? "Route Added" : "Add Route", "route-outreach-prospect")}</button>
       </div>
     `;
@@ -5438,7 +5479,7 @@
   }
 
   function setOutreachViewVisibility() {
-    qsa("[data-outreach-view]").forEach((button) => {
+    qsa(".outreach-view-tabs [data-outreach-view]").forEach((button) => {
       button.classList.toggle("is-active", button.dataset.outreachView === state.outreachView);
     });
     qsa("[data-outreach-view-panel]").forEach((panel) => {
@@ -5446,31 +5487,56 @@
     });
   }
 
+  function applyOutreachPreset(preset) {
+    if (!preset) return;
+    if (preset === "call-today" || preset === "follow-up-due") {
+      state.outreachStatusFilter = "Active";
+      state.outreachPriorityFilter = "All";
+      state.outreachSearch = "";
+    } else if (preset === "high-priority") {
+      state.outreachStatusFilter = "Active";
+      state.outreachPriorityFilter = "High";
+      state.outreachSearch = "";
+    } else if (preset === "quote-needed") {
+      state.outreachStatusFilter = "Quote Needed";
+      state.outreachPriorityFilter = "All";
+      state.outreachSearch = "";
+    } else if (preset === "interested") {
+      state.outreachStatusFilter = "Interested";
+      state.outreachPriorityFilter = "All";
+      state.outreachSearch = "";
+    } else if (preset === "unverified-properties") {
+      state.outreachVerifiedFilter = "Unverified";
+      state.outreachStatusFilter = "Active";
+      state.outreachPriorityFilter = "All";
+      state.outreachSearch = "";
+    }
+  }
+
   function renderOutreachCompanies() {
     if (!els.outreachCompanyTable) return;
     if (!state.outreachCompaniesReady) {
       const message = "Companies need the outreach_companies table. Run DASHBOARD_OUTREACH_SQL.md, then refresh.";
-      els.outreachCompanyTable.innerHTML = `<tr><td colspan="9">${emptyState(message)}</td></tr>`;
+      els.outreachCompanyTable.innerHTML = `<tr><td colspan="8">${emptyState(message)}</td></tr>`;
       if (els.outreachCompanyCards) els.outreachCompanyCards.innerHTML = emptyState(message);
       return;
     }
     const companies = filteredOutreachCompanies();
     if (!companies.length) {
-      els.outreachCompanyTable.innerHTML = `<tr><td colspan="9">${emptyState("No companies match this view yet.")}</td></tr>`;
+      els.outreachCompanyTable.innerHTML = `<tr><td colspan="8">${emptyState("No companies match this view yet.")}</td></tr>`;
       if (els.outreachCompanyCards) els.outreachCompanyCards.innerHTML = emptyState("No companies match this view yet.");
       return;
     }
     els.outreachCompanyTable.innerHTML = companies.map((company) => `
       <tr>
-        <td><strong>${escapeHtml(company.company)}</strong><br><span class="meta">${escapeHtml(company.website || company.sourceUrl || "No website")}</span></td>
-        <td>${escapeHtml(company.serviceArea || company.city || "Not set")}</td>
-        <td>${escapeHtml(company.contact || "No contact")}<br><span class="meta">${escapeHtml(company.email || "No email")}</span>${renderPhoneActions(company.phone, { leadId: company.id, leadType: "outreach_company", compact: true, helper: false })}</td>
-        <td>${escapeHtml(company.status)}</td>
-        <td>${escapeHtml(company.followUp)}</td>
-        <td>${escapeHtml(company.priority)}</td>
+        <td><strong>${escapeHtml(company.company)}</strong><br><span class="meta">${escapeHtml([company.contact, company.serviceArea || company.city].filter(Boolean).join(" / ") || company.website || "No contact details")}</span></td>
         <td>${escapeHtml(outreachCompanyPropertyCount(company))}</td>
-        <td>${escapeHtml(company.notes)}</td>
-        <td>${actionButton("Open", "open-outreach-company", company.id)}</td>
+        <td>${escapeHtml(outreachCompanyProspects(company).length)}</td>
+        <td>${escapeHtml(outreachCompanyFollowUps(company))}</td>
+        <td>${escapeHtml(company.status)}</td>
+        <td>${escapeHtml(company.priority)}</td>
+        <td>${escapeHtml(outreachCompanyNextAction(company))}</td>
+        <td><div class="outreach-actions">${renderPhoneActions(company.phone, { leadId: company.id, leadType: "outreach_company", compact: true, helper: false })}${actionButton("Open", "open-outreach-company", company.id)}</div></td>
       </tr>
     `).join("");
     if (els.outreachCompanyCards) {
@@ -5548,6 +5614,12 @@
     if (els.outreachSearch && els.outreachSearch.value !== state.outreachSearch) els.outreachSearch.value = state.outreachSearch;
     if (els.outreachStatusFilter) els.outreachStatusFilter.value = state.outreachStatusFilter;
     if (els.outreachPriorityFilter) els.outreachPriorityFilter.value = state.outreachPriorityFilter;
+    if (els.outreachCompanySearch && els.outreachCompanySearch.value !== state.outreachSearch) els.outreachCompanySearch.value = state.outreachSearch;
+    if (els.outreachCompanyStatusFilter) els.outreachCompanyStatusFilter.value = state.outreachStatusFilter;
+    if (els.outreachCompanyPriorityFilter) els.outreachCompanyPriorityFilter.value = state.outreachPriorityFilter;
+    if (els.outreachPropertySearch && els.outreachPropertySearch.value !== state.outreachSearch) els.outreachPropertySearch.value = state.outreachSearch;
+    if (els.outreachPropertyStatusFilter) els.outreachPropertyStatusFilter.value = state.outreachStatusFilter;
+    if (els.outreachPropertyPriorityFilter) els.outreachPropertyPriorityFilter.value = state.outreachPriorityFilter;
     if (els.outreachPropertyNeedsFilter && els.outreachPropertyNeedsFilter.value !== state.outreachVisibleNeedsFilter) els.outreachPropertyNeedsFilter.value = state.outreachVisibleNeedsFilter;
     if (els.outreachPropertyVerifiedFilter) els.outreachPropertyVerifiedFilter.value = state.outreachVerifiedFilter;
 
@@ -5571,13 +5643,20 @@
     const due = outreachDueProspects();
     const hot = outreachHotProspects();
     const metrics = [
-      ["Companies", data.outreachCompanies.length],
-      ["Properties", data.outreachProperties.length],
-      ["Total Prospects", data.outreachProspects.length],
-      ["Follow-Ups Due", due.length],
-      ["Interested", data.outreachProspects.filter((item) => item.status === "Interested").length + data.outreachCompanies.filter((item) => item.status === "Interested").length + data.outreachProperties.filter((item) => item.status === "Interested").length]
+      { label: "Companies", value: data.outreachCompanies.length, icon: "properties-building.svg", detail: "Owner groups" },
+      { label: "Properties", value: data.outreachProperties.length, icon: "add-property-building.svg", detail: "Managed locations" },
+      { label: "Total Prospects", value: data.outreachProspects.length, icon: "new-lead-user.svg", detail: "Lead records" },
+      { label: "Follow-ups Due", value: due.length, icon: "log-time-clock.svg", detail: "Needs contact" },
+      { label: "Interested", value: data.outreachProspects.filter((item) => item.status === "Interested").length + data.outreachCompanies.filter((item) => item.status === "Interested").length + data.outreachProperties.filter((item) => item.status === "Interested").length, icon: "outreach-send.svg", detail: "Warm opportunities" }
     ];
-    els.outreachMetrics.innerHTML = metrics.map(([label, value]) => `<article class="metric-card"><strong>${escapeHtml(value)}</strong><span>${escapeHtml(label)}</span></article>`).join("");
+    els.outreachMetrics.innerHTML = metrics.map((metric) => `
+      <article class="outreach-metric-card">
+        <span class="outreach-metric-icon" aria-hidden="true"><img src="${dashboardIcon(metric.icon)}" alt=""></span>
+        <strong>${escapeHtml(metric.value)}</strong>
+        <span>${escapeHtml(metric.label)}</span>
+        <small>${escapeHtml(metric.detail)}</small>
+      </article>
+    `).join("");
 
     renderOutreachCompanies();
     renderOutreachProperties();
@@ -5655,7 +5734,7 @@
           <div class="drawer-actions">
             <button type="submit">${buttonContent(item ? "Save Prospect" : "Add Prospect", "new-outreach-prospect")}</button>
             ${item ? `<button type="button" data-action="mark-outreach-contacted" data-id="${escapeHtml(item.id)}">${buttonContent("Mark Contacted", "mark-outreach-contacted")}</button>` : ""}
-            ${item ? `<button type="button" data-action="create-outreach-quote" data-id="${escapeHtml(item.id)}"${item.convertedToQuote ? " disabled" : ""}>${buttonContent(item.convertedToQuote ? "Quote Created" : "Create Quote Lead", "create-outreach-quote")}</button>` : ""}
+            ${item ? `<button type="button" data-action="create-outreach-quote" data-id="${escapeHtml(item.id)}"${item.convertedToQuote ? " disabled" : ""}>${buttonContent(item.convertedToQuote ? "Quote Lead Created" : "Create Quote Lead", "create-outreach-quote")}</button>` : ""}
             ${item ? `<button type="button" data-action="route-outreach-prospect" data-id="${escapeHtml(item.id)}"${state.routeStopsReady ? "" : " disabled"}>${buttonContent(item.routeAdded ? "Route Added" : "Add to Route", "route-outreach-prospect")}</button>` : ""}
             ${item ? `<button type="button" class="danger-action" data-action="delete-outreach-prospect" data-id="${escapeHtml(item.id)}">${buttonContent("Delete Prospect", "delete-outreach-prospect")}</button>` : ""}
           </div>
@@ -6299,17 +6378,15 @@
     const text = await file.text();
     const payload = JSON.parse(text);
     const imported = payload.data || payload;
-    state.data = {
-      submissions: Array.isArray(imported.submissions) ? imported.submissions : [],
-      contacts: Array.isArray(imported.contacts) ? imported.contacts : [],
-      jobs: Array.isArray(imported.jobs) ? imported.jobs : [],
-      notes: Array.isArray(imported.notes) ? imported.notes : [],
-      reminders: Array.isArray(imported.reminders) ? imported.reminders : [],
-      documents: Array.isArray(imported.documents) ? imported.documents : [],
-      operations: Array.isArray(imported.operations) ? imported.operations : [],
-      routeStops: Array.isArray(imported.routeStops) ? imported.routeStops : [],
-      groundskeeperAi: imported.groundskeeperAi || demoDashboardData().groundskeeperAi
-    };
+    const fallback = demoDashboardData();
+    const restored = {};
+    DASHBOARD_DATA_KEYS.forEach((key) => {
+      restored[key] = Array.isArray(imported[key]) ? imported[key] : [];
+    });
+    restored.groundskeeperAi = imported.groundskeeperAi && typeof imported.groundskeeperAi === "object"
+      ? imported.groundskeeperAi
+      : fallback.groundskeeperAi;
+    state.data = restored;
     await render();
     setDashboardState("Backup imported into demo mode.");
   }
@@ -7482,6 +7559,7 @@
 
     qsa("[data-outreach-view]").forEach((button) => {
       button.addEventListener("click", async () => {
+        applyOutreachPreset(button.dataset.outreachPreset || "");
         state.outreachView = button.dataset.outreachView || "companies";
         await render();
       });

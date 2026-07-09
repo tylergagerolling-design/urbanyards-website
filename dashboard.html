@@ -13,9 +13,9 @@
     <link rel="manifest" href="/dashboard.webmanifest">
     <link rel="stylesheet" href="dashboard.css?v=20260708-one-scroll-1">
     <link rel="stylesheet" href="dashboard-mobile-fix.css?v=20260708-one-scroll-1">
-    <link rel="stylesheet" href="dashboard-hotfix.css?v=20260708-leads-overlap-1">
+    <link rel="stylesheet" href="dashboard-hotfix.css?v=20260708-panel-guard-1">
     <script src="dashboard-config.js?v=20260623-1" defer></script>
-    <script src="dashboard.js?v=20260708-dashboard-polish-1" defer></script>
+    <script src="dashboard.js?v=20260708-panel-guard-1" defer></script>
   </head>
   <body>
     <main class="dashboard-shell" aria-labelledby="dashboard-title">
@@ -365,7 +365,7 @@
               </div>
             </section>
 
-            <section class="panel outreach-main-panel" data-outreach-view-panel="companies">
+            <section class="panel outreach-main-panel" data-outreach-view-panel="companies" hidden>
               <div class="panel-heading">
                 <div>
                   <h3>Companies</h3>
@@ -402,7 +402,7 @@
               <div class="outreach-card-list outreach-mobile-list" data-outreach-company-cards></div>
             </section>
 
-            <section class="panel outreach-main-panel" data-outreach-view-panel="properties">
+            <section class="panel outreach-main-panel" data-outreach-view-panel="properties" hidden>
               <div class="panel-heading">
                 <div>
                   <h3>Managed Properties</h3>
@@ -462,7 +462,7 @@
               <div class="outreach-card-list outreach-mobile-list" data-outreach-property-cards></div>
             </section>
 
-            <section class="panel outreach-main-panel" data-outreach-view-panel="prospects">
+            <section class="panel outreach-main-panel" data-outreach-view-panel="prospects" hidden>
               <div class="panel-heading">
                 <div>
                   <h3>Active Prospects</h3>
@@ -791,7 +791,7 @@
                 <div class="equipment-card-list" data-equipment-cards></div>
               </section>
 
-              <section class="panel equipment-main-panel" data-equipment-panel="maintenance">
+              <section class="panel equipment-main-panel" data-equipment-panel="maintenance" hidden>
                 <div class="panel-heading"><h3>Maintenance</h3><p>Items due soon, repair needs, and maintenance history.</p></div>
                 <form class="equipment-maintenance-form" data-equipment-maintenance-form>
                   <select name="equipment_id" required data-equipment-maintenance-item-options></select>
@@ -806,7 +806,7 @@
                 <div class="equipment-card-list" data-equipment-maintenance-list></div>
               </section>
 
-              <section class="panel equipment-main-panel" data-equipment-panel="guide">
+              <section class="panel equipment-main-panel" data-equipment-panel="guide" hidden>
                 <div class="panel-heading"><h3>Hardware Guide</h3><p>Recommended equipment links and buying research. Prices are manually entered.</p></div>
                 <form class="hardware-guide-form" data-hardware-guide-form>
                   <input name="id" type="hidden">
@@ -830,7 +830,7 @@
                 <div class="equipment-card-list" data-hardware-guide-list></div>
               </section>
 
-              <section class="panel equipment-main-panel" data-equipment-panel="wishlist">
+              <section class="panel equipment-main-panel" data-equipment-panel="wishlist" hidden>
                 <div class="panel-heading"><h3>Wishlist / Needed Soon</h3><p>High-priority guide items and owned equipment marked replace soon.</p></div>
                 <div class="equipment-card-list" data-equipment-wishlist></div>
               </section>

@@ -3595,6 +3595,47 @@
     sessionStorage.removeItem(SESSION_KEY);
   }
 
+  function syncPanelGroup({ buttonSelector, panelSelector, stateKey, fallback, buttonDatasetKey, panelDatasetKey }) {
+    const panels = qsa(panelSelector);
+    if (!panels.length) return;
+    const current = state[stateKey];
+    const hasCurrent = panels.some((panel) => panel.dataset[panelDatasetKey] === current);
+    if (!hasCurrent) state[stateKey] = fallback;
+    qsa(buttonSelector).forEach((button) => {
+      const isActive = button.dataset[buttonDatasetKey] === state[stateKey];
+      button.classList.toggle("is-active", isActive);
+      button.setAttribute("aria-selected", isActive ? "true" : "false");
+    });
+    panels.forEach((panel) => {
+      const isActive = panel.dataset[panelDatasetKey] === state[stateKey];
+      panel.hidden = !isActive;
+      panel.classList.toggle("is-active", isActive);
+    });
+  }
+
+  function syncDashboardSubviewVisibility(scope = "all") {
+    if (scope === "all" || scope === "outreach") {
+      syncPanelGroup({
+        buttonSelector: ".outreach-view-tabs [data-outreach-view]",
+        panelSelector: "[data-outreach-view-panel]",
+        stateKey: "outreachView",
+        fallback: "pipeline",
+        buttonDatasetKey: "outreachView",
+        panelDatasetKey: "outreachViewPanel"
+      });
+    }
+    if (scope === "all" || scope === "equipment") {
+      syncPanelGroup({
+        buttonSelector: "[data-equipment-view]",
+        panelSelector: "[data-equipment-panel]",
+        stateKey: "equipmentView",
+        fallback: "inventory",
+        buttonDatasetKey: "equipmentView",
+        panelDatasetKey: "equipmentPanel"
+      });
+    }
+  }
+
   function setLoginStatus(message, tone) {
     if (!els.loginStatus) return;
     els.loginStatus.textContent = message || "";
@@ -3615,6 +3656,7 @@
     renderSidebarUserProfile();
     const profile = await loadCurrentUserProfile(getSession()).catch(() => null);
     if (profile) renderSidebarUserProfile(profile);
+    syncDashboardSubviewVisibility();
     await refreshDashboard();
   }
 
@@ -3643,6 +3685,7 @@
         }
       }, 80);
     }
+    syncDashboardSubviewVisibility();
   }
 
   function matchesSearch(item) {
@@ -5484,12 +5527,7 @@
   }
 
   function setOutreachViewVisibility() {
-    qsa(".outreach-view-tabs [data-outreach-view]").forEach((button) => {
-      button.classList.toggle("is-active", button.dataset.outreachView === state.outreachView);
-    });
-    qsa("[data-outreach-view-panel]").forEach((panel) => {
-      panel.hidden = panel.dataset.outreachViewPanel !== state.outreachView;
-    });
+    syncDashboardSubviewVisibility("outreach");
   }
 
   function applyOutreachPreset(preset) {
@@ -6600,10 +6638,7 @@
   }
 
   function setEquipmentViewVisibility() {
-    qsa("[data-equipment-view]").forEach((button) => button.classList.toggle("is-active", button.dataset.equipmentView === state.equipmentView));
-    qsa("[data-equipment-panel]").forEach((panel) => {
-      panel.hidden = panel.dataset.equipmentPanel !== state.equipmentView;
-    });
+    syncDashboardSubviewVisibility("equipment");
   }
 
   function renderEquipment(data = state.data) {

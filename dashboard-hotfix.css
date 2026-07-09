@@ -30,6 +30,13 @@ body:not(.is-login-screen) .dashboard-section:not(.is-active) {
   display: none !important;
 }
 
+body:not(.is-login-screen) [hidden],
+body:not(.is-login-screen) [data-outreach-view-panel][hidden],
+body:not(.is-login-screen) [data-equipment-panel][hidden],
+body:not(.is-login-screen) [data-helper-preview-panel][hidden] {
+  display: none !important;
+}
+
 body:not(.is-login-screen) #outreach [hidden],
 body:not(.is-login-screen) #outreach [data-outreach-view-panel][hidden] {
   display: none !important;
@@ -84,6 +91,10 @@ body:not(.is-login-screen) #outreach .outreach-card-list {
   overflow: visible !important;
 }
 
+body:not(.is-login-screen) #outreach .outreach-mobile-list {
+  display: none !important;
+}
+
 body:not(.is-login-screen) #outreach .outreach-main-panel,
 body:not(.is-login-screen) #outreach .outreach-priority-panel,
 body:not(.is-login-screen) #outreach .outreach-archive-panel,
@@ -92,6 +103,35 @@ body:not(.is-login-screen) #outreach .outreach-card {
   min-width: 0 !important;
   height: auto !important;
   max-height: none !important;
+}
+
+body:not(.is-login-screen) #equipment [data-equipment-panel]:not([hidden]) {
+  display: block !important;
+  position: relative !important;
+  width: 100% !important;
+  min-width: 0 !important;
+  max-width: 100% !important;
+  height: auto !important;
+  max-height: none !important;
+  overflow: visible !important;
+}
+
+body:not(.is-login-screen) #equipment .equipment-layout {
+  align-items: start !important;
+  min-width: 0 !important;
+}
+
+body:not(.is-login-screen) #equipment .equipment-main-panel,
+body:not(.is-login-screen) #equipment .equipment-form-panel,
+body:not(.is-login-screen) #equipment .equipment-card {
+  position: relative !important;
+  min-width: 0 !important;
+  height: auto !important;
+  max-height: none !important;
+}
+
+body:not(.is-login-screen) #equipment [data-equipment-cards] {
+  display: none !important;
 }
 
 body:not(.is-login-screen) #overview.dashboard-section.is-active,
@@ -175,6 +215,18 @@ body:not(.is-login-screen) .call-history-list {
     max-height: none !important;
     overflow-x: auto !important;
     overflow-y: visible !important;
+  }
+
+  body:not(.is-login-screen) #outreach .outreach-table-wrap {
+    display: none !important;
+  }
+
+  body:not(.is-login-screen) #outreach .outreach-mobile-list:not([hidden]) {
+    display: grid !important;
+  }
+
+  body:not(.is-login-screen) #equipment [data-equipment-cards]:not([hidden]) {
+    display: grid !important;
   }
 }
 

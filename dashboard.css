@@ -9294,6 +9294,18 @@ body:not(.is-login-screen) {
   --uy-card-radius: 24px;
 }
 
+body:not(.is-login-screen) .dashboard-shell {
+  background:
+    radial-gradient(circle at 12% -4%, rgba(217, 182, 111, .16), transparent 30%),
+    radial-gradient(circle at 92% 2%, rgba(82, 123, 61, .12), transparent 28%),
+    linear-gradient(135deg, #eef3e7 0%, #fbf8ec 44%, #edf4ea 100%) !important;
+}
+
+body:not(.is-login-screen) .app-view::before {
+  display: none !important;
+  content: none !important;
+}
+
 html:has(body:not(.is-login-screen) .app-view:not([hidden])),
 html:has(body:not(.is-login-screen) .app-view:not([hidden])) body {
   width: 100%;

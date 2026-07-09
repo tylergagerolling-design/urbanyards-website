@@ -65,10 +65,19 @@ body:not(.is-login-screen) #outreach [data-outreach-view-panel]:not([hidden]) {
 }
 
 body:not(.is-login-screen) #outreach .outreach-pipeline-panel:not([hidden]) {
-  display: grid !important;
-  grid-template-columns: minmax(0, 1fr) !important;
+  display: flex !important;
+  flex-direction: column !important;
+  grid-template-columns: none !important;
   align-items: start !important;
   gap: 14px !important;
+}
+
+body:not(.is-login-screen) #outreach .outreach-pipeline-panel > .panel-heading,
+body:not(.is-login-screen) #outreach .outreach-pipeline-panel > .outreach-saved-views,
+body:not(.is-login-screen) #outreach .outreach-pipeline-panel > .outreach-secondary-layout,
+body:not(.is-login-screen) #outreach .outreach-pipeline-panel > .outreach-archive-panel {
+  flex: 0 0 auto !important;
+  width: 100% !important;
 }
 
 body:not(.is-login-screen) #outreach .outreach-layout,
@@ -243,6 +252,31 @@ body:not(.is-login-screen) .call-history-list {
 
   body:not(.is-login-screen) #equipment [data-equipment-cards]:not([hidden]) {
     display: grid !important;
+  }
+
+  body:not(.is-login-screen) #groundskeeper-ai .groundskeeper-ai-command-header {
+    grid-template-columns: minmax(0, 1fr) !important;
+    align-items: stretch !important;
+  }
+
+  body:not(.is-login-screen) #groundskeeper-ai .groundskeeper-ai-toolbar {
+    width: 100% !important;
+    min-width: 0 !important;
+    max-width: 100% !important;
+    justify-content: stretch !important;
+  }
+
+  body:not(.is-login-screen) #groundskeeper-ai .groundskeeper-ai-toolbar input {
+    flex: 1 1 100% !important;
+    width: 100% !important;
+    min-width: 0 !important;
+    max-width: 100% !important;
+  }
+
+  body:not(.is-login-screen) #groundskeeper-ai .groundskeeper-ai-toolbar button {
+    flex: 1 1 min(160px, 100%) !important;
+    min-width: 0 !important;
+    justify-content: center !important;
   }
 }
 

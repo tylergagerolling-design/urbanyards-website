@@ -9608,6 +9608,29 @@ body:not(.is-login-screen) .record-more-menu[open] > div .inline-action {
     flex: 0 0 var(--uy-rail-width) !important;
   }
 
+  body:not(.is-login-screen) .app-view:not(.is-sidebar-open):not(:has(.dashboard-sidebar:hover)):not(:has(.dashboard-sidebar:focus-within)) .dashboard-sidebar :is(
+    .dashboard-brand,
+    .dashboard-nav a,
+    .sidebar-quick-action,
+    .sidebar-manage-link
+  ) {
+    grid-template-columns: var(--uy-sidebar-icon) 0 !important;
+    gap: 0 !important;
+    overflow: hidden !important;
+  }
+
+  body:not(.is-login-screen) .app-view:not(.is-sidebar-open):not(:has(.dashboard-sidebar:hover)):not(:has(.dashboard-sidebar:focus-within)) .dashboard-sidebar .sidebar-profile {
+    grid-template-columns: var(--uy-sidebar-icon) 0 0 !important;
+    gap: 0 !important;
+    overflow: hidden !important;
+  }
+
+  body:not(.is-login-screen) .app-view:not(.is-sidebar-open):not(:has(.dashboard-sidebar:hover)):not(:has(.dashboard-sidebar:focus-within)) .dashboard-sidebar .sign-out {
+    grid-template-columns: var(--uy-sidebar-icon) 0 !important;
+    gap: 0 !important;
+    overflow: hidden !important;
+  }
+
   body:not(.is-login-screen) .dashboard-sidebar-inner {
     display: flex !important;
     flex-direction: column !important;

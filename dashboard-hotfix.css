@@ -37,6 +37,58 @@ body:not(.is-login-screen) [data-helper-preview-panel][hidden] {
   display: none !important;
 }
 
+body:not(.is-login-screen) .dashboard-main,
+body:not(.is-login-screen) .dashboard-main *,
+body:not(.is-login-screen) .dashboard-sidebar,
+body:not(.is-login-screen) .dashboard-sidebar * {
+  box-sizing: border-box;
+}
+
+body:not(.is-login-screen) .dashboard-main :is(
+  .dashboard-section,
+  .overview-command-header,
+  .home-command-grid,
+  .home-command-grid > *,
+  .home-dashboard-card,
+  .overview-activity-card,
+  .submission-list,
+  .overview-activity-row,
+  .overview-row-main,
+  .outreach-layout,
+  .outreach-secondary-layout,
+  .outreach-main-panel,
+  .outreach-priority-panel,
+  .outreach-archive-panel,
+  .outreach-card,
+  .outreach-card-list,
+  .metric-grid,
+  .metric-card,
+  .route-layout,
+  .route-list-panel,
+  .route-map-panel,
+  .route-form-panel,
+  .equipment-layout,
+  .equipment-main-panel,
+  .equipment-form-panel
+) {
+  min-width: 0 !important;
+  max-width: 100% !important;
+}
+
+body:not(.is-login-screen) .dashboard-main :is(
+  .overview-row-main strong,
+  .overview-row-main small,
+  .overview-row-context,
+  .outreach-card strong,
+  .outreach-card p,
+  .outreach-card span,
+  .metric-card strong,
+  .metric-card span
+) {
+  overflow-wrap: anywhere !important;
+  word-break: normal !important;
+}
+
 body:not(.is-login-screen) #outreach [hidden],
 body:not(.is-login-screen) #outreach [data-outreach-view-panel][hidden] {
   display: none !important;
@@ -128,6 +180,40 @@ body:not(.is-login-screen) #outreach .outreach-archive-panel {
   width: 100% !important;
   margin-top: 0 !important;
   clear: both !important;
+}
+
+body:not(.is-login-screen) #overview .overview-activity-row {
+  grid-template-columns: 42px minmax(0, 1fr) minmax(0, auto) 16px !important;
+}
+
+body:not(.is-login-screen) #overview .overview-row-main strong,
+body:not(.is-login-screen) #overview .overview-row-main small,
+body:not(.is-login-screen) #overview .overview-row-context {
+  display: block !important;
+  max-width: 100% !important;
+  white-space: normal !important;
+}
+
+body:not(.is-login-screen) #route-planner .route-layout {
+  grid-template-areas:
+    "form stops"
+    "form map" !important;
+  grid-template-rows: max-content max-content !important;
+  grid-auto-rows: max-content !important;
+  overflow: visible !important;
+}
+
+body:not(.is-login-screen) #route-planner .route-list-panel,
+body:not(.is-login-screen) #route-planner .route-map-panel {
+  align-self: start !important;
+  height: auto !important;
+  max-height: none !important;
+}
+
+@media (min-width: 901px) and (max-width: 1360px) {
+  body:not(.is-login-screen) #overview .home-command-grid {
+    grid-template-columns: 1fr !important;
+  }
 }
 
 body:not(.is-login-screen) #equipment [data-equipment-panel]:not([hidden]) {
@@ -282,222 +368,809 @@ body:not(.is-login-screen) .call-history-list {
 
 @media (min-width: 901px) {
   body:not(.is-login-screen) .app-view {
-    --uy-rail-width: 86px;
-    --uy-drawer-width: 306px;
-    --uy-sidebar-icon: 42px;
+    --uy-rail-width: 76px;
+    --uy-drawer-width: 292px;
+    --uy-sidebar-icon: 48px;
+    --uy-sidebar-icon-art: 24px;
+    --uy-sidebar-radius: 22px;
+    align-items: start !important;
     grid-template-columns: var(--uy-rail-width) minmax(0, 1fr) !important;
     gap: 18px !important;
-    transition: grid-template-columns .28s cubic-bezier(.22, 1, .36, 1), gap .28s cubic-bezier(.22, 1, .36, 1);
+    padding: 16px !important;
+    transition: none !important;
   }
 
   body:not(.is-login-screen) .app-view:has(.dashboard-sidebar:hover),
   body:not(.is-login-screen) .app-view:has(.dashboard-sidebar:focus-within),
   body:not(.is-login-screen) .app-view.is-sidebar-open {
-    grid-template-columns: var(--uy-drawer-width) minmax(0, 1fr) !important;
-    gap: 20px !important;
+    grid-template-columns: var(--uy-rail-width) minmax(0, 1fr) !important;
+    gap: 18px !important;
   }
 
-  body:not(.is-login-screen) .dashboard-sidebar,
+  body:not(.is-login-screen) .dashboard-sidebar {
+    position: sticky !important;
+    top: 16px !important;
+    z-index: 35 !important;
+    width: var(--uy-rail-width) !important;
+    min-width: var(--uy-rail-width) !important;
+    max-width: var(--uy-drawer-width) !important;
+    height: calc(100dvh - 32px) !important;
+    max-height: calc(100dvh - 32px) !important;
+    min-height: 0 !important;
+    overflow: hidden !important;
+    border-radius: var(--uy-sidebar-radius) !important;
+    border: 1px solid rgba(23, 54, 43, .1) !important;
+    background: rgba(255, 253, 247, .94) !important;
+    box-shadow: 0 18px 42px rgba(19, 36, 28, .1) !important;
+    transform: none !important;
+    transition: width .2s cubic-bezier(.22, 1, .36, 1), min-width .2s cubic-bezier(.22, 1, .36, 1), box-shadow .2s ease !important;
+    will-change: width !important;
+  }
+
   body:not(.is-login-screen) .dashboard-sidebar:hover,
   body:not(.is-login-screen) .dashboard-sidebar:focus-within,
   body:not(.is-login-screen) .app-view.is-sidebar-open .dashboard-sidebar {
+    width: var(--uy-drawer-width) !important;
+    min-width: var(--uy-drawer-width) !important;
+    box-shadow: 0 24px 56px rgba(19, 36, 28, .16) !important;
+  }
+
+  body:not(.is-login-screen) .dashboard-main {
+    grid-column: 2 !important;
     width: 100% !important;
     min-width: 0 !important;
-    max-width: none !important;
-    transform: none !important;
-    transition: box-shadow .28s ease, border-color .28s ease, background-color .28s ease !important;
+    margin: 0 !important;
+    transition: none !important;
   }
 
   body:not(.is-login-screen) .dashboard-sidebar-inner {
     display: flex !important;
+    flex-direction: column !important;
     align-items: stretch !important;
+    gap: 8px !important;
     width: 100% !important;
-    padding: 14px !important;
-    overflow-x: hidden !important;
+    height: 100% !important;
+    max-height: 100% !important;
+    min-height: 0 !important;
+    padding: 12px 13px !important;
+    overflow: hidden !important;
+    scrollbar-width: none !important;
+  }
+
+  body:not(.is-login-screen) .dashboard-sidebar-inner::-webkit-scrollbar {
+    display: none !important;
+    width: 0 !important;
   }
 
   body:not(.is-login-screen) .dashboard-brand,
-  body:not(.is-login-screen) .dashboard-brand:hover,
-  body:not(.is-login-screen) .dashboard-brand:focus-visible,
-  body:not(.is-login-screen) .app-view:has(.dashboard-sidebar:hover) .dashboard-brand,
-  body:not(.is-login-screen) .app-view:has(.dashboard-sidebar:focus-within) .dashboard-brand,
-  body:not(.is-login-screen) .app-view.is-sidebar-open .dashboard-brand {
+  body:not(.is-login-screen) .dashboard-nav a,
+  body:not(.is-login-screen) .sidebar-quick-action,
+  body:not(.is-login-screen) .sidebar-manage-link,
+  body:not(.is-login-screen) .sidebar-profile,
+  body:not(.is-login-screen) .sign-out {
     display: grid !important;
     grid-template-columns: var(--uy-sidebar-icon) minmax(0, 1fr) !important;
     align-items: center !important;
     gap: 12px !important;
     width: 100% !important;
-    min-height: 48px !important;
-    margin: 0 0 18px !important;
+    min-width: 0 !important;
+    min-height: var(--uy-sidebar-icon) !important;
+    margin: 0 !important;
     padding: 0 !important;
+    overflow: hidden !important;
+    border-radius: 16px !important;
+    transform: none !important;
+    transition: background-color .18s ease, border-color .18s ease, box-shadow .18s ease, color .18s ease !important;
   }
 
-  body:not(.is-login-screen) .dashboard-brand img,
-  body:not(.is-login-screen) .app-view:has(.dashboard-sidebar:hover) .dashboard-brand img,
-  body:not(.is-login-screen) .app-view:has(.dashboard-sidebar:focus-within) .dashboard-brand img,
-  body:not(.is-login-screen) .app-view.is-sidebar-open .dashboard-brand img {
+  body:not(.is-login-screen) .dashboard-brand {
+    flex: 0 0 auto !important;
+    margin-bottom: 8px !important;
+    border-radius: 18px !important;
+  }
+
+  body:not(.is-login-screen) .dashboard-brand img {
     grid-column: 1 !important;
     justify-self: center !important;
     width: var(--uy-sidebar-icon) !important;
     height: var(--uy-sidebar-icon) !important;
     min-width: var(--uy-sidebar-icon) !important;
+    min-height: var(--uy-sidebar-icon) !important;
+    object-fit: contain !important;
+    transform: none !important;
     transition: none !important;
   }
 
-  body:not(.is-login-screen) .dashboard-nav,
-  body:not(.is-login-screen) .app-view:has(.dashboard-sidebar:hover) .dashboard-nav,
-  body:not(.is-login-screen) .app-view:has(.dashboard-sidebar:focus-within) .dashboard-nav,
-  body:not(.is-login-screen) .app-view.is-sidebar-open .dashboard-nav {
+  body:not(.is-login-screen) .dashboard-nav {
     display: grid !important;
-    gap: 8px !important;
+    flex: 0 0 auto !important;
+    gap: 6px !important;
     width: 100% !important;
-    padding: 0 0 12px !important;
+    min-width: 0 !important;
+    max-width: 100% !important;
+    padding: 0 !important;
+    border: 0 !important;
   }
 
-  body:not(.is-login-screen) .dashboard-nav a,
+  body:not(.is-login-screen) .dashboard-nav a {
+    border: 1px solid transparent !important;
+    background: transparent !important;
+    color: #123f31 !important;
+    box-shadow: none !important;
+  }
+
   body:not(.is-login-screen) .dashboard-nav a:hover,
-  body:not(.is-login-screen) .dashboard-nav a.is-active,
-  body:not(.is-login-screen) .app-view:has(.dashboard-sidebar:hover) .dashboard-nav a,
-  body:not(.is-login-screen) .app-view:has(.dashboard-sidebar:focus-within) .dashboard-nav a,
-  body:not(.is-login-screen) .app-view.is-sidebar-open .dashboard-nav a {
-    display: grid !important;
-    grid-template-columns: var(--uy-sidebar-icon) minmax(0, 1fr) !important;
-    align-items: center !important;
-    gap: 12px !important;
-    width: 100% !important;
-    min-height: 48px !important;
-    padding: 3px 12px 3px 0 !important;
-    border-radius: 18px !important;
-    overflow: hidden !important;
-    transition: background-color .2s ease, border-color .2s ease, box-shadow .2s ease !important;
+  body:not(.is-login-screen) .dashboard-nav a:focus-visible {
+    background: rgba(231, 240, 220, .64) !important;
+    border-color: rgba(64, 104, 56, .1) !important;
+    color: #123f31 !important;
   }
 
-  body:not(.is-login-screen) .dashboard-nav .nav-icon,
+  body:not(.is-login-screen) .dashboard-nav a.is-active,
+  body:not(.is-login-screen) .dashboard-nav a.is-active:hover,
+  body:not(.is-login-screen) .dashboard-nav a.is-active:focus-visible {
+    background: linear-gradient(135deg, #e7f0dc, #dce9cf) !important;
+    border-color: rgba(64, 104, 56, .16) !important;
+    color: #123f31 !important;
+    box-shadow: 0 10px 22px rgba(74, 101, 57, .12) !important;
+  }
+
   body:not(.is-login-screen) .dashboard-sidebar .nav-icon,
-  body:not(.is-login-screen) .dashboard-sidebar .sidebar-quick-action .nav-icon,
-  body:not(.is-login-screen) .dashboard-sidebar .sidebar-manage-link .nav-icon,
-  body:not(.is-login-screen) .app-view:has(.dashboard-sidebar:hover) .dashboard-sidebar .nav-icon,
-  body:not(.is-login-screen) .app-view:has(.dashboard-sidebar:focus-within) .dashboard-sidebar .nav-icon,
-  body:not(.is-login-screen) .app-view.is-sidebar-open .dashboard-sidebar .nav-icon {
+  body:not(.is-login-screen) .sidebar-profile > img:first-child,
+  body:not(.is-login-screen) .sidebar-notification-button,
+  body:not(.is-login-screen) .sign-out .button-icon {
     grid-column: 1 !important;
     justify-self: center !important;
+    display: grid !important;
+    place-items: center !important;
     width: var(--uy-sidebar-icon) !important;
     height: var(--uy-sidebar-icon) !important;
     min-width: var(--uy-sidebar-icon) !important;
+    min-height: var(--uy-sidebar-icon) !important;
     margin: 0 !important;
-    transition: background-color .2s ease, border-color .2s ease, box-shadow .2s ease !important;
+    border-radius: 16px !important;
+    transform: none !important;
+    transition: background-color .18s ease, border-color .18s ease, box-shadow .18s ease, color .18s ease !important;
   }
 
   body:not(.is-login-screen) .dashboard-sidebar .nav-icon img,
-  body:not(.is-login-screen) .app-view:has(.dashboard-sidebar:hover) .dashboard-sidebar .nav-icon img,
-  body:not(.is-login-screen) .app-view:has(.dashboard-sidebar:focus-within) .dashboard-sidebar .nav-icon img,
-  body:not(.is-login-screen) .app-view.is-sidebar-open .dashboard-sidebar .nav-icon img {
-    width: 20px !important;
-    height: 20px !important;
+  body:not(.is-login-screen) .sidebar-profile > img:first-child,
+  body:not(.is-login-screen) .sidebar-notification-button img {
+    width: var(--uy-sidebar-icon-art) !important;
+    height: var(--uy-sidebar-icon-art) !important;
+    max-width: var(--uy-sidebar-icon-art) !important;
+    max-height: var(--uy-sidebar-icon-art) !important;
+    object-fit: contain !important;
+    transform: none !important;
+    transition: none !important;
+  }
+
+  body:not(.is-login-screen) .sidebar-profile > img:first-child {
+    width: 36px !important;
+    height: 36px !important;
+    min-width: 36px !important;
+    min-height: 36px !important;
+    align-self: center !important;
   }
 
   body:not(.is-login-screen) .dashboard-brand span,
-  body:not(.is-login-screen) .dashboard-brand strong,
-  body:not(.is-login-screen) .dashboard-brand small,
   body:not(.is-login-screen) .dashboard-sidebar .nav-label,
   body:not(.is-login-screen) .sidebar-section-title,
   body:not(.is-login-screen) .sidebar-quick-action span:not(.nav-icon),
   body:not(.is-login-screen) .sidebar-manage-link span:not(.nav-icon),
-  body:not(.is-login-screen) .sidebar-profile div,
+  body:not(.is-login-screen) .sidebar-profile span,
+  body:not(.is-login-screen) .sidebar-profile .sidebar-profile-chevron,
   body:not(.is-login-screen) .sidebar-profile .profile-chevron,
   body:not(.is-login-screen) .sign-out span:not(.button-icon) {
+    min-width: 0 !important;
+    max-width: 0 !important;
+    overflow: hidden !important;
     opacity: 0 !important;
-    transform: translateX(-8px) !important;
-    transition: opacity .2s ease .03s, transform .2s ease .03s !important;
+    visibility: hidden !important;
+    transform: translateX(-6px) !important;
+    white-space: nowrap !important;
     pointer-events: none !important;
+    transition: opacity .16s ease, transform .16s ease, visibility .16s ease, max-width .16s ease !important;
   }
 
-  body:not(.is-login-screen) .app-view:has(.dashboard-sidebar:hover) .dashboard-brand span,
-  body:not(.is-login-screen) .app-view:has(.dashboard-sidebar:focus-within) .dashboard-brand span,
+  body:not(.is-login-screen) .dashboard-sidebar:hover .dashboard-brand span,
+  body:not(.is-login-screen) .dashboard-sidebar:focus-within .dashboard-brand span,
   body:not(.is-login-screen) .app-view.is-sidebar-open .dashboard-brand span,
-  body:not(.is-login-screen) .app-view:has(.dashboard-sidebar:hover) .dashboard-brand strong,
-  body:not(.is-login-screen) .app-view:has(.dashboard-sidebar:focus-within) .dashboard-brand strong,
-  body:not(.is-login-screen) .app-view.is-sidebar-open .dashboard-brand strong,
-  body:not(.is-login-screen) .app-view:has(.dashboard-sidebar:hover) .dashboard-brand small,
-  body:not(.is-login-screen) .app-view:has(.dashboard-sidebar:focus-within) .dashboard-brand small,
-  body:not(.is-login-screen) .app-view.is-sidebar-open .dashboard-brand small,
-  body:not(.is-login-screen) .app-view:has(.dashboard-sidebar:hover) .dashboard-sidebar .nav-label,
-  body:not(.is-login-screen) .app-view:has(.dashboard-sidebar:focus-within) .dashboard-sidebar .nav-label,
-  body:not(.is-login-screen) .app-view.is-sidebar-open .dashboard-sidebar .nav-label,
-  body:not(.is-login-screen) .app-view:has(.dashboard-sidebar:hover) .sidebar-section-title,
-  body:not(.is-login-screen) .app-view:has(.dashboard-sidebar:focus-within) .sidebar-section-title,
+  body:not(.is-login-screen) .dashboard-sidebar:hover .nav-label,
+  body:not(.is-login-screen) .dashboard-sidebar:focus-within .nav-label,
+  body:not(.is-login-screen) .app-view.is-sidebar-open .nav-label,
+  body:not(.is-login-screen) .dashboard-sidebar:hover .sidebar-section-title,
+  body:not(.is-login-screen) .dashboard-sidebar:focus-within .sidebar-section-title,
   body:not(.is-login-screen) .app-view.is-sidebar-open .sidebar-section-title,
-  body:not(.is-login-screen) .app-view:has(.dashboard-sidebar:hover) .sidebar-quick-action span:not(.nav-icon),
-  body:not(.is-login-screen) .app-view:has(.dashboard-sidebar:focus-within) .sidebar-quick-action span:not(.nav-icon),
+  body:not(.is-login-screen) .dashboard-sidebar:hover .sidebar-quick-action span:not(.nav-icon),
+  body:not(.is-login-screen) .dashboard-sidebar:focus-within .sidebar-quick-action span:not(.nav-icon),
   body:not(.is-login-screen) .app-view.is-sidebar-open .sidebar-quick-action span:not(.nav-icon),
-  body:not(.is-login-screen) .app-view:has(.dashboard-sidebar:hover) .sidebar-manage-link span:not(.nav-icon),
-  body:not(.is-login-screen) .app-view:has(.dashboard-sidebar:focus-within) .sidebar-manage-link span:not(.nav-icon),
+  body:not(.is-login-screen) .dashboard-sidebar:hover .sidebar-manage-link span:not(.nav-icon),
+  body:not(.is-login-screen) .dashboard-sidebar:focus-within .sidebar-manage-link span:not(.nav-icon),
   body:not(.is-login-screen) .app-view.is-sidebar-open .sidebar-manage-link span:not(.nav-icon),
-  body:not(.is-login-screen) .app-view:has(.dashboard-sidebar:hover) .sidebar-profile div,
-  body:not(.is-login-screen) .app-view:has(.dashboard-sidebar:focus-within) .sidebar-profile div,
-  body:not(.is-login-screen) .app-view.is-sidebar-open .sidebar-profile div,
-  body:not(.is-login-screen) .app-view:has(.dashboard-sidebar:hover) .sidebar-profile .profile-chevron,
-  body:not(.is-login-screen) .app-view:has(.dashboard-sidebar:focus-within) .sidebar-profile .profile-chevron,
+  body:not(.is-login-screen) .dashboard-sidebar:hover .sidebar-profile span,
+  body:not(.is-login-screen) .dashboard-sidebar:focus-within .sidebar-profile span,
+  body:not(.is-login-screen) .app-view.is-sidebar-open .sidebar-profile span,
+  body:not(.is-login-screen) .dashboard-sidebar:hover .sidebar-profile .sidebar-profile-chevron,
+  body:not(.is-login-screen) .dashboard-sidebar:focus-within .sidebar-profile .sidebar-profile-chevron,
+  body:not(.is-login-screen) .app-view.is-sidebar-open .sidebar-profile .sidebar-profile-chevron,
+  body:not(.is-login-screen) .dashboard-sidebar:hover .sidebar-profile .profile-chevron,
+  body:not(.is-login-screen) .dashboard-sidebar:focus-within .sidebar-profile .profile-chevron,
   body:not(.is-login-screen) .app-view.is-sidebar-open .sidebar-profile .profile-chevron,
-  body:not(.is-login-screen) .app-view:has(.dashboard-sidebar:hover) .sign-out span:not(.button-icon),
-  body:not(.is-login-screen) .app-view:has(.dashboard-sidebar:focus-within) .sign-out span:not(.button-icon),
+  body:not(.is-login-screen) .dashboard-sidebar:hover .sign-out span:not(.button-icon),
+  body:not(.is-login-screen) .dashboard-sidebar:focus-within .sign-out span:not(.button-icon),
   body:not(.is-login-screen) .app-view.is-sidebar-open .sign-out span:not(.button-icon) {
+    max-width: 190px !important;
     opacity: 1 !important;
+    visibility: visible !important;
     transform: translateX(0) !important;
     pointer-events: auto !important;
   }
 
+  body:not(.is-login-screen) .dashboard-brand span,
+  body:not(.is-login-screen) .sidebar-profile span {
+    display: flex !important;
+    flex-direction: column !important;
+    gap: 2px !important;
+    color: #123f31 !important;
+    line-height: 1.12 !important;
+  }
+
+  body:not(.is-login-screen) .dashboard-brand strong,
+  body:not(.is-login-screen) .sidebar-profile strong,
+  body:not(.is-login-screen) .nav-label,
+  body:not(.is-login-screen) .sidebar-quick-action span:not(.nav-icon),
+  body:not(.is-login-screen) .sidebar-manage-link span:not(.nav-icon),
+  body:not(.is-login-screen) .sign-out span:not(.button-icon) {
+    color: #123f31 !important;
+    font-weight: 850 !important;
+  }
+
+  body:not(.is-login-screen) .dashboard-brand small,
+  body:not(.is-login-screen) .sidebar-profile small {
+    color: #667568 !important;
+    font-size: .68rem !important;
+    font-weight: 800 !important;
+    letter-spacing: .08em !important;
+    text-transform: uppercase !important;
+  }
+
+  body:not(.is-login-screen) .sidebar-quick-actions {
+    display: grid !important;
+    flex: 0 0 auto !important;
+    gap: 6px !important;
+    width: 100% !important;
+    margin: auto 0 0 !important;
+    padding: 8px 0 0 !important;
+    border-top: 1px solid rgba(23, 54, 43, .08) !important;
+  }
+
+  body:not(.is-login-screen) .sidebar-section-title {
+    display: block !important;
+    height: 14px !important;
+    margin: 0 !important;
+    color: #667568 !important;
+    font-size: .66rem !important;
+    font-weight: 900 !important;
+    letter-spacing: .13em !important;
+    line-height: 14px !important;
+    text-transform: uppercase !important;
+  }
+
+  body:not(.is-login-screen) .sidebar-quick-action-list {
+    display: grid !important;
+    gap: 6px !important;
+    width: 100% !important;
+  }
+
   body:not(.is-login-screen) .sidebar-quick-action,
   body:not(.is-login-screen) .sidebar-manage-link,
-  body:not(.is-login-screen) .app-view:has(.dashboard-sidebar:hover) .sidebar-quick-action,
-  body:not(.is-login-screen) .app-view:has(.dashboard-sidebar:focus-within) .sidebar-quick-action,
-  body:not(.is-login-screen) .app-view.is-sidebar-open .sidebar-quick-action,
-  body:not(.is-login-screen) .app-view:has(.dashboard-sidebar:hover) .sidebar-manage-link,
-  body:not(.is-login-screen) .app-view:has(.dashboard-sidebar:focus-within) .sidebar-manage-link,
-  body:not(.is-login-screen) .app-view.is-sidebar-open .sidebar-manage-link {
+  body:not(.is-login-screen) .sign-out {
+    min-height: 44px !important;
+    border: 1px solid rgba(23, 54, 43, .08) !important;
+    background: rgba(255, 253, 247, .72) !important;
+    color: #123f31 !important;
+    box-shadow: none !important;
+  }
+
+  body:not(.is-login-screen) .sidebar-quick-action:hover,
+  body:not(.is-login-screen) .sidebar-manage-link:hover,
+  body:not(.is-login-screen) .sign-out:hover {
+    background: rgba(231, 240, 220, .72) !important;
+    border-color: rgba(64, 104, 56, .13) !important;
+  }
+
+  body:not(.is-login-screen) .sidebar-bottom {
+    position: relative !important;
     display: grid !important;
-    grid-template-columns: var(--uy-sidebar-icon) minmax(0, 1fr) !important;
-    align-items: center !important;
-    gap: 12px !important;
+    flex: 0 0 auto !important;
+    gap: 6px !important;
     width: 100% !important;
-    min-height: 46px !important;
-    padding: 2px 12px 2px 0 !important;
-    border-radius: 16px !important;
+    margin: 0 !important;
+    padding: 8px 0 0 !important;
+    border-top: 1px solid rgba(23, 54, 43, .08) !important;
+  }
+
+  body:not(.is-login-screen) .sidebar-notification-button {
+    position: relative !important;
+    padding: 0 !important;
+    border: 1px solid rgba(23, 54, 43, .08) !important;
+    background: rgba(231, 240, 220, .58) !important;
+    color: #123f31 !important;
+  }
+
+  body:not(.is-login-screen) .notification-count {
+    position: absolute !important;
+    top: -5px !important;
+    right: -5px !important;
+    min-width: 18px !important;
+    height: 18px !important;
+    padding: 0 5px !important;
+    border-radius: 999px !important;
+    background: #cb7a3c !important;
+    color: #fffdf7 !important;
+    font-size: .68rem !important;
+    line-height: 18px !important;
+    text-align: center !important;
+  }
+
+  body:not(.is-login-screen) .sidebar-notifications-panel {
+    position: fixed !important;
+    right: auto !important;
+    bottom: 24px !important;
+    left: calc(16px + var(--uy-rail-width) + 18px) !important;
+    z-index: 80 !important;
+    width: min(360px, calc(100vw - var(--uy-rail-width) - 56px)) !important;
+    max-height: min(420px, calc(100dvh - 48px)) !important;
+    overflow: auto !important;
+    border-radius: 20px !important;
+    box-shadow: 0 24px 56px rgba(19, 36, 28, .18) !important;
+  }
+
+  body:not(.is-login-screen) .app-view.is-sidebar-open .sidebar-notifications-panel,
+  body:not(.is-login-screen) .dashboard-sidebar:hover .sidebar-notifications-panel,
+  body:not(.is-login-screen) .dashboard-sidebar:focus-within .sidebar-notifications-panel {
+    left: calc(16px + var(--uy-drawer-width) + 18px) !important;
+    width: min(360px, calc(100vw - var(--uy-drawer-width) - 56px)) !important;
+  }
+
+  body:not(.is-login-screen) .sidebar-profile {
+    grid-template-columns: var(--uy-sidebar-icon) minmax(0, 1fr) 16px !important;
+    min-height: 48px !important;
+    border: 0 !important;
+    background: transparent !important;
+  }
+
+  body:not(.is-login-screen) .sidebar-profile .sidebar-profile-chevron,
+  body:not(.is-login-screen) .sidebar-profile .profile-chevron {
+    grid-column: 3 !important;
+    width: 14px !important;
+    height: 14px !important;
+    justify-self: end !important;
+  }
+
+  body:not(.is-login-screen) .sign-out {
+    min-height: 40px !important;
+  }
+
+  body:not(.is-login-screen) .sign-out .button-icon {
+    font-size: .78rem !important;
+    font-weight: 900 !important;
+  }
+}
+
+@media (min-width: 901px) and (max-height: 850px) {
+  body:not(.is-login-screen) .app-view {
+    padding: 12px !important;
+  }
+
+  body:not(.is-login-screen) .dashboard-sidebar {
+    top: 12px !important;
+    height: calc(100dvh - 24px) !important;
+    max-height: calc(100dvh - 24px) !important;
+  }
+
+  body:not(.is-login-screen) .sidebar-notifications-panel {
+    bottom: 18px !important;
+    left: calc(12px + var(--uy-rail-width) + 16px) !important;
+  }
+
+  body:not(.is-login-screen) .app-view.is-sidebar-open .sidebar-notifications-panel,
+  body:not(.is-login-screen) .dashboard-sidebar:hover .sidebar-notifications-panel,
+  body:not(.is-login-screen) .dashboard-sidebar:focus-within .sidebar-notifications-panel {
+    left: calc(12px + var(--uy-drawer-width) + 16px) !important;
+  }
+
+  body:not(.is-login-screen) .dashboard-main {
+    height: calc(100dvh - 24px) !important;
+    max-height: calc(100dvh - 24px) !important;
+  }
+
+  body:not(.is-login-screen) .dashboard-sidebar-inner {
+    gap: 3px !important;
+    padding: 3px 13px !important;
+  }
+
+  body:not(.is-login-screen) .dashboard-brand {
+    margin-bottom: 0 !important;
+  }
+
+  body:not(.is-login-screen) .dashboard-nav {
+    gap: 3px !important;
+  }
+
+  body:not(.is-login-screen) .sidebar-quick-actions {
+    gap: 3px !important;
+    padding-top: 3px !important;
+  }
+
+  body:not(.is-login-screen) .sidebar-quick-action-list {
+    gap: 3px !important;
+  }
+
+  body:not(.is-login-screen) .sidebar-section-title {
+    display: none !important;
+    height: 0 !important;
+    line-height: 0 !important;
+  }
+
+  body:not(.is-login-screen) .sidebar-manage-link,
+  body:not(.is-login-screen) .sign-out {
+    display: none !important;
+  }
+
+  body:not(.is-login-screen) .sidebar-bottom {
+    gap: 3px !important;
+    padding-top: 3px !important;
+  }
+}
+
+@media (min-width: 901px) and (max-height: 660px) {
+  body:not(.is-login-screen) .sidebar-quick-actions {
+    display: none !important;
+  }
+}
+
+@media (min-width: 901px) {
+  body:not(.is-login-screen) .app-view:not(.is-sidebar-open):not(:has(.dashboard-sidebar:hover)):not(:has(.dashboard-sidebar :focus-visible)):not(:has(.dashboard-sidebar:focus-within)) {
+    grid-template-columns: var(--uy-rail-width) minmax(0, 1fr) !important;
+    gap: 18px !important;
+  }
+
+  body:not(.is-login-screen) .app-view:not(.is-sidebar-open):not(:has(.dashboard-sidebar:hover)):not(:has(.dashboard-sidebar :focus-visible)):not(:has(.dashboard-sidebar:focus-within)) .dashboard-sidebar {
+    width: var(--uy-rail-width) !important;
+    min-width: var(--uy-rail-width) !important;
+    max-width: var(--uy-rail-width) !important;
+  }
+
+  body:not(.is-login-screen) .app-view:has(.dashboard-sidebar:focus-within) {
+    grid-template-columns: var(--uy-rail-width) minmax(0, 1fr) !important;
+    gap: 18px !important;
+  }
+
+  body:not(.is-login-screen) .app-view:has(.dashboard-sidebar:focus-within) .dashboard-sidebar {
+    width: var(--uy-drawer-width) !important;
+    min-width: var(--uy-drawer-width) !important;
+    max-width: var(--uy-drawer-width) !important;
+  }
+
+  body:not(.is-login-screen) .app-view:has(.dashboard-sidebar:focus-within) .dashboard-sidebar .dashboard-sidebar-inner,
+  body:not(.is-login-screen) .app-view:has(.dashboard-sidebar:focus-within) .dashboard-sidebar .dashboard-nav {
+    align-items: stretch !important;
+    box-sizing: border-box !important;
+    width: 100% !important;
+    min-width: 0 !important;
+    max-width: 100% !important;
     overflow: hidden !important;
   }
 
-  body:not(.is-login-screen) .sidebar-profile,
-  body:not(.is-login-screen) .app-view:has(.dashboard-sidebar:hover) .sidebar-profile,
-  body:not(.is-login-screen) .app-view:has(.dashboard-sidebar:focus-within) .sidebar-profile,
-  body:not(.is-login-screen) .app-view.is-sidebar-open .sidebar-profile {
-    display: grid !important;
-    grid-template-columns: var(--uy-sidebar-icon) minmax(0, 1fr) 14px !important;
-    align-items: center !important;
-    gap: 10px !important;
-    min-height: 50px !important;
-    padding: 4px 10px 4px 0 !important;
+  body:not(.is-login-screen) .app-view:has(.dashboard-sidebar:focus-within) .dashboard-sidebar .dashboard-sidebar-inner {
+    padding-right: 13px !important;
+    padding-left: 13px !important;
   }
 
-  body:not(.is-login-screen) .sidebar-profile > img:first-child,
-  body:not(.is-login-screen) .app-view:has(.dashboard-sidebar:hover) .sidebar-profile > img:first-child,
-  body:not(.is-login-screen) .app-view:has(.dashboard-sidebar:focus-within) .sidebar-profile > img:first-child,
-  body:not(.is-login-screen) .app-view.is-sidebar-open .sidebar-profile > img:first-child {
-    grid-column: 1 !important;
-    justify-self: center !important;
-    width: 36px !important;
-    height: 36px !important;
+  body:not(.is-login-screen) .app-view:has(.dashboard-sidebar:focus-within) .dashboard-sidebar .dashboard-nav {
+    padding: 0 !important;
   }
 
-  body:not(.is-login-screen) .sign-out,
-  body:not(.is-login-screen) .app-view:has(.dashboard-sidebar:hover) .sign-out,
-  body:not(.is-login-screen) .app-view:has(.dashboard-sidebar:focus-within) .sign-out,
-  body:not(.is-login-screen) .app-view.is-sidebar-open .sign-out {
-    display: grid !important;
+  body:not(.is-login-screen) .app-view:has(.dashboard-sidebar:focus-within) .dashboard-sidebar .dashboard-brand,
+  body:not(.is-login-screen) .app-view:has(.dashboard-sidebar:focus-within) .dashboard-sidebar .dashboard-nav a,
+  body:not(.is-login-screen) .app-view:has(.dashboard-sidebar:focus-within) .dashboard-sidebar .sidebar-quick-action,
+  body:not(.is-login-screen) .app-view:has(.dashboard-sidebar:focus-within) .dashboard-sidebar .sidebar-manage-link,
+  body:not(.is-login-screen) .app-view:has(.dashboard-sidebar:focus-within) .dashboard-sidebar .sidebar-profile {
+    box-sizing: border-box !important;
     grid-template-columns: var(--uy-sidebar-icon) minmax(0, 1fr) !important;
-    align-items: center !important;
-    gap: 10px !important;
-    min-height: 42px !important;
-    padding: 2px 10px 2px 0 !important;
+    height: var(--uy-sidebar-icon) !important;
+    min-height: var(--uy-sidebar-icon) !important;
+    max-height: var(--uy-sidebar-icon) !important;
+    width: 100% !important;
+    padding: 0 !important;
+  }
+
+  body:not(.is-login-screen) .app-view:has(.dashboard-sidebar:focus-within) .dashboard-sidebar .nav-icon,
+  body:not(.is-login-screen) .app-view:has(.dashboard-sidebar:focus-within) .dashboard-sidebar .dashboard-nav a.is-active .nav-icon,
+  body:not(.is-login-screen) .app-view:has(.dashboard-sidebar:focus-within) .dashboard-sidebar .dashboard-nav a:hover .nav-icon {
+    width: var(--uy-sidebar-icon) !important;
+    min-width: var(--uy-sidebar-icon) !important;
+    max-width: var(--uy-sidebar-icon) !important;
+    height: var(--uy-sidebar-icon) !important;
+    min-height: var(--uy-sidebar-icon) !important;
+    max-height: var(--uy-sidebar-icon) !important;
+  }
+
+  body:not(.is-login-screen) .app-view:has(.dashboard-sidebar:focus-within) .dashboard-brand span,
+  body:not(.is-login-screen) .app-view:has(.dashboard-sidebar:focus-within) .nav-label,
+  body:not(.is-login-screen) .app-view:has(.dashboard-sidebar:focus-within) .sidebar-section-title,
+  body:not(.is-login-screen) .app-view:has(.dashboard-sidebar:focus-within) .sidebar-quick-action span:not(.nav-icon),
+  body:not(.is-login-screen) .app-view:has(.dashboard-sidebar:focus-within) .sidebar-manage-link span:not(.nav-icon),
+  body:not(.is-login-screen) .app-view:has(.dashboard-sidebar:focus-within) .sidebar-profile span,
+  body:not(.is-login-screen) .app-view:has(.dashboard-sidebar:focus-within) .sidebar-profile .sidebar-profile-chevron,
+  body:not(.is-login-screen) .app-view:has(.dashboard-sidebar:focus-within) .sidebar-profile .profile-chevron,
+  body:not(.is-login-screen) .app-view:has(.dashboard-sidebar:focus-within) .sign-out span:not(.button-icon) {
+    max-width: 190px !important;
+    opacity: 1 !important;
+    visibility: visible !important;
+    transform: translateX(0) !important;
+    pointer-events: auto !important;
+  }
+
+  body:not(.is-login-screen) .app-view .dashboard-sidebar .dashboard-brand,
+  body:not(.is-login-screen) .app-view .dashboard-sidebar .dashboard-nav a,
+  body:not(.is-login-screen) .app-view .dashboard-sidebar .sidebar-quick-action,
+  body:not(.is-login-screen) .app-view .dashboard-sidebar .sidebar-manage-link,
+  body:not(.is-login-screen) .app-view .dashboard-sidebar .sidebar-profile {
+    box-sizing: border-box !important;
+    height: var(--uy-sidebar-icon) !important;
+    min-height: var(--uy-sidebar-icon) !important;
+    max-height: var(--uy-sidebar-icon) !important;
+    width: 100% !important;
+    padding: 0 !important;
+  }
+
+  body:not(.is-login-screen) .app-view .dashboard-sidebar .sign-out {
+    box-sizing: border-box !important;
+    height: 40px !important;
+    min-height: 40px !important;
+    max-height: 40px !important;
+    width: 100% !important;
+    padding: 0 !important;
+  }
+
+  body:not(.is-login-screen) .app-view .dashboard-sidebar .nav-icon,
+  body:not(.is-login-screen) .app-view .dashboard-sidebar .sidebar-notification-button,
+  body:not(.is-login-screen) .app-view .dashboard-sidebar .sign-out .button-icon {
+    box-sizing: border-box !important;
+    width: var(--uy-sidebar-icon) !important;
+    min-width: var(--uy-sidebar-icon) !important;
+    max-width: var(--uy-sidebar-icon) !important;
+    height: var(--uy-sidebar-icon) !important;
+    min-height: var(--uy-sidebar-icon) !important;
+    max-height: var(--uy-sidebar-icon) !important;
+    padding: 0 !important;
+  }
+
+  body:not(.is-login-screen) .app-view:not(.is-sidebar-open):not(:has(.dashboard-sidebar:hover)):not(:has(.dashboard-sidebar :focus-visible)) .dashboard-sidebar .dashboard-sidebar-inner,
+  body:not(.is-login-screen) .app-view:has(.dashboard-sidebar:hover) .dashboard-sidebar .dashboard-sidebar-inner,
+  body:not(.is-login-screen) .app-view:has(.dashboard-sidebar :focus-visible) .dashboard-sidebar .dashboard-sidebar-inner,
+  body:not(.is-login-screen) .app-view.is-sidebar-open .dashboard-sidebar .dashboard-sidebar-inner {
+    align-items: stretch !important;
+    box-sizing: border-box !important;
+    width: 100% !important;
+    min-width: 0 !important;
+    max-width: 100% !important;
+    padding-right: 13px !important;
+    padding-left: 13px !important;
     overflow: hidden !important;
+  }
+
+  body:not(.is-login-screen) .app-view:not(.is-sidebar-open):not(:has(.dashboard-sidebar:hover)):not(:has(.dashboard-sidebar :focus-visible)) .dashboard-sidebar .dashboard-nav,
+  body:not(.is-login-screen) .app-view:has(.dashboard-sidebar:hover) .dashboard-sidebar .dashboard-nav,
+  body:not(.is-login-screen) .app-view:has(.dashboard-sidebar :focus-visible) .dashboard-sidebar .dashboard-nav,
+  body:not(.is-login-screen) .app-view.is-sidebar-open .dashboard-sidebar .dashboard-nav {
+    box-sizing: border-box !important;
+    width: 100% !important;
+    min-width: 0 !important;
+    max-width: 100% !important;
+    padding: 0 !important;
+    overflow: hidden !important;
+  }
+
+  body:not(.is-login-screen) .app-view:not(.is-sidebar-open):not(:has(.dashboard-sidebar:hover)):not(:has(.dashboard-sidebar :focus-visible)) .dashboard-sidebar .dashboard-brand,
+  body:not(.is-login-screen) .app-view:not(.is-sidebar-open):not(:has(.dashboard-sidebar:hover)):not(:has(.dashboard-sidebar :focus-visible)) .dashboard-sidebar .dashboard-nav a,
+  body:not(.is-login-screen) .app-view:not(.is-sidebar-open):not(:has(.dashboard-sidebar:hover)):not(:has(.dashboard-sidebar :focus-visible)) .dashboard-sidebar .sidebar-quick-action,
+  body:not(.is-login-screen) .app-view:not(.is-sidebar-open):not(:has(.dashboard-sidebar:hover)):not(:has(.dashboard-sidebar :focus-visible)) .dashboard-sidebar .sidebar-manage-link,
+  body:not(.is-login-screen) .app-view:not(.is-sidebar-open):not(:has(.dashboard-sidebar:hover)):not(:has(.dashboard-sidebar :focus-visible)) .dashboard-sidebar .sidebar-profile {
+    box-sizing: border-box !important;
+    grid-template-columns: var(--uy-sidebar-icon) minmax(0, 1fr) !important;
+    justify-content: start !important;
+    height: var(--uy-sidebar-icon) !important;
+    min-height: var(--uy-sidebar-icon) !important;
+    max-height: var(--uy-sidebar-icon) !important;
+    width: 100% !important;
+    padding: 0 !important;
+  }
+
+  body:not(.is-login-screen) .app-view:has(.dashboard-sidebar:hover) .dashboard-sidebar .dashboard-brand,
+  body:not(.is-login-screen) .app-view:has(.dashboard-sidebar:hover) .dashboard-sidebar .dashboard-nav a,
+  body:not(.is-login-screen) .app-view:has(.dashboard-sidebar:hover) .dashboard-sidebar .sidebar-quick-action,
+  body:not(.is-login-screen) .app-view:has(.dashboard-sidebar:hover) .dashboard-sidebar .sidebar-manage-link,
+  body:not(.is-login-screen) .app-view:has(.dashboard-sidebar:hover) .dashboard-sidebar .sidebar-profile,
+  body:not(.is-login-screen) .app-view:has(.dashboard-sidebar :focus-visible) .dashboard-sidebar .dashboard-brand,
+  body:not(.is-login-screen) .app-view:has(.dashboard-sidebar :focus-visible) .dashboard-sidebar .dashboard-nav a,
+  body:not(.is-login-screen) .app-view:has(.dashboard-sidebar :focus-visible) .dashboard-sidebar .sidebar-quick-action,
+  body:not(.is-login-screen) .app-view:has(.dashboard-sidebar :focus-visible) .dashboard-sidebar .sidebar-manage-link,
+  body:not(.is-login-screen) .app-view:has(.dashboard-sidebar :focus-visible) .dashboard-sidebar .sidebar-profile,
+  body:not(.is-login-screen) .app-view.is-sidebar-open .dashboard-sidebar .dashboard-brand,
+  body:not(.is-login-screen) .app-view.is-sidebar-open .dashboard-sidebar .dashboard-nav a,
+  body:not(.is-login-screen) .app-view.is-sidebar-open .dashboard-sidebar .sidebar-quick-action,
+  body:not(.is-login-screen) .app-view.is-sidebar-open .dashboard-sidebar .sidebar-manage-link,
+  body:not(.is-login-screen) .app-view.is-sidebar-open .dashboard-sidebar .sidebar-profile {
+    box-sizing: border-box !important;
+    grid-template-columns: var(--uy-sidebar-icon) minmax(0, 1fr) !important;
+    height: var(--uy-sidebar-icon) !important;
+    min-height: var(--uy-sidebar-icon) !important;
+    max-height: var(--uy-sidebar-icon) !important;
+    padding: 0 !important;
+  }
+
+  body:not(.is-login-screen) .app-view:not(.is-sidebar-open):not(:has(.dashboard-sidebar:hover)):not(:has(.dashboard-sidebar :focus-visible)) .dashboard-sidebar .nav-icon,
+  body:not(.is-login-screen) .app-view:not(.is-sidebar-open):not(:has(.dashboard-sidebar:hover)):not(:has(.dashboard-sidebar :focus-visible)) .dashboard-sidebar .dashboard-nav a.is-active .nav-icon,
+  body:not(.is-login-screen) .app-view:not(.is-sidebar-open):not(:has(.dashboard-sidebar:hover)):not(:has(.dashboard-sidebar :focus-visible)) .dashboard-sidebar .dashboard-nav a:hover .nav-icon,
+  body:not(.is-login-screen) .app-view:not(.is-sidebar-open):not(:has(.dashboard-sidebar:hover)):not(:has(.dashboard-sidebar :focus-visible)) .dashboard-sidebar .sidebar-quick-action .nav-icon,
+  body:not(.is-login-screen) .app-view:not(.is-sidebar-open):not(:has(.dashboard-sidebar:hover)):not(:has(.dashboard-sidebar :focus-visible)) .dashboard-sidebar .sidebar-manage-link .nav-icon,
+  body:not(.is-login-screen) .app-view:not(.is-sidebar-open):not(:has(.dashboard-sidebar:hover)):not(:has(.dashboard-sidebar :focus-visible)) .dashboard-sidebar .sidebar-notification-button {
+    box-sizing: border-box !important;
+    width: var(--uy-sidebar-icon) !important;
+    min-width: var(--uy-sidebar-icon) !important;
+    max-width: var(--uy-sidebar-icon) !important;
+    height: var(--uy-sidebar-icon) !important;
+    min-height: var(--uy-sidebar-icon) !important;
+    max-height: var(--uy-sidebar-icon) !important;
+    padding: 0 !important;
+  }
+
+  body:not(.is-login-screen) .app-view:has(.dashboard-sidebar:hover) .dashboard-sidebar .dashboard-nav a.is-active .nav-icon,
+  body:not(.is-login-screen) .app-view:has(.dashboard-sidebar:hover) .dashboard-sidebar .dashboard-nav a:hover .nav-icon,
+  body:not(.is-login-screen) .app-view:has(.dashboard-sidebar :focus-visible) .dashboard-sidebar .dashboard-nav a.is-active .nav-icon,
+  body:not(.is-login-screen) .app-view:has(.dashboard-sidebar :focus-visible) .dashboard-sidebar .dashboard-nav a:hover .nav-icon,
+  body:not(.is-login-screen) .app-view.is-sidebar-open .dashboard-sidebar .dashboard-nav a.is-active .nav-icon,
+  body:not(.is-login-screen) .app-view.is-sidebar-open .dashboard-sidebar .dashboard-nav a:hover .nav-icon {
+    width: var(--uy-sidebar-icon) !important;
+    min-width: var(--uy-sidebar-icon) !important;
+    max-width: var(--uy-sidebar-icon) !important;
+    height: var(--uy-sidebar-icon) !important;
+    min-height: var(--uy-sidebar-icon) !important;
+    max-height: var(--uy-sidebar-icon) !important;
+  }
+}
+
+@media (min-width: 901px) {
+  body:not(.is-login-screen) .app-view:has(.dashboard-sidebar:focus-within),
+  body:not(.is-login-screen) .app-view.is-sidebar-open {
+    grid-template-columns: var(--uy-rail-width) minmax(0, 1fr) !important;
+    gap: 18px !important;
+  }
+
+  body:not(.is-login-screen) .app-view:has(.dashboard-sidebar:focus-within) .dashboard-sidebar,
+  body:not(.is-login-screen) .app-view.is-sidebar-open .dashboard-sidebar {
+    width: var(--uy-drawer-width) !important;
+    min-width: var(--uy-drawer-width) !important;
+    max-width: var(--uy-drawer-width) !important;
+  }
+
+  body:not(.is-login-screen) .app-view:has(.dashboard-sidebar:focus-within) .dashboard-sidebar .dashboard-sidebar-inner,
+  body:not(.is-login-screen) .app-view.is-sidebar-open .dashboard-sidebar .dashboard-sidebar-inner {
+    align-items: stretch !important;
+    box-sizing: border-box !important;
+    width: 100% !important;
+    min-width: 0 !important;
+    max-width: 100% !important;
+    padding-right: 13px !important;
+    padding-left: 13px !important;
+    overflow: hidden !important;
+  }
+
+  body:not(.is-login-screen) .app-view:has(.dashboard-sidebar:focus-within) .dashboard-sidebar .dashboard-nav,
+  body:not(.is-login-screen) .app-view.is-sidebar-open .dashboard-sidebar .dashboard-nav {
+    width: 100% !important;
+    min-width: 0 !important;
+    max-width: 100% !important;
+    padding: 0 !important;
+    overflow: hidden !important;
+  }
+
+  body:not(.is-login-screen) .app-view:has(.dashboard-sidebar:focus-within) .dashboard-sidebar .dashboard-brand,
+  body:not(.is-login-screen) .app-view:has(.dashboard-sidebar:focus-within) .dashboard-sidebar .dashboard-nav a,
+  body:not(.is-login-screen) .app-view:has(.dashboard-sidebar:focus-within) .dashboard-sidebar .sidebar-quick-action,
+  body:not(.is-login-screen) .app-view:has(.dashboard-sidebar:focus-within) .dashboard-sidebar .sidebar-manage-link,
+  body:not(.is-login-screen) .app-view:has(.dashboard-sidebar:focus-within) .dashboard-sidebar .sidebar-profile,
+  body:not(.is-login-screen) .app-view.is-sidebar-open .dashboard-sidebar .dashboard-brand,
+  body:not(.is-login-screen) .app-view.is-sidebar-open .dashboard-sidebar .dashboard-nav a,
+  body:not(.is-login-screen) .app-view.is-sidebar-open .dashboard-sidebar .sidebar-quick-action,
+  body:not(.is-login-screen) .app-view.is-sidebar-open .dashboard-sidebar .sidebar-manage-link,
+  body:not(.is-login-screen) .app-view.is-sidebar-open .dashboard-sidebar .sidebar-profile {
+    grid-template-columns: var(--uy-sidebar-icon) minmax(0, 1fr) !important;
+    height: var(--uy-sidebar-icon) !important;
+    min-height: var(--uy-sidebar-icon) !important;
+    max-height: var(--uy-sidebar-icon) !important;
+    width: 100% !important;
+    padding: 0 !important;
+  }
+
+  body:not(.is-login-screen) .app-view:has(.dashboard-sidebar:focus-within) .dashboard-sidebar .nav-icon,
+  body:not(.is-login-screen) .app-view:has(.dashboard-sidebar:focus-within) .dashboard-sidebar .dashboard-nav a.is-active .nav-icon,
+  body:not(.is-login-screen) .app-view:has(.dashboard-sidebar:focus-within) .dashboard-sidebar .dashboard-nav a:hover .nav-icon,
+  body:not(.is-login-screen) .app-view.is-sidebar-open .dashboard-sidebar .nav-icon,
+  body:not(.is-login-screen) .app-view.is-sidebar-open .dashboard-sidebar .dashboard-nav a.is-active .nav-icon,
+  body:not(.is-login-screen) .app-view.is-sidebar-open .dashboard-sidebar .dashboard-nav a:hover .nav-icon {
+    width: var(--uy-sidebar-icon) !important;
+    min-width: var(--uy-sidebar-icon) !important;
+    max-width: var(--uy-sidebar-icon) !important;
+    height: var(--uy-sidebar-icon) !important;
+    min-height: var(--uy-sidebar-icon) !important;
+    max-height: var(--uy-sidebar-icon) !important;
+  }
+
+  body:not(.is-login-screen) .app-view:has(.dashboard-sidebar:focus-within) .dashboard-brand span,
+  body:not(.is-login-screen) .app-view:has(.dashboard-sidebar:focus-within) .nav-label,
+  body:not(.is-login-screen) .app-view:has(.dashboard-sidebar:focus-within) .sidebar-section-title,
+  body:not(.is-login-screen) .app-view:has(.dashboard-sidebar:focus-within) .sidebar-quick-action span:not(.nav-icon),
+  body:not(.is-login-screen) .app-view:has(.dashboard-sidebar:focus-within) .sidebar-manage-link span:not(.nav-icon),
+  body:not(.is-login-screen) .app-view:has(.dashboard-sidebar:focus-within) .sidebar-profile span,
+  body:not(.is-login-screen) .app-view:has(.dashboard-sidebar:focus-within) .sidebar-profile .sidebar-profile-chevron,
+  body:not(.is-login-screen) .app-view:has(.dashboard-sidebar:focus-within) .sidebar-profile .profile-chevron,
+  body:not(.is-login-screen) .app-view:has(.dashboard-sidebar:focus-within) .sign-out span:not(.button-icon),
+  body:not(.is-login-screen) .app-view.is-sidebar-open .dashboard-brand span,
+  body:not(.is-login-screen) .app-view.is-sidebar-open .nav-label,
+  body:not(.is-login-screen) .app-view.is-sidebar-open .sidebar-section-title,
+  body:not(.is-login-screen) .app-view.is-sidebar-open .sidebar-quick-action span:not(.nav-icon),
+  body:not(.is-login-screen) .app-view.is-sidebar-open .sidebar-manage-link span:not(.nav-icon),
+  body:not(.is-login-screen) .app-view.is-sidebar-open .sidebar-profile span,
+  body:not(.is-login-screen) .app-view.is-sidebar-open .sidebar-profile .sidebar-profile-chevron,
+  body:not(.is-login-screen) .app-view.is-sidebar-open .sidebar-profile .profile-chevron,
+  body:not(.is-login-screen) .app-view.is-sidebar-open .sign-out span:not(.button-icon) {
+    max-width: 190px !important;
+    opacity: 1 !important;
+    visibility: visible !important;
+    transform: translateX(0) !important;
+    pointer-events: auto !important;
+  }
+}
+
+@media (min-width: 901px) and (max-height: 850px) {
+  body:not(.is-login-screen) .app-view:has(.dashboard-sidebar:focus-within),
+  body:not(.is-login-screen) .app-view.is-sidebar-open {
+    padding: 12px !important;
+  }
+}
+
+@media (min-width: 901px) and (max-height: 850px) {
+  body:not(.is-login-screen) .app-view:not(.is-sidebar-open):not(:has(.dashboard-sidebar:hover)):not(:has(.dashboard-sidebar :focus-visible)) .dashboard-brand {
+    margin-bottom: 0 !important;
+  }
+
+  body:not(.is-login-screen) .app-view:not(.is-sidebar-open):not(:has(.dashboard-sidebar:hover)):not(:has(.dashboard-sidebar :focus-visible)) .sidebar-bottom {
+    margin-top: 0 !important;
+    padding-top: 2px !important;
+  }
+
+  body:not(.is-login-screen) .app-view .dashboard-sidebar .dashboard-brand {
+    margin-bottom: 0 !important;
+  }
+
+  body:not(.is-login-screen) .app-view .dashboard-sidebar .dashboard-nav,
+  body:not(.is-login-screen) .app-view .dashboard-sidebar .sidebar-quick-action-list,
+  body:not(.is-login-screen) .app-view .dashboard-sidebar .sidebar-bottom {
+    gap: 3px !important;
+  }
+
+  body:not(.is-login-screen) .app-view .dashboard-sidebar .sidebar-quick-actions {
+    gap: 3px !important;
+    padding-top: 2px !important;
+  }
+
+  body:not(.is-login-screen) .app-view .dashboard-sidebar .sidebar-bottom {
+    margin-top: 0 !important;
+    padding-top: 2px !important;
   }
 }

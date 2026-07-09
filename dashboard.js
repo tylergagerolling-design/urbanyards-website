@@ -7495,6 +7495,27 @@
       els.sidebarClose.addEventListener("click", () => setSidebarOpen(false));
     }
 
+    if (els.sidebar) {
+      const isDesktopSidebar = () => window.matchMedia("(min-width: 901px)").matches;
+      els.sidebar.addEventListener("pointerenter", () => {
+        if (isDesktopSidebar()) setSidebarOpen(true);
+      });
+      els.sidebar.addEventListener("pointerleave", () => {
+        if (isDesktopSidebar()) setSidebarOpen(false);
+      });
+      els.sidebar.addEventListener("focusin", () => {
+        if (isDesktopSidebar()) setSidebarOpen(true);
+      });
+      els.sidebar.addEventListener("focusout", () => {
+        if (!isDesktopSidebar()) return;
+        requestAnimationFrame(() => {
+          if (!els.sidebar.contains(document.activeElement)) {
+            setSidebarOpen(false);
+          }
+        });
+      });
+    }
+
     document.addEventListener("keydown", (event) => {
       if (event.key === "Escape") {
         setSidebarOpen(false);
@@ -9508,6 +9529,7 @@
     els.ownerEmail = qs("[data-owner-email]");
     els.sidebarUserName = qs("[data-sidebar-user-name]");
     els.sidebarUserRole = qs("[data-sidebar-user-role]");
+    els.sidebar = qs("#dashboard-sidebar");
     els.signOut = qs("[data-sign-out]");
     els.newNote = qs("[data-new-note]");
     els.refreshDashboard = qs("[data-refresh-dashboard]");

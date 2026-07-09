@@ -9293,6 +9293,7 @@ body:not(.is-login-screen) {
   --uy-icon-art: var(--uy-sidebar-icon-art);
   --uy-nav-gap: 6px;
   --uy-card-radius: 24px;
+  --uy-drawer-ease: cubic-bezier(.22, 1, .36, 1);
 }
 
 body:not(.is-login-screen) .dashboard-shell {
@@ -9587,10 +9588,11 @@ body:not(.is-login-screen) .record-more-menu[open] > div .inline-action {
     max-height: calc(100dvh - (var(--uy-page-pad) * 2)) !important;
     overflow: hidden !important;
     transition:
-      width .24s ease,
-      min-width .24s ease,
-      max-width .24s ease,
-      box-shadow .24s ease !important;
+      width .3s var(--uy-drawer-ease),
+      min-width .3s var(--uy-drawer-ease),
+      max-width .3s var(--uy-drawer-ease),
+      box-shadow .3s var(--uy-drawer-ease) !important;
+    will-change: width, min-width, max-width;
   }
 
   body:not(.is-login-screen) .dashboard-sidebar:hover,
@@ -9621,6 +9623,10 @@ body:not(.is-login-screen) .record-more-menu[open] > div .inline-action {
     overflow: hidden !important;
   }
 
+  body:not(.is-login-screen) .app-view:not(.is-sidebar-open):not(:has(.dashboard-sidebar:hover)):not(:has(.dashboard-sidebar:focus-within)) .dashboard-sidebar .dashboard-brand {
+    overflow: visible !important;
+  }
+
   body:not(.is-login-screen) .app-view:not(.is-sidebar-open):not(:has(.dashboard-sidebar:hover)):not(:has(.dashboard-sidebar:focus-within)) .dashboard-sidebar .sidebar-profile {
     grid-template-columns: var(--uy-closed-sidebar-icon) 0 0 !important;
     justify-content: center !important;
@@ -9629,10 +9635,7 @@ body:not(.is-login-screen) .record-more-menu[open] > div .inline-action {
   }
 
   body:not(.is-login-screen) .app-view:not(.is-sidebar-open):not(:has(.dashboard-sidebar:hover)):not(:has(.dashboard-sidebar:focus-within)) .dashboard-sidebar .sign-out {
-    grid-template-columns: var(--uy-closed-sidebar-icon) 0 !important;
-    justify-content: center !important;
-    gap: 0 !important;
-    overflow: hidden !important;
+    display: none !important;
   }
 
   body:not(.is-login-screen) .app-view:not(.is-sidebar-open):not(:has(.dashboard-sidebar:hover)):not(:has(.dashboard-sidebar:focus-within)) .dashboard-sidebar .dashboard-nav a::after {
@@ -9640,7 +9643,7 @@ body:not(.is-login-screen) .record-more-menu[open] > div .inline-action {
     content: none !important;
   }
 
-  body:not(.is-login-screen) .app-view:not(.is-sidebar-open):not(:has(.dashboard-sidebar:hover)):not(:has(.dashboard-sidebar:focus-within)) .dashboard-sidebar :is(.nav-icon, .sidebar-notification-button, .sign-out .button-icon, .sidebar-profile > img:first-child) {
+  body:not(.is-login-screen) .app-view:not(.is-sidebar-open):not(:has(.dashboard-sidebar:hover)):not(:has(.dashboard-sidebar:focus-within)) .dashboard-sidebar :is(.dashboard-brand img, .nav-icon, .sidebar-notification-button, .sidebar-profile > img:first-child) {
     width: var(--uy-closed-sidebar-icon) !important;
     min-width: var(--uy-closed-sidebar-icon) !important;
     max-width: var(--uy-closed-sidebar-icon) !important;
@@ -9785,7 +9788,10 @@ body:not(.is-login-screen) .record-more-menu[open] > div .inline-action {
     visibility: hidden !important;
     transform: translateX(-4px) !important;
     pointer-events: none !important;
-    transition: opacity .18s ease, transform .18s ease, max-width .22s ease !important;
+    transition:
+      opacity .22s var(--uy-drawer-ease),
+      transform .26s var(--uy-drawer-ease),
+      max-width .3s var(--uy-drawer-ease) !important;
   }
 
   body:not(.is-login-screen) :is(.dashboard-sidebar:hover, .dashboard-sidebar:focus-within) .dashboard-brand span,

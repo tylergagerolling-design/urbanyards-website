@@ -35,6 +35,21 @@
   const USER_AVATAR_MAX_BYTES = 2 * 1024 * 1024;
   const USER_AVATAR_ALLOWED_TYPES = new Set(["image/jpeg", "image/png", "image/webp"]);
   const USER_AVATAR_ALLOWED_EXTENSIONS = new Set(["jpg", "jpeg", "png", "webp"]);
+  const DASHBOARD_ROLES = ["owner", "admin", "manager", "worker", "viewer"];
+  const DASHBOARD_ROLE_LABELS = {
+    owner: "Owner",
+    admin: "Admin",
+    manager: "Manager",
+    worker: "Worker",
+    viewer: "Viewer"
+  };
+  const DASHBOARD_ROLE_PERMISSIONS = {
+    owner: ["*"],
+    admin: ["*"],
+    manager: ["view", "create", "edit", "archive", "import", "export"],
+    worker: ["view", "create", "edit"],
+    viewer: ["view"]
+  };
   const AI_TRAINING_CATEGORIES = {
     tone: "Tone & Voice",
     services: "Services",
@@ -80,7 +95,8 @@
     "equipmentMaintenance",
     "hardwareGuide",
     "leadActivity",
-    "userProfiles"
+    "userProfiles",
+    "auditLogs"
   ];
 
   const config = window.URBAN_YARDS_DASHBOARD_CONFIG || {
@@ -142,6 +158,7 @@
     groundskeeperAiReady: false,
     leadActivityReady: true,
     userProfilesReady: true,
+    auditLogsReady: true,
     avatarUploadTargetId: "",
     preferredCallMethod: localStorage.getItem(CALL_METHOD_KEY) || "browser_tel",
     groundskeeperMessages: [],
@@ -162,6 +179,7 @@
       hardwareGuide: [],
       leadActivity: [],
       userProfiles: [],
+      auditLogs: [],
       groundskeeperAi: {
         settings: [],
         knowledge: [],
@@ -338,6 +356,30 @@
     return (config.ownerEmail || "team@urbanyards.us").toLowerCase();
   }
 
+  function normalizeDashboardRole(role) {
+    const normalized = String(role || "").trim().toLowerCase();
+    if (normalized === "staff") return "manager";
+    return DASHBOARD_ROLES.includes(normalized) ? normalized : "viewer";
+  }
+
+  function roleLabel(role) {
+    return DASHBOARD_ROLE_LABELS[normalizeDashboardRole(role)] || "Viewer";
+  }
+
+  function currentSessionRole() {
+    const session = getSession() || {};
+    return normalizeDashboardRole(session.role || session.profile?.role);
+  }
+
+  function hasDashboardPermission(permission, role = currentSessionRole()) {
+    const permissions = DASHBOARD_ROLE_PERMISSIONS[normalizeDashboardRole(role)] || [];
+    return permissions.includes("*") || permissions.includes(permission);
+  }
+
+  function canManageUsers() {
+    return ["owner", "admin"].includes(currentSessionRole());
+  }
+
   function dashboardEnvironment() {
     return String(config.appEnv || "production").trim().toLowerCase();
   }
@@ -466,7 +508,7 @@
       profileFullName(user),
       email
     );
-    const role = firstProfileText(profileRole(userMetadata), profileRole(user));
+    const role = normalizeDashboardRole(firstProfileText(profileRole(userMetadata), profileRole(user), appMetadata.role));
     return { name, role };
   }
 
@@ -476,10 +518,27 @@
     const profile = profileRecord || {};
     return {
       name: firstProfileText(profileFullName(profile), sessionProfile.name, email, getOwnerEmail()),
-      role: firstProfileText(profileRole(profile), sessionProfile.role),
+      role: firstProfileText(profileRole(profile), roleLabel(session.role || sessionProfile.role)),
       avatar_url: firstProfileText(profileAvatarUrl(profile), sessionProfile.avatar_url, sessionProfile.avatarUrl),
       email
     };
+  }
+
+  function syncSessionRoleFromProfile(profileRecord = {}) {
+    const session = getSession();
+    if (!session) return;
+    const role = normalizeDashboardRole(firstProfileText(profileRecord.role, profileRecord.dashboard_role, profileRecord.app_role, session.role, session.profile?.role));
+    const nextSession = {
+      ...session,
+      role,
+      profile: {
+        ...(session.profile || {}),
+        role,
+        name: firstProfileText(profileFullName(profileRecord), session.profile?.name, session.email),
+        avatar_url: firstProfileText(profileAvatarUrl(profileRecord), session.profile?.avatar_url, session.profile?.avatarUrl)
+      }
+    };
+    setSession(nextSession);
   }
 
   function renderSidebarUserProfile(profileRecord = null) {
@@ -610,13 +669,26 @@
 
       try {
         const rows = await supabaseRestRequest(query, { method: "GET" });
-        if (Array.isArray(rows) && rows.length) return rows[0];
+        if (Array.isArray(rows) && rows.length) {
+          syncSessionRoleFromProfile(rows[0]);
+          return rows[0];
+        }
       } catch (error) {
         const message = String(error && error.message ? error.message : "");
         if (/relation .*profiles|profiles.*does not exist|could not find the table/i.test(message)) {
           return null;
         }
       }
+    }
+
+    try {
+      const result = await dashboardUsersRequest("me");
+      if (result.user) {
+        syncSessionRoleFromProfile(result.user);
+        return result.user;
+      }
+    } catch (error) {
+      // Keep the dashboard usable while the admin function or SQL is being installed.
     }
 
     return null;
@@ -632,11 +704,15 @@
       userId: id,
       email,
       name,
-      role: firstProfileText(row.role, row.dashboard_role, row.app_role, "viewer"),
-      title: firstProfileText(profileRole(row), row.role === "owner" ? "Owner" : ""),
+      role: normalizeDashboardRole(firstProfileText(row.role, row.dashboard_role, row.app_role, "viewer")),
+      title: firstProfileText(row.title, row.job_title, row.role_title, row.role_name),
       avatarUrl: profileAvatarUrl(row),
       avatarPath: firstProfileText(row.avatar_path, row.avatarPath),
-      avatarUpdatedAt: firstProfileText(row.avatar_updated_at, row.avatarUpdatedAt, row.updated_at)
+      avatarUpdatedAt: firstProfileText(row.avatar_updated_at, row.avatarUpdatedAt, row.updated_at),
+      disabledAt: firstProfileText(row.disabled_at, row.disabledAt),
+      lastLoginAt: firstProfileText(row.last_login_at, row.lastLoginAt, row.last_sign_in_at, row.lastSignInAt),
+      invitedAt: firstProfileText(row.invited_at, row.invitedAt),
+      lastSeenAt: firstProfileText(row.last_seen_at, row.lastSeenAt)
     };
   }
 
@@ -654,9 +730,14 @@
     }
 
     try {
-      const rows = await supabaseRestRequest("profiles?select=*&order=email.asc.nullslast,full_name.asc.nullslast", { method: "GET" });
+      const result = await dashboardUsersRequest("list");
       state.userProfilesReady = true;
-      return Array.isArray(rows) ? rows.map(normalizeUserProfile) : [];
+      const profiles = Array.isArray(result.users) ? result.users.map(normalizeUserProfile) : [];
+      const session = getSession();
+      const current = profiles.find((profile) => profile.userId && profile.userId === session?.userId)
+        || profiles.find((profile) => profile.email && profile.email.toLowerCase() === String(session?.email || "").toLowerCase());
+      if (current) syncSessionRoleFromProfile(current);
+      return profiles;
     } catch (error) {
       state.userProfilesReady = false;
       const session = getSession();
@@ -665,6 +746,32 @@
       if (session) {
         return [normalizeUserProfile({ id: session.userId, email: session.email, role: "viewer", title: "Dashboard user" })];
       }
+      return [];
+    }
+  }
+
+  async function loadAuditLogs() {
+    if (isDemoMode()) {
+      state.auditLogsReady = true;
+      return [
+        {
+          id: "demo-audit-1",
+          created_at: new Date().toISOString(),
+          actor_email: "demo@urbanyards.us",
+          actor_role: "owner",
+          action: "demo_activity",
+          entity_type: "dashboard",
+          metadata: { note: "Demo activity log entry" }
+        }
+      ];
+    }
+
+    try {
+      const result = await dashboardActivityRequest({ limit: "150" });
+      state.auditLogsReady = true;
+      return Array.isArray(result.logs) ? result.logs : [];
+    } catch (error) {
+      state.auditLogsReady = false;
       return [];
     }
   }
@@ -728,6 +835,36 @@
     return avatarRequest("/.netlify/functions/user-delete-avatar", {
       targetUserId: targetUserId || session?.userId
     });
+  }
+
+  async function dashboardUsersRequest(action, payload = {}) {
+    const session = getSession();
+    if (!session || !session.accessToken) throw new Error("Please sign in again.");
+    const response = await fetch("/.netlify/functions/dashboard-users", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${session.accessToken}`
+      },
+      body: JSON.stringify({ action, ...payload })
+    });
+    const result = await response.json().catch(() => ({}));
+    if (!response.ok) throw new Error(result.error || "User admin request failed.");
+    return result;
+  }
+
+  async function dashboardActivityRequest(params = {}) {
+    const session = getSession();
+    if (!session || !session.accessToken) throw new Error("Please sign in again.");
+    const query = new URLSearchParams(params);
+    const response = await fetch(`/.netlify/functions/dashboard-activity?${query.toString()}`, {
+      headers: {
+        Authorization: `Bearer ${session.accessToken}`
+      }
+    });
+    const result = await response.json().catch(() => ({}));
+    if (!response.ok) throw new Error(result.error || "Activity log request failed.");
+    return result;
   }
 
   async function groundskeeperRequest(action, payload = {}) {
@@ -2005,6 +2142,17 @@
           created_at: now,
           updated_at: now
         })
+      ],
+      auditLogs: [
+        {
+          id: "demo-audit-1",
+          created_at: now,
+          actor_email: "demo@urbanyards.us",
+          actor_role: "owner",
+          action: "demo_activity",
+          entity_type: "dashboard",
+          metadata: { note: "Demo mode activity sample" }
+        }
       ]
     };
   }
@@ -2013,11 +2161,8 @@
     const user = payload.user || {};
     const userEmail = String(user.email ? user.email : "").toLowerCase();
 
-    if (userEmail !== getOwnerEmail()) {
-      throw new Error(`Only ${getOwnerEmail()} can access this dashboard.`);
-    }
-
     const expiresIn = Number(payload.expires_in || 3600);
+    const profile = authProfileFromUser(user, userEmail);
 
     return {
       accessToken: payload.access_token,
@@ -2025,15 +2170,12 @@
       expiresAt: Date.now() + expiresIn * 1000,
       email: userEmail,
       userId: profileText(user.id),
-      profile: authProfileFromUser(user, userEmail)
+      role: normalizeDashboardRole(profile.role),
+      profile
     };
   }
 
   async function signInOwner(email, password) {
-    if (email.toLowerCase() !== getOwnerEmail()) {
-      throw new Error(`Only ${getOwnerEmail()} can access this dashboard.`);
-    }
-
     const payload = await supabaseAuthRequest("/auth/v1/token?grant_type=password", {
       method: "POST",
       body: JSON.stringify({ email, password })
@@ -2070,15 +2212,14 @@
     }, session.accessToken);
 
     const userEmail = String(payload.email || "").toLowerCase();
-    if (userEmail !== getOwnerEmail()) {
-      throw new Error(`Only ${getOwnerEmail()} can access this dashboard.`);
-    }
+    const profile = authProfileFromUser(payload, userEmail);
 
     return {
       ...session,
       email: userEmail,
       userId: profileText(payload.id || session.userId),
-      profile: authProfileFromUser(payload, userEmail)
+      role: normalizeDashboardRole(session.role || profile.role),
+      profile
     };
   }
 
@@ -2113,10 +2254,11 @@
       state.groundskeeperAiReady = true;
       state.leadActivityReady = true;
       state.userProfilesReady = true;
+      state.auditLogsReady = true;
       return demoDashboardData();
     }
 
-    const [submissions, contacts, jobs, notes, reminders, documents, operations, outreachProspects, outreachCompanies, outreachProperties, routeStops, equipmentItems, equipmentMaintenance, hardwareGuide, groundskeeperAi, leadActivity, userProfiles] = await Promise.all([
+    const [submissions, contacts, jobs, notes, reminders, documents, operations, outreachProspects, outreachCompanies, outreachProperties, routeStops, equipmentItems, equipmentMaintenance, hardwareGuide, groundskeeperAi, leadActivity, userProfiles, auditLogs] = await Promise.all([
       supabaseRestRequest("quote_submissions?select=*&order=created_at.desc", { method: "GET" }),
       supabaseRestRequest("contacts?select=*&order=created_at.desc", { method: "GET" }),
       supabaseRestRequest("scheduled_jobs?select=*&order=visit_date.asc", { method: "GET" }),
@@ -2133,7 +2275,8 @@
       loadHardwareGuide(),
       loadGroundskeeperAi(),
       loadLeadActivity(),
-      loadUserProfiles()
+      loadUserProfiles(),
+      loadAuditLogs()
     ]);
 
     return {
@@ -2153,7 +2296,8 @@
       hardwareGuide,
       groundskeeperAi,
       leadActivity,
-      userProfiles
+      userProfiles,
+      auditLogs
     };
   }
 
@@ -4511,45 +4655,100 @@
     renderSidebarUserProfile(currentUserProfile(data));
   }
 
+  function roleOptions(selectedRole) {
+    const selected = normalizeDashboardRole(selectedRole);
+    return DASHBOARD_ROLES.map((role) => `<option value="${escapeHtml(role)}"${role === selected ? " selected" : ""}>${escapeHtml(roleLabel(role))}</option>`).join("");
+  }
+
+  function formatAuditAction(action) {
+    return String(action || "unknown").replace(/_/g, " ").replace(/\b\w/g, (letter) => letter.toUpperCase());
+  }
+
   function renderUsersAccess(data = state.data) {
     if (!els.usersAccessList) return;
     const profiles = data.userProfiles || [];
+    const isAdmin = canManageUsers();
     if (els.usersAccessStatus) {
       els.usersAccessStatus.textContent = state.userProfilesReady
-        ? "Upload, replace, or remove safe dashboard profile images."
+        ? "Invite users, assign dashboard roles, disable access, and manage safe profile avatars."
         : "User profile listing is limited until the profile SQL is installed or your role has access.";
     }
 
+    const inviteForm = isAdmin ? `
+      <form class="users-access-invite" data-users-invite-form>
+        <label>
+          <span>Email</span>
+          <input type="email" name="email" placeholder="new.user@example.com" required>
+        </label>
+        <label>
+          <span>Role</span>
+          <select name="role">${roleOptions("viewer")}</select>
+        </label>
+        <button type="submit">Invite User</button>
+      </form>
+    ` : "";
+
     if (!profiles.length) {
-      els.usersAccessList.innerHTML = emptyState("No dashboard users found yet.");
+      els.usersAccessList.innerHTML = `${inviteForm}${emptyState("No dashboard users found yet.")}`;
       return;
     }
 
-    els.usersAccessList.innerHTML = profiles.map((profile) => {
+    els.usersAccessList.innerHTML = `${inviteForm}${profiles.map((profile) => {
       const name = profile.name || profile.email || "Dashboard user";
-      const subtitle = [profile.email, profile.title || profile.role || "Dashboard user"].filter(Boolean).join(" / ");
+      const subtitle = [profile.email, profile.title || roleLabel(profile.role)].filter(Boolean).join(" / ");
       const disabled = profile.userId ? "" : " disabled";
+      const isDisabled = Boolean(profile.disabledAt);
+      const canEdit = isAdmin && profile.userId;
       return `
-        <article class="users-access-row">
+        <article class="users-access-row${isDisabled ? " is-disabled" : ""}">
           <div class="users-access-identity">
             ${avatarMarkup(profile, "users-access-avatar")}
             <div>
               <strong>${escapeHtml(name)}</strong>
               <small>${escapeHtml(subtitle || "Dashboard user")}</small>
+              <small>${escapeHtml(profile.lastLoginAt ? `Last login ${formatDate(profile.lastLoginAt)}` : profile.invitedAt ? `Invited ${formatDate(profile.invitedAt)}` : "No login recorded")}</small>
             </div>
           </div>
           <div class="users-access-meta">
-            <span>${escapeHtml(profile.role || "viewer")}</span>
+            <span>${escapeHtml(isDisabled ? "Disabled" : roleLabel(profile.role))}</span>
+            ${canEdit ? `<select data-user-role-select data-user-id="${escapeHtml(profile.userId)}" data-user-email="${escapeHtml(profile.email)}" aria-label="Change role for ${escapeHtml(name)}">${roleOptions(profile.role)}</select>` : ""}
             <small>${profile.avatarUpdatedAt ? `Avatar updated ${escapeHtml(formatDate(profile.avatarUpdatedAt))}` : "No uploaded avatar"}</small>
           </div>
           <div class="users-access-actions">
-            <button class="inline-action" type="button" data-action="upload-user-avatar" data-user-id="${escapeHtml(profile.userId)}"${disabled}>Upload</button>
-            <button class="inline-action" type="button" data-action="remove-user-avatar" data-user-id="${escapeHtml(profile.userId)}"${profile.avatarUrl ? disabled : " disabled"}>Remove</button>
+            <button class="inline-action" type="button" data-action="upload-user-avatar" data-user-id="${escapeHtml(profile.userId)}"${canEdit || profile.userId === getSession()?.userId ? "" : " disabled"}>Upload</button>
+            <button class="inline-action" type="button" data-action="remove-user-avatar" data-user-id="${escapeHtml(profile.userId)}"${profile.avatarUrl && (canEdit || profile.userId === getSession()?.userId) ? "" : " disabled"}>Remove</button>
+            ${canEdit ? `<button class="inline-action" type="button" data-action="${isDisabled ? "enable-dashboard-user" : "disable-dashboard-user"}" data-user-id="${escapeHtml(profile.userId)}">${isDisabled ? "Enable" : "Disable"}</button>` : ""}
+            ${canEdit ? `<button class="inline-action" type="button" data-action="view-user-activity" data-user-id="${escapeHtml(profile.userId)}">Activity</button>` : ""}
           </div>
         </article>
       `;
-    }).join("");
+    }).join("")}`;
     bindAvatarFallbacks(els.usersAccessList);
+  }
+
+  function renderActivityLog(data = state.data) {
+    if (!els.activityLogList) return;
+    const logs = data.auditLogs || [];
+    if (!state.auditLogsReady) {
+      els.activityLogList.innerHTML = emptyState("Activity log is limited until audit SQL is installed or your role has access.");
+      return;
+    }
+    if (!logs.length) {
+      els.activityLogList.innerHTML = emptyState("No audit activity recorded yet.");
+      return;
+    }
+    els.activityLogList.innerHTML = logs.slice(0, 80).map((log) => `
+      <article class="activity-log-row">
+        <div>
+          <strong>${escapeHtml(formatAuditAction(log.action))}</strong>
+          <small>${escapeHtml([log.entity_type, log.entity_id].filter(Boolean).join(" / ") || "Dashboard")}</small>
+        </div>
+        <div>
+          <span>${escapeHtml(log.actor_email || log.actor_role || "System")}</span>
+          <small>${escapeHtml(log.created_at ? `${formatDate(log.created_at)} ${new Date(log.created_at).toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" })}` : "")}</small>
+        </div>
+      </article>
+    `).join("");
   }
 
   function renderMetrics(data) {
@@ -7625,6 +7824,7 @@
     renderRoutePlanner(data);
     renderGroundskeeperAi(data);
     renderUsersAccess(data);
+    renderActivityLog(data);
     renderCurrentProfileAvatar(data);
     renderEnvironmentIndicator();
     bindAvatarFallbacks();
@@ -8111,6 +8311,23 @@
         return;
       }
 
+      if (target.matches("[data-user-role-select]")) {
+        try {
+          setDashboardState("Updating user role...");
+          await dashboardUsersRequest("update-role", {
+            userId: target.dataset.userId || "",
+            email: target.dataset.userEmail || "",
+            role: target.value
+          });
+          await refreshDashboard();
+          setActiveSection("settings");
+          setDashboardState("User role updated.");
+        } catch (error) {
+          setDashboardState(error.message || "Unable to update user role.", "error");
+        }
+        return;
+      }
+
       if (target.matches("[data-route-status-id]")) {
         try {
           setDashboardState("Updating route stop...");
@@ -8246,6 +8463,39 @@
           setDashboardState("Avatar removed.");
         } catch (error) {
           setDashboardState(error.message || "Unable to remove avatar.", "error");
+        }
+        return;
+      }
+
+      if (action === "disable-dashboard-user" || action === "enable-dashboard-user") {
+        const targetUserId = target.dataset.userId || "";
+        if (!targetUserId) return;
+        const disabling = action === "disable-dashboard-user";
+        if (disabling && !window.confirm("Disable this dashboard user? They will lose access to protected dashboard actions.")) return;
+        try {
+          setDashboardState(disabling ? "Disabling user..." : "Enabling user...");
+          await dashboardUsersRequest(disabling ? "disable" : "enable", { userId: targetUserId });
+          await refreshDashboard();
+          setActiveSection("settings");
+          setDashboardState(disabling ? "User disabled." : "User enabled.");
+        } catch (error) {
+          setDashboardState(error.message || "Unable to update user access.", "error");
+        }
+        return;
+      }
+
+      if (action === "view-user-activity") {
+        const targetUserId = target.dataset.userId || "";
+        if (!targetUserId) return;
+        try {
+          setDashboardState("Loading user activity...");
+          const result = await dashboardUsersRequest("activity", { userId: targetUserId });
+          state.data.auditLogs = Array.isArray(result.logs) ? result.logs : [];
+          state.auditLogsReady = true;
+          renderActivityLog(state.data);
+          setDashboardState("Showing recent activity for selected user.");
+        } catch (error) {
+          setDashboardState(error.message || "Unable to load user activity.", "error");
         }
         return;
       }
@@ -9315,7 +9565,23 @@
     });
 
   els.appView.addEventListener("submit", async (event) => {
-      if (event.target.matches("[data-call-panel-form]")) {
+      if (event.target.matches("[data-users-invite-form]")) {
+        event.preventDefault();
+        const formData = new FormData(event.target);
+        try {
+          setDashboardState("Sending dashboard invite...");
+          await dashboardUsersRequest("invite", {
+            email: String(formData.get("email") || "").trim(),
+            role: String(formData.get("role") || "viewer")
+          });
+          event.target.reset();
+          await refreshDashboard();
+          setActiveSection("settings");
+          setDashboardState("Dashboard invite saved.");
+        } catch (error) {
+          setDashboardState(error.message || "Unable to send invite.", "error");
+        }
+      } else if (event.target.matches("[data-call-panel-form]")) {
         event.preventDefault();
         const formData = new FormData(event.target);
         const activityId = event.target.dataset.id || "";
@@ -9953,6 +10219,7 @@
     els.userAvatarUpload = qs("[data-user-avatar-upload]");
     els.usersAccessStatus = qs("[data-users-access-status]");
     els.usersAccessList = qs("[data-users-access-list]");
+    els.activityLogList = qs("[data-activity-log-list]");
     els.groundskeeperAiStatus = qs("[data-groundskeeper-ai-status]");
     els.aiNav = qs("[data-ai-nav]");
     els.aiMain = qs("[data-ai-main]");

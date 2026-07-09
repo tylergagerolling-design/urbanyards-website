@@ -51,7 +51,8 @@
   font-size: 0.68rem;
 }
 
-.users-access-panel {
+.users-access-panel,
+.activity-log-panel {
   display: grid;
   gap: 14px;
   margin-top: 18px;
@@ -69,6 +70,50 @@
   gap: 10px;
 }
 
+.users-access-invite {
+  display: grid;
+  grid-template-columns: minmax(220px, 1fr) minmax(150px, 200px) auto;
+  align-items: end;
+  gap: 10px;
+  padding: 12px;
+  border: 1px solid rgba(18, 63, 49, 0.1);
+  border-radius: 18px;
+  background: rgba(232, 240, 235, 0.35);
+}
+
+.users-access-invite label {
+  display: grid;
+  gap: 6px;
+  color: var(--uy-green);
+  font-size: 0.76rem;
+  font-weight: 850;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+.users-access-invite input,
+.users-access-invite select,
+.users-access-meta select {
+  width: 100%;
+  min-height: 38px;
+  border: 1px solid rgba(18, 63, 49, 0.14);
+  border-radius: 14px;
+  background: rgba(255, 253, 247, 0.92);
+  color: var(--uy-green);
+  font: inherit;
+  font-weight: 760;
+}
+
+.users-access-invite input,
+.users-access-invite select {
+  padding: 0 12px;
+}
+
+.users-access-invite button {
+  min-height: 38px;
+  white-space: nowrap;
+}
+
 .users-access-row {
   display: grid;
   grid-template-columns: minmax(240px, 1.3fr) minmax(150px, 0.7fr) auto;
@@ -78,6 +123,11 @@
   border: 1px solid rgba(18, 63, 49, 0.1);
   border-radius: 18px;
   background: rgba(255, 253, 247, 0.74);
+}
+
+.users-access-row.is-disabled {
+  opacity: 0.72;
+  background: rgba(248, 244, 235, 0.72);
 }
 
 .users-access-identity {
@@ -114,6 +164,8 @@
 }
 
 .users-access-meta {
+  display: grid;
+  gap: 6px;
   min-width: 0;
 }
 
@@ -136,13 +188,51 @@
   padding-inline: 12px;
 }
 
+.activity-log-list {
+  display: grid;
+  gap: 8px;
+}
+
+.activity-log-row {
+  display: grid;
+  grid-template-columns: minmax(220px, 1fr) minmax(180px, 0.5fr);
+  align-items: center;
+  gap: 14px;
+  padding: 12px 14px;
+  border: 1px solid rgba(18, 63, 49, 0.09);
+  border-radius: 16px;
+  background: rgba(255, 253, 247, 0.66);
+}
+
+.activity-log-row strong,
+.activity-log-row span,
+.activity-log-row small {
+  display: block;
+}
+
+.activity-log-row strong,
+.activity-log-row span {
+  color: var(--uy-green);
+  font-weight: 850;
+}
+
+.activity-log-row small {
+  color: var(--uy-muted);
+  font-size: 0.82rem;
+}
+
 @media (max-width: 780px) {
+  .users-access-invite,
   .users-access-row {
     grid-template-columns: 1fr;
   }
 
   .users-access-actions {
     justify-content: flex-start;
+  }
+
+  .activity-log-row {
+    grid-template-columns: 1fr;
   }
 }
 

@@ -6,14 +6,14 @@ const crypto = require("node:crypto");
 // VITE_SUPABASE_ANON_KEY or SUPABASE_ANON_KEY
 // Optional: VITE_DASHBOARD_OWNER_EMAIL, DASHBOARD_ADMIN_EMAILS
 
-const ROLE_ORDER = ["client", "viewer", "staff", "admin", "owner"];
+const ROLE_ORDER = ["client", "viewer", "worker", "staff", "manager", "admin", "owner"];
 const PROTECTED_ROLES = new Set(ROLE_ORDER);
 const RATE_LIMIT_BUCKETS = new Map();
 
 const ROLE_PERMISSIONS = {
   owner: ["*"],
   admin: ["*"],
-  staff: [
+  manager: [
     "dashboard:read",
     "leads:read", "leads:write", "leads:delete",
     "clients:read", "clients:write",
@@ -21,7 +21,31 @@ const ROLE_PERMISSIONS = {
     "equipment:read", "equipment:write", "equipment:delete",
     "notes:read", "notes:write", "notes:delete",
     "call_logs:read", "call_logs:write",
-    "route:read", "route:write", "route:delete"
+    "route:read", "route:write", "route:delete",
+    "invoices:read",
+    "settings:read",
+    "exports:read"
+  ],
+  staff: [
+    "dashboard:read",
+    "leads:read", "leads:write",
+    "clients:read", "clients:write",
+    "appointments:read", "appointments:write",
+    "equipment:read", "equipment:write",
+    "notes:read", "notes:write",
+    "call_logs:read", "call_logs:write",
+    "route:read", "route:write",
+    "invoices:read",
+    "settings:read"
+  ],
+  worker: [
+    "dashboard:read",
+    "clients:read",
+    "appointments:read", "appointments:write",
+    "equipment:read",
+    "notes:read", "notes:write",
+    "call_logs:read", "call_logs:write",
+    "route:read", "route:write"
   ],
   viewer: [
     "dashboard:read",
@@ -263,10 +287,13 @@ async function actorFromHeaders(headers = {}) {
   if (!user) return null;
   const profile = await loadUserProfile(user).catch(() => null);
   const role = resolveRole(user, profile);
+  const disabledAt = profile?.disabled_at || profile?.disabledAt || null;
   return {
     user,
     profile,
     role,
+    disabled: Boolean(disabledAt),
+    disabledAt,
     userId: user.id || profile?.user_id || profile?.id || "",
     email: String(user.email || profile?.email || "").toLowerCase()
   };
@@ -296,23 +323,43 @@ function rateLimit(key, limit = 60, windowMs = 60000) {
   };
 }
 
-async function writeAuditLog({ actor = null, action, entityType, entityId = null, metadata = {}, event = null } = {}) {
+async function writeAuditLog({ actor = null, action, entityType, entityId = null, metadata = {}, event = null, oldValue = null, newValue = null, module = "" } = {}) {
+  const baseRow = {
+    actor_user_id: actor?.userId || actor?.user?.id || null,
+    actor_role: actor?.role || null,
+    action: String(action || "unknown").slice(0, 120),
+    entity_type: String(entityType || "").slice(0, 120),
+    entity_id: entityId === undefined ? null : String(entityId || "").slice(0, 160),
+    metadata,
+    ip_address: event ? ipFromEvent(event) : null,
+    user_agent: event ? userAgentFromEvent(event) : null
+  };
+  const expandedRow = {
+    ...baseRow,
+    actor_email: actor?.email || actor?.user?.email || null,
+    old_value: oldValue,
+    new_value: newValue,
+    module: String(module || entityType || "").slice(0, 80)
+  };
   try {
     await supabaseAdminRequest("audit_logs", {
       method: "POST",
       headers: { Prefer: "return=minimal" },
-      body: JSON.stringify({
-        actor_user_id: actor?.userId || actor?.user?.id || null,
-        actor_role: actor?.role || null,
-        action: String(action || "unknown").slice(0, 120),
-        entity_type: String(entityType || "").slice(0, 120),
-        entity_id: entityId === undefined ? null : String(entityId || "").slice(0, 160),
-        metadata,
-        ip_address: event ? ipFromEvent(event) : null,
-        user_agent: event ? userAgentFromEvent(event) : null
-      })
+      body: JSON.stringify(expandedRow)
     });
   } catch (error) {
+    if (/actor_email|old_value|new_value|module|schema cache|column/i.test(error.message || "")) {
+      try {
+        await supabaseAdminRequest("audit_logs", {
+          method: "POST",
+          headers: { Prefer: "return=minimal" },
+          body: JSON.stringify(baseRow)
+        });
+        return;
+      } catch (fallbackError) {
+        if (/does not exist|schema cache|relation/i.test(fallbackError.message)) return;
+      }
+    }
     if (!/does not exist|schema cache|relation/i.test(error.message)) {
       console.warn(JSON.stringify({ event: "audit_log_failed", message: error.message }));
     }
@@ -359,6 +406,17 @@ async function requirePermission(eventOrHeaders, permission, context = {}) {
   if (!actor) {
     return { ok: false, statusCode: 401, error: "Unauthorized.", actor: null };
   }
+  if (actor.disabled) {
+    await writeAuditLog({
+      actor,
+      action: "permission_denied_disabled_user",
+      entityType: context.entityType || context.table || "",
+      entityId: context.entityId || "",
+      metadata: { permission, ...context },
+      event: eventOrHeaders?.headers ? eventOrHeaders : null
+    });
+    return { ok: false, statusCode: 403, error: "This dashboard user has been disabled.", actor };
+  }
   if (!hasPermission(actor.role, permission)) {
     await writeAuditLog({
       actor,
@@ -383,6 +441,8 @@ function requestIdFromEvent(event = {}) {
 }
 
 module.exports = {
+  ROLE_ORDER,
+  ROLE_PERMISSIONS,
   TABLE_PERMISSIONS,
   actorFromHeaders,
   featureFlagForTable,
@@ -398,6 +458,7 @@ module.exports = {
   rateLimit,
   requestIdFromEvent,
   requirePermission,
+  normalizeRole,
   resolveRole,
   supabaseAdminRequest,
   verifyOwner,

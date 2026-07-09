@@ -11,9 +11,9 @@
     <link rel="icon" href="/favicon.ico" sizes="any">
     <link rel="apple-touch-icon" href="/apple-touch-icon.png">
     <link rel="manifest" href="/dashboard.webmanifest">
-    <link rel="stylesheet" href="dashboard.css?v=20260709-avatars-1">
+    <link rel="stylesheet" href="dashboard.css?v=20260709-ops-foundation-1">
     <script src="dashboard-config.js?v=20260623-1" defer></script>
-    <script src="dashboard.js?v=20260709-avatars-1" defer></script>
+    <script src="dashboard.js?v=20260709-ops-foundation-1" defer></script>
   </head>
   <body>
     <main class="dashboard-shell" aria-labelledby="dashboard-title">
@@ -977,12 +977,21 @@
                 <div class="panel-heading">
                   <div>
                     <h3>Users &amp; Access</h3>
-                    <p>Manage dashboard user avatars. Images are optional and fall back to initials.</p>
+                    <p>Invite users, manage roles, disable access, and keep profile avatars clean.</p>
                   </div>
                 </div>
                 <div class="users-access-status" data-users-access-status></div>
                 <div class="users-access-list" data-users-access-list></div>
                 <p class="form-note">Allowed avatar files: JPG, PNG, or WebP up to 2 MB. SVG and document uploads are blocked.</p>
+              </div>
+              <div class="activity-log-panel">
+                <div class="panel-heading">
+                  <div>
+                    <h3>Activity Log</h3>
+                    <p>Recent protected dashboard actions, exports, user changes, imports, and system activity.</p>
+                  </div>
+                </div>
+                <div class="activity-log-list" data-activity-log-list></div>
               </div>
               <input data-import-backup type="file" accept="application/json" hidden>
               <input data-user-avatar-upload type="file" accept=".jpg,.jpeg,.png,.webp,image/jpeg,image/png,image/webp" hidden>

@@ -1,7 +1,7 @@
 Urban Yards Sidebar Icon Pack
 
 Contents:
-- 22 SVG icons in a consistent 24x24 outline style
+- 20 SVG icons in a consistent 24x24 outline style
 - Uses stroke="currentColor" so icons inherit text color in CSS
 - No leaf/logo icon included, per request
 
@@ -19,11 +19,9 @@ Suggested mapping:
 - notifications-bell.svg -> Notifications
 - search.svg -> Search bar
 - calendar.svg -> Today’s Jobs / Calendar
-- upcoming-clock.svg -> Upcoming
 - activity-check-circle.svg -> Activity / status
 - tasks-check-square.svg -> Tasks
 - chevron-right.svg / chevron-down.svg -> navigation arrows
-- filter-sliders.svg -> filters / settings
 - menu-grid.svg -> app switcher / more tools
 - profile-avatar.svg -> profile placeholder
 - quick-actions-spark.svg -> quick actions / AI / helper accent

@@ -835,16 +835,6 @@
     `;
   }
 
-  function renderCallSettingsPanel() {
-    const checked = state.preferredCallMethod === "browser_tel" ? " checked" : "";
-    return `
-      <section class="call-settings-panel">
-        <label><input type="checkbox" data-call-method-setting value="browser_tel"${checked}> Use Google Voice browser call flow</label>
-        <p>The Call button opens Google Voice with the number queued when supported, and copies the number as backup. <a href="${escapeHtml(GOOGLE_VOICE_HOME_URL)}" target="_blank" rel="noopener noreferrer">Open Google Voice</a></p>
-      </section>
-    `;
-  }
-
   function callPanelContext(leadType, leadId) {
     if (leadType === "quote_submission") {
       const item = findSubmission(leadId);
@@ -998,12 +988,6 @@
     if (typeof doc.squareAmountDueCents === "number") return doc.squareAmountDueCents;
     const total = Number(doc.total || 0);
     return Number.isFinite(total) ? Math.round(total * 100) : 0;
-  }
-
-  function squareAmountOwedCents(data) {
-    return data.documents
-      .filter(isDocumentUnpaid)
-      .reduce((sum, doc) => sum + documentAmountOwedCents(doc), 0);
   }
 
   function isOverdueInvoice(doc) {
@@ -2096,11 +2080,6 @@
       body: JSON.stringify({ title, body })
     });
     return normalizeNote(rows[0]);
-  }
-
-  async function insertScheduledJob(payload) {
-    const jobs = await insertScheduledJobs([payload]);
-    return jobs[0];
   }
 
   async function insertScheduledJobs(payloads) {
@@ -3910,25 +3889,6 @@
     return `<div class="profile-mini-list">${items.slice(0, limit).map(renderItem).join("")}</div>`;
   }
 
-  function filteredOperations() {
-    return state.data.operations.filter((item) => {
-      const typeMatches = state.operationsFilter === "All" || item.type === state.operationsFilter;
-      return typeMatches && matchesSearch(item);
-    });
-  }
-
-  function operationFilterGroups() {
-    return [
-      ["All", "All"],
-      ["daily_check", "Daily"],
-      ["property_issue", "Issues"],
-      ["client_follow_up", "Follow-ups"],
-      ["admin_task", "Admin"],
-      ["equipment_reminder", "Equipment"],
-      ["maintenance_reminder", "Maintenance"]
-    ];
-  }
-
   function findRouteStop(id) {
     return state.data.routeStops.find((stop) => stop.id === id);
   }
@@ -4181,13 +4141,6 @@
       if (address) input.value = address;
     });
     addressAutocompleteInputs.add(input);
-  }
-
-  function initVisibleAddressAutocompletes(root) {
-    const scope = root || document;
-    Array.from(scope.querySelectorAll("[data-address-autocomplete]")).forEach((input) => {
-      initAddressAutocomplete(input);
-    });
   }
 
   async function renderGoogleRouteMap(stops) {

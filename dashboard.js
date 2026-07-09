@@ -388,15 +388,15 @@
     const sessionProfile = session && session.profile ? session.profile : {};
     const profile = profileRecord || {};
     return {
-      name: firstProfileText(profileFullName(profile), sessionProfile.name, email, "Dashboard user"),
-      role: firstProfileText(profileRole(profile), sessionProfile.role, "Dashboard user")
+      name: firstProfileText(profileFullName(profile), sessionProfile.name, email, getOwnerEmail()),
+      role: firstProfileText(profileRole(profile), sessionProfile.role)
     };
   }
 
   function renderSidebarUserProfile(profileRecord = null) {
     const session = getSession();
     const display = isDemoMode()
-      ? { name: "Demo mode", role: "Dashboard user" }
+      ? { name: "Demo mode", role: "" }
       : displayProfileFromSession(session, profileRecord);
 
     if (els.sidebarUserName) {
@@ -7450,11 +7450,23 @@
 
     if (els.sidebar) {
       const isDesktopSidebar = () => window.matchMedia("(min-width: 901px)").matches;
+      const closeSidebarWhenPointerIsOutside = (event) => {
+        if (!isDesktopSidebar() || !els.appView?.classList.contains("is-sidebar-open")) return;
+        if (event.target instanceof Node && els.sidebar.contains(event.target)) return;
+        setSidebarOpen(false);
+      };
+
       els.sidebar.addEventListener("pointerenter", () => {
         if (isDesktopSidebar()) setSidebarOpen(true);
       });
       els.sidebar.addEventListener("pointerleave", () => {
         if (isDesktopSidebar()) setSidebarOpen(false);
+      });
+      els.sidebar.addEventListener("click", () => {
+        if (!isDesktopSidebar()) return;
+        requestAnimationFrame(() => {
+          if (!els.sidebar.matches(":hover")) setSidebarOpen(false);
+        });
       });
       els.sidebar.addEventListener("focusin", () => {
         if (isDesktopSidebar()) setSidebarOpen(true);
@@ -7467,6 +7479,7 @@
           }
         });
       });
+      document.addEventListener("pointermove", closeSidebarWhenPointerIsOutside);
     }
 
     document.addEventListener("keydown", (event) => {

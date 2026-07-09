@@ -6631,7 +6631,7 @@ body:not(.is-login-screen) .dashboard-nav a:hover .nav-icon img {
 
 .sidebar-profile {
   display: grid;
-  grid-template-columns: 42px minmax(0, 1fr) 16px;
+  grid-template-columns: 42px minmax(0, 1fr);
   align-items: center;
   gap: 12px;
 }
@@ -6657,11 +6657,6 @@ body:not(.is-login-screen) .dashboard-nav a:hover .nav-icon img {
   margin-top: 2px;
   color: var(--uy-app-muted);
   font-size: .82rem;
-}
-
-.sidebar-profile-chevron {
-  width: 16px !important;
-  height: 16px !important;
 }
 
 body:not(.is-login-screen) .sign-out {
@@ -9781,7 +9776,6 @@ body:not(.is-login-screen) .record-more-menu[open] > div .inline-action {
   body:not(.is-login-screen) .sidebar-quick-action span:not(.nav-icon),
   body:not(.is-login-screen) .sidebar-manage-link span:not(.nav-icon),
   body:not(.is-login-screen) .sidebar-profile span,
-  body:not(.is-login-screen) .sidebar-profile :is(.sidebar-profile-chevron, .profile-chevron),
   body:not(.is-login-screen) .sign-out span:not(.button-icon) {
     max-width: 0 !important;
     opacity: 0 !important;
@@ -9800,7 +9794,6 @@ body:not(.is-login-screen) .record-more-menu[open] > div .inline-action {
   body:not(.is-login-screen) :is(.dashboard-sidebar:hover, .dashboard-sidebar:focus-within) .sidebar-quick-action span:not(.nav-icon),
   body:not(.is-login-screen) :is(.dashboard-sidebar:hover, .dashboard-sidebar:focus-within) .sidebar-manage-link span:not(.nav-icon),
   body:not(.is-login-screen) :is(.dashboard-sidebar:hover, .dashboard-sidebar:focus-within) .sidebar-profile span,
-  body:not(.is-login-screen) :is(.dashboard-sidebar:hover, .dashboard-sidebar:focus-within) .sidebar-profile :is(.sidebar-profile-chevron, .profile-chevron),
   body:not(.is-login-screen) :is(.dashboard-sidebar:hover, .dashboard-sidebar:focus-within) .sign-out span:not(.button-icon),
   body:not(.is-login-screen) .app-view.is-sidebar-open .dashboard-sidebar .dashboard-brand span,
   body:not(.is-login-screen) .app-view.is-sidebar-open .dashboard-sidebar .nav-label,
@@ -9808,7 +9801,6 @@ body:not(.is-login-screen) .record-more-menu[open] > div .inline-action {
   body:not(.is-login-screen) .app-view.is-sidebar-open .dashboard-sidebar .sidebar-quick-action span:not(.nav-icon),
   body:not(.is-login-screen) .app-view.is-sidebar-open .dashboard-sidebar .sidebar-manage-link span:not(.nav-icon),
   body:not(.is-login-screen) .app-view.is-sidebar-open .dashboard-sidebar .sidebar-profile span,
-  body:not(.is-login-screen) .app-view.is-sidebar-open .dashboard-sidebar .sidebar-profile :is(.sidebar-profile-chevron, .profile-chevron),
   body:not(.is-login-screen) .app-view.is-sidebar-open .dashboard-sidebar .sign-out span:not(.button-icon) {
     max-width: 190px !important;
     opacity: 1 !important;

@@ -65,8 +65,9 @@ body:not(.is-login-screen) #outreach [data-outreach-view-panel]:not([hidden]) {
 }
 
 body:not(.is-login-screen) #outreach .outreach-pipeline-panel:not([hidden]) {
-  display: flex !important;
-  flex-direction: column !important;
+  display: grid !important;
+  grid-template-columns: minmax(0, 1fr) !important;
+  align-items: start !important;
   gap: 14px !important;
 }
 
@@ -78,6 +79,9 @@ body:not(.is-login-screen) #outreach .outreach-secondary-layout {
   gap: 14px !important;
   width: 100% !important;
   min-width: 0 !important;
+  height: auto !important;
+  min-height: 0 !important;
+  flex: none !important;
   overflow: visible !important;
 }
 
@@ -103,6 +107,18 @@ body:not(.is-login-screen) #outreach .outreach-card {
   min-width: 0 !important;
   height: auto !important;
   max-height: none !important;
+}
+
+body:not(.is-login-screen) #outreach .outreach-priority-panel,
+body:not(.is-login-screen) #outreach .outreach-archive-panel {
+  align-self: start !important;
+}
+
+body:not(.is-login-screen) #outreach .outreach-archive-panel {
+  z-index: 0 !important;
+  width: 100% !important;
+  margin-top: 0 !important;
+  clear: both !important;
 }
 
 body:not(.is-login-screen) #equipment [data-equipment-panel]:not([hidden]) {

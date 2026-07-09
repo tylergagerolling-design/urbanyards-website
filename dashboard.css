@@ -2259,960 +2259,6 @@ button:active,
   }
 }
 
-/* Final mobile webapp dock override */
-@media (max-width: 760px) {
-  .dashboard-main {
-    padding-bottom: calc(126px + env(safe-area-inset-bottom));
-  }
-
-  .mobile-tabbar {
-    display: flex;
-    grid-template-columns: none;
-    gap: 8px;
-    align-items: stretch;
-    overflow-x: auto;
-    overflow-y: hidden;
-    overscroll-behavior-x: contain;
-    scrollbar-width: none;
-    padding: 10px 12px calc(12px + env(safe-area-inset-bottom));
-    border-top: 1px solid rgba(6, 27, 21, .12);
-    background:
-      linear-gradient(180deg, rgba(255, 252, 239, .94), rgba(237, 244, 232, .98));
-    box-shadow: 0 -18px 44px rgba(6, 27, 21, .16);
-  }
-
-  .mobile-tabbar::-webkit-scrollbar {
-    display: none;
-  }
-
-  .mobile-tabbar a {
-    flex: 0 0 74px;
-    min-width: 74px;
-    min-height: 64px;
-    padding: 10px 8px;
-    border: 1px solid rgba(6, 27, 21, .1);
-    border-radius: 8px;
-    background:
-      linear-gradient(180deg, rgba(255, 252, 239, .98), rgba(229, 239, 225, .9));
-    color: rgba(6, 27, 21, .68);
-    box-shadow:
-      inset 0 1px 0 rgba(255, 255, 255, .74),
-      0 8px 18px rgba(6, 27, 21, .08);
-    font-size: .76rem;
-    line-height: 1.05;
-    white-space: nowrap;
-  }
-
-  .mobile-tabbar a.is-active {
-    flex-basis: 86px;
-    border-color: rgba(6, 27, 21, .18);
-    background:
-      linear-gradient(180deg, rgba(255, 255, 255, .12), transparent 46%),
-      linear-gradient(135deg, #143f30, #2f6b4f);
-    color: #fffcef;
-    box-shadow: 0 12px 26px rgba(6, 27, 21, .22);
-  }
-}
-
-/* Absolute final desktop rail: icon-only, no boxes, no white active state. */
-@media (min-width: 981px) {
-  .dashboard-sidebar {
-    --rail-width: 76px;
-    --drawer-width: 292px;
-    left: 0 !important;
-    width: var(--rail-width) !important;
-    max-width: var(--drawer-width) !important;
-    transform: none !important;
-    transition: width .24s ease, box-shadow .24s ease !important;
-  }
-
-  .dashboard-sidebar:hover,
-  .dashboard-sidebar:focus-within,
-  .app-view.is-sidebar-open .dashboard-sidebar {
-    width: var(--drawer-width) !important;
-    transform: none !important;
-  }
-
-  .dashboard-main {
-    max-width: calc(100vw - var(--rail-width));
-    margin-left: var(--rail-width);
-  }
-
-  .dashboard-brand,
-  .dashboard-nav a {
-    display: grid;
-    grid-template-columns: 48px minmax(0, 1fr);
-    gap: 12px;
-    align-items: center;
-  }
-
-  .dashboard-brand {
-    min-height: 52px;
-  }
-
-  .dashboard-brand img {
-    width: 48px;
-    height: 48px;
-  }
-
-  .dashboard-nav {
-    display: grid;
-    gap: 10px;
-    min-width: 248px;
-    margin-top: 18px;
-    padding: 0;
-    background: transparent;
-    opacity: 1;
-    pointer-events: auto;
-    transform: none;
-  }
-
-  .dashboard-nav a {
-    min-height: 48px;
-    padding: 0 10px 0 0;
-    overflow: hidden;
-    border: 0 !important;
-    border-radius: 0;
-    background: transparent !important;
-    color: rgba(255, 252, 239, .72);
-    box-shadow: none !important;
-  }
-
-  .dashboard-nav a::after {
-    display: none !important;
-  }
-
-  .nav-icon {
-    display: inline-grid;
-    place-items: center;
-    width: 48px;
-    height: 48px;
-    border: 0 !important;
-    border-radius: 0;
-    background: transparent !important;
-    color: rgba(255, 252, 239, .74);
-    box-shadow: none !important;
-  }
-
-  .nav-icon svg {
-    width: 25px;
-    height: 25px;
-    fill: none;
-    stroke: currentColor;
-    stroke-width: 1.9;
-    stroke-linecap: round;
-    stroke-linejoin: round;
-  }
-
-  .dashboard-nav a.is-active,
-  .dashboard-nav a:hover {
-    background: transparent !important;
-    color: #c9d982;
-    box-shadow: none !important;
-  }
-
-  .dashboard-nav a.is-active .nav-icon,
-  .dashboard-nav a:hover .nav-icon {
-    border: 0 !important;
-    background: transparent !important;
-    color: #c9d982;
-    box-shadow: none !important;
-    filter: drop-shadow(0 0 10px rgba(201, 217, 130, .32));
-  }
-
-  .dashboard-brand span,
-  .nav-label,
-  .sign-out {
-    opacity: 0;
-    pointer-events: none;
-    transform: translateX(-8px);
-    transition: opacity .18s ease, transform .18s ease;
-  }
-
-  .dashboard-sidebar:hover .dashboard-brand span,
-  .dashboard-sidebar:hover .nav-label,
-  .dashboard-sidebar:hover .sign-out,
-  .dashboard-sidebar:focus-within .dashboard-brand span,
-  .dashboard-sidebar:focus-within .nav-label,
-  .dashboard-sidebar:focus-within .sign-out,
-  .app-view.is-sidebar-open .dashboard-sidebar .dashboard-brand span,
-  .app-view.is-sidebar-open .dashboard-sidebar .nav-label,
-  .app-view.is-sidebar-open .sign-out {
-    opacity: 1;
-    pointer-events: auto;
-    transform: translateX(0);
-  }
-}
-
-/* Absolute final desktop rail: visible logo and icons while collapsed. */
-@media (min-width: 981px) {
-  .dashboard-sidebar {
-    --rail-width: 76px;
-    --drawer-width: 292px;
-    left: 0 !important;
-    width: var(--rail-width) !important;
-    max-width: var(--drawer-width) !important;
-    transform: none !important;
-    transition: width .24s ease, box-shadow .24s ease !important;
-  }
-
-  .dashboard-sidebar:hover,
-  .dashboard-sidebar:focus-within,
-  .app-view.is-sidebar-open .dashboard-sidebar {
-    width: var(--drawer-width) !important;
-    transform: none !important;
-  }
-
-  .dashboard-main {
-    max-width: calc(100vw - var(--rail-width));
-    margin-left: var(--rail-width);
-  }
-
-  .dashboard-brand,
-  .dashboard-nav a {
-    display: grid;
-    grid-template-columns: 48px minmax(0, 1fr);
-    gap: 12px;
-    align-items: center;
-  }
-
-  .dashboard-brand {
-    min-height: 52px;
-  }
-
-  .dashboard-brand img,
-  .nav-icon {
-    width: 48px;
-    height: 48px;
-  }
-
-  .dashboard-nav {
-    display: grid;
-    gap: 8px;
-    min-width: 248px;
-    margin-top: 18px;
-    padding: 0;
-    background: transparent;
-    opacity: 1;
-    pointer-events: auto;
-    transform: none;
-  }
-
-  .dashboard-nav a {
-    min-height: 48px;
-    padding: 0 10px 0 0;
-    overflow: hidden;
-    border-radius: 10px;
-    background: transparent;
-  }
-
-  .nav-icon {
-    display: inline-grid;
-    place-items: center;
-    border: 1px solid rgba(255, 252, 239, .14);
-    border-radius: 10px;
-    background: rgba(255, 252, 239, .08);
-    color: rgba(255, 252, 239, .84);
-    font-size: .8rem;
-    font-weight: 900;
-    letter-spacing: 0;
-    line-height: 1;
-  }
-
-  .dashboard-nav a.is-active {
-    background: transparent;
-    color: rgba(255, 252, 239, .9);
-  }
-
-  .dashboard-nav a.is-active .nav-icon,
-  .dashboard-nav a:hover .nav-icon {
-    border-color: rgba(201, 217, 130, .42);
-    background:
-      linear-gradient(180deg, rgba(255, 255, 255, .14), transparent 46%),
-      linear-gradient(135deg, #c9d982, #2f6b4f);
-    color: #061b15;
-  }
-
-  .dashboard-brand span,
-  .nav-label,
-  .sign-out {
-    opacity: 0;
-    pointer-events: none;
-    transform: translateX(-8px);
-    transition: opacity .18s ease, transform .18s ease;
-  }
-
-  .dashboard-sidebar:hover .dashboard-brand span,
-  .dashboard-sidebar:hover .nav-label,
-  .dashboard-sidebar:hover .sign-out,
-  .dashboard-sidebar:focus-within .dashboard-brand span,
-  .dashboard-sidebar:focus-within .nav-label,
-  .dashboard-sidebar:focus-within .sign-out,
-  .app-view.is-sidebar-open .dashboard-sidebar .dashboard-brand span,
-  .app-view.is-sidebar-open .dashboard-sidebar .nav-label,
-  .app-view.is-sidebar-open .dashboard-sidebar .sign-out {
-    opacity: 1;
-    pointer-events: auto;
-    transform: translateX(0);
-  }
-}
-
-/* Final desktop rail polish: logo and tab icons stay visible while collapsed. */
-@media (min-width: 981px) {
-  .dashboard-sidebar {
-    --rail-width: 76px;
-    --drawer-width: 292px;
-    width: var(--rail-width);
-    max-width: var(--drawer-width);
-    transform: none;
-    transition: width .24s ease, box-shadow .24s ease;
-  }
-
-  .dashboard-sidebar:hover,
-  .dashboard-sidebar:focus-within,
-  .app-view.is-sidebar-open .dashboard-sidebar {
-    width: var(--drawer-width);
-    transform: none;
-  }
-
-  .dashboard-brand {
-    display: grid;
-    grid-template-columns: 48px minmax(0, 1fr);
-    gap: 12px;
-    align-items: center;
-    min-height: 52px;
-  }
-
-  .dashboard-brand img {
-    width: 48px;
-    height: 48px;
-  }
-
-  .dashboard-nav {
-    display: grid;
-    gap: 8px;
-    min-width: 248px;
-    margin-top: 18px;
-    padding: 0;
-    background: transparent;
-    opacity: 1;
-    pointer-events: auto;
-    transform: none;
-  }
-
-  .dashboard-nav a {
-    display: grid;
-    grid-template-columns: 48px minmax(0, 1fr);
-    gap: 12px;
-    align-items: center;
-    min-height: 48px;
-    padding: 0 10px 0 0;
-    overflow: hidden;
-    border-radius: 10px;
-  }
-
-  .nav-icon {
-    display: inline-grid;
-    place-items: center;
-    width: 48px;
-    height: 48px;
-    border: 1px solid rgba(255, 252, 239, .14);
-    border-radius: 10px;
-    background: rgba(255, 252, 239, .08);
-    color: rgba(255, 252, 239, .84);
-    font-size: .8rem;
-    font-weight: 900;
-    letter-spacing: 0;
-    line-height: 1;
-  }
-
-  .dashboard-nav a.is-active {
-    background: transparent;
-    color: rgba(255, 252, 239, .9);
-  }
-
-  .dashboard-nav a.is-active .nav-icon,
-  .dashboard-nav a:hover .nav-icon {
-    border-color: rgba(201, 217, 130, .42);
-    background:
-      linear-gradient(180deg, rgba(255, 255, 255, .14), transparent 46%),
-      linear-gradient(135deg, #c9d982, #2f6b4f);
-    color: #061b15;
-  }
-
-  .dashboard-brand span,
-  .nav-label,
-  .sign-out {
-    opacity: 0;
-    pointer-events: none;
-    transform: translateX(-8px);
-    transition: opacity .18s ease, transform .18s ease;
-  }
-
-  .dashboard-sidebar:hover .dashboard-brand span,
-  .dashboard-sidebar:hover .nav-label,
-  .dashboard-sidebar:hover .sign-out,
-  .dashboard-sidebar:focus-within .dashboard-brand span,
-  .dashboard-sidebar:focus-within .nav-label,
-  .dashboard-sidebar:focus-within .sign-out,
-  .app-view.is-sidebar-open .dashboard-sidebar .dashboard-brand span,
-  .app-view.is-sidebar-open .dashboard-sidebar .nav-label,
-  .app-view.is-sidebar-open .dashboard-sidebar .sign-out {
-    opacity: 1;
-    pointer-events: auto;
-    transform: translateX(0);
-  }
-}
-
-/* Final mobile webapp content scale */
-@media (max-width: 760px) {
-  html,
-  body {
-    width: 100%;
-    max-width: 100%;
-    overflow-x: hidden;
-  }
-
-  .dashboard-shell,
-  .app-view {
-    width: 100%;
-    max-width: 100vw;
-    overflow-x: hidden;
-  }
-
-  .dashboard-shell {
-    background:
-      radial-gradient(circle at 20% -10%, rgba(201, 217, 130, .18), transparent 34%),
-      linear-gradient(180deg, #eef4e8, #fffcef);
-  }
-
-  .app-view::before {
-    background:
-      radial-gradient(circle at 82% 12%, rgba(255, 252, 239, .68), transparent 28%),
-      rgba(245, 240, 223, .82);
-  }
-
-  .dashboard-main {
-    width: 100%;
-    max-width: 100vw;
-    margin: 0;
-    box-sizing: border-box;
-    gap: 12px;
-    padding: 10px 10px calc(124px + env(safe-area-inset-bottom));
-  }
-
-  .dashboard-topbar,
-  .dashboard-section,
-  .panel,
-  .home-hero,
-  .operations-command,
-  .route-hero {
-    max-width: 100%;
-    box-sizing: border-box;
-  }
-
-  .dashboard-section.is-active {
-    gap: 12px;
-  }
-
-  .dashboard-topbar {
-    top: 6px;
-    gap: 10px;
-    padding: 10px;
-  }
-
-  .dashboard-topbar h2 {
-    font-size: clamp(1.35rem, 7vw, 2rem);
-    line-height: .98;
-  }
-
-  .topbar-actions input,
-  .topbar-actions button {
-    min-height: 42px;
-  }
-
-  .topbar-actions button {
-    padding: 9px 10px;
-    font-size: .78rem;
-  }
-
-  .home-hero,
-  .operations-command,
-  .route-hero {
-    min-height: 0;
-    padding: 18px;
-  }
-
-  .home-hero h3,
-  .operations-command h3,
-  .route-hero h3 {
-    max-width: 12ch;
-    font-size: clamp(1.9rem, 10vw, 2.8rem);
-    line-height: .9;
-  }
-
-  .home-hero p:last-child,
-  .operations-command p:not(.eyebrow),
-  .route-hero p:not(.eyebrow) {
-    margin-top: 10px;
-    font-size: .92rem;
-    line-height: 1.42;
-  }
-
-  .metric-card,
-  .operations-health-card {
-    min-height: 102px;
-    padding: 14px;
-  }
-
-  .metric-card strong,
-  .operations-health-card strong {
-    font-size: clamp(1.95rem, 9vw, 2.7rem);
-  }
-
-  .panel {
-    padding: 14px;
-  }
-
-  .panel-heading h3 {
-    font-size: 1.08rem;
-  }
-
-  .panel-heading p,
-  .meta,
-  .item-body,
-  .small {
-    font-size: .82rem;
-  }
-
-  .quick-actions button,
-  .operations-command-actions button,
-  .route-date-card button,
-  .route-stop-form button[type="submit"],
-  .operations-form button {
-    min-height: 46px;
-    font-size: .82rem;
-  }
-
-  .submission-card,
-  .contact-card,
-  .job-card,
-  .note-card,
-  .reminder-card,
-  .document-card,
-  .operation-card,
-  .calendar-card,
-  .route-stop-card {
-    padding: 12px;
-  }
-}
-
-/* Final mobile webapp content scale */
-@media (max-width: 760px) {
-  html,
-  body {
-    width: 100%;
-    max-width: 100%;
-    overflow-x: hidden;
-  }
-
-  .dashboard-shell,
-  .app-view {
-    width: 100%;
-    max-width: 100vw;
-    overflow-x: hidden;
-  }
-
-  .dashboard-shell {
-    background:
-      radial-gradient(circle at 20% -10%, rgba(201, 217, 130, .18), transparent 34%),
-      linear-gradient(180deg, #eef4e8, #fffcef);
-  }
-
-  .app-view::before {
-    background:
-      radial-gradient(circle at 82% 12%, rgba(255, 252, 239, .68), transparent 28%),
-      rgba(245, 240, 223, .82);
-  }
-
-  .dashboard-main {
-    width: 100%;
-    max-width: 100vw;
-    margin: 0;
-    box-sizing: border-box;
-    gap: 12px;
-    padding: 10px 10px calc(124px + env(safe-area-inset-bottom));
-  }
-
-  .dashboard-section.is-active {
-    gap: 12px;
-  }
-
-  .dashboard-topbar {
-    top: 6px;
-    gap: 10px;
-    padding: 10px;
-  }
-
-  .dashboard-topbar .eyebrow {
-    margin-bottom: 3px;
-    font-size: .64rem;
-  }
-
-  .dashboard-topbar h2 {
-    font-size: clamp(1.35rem, 7vw, 2rem);
-    line-height: .98;
-  }
-
-  .topbar-actions {
-    gap: 8px;
-    padding: 8px;
-  }
-
-  .topbar-actions input {
-    min-height: 42px;
-  }
-
-  .topbar-actions button {
-    min-height: 42px;
-    padding: 9px 10px;
-    font-size: .78rem;
-  }
-
-  .home-hero,
-  .operations-command,
-  .route-hero {
-    min-height: 0;
-    padding: 18px;
-  }
-
-  .home-hero h3,
-  .operations-command h3,
-  .route-hero h3 {
-    max-width: 12ch;
-    font-size: clamp(1.9rem, 10vw, 2.8rem);
-    line-height: .9;
-  }
-
-  .home-hero p:last-child,
-  .operations-command p:not(.eyebrow),
-  .route-hero p:not(.eyebrow) {
-    margin-top: 10px;
-    font-size: .92rem;
-    line-height: 1.42;
-  }
-
-  .today-chip {
-    padding: 9px 10px;
-    font-size: .78rem;
-  }
-
-  .metric-grid {
-    gap: 10px;
-  }
-
-  .metric-card,
-  .operations-health-card {
-    min-height: 102px;
-    padding: 14px;
-  }
-
-  .metric-card strong,
-  .operations-health-card strong {
-    font-size: clamp(1.95rem, 9vw, 2.7rem);
-  }
-
-  .metric-card span,
-  .operations-health-card span {
-    margin-top: 8px;
-    font-size: .68rem;
-  }
-
-  .panel {
-    padding: 14px;
-  }
-
-  .panel-heading {
-    gap: 8px;
-    margin-bottom: 12px;
-    padding-bottom: 10px;
-  }
-
-  .panel-heading h3 {
-    font-size: 1.08rem;
-  }
-
-  .panel-heading p {
-    font-size: .84rem;
-  }
-
-  .quick-actions {
-    gap: 8px;
-    padding: 8px;
-  }
-
-  .quick-actions button {
-    min-height: 46px;
-    padding: 9px 10px;
-    font-size: .78rem;
-  }
-
-  .submission-card,
-  .contact-card,
-  .job-card,
-  .note-card,
-  .reminder-card,
-  .document-card,
-  .operation-card,
-  .calendar-card,
-  .route-stop-card {
-    padding: 12px;
-  }
-
-  .item-topline h4 {
-    font-size: .95rem;
-  }
-
-  .meta,
-  .item-body,
-  .small {
-    font-size: .82rem;
-  }
-
-  .operations-command-actions {
-    grid-template-columns: 1fr;
-    gap: 8px;
-    padding: 8px;
-  }
-
-  .operations-command-actions button,
-  .route-date-card button,
-  .route-stop-form button[type="submit"],
-  .operations-form button {
-    min-height: 46px;
-    font-size: .82rem;
-  }
-
-  .route-date-card,
-  .operations-controls {
-    padding: 10px;
-  }
-
-  .route-stop-form input,
-  .route-stop-form select,
-  .route-stop-form textarea,
-  .operations-form input,
-  .operations-form select,
-  .operations-form textarea,
-  .client-form input,
-  .document-form input,
-  .document-form select,
-  .schedule-create-form input {
-    min-height: 42px;
-    font-size: .9rem;
-  }
-
-  .calendar-tabs button,
-  .operations-filter-pills button,
-  .inline-action {
-    min-height: 40px;
-    padding: 8px 10px;
-    font-size: .76rem;
-  }
-
-  .drawer-panel {
-    padding: 16px 14px calc(20px + env(safe-area-inset-bottom));
-  }
-}
-
-/* Final mobile webapp content scale */
-@media (max-width: 760px) {
-  .dashboard-main {
-    gap: 12px;
-    padding: 10px 10px calc(124px + env(safe-area-inset-bottom));
-  }
-
-  .dashboard-section.is-active {
-    gap: 12px;
-  }
-
-  .dashboard-topbar {
-    top: 6px;
-    gap: 10px;
-    padding: 10px;
-  }
-
-  .dashboard-topbar .eyebrow {
-    margin-bottom: 3px;
-    font-size: .64rem;
-  }
-
-  .dashboard-topbar h2 {
-    font-size: clamp(1.35rem, 7vw, 2rem);
-    line-height: .98;
-  }
-
-  .topbar-actions {
-    gap: 8px;
-    padding: 8px;
-  }
-
-  .topbar-actions input {
-    min-height: 42px;
-  }
-
-  .topbar-actions button {
-    min-height: 42px;
-    padding: 9px 10px;
-    font-size: .78rem;
-  }
-
-  .home-hero,
-  .operations-command,
-  .route-hero {
-    min-height: 0;
-    padding: 18px;
-  }
-
-  .home-hero h3,
-  .operations-command h3,
-  .route-hero h3 {
-    max-width: 12ch;
-    font-size: clamp(1.9rem, 10vw, 2.8rem);
-    line-height: .9;
-  }
-
-  .home-hero p:last-child,
-  .operations-command p:not(.eyebrow),
-  .route-hero p:not(.eyebrow) {
-    margin-top: 10px;
-    font-size: .92rem;
-    line-height: 1.42;
-  }
-
-  .today-chip {
-    padding: 9px 10px;
-    font-size: .78rem;
-  }
-
-  .metric-grid {
-    gap: 10px;
-  }
-
-  .metric-card,
-  .operations-health-card {
-    min-height: 102px;
-    padding: 14px;
-  }
-
-  .metric-card strong,
-  .operations-health-card strong {
-    font-size: clamp(1.95rem, 9vw, 2.7rem);
-  }
-
-  .metric-card span,
-  .operations-health-card span {
-    margin-top: 8px;
-    font-size: .68rem;
-  }
-
-  .panel {
-    padding: 14px;
-  }
-
-  .panel-heading {
-    gap: 8px;
-    margin-bottom: 12px;
-    padding-bottom: 10px;
-  }
-
-  .panel-heading h3 {
-    font-size: 1.08rem;
-  }
-
-  .panel-heading p {
-    font-size: .84rem;
-  }
-
-  .quick-actions {
-    gap: 8px;
-    padding: 8px;
-  }
-
-  .quick-actions button {
-    min-height: 46px;
-    padding: 9px 10px;
-    font-size: .78rem;
-  }
-
-  .submission-card,
-  .contact-card,
-  .job-card,
-  .note-card,
-  .reminder-card,
-  .document-card,
-  .operation-card,
-  .calendar-card,
-  .route-stop-card {
-    padding: 12px;
-  }
-
-  .item-topline h4 {
-    font-size: .95rem;
-  }
-
-  .meta,
-  .item-body,
-  .small {
-    font-size: .82rem;
-  }
-
-  .operations-command-actions {
-    grid-template-columns: 1fr;
-    gap: 8px;
-    padding: 8px;
-  }
-
-  .operations-command-actions button,
-  .route-date-card button,
-  .route-stop-form button[type="submit"],
-  .operations-form button {
-    min-height: 46px;
-    font-size: .82rem;
-  }
-
-  .route-date-card,
-  .operations-controls {
-    padding: 10px;
-  }
-
-  .route-stop-form input,
-  .route-stop-form select,
-  .route-stop-form textarea,
-  .operations-form input,
-  .operations-form select,
-  .operations-form textarea,
-  .client-form input,
-  .document-form input,
-  .document-form select,
-  .schedule-create-form input {
-    min-height: 42px;
-    font-size: .9rem;
-  }
-
-  .calendar-tabs button,
-  .operations-filter-pills button,
-  .inline-action {
-    min-height: 40px;
-    padding: 8px 10px;
-    font-size: .76rem;
-  }
-
-  .drawer-panel {
-    padding: 16px 14px calc(20px + env(safe-area-inset-bottom));
-  }
-}
-
 /* Mobile webapp dock rethink */
 @media (max-width: 760px) {
   .dashboard-main {
@@ -5767,6 +4813,9 @@ body:not(.is-login-screen) #outreach .outreach-view-tabs button {
 }
 
 body:not(.is-login-screen) #outreach .outreach-view-tabs button.is-active {
+  border-color: rgba(75, 124, 65, .22);
+  background: rgba(223, 237, 209, .92);
+  color: var(--uy-green);
   box-shadow: 0 10px 24px rgba(18, 63, 49, .16);
 }
 
@@ -6601,463 +5650,6 @@ td {
   }
 }
 
-/* Final mobile webapp content scale */
-@media (max-width: 760px) {
-  .dashboard-main {
-    gap: 12px;
-    padding: 10px 10px calc(124px + env(safe-area-inset-bottom));
-  }
-
-  .dashboard-section.is-active {
-    gap: 12px;
-  }
-
-  .dashboard-topbar {
-    top: 6px;
-    gap: 10px;
-    padding: 10px;
-  }
-
-  .dashboard-topbar h2 {
-    font-size: clamp(1.35rem, 7vw, 2rem);
-    line-height: .98;
-  }
-
-  .topbar-actions input,
-  .topbar-actions button {
-    min-height: 42px;
-  }
-
-  .topbar-actions button {
-    padding: 9px 10px;
-    font-size: .78rem;
-  }
-
-  .home-hero,
-  .operations-command,
-  .route-hero {
-    min-height: 0;
-    padding: 18px;
-  }
-
-  .home-hero h3,
-  .operations-command h3,
-  .route-hero h3 {
-    max-width: 12ch;
-    font-size: clamp(1.9rem, 10vw, 2.8rem);
-    line-height: .9;
-  }
-
-  .home-hero p:last-child,
-  .operations-command p:not(.eyebrow),
-  .route-hero p:not(.eyebrow) {
-    margin-top: 10px;
-    font-size: .92rem;
-    line-height: 1.42;
-  }
-
-  .metric-card,
-  .operations-health-card {
-    min-height: 102px;
-    padding: 14px;
-  }
-
-  .metric-card strong,
-  .operations-health-card strong {
-    font-size: clamp(1.95rem, 9vw, 2.7rem);
-  }
-
-  .panel {
-    padding: 14px;
-  }
-
-  .panel-heading h3 {
-    font-size: 1.08rem;
-  }
-
-  .panel-heading p,
-  .meta,
-  .item-body,
-  .small {
-    font-size: .82rem;
-  }
-
-  .quick-actions button,
-  .operations-command-actions button,
-  .route-date-card button,
-  .route-stop-form button[type="submit"],
-  .operations-form button {
-    min-height: 46px;
-    font-size: .82rem;
-  }
-
-  .submission-card,
-  .contact-card,
-  .job-card,
-  .note-card,
-  .reminder-card,
-  .document-card,
-  .operation-card,
-  .calendar-card,
-  .route-stop-card {
-    padding: 12px;
-  }
-}
-
-/* Final mobile webapp dock override */
-@media (max-width: 760px) {
-  .dashboard-main {
-    padding-bottom: calc(126px + env(safe-area-inset-bottom));
-  }
-
-  .mobile-tabbar {
-    display: flex;
-    grid-template-columns: none;
-    gap: 8px;
-    align-items: stretch;
-    overflow-x: auto;
-    overflow-y: hidden;
-    overscroll-behavior-x: contain;
-    scrollbar-width: none;
-    padding: 10px 12px calc(12px + env(safe-area-inset-bottom));
-    border-top: 1px solid rgba(6, 27, 21, .12);
-    background:
-      linear-gradient(180deg, rgba(255, 252, 239, .94), rgba(237, 244, 232, .98));
-    box-shadow: 0 -18px 44px rgba(6, 27, 21, .16);
-  }
-
-  .mobile-tabbar::-webkit-scrollbar {
-    display: none;
-  }
-
-  .mobile-tabbar a {
-    flex: 0 0 74px;
-    min-width: 74px;
-    min-height: 64px;
-    padding: 10px 8px;
-    border: 1px solid rgba(6, 27, 21, .1);
-    border-radius: 8px;
-    background:
-      linear-gradient(180deg, rgba(255, 252, 239, .98), rgba(229, 239, 225, .9));
-    color: rgba(6, 27, 21, .68);
-    box-shadow:
-      inset 0 1px 0 rgba(255, 255, 255, .74),
-      0 8px 18px rgba(6, 27, 21, .08);
-    font-size: .76rem;
-    line-height: 1.05;
-    white-space: nowrap;
-  }
-
-  .mobile-tabbar a.is-active {
-    flex-basis: 86px;
-    border-color: rgba(6, 27, 21, .18);
-    background:
-      linear-gradient(180deg, rgba(255, 255, 255, .12), transparent 46%),
-      linear-gradient(135deg, #143f30, #2f6b4f);
-    color: #fffcef;
-    box-shadow: 0 12px 26px rgba(6, 27, 21, .22);
-  }
-}
-
-/* Absolute final desktop rail: icon-only, no boxes, no white active state. */
-@media (min-width: 981px) {
-  .dashboard-sidebar {
-    --rail-width: 76px;
-    --drawer-width: 292px;
-    left: 0 !important;
-    width: var(--rail-width) !important;
-    max-width: var(--drawer-width) !important;
-    transform: none !important;
-    transition: width .24s ease, box-shadow .24s ease !important;
-  }
-
-  .dashboard-sidebar:hover,
-  .dashboard-sidebar:focus-within,
-  .app-view.is-sidebar-open .dashboard-sidebar {
-    width: var(--drawer-width) !important;
-    transform: none !important;
-  }
-
-  .dashboard-main {
-    max-width: calc(100vw - var(--rail-width));
-    margin-left: var(--rail-width);
-  }
-
-  .dashboard-brand,
-  .dashboard-nav a {
-    display: grid;
-    grid-template-columns: 48px minmax(0, 1fr);
-    gap: 12px;
-    align-items: center;
-  }
-
-  .dashboard-brand {
-    min-height: 52px;
-  }
-
-  .dashboard-brand img {
-    width: 48px;
-    height: 48px;
-  }
-
-  .dashboard-nav {
-    display: grid;
-    gap: 10px;
-    min-width: 248px;
-    margin-top: 18px;
-    padding: 0;
-    background: transparent;
-    opacity: 1;
-    pointer-events: auto;
-    transform: none;
-  }
-
-  .dashboard-nav a {
-    min-height: 48px;
-    padding: 0 10px 0 0;
-    overflow: hidden;
-    border: 0 !important;
-    border-radius: 0;
-    background: transparent !important;
-    color: rgba(255, 252, 239, .72);
-    box-shadow: none !important;
-  }
-
-  .dashboard-nav a::after {
-    display: none !important;
-  }
-
-  .nav-icon {
-    display: inline-grid;
-    place-items: center;
-    width: 48px;
-    height: 48px;
-    border: 0 !important;
-    border-radius: 0;
-    background: transparent !important;
-    color: rgba(255, 252, 239, .74);
-    box-shadow: none !important;
-  }
-
-  .nav-icon svg {
-    width: 25px;
-    height: 25px;
-    fill: none;
-    stroke: currentColor;
-    stroke-width: 1.9;
-    stroke-linecap: round;
-    stroke-linejoin: round;
-  }
-
-  .dashboard-nav a.is-active,
-  .dashboard-nav a:hover {
-    background: transparent !important;
-    color: #c9d982;
-    box-shadow: none !important;
-  }
-
-  .dashboard-nav a.is-active .nav-icon,
-  .dashboard-nav a:hover .nav-icon {
-    border: 0 !important;
-    background: transparent !important;
-    color: #c9d982;
-    box-shadow: none !important;
-    filter: drop-shadow(0 0 10px rgba(201, 217, 130, .32));
-  }
-
-  .dashboard-brand span,
-  .nav-label,
-  .sign-out {
-    opacity: 0;
-    pointer-events: none;
-    transform: translateX(-8px);
-    transition: opacity .18s ease, transform .18s ease;
-  }
-
-  .dashboard-sidebar:hover .dashboard-brand span,
-  .dashboard-sidebar:hover .nav-label,
-  .dashboard-sidebar:hover .sign-out,
-  .dashboard-sidebar:focus-within .dashboard-brand span,
-  .dashboard-sidebar:focus-within .nav-label,
-  .dashboard-sidebar:focus-within .sign-out,
-  .app-view.is-sidebar-open .dashboard-sidebar .dashboard-brand span,
-  .app-view.is-sidebar-open .dashboard-sidebar .nav-label,
-  .app-view.is-sidebar-open .sign-out {
-    opacity: 1;
-    pointer-events: auto;
-    transform: translateX(0);
-  }
-}
-
-/* Absolute final desktop rail state: no collapsed active highlight, centered line icons. */
-@media (min-width: 981px) {
-  .dashboard-sidebar:not(:hover):not(:focus-within):not(.is-sidebar-open) .dashboard-nav a,
-  .app-view:not(.is-sidebar-open) .dashboard-sidebar:not(:hover):not(:focus-within) .dashboard-nav a.is-active {
-    background: transparent !important;
-    color: rgba(255, 252, 239, .72) !important;
-    box-shadow: none !important;
-    filter: none !important;
-  }
-
-  .app-view:not(.is-sidebar-open) .dashboard-sidebar:not(:hover):not(:focus-within) .dashboard-nav a.is-active .nav-icon {
-    color: rgba(255, 252, 239, .74) !important;
-    filter: none !important;
-  }
-
-  .nav-icon {
-    align-items: center !important;
-    justify-items: center !important;
-    place-items: center !important;
-    line-height: 0 !important;
-  }
-
-  .nav-icon svg {
-    display: block !important;
-    margin: auto !important;
-    transform-origin: center !important;
-  }
-
-  .dashboard-nav a[data-dashboard-link="settings"] .nav-icon svg {
-    width: 24px !important;
-    height: 24px !important;
-    transform: translateX(1px);
-  }
-
-  .dashboard-sidebar:hover .dashboard-nav a.is-active,
-  .dashboard-sidebar:focus-within .dashboard-nav a.is-active,
-  .app-view.is-sidebar-open .dashboard-nav a.is-active {
-    color: #c9d982 !important;
-  }
-
-  .dashboard-sidebar:hover .dashboard-nav a.is-active .nav-icon,
-  .dashboard-sidebar:focus-within .dashboard-nav a.is-active .nav-icon,
-  .app-view.is-sidebar-open .dashboard-nav a.is-active .nav-icon {
-    color: #c9d982 !important;
-    filter: drop-shadow(0 0 10px rgba(201, 217, 130, .32));
-  }
-}
-
-/* Final collapsed-only sidebar cleanup. Expanded drawer labels/layout stay intact. */
-@media (min-width: 981px) {
-  .app-view:not(.is-sidebar-open) .dashboard-sidebar:not(:hover):not(:focus-within) .dashboard-nav,
-  .app-view:not(.is-sidebar-open) .dashboard-sidebar:not(:hover):not(:focus-within) .dashboard-nav a,
-  .app-view:not(.is-sidebar-open) .dashboard-sidebar:not(:hover):not(:focus-within) .dashboard-nav a.is-active,
-  .app-view:not(.is-sidebar-open) .dashboard-sidebar:not(:hover):not(:focus-within) .dashboard-nav a:hover,
-  .app-view:not(.is-sidebar-open) .dashboard-sidebar:not(:hover):not(:focus-within) .nav-icon,
-  .app-view:not(.is-sidebar-open) .dashboard-sidebar:not(:hover):not(:focus-within) .dashboard-nav a.is-active .nav-icon,
-  .app-view:not(.is-sidebar-open) .dashboard-sidebar:not(:hover):not(:focus-within) .dashboard-nav a:hover .nav-icon {
-    background: transparent !important;
-    background-color: transparent !important;
-    background-image: none !important;
-    border-color: transparent !important;
-    box-shadow: none !important;
-  }
-
-  .app-view:not(.is-sidebar-open) .dashboard-sidebar:not(:hover):not(:focus-within) .dashboard-nav a {
-    display: grid !important;
-    grid-template-columns: 48px minmax(0, 1fr) !important;
-    align-items: center !important;
-    justify-items: start !important;
-    min-height: 48px !important;
-    padding: 0 10px 0 0 !important;
-    color: rgba(255, 252, 239, .72) !important;
-  }
-
-  .app-view:not(.is-sidebar-open) .dashboard-sidebar:not(:hover):not(:focus-within) .nav-icon {
-    display: inline-grid !important;
-    place-items: center !important;
-    width: 48px !important;
-    height: 48px !important;
-    color: rgba(255, 252, 239, .76) !important;
-    line-height: 0 !important;
-  }
-
-  .app-view:not(.is-sidebar-open) .dashboard-sidebar:not(:hover):not(:focus-within) .nav-icon svg {
-    display: block !important;
-    width: 25px !important;
-    height: 25px !important;
-    margin: auto !important;
-  }
-
-  .app-view:not(.is-sidebar-open) .dashboard-sidebar:not(:hover):not(:focus-within) .dashboard-nav a.is-active .nav-icon {
-    color: #c9d982 !important;
-    filter: none !important;
-  }
-
-  .app-view:not(.is-sidebar-open) .dashboard-sidebar:not(:hover):not(:focus-within) .dashboard-nav a:hover .nav-icon {
-    color: #d8e69a !important;
-    filter: drop-shadow(0 0 8px rgba(201, 217, 130, .22)) !important;
-  }
-}
-
-/* Final desktop sidebar layout: reserve real space for the rail/drawer. */
-@media (min-width: 981px) {
-  html:has(.dashboard-shell),
-  body:has(.dashboard-shell) {
-    height: 100%;
-    overflow: hidden !important;
-  }
-
-  .dashboard-shell {
-    height: 100vh !important;
-    min-height: 100vh !important;
-    overflow: hidden !important;
-  }
-
-  .app-view {
-    --dashboard-rail-width: 76px;
-    --dashboard-drawer-width: 292px;
-    display: grid !important;
-    grid-template-columns: var(--dashboard-rail-width) minmax(0, 1fr) !important;
-    align-items: stretch !important;
-    height: 100vh !important;
-    min-height: 100vh !important;
-    overflow: hidden !important;
-    width: 100% !important;
-  }
-
-  .app-view:has(.dashboard-sidebar:hover),
-  .app-view:has(.dashboard-sidebar:focus-within),
-  .app-view.is-sidebar-open {
-    grid-template-columns: var(--dashboard-drawer-width) minmax(0, 1fr) !important;
-  }
-
-  .dashboard-sidebar {
-    position: sticky !important;
-    top: 0 !important;
-    bottom: auto !important;
-    left: 0 !important;
-    grid-column: 1 !important;
-    align-self: start !important;
-    width: var(--dashboard-rail-width) !important;
-    height: 100vh !important;
-    max-height: 100vh !important;
-    overflow-x: hidden !important;
-    overflow-y: auto !important;
-    transform: none !important;
-  }
-
-  .dashboard-sidebar:hover,
-  .dashboard-sidebar:focus-within,
-  .app-view.is-sidebar-open .dashboard-sidebar {
-    width: var(--dashboard-drawer-width) !important;
-    transform: none !important;
-  }
-
-  .dashboard-main {
-    grid-column: 2 !important;
-    height: 100vh !important;
-    width: 100% !important;
-    min-width: 0 !important;
-    max-width: 100% !important;
-    margin-inline: 0 !important;
-    margin-left: 0 !important;
-    overflow-x: hidden !important;
-    overflow-y: auto !important;
-    scrollbar-gutter: stable;
-  }
-}
-
 /* Final topbar tune: compact title, right-aligned controls, no refresh button. */
 .dashboard-topbar {
   grid-template-columns: minmax(220px, .72fr) minmax(320px, 520px) !important;
@@ -7782,151 +6374,6 @@ body.is-login-screen .app-view {
   }
 }
 
-/* Desktop dashboard fit pass: keep the main dashboard from page-scrolling. */
-@media (min-width: 901px) {
-  body:not(.is-login-screen),
-  body:not(.is-login-screen) .dashboard-shell {
-    height: 100vh !important;
-    overflow: hidden !important;
-  }
-
-  body:not(.is-login-screen) .app-view {
-    height: 100vh !important;
-    min-height: 100vh !important;
-    overflow: hidden !important;
-  }
-
-  body:not(.is-login-screen) .dashboard-main {
-    display: flex !important;
-    flex-direction: column !important;
-    height: 100vh !important;
-    min-height: 0 !important;
-    gap: 10px !important;
-    padding: 12px clamp(14px, 1.8vw, 28px) 14px !important;
-    overflow: hidden !important;
-  }
-
-body:not(.is-login-screen) .dashboard-topbar {
-  position: relative !important;
-  top: auto !important;
-  flex: 0 0 auto !important;
-  gap: 10px !important;
-    padding: 9px 12px !important;
-  }
-
-  body:not(.is-login-screen) .dashboard-topbar h2 {
-    font-size: clamp(1.14rem, 1.45vw, 1.55rem) !important;
-  }
-
-  body:not(.is-login-screen) .dashboard-topbar .eyebrow {
-    margin-bottom: 1px !important;
-    font-size: 0.56rem !important;
-  }
-
-  body:not(.is-login-screen) .topbar-actions {
-    max-width: 430px !important;
-    padding: 4px !important;
-  }
-
-  body:not(.is-login-screen) .topbar-actions input,
-  body:not(.is-login-screen) .topbar-actions button {
-    min-height: 34px !important;
-    font-size: 0.78rem !important;
-  }
-
-  body:not(.is-login-screen) .dashboard-section.is-active {
-    display: flex !important;
-    flex: 1 1 auto !important;
-    flex-direction: column !important;
-    min-height: 0 !important;
-    gap: 10px !important;
-    overflow: hidden !important;
-  }
-
-  body:not(.is-login-screen) .home-hero,
-  body:not(.is-login-screen) .outreach-hero,
-  body:not(.is-login-screen) .route-hero,
-  body:not(.is-login-screen) .groundskeeper-ai-hero {
-    flex: 0 0 auto !important;
-    min-height: 0 !important;
-    padding: 14px 16px !important;
-  }
-
-  body:not(.is-login-screen) .home-hero h3,
-  body:not(.is-login-screen) .outreach-hero h3,
-  body:not(.is-login-screen) .route-hero h3,
-  body:not(.is-login-screen) .groundskeeper-ai-hero h3 {
-    font-size: clamp(1.45rem, 2.4vw, 2.8rem) !important;
-    line-height: 0.94 !important;
-  }
-
-  body:not(.is-login-screen) .home-hero p:last-child,
-  body:not(.is-login-screen) .outreach-hero p,
-  body:not(.is-login-screen) .route-hero p,
-  body:not(.is-login-screen) .groundskeeper-ai-hero p:not(.eyebrow) {
-    margin-top: 6px !important;
-    font-size: 0.86rem !important;
-    line-height: 1.35 !important;
-  }
-
-  body:not(.is-login-screen) .metric-grid {
-    flex: 0 0 auto !important;
-    gap: 8px !important;
-  }
-
-  body:not(.is-login-screen) .metric-card,
-  body:not(.is-login-screen) .operations-health-card {
-    padding: 10px !important;
-  }
-
-  body:not(.is-login-screen) .metric-card strong,
-  body:not(.is-login-screen) .operations-health-card strong {
-    font-size: clamp(1.05rem, 1.8vw, 1.55rem) !important;
-  }
-
-  body:not(.is-login-screen) .panel,
-  body:not(.is-login-screen) .document-card,
-  body:not(.is-login-screen) .contact-card,
-  body:not(.is-login-screen) .job-card,
-  body:not(.is-login-screen) .note-card,
-  body:not(.is-login-screen) .reminder-card,
-  body:not(.is-login-screen) .submission-card {
-    padding: 12px !important;
-  }
-
-  body:not(.is-login-screen) .panel-heading {
-    padding-bottom: 8px !important;
-    margin-bottom: 8px !important;
-  }
-
-  body:not(.is-login-screen) .overview-grid,
-  body:not(.is-login-screen) .dashboard-grid,
-  body:not(.is-login-screen) .outreach-layout,
-  body:not(.is-login-screen) .route-planner-shell,
-  body:not(.is-login-screen) .groundskeeper-ai-layout,
-  body:not(.is-login-screen) .groundskeeper-ai-grid {
-    flex: 1 1 auto !important;
-    min-height: 0 !important;
-    gap: 10px !important;
-    overflow: hidden !important;
-  }
-
-  body:not(.is-login-screen) .panel,
-  body:not(.is-login-screen) .table-wrap,
-  body:not(.is-login-screen) .outreach-table-wrap,
-  body:not(.is-login-screen) .route-stops,
-  body:not(.is-login-screen) .groundskeeper-ai-list,
-  body:not(.is-login-screen) .groundskeeper-ai-chat,
-  body:not(.is-login-screen) .drawer-panel {
-    min-height: 0 !important;
-    overflow: auto !important;
-  }
-
-  body:not(.is-login-screen) .calendar-grid {
-    min-height: 0 !important;
-  }
-}
-
 /* Apple-simple dashboard shell refresh */
 :root {
   --uy-app-bg: #f7f5ee;
@@ -7951,12 +6398,12 @@ body:not(.is-login-screen) {
 
 body:not(.is-login-screen) .app-view {
   display: grid !important;
-  grid-template-columns: 292px minmax(0, 1fr) !important;
-  gap: 22px !important;
-  min-height: 100vh !important;
-  height: 100vh !important;
-  padding: 20px !important;
-  overflow: hidden !important;
+  grid-template-columns: var(--uy-rail-width, 76px) minmax(0, 1fr) !important;
+  gap: var(--uy-shell-gap, 18px) !important;
+  min-height: 100dvh !important;
+  height: auto !important;
+  padding: var(--uy-page-pad, 16px) !important;
+  overflow: visible !important;
   background: transparent !important;
 }
 
@@ -7964,13 +6411,14 @@ body:not(.is-login-screen) .dashboard-sidebar,
 body:not(.is-login-screen) .dashboard-sidebar:hover,
 body:not(.is-login-screen) .dashboard-sidebar:focus-within,
 body:not(.is-login-screen) .app-view.is-sidebar-open .dashboard-sidebar {
-  position: sticky !important;
-  top: 20px !important;
+  position: fixed !important;
+  top: var(--uy-page-pad, 16px) !important;
+  left: var(--uy-page-pad, 16px) !important;
   grid-column: 1 !important;
-  width: 100% !important;
-  max-width: none !important;
-  height: calc(100vh - 40px) !important;
-  max-height: calc(100vh - 40px) !important;
+  width: var(--uy-rail-width, 76px) !important;
+  max-width: var(--uy-rail-width, 76px) !important;
+  height: calc(100dvh - (var(--uy-page-pad, 16px) * 2)) !important;
+  max-height: calc(100dvh - (var(--uy-page-pad, 16px) * 2)) !important;
   padding: 0 !important;
   overflow: visible !important;
   border: 1px solid rgba(23, 54, 43, .1) !important;
@@ -8233,10 +6681,11 @@ body:not(.is-login-screen) .dashboard-main {
   min-width: 0 !important;
   width: 100% !important;
   max-width: none !important;
-  height: calc(100vh - 40px) !important;
+  height: auto !important;
+  min-height: calc(100dvh - (var(--uy-page-pad, 16px) * 2)) !important;
   margin: 0 !important;
-  padding: 34px 30px !important;
-  overflow: auto !important;
+  padding: clamp(22px, 2.4vw, 40px) !important;
+  overflow: visible !important;
   border: 1px solid rgba(23, 54, 43, .08) !important;
   border-radius: 26px !important;
   background: rgba(255, 253, 247, .72) !important;
@@ -8660,7 +7109,6 @@ body:not(.is-login-screen) .settings-grid {
   }
 
   body:not(.is-login-screen) .dashboard-main {
-    height: calc(100vh - 32px) !important;
     padding: 26px 20px !important;
   }
 
@@ -8739,1395 +7187,6 @@ body:not(.is-login-screen) .settings-grid {
 
   .overview-row-context {
     display: none;
-  }
-}
-
-/* Final desktop no-page-scroll pass. */
-@media (min-width: 901px) {
-  html:has(body:not(.is-login-screen) .app-view:not([hidden])),
-  html:has(body:not(.is-login-screen) .app-view:not([hidden])) body {
-    width: 100% !important;
-    height: 100vh !important;
-    max-height: 100vh !important;
-    overflow: hidden !important;
-  }
-
-  body:not(.is-login-screen) .dashboard-shell,
-  body:not(.is-login-screen) .app-view {
-    width: 100vw !important;
-    height: 100vh !important;
-    max-height: 100vh !important;
-    min-height: 0 !important;
-    overflow: hidden !important;
-  }
-
-  body:not(.is-login-screen) .app-view {
-    grid-template-columns: 76px minmax(0, 1fr) !important;
-  }
-
-  body:not(.is-login-screen) .app-view:has(.dashboard-sidebar:hover),
-  body:not(.is-login-screen) .app-view:has(.dashboard-sidebar:focus-within),
-  body:not(.is-login-screen) .app-view.is-sidebar-open {
-    grid-template-columns: 292px minmax(0, 1fr) !important;
-  }
-
-  body:not(.is-login-screen) .dashboard-sidebar {
-    height: 100vh !important;
-    max-height: 100vh !important;
-    overflow-y: auto !important;
-  }
-
-  body:not(.is-login-screen) .dashboard-main {
-    grid-column: 2 !important;
-    width: 100% !important;
-    max-width: none !important;
-    height: 100vh !important;
-    max-height: 100vh !important;
-    margin: 0 !important;
-    padding: 8px 12px !important;
-    gap: 7px !important;
-    overflow: hidden !important;
-  }
-
-  body:not(.is-login-screen) .dashboard-topbar {
-    min-height: 0 !important;
-    padding: 7px 10px !important;
-  }
-
-  body:not(.is-login-screen) .dashboard-topbar h2 {
-    font-size: clamp(1.05rem, 1.3vw, 1.38rem) !important;
-  }
-
-  body:not(.is-login-screen) .topbar-actions input,
-  body:not(.is-login-screen) .topbar-actions button {
-    min-height: 31px !important;
-  }
-
-  body:not(.is-login-screen) .dashboard-section.is-active {
-    max-height: calc(100vh - 58px) !important;
-    gap: 7px !important;
-    overflow: hidden !important;
-  }
-
-  body:not(.is-login-screen) .home-hero,
-  body:not(.is-login-screen) .outreach-hero,
-  body:not(.is-login-screen) .route-hero,
-  body:not(.is-login-screen) .groundskeeper-ai-hero,
-  body:not(.is-login-screen) .panel {
-    padding: 10px 12px !important;
-  }
-
-  body:not(.is-login-screen) .home-hero h3,
-  body:not(.is-login-screen) .outreach-hero h3,
-  body:not(.is-login-screen) .route-hero h3,
-  body:not(.is-login-screen) .groundskeeper-ai-hero h3 {
-    font-size: clamp(1.25rem, 1.9vw, 2.15rem) !important;
-  }
-
-  body:not(.is-login-screen) .metric-grid,
-  body:not(.is-login-screen) .overview-grid,
-  body:not(.is-login-screen) .dashboard-grid,
-  body:not(.is-login-screen) .outreach-layout,
-  body:not(.is-login-screen) .route-planner-shell,
-  body:not(.is-login-screen) .groundskeeper-ai-layout,
-  body:not(.is-login-screen) .groundskeeper-ai-grid {
-    gap: 7px !important;
-  }
-
-  body:not(.is-login-screen) .metric-card,
-  body:not(.is-login-screen) .operations-health-card,
-  body:not(.is-login-screen) .document-card,
-  body:not(.is-login-screen) .contact-card,
-  body:not(.is-login-screen) .job-card,
-  body:not(.is-login-screen) .note-card,
-  body:not(.is-login-screen) .reminder-card,
-  body:not(.is-login-screen) .submission-card {
-    padding: 9px !important;
-  }
-}
-
-/* Equipment dashboard page */
-.equipment-section {
-  gap: 12px;
-}
-
-.equipment-hero {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
-  gap: 16px;
-  align-items: center;
-  padding: 18px;
-  border: 1px solid rgba(6, 27, 21, .13);
-  border-radius: 8px;
-  background:
-    radial-gradient(circle at 92% 0%, rgba(201, 217, 130, .22), transparent 30%),
-    linear-gradient(135deg, rgba(255, 252, 239, .96), rgba(232, 239, 223, .9));
-}
-
-.equipment-hero h3 {
-  margin: 0;
-  color: var(--uy-green);
-  font-size: clamp(1.7rem, 3vw, 3.2rem);
-  line-height: .95;
-}
-
-.equipment-hero p:not(.eyebrow) {
-  max-width: 54rem;
-  margin: 8px 0 0;
-  color: rgba(19, 36, 28, .68);
-}
-
-.equipment-tabs,
-.equipment-toolbar,
-.equipment-form-actions,
-.equipment-actions,
-.equipment-card-meta {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-}
-
-.equipment-tabs {
-  justify-content: flex-end;
-}
-
-.equipment-tabs button,
-.equipment-toolbar input,
-.equipment-toolbar select {
-  min-height: 40px;
-}
-
-.equipment-tabs button {
-  border: 1px solid rgba(18, 63, 49, .12);
-  background: rgba(255, 252, 239, .82);
-  color: var(--uy-green);
-}
-
-.equipment-tabs button.is-active {
-  background: var(--uy-green);
-  color: #fffcef;
-}
-
-.equipment-toolbar {
-  align-items: center;
-  padding: 10px;
-  border: 1px solid rgba(18, 63, 49, .1);
-  border-radius: 8px;
-  background: rgba(255, 252, 239, .78);
-}
-
-.equipment-toolbar input {
-  flex: 1 1 260px;
-}
-
-.equipment-toolbar select {
-  flex: 1 1 150px;
-}
-
-.equipment-layout {
-  display: grid;
-  grid-template-columns: minmax(280px, 360px) minmax(0, 1fr);
-  gap: 12px;
-  min-height: 0;
-}
-
-.equipment-form,
-.equipment-maintenance-form,
-.hardware-guide-form {
-  display: grid;
-  gap: 9px;
-}
-
-.equipment-form,
-.hardware-guide-form {
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-}
-
-.equipment-form textarea,
-.hardware-guide-form textarea,
-.equipment-form-actions {
-  grid-column: 1 / -1;
-}
-
-.equipment-maintenance-form {
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  margin-bottom: 12px;
-}
-
-.equipment-maintenance-form textarea,
-.equipment-maintenance-form button {
-  grid-column: span 3;
-}
-
-.equipment-table-wrap {
-  overflow: auto;
-}
-
-.equipment-table-wrap table {
-  min-width: 900px;
-}
-
-.equipment-table-wrap small,
-.equipment-card small {
-  display: block;
-  margin-top: 3px;
-  color: rgba(19, 36, 28, .58);
-  font-size: .76rem;
-}
-
-.equipment-card-list {
-  display: grid;
-  gap: 9px;
-}
-
-.equipment-card {
-  padding: 12px;
-  border: 1px solid rgba(18, 63, 49, .1);
-  border-radius: 8px;
-  background: rgba(255, 252, 239, .88);
-}
-
-.equipment-card.is-due {
-  border-color: rgba(143, 47, 34, .24);
-  background: #fff8ef;
-}
-
-.equipment-card-head {
-  display: flex;
-  gap: 10px;
-  align-items: start;
-  justify-content: space-between;
-}
-
-.equipment-card p {
-  margin: 8px 0;
-  color: rgba(19, 36, 28, .72);
-  font-size: .9rem;
-  line-height: 1.45;
-}
-
-.equipment-card-meta span {
-  padding: 5px 8px;
-  border-radius: 999px;
-  background: rgba(18, 63, 49, .08);
-  color: var(--uy-green);
-  font-size: .75rem;
-  font-weight: 800;
-}
-
-.equipment-actions {
-  margin-top: 10px;
-}
-
-.equipment-card-list h4 {
-  margin: 10px 0 2px;
-  color: var(--uy-green);
-}
-
-@media (min-width: 901px) {
-  body:not(.is-login-screen) .equipment-hero {
-    padding: 10px 12px !important;
-  }
-
-  body:not(.is-login-screen) .equipment-layout {
-    flex: 1 1 auto !important;
-    min-height: 0 !important;
-    overflow: hidden !important;
-  }
-
-  body:not(.is-login-screen) .equipment-form-panel,
-  body:not(.is-login-screen) .equipment-main-panel {
-    min-height: 0 !important;
-    overflow: auto !important;
-  }
-}
-
-@media (max-width: 900px) {
-  .equipment-hero,
-  .equipment-layout {
-    grid-template-columns: 1fr;
-  }
-
-  .equipment-tabs {
-    justify-content: stretch;
-  }
-
-  .equipment-tabs button {
-    flex: 1 1 140px;
-  }
-
-  .equipment-form,
-  .hardware-guide-form,
-  .equipment-maintenance-form {
-    grid-template-columns: 1fr;
-  }
-
-  .equipment-maintenance-form textarea,
-  .equipment-maintenance-form button {
-    grid-column: auto;
-  }
-
-  .equipment-table-wrap {
-    display: none;
-  }
-}
-
-/* Compact Groundskeeper AI workspace */
-body:not(.is-login-screen) #groundskeeper-ai {
-  gap: 8px;
-}
-
-body:not(.is-login-screen) #groundskeeper-ai .groundskeeper-ai-hero {
-  position: relative;
-  overflow: hidden;
-  min-height: 0;
-  padding: 12px 14px !important;
-  border-radius: 14px;
-  background:
-    radial-gradient(circle at 92% 6%, rgba(201, 217, 130, 0.28), transparent 28%),
-    linear-gradient(135deg, rgba(255, 252, 244, 0.96), rgba(226, 235, 217, 0.88));
-}
-
-body:not(.is-login-screen) #groundskeeper-ai .groundskeeper-ai-hero::after {
-  content: "";
-  position: absolute;
-  inset: auto 18px -34px auto;
-  width: 150px;
-  height: 150px;
-  border-radius: 999px;
-  background: rgba(18, 63, 49, 0.08);
-  pointer-events: none;
-}
-
-body:not(.is-login-screen) #groundskeeper-ai .groundskeeper-ai-hero h3 {
-  margin: 0;
-  font-size: clamp(1.25rem, 1.7vw, 1.9rem) !important;
-  line-height: 1;
-}
-
-body:not(.is-login-screen) #groundskeeper-ai .groundskeeper-ai-hero p:not(.eyebrow) {
-  max-width: 780px;
-  margin-top: 4px !important;
-  font-size: 0.84rem !important;
-}
-
-body:not(.is-login-screen) #groundskeeper-ai .groundskeeper-ai-actions {
-  position: relative;
-  z-index: 1;
-  gap: 7px;
-}
-
-body:not(.is-login-screen) #groundskeeper-ai .groundskeeper-ai-actions button,
-body:not(.is-login-screen) #groundskeeper-ai .groundskeeper-ai-form button,
-body:not(.is-login-screen) #groundskeeper-ai .groundskeeper-ai-chat-form button {
-  min-height: 34px;
-  padding: 8px 12px;
-  border-radius: 999px;
-}
-
-body:not(.is-login-screen) #groundskeeper-ai .groundskeeper-ai-status {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 7px;
-  min-height: 0;
-  padding: 0;
-  border: 0;
-  background: transparent;
-}
-
-body:not(.is-login-screen) #groundskeeper-ai .groundskeeper-ai-status span {
-  flex: 1 1 260px;
-  padding: 7px 10px;
-  border: 1px solid rgba(18, 63, 49, 0.1);
-  border-radius: 12px;
-  background: rgba(255, 252, 244, 0.78);
-  font-size: 0.78rem;
-  line-height: 1.3;
-}
-
-body:not(.is-login-screen) #groundskeeper-ai .groundskeeper-ai-layout {
-  grid-template-columns: minmax(280px, 0.92fr) minmax(380px, 1.08fr);
-  flex: 0 0 auto !important;
-  min-height: 0;
-  max-height: 34vh;
-}
-
-body:not(.is-login-screen) #groundskeeper-ai .groundskeeper-ai-layout > .panel {
-  display: flex;
-  min-height: 0;
-  overflow: hidden !important;
-  flex-direction: column;
-}
-
-body:not(.is-login-screen) #groundskeeper-ai .panel-heading {
-  gap: 6px;
-  padding-bottom: 6px !important;
-  margin-bottom: 7px !important;
-}
-
-body:not(.is-login-screen) #groundskeeper-ai .panel-heading h3 {
-  font-size: 1rem;
-}
-
-body:not(.is-login-screen) #groundskeeper-ai .panel-heading p {
-  max-width: 62rem;
-  font-size: 0.76rem;
-  line-height: 1.3;
-}
-
-body:not(.is-login-screen) #groundskeeper-ai .groundskeeper-ai-chat {
-  flex: 1 1 auto;
-  min-height: 112px;
-  max-height: none;
-  gap: 7px;
-  padding: 8px;
-  border-radius: 12px;
-}
-
-body:not(.is-login-screen) #groundskeeper-ai .groundskeeper-chat-message {
-  padding: 8px 10px;
-  border-radius: 12px;
-  font-size: 0.82rem;
-  line-height: 1.35;
-}
-
-body:not(.is-login-screen) #groundskeeper-ai .groundskeeper-ai-chat-form {
-  margin-top: 7px;
-  gap: 7px;
-}
-
-body:not(.is-login-screen) #groundskeeper-ai .groundskeeper-ai-chat-form textarea {
-  min-height: 38px;
-  max-height: 76px;
-}
-
-body:not(.is-login-screen) #groundskeeper-ai .groundskeeper-ai-form {
-  display: grid;
-  grid-template-columns: repeat(6, minmax(0, 1fr));
-  gap: 7px;
-  align-items: end;
-}
-
-body:not(.is-login-screen) #groundskeeper-ai .groundskeeper-ai-form label:nth-child(1),
-body:not(.is-login-screen) #groundskeeper-ai .groundskeeper-ai-form label:nth-child(4),
-body:not(.is-login-screen) #groundskeeper-ai .groundskeeper-ai-form label:nth-child(5) {
-  grid-column: span 2;
-}
-
-body:not(.is-login-screen) #groundskeeper-ai .groundskeeper-ai-form label:nth-child(2),
-body:not(.is-login-screen) #groundskeeper-ai .groundskeeper-ai-form label:nth-child(3) {
-  grid-column: span 3;
-}
-
-body:not(.is-login-screen) #groundskeeper-ai .groundskeeper-ai-form .span-full {
-  grid-column: 1 / -2;
-}
-
-body:not(.is-login-screen) #groundskeeper-ai .groundskeeper-ai-form button {
-  grid-column: auto;
-  justify-self: stretch;
-}
-
-body:not(.is-login-screen) #groundskeeper-ai .groundskeeper-ai-form input,
-body:not(.is-login-screen) #groundskeeper-ai .groundskeeper-ai-form select,
-body:not(.is-login-screen) #groundskeeper-ai .groundskeeper-ai-form textarea {
-  min-height: 34px;
-  padding: 8px 10px;
-}
-
-body:not(.is-login-screen) #groundskeeper-ai .groundskeeper-ai-form textarea {
-  min-height: 56px;
-  max-height: 90px;
-}
-
-body:not(.is-login-screen) #groundskeeper-ai .groundskeeper-ai-grid {
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  flex: 1 1 auto !important;
-  min-height: 0;
-  overflow: hidden !important;
-}
-
-body:not(.is-login-screen) #groundskeeper-ai .groundskeeper-ai-grid > .panel {
-  display: flex;
-  min-width: 0;
-  min-height: 0;
-  overflow: hidden !important;
-  flex-direction: column;
-}
-
-body:not(.is-login-screen) #groundskeeper-ai .groundskeeper-ai-list {
-  flex: 1 1 auto;
-  min-height: 0;
-  gap: 6px;
-  overflow: auto !important;
-  padding-right: 2px;
-}
-
-body:not(.is-login-screen) #groundskeeper-ai .groundskeeper-ai-record {
-  gap: 4px;
-  padding: 8px 9px;
-  border-radius: 11px;
-  background: rgba(255, 252, 244, 0.84);
-}
-
-body:not(.is-login-screen) #groundskeeper-ai .groundskeeper-ai-record-head {
-  align-items: flex-start;
-  gap: 7px;
-}
-
-body:not(.is-login-screen) #groundskeeper-ai .groundskeeper-ai-record-head strong {
-  min-width: 0;
-  color: var(--green);
-  font-size: 0.86rem;
-  line-height: 1.2;
-}
-
-body:not(.is-login-screen) #groundskeeper-ai .groundskeeper-ai-record-head span {
-  flex: 0 0 auto;
-}
-
-body:not(.is-login-screen) #groundskeeper-ai .groundskeeper-ai-record p {
-  display: -webkit-box;
-  margin: 0;
-  overflow: hidden;
-  color: rgba(18, 63, 49, 0.68);
-  font-size: 0.78rem;
-  line-height: 1.34;
-  -webkit-box-orient: vertical;
-  -webkit-line-clamp: 3;
-}
-
-body:not(.is-login-screen) #groundskeeper-ai .groundskeeper-ai-record small,
-body:not(.is-login-screen) #groundskeeper-ai .groundskeeper-ai-record time {
-  font-size: 0.68rem;
-  line-height: 1.25;
-}
-
-body:not(.is-login-screen) #groundskeeper-ai .groundskeeper-ai-record-actions {
-  justify-content: flex-start;
-  gap: 5px;
-  padding-top: 2px;
-}
-
-body:not(.is-login-screen) #groundskeeper-ai .groundskeeper-ai-record-actions .inline-action {
-  min-height: 26px;
-  padding: 4px 7px;
-  font-size: 0.68rem;
-}
-
-body:not(.is-login-screen) #groundskeeper-ai .ai-badge {
-  min-height: 19px;
-  padding: 2px 6px;
-  font-size: 0.62rem;
-}
-
-.groundskeeper-ai-more {
-  padding: 7px 8px;
-  border: 1px dashed rgba(18, 63, 49, 0.18);
-  border-radius: 10px;
-  background: rgba(229, 239, 225, 0.44);
-  color: rgba(18, 63, 49, 0.68);
-  font-size: 0.72rem;
-  font-weight: 800;
-}
-
-@media (max-width: 1180px) and (min-width: 901px) {
-  body:not(.is-login-screen) #groundskeeper-ai .groundskeeper-ai-layout {
-    grid-template-columns: 1fr;
-    max-height: 40vh;
-  }
-
-  body:not(.is-login-screen) #groundskeeper-ai .groundskeeper-ai-grid {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
-}
-
-@media (max-width: 900px) {
-  body:not(.is-login-screen) #groundskeeper-ai .groundskeeper-ai-layout,
-  body:not(.is-login-screen) #groundskeeper-ai .groundskeeper-ai-grid,
-  body:not(.is-login-screen) #groundskeeper-ai .groundskeeper-ai-form {
-    grid-template-columns: 1fr;
-    max-height: none;
-    overflow: visible !important;
-  }
-
-  body:not(.is-login-screen) #groundskeeper-ai .groundskeeper-ai-layout > .panel,
-  body:not(.is-login-screen) #groundskeeper-ai .groundskeeper-ai-grid > .panel,
-  body:not(.is-login-screen) #groundskeeper-ai .groundskeeper-ai-list {
-    overflow: visible !important;
-  }
-
-  body:not(.is-login-screen) #groundskeeper-ai .groundskeeper-ai-form label,
-  body:not(.is-login-screen) #groundskeeper-ai .groundskeeper-ai-form .span-full,
-  body:not(.is-login-screen) #groundskeeper-ai .groundskeeper-ai-form button {
-    grid-column: 1 / -1 !important;
-  }
-}
-
-/* Dashboard click-to-call controls */
-.phone-call-control {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 6px;
-  align-items: center;
-  margin-top: 7px;
-}
-
-.phone-call-link {
-  color: var(--uy-green);
-  font-weight: 850;
-  text-decoration: none;
-}
-
-.phone-call-link:hover {
-  text-decoration: underline;
-}
-
-.phone-call-control small {
-  flex-basis: 100%;
-  color: rgba(19, 36, 28, .58);
-  font-size: .75rem;
-  line-height: 1.35;
-}
-
-.phone-call-control small a,
-.call-settings-panel a {
-  color: var(--uy-green);
-  font-weight: 800;
-}
-
-.phone-call-control-compact {
-  gap: 4px;
-  margin-top: 4px;
-}
-
-.phone-call-control-compact .phone-call-link {
-  flex: 1 1 100%;
-  font-size: .82rem;
-}
-
-.phone-call-control-compact .inline-action {
-  min-height: 26px;
-  padding: 4px 7px;
-  font-size: .68rem;
-}
-
-.phone-call-control-invalid {
-  color: rgba(19, 36, 28, .55);
-  font-size: .82rem;
-}
-
-.drawer-phone-field .phone-call-control {
-  margin-top: 2px;
-}
-
-.call-helper-panel {
-  display: grid;
-  gap: 13px;
-  margin-top: 14px;
-  padding: 16px;
-  border: 1px solid rgba(18, 63, 49, .1);
-  border-radius: 18px;
-  background:
-    radial-gradient(circle at top right, rgba(198, 218, 178, .22), transparent 34%),
-    rgba(255, 253, 247, .86);
-  box-shadow: 0 14px 36px rgba(18, 63, 49, .08);
-}
-
-.call-helper-head,
-.call-helper-phone-row {
-  display: flex;
-  gap: 14px;
-  align-items: flex-start;
-  justify-content: space-between;
-}
-
-.call-helper-head h4 {
-  margin: 2px 0 3px;
-  color: var(--uy-green);
-  font-size: 1.08rem;
-}
-
-.call-helper-head span,
-.call-helper-note,
-.call-helper-phone-row small,
-.call-helper-number small {
-  color: rgba(19, 36, 28, .62);
-  font-size: .78rem;
-  line-height: 1.35;
-}
-
-.call-helper-number {
-  min-width: 150px;
-  padding: 9px 11px;
-  border: 1px solid rgba(18, 63, 49, .08);
-  border-radius: 14px;
-  background: rgba(255, 255, 255, .66);
-  text-align: right;
-}
-
-.call-helper-number strong {
-  display: block;
-  margin-top: 2px;
-  color: var(--uy-green);
-  font-size: .9rem;
-}
-
-.call-helper-phone-row {
-  align-items: center;
-  padding: 12px;
-  border: 1px solid rgba(18, 63, 49, .08);
-  border-radius: 16px;
-  background: rgba(255, 255, 255, .72);
-}
-
-.call-helper-phone-row > div:first-child {
-  display: grid;
-  gap: 3px;
-  min-width: 0;
-}
-
-.call-helper-actions {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 7px;
-  justify-content: flex-end;
-}
-
-.call-helper-actions button,
-.call-panel-form button {
-  min-height: 38px;
-}
-
-.phone-call-invalid {
-  color: rgba(19, 36, 28, .58);
-  font-weight: 800;
-}
-
-.call-helper-note {
-  margin: -2px 0 0;
-}
-
-.call-panel-form {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(130px, .6fr);
-  gap: 10px;
-}
-
-.call-panel-form label {
-  display: grid;
-  gap: 5px;
-  color: rgba(19, 36, 28, .72);
-  font-size: .78rem;
-  font-weight: 850;
-}
-
-.call-panel-form select,
-.call-panel-form input,
-.call-panel-form textarea {
-  width: 100%;
-  border: 1px solid rgba(18, 63, 49, .14);
-  border-radius: 12px;
-  background: rgba(255, 255, 255, .84);
-  color: var(--uy-ink);
-}
-
-.call-panel-form textarea {
-  resize: vertical;
-}
-
-.call-settings-panel,
-.call-outcome-panel,
-.call-history {
-  margin-top: 12px;
-  padding: 12px;
-  border: 1px solid rgba(18, 63, 49, .1);
-  border-radius: 12px;
-  background: rgba(255, 252, 244, .78);
-}
-
-.call-settings-panel label {
-  display: flex;
-  gap: 8px;
-  align-items: center;
-  color: var(--uy-green);
-  font-size: .88rem;
-  font-weight: 850;
-}
-
-.call-settings-panel p,
-.call-outcome-panel p {
-  margin: 5px 0 0;
-  color: rgba(19, 36, 28, .65);
-  font-size: .8rem;
-  line-height: 1.4;
-}
-
-.call-outcome-form {
-  display: grid;
-  gap: 9px;
-}
-
-.call-outcome-options {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 7px;
-}
-
-.call-outcome-options label {
-  display: inline-flex;
-  min-height: 32px;
-  gap: 6px;
-  align-items: center;
-  padding: 6px 9px;
-  border: 1px solid rgba(18, 63, 49, .1);
-  border-radius: 999px;
-  background: rgba(255, 252, 239, .9);
-  color: rgba(19, 36, 28, .78);
-  font-size: .78rem;
-  font-weight: 800;
-}
-
-.call-outcome-form textarea,
-.call-outcome-form input {
-  width: 100%;
-}
-
-.call-history h4 {
-  margin: 0 0 8px;
-}
-
-.call-history-list {
-  display: grid;
-  gap: 7px;
-}
-
-.call-history-item {
-  padding: 9px;
-  border: 1px solid rgba(18, 63, 49, .08);
-  border-radius: 10px;
-  background: rgba(255, 252, 239, .86);
-}
-
-.call-history-item strong,
-.call-history-item span,
-.call-history-item small {
-  display: block;
-}
-
-.call-history-item strong {
-  color: var(--uy-green);
-  font-size: .86rem;
-}
-
-.call-history-item span,
-.call-history-item small {
-  color: rgba(19, 36, 28, .62);
-  font-size: .78rem;
-}
-
-.call-history-item p {
-  margin: 6px 0;
-  color: rgba(19, 36, 28, .72);
-  font-size: .82rem;
-  line-height: 1.35;
-}
-
-@media (min-width: 901px) {
-  .client-profile-contact-line .phone-call-control,
-  .outreach-actions .phone-call-control {
-    margin-top: 0;
-  }
-}
-
-@media (max-width: 700px) {
-  .phone-call-control {
-    align-items: stretch;
-  }
-
-  .phone-call-control .inline-action,
-  .phone-call-button {
-    flex: 1 1 120px;
-    justify-content: center;
-  }
-
-  .call-helper-head,
-  .call-helper-phone-row,
-  .call-panel-form {
-    display: grid;
-    grid-template-columns: 1fr;
-  }
-
-  .call-helper-number {
-    min-width: 0;
-    text-align: left;
-  }
-
-  .call-helper-actions {
-    justify-content: stretch;
-  }
-
-  .call-helper-actions button {
-    flex: 1 1 150px;
-    justify-content: center;
-  }
-}
-
-/* Groundskeeper AI command center redesign */
-body:not(.is-login-screen) #groundskeeper-ai .groundskeeper-ai-command-header {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(360px, auto);
-  gap: 16px;
-  align-items: center;
-  padding: 14px 16px !important;
-  border: 0;
-  border-radius: 16px;
-  background: linear-gradient(135deg, rgba(255, 252, 244, .94), rgba(229, 239, 225, .72));
-  box-shadow: none;
-}
-
-body:not(.is-login-screen) #groundskeeper-ai .groundskeeper-ai-command-header::after {
-  display: none;
-}
-
-body:not(.is-login-screen) #groundskeeper-ai .groundskeeper-ai-command-header h3 {
-  font-size: clamp(1.35rem, 1.8vw, 2rem) !important;
-}
-
-.groundskeeper-ai-toolbar {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-  align-items: center;
-  justify-content: flex-end;
-}
-
-.groundskeeper-ai-toolbar input {
-  min-width: min(320px, 100%);
-  min-height: 36px;
-  border-radius: 999px;
-}
-
-body:not(.is-login-screen) #groundskeeper-ai .groundskeeper-ai-status {
-  flex: 0 0 auto;
-}
-
-.groundskeeper-ai-workspace {
-  display: grid;
-  grid-template-columns: minmax(220px, 260px) minmax(0, 1fr);
-  gap: 12px;
-  min-height: 0;
-  flex: 1 1 auto;
-  overflow: hidden;
-}
-
-.groundskeeper-ai-sidebar {
-  display: flex;
-  min-height: 0;
-  flex-direction: column;
-  gap: 6px;
-  padding: 10px;
-  border-radius: 16px;
-  background: rgba(255, 252, 244, .66);
-}
-
-.ai-nav-item {
-  display: grid;
-  grid-template-columns: 34px minmax(0, 1fr) auto;
-  gap: 9px;
-  align-items: center;
-  width: 100%;
-  min-height: 42px;
-  padding: 7px 9px;
-  border: 0;
-  border-radius: 12px;
-  background: transparent;
-  color: rgba(19, 36, 28, .72);
-  text-align: left;
-  font-weight: 850;
-  cursor: pointer;
-}
-
-.ai-nav-item:hover,
-.ai-nav-item.is-active {
-  background: rgba(18, 63, 49, .08);
-  color: var(--uy-green);
-}
-
-.ai-nav-icon {
-  display: inline-flex;
-  width: 30px;
-  height: 30px;
-  align-items: center;
-  justify-content: center;
-  border-radius: 10px;
-  background: rgba(18, 63, 49, .1);
-  color: var(--uy-green);
-  font-size: .68rem;
-  font-weight: 900;
-}
-
-.ai-nav-item strong {
-  min-width: 24px;
-  padding: 3px 7px;
-  border-radius: 999px;
-  background: rgba(238, 194, 82, .22);
-  color: var(--uy-green);
-  font-size: .7rem;
-  text-align: center;
-}
-
-.groundskeeper-ai-main {
-  min-width: 0;
-  min-height: 0;
-  overflow: auto;
-}
-
-.ai-command-panel {
-  min-height: 100%;
-  overflow: visible !important;
-  border: 0 !important;
-  border-radius: 18px !important;
-  background: rgba(255, 252, 244, .84) !important;
-  box-shadow: none !important;
-}
-
-.ai-workspace-heading {
-  display: flex;
-  gap: 16px;
-  align-items: flex-start;
-  justify-content: space-between;
-  padding-bottom: 14px;
-  margin-bottom: 16px;
-  border-bottom: 1px solid rgba(18, 63, 49, .09);
-}
-
-.ai-workspace-heading h3 {
-  margin: 0;
-  color: var(--uy-green);
-  font-size: clamp(1.35rem, 2vw, 2rem);
-}
-
-.ai-workspace-heading p {
-  max-width: 760px;
-  margin: 5px 0 0;
-  color: rgba(19, 36, 28, .66);
-}
-
-.ai-quick-actions {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-  margin-bottom: 14px;
-}
-
-.ai-quick-actions button {
-  min-height: 34px;
-  padding: 7px 11px;
-  border: 1px solid rgba(18, 63, 49, .1);
-  border-radius: 999px;
-  background: rgba(229, 239, 225, .66);
-  color: var(--uy-green);
-  font-weight: 850;
-}
-
-body:not(.is-login-screen) #groundskeeper-ai .ai-command-panel .groundskeeper-ai-chat {
-  min-height: 260px;
-  max-height: none;
-  padding: 14px;
-  border: 1px solid rgba(18, 63, 49, .08);
-  background: rgba(18, 63, 49, .04);
-}
-
-.ai-command-chat-form {
-  grid-template-columns: minmax(0, 1fr) auto !important;
-  align-items: stretch !important;
-  gap: 10px !important;
-  margin-top: 12px !important;
-}
-
-.ai-command-chat-form textarea {
-  min-height: 112px !important;
-  max-height: none !important;
-  border-radius: 14px;
-}
-
-body:not(.is-login-screen) #groundskeeper-ai .ai-command-editor {
-  grid-template-columns: repeat(12, minmax(0, 1fr));
-  gap: 12px;
-}
-
-body:not(.is-login-screen) #groundskeeper-ai .ai-command-editor label {
-  grid-column: span 4;
-}
-
-body:not(.is-login-screen) #groundskeeper-ai .ai-command-editor label:nth-child(2) {
-  grid-column: span 8;
-}
-
-body:not(.is-login-screen) #groundskeeper-ai .ai-command-editor .span-full {
-  grid-column: 1 / -1;
-}
-
-body:not(.is-login-screen) #groundskeeper-ai .ai-command-editor textarea {
-  min-height: 230px;
-  max-height: none;
-  line-height: 1.5;
-}
-
-.ai-editor-actions {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 9px;
-  justify-content: flex-start;
-}
-
-.ai-entry-table-heading {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  margin: 22px 0 10px;
-}
-
-.ai-entry-table-heading h4 {
-  margin: 0;
-  color: var(--uy-green);
-}
-
-.ai-entry-table-heading span {
-  color: rgba(19, 36, 28, .56);
-  font-size: .8rem;
-  font-weight: 800;
-}
-
-.ai-entry-list,
-.ai-log-list {
-  display: grid;
-  gap: 8px;
-}
-
-.ai-entry-row {
-  display: grid;
-  grid-template-columns: minmax(220px, 1.5fr) minmax(120px, .7fr) auto auto minmax(90px, auto) auto;
-  gap: 10px;
-  align-items: center;
-  padding: 11px 12px;
-  border-radius: 12px;
-  background: rgba(255, 252, 239, .72);
-}
-
-.ai-entry-row strong,
-.ai-log-item strong {
-  color: var(--uy-green);
-}
-
-.ai-entry-row p,
-.ai-log-item p {
-  display: -webkit-box;
-  margin: 4px 0 0;
-  overflow: hidden;
-  color: rgba(19, 36, 28, .64);
-  font-size: .82rem;
-  line-height: 1.35;
-  -webkit-box-orient: vertical;
-  -webkit-line-clamp: 2;
-}
-
-.ai-entry-row > span,
-.ai-entry-row time {
-  color: rgba(19, 36, 28, .62);
-  font-size: .76rem;
-}
-
-.ai-entry-actions,
-.ai-log-actions {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 6px;
-  justify-content: flex-end;
-}
-
-.ai-log-item {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
-  gap: 14px;
-  align-items: start;
-  padding: 14px;
-  border-radius: 14px;
-  background: rgba(255, 252, 239, .76);
-}
-
-.ai-log-item small {
-  display: block;
-  margin-top: 8px;
-  color: rgba(19, 36, 28, .54);
-  font-size: .76rem;
-}
-
-@media (max-width: 1180px) and (min-width: 901px) {
-  .groundskeeper-ai-workspace {
-    grid-template-columns: 210px minmax(0, 1fr);
-  }
-
-  .ai-entry-row {
-    grid-template-columns: minmax(0, 1fr) auto;
-  }
-
-  .ai-entry-row > span,
-  .ai-entry-row time {
-    display: none;
-  }
-}
-
-@media (max-width: 900px) {
-  body:not(.is-login-screen) #groundskeeper-ai {
-    overflow: auto !important;
-  }
-
-  .groundskeeper-ai-workspace {
-    display: block;
-    overflow: visible;
-  }
-
-  .groundskeeper-ai-sidebar {
-    display: flex;
-    flex-direction: row;
-    gap: 8px;
-    margin-bottom: 12px;
-    overflow-x: auto;
-  }
-
-  .ai-nav-item {
-    grid-template-columns: 28px max-content auto;
-    width: auto;
-    min-width: max-content;
-  }
-
-  .groundskeeper-ai-toolbar {
-    justify-content: flex-start;
-  }
-
-  .groundskeeper-ai-toolbar input {
-    width: 100%;
-  }
-
-  .ai-workspace-heading,
-  .ai-log-item {
-    display: grid;
-    grid-template-columns: 1fr;
-  }
-
-  body:not(.is-login-screen) #groundskeeper-ai .ai-command-editor {
-    grid-template-columns: 1fr;
-  }
-
-  body:not(.is-login-screen) #groundskeeper-ai .ai-command-editor label,
-  body:not(.is-login-screen) #groundskeeper-ai .ai-command-editor label:nth-child(2) {
-    grid-column: 1 / -1;
-  }
-
-  .ai-command-chat-form {
-    grid-template-columns: 1fr !important;
-  }
-
-  .ai-entry-row {
-    grid-template-columns: 1fr;
-    align-items: start;
-  }
-
-  .ai-entry-actions,
-  .ai-log-actions {
-    justify-content: flex-start;
-  }
-}
-
-/* Final visual guard for the Apple-simple dashboard redesign. */
-@media (min-width: 901px) {
-  body:not(.is-login-screen) .app-view,
-  body:not(.is-login-screen) .app-view:has(.dashboard-sidebar:hover),
-  body:not(.is-login-screen) .app-view:has(.dashboard-sidebar:focus-within),
-  body:not(.is-login-screen) .app-view.is-sidebar-open {
-    grid-template-columns: 292px minmax(0, 1fr) !important;
-    gap: 22px !important;
-    padding: 20px !important;
-    background: transparent !important;
-  }
-
-  body:not(.is-login-screen) .dashboard-sidebar,
-  body:not(.is-login-screen) .dashboard-sidebar:hover,
-  body:not(.is-login-screen) .dashboard-sidebar:focus-within,
-  body:not(.is-login-screen) .app-view.is-sidebar-open .dashboard-sidebar {
-    position: sticky !important;
-    top: 20px !important;
-    grid-column: 1 !important;
-    width: 100% !important;
-    height: calc(100vh - 40px) !important;
-    max-height: calc(100vh - 40px) !important;
-    overflow: visible !important;
-    border-radius: 24px !important;
-    background: linear-gradient(145deg, rgba(255, 253, 247, .96), rgba(248, 246, 238, .9)) !important;
-    color: var(--uy-app-ink) !important;
-  }
-
-  body:not(.is-login-screen) .dashboard-sidebar .dashboard-brand span,
-  body:not(.is-login-screen) .dashboard-sidebar .nav-label,
-  body:not(.is-login-screen) .dashboard-sidebar .sign-out,
-  body:not(.is-login-screen) .dashboard-sidebar:hover .dashboard-brand span,
-  body:not(.is-login-screen) .dashboard-sidebar:hover .nav-label,
-  body:not(.is-login-screen) .dashboard-sidebar:hover .sign-out,
-  body:not(.is-login-screen) .dashboard-sidebar:focus-within .dashboard-brand span,
-  body:not(.is-login-screen) .dashboard-sidebar:focus-within .nav-label,
-  body:not(.is-login-screen) .dashboard-sidebar:focus-within .sign-out {
-    opacity: 1 !important;
-    pointer-events: auto !important;
-    transform: none !important;
-  }
-
-  body:not(.is-login-screen) .dashboard-main {
-    grid-column: 2 !important;
-    height: calc(100vh - 40px) !important;
-    max-height: calc(100vh - 40px) !important;
-    padding: 34px 30px !important;
-    gap: 22px !important;
-    overflow: auto !important;
-    border-radius: 26px !important;
-    background: rgba(255, 253, 247, .72) !important;
-  }
-
-  body:not(.is-login-screen) .dashboard-section.is-active {
-    max-height: none !important;
-    gap: 22px !important;
-    overflow: visible !important;
-  }
-
-  body:not(.is-login-screen) .dashboard-nav a,
-  body:not(.is-login-screen) .dashboard-nav a.is-active,
-  body:not(.is-login-screen) .dashboard-nav a:hover {
-    display: grid !important;
-    grid-template-columns: 38px minmax(0, 1fr) !important;
-    min-height: 46px !important;
-    padding: 6px 12px !important;
-    color: var(--uy-app-ink) !important;
-  }
-
-  body:not(.is-login-screen) .panel {
-    padding: 18px !important;
-  }
-
-  body:not(.is-login-screen) .metric-grid,
-  body:not(.is-login-screen) .overview-grid {
-    gap: 18px !important;
-  }
-
-  body:not(.is-login-screen) .metric-card.overview-summary-card {
-    min-height: 142px !important;
-    padding: 24px !important;
-  }
-
-  body:not(.is-login-screen) .overview-activity-card,
-  body:not(.is-login-screen) .overview-tasks-card {
-    padding: 24px 26px !important;
   }
 }
 
@@ -10385,502 +7444,6 @@ body.is-detail-drawer-open {
   .drawer-actions .danger-action,
   .document-delete-action {
     margin-left: 0 !important;
-  }
-}
-
-/* Final sidebar polish: keep desktop navigation as one intentional floating panel. */
-body:not(.is-login-screen) .dashboard-shell {
-  background:
-    radial-gradient(circle at 86% 10%, rgba(222, 232, 205, .46), transparent 34%),
-    linear-gradient(135deg, #f6f2e6 0%, #fbf9f1 54%, #f0f4e8 100%) !important;
-}
-
-@media (min-width: 901px) {
-  body:not(.is-login-screen) .app-view,
-  body:not(.is-login-screen) .app-view:has(.dashboard-sidebar:hover),
-  body:not(.is-login-screen) .app-view:has(.dashboard-sidebar:focus-within),
-  body:not(.is-login-screen) .app-view.is-sidebar-open {
-    grid-template-columns: 312px minmax(0, 1fr) !important;
-    gap: 22px !important;
-    width: 100vw !important;
-    height: 100vh !important;
-    padding: 20px 20px 20px 20px !important;
-    background:
-      radial-gradient(circle at 10% 8%, rgba(255, 253, 247, .72), transparent 30%),
-      linear-gradient(135deg, #f3efdf 0%, #fbf9f1 52%, #edf4e7 100%) !important;
-    overflow: hidden !important;
-  }
-
-  body:not(.is-login-screen) .app-view::before {
-    display: none !important;
-  }
-
-  body:not(.is-login-screen) .dashboard-sidebar,
-  body:not(.is-login-screen) .dashboard-sidebar:hover,
-  body:not(.is-login-screen) .dashboard-sidebar:focus-within,
-  body:not(.is-login-screen) .app-view.is-sidebar-open .dashboard-sidebar {
-    position: sticky !important;
-    top: 0 !important;
-    left: auto !important;
-    z-index: 12 !important;
-    display: block !important;
-    width: 292px !important;
-    min-width: 292px !important;
-    max-width: 292px !important;
-    height: calc(100vh - 40px) !important;
-    max-height: calc(100vh - 40px) !important;
-    margin: 0 !important;
-    padding: 0 !important;
-    transform: none !important;
-    overflow: visible !important;
-    border: 1px solid rgba(23, 54, 43, .1) !important;
-    border-radius: 22px !important;
-    background:
-      radial-gradient(circle at 12% 0%, rgba(255, 255, 255, .8), transparent 34%),
-      linear-gradient(155deg, rgba(255, 253, 247, .98), rgba(247, 244, 235, .94)) !important;
-    box-shadow: 0 24px 54px rgba(23, 54, 43, .12), 0 2px 0 rgba(255, 255, 255, .7) inset !important;
-  }
-
-  body:not(.is-login-screen) .dashboard-sidebar-inner {
-    display: flex !important;
-    flex-direction: column !important;
-    height: 100% !important;
-    max-height: 100% !important;
-    min-height: 0 !important;
-    padding: 22px 20px 14px !important;
-    overflow: hidden !important;
-  }
-
-  body:not(.is-login-screen) .dashboard-brand,
-  body:not(.is-login-screen) .dashboard-brand:hover,
-  body:not(.is-login-screen) .dashboard-brand:focus-visible {
-    display: grid !important;
-    grid-template-columns: 52px minmax(0, 1fr) !important;
-    align-items: center !important;
-    gap: 12px !important;
-    min-height: 58px !important;
-    margin: 0 0 22px !important;
-    padding: 0 !important;
-    border: 0 !important;
-    border-radius: 0 !important;
-    background: transparent !important;
-    box-shadow: none !important;
-    color: #102f25 !important;
-    text-decoration: none !important;
-  }
-
-  body:not(.is-login-screen) .dashboard-brand img {
-    width: 52px !important;
-    height: 52px !important;
-    min-width: 52px !important;
-    object-fit: contain !important;
-    border: 0 !important;
-    border-radius: 0 !important;
-    background: transparent !important;
-    box-shadow: none !important;
-    filter: none !important;
-  }
-
-  body:not(.is-login-screen) .dashboard-brand span,
-  body:not(.is-login-screen) .dashboard-brand strong,
-  body:not(.is-login-screen) .dashboard-brand small,
-  body:not(.is-login-screen) .dashboard-sidebar .nav-label,
-  body:not(.is-login-screen) .dashboard-sidebar .sign-out {
-    opacity: 1 !important;
-    pointer-events: auto !important;
-    transform: none !important;
-  }
-
-  body:not(.is-login-screen) .dashboard-brand strong {
-    display: block !important;
-    color: #102f25 !important;
-    font-size: 1.02rem !important;
-    font-weight: 900 !important;
-    line-height: 1 !important;
-    letter-spacing: .08em !important;
-    text-transform: uppercase !important;
-    white-space: nowrap !important;
-  }
-
-  body:not(.is-login-screen) .dashboard-brand small {
-    display: block !important;
-    margin-top: 5px !important;
-    color: #6f7a68 !important;
-    font-size: .66rem !important;
-    font-weight: 900 !important;
-    line-height: 1 !important;
-    letter-spacing: .16em !important;
-    text-transform: uppercase !important;
-    white-space: nowrap !important;
-  }
-
-  body:not(.is-login-screen) .dashboard-nav {
-    display: grid !important;
-    gap: 7px !important;
-    margin: 0 !important;
-    padding: 0 0 18px !important;
-    border: 0 !important;
-    border-bottom: 1px solid rgba(23, 54, 43, .09) !important;
-    background: transparent !important;
-  }
-
-  body:not(.is-login-screen) .dashboard-nav a,
-  body:not(.is-login-screen) .dashboard-nav a:hover,
-  body:not(.is-login-screen) .dashboard-nav a.is-active,
-  body:not(.is-login-screen) .app-view:not(.is-sidebar-open) .dashboard-sidebar:not(:hover):not(:focus-within) .dashboard-nav a,
-  body:not(.is-login-screen) .app-view:not(.is-sidebar-open) .dashboard-sidebar:not(:hover):not(:focus-within) .dashboard-nav a.is-active {
-    display: grid !important;
-    grid-template-columns: 40px minmax(0, 1fr) !important;
-    align-items: center !important;
-    gap: 10px !important;
-    min-height: 50px !important;
-    width: 100% !important;
-    padding: 5px 12px 5px 6px !important;
-    border: 1px solid transparent !important;
-    border-radius: 17px !important;
-    background: transparent !important;
-    color: #123f31 !important;
-    font-size: .92rem !important;
-    font-weight: 850 !important;
-    letter-spacing: 0 !important;
-    text-decoration: none !important;
-    box-shadow: none !important;
-    transform: none !important;
-  }
-
-  body:not(.is-login-screen) .dashboard-nav a:hover {
-    background: rgba(229, 237, 219, .62) !important;
-    border-color: rgba(23, 54, 43, .06) !important;
-  }
-
-  body:not(.is-login-screen) .dashboard-nav a.is-active,
-  body:not(.is-login-screen) .dashboard-nav a.is-active:hover,
-  body:not(.is-login-screen) .app-view:not(.is-sidebar-open) .dashboard-sidebar:not(:hover):not(:focus-within) .dashboard-nav a.is-active {
-    background: linear-gradient(135deg, #e7f0dc, #d9e8cd) !important;
-    border-color: rgba(64, 104, 56, .16) !important;
-    color: #123f31 !important;
-    box-shadow: 0 12px 26px rgba(74, 101, 57, .11) !important;
-  }
-
-  body:not(.is-login-screen) .dashboard-sidebar .nav-icon,
-  body:not(.is-login-screen) .dashboard-sidebar .sidebar-quick-action .nav-icon,
-  body:not(.is-login-screen) .dashboard-sidebar .sidebar-manage-link .nav-icon,
-  body:not(.is-login-screen) .app-view:not(.is-sidebar-open) .dashboard-sidebar:not(:hover):not(:focus-within) .nav-icon {
-    display: inline-grid !important;
-    place-items: center !important;
-    width: 38px !important;
-    height: 38px !important;
-    min-width: 38px !important;
-    border: 0 !important;
-    border-radius: 999px !important;
-    background: rgba(224, 235, 214, .74) !important;
-    color: #123f31 !important;
-    box-shadow: none !important;
-    filter: none !important;
-  }
-
-  body:not(.is-login-screen) .dashboard-sidebar .nav-icon img,
-  body:not(.is-login-screen) .app-view:not(.is-sidebar-open) .dashboard-sidebar:not(:hover):not(:focus-within) .nav-icon img {
-    width: 20px !important;
-    height: 20px !important;
-    object-fit: contain !important;
-    opacity: 1 !important;
-    filter: none !important;
-  }
-
-  body:not(.is-login-screen) .dashboard-sidebar .nav-label {
-    min-width: 0 !important;
-    color: inherit !important;
-    opacity: 1 !important;
-    overflow: hidden !important;
-    text-overflow: ellipsis !important;
-    white-space: nowrap !important;
-  }
-
-  body:not(.is-login-screen) .sidebar-quick-actions {
-    display: grid !important;
-    gap: 10px !important;
-    margin: 16px 0 0 !important;
-    padding: 0 0 14px !important;
-    border-top: 0 !important;
-    border-bottom: 1px solid rgba(23, 54, 43, .09) !important;
-  }
-
-  body:not(.is-login-screen) .sidebar-section-title {
-    margin: 0 0 2px !important;
-    color: #71806f !important;
-    font-size: .68rem !important;
-    font-weight: 900 !important;
-    letter-spacing: .16em !important;
-    line-height: 1 !important;
-    text-transform: uppercase !important;
-  }
-
-  body:not(.is-login-screen) .sidebar-quick-action-list {
-    display: grid !important;
-    gap: 8px !important;
-  }
-
-  body:not(.is-login-screen) .sidebar-quick-action,
-  body:not(.is-login-screen) .sidebar-manage-link {
-    display: grid !important;
-    grid-template-columns: 38px minmax(0, 1fr) !important;
-    align-items: center !important;
-    gap: 10px !important;
-    width: 100% !important;
-    min-height: 48px !important;
-    padding: 5px 12px 5px 6px !important;
-    border: 1px solid rgba(23, 54, 43, .08) !important;
-    border-radius: 15px !important;
-    background: rgba(255, 253, 247, .78) !important;
-    color: #123f31 !important;
-    font-size: .86rem !important;
-    font-weight: 850 !important;
-    text-align: left !important;
-    box-shadow: 0 8px 18px rgba(23, 54, 43, .04) !important;
-  }
-
-  body:not(.is-login-screen) .sidebar-quick-action:hover,
-  body:not(.is-login-screen) .sidebar-manage-link:hover {
-    background: rgba(232, 240, 223, .78) !important;
-    border-color: rgba(64, 104, 56, .16) !important;
-    transform: translateY(-1px) !important;
-  }
-
-  body:not(.is-login-screen) .sidebar-manage-link {
-    margin-top: 2px !important;
-    color: #5f6c60 !important;
-    background: rgba(250, 248, 240, .7) !important;
-    box-shadow: none !important;
-  }
-
-  body:not(.is-login-screen) .sidebar-bottom {
-    display: grid !important;
-    gap: 10px !important;
-    margin-top: auto !important;
-    padding-top: 12px !important;
-    min-height: 0 !important;
-    border-top: 0 !important;
-  }
-
-  body:not(.is-login-screen) .sidebar-notification-button {
-    display: inline-grid !important;
-    place-items: center !important;
-    width: 42px !important;
-    height: 42px !important;
-    min-width: 42px !important;
-    border: 1px solid rgba(23, 54, 43, .08) !important;
-    border-radius: 14px !important;
-    background: rgba(255, 253, 247, .74) !important;
-    color: #123f31 !important;
-    box-shadow: 0 8px 18px rgba(23, 54, 43, .04) !important;
-  }
-
-  body:not(.is-login-screen) .sidebar-notification-button img {
-    width: 20px !important;
-    height: 20px !important;
-    filter: none !important;
-  }
-
-  body:not(.is-login-screen) .sidebar-profile {
-    display: grid !important;
-    grid-template-columns: 42px minmax(0, 1fr) 16px !important;
-    align-items: center !important;
-    gap: 10px !important;
-    min-height: 54px !important;
-    padding: 6px !important;
-    border: 1px solid rgba(23, 54, 43, .08) !important;
-    border-radius: 17px !important;
-    background: rgba(255, 253, 247, .78) !important;
-    color: #102f25 !important;
-    box-shadow: 0 10px 22px rgba(23, 54, 43, .045) !important;
-  }
-
-  body:not(.is-login-screen) .sidebar-profile > img:first-child {
-    width: 42px !important;
-    height: 42px !important;
-    border-radius: 50% !important;
-    background: rgba(224, 235, 214, .82) !important;
-    object-fit: contain !important;
-  }
-
-  body:not(.is-login-screen) .sidebar-profile strong,
-  body:not(.is-login-screen) .sidebar-profile small {
-    display: block !important;
-    min-width: 0 !important;
-    overflow: hidden !important;
-    text-overflow: ellipsis !important;
-    white-space: nowrap !important;
-  }
-
-  body:not(.is-login-screen) .sidebar-profile strong {
-    color: #102f25 !important;
-    font-size: .9rem !important;
-    line-height: 1.1 !important;
-  }
-
-  body:not(.is-login-screen) .sidebar-profile small {
-    margin-top: 3px !important;
-    color: #6f7a68 !important;
-    font-size: .74rem !important;
-    line-height: 1.1 !important;
-  }
-
-  body:not(.is-login-screen) .sidebar-profile-chevron {
-    width: 14px !important;
-    height: 14px !important;
-    opacity: .74 !important;
-  }
-
-  body:not(.is-login-screen) .sign-out {
-    display: inline-flex !important;
-    align-items: center !important;
-    justify-content: center !important;
-    gap: 8px !important;
-    width: 100% !important;
-    min-width: 0 !important;
-    min-height: 40px !important;
-    margin: 0 !important;
-    padding: 8px 12px !important;
-    border: 1px solid rgba(23, 54, 43, .09) !important;
-    border-radius: 15px !important;
-    background: rgba(255, 253, 247, .68) !important;
-    color: #5f6c60 !important;
-    font-size: .84rem !important;
-    font-weight: 850 !important;
-    box-shadow: none !important;
-  }
-
-  body:not(.is-login-screen) .sign-out:hover {
-    background: rgba(232, 240, 223, .76) !important;
-    color: #123f31 !important;
-  }
-
-  body:not(.is-login-screen) .sign-out .button-icon {
-    width: auto !important;
-    min-width: 0 !important;
-    height: auto !important;
-    border: 0 !important;
-    background: transparent !important;
-    color: inherit !important;
-    font-size: .82rem !important;
-    line-height: 1 !important;
-  }
-
-  body:not(.is-login-screen) .dashboard-main {
-    min-width: 0 !important;
-  }
-}
-
-@media (min-width: 901px) and (max-height: 830px) {
-  body:not(.is-login-screen) .dashboard-sidebar-inner {
-    padding: 14px 18px 10px !important;
-  }
-
-  body:not(.is-login-screen) .dashboard-brand {
-    grid-template-columns: 44px minmax(0, 1fr) !important;
-    min-height: 48px !important;
-    margin-bottom: 10px !important;
-  }
-
-  body:not(.is-login-screen) .dashboard-brand img {
-    width: 44px !important;
-    height: 44px !important;
-    min-width: 44px !important;
-  }
-
-  body:not(.is-login-screen) .dashboard-brand strong {
-    font-size: .92rem !important;
-  }
-
-  body:not(.is-login-screen) .dashboard-brand small {
-    margin-top: 3px !important;
-    font-size: .58rem !important;
-    letter-spacing: .13em !important;
-  }
-
-  body:not(.is-login-screen) .dashboard-nav {
-    gap: 5px !important;
-    padding-bottom: 12px !important;
-  }
-
-  body:not(.is-login-screen) .dashboard-nav a,
-  body:not(.is-login-screen) .dashboard-nav a:hover,
-  body:not(.is-login-screen) .dashboard-nav a.is-active {
-    min-height: 38px !important;
-    border-radius: 14px !important;
-  }
-
-  body:not(.is-login-screen) .dashboard-sidebar .nav-icon,
-  body:not(.is-login-screen) .dashboard-sidebar .sidebar-quick-action .nav-icon,
-  body:not(.is-login-screen) .dashboard-sidebar .sidebar-manage-link .nav-icon {
-    width: 32px !important;
-    height: 32px !important;
-    min-width: 32px !important;
-  }
-
-  body:not(.is-login-screen) .dashboard-sidebar .nav-icon img {
-    width: 17px !important;
-    height: 17px !important;
-  }
-
-  body:not(.is-login-screen) .sidebar-quick-actions {
-    gap: 6px !important;
-    margin-top: 9px !important;
-    padding-bottom: 8px !important;
-  }
-
-  body:not(.is-login-screen) .sidebar-section-title {
-    font-size: .6rem !important;
-  }
-
-  body:not(.is-login-screen) .sidebar-quick-action-list {
-    gap: 5px !important;
-  }
-
-  body:not(.is-login-screen) .sidebar-quick-action,
-  body:not(.is-login-screen) .sidebar-manage-link {
-    grid-template-columns: 32px minmax(0, 1fr) !important;
-    min-height: 36px !important;
-    border-radius: 13px !important;
-    font-size: .8rem !important;
-  }
-
-  body:not(.is-login-screen) .sidebar-bottom {
-    gap: 6px !important;
-    padding-top: 6px !important;
-  }
-
-  body:not(.is-login-screen) .sidebar-notification-button {
-    width: 38px !important;
-    height: 38px !important;
-    min-width: 38px !important;
-  }
-
-  body:not(.is-login-screen) .sidebar-profile {
-    min-height: 46px !important;
-    grid-template-columns: 36px minmax(0, 1fr) 14px !important;
-  }
-
-  body:not(.is-login-screen) .sidebar-profile > img:first-child {
-    width: 36px !important;
-    height: 36px !important;
-  }
-
-  body:not(.is-login-screen) .sign-out {
-    min-height: 34px !important;
-    padding: 6px 10px !important;
-    font-size: .78rem !important;
-  }
-}
-
-@media (max-width: 820px) {
-  body:not(.is-login-screen) .dashboard-sidebar {
-    display: none !important;
-  }
-
-  body:not(.is-login-screen) .app-view.is-sidebar-open .dashboard-sidebar {
-    display: block !important;
   }
 }
 
@@ -12041,8 +8604,8 @@ body:not(.is-login-screen) #route-planner .route-form-panel {
 }
 
 body:not(.is-login-screen) #route-planner .route-stop-list {
-  max-height: min(44vh, 430px) !important;
-  overflow: auto !important;
+  max-height: none !important;
+  overflow: visible !important;
   padding-right: 4px !important;
 }
 
@@ -12240,593 +8803,6 @@ body:not(.is-login-screen) .sidebar-notification-more {
 
   body:not(.is-login-screen) .sidebar-notifications-panel::before {
     display: none !important;
-  }
-}
-
-/* Final desktop sidebar behavior: icon rail at rest, full drawer on hover/focus. */
-@media (min-width: 901px) {
-  body:not(.is-login-screen) .app-view:not(.is-sidebar-open):not(:has(.dashboard-sidebar:hover)):not(:has(.dashboard-sidebar :focus-visible)) {
-    grid-template-columns: 88px minmax(0, 1fr) !important;
-    gap: 22px !important;
-  }
-
-  body:not(.is-login-screen) .app-view:has(.dashboard-sidebar:hover),
-  body:not(.is-login-screen) .app-view:has(.dashboard-sidebar :focus-visible),
-  body:not(.is-login-screen) .app-view.is-sidebar-open {
-    grid-template-columns: 312px minmax(0, 1fr) !important;
-    gap: 22px !important;
-  }
-
-  body:not(.is-login-screen) .app-view:not(.is-sidebar-open):not(:has(.dashboard-sidebar:hover)):not(:has(.dashboard-sidebar :focus-visible)) .dashboard-sidebar,
-  body:not(.is-login-screen) .app-view:has(.dashboard-sidebar:hover) .dashboard-sidebar,
-  body:not(.is-login-screen) .app-view:has(.dashboard-sidebar :focus-visible) .dashboard-sidebar,
-  body:not(.is-login-screen) .app-view.is-sidebar-open .dashboard-sidebar {
-    width: 100% !important;
-    min-width: 0 !important;
-    max-width: none !important;
-    overflow: visible !important;
-  }
-
-  body:not(.is-login-screen) .app-view:not(.is-sidebar-open):not(:has(.dashboard-sidebar:hover)):not(:has(.dashboard-sidebar :focus-visible)) .dashboard-sidebar-inner {
-    align-items: center !important;
-    padding: 18px 11px 12px !important;
-  }
-
-  body:not(.is-login-screen) .app-view:not(.is-sidebar-open):not(:has(.dashboard-sidebar:hover)):not(:has(.dashboard-sidebar :focus-visible)) .dashboard-brand,
-  body:not(.is-login-screen) .app-view:not(.is-sidebar-open):not(:has(.dashboard-sidebar:hover)):not(:has(.dashboard-sidebar :focus-visible)) .dashboard-brand:hover,
-  body:not(.is-login-screen) .app-view:not(.is-sidebar-open):not(:has(.dashboard-sidebar:hover)):not(:has(.dashboard-sidebar :focus-visible)) .dashboard-brand:focus-visible {
-    grid-template-columns: 48px !important;
-    justify-content: center !important;
-    gap: 0 !important;
-    width: 100% !important;
-    min-height: 50px !important;
-    margin-bottom: 16px !important;
-  }
-
-  body:not(.is-login-screen) .app-view:not(.is-sidebar-open):not(:has(.dashboard-sidebar:hover)):not(:has(.dashboard-sidebar :focus-visible)) .dashboard-brand img {
-    width: 48px !important;
-    height: 48px !important;
-    min-width: 48px !important;
-  }
-
-  body:not(.is-login-screen) .app-view:not(.is-sidebar-open):not(:has(.dashboard-sidebar:hover)):not(:has(.dashboard-sidebar :focus-visible)) .dashboard-brand span,
-  body:not(.is-login-screen) .app-view:not(.is-sidebar-open):not(:has(.dashboard-sidebar:hover)):not(:has(.dashboard-sidebar :focus-visible)) .dashboard-sidebar .nav-label,
-  body:not(.is-login-screen) .app-view:not(.is-sidebar-open):not(:has(.dashboard-sidebar:hover)):not(:has(.dashboard-sidebar :focus-visible)) .sidebar-section-title,
-  body:not(.is-login-screen) .app-view:not(.is-sidebar-open):not(:has(.dashboard-sidebar:hover)):not(:has(.dashboard-sidebar :focus-visible)) .sidebar-quick-action span:not(.nav-icon),
-  body:not(.is-login-screen) .app-view:not(.is-sidebar-open):not(:has(.dashboard-sidebar:hover)):not(:has(.dashboard-sidebar :focus-visible)) .sidebar-manage-link span:not(.nav-icon),
-  body:not(.is-login-screen) .app-view:not(.is-sidebar-open):not(:has(.dashboard-sidebar:hover)):not(:has(.dashboard-sidebar :focus-visible)) .sidebar-profile span,
-  body:not(.is-login-screen) .app-view:not(.is-sidebar-open):not(:has(.dashboard-sidebar:hover)):not(:has(.dashboard-sidebar :focus-visible)) .sidebar-profile-chevron,
-  body:not(.is-login-screen) .app-view:not(.is-sidebar-open):not(:has(.dashboard-sidebar:hover)):not(:has(.dashboard-sidebar :focus-visible)) .sign-out span:not(.button-icon) {
-    opacity: 0 !important;
-    max-width: 0 !important;
-    overflow: hidden !important;
-    pointer-events: none !important;
-    transform: translateX(-6px) !important;
-    white-space: nowrap !important;
-  }
-
-  body:not(.is-login-screen) .app-view:not(.is-sidebar-open):not(:has(.dashboard-sidebar:hover)):not(:has(.dashboard-sidebar :focus-visible)) .sidebar-section-title {
-    height: 0 !important;
-    margin: 0 !important;
-  }
-
-  body:not(.is-login-screen) .app-view:not(.is-sidebar-open):not(:has(.dashboard-sidebar:hover)):not(:has(.dashboard-sidebar :focus-visible)) .dashboard-nav,
-  body:not(.is-login-screen) .app-view:not(.is-sidebar-open):not(:has(.dashboard-sidebar:hover)):not(:has(.dashboard-sidebar :focus-visible)) .sidebar-quick-actions,
-  body:not(.is-login-screen) .app-view:not(.is-sidebar-open):not(:has(.dashboard-sidebar:hover)):not(:has(.dashboard-sidebar :focus-visible)) .sidebar-quick-action-list,
-  body:not(.is-login-screen) .app-view:not(.is-sidebar-open):not(:has(.dashboard-sidebar:hover)):not(:has(.dashboard-sidebar :focus-visible)) .sidebar-bottom {
-    width: 100% !important;
-    justify-items: center !important;
-  }
-
-  body:not(.is-login-screen) .app-view:not(.is-sidebar-open):not(:has(.dashboard-sidebar:hover)):not(:has(.dashboard-sidebar :focus-visible)) .dashboard-nav a,
-  body:not(.is-login-screen) .app-view:not(.is-sidebar-open):not(:has(.dashboard-sidebar:hover)):not(:has(.dashboard-sidebar :focus-visible)) .dashboard-nav a:hover,
-  body:not(.is-login-screen) .app-view:not(.is-sidebar-open):not(:has(.dashboard-sidebar:hover)):not(:has(.dashboard-sidebar :focus-visible)) .dashboard-nav a.is-active {
-    grid-template-columns: 42px !important;
-    justify-content: center !important;
-    width: 54px !important;
-    min-height: 46px !important;
-    padding: 4px !important;
-    gap: 0 !important;
-  }
-
-  body:not(.is-login-screen) .app-view:not(.is-sidebar-open):not(:has(.dashboard-sidebar:hover)):not(:has(.dashboard-sidebar :focus-visible)) .sidebar-quick-actions {
-    gap: 8px !important;
-    margin-top: 14px !important;
-    padding-bottom: 10px !important;
-  }
-
-  body:not(.is-login-screen) .app-view:not(.is-sidebar-open):not(:has(.dashboard-sidebar:hover)):not(:has(.dashboard-sidebar :focus-visible)) .sidebar-quick-action,
-  body:not(.is-login-screen) .app-view:not(.is-sidebar-open):not(:has(.dashboard-sidebar:hover)):not(:has(.dashboard-sidebar :focus-visible)) .sidebar-manage-link {
-    grid-template-columns: 42px !important;
-    justify-content: center !important;
-    width: 54px !important;
-    min-height: 44px !important;
-    padding: 3px !important;
-    gap: 0 !important;
-  }
-
-  body:not(.is-login-screen) .app-view:not(.is-sidebar-open):not(:has(.dashboard-sidebar:hover)):not(:has(.dashboard-sidebar :focus-visible)) .dashboard-sidebar .nav-icon,
-  body:not(.is-login-screen) .app-view:not(.is-sidebar-open):not(:has(.dashboard-sidebar:hover)):not(:has(.dashboard-sidebar :focus-visible)) .dashboard-sidebar .sidebar-quick-action .nav-icon,
-  body:not(.is-login-screen) .app-view:not(.is-sidebar-open):not(:has(.dashboard-sidebar:hover)):not(:has(.dashboard-sidebar :focus-visible)) .dashboard-sidebar .sidebar-manage-link .nav-icon {
-    width: 38px !important;
-    height: 38px !important;
-    min-width: 38px !important;
-  }
-
-  body:not(.is-login-screen) .app-view:not(.is-sidebar-open):not(:has(.dashboard-sidebar:hover)):not(:has(.dashboard-sidebar :focus-visible)) .sidebar-bottom {
-    gap: 8px !important;
-  }
-
-  body:not(.is-login-screen) .app-view:not(.is-sidebar-open):not(:has(.dashboard-sidebar:hover)):not(:has(.dashboard-sidebar :focus-visible)) .sidebar-profile {
-    grid-template-columns: 42px !important;
-    justify-content: center !important;
-    width: 54px !important;
-    min-height: 52px !important;
-    padding: 5px !important;
-    gap: 0 !important;
-  }
-
-  body:not(.is-login-screen) .app-view:not(.is-sidebar-open):not(:has(.dashboard-sidebar:hover)):not(:has(.dashboard-sidebar :focus-visible)) .sign-out {
-    width: 54px !important;
-    min-height: 40px !important;
-    padding: 6px !important;
-  }
-
-  body:not(.is-login-screen) .app-view:has(.dashboard-sidebar:hover) .dashboard-sidebar-inner,
-  body:not(.is-login-screen) .app-view:has(.dashboard-sidebar :focus-visible) .dashboard-sidebar-inner,
-  body:not(.is-login-screen) .app-view.is-sidebar-open .dashboard-sidebar-inner {
-    align-items: stretch !important;
-    padding: 22px 20px 14px !important;
-  }
-
-  body:not(.is-login-screen) .app-view:has(.dashboard-sidebar:hover) .dashboard-brand,
-  body:not(.is-login-screen) .app-view:has(.dashboard-sidebar :focus-visible) .dashboard-brand,
-  body:not(.is-login-screen) .app-view.is-sidebar-open .dashboard-brand {
-    grid-template-columns: 52px minmax(0, 1fr) !important;
-    justify-content: stretch !important;
-    gap: 12px !important;
-    min-height: 58px !important;
-    margin-bottom: 22px !important;
-  }
-
-  body:not(.is-login-screen) .app-view:has(.dashboard-sidebar:hover) .dashboard-brand span,
-  body:not(.is-login-screen) .app-view:has(.dashboard-sidebar :focus-visible) .dashboard-brand span,
-  body:not(.is-login-screen) .app-view.is-sidebar-open .dashboard-brand span,
-  body:not(.is-login-screen) .app-view:has(.dashboard-sidebar:hover) .dashboard-sidebar .nav-label,
-  body:not(.is-login-screen) .app-view:has(.dashboard-sidebar :focus-visible) .dashboard-sidebar .nav-label,
-  body:not(.is-login-screen) .app-view.is-sidebar-open .dashboard-sidebar .nav-label,
-  body:not(.is-login-screen) .app-view:has(.dashboard-sidebar:hover) .sidebar-section-title,
-  body:not(.is-login-screen) .app-view:has(.dashboard-sidebar :focus-visible) .sidebar-section-title,
-  body:not(.is-login-screen) .app-view.is-sidebar-open .sidebar-section-title,
-  body:not(.is-login-screen) .app-view:has(.dashboard-sidebar:hover) .sidebar-quick-action span:not(.nav-icon),
-  body:not(.is-login-screen) .app-view:has(.dashboard-sidebar :focus-visible) .sidebar-quick-action span:not(.nav-icon),
-  body:not(.is-login-screen) .app-view.is-sidebar-open .sidebar-quick-action span:not(.nav-icon),
-  body:not(.is-login-screen) .app-view:has(.dashboard-sidebar:hover) .sidebar-manage-link span:not(.nav-icon),
-  body:not(.is-login-screen) .app-view:has(.dashboard-sidebar :focus-visible) .sidebar-manage-link span:not(.nav-icon),
-  body:not(.is-login-screen) .app-view.is-sidebar-open .sidebar-manage-link span:not(.nav-icon),
-  body:not(.is-login-screen) .app-view:has(.dashboard-sidebar:hover) .sidebar-profile span,
-  body:not(.is-login-screen) .app-view:has(.dashboard-sidebar :focus-visible) .sidebar-profile span,
-  body:not(.is-login-screen) .app-view.is-sidebar-open .sidebar-profile span,
-  body:not(.is-login-screen) .app-view:has(.dashboard-sidebar:hover) .sidebar-profile-chevron,
-  body:not(.is-login-screen) .app-view:has(.dashboard-sidebar :focus-visible) .sidebar-profile-chevron,
-  body:not(.is-login-screen) .app-view.is-sidebar-open .sidebar-profile-chevron,
-  body:not(.is-login-screen) .app-view:has(.dashboard-sidebar:hover) .sign-out span:not(.button-icon),
-  body:not(.is-login-screen) .app-view:has(.dashboard-sidebar :focus-visible) .sign-out span:not(.button-icon),
-  body:not(.is-login-screen) .app-view.is-sidebar-open .sign-out span:not(.button-icon) {
-    opacity: 1 !important;
-    max-width: 190px !important;
-    pointer-events: auto !important;
-    transform: none !important;
-  }
-
-  body:not(.is-login-screen) .app-view:has(.dashboard-sidebar:hover) .sidebar-section-title,
-  body:not(.is-login-screen) .app-view:has(.dashboard-sidebar :focus-visible) .sidebar-section-title,
-  body:not(.is-login-screen) .app-view.is-sidebar-open .sidebar-section-title {
-    height: auto !important;
-    margin: 0 0 2px !important;
-  }
-
-  body:not(.is-login-screen) .app-view:has(.dashboard-sidebar:hover) .dashboard-nav,
-  body:not(.is-login-screen) .app-view:has(.dashboard-sidebar :focus-visible) .dashboard-nav,
-  body:not(.is-login-screen) .app-view.is-sidebar-open .dashboard-nav,
-  body:not(.is-login-screen) .app-view:has(.dashboard-sidebar:hover) .sidebar-quick-actions,
-  body:not(.is-login-screen) .app-view:has(.dashboard-sidebar :focus-visible) .sidebar-quick-actions,
-  body:not(.is-login-screen) .app-view.is-sidebar-open .sidebar-quick-actions,
-  body:not(.is-login-screen) .app-view:has(.dashboard-sidebar:hover) .sidebar-bottom,
-  body:not(.is-login-screen) .app-view:has(.dashboard-sidebar :focus-visible) .sidebar-bottom,
-  body:not(.is-login-screen) .app-view.is-sidebar-open .sidebar-bottom {
-    justify-items: stretch !important;
-  }
-
-  body:not(.is-login-screen) .app-view:has(.dashboard-sidebar:hover) .dashboard-nav a,
-  body:not(.is-login-screen) .app-view:has(.dashboard-sidebar :focus-visible) .dashboard-nav a,
-  body:not(.is-login-screen) .app-view.is-sidebar-open .dashboard-nav a {
-    grid-template-columns: 40px minmax(0, 1fr) !important;
-    width: 100% !important;
-    min-height: 50px !important;
-    padding: 5px 12px 5px 6px !important;
-    gap: 10px !important;
-  }
-
-  body:not(.is-login-screen) .app-view:has(.dashboard-sidebar:hover) .sidebar-quick-action,
-  body:not(.is-login-screen) .app-view:has(.dashboard-sidebar :focus-visible) .sidebar-quick-action,
-  body:not(.is-login-screen) .app-view.is-sidebar-open .sidebar-quick-action,
-  body:not(.is-login-screen) .app-view:has(.dashboard-sidebar:hover) .sidebar-manage-link,
-  body:not(.is-login-screen) .app-view:has(.dashboard-sidebar :focus-visible) .sidebar-manage-link,
-  body:not(.is-login-screen) .app-view.is-sidebar-open .sidebar-manage-link {
-    grid-template-columns: 38px minmax(0, 1fr) !important;
-    width: 100% !important;
-    min-height: 48px !important;
-    padding: 5px 12px 5px 6px !important;
-    gap: 10px !important;
-  }
-
-  body:not(.is-login-screen) .app-view:has(.dashboard-sidebar:hover) .sidebar-profile,
-  body:not(.is-login-screen) .app-view:has(.dashboard-sidebar :focus-visible) .sidebar-profile,
-  body:not(.is-login-screen) .app-view.is-sidebar-open .sidebar-profile {
-    grid-template-columns: 42px minmax(0, 1fr) 16px !important;
-    width: 100% !important;
-    justify-content: stretch !important;
-    gap: 10px !important;
-  }
-
-  body:not(.is-login-screen) .app-view:has(.dashboard-sidebar:hover) .sign-out,
-  body:not(.is-login-screen) .app-view:has(.dashboard-sidebar :focus-visible) .sign-out,
-  body:not(.is-login-screen) .app-view.is-sidebar-open .sign-out {
-    width: 100% !important;
-    padding: 8px 12px !important;
-  }
-
-  body:not(.is-login-screen) .app-view:not(.is-sidebar-open):not(:has(.dashboard-sidebar:hover)):not(:has(.dashboard-sidebar :focus-visible)) .sidebar-notifications-panel {
-    left: 112px !important;
-    width: min(390px, calc(100vw - 152px)) !important;
-  }
-
-  body:not(.is-login-screen) .app-view:not(.is-sidebar-open):not(:has(.dashboard-sidebar:hover)):not(:has(.dashboard-sidebar :focus-visible)) .sidebar-notifications-panel::before {
-    left: 100px !important;
-  }
-
-  body:not(.is-login-screen) .app-view:has(.dashboard-sidebar:hover) .sidebar-notifications-panel,
-  body:not(.is-login-screen) .app-view:has(.dashboard-sidebar :focus-visible) .sidebar-notifications-panel,
-  body:not(.is-login-screen) .app-view.is-sidebar-open .sidebar-notifications-panel {
-    left: 332px !important;
-    width: min(390px, calc(100vw - 372px)) !important;
-  }
-
-  body:not(.is-login-screen) .app-view:has(.dashboard-sidebar:hover) .sidebar-notifications-panel::before,
-  body:not(.is-login-screen) .app-view:has(.dashboard-sidebar :focus-visible) .sidebar-notifications-panel::before,
-  body:not(.is-login-screen) .app-view.is-sidebar-open .sidebar-notifications-panel::before {
-    left: 320px !important;
-  }
-}
-
-/* Collapsed sidebar active state: highlight the icon, not the full row. */
-@media (min-width: 901px) {
-  body:not(.is-login-screen) .app-view:not(.is-sidebar-open):not(:has(.dashboard-sidebar:hover)):not(:has(.dashboard-sidebar :focus-visible)) .dashboard-nav a.is-active,
-  body:not(.is-login-screen) .app-view:not(.is-sidebar-open):not(:has(.dashboard-sidebar:hover)):not(:has(.dashboard-sidebar :focus-visible)) .dashboard-nav a.is-active:hover {
-    background: transparent !important;
-    border-color: transparent !important;
-    box-shadow: none !important;
-  }
-
-  body:not(.is-login-screen) .app-view:not(.is-sidebar-open):not(:has(.dashboard-sidebar:hover)):not(:has(.dashboard-sidebar :focus-visible)) .dashboard-nav a.is-active .nav-icon {
-    width: 42px !important;
-    height: 42px !important;
-    min-width: 42px !important;
-    border: 1px solid rgba(64, 104, 56, .16) !important;
-    background: linear-gradient(135deg, #e7f0dc, #d9e8cd) !important;
-    box-shadow: 0 10px 22px rgba(74, 101, 57, .12) !important;
-  }
-
-  body:not(.is-login-screen) .app-view:not(.is-sidebar-open):not(:has(.dashboard-sidebar:hover)):not(:has(.dashboard-sidebar :focus-visible)) .dashboard-nav a.is-active:hover .nav-icon {
-    background: linear-gradient(135deg, #e1ecd6, #cfdfc4) !important;
-  }
-}
-
-/* Laptop-height sidebar fit repair: keep the floating panel inside the viewport. */
-@media (min-width: 901px) {
-  body:not(.is-login-screen) .app-view,
-  body:not(.is-login-screen) .app-view:has(.dashboard-sidebar:hover),
-  body:not(.is-login-screen) .app-view:has(.dashboard-sidebar :focus-visible),
-  body:not(.is-login-screen) .app-view.is-sidebar-open {
-    height: 100dvh !important;
-    min-height: 0 !important;
-    padding: 16px !important;
-    overflow: hidden !important;
-  }
-
-  body:not(.is-login-screen) .app-view:not(.is-sidebar-open):not(:has(.dashboard-sidebar:hover)):not(:has(.dashboard-sidebar :focus-visible)) {
-    grid-template-columns: 84px minmax(0, 1fr) !important;
-    gap: 18px !important;
-  }
-
-  body:not(.is-login-screen) .app-view:has(.dashboard-sidebar:hover),
-  body:not(.is-login-screen) .app-view:has(.dashboard-sidebar :focus-visible),
-  body:not(.is-login-screen) .app-view.is-sidebar-open {
-    grid-template-columns: 292px minmax(0, 1fr) !important;
-    gap: 18px !important;
-  }
-
-  body:not(.is-login-screen) .dashboard-sidebar,
-  body:not(.is-login-screen) .dashboard-sidebar:hover,
-  body:not(.is-login-screen) .dashboard-sidebar:focus-within,
-  body:not(.is-login-screen) .app-view.is-sidebar-open .dashboard-sidebar {
-    height: calc(100dvh - 32px) !important;
-    max-height: calc(100dvh - 32px) !important;
-    min-height: 0 !important;
-    overflow: hidden !important;
-    border-radius: 22px !important;
-  }
-
-  body:not(.is-login-screen) .dashboard-sidebar-inner {
-    height: 100% !important;
-    max-height: 100% !important;
-    min-height: 0 !important;
-    overflow-x: hidden !important;
-    overflow-y: auto !important;
-    overscroll-behavior: contain !important;
-    scrollbar-width: thin !important;
-    scrollbar-color: rgba(23, 54, 43, .18) transparent !important;
-  }
-
-  body:not(.is-login-screen) .dashboard-sidebar-inner::-webkit-scrollbar {
-    width: 6px !important;
-  }
-
-  body:not(.is-login-screen) .dashboard-sidebar-inner::-webkit-scrollbar-thumb {
-    border-radius: 999px !important;
-    background: rgba(23, 54, 43, .16) !important;
-  }
-
-  body:not(.is-login-screen) .dashboard-sidebar-inner::-webkit-scrollbar-track {
-    background: transparent !important;
-  }
-
-  body:not(.is-login-screen) .app-view:has(.dashboard-sidebar:hover) .dashboard-sidebar-inner,
-  body:not(.is-login-screen) .app-view:has(.dashboard-sidebar :focus-visible) .dashboard-sidebar-inner,
-  body:not(.is-login-screen) .app-view.is-sidebar-open .dashboard-sidebar-inner {
-    padding: 18px 18px 12px !important;
-  }
-
-  body:not(.is-login-screen) .app-view:has(.dashboard-sidebar:hover) .dashboard-brand,
-  body:not(.is-login-screen) .app-view:has(.dashboard-sidebar :focus-visible) .dashboard-brand,
-  body:not(.is-login-screen) .app-view.is-sidebar-open .dashboard-brand {
-    margin-bottom: 16px !important;
-  }
-
-  body:not(.is-login-screen) .app-view:has(.dashboard-sidebar:hover) .dashboard-nav,
-  body:not(.is-login-screen) .app-view:has(.dashboard-sidebar :focus-visible) .dashboard-nav,
-  body:not(.is-login-screen) .app-view.is-sidebar-open .dashboard-nav {
-    gap: 6px !important;
-    padding-bottom: 14px !important;
-  }
-
-  body:not(.is-login-screen) .app-view:has(.dashboard-sidebar:hover) .dashboard-nav a,
-  body:not(.is-login-screen) .app-view:has(.dashboard-sidebar :focus-visible) .dashboard-nav a,
-  body:not(.is-login-screen) .app-view.is-sidebar-open .dashboard-nav a {
-    min-height: 46px !important;
-    color: #123f31 !important;
-  }
-
-  body:not(.is-login-screen) .app-view:has(.dashboard-sidebar:hover) .dashboard-nav a.is-active,
-  body:not(.is-login-screen) .app-view:has(.dashboard-sidebar:hover) .dashboard-nav a.is-active:hover,
-  body:not(.is-login-screen) .app-view:has(.dashboard-sidebar :focus-visible) .dashboard-nav a.is-active,
-  body:not(.is-login-screen) .app-view:has(.dashboard-sidebar :focus-visible) .dashboard-nav a.is-active:hover,
-  body:not(.is-login-screen) .app-view.is-sidebar-open .dashboard-nav a.is-active,
-  body:not(.is-login-screen) .app-view.is-sidebar-open .dashboard-nav a.is-active:hover {
-    color: #123f31 !important;
-  }
-
-  body:not(.is-login-screen) .app-view:has(.dashboard-sidebar:hover) .dashboard-nav a.is-active .nav-label,
-  body:not(.is-login-screen) .app-view:has(.dashboard-sidebar :focus-visible) .dashboard-nav a.is-active .nav-label,
-  body:not(.is-login-screen) .app-view.is-sidebar-open .dashboard-nav a.is-active .nav-label {
-    color: #123f31 !important;
-  }
-
-  body:not(.is-login-screen) .app-view:has(.dashboard-sidebar:hover) .sidebar-quick-actions,
-  body:not(.is-login-screen) .app-view:has(.dashboard-sidebar :focus-visible) .sidebar-quick-actions,
-  body:not(.is-login-screen) .app-view.is-sidebar-open .sidebar-quick-actions {
-    gap: 8px !important;
-    margin-top: 12px !important;
-    padding-bottom: 12px !important;
-  }
-
-  body:not(.is-login-screen) .app-view:has(.dashboard-sidebar:hover) .sidebar-quick-action-list,
-  body:not(.is-login-screen) .app-view:has(.dashboard-sidebar :focus-visible) .sidebar-quick-action-list,
-  body:not(.is-login-screen) .app-view.is-sidebar-open .sidebar-quick-action-list {
-    gap: 7px !important;
-  }
-
-  body:not(.is-login-screen) .app-view:has(.dashboard-sidebar:hover) .sidebar-quick-action,
-  body:not(.is-login-screen) .app-view:has(.dashboard-sidebar :focus-visible) .sidebar-quick-action,
-  body:not(.is-login-screen) .app-view.is-sidebar-open .sidebar-quick-action,
-  body:not(.is-login-screen) .app-view:has(.dashboard-sidebar:hover) .sidebar-manage-link,
-  body:not(.is-login-screen) .app-view:has(.dashboard-sidebar :focus-visible) .sidebar-manage-link,
-  body:not(.is-login-screen) .app-view.is-sidebar-open .sidebar-manage-link {
-    min-height: 44px !important;
-  }
-
-  body:not(.is-login-screen) .app-view:has(.dashboard-sidebar:hover) .sidebar-bottom,
-  body:not(.is-login-screen) .app-view:has(.dashboard-sidebar :focus-visible) .sidebar-bottom,
-  body:not(.is-login-screen) .app-view.is-sidebar-open .sidebar-bottom {
-    gap: 8px !important;
-    padding-top: 10px !important;
-  }
-
-  body:not(.is-login-screen) .dashboard-main {
-    height: calc(100dvh - 32px) !important;
-    max-height: calc(100dvh - 32px) !important;
-    min-height: 0 !important;
-  }
-}
-
-@media (min-width: 901px) and (max-height: 850px) {
-  body:not(.is-login-screen) .app-view,
-  body:not(.is-login-screen) .app-view:has(.dashboard-sidebar:hover),
-  body:not(.is-login-screen) .app-view:has(.dashboard-sidebar :focus-visible),
-  body:not(.is-login-screen) .app-view.is-sidebar-open {
-    padding: 12px !important;
-  }
-
-  body:not(.is-login-screen) .app-view:not(.is-sidebar-open):not(:has(.dashboard-sidebar:hover)):not(:has(.dashboard-sidebar :focus-visible)) {
-    grid-template-columns: 78px minmax(0, 1fr) !important;
-    gap: 14px !important;
-  }
-
-  body:not(.is-login-screen) .app-view:has(.dashboard-sidebar:hover),
-  body:not(.is-login-screen) .app-view:has(.dashboard-sidebar :focus-visible),
-  body:not(.is-login-screen) .app-view.is-sidebar-open {
-    grid-template-columns: 280px minmax(0, 1fr) !important;
-    gap: 14px !important;
-  }
-
-  body:not(.is-login-screen) .dashboard-sidebar,
-  body:not(.is-login-screen) .dashboard-sidebar:hover,
-  body:not(.is-login-screen) .dashboard-sidebar:focus-within,
-  body:not(.is-login-screen) .app-view.is-sidebar-open .dashboard-sidebar,
-  body:not(.is-login-screen) .dashboard-main {
-    height: calc(100dvh - 24px) !important;
-    max-height: calc(100dvh - 24px) !important;
-  }
-
-  body:not(.is-login-screen) .app-view:has(.dashboard-sidebar:hover) .dashboard-sidebar-inner,
-  body:not(.is-login-screen) .app-view:has(.dashboard-sidebar :focus-visible) .dashboard-sidebar-inner,
-  body:not(.is-login-screen) .app-view.is-sidebar-open .dashboard-sidebar-inner {
-    padding: 12px 14px 10px !important;
-  }
-
-  body:not(.is-login-screen) .app-view:has(.dashboard-sidebar:hover) .dashboard-brand,
-  body:not(.is-login-screen) .app-view:has(.dashboard-sidebar :focus-visible) .dashboard-brand,
-  body:not(.is-login-screen) .app-view.is-sidebar-open .dashboard-brand {
-    grid-template-columns: 42px minmax(0, 1fr) !important;
-    min-height: 44px !important;
-    margin-bottom: 8px !important;
-    gap: 10px !important;
-  }
-
-  body:not(.is-login-screen) .app-view:has(.dashboard-sidebar:hover) .dashboard-brand img,
-  body:not(.is-login-screen) .app-view:has(.dashboard-sidebar :focus-visible) .dashboard-brand img,
-  body:not(.is-login-screen) .app-view.is-sidebar-open .dashboard-brand img {
-    width: 42px !important;
-    height: 42px !important;
-    min-width: 42px !important;
-  }
-
-  body:not(.is-login-screen) .app-view:has(.dashboard-sidebar:hover) .dashboard-brand strong,
-  body:not(.is-login-screen) .app-view:has(.dashboard-sidebar :focus-visible) .dashboard-brand strong,
-  body:not(.is-login-screen) .app-view.is-sidebar-open .dashboard-brand strong {
-    font-size: .86rem !important;
-  }
-
-  body:not(.is-login-screen) .app-view:has(.dashboard-sidebar:hover) .dashboard-brand small,
-  body:not(.is-login-screen) .app-view:has(.dashboard-sidebar :focus-visible) .dashboard-brand small,
-  body:not(.is-login-screen) .app-view.is-sidebar-open .dashboard-brand small {
-    margin-top: 2px !important;
-    font-size: .54rem !important;
-    letter-spacing: .12em !important;
-  }
-
-  body:not(.is-login-screen) .app-view:has(.dashboard-sidebar:hover) .dashboard-nav,
-  body:not(.is-login-screen) .app-view:has(.dashboard-sidebar :focus-visible) .dashboard-nav,
-  body:not(.is-login-screen) .app-view.is-sidebar-open .dashboard-nav {
-    gap: 4px !important;
-    padding-bottom: 8px !important;
-  }
-
-  body:not(.is-login-screen) .app-view:has(.dashboard-sidebar:hover) .dashboard-nav a,
-  body:not(.is-login-screen) .app-view:has(.dashboard-sidebar :focus-visible) .dashboard-nav a,
-  body:not(.is-login-screen) .app-view.is-sidebar-open .dashboard-nav a {
-    min-height: 38px !important;
-    padding: 3px 10px 3px 4px !important;
-    border-radius: 13px !important;
-    font-size: .84rem !important;
-  }
-
-  body:not(.is-login-screen) .app-view:has(.dashboard-sidebar:hover) .dashboard-sidebar .nav-icon,
-  body:not(.is-login-screen) .app-view:has(.dashboard-sidebar :focus-visible) .dashboard-sidebar .nav-icon,
-  body:not(.is-login-screen) .app-view.is-sidebar-open .dashboard-sidebar .nav-icon,
-  body:not(.is-login-screen) .app-view:has(.dashboard-sidebar:hover) .dashboard-sidebar .sidebar-quick-action .nav-icon,
-  body:not(.is-login-screen) .app-view:has(.dashboard-sidebar :focus-visible) .dashboard-sidebar .sidebar-quick-action .nav-icon,
-  body:not(.is-login-screen) .app-view.is-sidebar-open .dashboard-sidebar .sidebar-quick-action .nav-icon,
-  body:not(.is-login-screen) .app-view:has(.dashboard-sidebar:hover) .dashboard-sidebar .sidebar-manage-link .nav-icon,
-  body:not(.is-login-screen) .app-view:has(.dashboard-sidebar :focus-visible) .dashboard-sidebar .sidebar-manage-link .nav-icon,
-  body:not(.is-login-screen) .app-view.is-sidebar-open .dashboard-sidebar .sidebar-manage-link .nav-icon {
-    width: 30px !important;
-    height: 30px !important;
-    min-width: 30px !important;
-  }
-
-  body:not(.is-login-screen) .app-view:has(.dashboard-sidebar:hover) .dashboard-sidebar .nav-icon img,
-  body:not(.is-login-screen) .app-view:has(.dashboard-sidebar :focus-visible) .dashboard-sidebar .nav-icon img,
-  body:not(.is-login-screen) .app-view.is-sidebar-open .dashboard-sidebar .nav-icon img {
-    width: 16px !important;
-    height: 16px !important;
-  }
-
-  body:not(.is-login-screen) .app-view:has(.dashboard-sidebar:hover) .sidebar-quick-actions,
-  body:not(.is-login-screen) .app-view:has(.dashboard-sidebar :focus-visible) .sidebar-quick-actions,
-  body:not(.is-login-screen) .app-view.is-sidebar-open .sidebar-quick-actions {
-    gap: 5px !important;
-    margin-top: 7px !important;
-    padding-bottom: 7px !important;
-  }
-
-  body:not(.is-login-screen) .app-view:has(.dashboard-sidebar:hover) .sidebar-section-title,
-  body:not(.is-login-screen) .app-view:has(.dashboard-sidebar :focus-visible) .sidebar-section-title,
-  body:not(.is-login-screen) .app-view.is-sidebar-open .sidebar-section-title {
-    font-size: .58rem !important;
-    letter-spacing: .13em !important;
-  }
-
-  body:not(.is-login-screen) .app-view:has(.dashboard-sidebar:hover) .sidebar-quick-action-list,
-  body:not(.is-login-screen) .app-view:has(.dashboard-sidebar :focus-visible) .sidebar-quick-action-list,
-  body:not(.is-login-screen) .app-view.is-sidebar-open .sidebar-quick-action-list {
-    gap: 5px !important;
-  }
-
-  body:not(.is-login-screen) .app-view:has(.dashboard-sidebar:hover) .sidebar-quick-action,
-  body:not(.is-login-screen) .app-view:has(.dashboard-sidebar :focus-visible) .sidebar-quick-action,
-  body:not(.is-login-screen) .app-view.is-sidebar-open .sidebar-quick-action,
-  body:not(.is-login-screen) .app-view:has(.dashboard-sidebar:hover) .sidebar-manage-link,
-  body:not(.is-login-screen) .app-view:has(.dashboard-sidebar :focus-visible) .sidebar-manage-link,
-  body:not(.is-login-screen) .app-view.is-sidebar-open .sidebar-manage-link {
-    grid-template-columns: 30px minmax(0, 1fr) !important;
-    min-height: 34px !important;
-    padding: 3px 9px 3px 4px !important;
-    border-radius: 12px !important;
-    font-size: .78rem !important;
-  }
-
-  body:not(.is-login-screen) .app-view:has(.dashboard-sidebar:hover) .sidebar-bottom,
-  body:not(.is-login-screen) .app-view:has(.dashboard-sidebar :focus-visible) .sidebar-bottom,
-  body:not(.is-login-screen) .app-view.is-sidebar-open .sidebar-bottom {
-    gap: 5px !important;
-    padding-top: 6px !important;
-  }
-
-  body:not(.is-login-screen) .app-view:has(.dashboard-sidebar:hover) .sidebar-profile,
-  body:not(.is-login-screen) .app-view:has(.dashboard-sidebar :focus-visible) .sidebar-profile,
-  body:not(.is-login-screen) .app-view.is-sidebar-open .sidebar-profile {
-    grid-template-columns: 32px minmax(0, 1fr) 12px !important;
-    min-height: 40px !important;
-    padding: 4px !important;
-    border-radius: 13px !important;
-  }
-
-  body:not(.is-login-screen) .app-view:has(.dashboard-sidebar:hover) .sidebar-profile > img:first-child,
-  body:not(.is-login-screen) .app-view:has(.dashboard-sidebar :focus-visible) .sidebar-profile > img:first-child,
-  body:not(.is-login-screen) .app-view.is-sidebar-open .sidebar-profile > img:first-child {
-    width: 32px !important;
-    height: 32px !important;
-  }
-
-  body:not(.is-login-screen) .app-view:has(.dashboard-sidebar:hover) .sign-out,
-  body:not(.is-login-screen) .app-view:has(.dashboard-sidebar :focus-visible) .sign-out,
-  body:not(.is-login-screen) .app-view.is-sidebar-open .sign-out {
-    min-height: 32px !important;
-    padding: 5px 8px !important;
-    border-radius: 12px !important;
-    font-size: .76rem !important;
   }
 }
 
@@ -13231,355 +9207,753 @@ body:not(.is-login-screen) #groundskeeper-ai .groundskeeper-ai-command-header h3
   }
 }
 
-/* Closed sidebar rail fit: keep the icon-only state compact and uncut. */
-@media (min-width: 901px) {
-  body:not(.is-login-screen) .app-view:not(.is-sidebar-open):not(:has(.dashboard-sidebar:hover)):not(:has(.dashboard-sidebar :focus-visible)) {
-    grid-template-columns: 86px minmax(0, 1fr) !important;
-    gap: 18px !important;
-  }
+/* Pull-to-refresh indicator retained from the retired mobile layer. */
+.pull-refresh {
+  position: fixed;
+  top: calc(64px + env(safe-area-inset-top));
+  left: 50%;
+  z-index: 80;
+  display: inline-flex;
+  align-items: center;
+  gap: 9px;
+  min-height: 42px;
+  padding: 9px 13px;
+  border: 1px solid rgba(6, 27, 21, .13);
+  border-radius: 999px;
+  background: rgba(255, 252, 239, .94);
+  box-shadow: 0 16px 42px rgba(6, 27, 21, .18);
+  color: #123f31;
+  opacity: 0;
+  pointer-events: none;
+  transform: translate(-50%, calc(-76px + var(--pull-distance, 0px)));
+  transition: opacity .16s ease, transform .16s ease;
+}
 
-  body:not(.is-login-screen) .app-view:not(.is-sidebar-open):not(:has(.dashboard-sidebar:hover)):not(:has(.dashboard-sidebar :focus-visible)) .dashboard-sidebar {
-    width: 86px !important;
-    min-width: 86px !important;
-    max-width: 86px !important;
-    height: calc(100dvh - 32px) !important;
-    max-height: calc(100dvh - 32px) !important;
-    overflow: hidden !important;
-  }
+.pull-refresh span {
+  width: 19px;
+  height: 19px;
+  border: 2px solid rgba(18, 63, 49, .18);
+  border-top-color: #2f6b4f;
+  border-radius: 999px;
+  transform: rotate(calc(var(--pull-progress, 0) * 260deg));
+}
 
-  body:not(.is-login-screen) .app-view:not(.is-sidebar-open):not(:has(.dashboard-sidebar:hover)):not(:has(.dashboard-sidebar :focus-visible)) .dashboard-sidebar-inner {
-    align-items: center !important;
-    height: 100% !important;
-    max-height: 100% !important;
-    padding: 14px 9px 12px !important;
-    overflow: hidden !important;
-    scrollbar-width: none !important;
-  }
+.pull-refresh strong {
+  font-size: .72rem;
+  font-weight: 900;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
 
-  body:not(.is-login-screen) .app-view:not(.is-sidebar-open):not(:has(.dashboard-sidebar:hover)):not(:has(.dashboard-sidebar :focus-visible)) .dashboard-sidebar-inner::-webkit-scrollbar {
-    display: none !important;
-    width: 0 !important;
-  }
+.pull-refresh.is-visible {
+  opacity: 1;
+}
 
-  body:not(.is-login-screen) .app-view:not(.is-sidebar-open):not(:has(.dashboard-sidebar:hover)):not(:has(.dashboard-sidebar :focus-visible)) .dashboard-brand,
-  body:not(.is-login-screen) .app-view:not(.is-sidebar-open):not(:has(.dashboard-sidebar:hover)):not(:has(.dashboard-sidebar :focus-visible)) .dashboard-brand:hover,
-  body:not(.is-login-screen) .app-view:not(.is-sidebar-open):not(:has(.dashboard-sidebar:hover)):not(:has(.dashboard-sidebar :focus-visible)) .dashboard-brand:focus-visible {
-    flex: 0 0 auto !important;
-    width: 56px !important;
-    min-height: 48px !important;
-    margin: 0 0 18px !important;
-  }
+.pull-refresh.is-ready {
+  background: #123f31;
+  color: #fffcef;
+}
 
-  body:not(.is-login-screen) .app-view:not(.is-sidebar-open):not(:has(.dashboard-sidebar:hover)):not(:has(.dashboard-sidebar :focus-visible)) .dashboard-brand img {
-    width: 46px !important;
-    height: 46px !important;
-    min-width: 46px !important;
-  }
+.pull-refresh.is-ready span {
+  border-color: rgba(255, 252, 239, .28);
+  border-top-color: #c9d982;
+}
 
-  body:not(.is-login-screen) .app-view:not(.is-sidebar-open):not(:has(.dashboard-sidebar:hover)):not(:has(.dashboard-sidebar :focus-visible)) .dashboard-nav {
-    flex: 0 0 auto !important;
-    gap: 10px !important;
-    padding: 0 !important;
-    border: 0 !important;
-  }
+.pull-refresh.is-refreshing {
+  opacity: 1;
+  transform: translate(-50%, 0);
+}
 
-  body:not(.is-login-screen) .app-view:not(.is-sidebar-open):not(:has(.dashboard-sidebar:hover)):not(:has(.dashboard-sidebar :focus-visible)) .dashboard-nav a,
-  body:not(.is-login-screen) .app-view:not(.is-sidebar-open):not(:has(.dashboard-sidebar:hover)):not(:has(.dashboard-sidebar :focus-visible)) .dashboard-nav a:hover,
-  body:not(.is-login-screen) .app-view:not(.is-sidebar-open):not(:has(.dashboard-sidebar:hover)):not(:has(.dashboard-sidebar :focus-visible)) .dashboard-nav a.is-active {
-    width: 50px !important;
-    min-height: 44px !important;
-    padding: 3px !important;
-    border: 0 !important;
-    background: transparent !important;
-    box-shadow: none !important;
-  }
+.pull-refresh.is-refreshing span {
+  animation: dashboard-refresh-spin .75s linear infinite;
+}
 
-  body:not(.is-login-screen) .app-view:not(.is-sidebar-open):not(:has(.dashboard-sidebar:hover)):not(:has(.dashboard-sidebar :focus-visible)) .dashboard-sidebar .nav-icon,
-  body:not(.is-login-screen) .app-view:not(.is-sidebar-open):not(:has(.dashboard-sidebar:hover)):not(:has(.dashboard-sidebar :focus-visible)) .dashboard-sidebar .sidebar-quick-action .nav-icon,
-  body:not(.is-login-screen) .app-view:not(.is-sidebar-open):not(:has(.dashboard-sidebar:hover)):not(:has(.dashboard-sidebar :focus-visible)) .dashboard-sidebar .sidebar-manage-link .nav-icon {
-    width: 40px !important;
-    height: 40px !important;
-    min-width: 40px !important;
-  }
-
-  body:not(.is-login-screen) .app-view:not(.is-sidebar-open):not(:has(.dashboard-sidebar:hover)):not(:has(.dashboard-sidebar :focus-visible)) .dashboard-nav a.is-active .nav-icon {
-    background: linear-gradient(135deg, #e7f0dc, #d9e8cd) !important;
-    border: 1px solid rgba(64, 104, 56, .16) !important;
-    box-shadow: 0 10px 22px rgba(74, 101, 57, .12) !important;
-  }
-
-  body:not(.is-login-screen) .app-view:not(.is-sidebar-open):not(:has(.dashboard-sidebar:hover)):not(:has(.dashboard-sidebar :focus-visible)) .sidebar-quick-actions {
-    flex: 0 0 auto !important;
-    width: 100% !important;
-    gap: 8px !important;
-    margin: auto 0 0 !important;
-    padding: 12px 0 0 !important;
-    border: 0 !important;
-  }
-
-  body:not(.is-login-screen) .app-view:not(.is-sidebar-open):not(:has(.dashboard-sidebar:hover)):not(:has(.dashboard-sidebar :focus-visible)) .sidebar-quick-action-list {
-    gap: 8px !important;
-  }
-
-  body:not(.is-login-screen) .app-view:not(.is-sidebar-open):not(:has(.dashboard-sidebar:hover)):not(:has(.dashboard-sidebar :focus-visible)) .sidebar-quick-action,
-  body:not(.is-login-screen) .app-view:not(.is-sidebar-open):not(:has(.dashboard-sidebar:hover)):not(:has(.dashboard-sidebar :focus-visible)) .sidebar-manage-link {
-    width: 50px !important;
-    min-height: 42px !important;
-    padding: 2px !important;
-    border-radius: 14px !important;
-  }
-
-  body:not(.is-login-screen) .app-view:not(.is-sidebar-open):not(:has(.dashboard-sidebar:hover)):not(:has(.dashboard-sidebar :focus-visible)) .sidebar-manage-link {
-    margin-top: 0 !important;
-  }
-
-  body:not(.is-login-screen) .app-view:not(.is-sidebar-open):not(:has(.dashboard-sidebar:hover)):not(:has(.dashboard-sidebar :focus-visible)) .sidebar-bottom {
-    flex: 0 0 auto !important;
-    width: 100% !important;
-    gap: 8px !important;
-    margin-top: 10px !important;
-    padding-top: 8px !important;
-    border-top: 1px solid rgba(23, 54, 43, .08) !important;
-    justify-items: center !important;
-  }
-
-  body:not(.is-login-screen) .app-view:not(.is-sidebar-open):not(:has(.dashboard-sidebar:hover)):not(:has(.dashboard-sidebar :focus-visible)) .sidebar-notification-button {
-    width: 42px !important;
-    height: 42px !important;
-    min-width: 42px !important;
-    border-radius: 14px !important;
-  }
-
-  body:not(.is-login-screen) .app-view:not(.is-sidebar-open):not(:has(.dashboard-sidebar:hover)):not(:has(.dashboard-sidebar :focus-visible)) .sidebar-profile,
-  body:not(.is-login-screen) .app-view:not(.is-sidebar-open):not(:has(.dashboard-sidebar:hover)):not(:has(.dashboard-sidebar :focus-visible)) .sign-out {
-    display: none !important;
+@keyframes dashboard-refresh-spin {
+  to {
+    transform: rotate(360deg);
   }
 }
 
-@media (min-width: 901px) and (max-height: 850px) {
-  body:not(.is-login-screen) .app-view:not(.is-sidebar-open):not(:has(.dashboard-sidebar:hover)):not(:has(.dashboard-sidebar :focus-visible)) {
-    grid-template-columns: 76px minmax(0, 1fr) !important;
-    gap: 14px !important;
-  }
-
-  body:not(.is-login-screen) .app-view:not(.is-sidebar-open):not(:has(.dashboard-sidebar:hover)):not(:has(.dashboard-sidebar :focus-visible)) .dashboard-sidebar {
-    width: 76px !important;
-    min-width: 76px !important;
-    max-width: 76px !important;
-    height: calc(100dvh - 24px) !important;
-    max-height: calc(100dvh - 24px) !important;
-  }
-
-  body:not(.is-login-screen) .app-view:not(.is-sidebar-open):not(:has(.dashboard-sidebar:hover)):not(:has(.dashboard-sidebar :focus-visible)) .dashboard-sidebar-inner {
-    padding: 10px 8px !important;
-  }
-
-  body:not(.is-login-screen) .app-view:not(.is-sidebar-open):not(:has(.dashboard-sidebar:hover)):not(:has(.dashboard-sidebar :focus-visible)) .dashboard-brand {
-    width: 48px !important;
-    min-height: 40px !important;
-    margin-bottom: 14px !important;
-  }
-
-  body:not(.is-login-screen) .app-view:not(.is-sidebar-open):not(:has(.dashboard-sidebar:hover)):not(:has(.dashboard-sidebar :focus-visible)) .dashboard-brand img {
-    width: 40px !important;
-    height: 40px !important;
-    min-width: 40px !important;
-  }
-
-  body:not(.is-login-screen) .app-view:not(.is-sidebar-open):not(:has(.dashboard-sidebar:hover)):not(:has(.dashboard-sidebar :focus-visible)) .dashboard-nav {
-    gap: 7px !important;
-  }
-
-  body:not(.is-login-screen) .app-view:not(.is-sidebar-open):not(:has(.dashboard-sidebar:hover)):not(:has(.dashboard-sidebar :focus-visible)) .dashboard-nav a,
-  body:not(.is-login-screen) .app-view:not(.is-sidebar-open):not(:has(.dashboard-sidebar:hover)):not(:has(.dashboard-sidebar :focus-visible)) .dashboard-nav a:hover,
-  body:not(.is-login-screen) .app-view:not(.is-sidebar-open):not(:has(.dashboard-sidebar:hover)):not(:has(.dashboard-sidebar :focus-visible)) .dashboard-nav a.is-active,
-  body:not(.is-login-screen) .app-view:not(.is-sidebar-open):not(:has(.dashboard-sidebar:hover)):not(:has(.dashboard-sidebar :focus-visible)) .sidebar-quick-action,
-  body:not(.is-login-screen) .app-view:not(.is-sidebar-open):not(:has(.dashboard-sidebar:hover)):not(:has(.dashboard-sidebar :focus-visible)) .sidebar-manage-link {
-    width: 46px !important;
-    min-height: 38px !important;
-    padding: 2px !important;
-  }
-
-  body:not(.is-login-screen) .app-view:not(.is-sidebar-open):not(:has(.dashboard-sidebar:hover)):not(:has(.dashboard-sidebar :focus-visible)) .dashboard-sidebar .nav-icon,
-  body:not(.is-login-screen) .app-view:not(.is-sidebar-open):not(:has(.dashboard-sidebar:hover)):not(:has(.dashboard-sidebar :focus-visible)) .dashboard-sidebar .sidebar-quick-action .nav-icon,
-  body:not(.is-login-screen) .app-view:not(.is-sidebar-open):not(:has(.dashboard-sidebar:hover)):not(:has(.dashboard-sidebar :focus-visible)) .dashboard-sidebar .sidebar-manage-link .nav-icon {
-    width: 36px !important;
-    height: 36px !important;
-    min-width: 36px !important;
-  }
-
-  body:not(.is-login-screen) .app-view:not(.is-sidebar-open):not(:has(.dashboard-sidebar:hover)):not(:has(.dashboard-sidebar :focus-visible)) .sidebar-quick-actions {
-    gap: 6px !important;
-    padding-top: 8px !important;
-  }
-
-  body:not(.is-login-screen) .app-view:not(.is-sidebar-open):not(:has(.dashboard-sidebar:hover)):not(:has(.dashboard-sidebar :focus-visible)) .sidebar-quick-action-list {
-    gap: 6px !important;
-  }
-
-  body:not(.is-login-screen) .app-view:not(.is-sidebar-open):not(:has(.dashboard-sidebar:hover)):not(:has(.dashboard-sidebar :focus-visible)) .sidebar-bottom {
-    margin-top: 8px !important;
-    padding-top: 7px !important;
-  }
+/* Dashboard responsive stabilization layer.
+   One source of truth for shell spacing, drawer width, mobile navigation,
+   natural page scrolling, and the remaining card/table wrapping guards. */
+body:not(.is-login-screen) {
+  --uy-page-pad: 16px;
+  --uy-shell-gap: 18px;
+  --uy-section-gap: clamp(14px, 1.4vw, 22px);
+  --uy-card-pad: clamp(18px, 1.5vw, 26px);
+  --uy-panel-pad: var(--uy-card-pad);
+  --uy-button-h: 42px;
+  --uy-rail-width: 76px;
+  --uy-drawer-width: 292px;
+  --uy-sidebar-icon: 48px;
+  --uy-sidebar-icon-art: 22px;
+  --uy-icon-art: var(--uy-sidebar-icon-art);
+  --uy-nav-gap: 6px;
+  --uy-card-radius: 24px;
 }
 
-@media (max-width: 900px) {
-  body:not(.is-login-screen) .mobile-tabbar {
-    display: grid !important;
-    grid-auto-flow: column !important;
-    grid-auto-columns: minmax(82px, 1fr) !important;
-    grid-template-columns: none !important;
-    overflow-x: auto !important;
-    overscroll-behavior-x: contain !important;
-  }
-}
-
-/* True final dashboard flow pass: one app, one natural page scroll. */
 html:has(body:not(.is-login-screen) .app-view:not([hidden])),
 html:has(body:not(.is-login-screen) .app-view:not([hidden])) body {
+  width: 100%;
+  max-width: 100%;
   height: auto !important;
   min-height: 100% !important;
-  max-height: none !important;
-  overflow-x: clip !important;
+  overflow-x: hidden !important;
   overflow-y: auto !important;
-}
-
-body:not(.is-login-screen),
-body:not(.is-login-screen) .dashboard-shell,
-body:not(.is-login-screen) .app-view,
-body:not(.is-login-screen) .dashboard-main,
-body:not(.is-login-screen) .dashboard-section,
-body:not(.is-login-screen) .panel,
-body:not(.is-login-screen) .home-hero,
-body:not(.is-login-screen) .outreach-hero,
-body:not(.is-login-screen) .route-hero,
-body:not(.is-login-screen) .equipment-hero,
-body:not(.is-login-screen) .groundskeeper-ai-hero {
-  max-height: none !important;
 }
 
 body:not(.is-login-screen) .dashboard-shell,
 body:not(.is-login-screen) .app-view {
   height: auto !important;
+  max-height: none !important;
   min-height: 100dvh !important;
   overflow: visible !important;
 }
 
 body:not(.is-login-screen) .dashboard-main {
   height: auto !important;
-  min-height: calc(100dvh - 32px) !important;
   max-height: none !important;
-  overflow: visible !important;
-  align-content: start !important;
+  min-height: calc(100dvh - (var(--uy-page-pad) * 2)) !important;
+  overflow-x: clip !important;
+  overflow-y: visible !important;
+  overscroll-behavior: auto !important;
+  scrollbar-gutter: auto !important;
 }
 
 body:not(.is-login-screen) .dashboard-section.is-active {
+  gap: var(--uy-section-gap) !important;
+  min-width: 0 !important;
+  max-width: 100% !important;
+  overflow: visible !important;
+}
+
+body:not(.is-login-screen) :is(
+  .panel,
+  .home-hero,
+  .outreach-hero,
+  .route-hero,
+  .equipment-hero,
+  .groundskeeper-ai-hero,
+  .home-dashboard-card,
+  .work-dashboard-card,
+  .outreach-main-panel,
+  .outreach-priority-panel,
+  .outreach-archive-panel,
+  .equipment-main-panel,
+  .equipment-form-panel,
+  .metric-card,
+  .overview-activity-card,
+  .tasks-card
+) {
+  border-radius: var(--uy-card-radius) !important;
+  min-width: 0 !important;
+  max-width: 100% !important;
+  overflow: visible !important;
+}
+
+body:not(.is-login-screen) :is(
+  .panel,
+  .home-dashboard-card,
+  .work-dashboard-card,
+  .outreach-main-panel,
+  .outreach-priority-panel,
+  .outreach-archive-panel,
+  .equipment-main-panel,
+  .equipment-form-panel,
+  .metric-card,
+  .overview-activity-card,
+  .tasks-card
+) {
+  padding: var(--uy-card-pad) !important;
+}
+
+body:not(.is-login-screen) :is(
+  .metric-grid,
+  .home-snapshot-grid,
+  .outreach-metrics,
+  .equipment-metrics,
+  .settings-grid,
+  .work-snapshot-grid,
+  .profile-drawer-metrics
+) {
   display: grid !important;
-  align-content: start !important;
-  gap: clamp(14px, 1.6vw, 22px) !important;
-  height: auto !important;
-  min-height: 0 !important;
-  max-height: none !important;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)) !important;
+  gap: var(--uy-section-gap) !important;
+  align-items: stretch !important;
+  min-width: 0 !important;
+}
+
+body:not(.is-login-screen) :is(
+  .home-command-grid,
+  .work-dashboard-grid,
+  .work-main-grid,
+  .outreach-layout,
+  .outreach-secondary-layout,
+  .equipment-layout,
+  .route-layout,
+  .groundskeeper-ai-layout,
+  .ai-training-layout,
+  .settings-layout
+) {
+  gap: var(--uy-section-gap) !important;
+  min-width: 0 !important;
+  max-width: 100% !important;
   overflow: visible !important;
 }
 
-body:not(.is-login-screen) .panel,
-body:not(.is-login-screen) .home-hero,
-body:not(.is-login-screen) .outreach-hero,
-body:not(.is-login-screen) .route-hero,
-body:not(.is-login-screen) .equipment-hero,
-body:not(.is-login-screen) .groundskeeper-ai-hero,
-body:not(.is-login-screen) .dashboard-grid,
-body:not(.is-login-screen) .overview-grid,
-body:not(.is-login-screen) .work-two-column,
-body:not(.is-login-screen) .outreach-layout,
-body:not(.is-login-screen) .route-planner-shell,
-body:not(.is-login-screen) .equipment-grid,
-body:not(.is-login-screen) .groundskeeper-ai-layout,
-body:not(.is-login-screen) .groundskeeper-ai-grid,
-body:not(.is-login-screen) .settings-grid,
-body:not(.is-login-screen) .settings-nav-grid,
-body:not(.is-login-screen) .document-list,
-body:not(.is-login-screen) .calendar-list,
-body:not(.is-login-screen) .operations-layout,
-body:not(.is-login-screen) .route-layout,
-body:not(.is-login-screen) .equipment-card-list,
-body:not(.is-login-screen) .outreach-card-list,
-body:not(.is-login-screen) .groundskeeper-ai-chat,
-body:not(.is-login-screen) .document-preview,
-body:not(.is-login-screen) .receipt-list,
-body:not(.is-login-screen) .snapshot-card,
-body:not(.is-login-screen) .home-command-card,
-body:not(.is-login-screen) .work-card,
-body:not(.is-login-screen) .outreach-card {
-  height: auto !important;
-  min-height: 0 !important;
-  max-height: none !important;
-  overflow: visible !important;
+body:not(.is-login-screen) :is(
+  .overview-command-header,
+  .work-command-header,
+  .outreach-hero,
+  .equipment-hero,
+  .groundskeeper-ai-command-header,
+  .panel-heading,
+  .topbar-actions,
+  .overview-header-actions,
+  .outreach-hero-actions,
+  .outreach-toolbar,
+  .outreach-property-toolbar,
+  .equipment-toolbar,
+  .drawer-actions
+) {
+  min-width: 0 !important;
 }
 
-body:not(.is-login-screen) .toolbar,
-body:not(.is-login-screen) .topbar-actions,
-body:not(.is-login-screen) .quick-actions,
-body:not(.is-login-screen) .operations-command-actions,
-body:not(.is-login-screen) .route-actions,
-body:not(.is-login-screen) .equipment-toolbar,
-body:not(.is-login-screen) .groundskeeper-ai-toolbar,
-body:not(.is-login-screen) .outreach-toolbar,
-body:not(.is-login-screen) .drawer-actions {
+body:not(.is-login-screen) :is(
+  .topbar-actions,
+  .overview-header-actions,
+  .outreach-hero-actions,
+  .outreach-toolbar,
+  .outreach-property-toolbar,
+  .equipment-toolbar,
+  .drawer-actions,
+  .outreach-actions
+) {
   flex-wrap: wrap !important;
-  max-height: none !important;
-  overflow: visible !important;
 }
 
-body:not(.is-login-screen) .table-wrap,
-body:not(.is-login-screen) .table-scroll,
-body:not(.is-login-screen) .quote-table,
-body:not(.is-login-screen) .outreach-table-wrap,
-body:not(.is-login-screen) .equipment-table-wrap {
+body:not(.is-login-screen) :is(
+  button,
+  .button,
+  .inline-action,
+  .overview-primary-action,
+  .sidebar-quick-action,
+  .sidebar-manage-link
+) {
+  min-height: var(--uy-button-h);
+}
+
+body:not(.is-login-screen) :is(
+  .table-wrap,
+  .table-scroll,
+  .quote-table,
+  .outreach-table-wrap,
+  .equipment-table-wrap
+) {
   max-height: none !important;
   overflow-x: auto !important;
   overflow-y: visible !important;
 }
 
-body:not(.is-login-screen) .record-more-menu {
-  position: relative;
-  flex: 0 0 auto;
+body:not(.is-login-screen) :is(
+  .outreach-card-list,
+  .training-library-list,
+  .training-log-list,
+  .call-history-list,
+  .notification-list,
+  .groundskeeper-ai-chat
+) {
+  max-height: none !important;
+  overflow-y: visible !important;
 }
 
-body:not(.is-login-screen) .record-more-menu summary {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  min-height: 34px;
-  padding: 7px 12px;
-  border: 1px solid rgba(23, 54, 43, .12);
-  border-radius: 999px;
-  background: rgba(255, 253, 247, .9);
-  box-shadow: 0 8px 18px rgba(19, 36, 28, .06);
-  color: #123f31;
-  font-size: .8rem;
-  font-weight: 850;
-  list-style: none;
-  cursor: pointer;
-}
-
-body:not(.is-login-screen) .record-more-menu summary::-webkit-details-marker {
-  display: none;
-}
-
-body:not(.is-login-screen) .record-more-menu > div {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 7px;
-  margin-top: 7px;
-}
-
-body:not(.is-login-screen) .detail-drawer,
-body:not(.is-login-screen) .drawer-panel,
-body:not(.is-login-screen) .modal-body,
-body:not(.is-login-screen) .ai-training-modal-card,
-body:not(.is-login-screen) .notification-popover,
-body:not(.is-login-screen) .dashboard-sidebar-inner {
+body:not(.is-login-screen) :is(
+  .detail-drawer,
+  .drawer-panel,
+  .modal-body,
+  .ai-training-modal-card,
+  .sidebar-notifications-panel
+) {
   overflow-y: auto !important;
+}
+
+body:not(.is-login-screen) #outreach .outreach-pipeline-panel:not([hidden]) {
+  display: flex !important;
+  flex-direction: column !important;
+  align-items: stretch !important;
+  gap: var(--uy-section-gap) !important;
+  overflow: visible !important;
+}
+
+body:not(.is-login-screen) #outreach .outreach-pipeline-panel > :is(
+  .panel-heading,
+  .outreach-saved-views,
+  .outreach-secondary-layout,
+  .outreach-archive-panel
+) {
+  position: relative !important;
+  z-index: auto !important;
+  width: 100% !important;
+  flex: 0 0 auto !important;
+  margin: 0 !important;
+}
+
+body:not(.is-login-screen) #outreach .outreach-secondary-layout {
+  display: grid !important;
+  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)) !important;
+  align-items: start !important;
+}
+
+body:not(.is-login-screen) #outreach .outreach-archive-panel {
+  clear: none !important;
+  transform: none !important;
+}
+
+body:not(.is-login-screen) .record-more-menu:not([open]) > div {
+  display: none !important;
+}
+
+body:not(.is-login-screen) .record-more-menu[open] {
+  flex: 1 1 min(100%, 360px) !important;
+  min-width: min(100%, 260px) !important;
+}
+
+body:not(.is-login-screen) .record-more-menu[open] > div {
+  display: flex !important;
+  flex-wrap: wrap !important;
+  width: 100% !important;
+  min-width: 0 !important;
+}
+
+body:not(.is-login-screen) .record-more-menu[open] > div .inline-action {
+  flex: 1 1 142px !important;
+  min-width: 0 !important;
+}
+
+@media (min-width: 901px) {
+  body:not(.is-login-screen) .mobile-tabbar {
+    display: none !important;
+  }
+
+  body:not(.is-login-screen) .sidebar-scrim {
+    display: none !important;
+    opacity: 0 !important;
+    pointer-events: none !important;
+  }
+
+  body:not(.is-login-screen) .app-view {
+    display: grid !important;
+    grid-template-columns: var(--uy-rail-width) minmax(0, 1fr) !important;
+    align-items: start !important;
+    gap: var(--uy-shell-gap) !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    margin: 0 !important;
+    padding: var(--uy-page-pad) !important;
+  }
+
+  body:not(.is-login-screen) .app-view:has(.dashboard-sidebar:hover),
+  body:not(.is-login-screen) .app-view:has(.dashboard-sidebar:focus-within),
+  body:not(.is-login-screen) .app-view.is-sidebar-open {
+    grid-template-columns: var(--uy-rail-width) minmax(0, 1fr) !important;
+  }
+
+  body:not(.is-login-screen) .dashboard-sidebar {
+    display: block !important;
+    position: fixed !important;
+    top: var(--uy-page-pad) !important;
+    left: var(--uy-page-pad) !important;
+    z-index: 60 !important;
+    width: var(--uy-rail-width) !important;
+    min-width: var(--uy-rail-width) !important;
+    max-width: var(--uy-rail-width) !important;
+    height: calc(100dvh - (var(--uy-page-pad) * 2)) !important;
+    min-height: 0 !important;
+    max-height: calc(100dvh - (var(--uy-page-pad) * 2)) !important;
+    overflow: hidden !important;
+    transition:
+      width .24s ease,
+      min-width .24s ease,
+      max-width .24s ease,
+      box-shadow .24s ease !important;
+  }
+
+  body:not(.is-login-screen) .dashboard-sidebar:hover,
+  body:not(.is-login-screen) .dashboard-sidebar:focus-within,
+  body:not(.is-login-screen) .app-view.is-sidebar-open .dashboard-sidebar {
+    width: var(--uy-drawer-width) !important;
+    min-width: var(--uy-drawer-width) !important;
+    max-width: var(--uy-drawer-width) !important;
+    box-shadow: 0 24px 56px rgba(19, 36, 28, .16) !important;
+  }
+
+  body:not(.is-login-screen) .app-view:not(.is-sidebar-open):not(:has(.dashboard-sidebar:hover)):not(:has(.dashboard-sidebar:focus-within)) .dashboard-sidebar {
+    width: var(--uy-rail-width) !important;
+    min-width: var(--uy-rail-width) !important;
+    max-width: var(--uy-rail-width) !important;
+    flex: 0 0 var(--uy-rail-width) !important;
+  }
+
+  body:not(.is-login-screen) .dashboard-sidebar-inner {
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: stretch !important;
+    gap: var(--uy-nav-gap) !important;
+    width: 100% !important;
+    height: 100% !important;
+    max-height: 100% !important;
+    padding: 12px calc((var(--uy-rail-width) - var(--uy-sidebar-icon)) / 2) !important;
+    overflow: hidden !important;
+  }
+
+  body:not(.is-login-screen) .dashboard-nav,
+  body:not(.is-login-screen) .sidebar-quick-action-list,
+  body:not(.is-login-screen) .sidebar-quick-actions,
+  body:not(.is-login-screen) .sidebar-bottom {
+    gap: var(--uy-nav-gap) !important;
+    min-width: 0 !important;
+  }
+
+  body:not(.is-login-screen) .dashboard-nav {
+    display: flex !important;
+    flex: 0 0 auto !important;
+    flex-direction: column !important;
+    overflow: visible !important;
+  }
+
+  body:not(.is-login-screen) .sidebar-quick-actions {
+    flex: 0 1 auto !important;
+    min-height: 0 !important;
+    overflow: hidden !important;
+  }
+
+  body:not(.is-login-screen) .sidebar-bottom {
+    flex: 0 0 auto !important;
+    margin-top: auto !important;
+    overflow: visible !important;
+  }
+
+  body:not(.is-login-screen) :is(
+    .dashboard-brand,
+    .dashboard-nav a,
+    .sidebar-quick-action,
+    .sidebar-manage-link,
+    .sidebar-profile,
+    .sign-out
+  ) {
+    display: grid !important;
+    grid-template-columns: var(--uy-sidebar-icon) minmax(0, 1fr) !important;
+    align-items: center !important;
+    gap: 10px !important;
+    height: var(--uy-sidebar-icon) !important;
+    min-height: var(--uy-sidebar-icon) !important;
+    max-height: var(--uy-sidebar-icon) !important;
+    width: 100% !important;
+    padding: 0 !important;
+  }
+
+  body:not(.is-login-screen) .dashboard-sidebar .dashboard-nav a,
+  body:not(.is-login-screen) .dashboard-sidebar .dashboard-nav a:hover,
+  body:not(.is-login-screen) .dashboard-sidebar .dashboard-nav a.is-active {
+    height: var(--uy-sidebar-icon) !important;
+    min-height: var(--uy-sidebar-icon) !important;
+    max-height: var(--uy-sidebar-icon) !important;
+    padding: 0 !important;
+  }
+
+  body:not(.is-login-screen) :is(.dashboard-brand img, .nav-icon, .sidebar-notification-button) {
+    width: var(--uy-sidebar-icon) !important;
+    min-width: var(--uy-sidebar-icon) !important;
+    max-width: var(--uy-sidebar-icon) !important;
+    height: var(--uy-sidebar-icon) !important;
+    min-height: var(--uy-sidebar-icon) !important;
+    max-height: var(--uy-sidebar-icon) !important;
+    padding: 0 !important;
+  }
+
+  body:not(.is-login-screen) .sidebar-bottom .sign-out {
+    margin-top: 0 !important;
+  }
+
+  body:not(.is-login-screen) .sign-out .button-icon {
+    display: inline-grid !important;
+    place-items: center !important;
+    width: var(--uy-sidebar-icon) !important;
+    min-width: var(--uy-sidebar-icon) !important;
+    max-width: var(--uy-sidebar-icon) !important;
+    height: var(--uy-sidebar-icon) !important;
+    min-height: var(--uy-sidebar-icon) !important;
+    max-height: var(--uy-sidebar-icon) !important;
+    padding: 0 !important;
+    background: transparent !important;
+  }
+
+  body:not(.is-login-screen) .nav-icon img,
+  body:not(.is-login-screen) .sidebar-notification-button img {
+    width: var(--uy-icon-art) !important;
+    height: var(--uy-icon-art) !important;
+  }
+
+  body:not(.is-login-screen) .dashboard-nav a.is-active {
+    color: #0b3529 !important;
+    background: rgba(206, 225, 191, .84) !important;
+    border-color: rgba(91, 129, 73, .22) !important;
+  }
+
+  body:not(.is-login-screen) .dashboard-nav a.is-active .nav-icon {
+    color: #0b3529 !important;
+    background: rgba(206, 225, 191, .95) !important;
+  }
+
+  body:not(.is-login-screen) .app-view:not(.is-sidebar-open):not(:has(.dashboard-sidebar:hover)):not(:has(.dashboard-sidebar:focus-within)) .dashboard-nav a.is-active {
+    background: transparent !important;
+    border-color: transparent !important;
+    box-shadow: none !important;
+  }
+
+  body:not(.is-login-screen) .app-view:not(.is-sidebar-open):not(:has(.dashboard-sidebar:hover)):not(:has(.dashboard-sidebar:focus-within)) .dashboard-nav a.is-active .nav-icon {
+    border: 1px solid rgba(91, 129, 73, .18) !important;
+    background: rgba(206, 225, 191, .95) !important;
+    box-shadow: 0 8px 18px rgba(74, 101, 57, .11) !important;
+  }
+
+  body:not(.is-login-screen) .dashboard-brand span,
+  body:not(.is-login-screen) .nav-label,
+  body:not(.is-login-screen) .sidebar-section-title,
+  body:not(.is-login-screen) .sidebar-quick-action span:not(.nav-icon),
+  body:not(.is-login-screen) .sidebar-manage-link span:not(.nav-icon),
+  body:not(.is-login-screen) .sidebar-profile span,
+  body:not(.is-login-screen) .sidebar-profile :is(.sidebar-profile-chevron, .profile-chevron),
+  body:not(.is-login-screen) .sign-out span:not(.button-icon) {
+    max-width: 0 !important;
+    opacity: 0 !important;
+    visibility: hidden !important;
+    transform: translateX(-4px) !important;
+    pointer-events: none !important;
+    transition: opacity .18s ease, transform .18s ease, max-width .22s ease !important;
+  }
+
+  body:not(.is-login-screen) :is(.dashboard-sidebar:hover, .dashboard-sidebar:focus-within) .dashboard-brand span,
+  body:not(.is-login-screen) :is(.dashboard-sidebar:hover, .dashboard-sidebar:focus-within) .nav-label,
+  body:not(.is-login-screen) :is(.dashboard-sidebar:hover, .dashboard-sidebar:focus-within) .sidebar-section-title,
+  body:not(.is-login-screen) :is(.dashboard-sidebar:hover, .dashboard-sidebar:focus-within) .sidebar-quick-action span:not(.nav-icon),
+  body:not(.is-login-screen) :is(.dashboard-sidebar:hover, .dashboard-sidebar:focus-within) .sidebar-manage-link span:not(.nav-icon),
+  body:not(.is-login-screen) :is(.dashboard-sidebar:hover, .dashboard-sidebar:focus-within) .sidebar-profile span,
+  body:not(.is-login-screen) :is(.dashboard-sidebar:hover, .dashboard-sidebar:focus-within) .sidebar-profile :is(.sidebar-profile-chevron, .profile-chevron),
+  body:not(.is-login-screen) :is(.dashboard-sidebar:hover, .dashboard-sidebar:focus-within) .sign-out span:not(.button-icon),
+  body:not(.is-login-screen) .app-view.is-sidebar-open .dashboard-sidebar .dashboard-brand span,
+  body:not(.is-login-screen) .app-view.is-sidebar-open .dashboard-sidebar .nav-label,
+  body:not(.is-login-screen) .app-view.is-sidebar-open .dashboard-sidebar .sidebar-section-title,
+  body:not(.is-login-screen) .app-view.is-sidebar-open .dashboard-sidebar .sidebar-quick-action span:not(.nav-icon),
+  body:not(.is-login-screen) .app-view.is-sidebar-open .dashboard-sidebar .sidebar-manage-link span:not(.nav-icon),
+  body:not(.is-login-screen) .app-view.is-sidebar-open .dashboard-sidebar .sidebar-profile span,
+  body:not(.is-login-screen) .app-view.is-sidebar-open .dashboard-sidebar .sidebar-profile :is(.sidebar-profile-chevron, .profile-chevron),
+  body:not(.is-login-screen) .app-view.is-sidebar-open .dashboard-sidebar .sign-out span:not(.button-icon) {
+    max-width: 190px !important;
+    opacity: 1 !important;
+    visibility: visible !important;
+    transform: translateX(0) !important;
+    pointer-events: auto !important;
+  }
+
+  body:not(.is-login-screen) .dashboard-main {
+    grid-column: 2 !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    margin: 0 !important;
+    padding: clamp(22px, 2.4vw, 40px) !important;
+  }
+}
+
+@media (min-width: 901px) and (max-height: 850px) {
+  body:not(.is-login-screen) {
+    --uy-page-pad: 12px;
+    --uy-shell-gap: 14px;
+    --uy-section-gap: 12px;
+    --uy-card-pad: 18px;
+    --uy-button-h: 38px;
+    --uy-sidebar-icon: 44px;
+    --uy-sidebar-icon-art: 20px;
+    --uy-icon-art: var(--uy-sidebar-icon-art);
+    --uy-nav-gap: 4px;
+  }
+
+  body:not(.is-login-screen) .dashboard-sidebar-inner {
+    padding-top: 10px !important;
+    padding-bottom: 10px !important;
+  }
+
+  body:not(.is-login-screen) .dashboard-brand {
+    margin-bottom: 0 !important;
+  }
+
+  body:not(.is-login-screen) .dashboard-main {
+    padding: 22px !important;
+  }
+}
+
+@media (min-width: 901px) and (max-height: 740px) {
+  body:not(.is-login-screen) {
+    --uy-page-pad: 10px;
+    --uy-shell-gap: 12px;
+    --uy-section-gap: 10px;
+    --uy-card-pad: 16px;
+    --uy-sidebar-icon: 42px;
+    --uy-sidebar-icon-art: 19px;
+    --uy-icon-art: var(--uy-sidebar-icon-art);
+    --uy-nav-gap: 3px;
+  }
+
+  body:not(.is-login-screen) .sidebar-quick-actions {
+    display: none !important;
+  }
+
+  body:not(.is-login-screen) .sidebar-bottom {
+    margin-top: auto !important;
+  }
+
+  body:not(.is-login-screen) .dashboard-main {
+    padding: 18px !important;
+  }
+}
+
+@media (min-width: 901px) and (max-width: 1366px) {
+  body:not(.is-login-screen) {
+    --uy-section-gap: 12px;
+    --uy-card-pad: 18px;
+  }
+
+  body:not(.is-login-screen) :is(.overview-command-header, .work-command-header, .groundskeeper-ai-command-header) {
+    gap: 16px !important;
+  }
+
+  body:not(.is-login-screen) #outreach .outreach-metrics {
+    grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)) !important;
+  }
+
+  body:not(.is-login-screen) #outreach .outreach-secondary-layout {
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)) !important;
+  }
+}
+
+@media (max-width: 900px) {
+  body:not(.is-login-screen) {
+    --uy-page-pad: 10px;
+    --uy-shell-gap: 0px;
+    --uy-section-gap: 12px;
+    --uy-card-pad: 16px;
+    --uy-button-h: 42px;
+  }
+
+  body:not(.is-login-screen) .app-view {
+    display: block !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    margin: 0 !important;
+    padding: var(--uy-page-pad) !important;
+    overflow: visible !important;
+  }
+
+  body:not(.is-login-screen) .dashboard-sidebar,
+  body:not(.is-login-screen) .sidebar-scrim {
+    display: none !important;
+  }
+
+  body:not(.is-login-screen) .mobile-tabbar {
+    display: grid !important;
+    grid-auto-flow: row !important;
+    grid-auto-columns: unset !important;
+    grid-template-columns: repeat(6, minmax(0, 1fr)) !important;
+    gap: 4px !important;
+    overflow-x: hidden !important;
+    padding: 6px max(6px, env(safe-area-inset-right)) 6px max(6px, env(safe-area-inset-left)) !important;
+  }
+
+  body:not(.is-login-screen) .mobile-tabbar a,
+  body:not(.is-login-screen) .mobile-tabbar a.is-active {
+    flex: 1 1 auto !important;
+    flex-basis: auto !important;
+    width: auto !important;
+    min-width: 0 !important;
+    min-height: 44px !important;
+    padding: 6px 2px !important;
+    font-size: clamp(.58rem, 2.35vw, .72rem) !important;
+    line-height: 1.05 !important;
+    white-space: normal !important;
+    text-align: center !important;
+  }
+
+  body:not(.is-login-screen) :is(
+    .overview-command-header,
+    .work-command-header,
+    .groundskeeper-ai-command-header,
+    .home-command-grid,
+    .work-dashboard-grid,
+    .outreach-layout,
+    .outreach-secondary-layout,
+    .equipment-layout,
+    .route-layout,
+    .groundskeeper-ai-layout,
+    .ai-training-layout
+  ) {
+    grid-template-columns: 1fr !important;
+  }
+
+  body:not(.is-login-screen) #outreach .outreach-metrics,
+  body:not(.is-login-screen) .metric-grid,
+  body:not(.is-login-screen) .home-snapshot-grid {
+    grid-template-columns: 1fr !important;
+  }
+}
+
+body:not(.is-login-screen) .pipeline-grid {
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 210px), 1fr)) !important;
+  overflow-x: visible !important;
+}
+
+body:not(.is-login-screen) .pipeline-column,
+body:not(.is-login-screen) .pipeline-card {
+  min-width: 0 !important;
+}
+
+body:not(.is-login-screen) .pipeline-card .meta {
+  display: block !important;
+  min-width: 0 !important;
+  max-width: 100% !important;
+  white-space: normal !important;
+  overflow-wrap: anywhere !important;
+}
+
+@media (max-width: 760px) {
+  body:not(.is-login-screen) {
+    --uy-section-gap: 10px;
+    --uy-card-pad: 14px;
+    --uy-card-radius: 20px;
+  }
+
+  body:not(.is-login-screen) :is(
+    .topbar-actions,
+    .overview-header-actions,
+    .outreach-hero-actions,
+    .outreach-toolbar,
+    .outreach-property-toolbar,
+    .equipment-toolbar,
+    .drawer-actions
+  ) > * {
+    min-width: min(100%, 220px) !important;
+  }
+}
+
+@media (min-width: 901px) {
+  body:not(.is-login-screen) .app-view:not(.is-sidebar-open):not(:has(.dashboard-sidebar:hover)):not(:has(.dashboard-sidebar:focus-within)) .dashboard-sidebar .dashboard-nav a,
+  body:not(.is-login-screen) .app-view:not(.is-sidebar-open):not(:has(.dashboard-sidebar:hover)):not(:has(.dashboard-sidebar:focus-within)) .dashboard-sidebar .dashboard-nav a:hover,
+  body:not(.is-login-screen) .app-view:not(.is-sidebar-open):not(:has(.dashboard-sidebar:hover)):not(:has(.dashboard-sidebar:focus-within)) .dashboard-sidebar .dashboard-nav a.is-active,
+  body:not(.is-login-screen) .app-view:not(.is-sidebar-open):not(:has(.dashboard-sidebar:hover)):not(:has(.dashboard-sidebar:focus-within)) .dashboard-sidebar .nav-icon {
+    height: var(--uy-sidebar-icon) !important;
+    min-height: var(--uy-sidebar-icon) !important;
+    max-height: var(--uy-sidebar-icon) !important;
+    padding: 0 !important;
+  }
 }

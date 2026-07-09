@@ -715,7 +715,7 @@
     const session = getSession();
     const data = await fileAsDataUrl(file);
     const isSelf = !targetUserId || targetUserId === session?.userId;
-    return avatarRequest(isSelf ? "/api/user/upload-avatar" : "/api/admin/upload-user-avatar", {
+    return avatarRequest(isSelf ? "/.netlify/functions/user-upload-avatar" : "/.netlify/functions/admin-upload-user-avatar", {
       targetUserId: targetUserId || session?.userId,
       fileName: file.name,
       mimeType: file.type,
@@ -725,7 +725,7 @@
 
   async function removeUserAvatar(targetUserId) {
     const session = getSession();
-    return avatarRequest("/api/user/delete-avatar", {
+    return avatarRequest("/.netlify/functions/user-delete-avatar", {
       targetUserId: targetUserId || session?.userId
     });
   }

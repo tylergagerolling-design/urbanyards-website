@@ -9288,6 +9288,7 @@ body:not(.is-login-screen) {
   --uy-rail-width: 76px;
   --uy-drawer-width: 292px;
   --uy-sidebar-icon: 48px;
+  --uy-closed-sidebar-icon: 44px;
   --uy-sidebar-icon-art: 22px;
   --uy-icon-art: var(--uy-sidebar-icon-art);
   --uy-nav-gap: 6px;
@@ -9614,21 +9615,38 @@ body:not(.is-login-screen) .record-more-menu[open] > div .inline-action {
     .sidebar-quick-action,
     .sidebar-manage-link
   ) {
-    grid-template-columns: var(--uy-sidebar-icon) 0 !important;
+    grid-template-columns: var(--uy-closed-sidebar-icon) 0 !important;
+    justify-content: center !important;
     gap: 0 !important;
     overflow: hidden !important;
   }
 
   body:not(.is-login-screen) .app-view:not(.is-sidebar-open):not(:has(.dashboard-sidebar:hover)):not(:has(.dashboard-sidebar:focus-within)) .dashboard-sidebar .sidebar-profile {
-    grid-template-columns: var(--uy-sidebar-icon) 0 0 !important;
+    grid-template-columns: var(--uy-closed-sidebar-icon) 0 0 !important;
+    justify-content: center !important;
     gap: 0 !important;
     overflow: hidden !important;
   }
 
   body:not(.is-login-screen) .app-view:not(.is-sidebar-open):not(:has(.dashboard-sidebar:hover)):not(:has(.dashboard-sidebar:focus-within)) .dashboard-sidebar .sign-out {
-    grid-template-columns: var(--uy-sidebar-icon) 0 !important;
+    grid-template-columns: var(--uy-closed-sidebar-icon) 0 !important;
+    justify-content: center !important;
     gap: 0 !important;
     overflow: hidden !important;
+  }
+
+  body:not(.is-login-screen) .app-view:not(.is-sidebar-open):not(:has(.dashboard-sidebar:hover)):not(:has(.dashboard-sidebar:focus-within)) .dashboard-sidebar .dashboard-nav a::after {
+    display: none !important;
+    content: none !important;
+  }
+
+  body:not(.is-login-screen) .app-view:not(.is-sidebar-open):not(:has(.dashboard-sidebar:hover)):not(:has(.dashboard-sidebar:focus-within)) .dashboard-sidebar :is(.nav-icon, .sidebar-notification-button, .sign-out .button-icon, .sidebar-profile > img:first-child) {
+    width: var(--uy-closed-sidebar-icon) !important;
+    min-width: var(--uy-closed-sidebar-icon) !important;
+    max-width: var(--uy-closed-sidebar-icon) !important;
+    height: var(--uy-closed-sidebar-icon) !important;
+    min-height: var(--uy-closed-sidebar-icon) !important;
+    max-height: var(--uy-closed-sidebar-icon) !important;
   }
 
   body:not(.is-login-screen) .dashboard-sidebar-inner {
@@ -9810,6 +9828,7 @@ body:not(.is-login-screen) .record-more-menu[open] > div .inline-action {
     --uy-card-pad: 18px;
     --uy-button-h: 38px;
     --uy-sidebar-icon: 44px;
+    --uy-closed-sidebar-icon: 42px;
     --uy-sidebar-icon-art: 20px;
     --uy-icon-art: var(--uy-sidebar-icon-art);
     --uy-nav-gap: 4px;
@@ -9836,6 +9855,7 @@ body:not(.is-login-screen) .record-more-menu[open] > div .inline-action {
     --uy-section-gap: 10px;
     --uy-card-pad: 16px;
     --uy-sidebar-icon: 42px;
+    --uy-closed-sidebar-icon: 40px;
     --uy-sidebar-icon-art: 19px;
     --uy-icon-art: var(--uy-sidebar-icon-art);
     --uy-nav-gap: 3px;

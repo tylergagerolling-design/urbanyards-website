@@ -13,6 +13,16 @@ This pass adds the security foundation for the Urban Yards dashboard without cha
   - Owner/admin-only export endpoint.
   - Supports `?table=all&format=json` and single-table CSV exports such as `?table=contacts&format=csv`.
 
+- `/.netlify/functions/user-upload-avatar`
+  - Authenticated users can upload or replace their own dashboard avatar.
+  - Validates JPG/PNG/WebP extension, MIME type, magic bytes, and 2 MB max size server-side.
+
+- `/.netlify/functions/admin-upload-user-avatar`
+  - Owner/admin-only route for changing another user's dashboard avatar.
+
+- `/.netlify/functions/user-delete-avatar`
+  - Removes an avatar for the signed-in user, or for any user when the actor is owner/admin.
+
 Existing routes now also participate in the security foundation:
 
 - `/.netlify/functions/groundskeeper-ai`
@@ -65,6 +75,12 @@ Run this migration in Supabase SQL editor:
 supabase/migrations/20260709_security_foundation.sql
 ```
 
+Then run the avatar migration:
+
+```text
+supabase/migrations/20260709_user_avatars.sql
+```
+
 It creates or improves:
 
 - `profiles`
@@ -73,6 +89,10 @@ It creates or improves:
 - `settings`
 - `audit_logs`
 - `system_errors`
+- `profiles.avatar_url`
+- `profiles.avatar_path`
+- `profiles.avatar_updated_at`
+- Supabase Storage bucket `user-avatars`
 - future canonical tables: `clients`, `properties`, `leads`, `lead_notes`, `appointments`, `equipment`, `equipment_maintenance`, `invoices`, `call_logs`, `ai_sessions`
 - RLS policies for existing dashboard tables when present
 
@@ -121,6 +141,8 @@ Permissions:
 - OpenAI and Square keys remain server-side.
 - The public AI helper uses `ai_helper_enabled` as a kill switch.
 - AI helper has message length limits, per-window rate limits, and a daily in-memory limit.
+- Avatar uploads are validated in Netlify Functions before storage. SVG, PDFs, HTML, scripts, executable files, unknown MIME types, and files over 2 MB are rejected.
+- Avatar files are stored in Supabase Storage; profile rows store only `avatar_url`, `avatar_path`, and `avatar_updated_at`.
 - Serverless in-memory rate limits are practical but not perfect across multiple Netlify instances. For stricter abuse prevention, add a Supabase-backed rate-limit table later.
 - The AI does not directly modify leads, invoices, appointments, or client records. Dashboard action-taking still requires explicit UI actions.
 
@@ -147,10 +169,12 @@ Supabase:
 7. Confirm `audit_logs` records the action.
 8. Trigger a backend failure in staging/local and confirm `system_errors` records it.
 9. Click `Backend Export` in Tools & Admin as owner/admin.
-10. Confirm a viewer/staff account cannot access owner/admin export routes.
-11. Confirm public quote form still works.
-12. Confirm public AI helper still works when `ai_helper_enabled = true`.
-13. Set `ai_helper_enabled = false` and confirm the helper fails gracefully.
+10. Upload and remove a test avatar from Tools & Admin > Users & Access.
+11. Confirm invalid avatar types, SVG, and files over 2 MB are rejected.
+12. Confirm a viewer/staff account cannot access owner/admin export or admin avatar routes.
+13. Confirm public quote form still works.
+14. Confirm public AI helper still works when `ai_helper_enabled = true`.
+15. Set `ai_helper_enabled = false` and confirm the helper fails gracefully.
 
 ## Known Limits
 

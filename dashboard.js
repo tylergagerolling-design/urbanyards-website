@@ -32,6 +32,9 @@
   const GOOGLE_VOICE_HOME_URL = "https://voice.google.com/";
   const GOOGLE_VOICE_CALLS_URL = "https://voice.google.com/u/0/calls";
   const URBAN_YARDS_GOOGLE_VOICE_NUMBER = "(971) 258-1109";
+  const USER_AVATAR_MAX_BYTES = 2 * 1024 * 1024;
+  const USER_AVATAR_ALLOWED_TYPES = new Set(["image/jpeg", "image/png", "image/webp"]);
+  const USER_AVATAR_ALLOWED_EXTENSIONS = new Set(["jpg", "jpeg", "png", "webp"]);
   const AI_TRAINING_CATEGORIES = {
     tone: "Tone & Voice",
     services: "Services",
@@ -76,7 +79,8 @@
     "equipmentItems",
     "equipmentMaintenance",
     "hardwareGuide",
-    "leadActivity"
+    "leadActivity",
+    "userProfiles"
   ];
 
   const config = window.URBAN_YARDS_DASHBOARD_CONFIG || {
@@ -137,6 +141,8 @@
     hardwareGuideReady: true,
     groundskeeperAiReady: false,
     leadActivityReady: true,
+    userProfilesReady: true,
+    avatarUploadTargetId: "",
     preferredCallMethod: localStorage.getItem(CALL_METHOD_KEY) || "browser_tel",
     groundskeeperMessages: [],
     data: {
@@ -155,6 +161,7 @@
       equipmentMaintenance: [],
       hardwareGuide: [],
       leadActivity: [],
+      userProfiles: [],
       groundskeeperAi: {
         settings: [],
         knowledge: [],
@@ -384,6 +391,72 @@
     return role.toLowerCase() === "authenticated" ? "" : role;
   }
 
+  function profileAvatarUrl(record = {}) {
+    return firstProfileText(record.avatar_url, record.avatarUrl, record.photo_url, record.photoUrl, record.picture);
+  }
+
+  function profileId(record = {}) {
+    return firstProfileText(record.id, record.user_id, record.userId);
+  }
+
+  function profileEmail(record = {}) {
+    return firstProfileText(record.email, record.user_email, record.userEmail);
+  }
+
+  function initialsForName(name, email) {
+    const source = firstProfileText(name, email, "UY");
+    const words = source
+      .replace(/@.*/, "")
+      .replace(/[^a-zA-Z0-9\s-]/g, " ")
+      .split(/[\s-]+/)
+      .map((word) => word.trim())
+      .filter(Boolean);
+    if (!words.length) return "UY";
+    if (words.length === 1) return words[0].slice(0, 2).toUpperCase();
+    return `${words[0][0]}${words[words.length - 1][0]}`.toUpperCase();
+  }
+
+  function avatarMarkup(record = {}, sizeClass = "") {
+    const name = firstProfileText(profileFullName(record), profileEmail(record));
+    const avatarUrl = profileAvatarUrl(record);
+    const initials = initialsForName(name, profileEmail(record));
+    return `
+      <span class="user-avatar ${escapeHtml(sizeClass)}">
+        ${avatarUrl ? `<img data-avatar-img src="${escapeHtml(avatarUrl)}" alt="" loading="lazy">` : ""}
+        <span${avatarUrl ? " hidden" : ""}>${escapeHtml(initials)}</span>
+      </span>
+    `;
+  }
+
+  function bindAvatarFallbacks(scope = document) {
+    qsa("[data-avatar-img]", scope).forEach((img) => {
+      img.onerror = () => {
+        img.hidden = true;
+        const fallback = img.nextElementSibling;
+        if (fallback) fallback.hidden = false;
+      };
+    });
+  }
+
+  function setAvatarElement(img, initialsNode, record = {}, fallbackName = "") {
+    const avatarUrl = profileAvatarUrl(record);
+    const initials = initialsForName(firstProfileText(profileFullName(record), fallbackName), profileEmail(record));
+    if (initialsNode) {
+      initialsNode.textContent = initials;
+      initialsNode.hidden = Boolean(avatarUrl);
+    }
+    if (!img) return;
+    img.hidden = !avatarUrl;
+    img.removeAttribute("src");
+    if (avatarUrl) {
+      img.src = avatarUrl;
+      img.onerror = () => {
+        img.hidden = true;
+        if (initialsNode) initialsNode.hidden = false;
+      };
+    }
+  }
+
   function authProfileFromUser(user = {}, email = "") {
     const userMetadata = user.user_metadata || {};
     const appMetadata = user.app_metadata || {};
@@ -403,7 +476,9 @@
     const profile = profileRecord || {};
     return {
       name: firstProfileText(profileFullName(profile), sessionProfile.name, email, getOwnerEmail()),
-      role: firstProfileText(profileRole(profile), sessionProfile.role)
+      role: firstProfileText(profileRole(profile), sessionProfile.role),
+      avatar_url: firstProfileText(profileAvatarUrl(profile), sessionProfile.avatar_url, sessionProfile.avatarUrl),
+      email
     };
   }
 
@@ -420,6 +495,8 @@
       els.sidebarUserRole.textContent = display.role || "";
       els.sidebarUserRole.hidden = !display.role;
     }
+    setAvatarElement(els.sidebarUserAvatar, els.sidebarUserInitials, display, display.name);
+    setAvatarElement(els.headerUserAvatar, els.headerUserInitials, display, display.name);
     if (els.ownerEmail) {
       els.ownerEmail.textContent = isDemoMode() ? "Demo mode" : firstProfileText(session && session.email, getOwnerEmail());
     }
@@ -543,6 +620,114 @@
     }
 
     return null;
+  }
+
+  function normalizeUserProfile(row = {}) {
+    const id = profileId(row);
+    const email = profileEmail(row);
+    const name = firstProfileText(profileFullName(row), email, "Dashboard User");
+    return {
+      ...row,
+      id,
+      userId: id,
+      email,
+      name,
+      role: firstProfileText(row.role, row.dashboard_role, row.app_role, "viewer"),
+      title: firstProfileText(profileRole(row), row.role === "owner" ? "Owner" : ""),
+      avatarUrl: profileAvatarUrl(row),
+      avatarPath: firstProfileText(row.avatar_path, row.avatarPath),
+      avatarUpdatedAt: firstProfileText(row.avatar_updated_at, row.avatarUpdatedAt, row.updated_at)
+    };
+  }
+
+  async function loadUserProfiles() {
+    if (isDemoMode()) {
+      state.userProfilesReady = true;
+      const session = getSession();
+      return [normalizeUserProfile({
+        id: session?.userId || "demo-user",
+        email: session?.email || "demo@urbanyards.us",
+        full_name: "Demo User",
+        role: "owner",
+        title: "Dashboard user"
+      })];
+    }
+
+    try {
+      const rows = await supabaseRestRequest("profiles?select=*&order=email.asc.nullslast,full_name.asc.nullslast", { method: "GET" });
+      state.userProfilesReady = true;
+      return Array.isArray(rows) ? rows.map(normalizeUserProfile) : [];
+    } catch (error) {
+      state.userProfilesReady = false;
+      const session = getSession();
+      const ownProfile = await loadCurrentUserProfile(session).catch(() => null);
+      if (ownProfile) return [normalizeUserProfile(ownProfile)];
+      if (session) {
+        return [normalizeUserProfile({ id: session.userId, email: session.email, role: "viewer", title: "Dashboard user" })];
+      }
+      return [];
+    }
+  }
+
+  function avatarFileExtension(file) {
+    const match = String(file?.name || "").toLowerCase().match(/\.([a-z0-9]+)$/);
+    return match ? match[1] : "";
+  }
+
+  function validateAvatarFile(file) {
+    if (!file) throw new Error("Choose an avatar image first.");
+    if (file.size > USER_AVATAR_MAX_BYTES) throw new Error("Avatar file must be 2 MB or smaller.");
+    if (!USER_AVATAR_ALLOWED_TYPES.has(String(file.type || "").toLowerCase())) {
+      throw new Error("Avatar must be a JPG, PNG, or WebP image.");
+    }
+    if (!USER_AVATAR_ALLOWED_EXTENSIONS.has(avatarFileExtension(file))) {
+      throw new Error("Avatar file extension must be .jpg, .jpeg, .png, or .webp.");
+    }
+  }
+
+  function fileAsDataUrl(file) {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(String(reader.result || ""));
+      reader.onerror = () => reject(new Error("Unable to read avatar file."));
+      reader.readAsDataURL(file);
+    });
+  }
+
+  async function avatarRequest(path, payload = {}) {
+    const session = getSession();
+    if (!session || !session.accessToken) throw new Error("Please sign in again.");
+    const response = await fetch(path, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${session.accessToken}`
+      },
+      body: JSON.stringify(payload)
+    });
+    const result = await response.json().catch(() => ({}));
+    if (!response.ok) throw new Error(result.error || "Avatar request failed.");
+    return result;
+  }
+
+  async function uploadUserAvatar(targetUserId, file) {
+    validateAvatarFile(file);
+    const session = getSession();
+    const data = await fileAsDataUrl(file);
+    const isSelf = !targetUserId || targetUserId === session?.userId;
+    return avatarRequest(isSelf ? "/api/user/upload-avatar" : "/api/admin/upload-user-avatar", {
+      targetUserId: targetUserId || session?.userId,
+      fileName: file.name,
+      mimeType: file.type,
+      data
+    });
+  }
+
+  async function removeUserAvatar(targetUserId) {
+    const session = getSession();
+    return avatarRequest("/api/user/delete-avatar", {
+      targetUserId: targetUserId || session?.userId
+    });
   }
 
   async function groundskeeperRequest(action, payload = {}) {
@@ -1809,7 +1994,18 @@
         feedback: [],
         fallback: {}
       },
-      leadActivity: []
+      leadActivity: [],
+      userProfiles: [
+        normalizeUserProfile({
+          id: "demo-user",
+          email: "demo@urbanyards.us",
+          full_name: "Demo User",
+          role: "owner",
+          title: "Dashboard user",
+          created_at: now,
+          updated_at: now
+        })
+      ]
     };
   }
 
@@ -1916,10 +2112,11 @@
       state.hardwareGuideReady = true;
       state.groundskeeperAiReady = true;
       state.leadActivityReady = true;
+      state.userProfilesReady = true;
       return demoDashboardData();
     }
 
-    const [submissions, contacts, jobs, notes, reminders, documents, operations, outreachProspects, outreachCompanies, outreachProperties, routeStops, equipmentItems, equipmentMaintenance, hardwareGuide, groundskeeperAi, leadActivity] = await Promise.all([
+    const [submissions, contacts, jobs, notes, reminders, documents, operations, outreachProspects, outreachCompanies, outreachProperties, routeStops, equipmentItems, equipmentMaintenance, hardwareGuide, groundskeeperAi, leadActivity, userProfiles] = await Promise.all([
       supabaseRestRequest("quote_submissions?select=*&order=created_at.desc", { method: "GET" }),
       supabaseRestRequest("contacts?select=*&order=created_at.desc", { method: "GET" }),
       supabaseRestRequest("scheduled_jobs?select=*&order=visit_date.asc", { method: "GET" }),
@@ -1935,7 +2132,8 @@
       loadEquipmentMaintenance(),
       loadHardwareGuide(),
       loadGroundskeeperAi(),
-      loadLeadActivity()
+      loadLeadActivity(),
+      loadUserProfiles()
     ]);
 
     return {
@@ -1954,7 +2152,8 @@
       equipmentMaintenance,
       hardwareGuide,
       groundskeeperAi,
-      leadActivity
+      leadActivity,
+      userProfiles
     };
   }
 
@@ -4297,6 +4496,60 @@
         <span>${escapeHtml(item.label)}</span>
       </button>
     `).join("");
+  }
+
+  function currentUserProfile(data = state.data) {
+    const session = getSession() || {};
+    const profiles = data.userProfiles || [];
+    return profiles.find((profile) => profile.userId && profile.userId === session.userId)
+      || profiles.find((profile) => profile.email && profile.email.toLowerCase() === String(session.email || "").toLowerCase())
+      || normalizeUserProfile({ id: session.userId, email: session.email, ...session.profile });
+  }
+
+  function renderCurrentProfileAvatar(data = state.data) {
+    if (isDemoMode()) return renderSidebarUserProfile({ full_name: "Demo mode" });
+    renderSidebarUserProfile(currentUserProfile(data));
+  }
+
+  function renderUsersAccess(data = state.data) {
+    if (!els.usersAccessList) return;
+    const profiles = data.userProfiles || [];
+    if (els.usersAccessStatus) {
+      els.usersAccessStatus.textContent = state.userProfilesReady
+        ? "Upload, replace, or remove safe dashboard profile images."
+        : "User profile listing is limited until the profile SQL is installed or your role has access.";
+    }
+
+    if (!profiles.length) {
+      els.usersAccessList.innerHTML = emptyState("No dashboard users found yet.");
+      return;
+    }
+
+    els.usersAccessList.innerHTML = profiles.map((profile) => {
+      const name = profile.name || profile.email || "Dashboard user";
+      const subtitle = [profile.email, profile.title || profile.role || "Dashboard user"].filter(Boolean).join(" / ");
+      const disabled = profile.userId ? "" : " disabled";
+      return `
+        <article class="users-access-row">
+          <div class="users-access-identity">
+            ${avatarMarkup(profile, "users-access-avatar")}
+            <div>
+              <strong>${escapeHtml(name)}</strong>
+              <small>${escapeHtml(subtitle || "Dashboard user")}</small>
+            </div>
+          </div>
+          <div class="users-access-meta">
+            <span>${escapeHtml(profile.role || "viewer")}</span>
+            <small>${profile.avatarUpdatedAt ? `Avatar updated ${escapeHtml(formatDate(profile.avatarUpdatedAt))}` : "No uploaded avatar"}</small>
+          </div>
+          <div class="users-access-actions">
+            <button class="inline-action" type="button" data-action="upload-user-avatar" data-user-id="${escapeHtml(profile.userId)}"${disabled}>Upload</button>
+            <button class="inline-action" type="button" data-action="remove-user-avatar" data-user-id="${escapeHtml(profile.userId)}"${profile.avatarUrl ? disabled : " disabled"}>Remove</button>
+          </div>
+        </article>
+      `;
+    }).join("");
+    bindAvatarFallbacks(els.usersAccessList);
   }
 
   function renderMetrics(data) {
@@ -7371,7 +7624,10 @@
     renderOperations(data);
     renderRoutePlanner(data);
     renderGroundskeeperAi(data);
+    renderUsersAccess(data);
+    renderCurrentProfileAvatar(data);
     renderEnvironmentIndicator();
+    bindAvatarFallbacks();
     if (els.todayChip) els.todayChip.textContent = new Date().toLocaleDateString("en-US", { weekday: "long", month: "short", day: "numeric" });
     setActiveSection(state.activeSection);
   }
@@ -7804,6 +8060,26 @@
       const target = event.target;
       if (!target) return;
 
+      if (target.matches("[data-user-avatar-upload]")) {
+        const file = target.files && target.files[0];
+        if (!file) return;
+        const targetUserId = state.avatarUploadTargetId;
+        try {
+          setDashboardState("Uploading avatar...");
+          await uploadUserAvatar(targetUserId, file);
+          state.avatarUploadTargetId = "";
+          target.value = "";
+          await refreshDashboard();
+          setActiveSection("settings");
+          setDashboardState("Avatar updated.");
+        } catch (error) {
+          state.avatarUploadTargetId = "";
+          target.value = "";
+          setDashboardState(error.message || "Unable to upload avatar.", "error");
+        }
+        return;
+      }
+
       if (target.matches("[data-recurring-toggle]")) {
         const form = target.closest("form");
         const controls = form?.querySelector("[data-recurring-controls]");
@@ -7946,6 +8222,30 @@
           setDashboardState("Opened voicemail lead.");
         } else {
           setDashboardState("This voicemail is logged, but it is not linked to a lead record.", "error");
+        }
+        return;
+      }
+
+      if (action === "upload-user-avatar") {
+        state.avatarUploadTargetId = target.dataset.userId || "";
+        if (els.userAvatarUpload) {
+          els.userAvatarUpload.value = "";
+          els.userAvatarUpload.click();
+        }
+        return;
+      }
+
+      if (action === "remove-user-avatar") {
+        const targetUserId = target.dataset.userId || "";
+        if (!targetUserId || !window.confirm("Remove this user's avatar?")) return;
+        try {
+          setDashboardState("Removing avatar...");
+          await removeUserAvatar(targetUserId);
+          await refreshDashboard();
+          setActiveSection("settings");
+          setDashboardState("Avatar removed.");
+        } catch (error) {
+          setDashboardState(error.message || "Unable to remove avatar.", "error");
         }
         return;
       }
@@ -9558,6 +9858,10 @@
     els.environmentIndicator = qs("[data-environment-indicator]");
     els.sidebarUserName = qs("[data-sidebar-user-name]");
     els.sidebarUserRole = qs("[data-sidebar-user-role]");
+    els.sidebarUserAvatar = qs("[data-sidebar-user-avatar]");
+    els.sidebarUserInitials = qs("[data-sidebar-user-initials]");
+    els.headerUserAvatar = qs("[data-header-user-avatar]");
+    els.headerUserInitials = qs("[data-header-user-initials]");
     els.sidebar = qs("#dashboard-sidebar");
     els.signOut = qs("[data-sign-out]");
     els.newNote = qs("[data-new-note]");
@@ -9646,6 +9950,9 @@
     els.routeMap = qs("[data-route-map]");
     els.routeMapStatus = qs("[data-route-map-status]");
     els.importBackup = qs("[data-import-backup]");
+    els.userAvatarUpload = qs("[data-user-avatar-upload]");
+    els.usersAccessStatus = qs("[data-users-access-status]");
+    els.usersAccessList = qs("[data-users-access-list]");
     els.groundskeeperAiStatus = qs("[data-groundskeeper-ai-status]");
     els.aiNav = qs("[data-ai-nav]");
     els.aiMain = qs("[data-ai-main]");

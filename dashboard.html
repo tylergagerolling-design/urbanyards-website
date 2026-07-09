@@ -11,9 +11,9 @@
     <link rel="icon" href="/favicon.ico" sizes="any">
     <link rel="apple-touch-icon" href="/apple-touch-icon.png">
     <link rel="manifest" href="/dashboard.webmanifest">
-    <link rel="stylesheet" href="dashboard.css?v=20260709-security-1">
+    <link rel="stylesheet" href="dashboard.css?v=20260709-avatars-1">
     <script src="dashboard-config.js?v=20260623-1" defer></script>
-    <script src="dashboard.js?v=20260709-security-1" defer></script>
+    <script src="dashboard.js?v=20260709-avatars-1" defer></script>
   </head>
   <body>
     <main class="dashboard-shell" aria-labelledby="dashboard-title">
@@ -85,7 +85,10 @@
                 <div class="sidebar-notifications-list" data-notification-list></div>
               </div>
               <div class="sidebar-profile">
-                <img src="images/dashboard-icons/profile-avatar.svg" alt="">
+                <span class="user-avatar sidebar-user-avatar" data-sidebar-user-avatar-wrap>
+                  <img data-sidebar-user-avatar alt="" hidden>
+                  <span data-sidebar-user-initials>UY</span>
+                </span>
                 <span><strong data-sidebar-user-name>team@urbanyards.us</strong><small data-sidebar-user-role hidden></small></span>
               </div>
               <button class="sign-out" type="button" data-sign-out><span class="button-icon" aria-hidden="true">x</span><span>Sign Out</span></button>
@@ -103,6 +106,10 @@
             </div>
             <div class="topbar-actions">
               <span class="environment-pill" data-environment-indicator hidden></span>
+              <span class="user-avatar header-user-avatar" data-header-user-avatar-wrap>
+                <img data-header-user-avatar alt="" hidden>
+                <span data-header-user-initials>UY</span>
+              </span>
               <span data-owner-email>team@urbanyards.us</span>
               <input data-global-search type="search" aria-label="Search dashboard" placeholder="Search everything...">
               <button type="button" data-action="quick-add-job"><span class="button-icon" aria-hidden="true">+</span><span>Add Job</span></button>
@@ -966,7 +973,19 @@
                 <button type="button" data-action="clear-demo-data"><span class="button-icon" aria-hidden="true">x</span><span>Clear Demo Data</span></button>
                 <button type="button" data-action="refresh-dashboard"><span class="button-icon" aria-hidden="true">R</span><span>Refresh</span></button>
               </div>
+              <div class="users-access-panel">
+                <div class="panel-heading">
+                  <div>
+                    <h3>Users &amp; Access</h3>
+                    <p>Manage dashboard user avatars. Images are optional and fall back to initials.</p>
+                  </div>
+                </div>
+                <div class="users-access-status" data-users-access-status></div>
+                <div class="users-access-list" data-users-access-list></div>
+                <p class="form-note">Allowed avatar files: JPG, PNG, or WebP up to 2 MB. SVG and document uploads are blocked.</p>
+              </div>
               <input data-import-backup type="file" accept="application/json" hidden>
+              <input data-user-avatar-upload type="file" accept=".jpg,.jpeg,.png,.webp,image/jpeg,image/png,image/webp" hidden>
             </div>
           </section>
         </div>

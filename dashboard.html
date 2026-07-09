@@ -11,9 +11,9 @@
     <link rel="icon" href="/favicon.ico" sizes="any">
     <link rel="apple-touch-icon" href="/apple-touch-icon.png">
     <link rel="manifest" href="/dashboard.webmanifest">
-    <link rel="stylesheet" href="dashboard.css?v=20260709-profile-clean-1">
+    <link rel="stylesheet" href="dashboard.css?v=20260709-security-1">
     <script src="dashboard-config.js?v=20260623-1" defer></script>
-    <script src="dashboard.js?v=20260709-profile-clean-1" defer></script>
+    <script src="dashboard.js?v=20260709-security-1" defer></script>
   </head>
   <body>
     <main class="dashboard-shell" aria-labelledby="dashboard-title">
@@ -102,6 +102,7 @@
               </div>
             </div>
             <div class="topbar-actions">
+              <span class="environment-pill" data-environment-indicator hidden></span>
               <span data-owner-email>team@urbanyards.us</span>
               <input data-global-search type="search" aria-label="Search dashboard" placeholder="Search everything...">
               <button type="button" data-action="quick-add-job"><span class="button-icon" aria-hidden="true">+</span><span>Add Job</span></button>
@@ -960,6 +961,7 @@
                 <button type="button" data-export="contacts"><span class="button-icon" aria-hidden="true">CSV</span><span>Export Contacts</span></button>
                 <button type="button" data-export="submissions"><span class="button-icon" aria-hidden="true">CSV</span><span>Export Quotes</span></button>
                 <button type="button" data-action="export-full-backup"><span class="button-icon" aria-hidden="true">JSON</span><span>Export Full Backup</span></button>
+                <button type="button" data-action="export-backend-backup"><span class="button-icon" aria-hidden="true">DB</span><span>Backend Export</span></button>
                 <button type="button" data-action="import-backup"><span class="button-icon" aria-hidden="true">IN</span><span>Import Backup</span></button>
                 <button type="button" data-action="clear-demo-data"><span class="button-icon" aria-hidden="true">x</span><span>Clear Demo Data</span></button>
                 <button type="button" data-action="refresh-dashboard"><span class="button-icon" aria-hidden="true">R</span><span>Refresh</span></button>

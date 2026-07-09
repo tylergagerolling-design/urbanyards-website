@@ -1,6 +1,7 @@
 const NOMINATIM_ENDPOINT = "https://nominatim.openstreetmap.org/search";
 const GOOGLE_GEOCODE_ENDPOINT = "https://maps.googleapis.com/maps/api/geocode/json";
 const APP_USER_AGENT = "UrbanYardsRoutePlanner/1.0 (team@urbanyards.us)";
+const { ipFromEvent, rateLimit, writeSystemError } = require("./lib/dashboard-auth");
 
 function json(statusCode, body) {
   return {
@@ -103,6 +104,11 @@ exports.handler = async (event) => {
     return json(405, { error: "Method Not Allowed" });
   }
 
+  const limit = rateLimit(`route-geocode:${ipFromEvent(event)}`, 80, 10 * 60 * 1000);
+  if (!limit.allowed) {
+    return json(429, { error: "Too many requests. Please try again later." });
+  }
+
   let payload = {};
   try {
     payload = event.body ? JSON.parse(event.body) : {};
@@ -126,6 +132,7 @@ exports.handler = async (event) => {
     return json(200, osmResult);
   } catch (error) {
     console.error(JSON.stringify({ event: "route_geocode_error", message: error.message }));
+    await writeSystemError({ route: "route-geocode", error, metadata: { address } });
     return json(502, { error: error.message || "Map lookup failed." });
   }
 };

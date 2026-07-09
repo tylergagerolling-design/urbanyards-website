@@ -1,4 +1,4 @@
-const { json, supabaseAdminRequest, verifyOwner } = require("./lib/dashboard-auth");
+const { actorFromHeaders, json, supabaseAdminRequest, verifyOwner, writeAuditLog, writeSystemError } = require("./lib/dashboard-auth");
 const { findInvoicesByEmail, getInvoice, safeInvoice } = require("./lib/square-invoices");
 
 function squareFields(invoice) {
@@ -44,9 +44,11 @@ async function findSquareInvoiceForDocument(document) {
 exports.handler = async (event) => {
   if (event.httpMethod !== "POST") return json(405, { error: "Method not allowed." });
 
+  let actor = null;
   try {
     const allowed = await verifyOwner(event);
     if (!allowed) return json(401, { error: "Unauthorized." });
+    actor = await actorFromHeaders(event.headers || {});
 
     const body = JSON.parse(event.body || "{}");
     const documentId = String(body.documentId || "").trim();
@@ -66,9 +68,18 @@ exports.handler = async (event) => {
       body: JSON.stringify(patch)
     });
 
+    await writeAuditLog({
+      actor,
+      action: "invoice_synced",
+      entityType: "sales_documents",
+      entityId: documentId,
+      metadata: { squareInvoiceId: safeInvoice(invoice).id },
+      event
+    });
     return json(200, { ok: true, document: updated[0] || null });
   } catch (error) {
     console.error(JSON.stringify({ event: "square_invoice_sync_error", message: error.message }));
+    await writeSystemError({ route: "sync-square-invoice", error, actor });
     return json(502, { error: error.message || "Unable to sync Square invoice." });
   }
 };

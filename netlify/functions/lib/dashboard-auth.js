@@ -1,9 +1,110 @@
-function json(statusCode, body) {
+const crypto = require("node:crypto");
+
+// Required environment variables for privileged dashboard functions:
+// SUPABASE_URL or VITE_SUPABASE_URL
+// SUPABASE_SERVICE_ROLE_KEY
+// VITE_SUPABASE_ANON_KEY or SUPABASE_ANON_KEY
+// Optional: VITE_DASHBOARD_OWNER_EMAIL, DASHBOARD_ADMIN_EMAILS
+
+const ROLE_ORDER = ["client", "viewer", "staff", "admin", "owner"];
+const PROTECTED_ROLES = new Set(ROLE_ORDER);
+const RATE_LIMIT_BUCKETS = new Map();
+
+const ROLE_PERMISSIONS = {
+  owner: ["*"],
+  admin: ["*"],
+  staff: [
+    "dashboard:read",
+    "leads:read", "leads:write", "leads:delete",
+    "clients:read", "clients:write",
+    "appointments:read", "appointments:write", "appointments:delete",
+    "equipment:read", "equipment:write", "equipment:delete",
+    "notes:read", "notes:write", "notes:delete",
+    "call_logs:read", "call_logs:write",
+    "route:read", "route:write", "route:delete"
+  ],
+  viewer: [
+    "dashboard:read",
+    "leads:read",
+    "clients:read",
+    "appointments:read",
+    "equipment:read",
+    "notes:read",
+    "call_logs:read",
+    "route:read"
+  ],
+  client: ["client_portal:read"]
+};
+
+const TABLE_PERMISSIONS = {
+  quote_submissions: { GET: "leads:read", POST: "leads:write", PATCH: "leads:write", DELETE: "leads:delete" },
+  outreach_prospects: { GET: "leads:read", POST: "leads:write", PATCH: "leads:write", DELETE: "leads:delete" },
+  outreach_companies: { GET: "leads:read", POST: "leads:write", PATCH: "leads:write", DELETE: "leads:delete" },
+  outreach_properties: { GET: "leads:read", POST: "leads:write", PATCH: "leads:write", DELETE: "leads:delete" },
+  contacts: { GET: "clients:read", POST: "clients:write", PATCH: "clients:write", DELETE: "admin:manage" },
+  clients: { GET: "clients:read", POST: "clients:write", PATCH: "clients:write", DELETE: "admin:manage" },
+  properties: { GET: "clients:read", POST: "clients:write", PATCH: "clients:write", DELETE: "admin:manage" },
+  scheduled_jobs: { GET: "appointments:read", POST: "appointments:write", PATCH: "appointments:write", DELETE: "appointments:delete" },
+  appointments: { GET: "appointments:read", POST: "appointments:write", PATCH: "appointments:write", DELETE: "appointments:delete" },
+  follow_up_reminders: { GET: "appointments:read", POST: "appointments:write", PATCH: "appointments:write", DELETE: "appointments:delete" },
+  operations_records: { GET: "appointments:read", POST: "appointments:write", PATCH: "appointments:write", DELETE: "appointments:delete" },
+  route_stops: { GET: "route:read", POST: "route:write", PATCH: "route:write", DELETE: "route:delete" },
+  job_notes: { GET: "notes:read", POST: "notes:write", PATCH: "notes:write", DELETE: "notes:delete" },
+  lead_notes: { GET: "notes:read", POST: "notes:write", PATCH: "notes:write", DELETE: "notes:delete" },
+  lead_activity: { GET: "call_logs:read", POST: "call_logs:write", PATCH: "call_logs:write", DELETE: "admin:manage" },
+  call_logs: { GET: "call_logs:read", POST: "call_logs:write", PATCH: "call_logs:write", DELETE: "admin:manage" },
+  equipment_items: { GET: "equipment:read", POST: "equipment:write", PATCH: "equipment:write", DELETE: "equipment:delete" },
+  equipment: { GET: "equipment:read", POST: "equipment:write", PATCH: "equipment:write", DELETE: "equipment:delete" },
+  equipment_maintenance: { GET: "equipment:read", POST: "equipment:write", PATCH: "equipment:write", DELETE: "equipment:delete" },
+  hardware_guide: { GET: "equipment:read", POST: "equipment:write", PATCH: "equipment:write", DELETE: "equipment:delete" },
+  sales_documents: { GET: "invoices:read", POST: "admin:manage", PATCH: "admin:manage", DELETE: "admin:manage" },
+  invoices: { GET: "invoices:read", POST: "admin:manage", PATCH: "admin:manage", DELETE: "admin:manage" },
+  ai_settings: { GET: "ai:manage", POST: "ai:manage", PATCH: "ai:manage", DELETE: "ai:manage" },
+  ai_knowledge: { GET: "ai:manage", POST: "ai:manage", PATCH: "ai:manage", DELETE: "ai:manage" },
+  ai_faqs: { GET: "ai:manage", POST: "ai:manage", PATCH: "ai:manage", DELETE: "ai:manage" },
+  ai_rules: { GET: "ai:manage", POST: "ai:manage", PATCH: "ai:manage", DELETE: "ai:manage" },
+  ai_saved_answers: { GET: "ai:manage", POST: "ai:manage", PATCH: "ai:manage", DELETE: "ai:manage" },
+  ai_training_rules: { GET: "ai:manage", POST: "ai:manage", PATCH: "ai:manage", DELETE: "ai:manage" },
+  ai_helper_versions: { GET: "ai:manage", POST: "ai:manage", PATCH: "ai:manage", DELETE: "ai:manage" },
+  ai_conversation_logs: { GET: "ai:manage", POST: "ai:manage", PATCH: "ai:manage", DELETE: "ai:manage" },
+  ai_feedback: { GET: "ai:manage", POST: "ai:manage", PATCH: "ai:manage", DELETE: "ai:manage" },
+  settings: { GET: "settings:read", POST: "admin:manage", PATCH: "admin:manage", DELETE: "admin:manage" },
+  feature_flags: { GET: "settings:read", POST: "admin:manage", PATCH: "admin:manage", DELETE: "admin:manage" },
+  profiles: { GET: "admin:manage", POST: "admin:manage", PATCH: "admin:manage", DELETE: "admin:manage" },
+  roles: { GET: "admin:manage", POST: "admin:manage", PATCH: "admin:manage", DELETE: "admin:manage" },
+  audit_logs: { GET: "admin:manage", POST: "admin:manage", PATCH: "admin:manage", DELETE: "admin:manage" },
+  system_errors: { GET: "admin:manage", POST: "admin:manage", PATCH: "admin:manage", DELETE: "admin:manage" }
+};
+
+const FEATURE_BY_TABLE = {
+  ai_settings: "ai_helper_enabled",
+  ai_knowledge: "ai_helper_enabled",
+  ai_faqs: "ai_helper_enabled",
+  ai_rules: "ai_helper_enabled",
+  ai_saved_answers: "ai_helper_enabled",
+  ai_training_rules: "ai_helper_enabled",
+  ai_helper_versions: "ai_helper_enabled",
+  outreach_prospects: "outreach_enabled",
+  outreach_companies: "outreach_enabled",
+  outreach_properties: "outreach_enabled",
+  equipment_items: "equipment_enabled",
+  equipment: "equipment_enabled",
+  equipment_maintenance: "equipment_enabled",
+  hardware_guide: "equipment_enabled",
+  scheduled_jobs: "scheduler_enabled",
+  appointments: "scheduler_enabled",
+  route_stops: "scheduler_enabled",
+  sales_documents: "square_invoices_enabled",
+  invoices: "square_invoices_enabled"
+};
+
+function json(statusCode, body, headers = {}) {
   return {
     statusCode,
     headers: {
       "Content-Type": "application/json",
-      "Cache-Control": "no-store"
+      "Cache-Control": "no-store",
+      ...headers
     },
     body: JSON.stringify(body)
   };
@@ -21,15 +122,58 @@ function getSupabaseServiceKey() {
   return process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_SERVICE_KEY || "";
 }
 
-async function verifyOwner(event) {
-  const authHeader = event.headers.authorization || event.headers.Authorization || "";
-  const token = authHeader.replace(/^Bearer\s+/i, "");
+function normalizeHeaders(headers = {}) {
+  return Object.fromEntries(Object.entries(headers || {}).map(([key, value]) => [String(key).toLowerCase(), value]));
+}
+
+function bearerToken(headers = {}) {
+  const normalized = normalizeHeaders(headers);
+  return String(normalized.authorization || "").replace(/^Bearer\s+/i, "").trim();
+}
+
+function ownerEmails() {
+  return new Set([
+    process.env.VITE_DASHBOARD_OWNER_EMAIL || "team@urbanyards.us",
+    process.env.DASHBOARD_OWNER_EMAIL || "",
+    ...String(process.env.DASHBOARD_ADMIN_EMAILS || "").split(",")
+  ].map((value) => value.trim().toLowerCase()).filter(Boolean));
+}
+
+function normalizeRole(role) {
+  const value = String(role || "").trim().toLowerCase();
+  return PROTECTED_ROLES.has(value) ? value : "";
+}
+
+function roleRank(role) {
+  return ROLE_ORDER.indexOf(normalizeRole(role));
+}
+
+function hasRoleAtLeast(role, minimum) {
+  return roleRank(role) >= roleRank(minimum);
+}
+
+function hasPermission(role, permission) {
+  const normalizedRole = normalizeRole(role);
+  const permissions = ROLE_PERMISSIONS[normalizedRole] || [];
+  if (permissions.includes("*")) return true;
+  if (permissions.includes(permission)) return true;
+  const [area, verb] = String(permission || "").split(":");
+  return permissions.includes(`${area}:*`) || (verb === "read" && permissions.includes("dashboard:read"));
+}
+
+function permissionForTable(table, method) {
+  const normalizedTable = String(table || "").replace(/[^a-zA-Z0-9_]/g, "");
+  return TABLE_PERMISSIONS[normalizedTable]?.[String(method || "GET").toUpperCase()] || "";
+}
+
+function featureFlagForTable(table) {
+  return FEATURE_BY_TABLE[String(table || "").replace(/[^a-zA-Z0-9_]/g, "")] || "";
+}
+
+async function supabaseAuthUser(token) {
   const supabaseUrl = getSupabaseUrl();
   const anonKey = getSupabaseAnonKey();
-  const ownerEmail = (process.env.VITE_DASHBOARD_OWNER_EMAIL || "team@urbanyards.us").toLowerCase();
-
-  if (!token || !supabaseUrl || !anonKey) return false;
-
+  if (!token || !supabaseUrl || !anonKey) return null;
   const response = await fetch(`${supabaseUrl}/auth/v1/user`, {
     headers: {
       apikey: anonKey,
@@ -37,13 +181,11 @@ async function verifyOwner(event) {
     },
     signal: AbortSignal.timeout(8000)
   });
-
-  if (!response.ok) return false;
-  const user = await response.json();
-  return String(user.email || "").toLowerCase() === ownerEmail;
+  if (!response.ok) return null;
+  return response.json();
 }
 
-async function supabaseAdminRequest(path, options) {
+async function supabaseAdminRequest(path, options = {}) {
   const supabaseUrl = getSupabaseUrl();
   const serviceKey = getSupabaseServiceKey();
   if (!supabaseUrl || !serviceKey) throw new Error("Supabase service role is not configured.");
@@ -56,15 +198,209 @@ async function supabaseAdminRequest(path, options) {
       "Content-Type": "application/json",
       ...(options && options.headers ? options.headers : {})
     },
-    signal: AbortSignal.timeout(10000)
+    signal: AbortSignal.timeout(Number(process.env.SUPABASE_FUNCTION_TIMEOUT_MS || 10000))
   });
 
-  const text = await response.text();
-  const payload = text ? JSON.parse(text) : null;
+  const bodyText = await response.text();
+  let payload = null;
+  if (bodyText) {
+    try { payload = JSON.parse(bodyText); }
+    catch { payload = bodyText; }
+  }
   if (!response.ok) {
-    throw new Error(payload?.message || payload?.hint || `Supabase request failed (${response.status})`);
+    const message = payload?.message || payload?.hint || `Supabase request failed (${response.status})`;
+    const error = new Error(message);
+    error.statusCode = response.status;
+    error.payload = payload;
+    throw error;
   }
   return payload;
 }
 
-module.exports = { json, supabaseAdminRequest, verifyOwner };
+async function firstExistingRow(paths) {
+  for (const path of paths) {
+    try {
+      const rows = await supabaseAdminRequest(path, { method: "GET" });
+      if (Array.isArray(rows) && rows[0]) return rows[0];
+    } catch (error) {
+      if (!/does not exist|schema cache|relation/i.test(error.message)) throw error;
+    }
+  }
+  return null;
+}
+
+async function loadUserProfile(user) {
+  if (!user?.id && !user?.email) return null;
+  const paths = [];
+  if (user.id) {
+    paths.push(`profiles?id=eq.${encodeURIComponent(user.id)}&select=*&limit=1`);
+    paths.push(`profiles?user_id=eq.${encodeURIComponent(user.id)}&select=*&limit=1`);
+    paths.push(`roles?user_id=eq.${encodeURIComponent(user.id)}&select=*&limit=1`);
+  }
+  if (user.email) {
+    paths.push(`profiles?email=eq.${encodeURIComponent(user.email)}&select=*&limit=1`);
+    paths.push(`roles?email=eq.${encodeURIComponent(user.email)}&select=*&limit=1`);
+  }
+  return firstExistingRow(paths);
+}
+
+function resolveRole(user, profile) {
+  const email = String(user?.email || profile?.email || "").toLowerCase();
+  if (ownerEmails().has(email)) return "owner";
+  return normalizeRole(
+    profile?.role ||
+    profile?.dashboard_role ||
+    profile?.app_role ||
+    user?.app_metadata?.role ||
+    user?.user_metadata?.role ||
+    "viewer"
+  ) || "viewer";
+}
+
+async function actorFromHeaders(headers = {}) {
+  const token = bearerToken(headers);
+  const user = await supabaseAuthUser(token);
+  if (!user) return null;
+  const profile = await loadUserProfile(user).catch(() => null);
+  const role = resolveRole(user, profile);
+  return {
+    user,
+    profile,
+    role,
+    userId: user.id || profile?.user_id || profile?.id || "",
+    email: String(user.email || profile?.email || "").toLowerCase()
+  };
+}
+
+function ipFromEvent(event = {}) {
+  const headers = normalizeHeaders(event.headers || {});
+  return String(headers["x-nf-client-connection-ip"] || headers["x-forwarded-for"] || headers["client-ip"] || "unknown").split(",")[0].trim();
+}
+
+function userAgentFromEvent(event = {}) {
+  return String(normalizeHeaders(event.headers || {})["user-agent"] || "").slice(0, 500);
+}
+
+function rateLimit(key, limit = 60, windowMs = 60000) {
+  const now = Date.now();
+  const bucket = RATE_LIMIT_BUCKETS.get(key);
+  if (!bucket || bucket.resetAt <= now) {
+    RATE_LIMIT_BUCKETS.set(key, { count: 1, resetAt: now + windowMs });
+    return { allowed: true, remaining: limit - 1 };
+  }
+  bucket.count += 1;
+  return {
+    allowed: bucket.count <= limit,
+    remaining: Math.max(0, limit - bucket.count),
+    retryAfter: Math.ceil((bucket.resetAt - now) / 1000)
+  };
+}
+
+async function writeAuditLog({ actor = null, action, entityType, entityId = null, metadata = {}, event = null } = {}) {
+  try {
+    await supabaseAdminRequest("audit_logs", {
+      method: "POST",
+      headers: { Prefer: "return=minimal" },
+      body: JSON.stringify({
+        actor_user_id: actor?.userId || actor?.user?.id || null,
+        actor_role: actor?.role || null,
+        action: String(action || "unknown").slice(0, 120),
+        entity_type: String(entityType || "").slice(0, 120),
+        entity_id: entityId === undefined ? null : String(entityId || "").slice(0, 160),
+        metadata,
+        ip_address: event ? ipFromEvent(event) : null,
+        user_agent: event ? userAgentFromEvent(event) : null
+      })
+    });
+  } catch (error) {
+    if (!/does not exist|schema cache|relation/i.test(error.message)) {
+      console.warn(JSON.stringify({ event: "audit_log_failed", message: error.message }));
+    }
+  }
+}
+
+async function writeSystemError({ route, error, actor = null, severity = "error", metadata = {} } = {}) {
+  try {
+    await supabaseAdminRequest("system_errors", {
+      method: "POST",
+      headers: { Prefer: "return=minimal" },
+      body: JSON.stringify({
+        route: String(route || "").slice(0, 160),
+        user_id: actor?.userId || actor?.user?.id || null,
+        severity: String(severity || "error").slice(0, 40),
+        message: String(error?.message || error || "Unknown error").slice(0, 1000),
+        stack_trace: process.env.NODE_ENV === "production" ? null : String(error?.stack || "").slice(0, 6000),
+        metadata,
+        resolved: false
+      })
+    });
+  } catch (loggingError) {
+    if (!/does not exist|schema cache|relation/i.test(loggingError.message)) {
+      console.warn(JSON.stringify({ event: "system_error_log_failed", message: loggingError.message }));
+    }
+  }
+}
+
+async function getFeatureFlag(flag, fallback = true) {
+  if (!flag) return fallback;
+  if (!getSupabaseUrl() || !getSupabaseServiceKey()) return fallback;
+  try {
+    const rows = await supabaseAdminRequest(`feature_flags?flag_key=eq.${encodeURIComponent(flag)}&select=enabled&limit=1`, { method: "GET" });
+    if (Array.isArray(rows) && rows[0] && typeof rows[0].enabled === "boolean") return rows[0].enabled;
+  } catch (error) {
+    if (!/does not exist|schema cache|relation/i.test(error.message)) throw error;
+  }
+  return fallback;
+}
+
+async function requirePermission(eventOrHeaders, permission, context = {}) {
+  const headers = eventOrHeaders?.headers || eventOrHeaders || {};
+  const actor = await actorFromHeaders(headers);
+  if (!actor) {
+    return { ok: false, statusCode: 401, error: "Unauthorized.", actor: null };
+  }
+  if (!hasPermission(actor.role, permission)) {
+    await writeAuditLog({
+      actor,
+      action: "permission_denied",
+      entityType: context.entityType || context.table || "",
+      entityId: context.entityId || "",
+      metadata: { permission, ...context },
+      event: eventOrHeaders?.headers ? eventOrHeaders : null
+    });
+    return { ok: false, statusCode: 403, error: "You do not have permission to perform this action.", actor };
+  }
+  return { ok: true, actor };
+}
+
+async function verifyOwner(event) {
+  const result = await requirePermission(event, "admin:manage");
+  return result.ok && hasRoleAtLeast(result.actor.role, "admin");
+}
+
+function requestIdFromEvent(event = {}) {
+  return String(normalizeHeaders(event.headers || {})["x-request-id"] || crypto.randomUUID()).slice(0, 80);
+}
+
+module.exports = {
+  TABLE_PERMISSIONS,
+  actorFromHeaders,
+  featureFlagForTable,
+  getFeatureFlag,
+  getSupabaseAnonKey,
+  getSupabaseServiceKey,
+  getSupabaseUrl,
+  hasPermission,
+  hasRoleAtLeast,
+  ipFromEvent,
+  json,
+  permissionForTable,
+  rateLimit,
+  requestIdFromEvent,
+  requirePermission,
+  resolveRole,
+  supabaseAdminRequest,
+  verifyOwner,
+  writeAuditLog,
+  writeSystemError
+};

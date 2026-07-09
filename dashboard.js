@@ -82,7 +82,8 @@
   const config = window.URBAN_YARDS_DASHBOARD_CONFIG || {
     supabaseUrl: "",
     supabaseAnonKey: "",
-    ownerEmail: "team@urbanyards.us"
+    ownerEmail: "team@urbanyards.us",
+    appEnv: "production"
   };
 
   const state = {
@@ -264,6 +265,7 @@
       "edit-outreach-prospect": "/",
       "edit-route-stop": "/",
       "export-full-backup": "JSON",
+      "export-backend-backup": "DB",
       "find-stop-map": "M",
       "go-calendar": "+",
       "go-contacts": "-&gt;",
@@ -327,6 +329,18 @@
 
   function getOwnerEmail() {
     return (config.ownerEmail || "team@urbanyards.us").toLowerCase();
+  }
+
+  function dashboardEnvironment() {
+    return String(config.appEnv || "production").trim().toLowerCase();
+  }
+
+  function renderEnvironmentIndicator() {
+    if (!els.environmentIndicator) return;
+    const env = dashboardEnvironment();
+    const shouldShow = env && !["production", "prod", "main"].includes(env);
+    els.environmentIndicator.hidden = !shouldShow;
+    els.environmentIndicator.textContent = shouldShow ? env : "";
   }
 
   function profileText(value) {
@@ -453,6 +467,29 @@
     const session = getSession();
     if (!session || !session.accessToken) {
       throw new Error("Please sign in again.");
+    }
+
+    const method = String(options?.method || "GET").toUpperCase();
+    if (method !== "GET") {
+      const response = await fetch("/.netlify/functions/dashboard-records", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${session.accessToken}`
+        },
+        body: JSON.stringify({
+          path,
+          method,
+          prefer: options?.headers?.Prefer || options?.headers?.prefer || "",
+          body: options?.body ? JSON.parse(options.body) : null
+        })
+      });
+      const text = await response.text();
+      const payload = text ? JSON.parse(text) : {};
+      if (!response.ok) {
+        throw new Error(payload?.error || "Dashboard database request failed.");
+      }
+      return payload.data;
     }
 
     const headers = {
@@ -6365,6 +6402,22 @@
     });
   }
 
+  async function exportBackendBackup() {
+    if (isDemoMode()) {
+      exportFullBackup();
+      return;
+    }
+    const session = getSession();
+    if (!session || !session.accessToken) throw new Error("Please sign in again.");
+    const response = await fetch("/.netlify/functions/dashboard-export?table=all&format=json", {
+      headers: { Authorization: `Bearer ${session.accessToken}` }
+    });
+    const text = await response.text();
+    const payload = text ? JSON.parse(text) : {};
+    if (!response.ok) throw new Error(payload?.error || "Backend export failed.");
+    downloadJson(`urban-yards-backend-export-${todayKey()}.json`, payload);
+  }
+
   async function importBackupFile(file) {
     if (!file) return;
     if (!isDemoMode()) {
@@ -7318,6 +7371,7 @@
     renderOperations(data);
     renderRoutePlanner(data);
     renderGroundskeeperAi(data);
+    renderEnvironmentIndicator();
     if (els.todayChip) els.todayChip.textContent = new Date().toLocaleDateString("en-US", { weekday: "long", month: "short", day: "numeric" });
     setActiveSection(state.activeSection);
   }
@@ -8764,6 +8818,14 @@
         }
       } else if (action === "export-full-backup") {
         exportFullBackup();
+      } else if (action === "export-backend-backup") {
+        try {
+          setDashboardState("Preparing backend export...");
+          await exportBackendBackup();
+          setDashboardState("Backend export downloaded.");
+        } catch (error) {
+          setDashboardState(error.message || "Unable to export backend data.", "error");
+        }
       } else if (action === "import-backup") {
         if (els.importBackup) els.importBackup.click();
       } else if (action === "clear-demo-data") {
@@ -9493,6 +9555,7 @@
     els.loginForm = qs("[data-login-form]");
     els.loginStatus = qs("[data-login-status]");
     els.ownerEmail = qs("[data-owner-email]");
+    els.environmentIndicator = qs("[data-environment-indicator]");
     els.sidebarUserName = qs("[data-sidebar-user-name]");
     els.sidebarUserRole = qs("[data-sidebar-user-role]");
     els.sidebar = qs("#dashboard-sidebar");

@@ -363,6 +363,21 @@ textarea:focus {
   min-width: min(260px, 100%);
 }
 
+.environment-pill {
+  display: inline-flex;
+  align-items: center;
+  min-height: 28px;
+  padding: 5px 10px;
+  border: 1px solid rgba(92, 127, 73, .22);
+  border-radius: 999px;
+  background: rgba(224, 235, 214, .72);
+  color: #274a38;
+  font-size: .78rem;
+  font-weight: 800;
+  letter-spacing: .04em;
+  text-transform: uppercase;
+}
+
 .topbar-actions span {
   color: var(--uy-muted);
   font-size: 0.9rem;

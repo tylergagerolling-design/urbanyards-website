@@ -1,4 +1,5 @@
 const GOOGLE_DIRECTIONS_ENDPOINT = "https://maps.googleapis.com/maps/api/directions/json";
+const { ipFromEvent, rateLimit, writeSystemError } = require("./lib/dashboard-auth");
 
 function json(statusCode, body) {
   return {
@@ -28,6 +29,11 @@ function normalizeStop(stop) {
 exports.handler = async (event) => {
   if (event.httpMethod !== "POST") {
     return json(405, { error: "Method Not Allowed" });
+  }
+
+  const limit = rateLimit(`route-directions:${ipFromEvent(event)}`, 60, 10 * 60 * 1000);
+  if (!limit.allowed) {
+    return json(429, { error: "Too many requests. Please try again later." });
   }
 
   const key = googleMapsApiKey();
@@ -91,6 +97,7 @@ exports.handler = async (event) => {
     });
   } catch (error) {
     console.error(JSON.stringify({ event: "route_directions_error", message: error.message }));
+    await writeSystemError({ route: "route-directions", error, metadata: { stops: stops.length } });
     return json(502, { error: error.message || "Unable to build driving route." });
   }
 };

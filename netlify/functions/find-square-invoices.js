@@ -1,4 +1,5 @@
 const { OPEN_INVOICE_STATUSES, findInvoicesByEmail, getPaymentUrl, safeInvoice } = require("./lib/square-invoices");
+const { getFeatureFlag, writeAuditLog, writeSystemError } = require("./lib/dashboard-auth");
 const RATE_LIMIT = new Map();
 
 function json(statusCode, body) {
@@ -35,6 +36,10 @@ exports.handler = async (event) => {
     return json(405, { error: "Method not allowed." });
   }
 
+  if (!(await getFeatureFlag("square_invoices_enabled", true))) {
+    return json(503, { error: "Invoice lookup is temporarily unavailable. Please request invoice help." });
+  }
+
   const ip = event.headers["x-nf-client-connection-ip"] || event.headers["client-ip"] || "unknown";
   if (!rateLimit(ip)) {
     return json(429, { error: "Too many lookup attempts. Please try again later." });
@@ -61,9 +66,16 @@ exports.handler = async (event) => {
       .filter((invoice) => !invoiceNumber || String(invoice.invoice_number || invoice.title || "").toLowerCase() === invoiceNumber)
       .map(safeInvoice);
 
+    await writeAuditLog({
+      action: "invoice_viewed",
+      entityType: "square_invoice_lookup",
+      metadata: { matchedCount: safeResults.length, hasInvoiceNumber: Boolean(invoiceNumber) },
+      event
+    });
     return json(200, { invoices: safeResults });
   } catch (error) {
     console.error(JSON.stringify({ event: "square_invoice_lookup_error", message: error.message }));
+    await writeSystemError({ route: "find-square-invoices", error });
     return json(502, { error: "Invoice lookup is temporarily unavailable. Please request invoice help." });
   }
 };

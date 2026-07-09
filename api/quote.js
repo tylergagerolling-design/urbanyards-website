@@ -4,6 +4,7 @@ const {
 } = require("./lib/security");
 const { scanImage, verifyImage } = require("./lib/images");
 const { alertSecurityEvent } = require("./lib/monitoring");
+const { writeAuditLog, writeSystemError } = require("../netlify/functions/lib/dashboard-auth");
 
 const allowedImageTypes = new Set(["image/jpeg", "image/png"]);
 
@@ -99,9 +100,16 @@ async function handler(req, res) {
     }
 
     console.log(JSON.stringify({ event: "quote_received", requestId: id, service: lead.service, hasPhotos: photos.length > 0 }));
+    await writeAuditLog({
+      action: "lead_created",
+      entityType: "quote_submissions",
+      entityId: id,
+      metadata: { source: lead.source, service: lead.service, hasPhotos: photos.length > 0 }
+    });
     return res.status(200).json({ ok: true, requestId: id });
   } catch (error) {
     console.error(JSON.stringify({ event: "quote_error", requestId: id, message: error.message }));
+    await writeSystemError({ route: "quote", error, metadata: { requestId: id } });
     void alertSecurityEvent("quote_processing_error", { requestId: id, errorType: error.name });
     return res.status(502).json({ error: "We could not send your request. Please try again or contact Urban Yards directly.", requestId: id });
   }

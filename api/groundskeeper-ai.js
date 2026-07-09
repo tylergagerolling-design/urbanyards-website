@@ -2,7 +2,13 @@ const { buildSiteContext, publicKnowledgeSnapshot } = require("./lib/site-knowle
 const {
   allowedOrigin, clientIp, rateLimit, requestId, setApiHeaders, text
 } = require("./lib/security");
-const { supabaseAdminRequest, verifyOwner } = require("../netlify/functions/lib/dashboard-auth");
+const {
+  getFeatureFlag,
+  supabaseAdminRequest,
+  verifyOwner,
+  writeAuditLog,
+  writeSystemError
+} = require("../netlify/functions/lib/dashboard-auth");
 
 const BUSINESS_CONTEXT = `
 You are The Groundskeeper, the shared AI assistant for Urban Yards Groundskeeping.
@@ -506,6 +512,10 @@ async function handler(req, res) {
   const { action = "chat", mode: rawMode = "public", message = "", history = [], page = "", lead = {}, context = {}, payload = {} } = req.body || {};
   const mode = sanitizeMode(rawMode);
 
+  if (!(await getFeatureFlag("ai_helper_enabled", true))) {
+    return res.status(503).json({ error: UNAVAILABLE_REPLY, requestId: id });
+  }
+
   if (isAdminAction(action)) {
     try {
       return await adminAction(req, res, id, action, payload);
@@ -519,6 +529,11 @@ async function handler(req, res) {
   if (!limit.allowed) {
     res.setHeader("Retry-After", String(limit.retryAfter));
     return res.status(429).json({ error: "Too many assistant requests. Please try again shortly.", requestId: id });
+  }
+  const dailyLimit = rateLimit(`groundskeeper-daily:${mode}:${clientIp(req)}`, Number(process.env.AI_HELPER_DAILY_LIMIT || (mode === "dashboard" ? 240 : 80)), 24 * 60 * 60 * 1000);
+  if (!dailyLimit.allowed) {
+    res.setHeader("Retry-After", String(dailyLimit.retryAfter));
+    return res.status(429).json({ error: "Too many assistant requests today. Please try again later.", requestId: id });
   }
 
   const userMessage = text(message, 1400);
@@ -564,10 +579,16 @@ async function handler(req, res) {
     const data = await response.json();
     const reply = data?.choices?.[0]?.message?.content?.trim() || "I can help with Urban Yards services, property care, and quote questions.";
     await logConversation({ mode, page, question: userMessage, answer: reply, lead, requestId: id });
+    await writeAuditLog({
+      action: "ai_helper_used",
+      entityType: "ai_session",
+      metadata: { mode, page: String(page || "").slice(0, 120), requestId: id }
+    });
     console.log(JSON.stringify({ event: "groundskeeper_reply", requestId: id, mode }));
     return res.status(200).json({ reply, requestId: id });
   } catch (error) {
     console.error(JSON.stringify({ event: "groundskeeper_error", requestId: id, message: error.message }));
+    await writeSystemError({ route: "groundskeeper-ai", error, metadata: { mode, action, requestId: id } });
     return res.status(502).json({ error: UNAVAILABLE_REPLY, requestId: id });
   }
 }

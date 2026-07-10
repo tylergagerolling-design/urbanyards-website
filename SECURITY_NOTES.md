@@ -38,3 +38,40 @@ Important admin and backend actions should write to `audit_logs`, including user
 
 Avatar uploads are validated on the server for extension, MIME type, size, and magic bytes. SVG, HTML, PDF, scripts, and unknown formats are rejected.
 
+## Supabase Auth Invite Redirects
+
+Dashboard user invites are sent from the protected `dashboard-users` Netlify Function. The function uses the server-side `SITE_URL` setting to build the invite callback URL:
+
+```text
+${SITE_URL}/auth/callback
+```
+
+Set these Netlify environment variables for production:
+
+```text
+SITE_URL=https://YOUR_NETLIFY_DASHBOARD_URL
+VITE_SUPABASE_URL=https://YOUR_PROJECT.supabase.co
+VITE_SUPABASE_ANON_KEY=your-public-anon-key
+SUPABASE_URL=https://YOUR_PROJECT.supabase.co
+SUPABASE_SERVICE_ROLE_KEY=your-server-only-service-role-key
+```
+
+Local development should only use localhost invite redirects when `SITE_URL` or `VITE_SITE_URL` is explicitly set to a local URL for that test run.
+
+In Supabase, set **Authentication -> URL Configuration**:
+
+Production Site URL:
+
+```text
+https://YOUR_NETLIFY_DASHBOARD_URL
+```
+
+Redirect URLs:
+
+```text
+https://YOUR_NETLIFY_DASHBOARD_URL/*
+http://localhost:3000/*
+http://localhost:5173/*
+```
+
+If an invite is expired or invalid, `/auth/callback` shows a friendly in-app message and a link back to the dashboard login instead of leaving the visitor on a raw browser error.

@@ -7,6 +7,7 @@ const healthHandler = require("../api/health");
 const retentionHandler = require("../api/retention-cleanup");
 const { sendWebhook } = require("../api/lib/integrations");
 const { verifyImage } = require("../api/lib/images");
+const { buildAuthCallbackUrl } = require("../netlify/functions/lib/site-url");
 const {
   ASSISTANT_KNOWLEDGE,
   answerFromSiteKnowledge,
@@ -33,11 +34,38 @@ function request(method, body = {}, ip = `test-${Math.random()}`) {
   return { method, body, headers: { "x-forwarded-for": ip, origin: "https://urbanyards.us" }, socket: {} };
 }
 
+function withEnv(patch, callback) {
+  const original = {};
+  Object.keys(patch).forEach((key) => {
+    original[key] = process.env[key];
+    patch[key] === undefined ? delete process.env[key] : process.env[key] = patch[key];
+  });
+  try {
+    return callback();
+  } finally {
+    Object.keys(patch).forEach((key) => {
+      original[key] === undefined ? delete process.env[key] : process.env[key] = original[key];
+    });
+  }
+}
+
 test("quote endpoint rejects unsupported methods", async () => {
   const res = mockResponse();
   await quoteHandler(request("GET"), res);
   assert.equal(res.statusCode, 405);
   assert.equal(res.headers.Allow, "POST");
+});
+
+test("dashboard invite callback URL uses configured production site URL", () => {
+  withEnv({ SITE_URL: "https://dashboard.example.com/", VITE_SITE_URL: undefined, NEXT_PUBLIC_SITE_URL: undefined, URL: undefined }, () => {
+    assert.equal(buildAuthCallbackUrl({ headers: { host: "localhost:3000" } }), "https://dashboard.example.com/auth/callback");
+  });
+});
+
+test("dashboard invite callback URL does not infer localhost without explicit config", () => {
+  withEnv({ SITE_URL: undefined, VITE_SITE_URL: undefined, NEXT_PUBLIC_SITE_URL: undefined, URL: "http://localhost:3000" }, () => {
+    assert.equal(buildAuthCallbackUrl({ headers: { host: "localhost:3000" } }), "https://urbanyards.us/auth/callback");
+  });
 });
 
 test("quote endpoint validates required lead fields", async () => {

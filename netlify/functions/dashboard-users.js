@@ -14,6 +14,7 @@ const {
   writeAuditLog,
   writeSystemError
 } = require("./lib/dashboard-auth");
+const { buildAuthCallbackUrl } = require("./lib/site-url");
 
 const ADMIN_ROLES = new Set(["owner", "admin"]);
 const USER_ROLES = ROLE_ORDER.filter((role) => role !== "client" && role !== "staff");
@@ -201,7 +202,8 @@ async function inviteUser(actor, event, payload) {
   let invited = false;
   let inviteMessage = "";
   try {
-    await authAdminRequest("invite", {
+    const redirectTo = buildAuthCallbackUrl(event);
+    await authAdminRequest(`invite?redirect_to=${encodeURIComponent(redirectTo)}`, {
       method: "POST",
       body: JSON.stringify({
         email,
@@ -219,7 +221,7 @@ async function inviteUser(actor, event, payload) {
     entityType: "user",
     entityId: email,
     newValue: { email, role, invited },
-    metadata: { email, role, invited, inviteMessage },
+    metadata: { email, role, invited, inviteMessage, redirectTo: buildAuthCallbackUrl(event) },
     event,
     module: "users"
   });

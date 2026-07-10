@@ -10335,7 +10335,7 @@ body:not(.is-login-screen) .record-more-menu[open] > div .inline-action {
 
   body:not(.is-login-screen) .dashboard-brand span,
   body:not(.is-login-screen) .nav-label,
-  body:not(.is-login-screen) .sidebar-profile span,
+  body:not(.is-login-screen) .sidebar-profile > span:not(.user-avatar),
   body:not(.is-login-screen) .sign-out span:not(.button-icon) {
     max-width: 0 !important;
     opacity: 0 !important;
@@ -10350,11 +10350,11 @@ body:not(.is-login-screen) .record-more-menu[open] > div .inline-action {
 
   body:not(.is-login-screen) :is(.dashboard-sidebar:hover, .dashboard-sidebar:focus-within) .dashboard-brand span,
   body:not(.is-login-screen) :is(.dashboard-sidebar:hover, .dashboard-sidebar:focus-within) .nav-label,
-  body:not(.is-login-screen) :is(.dashboard-sidebar:hover, .dashboard-sidebar:focus-within) .sidebar-profile span,
+  body:not(.is-login-screen) :is(.dashboard-sidebar:hover, .dashboard-sidebar:focus-within) .sidebar-profile > span:not(.user-avatar),
   body:not(.is-login-screen) :is(.dashboard-sidebar:hover, .dashboard-sidebar:focus-within) .sign-out span:not(.button-icon),
   body:not(.is-login-screen) .app-view.is-sidebar-open .dashboard-sidebar .dashboard-brand span,
   body:not(.is-login-screen) .app-view.is-sidebar-open .dashboard-sidebar .nav-label,
-  body:not(.is-login-screen) .app-view.is-sidebar-open .dashboard-sidebar .sidebar-profile span,
+  body:not(.is-login-screen) .app-view.is-sidebar-open .dashboard-sidebar .sidebar-profile > span:not(.user-avatar),
   body:not(.is-login-screen) .app-view.is-sidebar-open .dashboard-sidebar .sign-out span:not(.button-icon) {
     max-width: 190px !important;
     opacity: 1 !important;

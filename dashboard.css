@@ -14,6 +14,99 @@
   --uy-soft-shadow: 0 10px 28px rgba(19, 36, 28, 0.08);
   --uy-premium-shadow: 0 24px 70px rgba(19, 36, 28, 0.12);
   --uy-button-shadow: 0 12px 24px rgba(18, 63, 49, 0.18);
+
+  /* Dashboard design system aliases. Keep new dashboard UI work on these tokens. */
+  --color-bg: var(--uy-paper);
+  --color-bg-depth: #eef3e7;
+  --color-surface: var(--uy-surface);
+  --color-surface-solid: var(--uy-card);
+  --color-surface-soft: var(--uy-green-3);
+  --color-primary: var(--uy-green);
+  --color-primary-hover: #0c3025;
+  --color-primary-soft: #dcead3;
+  --color-accent: #5f8f46;
+  --color-accent-soft: #e7f0df;
+  --color-warning: #c57a35;
+  --color-danger: var(--uy-danger);
+  --color-border: var(--uy-line);
+  --color-border-strong: rgba(18, 63, 49, 0.18);
+  --color-text: var(--uy-ink);
+  --color-muted: var(--uy-muted);
+  --color-inverse: #fffdf4;
+
+  --radius-xs: 6px;
+  --radius-sm: 8px;
+  --radius-md: 14px;
+  --radius-lg: 20px;
+  --radius-card: 24px;
+  --radius-shell: 28px;
+  --radius-pill: 999px;
+
+  --shadow-card: var(--uy-soft-shadow);
+  --shadow-card-elevated: var(--uy-premium-shadow);
+  --shadow-button: var(--uy-button-shadow);
+  --shadow-popover: 0 24px 58px rgba(19, 36, 28, 0.18);
+
+  --space-2xs: 4px;
+  --space-xs: 6px;
+  --space-sm: 10px;
+  --space-md: 16px;
+  --space-lg: 24px;
+  --space-xl: 36px;
+  --space-2xl: 48px;
+
+  --font-ui: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  --font-size-xs: 0.76rem;
+  --font-size-sm: 0.86rem;
+  --font-size-md: 0.98rem;
+  --font-size-lg: 1.18rem;
+  --font-size-xl: 1.5rem;
+  --font-size-page: clamp(2.3rem, 5vw, 4rem);
+  --line-tight: 1.15;
+  --line-normal: 1.5;
+
+  --z-base: 1;
+  --z-topbar: 12;
+  --z-sidebar: 60;
+  --z-popover: 80;
+  --z-modal: 120;
+
+  --transition-fast: 120ms ease;
+  --transition-normal: 200ms ease;
+  --transition-drawer: 300ms cubic-bezier(.22, 1, .36, 1);
+}
+
+html[data-theme="urban-yards"] {
+  color-scheme: light;
+}
+
+html[data-theme="urban-yards"] body:not(.is-login-screen) {
+  --uy-green: var(--color-primary);
+  --uy-green-2: #1e5a45;
+  --uy-paper: var(--color-bg);
+  --uy-surface: var(--color-surface);
+  --uy-card: var(--color-surface-solid);
+  --uy-line: var(--color-border);
+  --uy-ink: var(--color-text);
+  --uy-muted: var(--color-muted);
+  --uy-shadow: var(--shadow-card-elevated);
+  --uy-soft-shadow: var(--shadow-card);
+  --uy-button-shadow: var(--shadow-button);
+}
+
+html[data-compact="true"] body:not(.is-login-screen) {
+  --uy-section-gap: 12px;
+  --uy-card-pad: 16px;
+  --uy-button-h: 38px;
+}
+
+html[data-reduced-motion="true"] *,
+html[data-reduced-motion="true"] *::before,
+html[data-reduced-motion="true"] *::after {
+  animation-duration: 1ms !important;
+  animation-iteration-count: 1 !important;
+  scroll-behavior: auto !important;
+  transition-duration: 1ms !important;
 }
 
 /* User avatar support */
@@ -9521,6 +9614,34 @@ body:not(.is-login-screen) #groundskeeper-ai .groundskeeper-ai-command-header h3
    One source of truth for shell spacing, drawer width, mobile navigation,
    natural page scrolling, and the remaining card/table wrapping guards. */
 body:not(.is-login-screen) {
+  --color-bg: #f8f7ec;
+  --color-bg-depth: #eef3e7;
+  --color-surface: #fffdf4;
+  --color-surface-solid: #ffffff;
+  --color-surface-soft: #f1f6e9;
+  --color-primary: #123f31;
+  --color-primary-hover: #0c3025;
+  --color-primary-soft: #dcead3;
+  --color-accent: #5f8f46;
+  --color-accent-soft: #e7f0df;
+  --color-warning: #c57a35;
+  --color-danger: #8f2f22;
+  --color-border: #dfe5d5;
+  --color-border-strong: rgba(18, 63, 49, .18);
+  --color-text: #0e3029;
+  --color-muted: #63756b;
+  --color-inverse: #fffdf4;
+  --shadow-card: 0 12px 30px rgba(18, 63, 50, .08);
+  --shadow-card-elevated: 0 24px 70px rgba(19, 36, 28, .12);
+  --shadow-button: 0 10px 24px rgba(18, 63, 49, .16);
+  --shadow-popover: 0 24px 58px rgba(19, 36, 28, .18);
+  --button-pad-x: 18px;
+  --button-gap: 8px;
+  --card-border: 1px solid rgba(18, 63, 49, .1);
+  --card-bg: linear-gradient(180deg, rgba(255, 255, 255, .96), rgba(255, 253, 244, .98));
+  --field-bg: rgba(255, 253, 247, .94);
+  --field-border: rgba(18, 63, 49, .14);
+  --focus-ring: 0 0 0 3px rgba(95, 143, 70, .2);
   --uy-page-pad: 16px;
   --uy-shell-gap: 18px;
   --uy-section-gap: clamp(14px, 1.4vw, 22px);
@@ -9534,8 +9655,8 @@ body:not(.is-login-screen) {
   --uy-sidebar-icon-art: 22px;
   --uy-icon-art: var(--uy-sidebar-icon-art);
   --uy-nav-gap: 6px;
-  --uy-card-radius: 24px;
-  --uy-drawer-ease: cubic-bezier(.22, 1, .36, 1);
+  --uy-card-radius: var(--radius-card);
+  --uy-drawer-ease: var(--transition-drawer);
 }
 
 body:not(.is-login-screen) .dashboard-shell {
@@ -9543,6 +9664,205 @@ body:not(.is-login-screen) .dashboard-shell {
     radial-gradient(circle at 12% -4%, rgba(217, 182, 111, .16), transparent 30%),
     radial-gradient(circle at 92% 2%, rgba(82, 123, 61, .12), transparent 28%),
     linear-gradient(135deg, #eef3e7 0%, #fbf8ec 44%, #edf4ea 100%) !important;
+}
+
+/* Shared dashboard component system. New feature UI should reuse these classes
+   or existing selectors covered here instead of inventing page-local styles. */
+body:not(.is-login-screen) :is(.uy-card, .panel, .metric-card, .contact-card, .job-card, .submission-card, .note-card, .reminder-card, .document-card, .calendar-card, .operation-card, .route-stop-card, .training-rule-card, .ai-entry-row, .ai-log-item, .call-helper-panel, .call-history-item, .users-access-row, .activity-log-row) {
+  border: var(--card-border) !important;
+  border-radius: var(--uy-card-radius) !important;
+  background: var(--card-bg) !important;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, .78),
+    var(--shadow-card) !important;
+}
+
+body:not(.is-login-screen) :is(.uy-card--compact, .metric-card, .route-stop-card, .training-rule-card, .ai-entry-row, .ai-log-item, .call-history-item, .users-access-row, .activity-log-row) {
+  border-radius: var(--radius-lg) !important;
+}
+
+body:not(.is-login-screen) :is(.uy-card--elevated, .home-snapshot-card, .work-snapshot-card, .outreach-hero, .equipment-hero, .groundskeeper-ai-hero, .route-hero) {
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, .82),
+    var(--shadow-card-elevated) !important;
+}
+
+body:not(.is-login-screen) :is(.dashboard-section, .uy-page-stack) {
+  display: none;
+}
+
+body:not(.is-login-screen) :is(.dashboard-section.is-active, .uy-page-stack.is-active) {
+  display: grid !important;
+  align-content: start !important;
+  gap: var(--uy-section-gap) !important;
+}
+
+body:not(.is-login-screen) :is(.overview-command-header, .work-command-header, .groundskeeper-ai-command-header, .uy-page-header) {
+  display: grid !important;
+  grid-template-columns: minmax(0, 1fr) auto !important;
+  align-items: center !important;
+  gap: clamp(16px, 2vw, 28px) !important;
+  margin-bottom: var(--uy-section-gap) !important;
+}
+
+body:not(.is-login-screen) :is(.overview-command-header h3, .work-command-header h3, .groundskeeper-ai-command-header h3, .uy-page-header h3) {
+  color: var(--color-primary) !important;
+  font-size: var(--font-size-page) !important;
+  line-height: .95 !important;
+  letter-spacing: 0 !important;
+}
+
+body:not(.is-login-screen) :is(.overview-command-header p, .work-command-header p, .groundskeeper-ai-command-header p, .uy-page-header p) {
+  color: var(--color-muted) !important;
+  line-height: var(--line-normal) !important;
+}
+
+body:not(.is-login-screen) :is(.panel-heading, .uy-section-header) {
+  align-items: flex-start !important;
+  gap: var(--space-md) !important;
+  margin-bottom: var(--space-md) !important;
+  padding-bottom: var(--space-md) !important;
+  border-bottom: 1px solid rgba(18, 63, 49, .08) !important;
+}
+
+body:not(.is-login-screen) :is(.panel-heading h3, .uy-section-header h3) {
+  color: var(--color-primary) !important;
+  font-size: clamp(1.05rem, 1.1vw, 1.28rem) !important;
+  line-height: var(--line-tight) !important;
+}
+
+body:not(.is-login-screen) :is(.panel-heading p, .uy-section-header p) {
+  color: var(--color-muted) !important;
+  line-height: 1.45 !important;
+}
+
+body:not(.is-login-screen) :is(.eyebrow, .uy-eyebrow) {
+  color: rgba(18, 63, 49, .68) !important;
+  font-size: var(--font-size-xs) !important;
+  font-weight: 900 !important;
+  letter-spacing: .1em !important;
+  text-transform: uppercase !important;
+}
+
+body:not(.is-login-screen) :is(input, select, textarea) {
+  min-width: 0 !important;
+  border-color: var(--field-border) !important;
+  border-radius: var(--radius-md) !important;
+  background: var(--field-bg) !important;
+  color: var(--color-text) !important;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, .72) !important;
+}
+
+body:not(.is-login-screen) :is(input, select) {
+  min-height: var(--uy-button-h) !important;
+}
+
+body:not(.is-login-screen) :is(textarea) {
+  line-height: var(--line-normal) !important;
+}
+
+body:not(.is-login-screen) :is(input, select, textarea):focus {
+  border-color: rgba(95, 143, 70, .64) !important;
+  box-shadow: var(--focus-ring) !important;
+}
+
+body:not(.is-login-screen) :is(.uy-button, .inline-action, .overview-primary-action, .topbar-actions button, .toolbar button, .drawer-actions button, .client-form button, .operations-form button, .document-form button, .note-form button, .schedule-create-form button, .calendar-tabs button, .settings-grid button, .route-date-card button, .route-stop-form button, .equipment-form-actions button, .hardware-guide-form button, .equipment-maintenance-form button, .groundskeeper-ai-toolbar button, .ai-editor-actions button, .ai-training-modal-actions button, .training-chat-form button, .groundskeeper-ai-chat-form button) {
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  gap: var(--button-gap) !important;
+  min-height: var(--uy-button-h) !important;
+  min-width: 0 !important;
+  padding: 0 var(--button-pad-x) !important;
+  border-radius: var(--radius-pill) !important;
+  font-weight: 850 !important;
+  line-height: 1 !important;
+  text-decoration: none !important;
+  transition:
+    transform var(--transition-normal),
+    box-shadow var(--transition-normal),
+    background var(--transition-normal),
+    border-color var(--transition-normal),
+    color var(--transition-normal) !important;
+}
+
+body:not(.is-login-screen) :is(.uy-button--secondary, .inline-action, .toolbar button, .settings-grid button, .calendar-tabs button, .route-stop-form .inline-action, .equipment-form-actions .inline-action, .hardware-guide-form .inline-action) {
+  border: 1px solid var(--color-border-strong) !important;
+  background: rgba(255, 253, 247, .92) !important;
+  color: var(--color-primary) !important;
+  box-shadow: 0 8px 18px rgba(19, 36, 28, .05) !important;
+}
+
+body:not(.is-login-screen) :is(.uy-button--primary, .overview-primary-action, .topbar-actions button:last-child, .note-form button, .drawer-actions button:not(.inline-action), .client-form button, .operations-form button, .document-form button, .schedule-create-form button, .route-date-card button, .route-stop-form button[type="submit"], .equipment-form-actions button[type="submit"], .hardware-guide-form button[type="submit"], .equipment-maintenance-form button, .groundskeeper-ai-toolbar button:last-child, .ai-editor-actions button, .training-chat-form button, .groundskeeper-ai-chat-form button) {
+  border: 1px solid rgba(18, 63, 49, .16) !important;
+  background: linear-gradient(180deg, #5f8f46 0%, var(--color-primary) 100%) !important;
+  color: var(--color-inverse) !important;
+  box-shadow: var(--shadow-button) !important;
+}
+
+body:not(.is-login-screen) :is(.uy-button, .inline-action, .overview-primary-action, .topbar-actions button, .toolbar button, .drawer-actions button, .client-form button, .operations-form button, .document-form button, .note-form button, .schedule-create-form button, .settings-grid button):hover:not(:disabled) {
+  transform: translateY(-1px) !important;
+}
+
+body:not(.is-login-screen) :is(.danger-action, .uy-button--danger) {
+  border-color: rgba(185, 74, 58, .28) !important;
+  background: #fff4ef !important;
+  color: var(--color-danger) !important;
+  box-shadow: none !important;
+}
+
+body:not(.is-login-screen) :is(.status, .document-status, .environment-pill, .training-status-badge, .ai-badge, .uy-badge) {
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  min-height: 28px !important;
+  padding: 5px 10px !important;
+  border: 1px solid rgba(18, 63, 49, .1) !important;
+  border-radius: var(--radius-pill) !important;
+  background: var(--color-surface-soft) !important;
+  color: var(--color-primary) !important;
+  font-size: var(--font-size-xs) !important;
+  font-weight: 900 !important;
+  letter-spacing: .03em !important;
+}
+
+body:not(.is-login-screen) :is(.empty-state, .loading-state, .uy-empty-state) {
+  display: grid !important;
+  place-items: center !important;
+  gap: var(--space-xs) !important;
+  min-height: 88px !important;
+  border: 1px dashed rgba(18, 63, 49, .14) !important;
+  border-radius: var(--radius-lg) !important;
+  background: rgba(255, 253, 247, .64) !important;
+  color: var(--color-muted) !important;
+  text-align: center !important;
+}
+
+body:not(.is-login-screen) .loading-state {
+  position: relative !important;
+  overflow: hidden !important;
+}
+
+body:not(.is-login-screen) .loading-state::after {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, .58), transparent);
+  content: "";
+  transform: translateX(-100%);
+  animation: uy-skeleton-sweep 1.35s ease-in-out infinite;
+}
+
+@keyframes uy-skeleton-sweep {
+  to {
+    transform: translateX(100%);
+  }
+}
+
+html[data-compact="true"] body:not(.is-login-screen) {
+  --uy-section-gap: 12px !important;
+  --uy-card-pad: 16px !important;
+  --uy-button-h: 38px !important;
+  --button-pad-x: 14px !important;
 }
 
 body:not(.is-login-screen) .app-view::before {

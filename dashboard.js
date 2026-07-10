@@ -29,6 +29,9 @@
   };
   const SESSION_KEY = "urbanYardsDashboardSession";
   const CALL_METHOD_KEY = "urbanYardsPreferredCallMethod";
+  const DASHBOARD_THEME_KEY = "urbanYardsDashboardTheme";
+  const DASHBOARD_COMPACT_KEY = "urbanYardsDashboardCompact";
+  const DASHBOARD_REDUCED_MOTION_KEY = "urbanYardsDashboardReducedMotion";
   const GOOGLE_VOICE_HOME_URL = "https://voice.google.com/";
   const GOOGLE_VOICE_CALLS_URL = "https://voice.google.com/u/0/calls";
   const URBAN_YARDS_GOOGLE_VOICE_NUMBER = "(971) 258-1109";
@@ -101,6 +104,23 @@
     ownerEmail: "team@urbanyards.us",
     appEnv: "production"
   };
+
+  function readStoredPreference(key, fallback) {
+    try {
+      const value = localStorage.getItem(key);
+      return value === null || value === "" ? fallback : value;
+    } catch (error) {
+      return fallback;
+    }
+  }
+
+  function applyDashboardPreferences() {
+    const root = document.documentElement;
+    root.dataset.theme = readStoredPreference(DASHBOARD_THEME_KEY, "urban-yards");
+    root.dataset.compact = readStoredPreference(DASHBOARD_COMPACT_KEY, "false");
+    const reducedMotionFallback = window.matchMedia?.("(prefers-reduced-motion: reduce)").matches ? "true" : "false";
+    root.dataset.reducedMotion = readStoredPreference(DASHBOARD_REDUCED_MOTION_KEY, reducedMotionFallback);
+  }
 
   const state = {
     activeSection: "overview",
@@ -10453,6 +10473,7 @@
   }
 
   async function init() {
+    applyDashboardPreferences();
     cacheElements();
     bindEvents();
     const hashSection = window.location.hash.replace("#", "");

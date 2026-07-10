@@ -185,9 +185,22 @@ function checkCssTokens() {
     "--uy-sidebar-icon",
     "--uy-sidebar-icon-art"
   ];
+  const designSystemTokens = [
+    "--color-bg",
+    "--color-surface",
+    "--color-primary",
+    "--color-muted",
+    "--color-border",
+    "--radius-card",
+    "--radius-pill",
+    "--shadow-card",
+    "--shadow-button",
+    "--transition-normal"
+  ];
 
-  const missingTokens = requiredTokens.filter((token) => !dashboardCss.includes(token));
-  const underusedTokens = requiredTokens.filter((token) => {
+  const allRequiredTokens = [...requiredTokens, ...designSystemTokens];
+  const missingTokens = allRequiredTokens.filter((token) => !dashboardCss.includes(token));
+  const underusedTokens = allRequiredTokens.filter((token) => {
     const count = (dashboardCss.match(new RegExp(token.replace(/-/g, "\\-"), "g")) || []).length;
     return count < 2;
   });

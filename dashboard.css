@@ -10550,6 +10550,26 @@ body:not(.is-login-screen) .pipeline-card .meta {
 }
 
 @media (min-width: 901px) {
+  body:not(.is-login-screen) .dashboard-sidebar .dashboard-nav {
+    width: 100% !important;
+    padding: 0 !important;
+    border: 0 !important;
+    background: transparent !important;
+    box-shadow: none !important;
+  }
+
+  body:not(.is-login-screen) .dashboard-sidebar .nav-icon {
+    display: inline-grid !important;
+    place-items: center !important;
+    justify-self: center !important;
+    overflow: visible !important;
+  }
+
+  body:not(.is-login-screen) .dashboard-sidebar .nav-icon img {
+    display: block !important;
+    object-fit: contain !important;
+  }
+
   body:not(.is-login-screen) .app-view:not(.is-sidebar-open):not(:has(.dashboard-sidebar:hover)):not(:has(.dashboard-sidebar:focus-within)) .dashboard-sidebar .dashboard-nav a,
   body:not(.is-login-screen) .app-view:not(.is-sidebar-open):not(:has(.dashboard-sidebar:hover)):not(:has(.dashboard-sidebar:focus-within)) .dashboard-sidebar .dashboard-nav a:hover,
   body:not(.is-login-screen) .app-view:not(.is-sidebar-open):not(:has(.dashboard-sidebar:hover)):not(:has(.dashboard-sidebar:focus-within)) .dashboard-sidebar .dashboard-nav a.is-active,
@@ -10558,6 +10578,27 @@ body:not(.is-login-screen) .pipeline-card .meta {
     min-height: var(--uy-sidebar-icon) !important;
     max-height: var(--uy-sidebar-icon) !important;
     padding: 0 !important;
+  }
+
+  body:not(.is-login-screen) .app-view:not(.is-sidebar-open):not(:has(.dashboard-sidebar:hover)):not(:has(.dashboard-sidebar:focus-within)) .dashboard-sidebar .dashboard-sidebar-inner {
+    align-items: center !important;
+  }
+
+  body:not(.is-login-screen) .app-view:not(.is-sidebar-open):not(:has(.dashboard-sidebar:hover)):not(:has(.dashboard-sidebar:focus-within)) .dashboard-sidebar :is(.dashboard-nav, .sidebar-bottom) {
+    width: var(--uy-sidebar-icon) !important;
+    min-width: var(--uy-sidebar-icon) !important;
+    max-width: var(--uy-sidebar-icon) !important;
+    align-items: center !important;
+  }
+
+  body:not(.is-login-screen) .app-view:not(.is-sidebar-open):not(:has(.dashboard-sidebar:hover)):not(:has(.dashboard-sidebar:focus-within)) .dashboard-sidebar :is(.dashboard-brand, .dashboard-nav a, .sidebar-profile) {
+    width: var(--uy-sidebar-icon) !important;
+    min-width: var(--uy-sidebar-icon) !important;
+    max-width: var(--uy-sidebar-icon) !important;
+    grid-template-columns: var(--uy-sidebar-icon) minmax(0, 0) !important;
+    justify-content: center !important;
+    justify-items: center !important;
+    overflow: visible !important;
   }
 }
 

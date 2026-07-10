@@ -11438,3 +11438,44 @@ body:not(.is-login-screen) .duplicate-warning > div {
     height: var(--uy-sidebar-icon) !important;
   }
 }
+
+@media (min-width: 901px) {
+  body:not(.is-login-screen) .dashboard-sidebar .dashboard-nav a {
+    grid-template-columns: var(--uy-sidebar-icon) minmax(0, 1fr) !important;
+  }
+
+  body:not(.is-login-screen) .dashboard-sidebar .nav-icon {
+    display: grid !important;
+    place-items: center !important;
+    justify-self: center !important;
+    align-self: center !important;
+    width: var(--uy-sidebar-icon) !important;
+    min-width: var(--uy-sidebar-icon) !important;
+    max-width: var(--uy-sidebar-icon) !important;
+    height: var(--uy-sidebar-icon) !important;
+    min-height: var(--uy-sidebar-icon) !important;
+    max-height: var(--uy-sidebar-icon) !important;
+    padding: 0 !important;
+    line-height: 0 !important;
+    transform: none !important;
+  }
+
+  body:not(.is-login-screen) .dashboard-sidebar .nav-icon img {
+    display: block !important;
+    width: var(--uy-sidebar-icon-art) !important;
+    min-width: var(--uy-sidebar-icon-art) !important;
+    max-width: var(--uy-sidebar-icon-art) !important;
+    height: var(--uy-sidebar-icon-art) !important;
+    min-height: var(--uy-sidebar-icon-art) !important;
+    max-height: var(--uy-sidebar-icon-art) !important;
+    margin: auto !important;
+    object-fit: contain !important;
+  }
+
+  body:not(.is-login-screen) .app-view:not(.is-sidebar-open):not(:has(.dashboard-sidebar:hover)):not(:has(.dashboard-sidebar:focus-within)) .dashboard-sidebar .dashboard-nav a,
+  body:not(.is-login-screen) .app-view.is-sidebar-closing .dashboard-sidebar .dashboard-nav a {
+    grid-template-columns: var(--uy-sidebar-icon) minmax(0, 0) !important;
+    justify-content: center !important;
+    justify-items: center !important;
+  }
+}

@@ -2824,6 +2824,67 @@ button:active,
   display: inline-block;
 }
 
+.dashboard-map-preview-shell {
+  position: relative;
+  width: 100%;
+  min-height: 132px;
+  margin-bottom: 14px;
+  overflow: hidden;
+  border: 1px solid rgba(23, 54, 43, .1);
+  border-radius: 18px;
+  background:
+    radial-gradient(circle at 85% 15%, rgba(201, 217, 130, .2), transparent 34%),
+    linear-gradient(135deg, #edf4e7, #fbf9f1);
+  isolation: isolate;
+}
+
+.dashboard-map-preview {
+  width: 100%;
+  height: clamp(132px, 14vw, 168px);
+  min-height: 132px;
+  background: rgba(235, 244, 229, .75);
+}
+
+.dashboard-map-preview-message {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  display: grid;
+  place-items: center;
+  padding: 18px;
+  background: rgba(255, 252, 239, .82);
+  color: rgba(6, 27, 21, .72);
+  font-size: .86rem;
+  font-weight: 850;
+  line-height: 1.35;
+  text-align: center;
+}
+
+.dashboard-map-preview-message[hidden] {
+  display: none !important;
+}
+
+.dashboard-map-preview-shell.is-error .dashboard-map-preview-message {
+  background: rgba(255, 247, 223, .9);
+  color: #6b4420;
+}
+
+.dashboard-map-preview .gm-style button,
+.dashboard-map-preview .gm-style [role="button"] {
+  all: revert !important;
+  box-sizing: border-box !important;
+}
+
+.dashboard-map-preview .gm-style img {
+  max-width: none !important;
+  height: auto;
+}
+
+.dashboard-map-preview .gm-style .gm-style-cc,
+.dashboard-map-preview .gm-style .gmnoprint {
+  opacity: .74;
+}
+
 .route-map-zoom {
   position: absolute;
   left: 12px;
@@ -7934,6 +7995,16 @@ body:not(.is-login-screen) #overview .home-route-map img {
   opacity: .82 !important;
 }
 
+body:not(.is-login-screen) #overview .home-route-card .dashboard-map-preview-shell {
+  min-height: 132px !important;
+  margin-bottom: 14px !important;
+  border-radius: 18px !important;
+}
+
+body:not(.is-login-screen) #overview .home-route-card .dashboard-map-preview {
+  height: clamp(132px, 13vw, 158px) !important;
+}
+
 body:not(.is-login-screen) #overview .route-snapshot-card {
   display: grid !important;
   gap: 8px !important;
@@ -8486,6 +8557,16 @@ body:not(.is-login-screen) #calendar .work-route-map img {
   height: 132px !important;
   object-fit: cover !important;
   opacity: .82 !important;
+}
+
+body:not(.is-login-screen) #calendar .work-route-card .dashboard-map-preview-shell {
+  min-height: 132px !important;
+  margin-bottom: 14px !important;
+  border-radius: 18px !important;
+}
+
+body:not(.is-login-screen) #calendar .work-route-card .dashboard-map-preview {
+  height: clamp(132px, 13vw, 158px) !important;
 }
 
 body:not(.is-login-screen) #calendar .work-route-summary {

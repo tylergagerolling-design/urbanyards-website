@@ -221,6 +221,8 @@
   let notificationCloseTimer = null;
   const addressAutocompleteInputs = new WeakSet();
   let googleRouteMarkers = [];
+  const googleMapViews = new Map();
+  const routePreviewState = new Map();
   const routeGeocodingIds = new Set();
   const PORTLAND_CENTER = { lat: 45.5152, lng: -122.6784 };
 
@@ -4063,6 +4065,14 @@
         }
       }, 80);
     }
+    setTimeout(() => {
+      renderActiveRoutePreviews();
+      if (!window.google?.maps) return;
+      googleMapViews.forEach((view, key) => {
+        if (!key.startsWith("preview-") || !view?.map) return;
+        window.google.maps.event.trigger(view.map, "resize");
+      });
+    }, 100);
     syncDashboardSubviewVisibility();
   }
 
@@ -4497,17 +4507,16 @@
     return googleMapsLoadPromise;
   }
 
-  async function ensureGoogleRouteMap() {
-    if (!els.routeMap) return null;
-    await loadGoogleMapsScript();
-    if (googleRouteMap) return googleRouteMap;
-    googleRouteMap = new window.google.maps.Map(els.routeMap, {
+  function googleMapOptions(options = {}) {
+    const compact = Boolean(options.compact);
+    return {
       center: PORTLAND_CENTER,
-      zoom: 11,
-      controlSize: 32,
+      zoom: options.zoom || 11,
+      controlSize: compact ? 24 : 32,
+      disableDefaultUI: compact,
       mapTypeControl: false,
       streetViewControl: false,
-      fullscreenControl: true,
+      fullscreenControl: !compact,
       fullscreenControlOptions: {
         position: window.google.maps.ControlPosition.RIGHT_BOTTOM
       },
@@ -4515,8 +4524,38 @@
       scaleControl: false,
       zoomControl: false,
       clickableIcons: false,
-      gestureHandling: "greedy"
-    });
+      gestureHandling: compact ? "cooperative" : "greedy"
+    };
+  }
+
+  function clearGoogleMapView(view) {
+    if (!view) return;
+    (view.markers || []).forEach((marker) => marker.setMap(null));
+    if (view.line) view.line.setMap(null);
+    view.markers = [];
+    view.line = null;
+  }
+
+  async function ensureGoogleMapView(key, mapElement, options = {}) {
+    if (!mapElement) return null;
+    await loadGoogleMapsScript();
+    const existing = googleMapViews.get(key);
+    if (existing?.map && existing.mapElement === mapElement) return existing;
+    clearGoogleMapView(existing);
+    const view = {
+      map: new window.google.maps.Map(mapElement, googleMapOptions(options)),
+      mapElement,
+      markers: [],
+      line: null
+    };
+    googleMapViews.set(key, view);
+    return view;
+  }
+
+  async function ensureGoogleRouteMap() {
+    if (!els.routeMap) return null;
+    const view = await ensureGoogleMapView("planner", els.routeMap, { compact: false });
+    googleRouteMap = view?.map || null;
     return googleRouteMap;
   }
 
@@ -4542,40 +4581,66 @@
     addressAutocompleteInputs.add(input);
   }
 
-  async function renderGoogleRouteMap(stops) {
-    if (!els.routeMapStatus) return;
+  async function renderGoogleRouteMapView({
+    key,
+    mapElement,
+    statusElement,
+    stops = [],
+    compact = false,
+    emptyText = "Add stops to preview today's route.",
+    noPinsText = "Map pin needed.",
+    errorText = "Google Maps could not load.",
+    enableStopSelection = false
+  }) {
+    if (!mapElement) return;
+    const shell = mapElement.closest(".dashboard-map-preview-shell");
+    if (shell) {
+      shell.classList.add("is-loading");
+      shell.classList.remove("is-ready", "is-error");
+    }
+    if (statusElement) {
+      statusElement.hidden = false;
+      statusElement.textContent = compact ? "Loading Google Map..." : "Route map is loading.";
+    }
     try {
-      const map = await ensureGoogleRouteMap();
+      const view = await ensureGoogleMapView(key, mapElement, { compact });
+      const map = view?.map;
       if (!map) {
-        els.routeMapStatus.textContent = "Route map is loading.";
+        if (statusElement) statusElement.textContent = compact ? "Loading Google Map..." : "Route map is loading.";
         return;
       }
 
-      googleRouteMarkers.forEach((marker) => marker.setMap(null));
-      googleRouteMarkers = [];
-      if (googleRouteLine) {
-        googleRouteLine.setMap(null);
-        googleRouteLine = null;
-      }
+      clearGoogleMapView(view);
 
       const pinnedStops = stops.filter(hasRouteCoordinates);
       const missingPins = stops.filter((stop) => stop.address && !hasRouteCoordinates(stop));
       if (!stops.length) {
-        els.routeMapStatus.textContent = "Add stops to preview today's route.";
+        if (statusElement) {
+          statusElement.textContent = emptyText;
+          statusElement.hidden = compact;
+        }
         map.setCenter(PORTLAND_CENTER);
         map.setZoom(11);
+        if (shell) shell.classList.add("is-ready");
         return;
       }
       if (!pinnedStops.length) {
-        els.routeMapStatus.textContent = "Map pin needed.";
+        if (statusElement) {
+          statusElement.textContent = noPinsText;
+          statusElement.hidden = compact;
+        }
         map.setCenter(PORTLAND_CENTER);
         map.setZoom(11);
+        if (shell) shell.classList.add("is-ready");
         return;
       }
 
-      els.routeMapStatus.textContent = missingPins.length
-        ? `${pinnedStops.length} pinned / ${missingPins.length} need pins.`
-        : `${pinnedStops.length} stop${pinnedStops.length === 1 ? "" : "s"} mapped with Google Maps.`;
+      if (statusElement) {
+        statusElement.textContent = missingPins.length
+          ? `${pinnedStops.length} pinned / ${missingPins.length} need pins.`
+          : `${pinnedStops.length} stop${pinnedStops.length === 1 ? "" : "s"} mapped with Google Maps.`;
+        statusElement.hidden = compact;
+      }
 
       const bounds = new window.google.maps.LatLngBounds();
       const path = pinnedStops.map((stop) => ({ lat: stop.latitude, lng: stop.longitude }));
@@ -4590,19 +4655,24 @@
           title: stop.clientName || stop.address
         });
         marker.addListener("click", () => {
-          state.selectedRouteStopId = stop.id;
-          renderRoutePlanner();
-          const card = qs(`[data-route-stop-card][data-id="${cssEscape(stop.id)}"]`);
-          if (card) card.scrollIntoView({ behavior: "smooth", block: "center" });
+          if (enableStopSelection) {
+            state.selectedRouteStopId = stop.id;
+            renderRoutePlanner();
+            const card = qs(`[data-route-stop-card][data-id="${cssEscape(stop.id)}"]`);
+            if (card) card.scrollIntoView({ behavior: "smooth", block: "center" });
+            return;
+          }
+          setActiveSection("route-planner");
+          history.replaceState(null, "", "#route-planner");
         });
-        googleRouteMarkers.push(marker);
+        view.markers.push(marker);
       });
 
       if (path.length > 1) {
         let routePath = path;
         let routeLabel = "";
         try {
-          els.routeMapStatus.textContent = "Previewing driving route...";
+          if (statusElement && !compact) statusElement.textContent = "Previewing driving route...";
           const drivingRoute = await fetchDrivingRoute(pinnedStops);
           if (drivingRoute?.path?.length) {
             routePath = drivingRoute.path;
@@ -4614,16 +4684,19 @@
           routeLabel = "Straight-line preview; driving route unavailable.";
         }
         routePath.forEach((point) => bounds.extend(point));
-        googleRouteLine = new window.google.maps.Polyline({
+        view.line = new window.google.maps.Polyline({
           path: routePath,
           map,
           strokeColor: "#2f6b4f",
           strokeOpacity: .82,
-          strokeWeight: 4
+          strokeWeight: compact ? 3 : 4
         });
-        els.routeMapStatus.textContent = routeLabel
-          ? `${routeLabel}${missingPins.length ? ` / ${missingPins.length} need pins.` : ""}`
-          : `${pinnedStops.length} stop${pinnedStops.length === 1 ? "" : "s"} mapped with Google driving directions.`;
+        if (statusElement) {
+          statusElement.textContent = routeLabel
+            ? `${routeLabel}${missingPins.length ? ` / ${missingPins.length} need pins.` : ""}`
+            : `${pinnedStops.length} stop${pinnedStops.length === 1 ? "" : "s"} mapped with Google driving directions.`;
+          statusElement.hidden = compact;
+        }
       }
 
       if (path.length === 1) {
@@ -4632,14 +4705,82 @@
       } else {
         map.fitBounds(bounds, 52);
       }
+      if (shell) shell.classList.add("is-ready");
     } catch (error) {
-      els.routeMapStatus.textContent = error.message || "Google Maps could not load.";
+      if (shell) shell.classList.add("is-error");
+      if (statusElement) {
+        statusElement.hidden = false;
+        statusElement.textContent = compact ? "Google Map unavailable. Check Maps API configuration." : (error.message || errorText);
+      }
+    } finally {
+      if (shell) shell.classList.remove("is-loading");
     }
+  }
+
+  async function renderGoogleRouteMap(stops) {
+    if (!els.routeMapStatus) return;
+    await renderGoogleRouteMapView({
+      key: "planner",
+      mapElement: els.routeMap,
+      statusElement: els.routeMapStatus,
+      stops,
+      compact: false,
+      emptyText: "Add stops to preview today's route.",
+      noPinsText: "Map pin needed.",
+      enableStopSelection: true
+    });
+    const view = googleMapViews.get("planner");
+    googleRouteMap = view?.map || null;
+    googleRouteMarkers = view?.markers || [];
+    googleRouteLine = view?.line || null;
   }
 
   function renderRouteMap(stops) {
     if (!els.routeMapStatus) return;
     renderGoogleRouteMap(stops);
+  }
+
+  function dashboardRouteStopsForDate(data = state.data, routeDate = todayKey()) {
+    return data.routeStops
+      .filter((stop) => stop.routeDate === routeDate)
+      .sort((a, b) => a.stopOrder - b.stopOrder || a.createdAt.localeCompare(b.createdAt));
+  }
+
+  function routePreviewMapShell(key) {
+    return `
+      <div class="dashboard-map-preview-shell">
+        <div class="dashboard-map-preview" data-route-preview-map="${escapeHtml(key)}"></div>
+        <div class="dashboard-map-preview-message" data-route-preview-status="${escapeHtml(key)}" role="status">Loading Google Map...</div>
+      </div>
+    `;
+  }
+
+  function setRoutePreviewState(key, options) {
+    routePreviewState.set(key, options);
+    requestAnimationFrame(() => renderRoutePreview(key));
+  }
+
+  function renderRoutePreview(key) {
+    const config = routePreviewState.get(key);
+    if (!config || config.section !== state.activeSection) return;
+    const mapElement = qs(`[data-route-preview-map="${cssEscape(key)}"]`);
+    if (!mapElement) return;
+    const statusElement = qs(`[data-route-preview-status="${cssEscape(key)}"]`);
+    renderGoogleRouteMapView({
+      key: `preview-${key}`,
+      mapElement,
+      statusElement,
+      stops: config.stops || [],
+      compact: true,
+      emptyText: config.emptyText,
+      noPinsText: "Map pin needed.",
+      errorText: "Google Map unavailable. Check Maps API configuration.",
+      enableStopSelection: false
+    });
+  }
+
+  function renderActiveRoutePreviews() {
+    routePreviewState.forEach((_, key) => renderRoutePreview(key));
   }
 
   function populatePropertyFilter(data) {
@@ -4961,33 +5102,36 @@
 
   function renderTodayRouteSnapshot(data) {
     if (!els.todayRouteSnapshot) return;
-    const today = todayKey();
-    const stops = filteredRouteStops(data.routeStops)
-      .filter((stop) => stop.routeDate === today)
-      .sort((a, b) => a.stopOrder - b.stopOrder || a.createdAt.localeCompare(b.createdAt));
+    const stops = dashboardRouteStopsForDate(data, todayKey());
     if (!stops.length) {
       els.todayRouteSnapshot.innerHTML = `
-        <div class="home-route-map" aria-hidden="true">
-          <img src="${homeDashboardIcon("route-map-placeholder.svg")}" alt="">
-        </div>
+        ${routePreviewMapShell("home")}
         <div class="home-empty-state compact">
           <strong>No route stops planned for today.</strong>
           <p>Add stops from a client, lead, or property when the route needs attention.</p>
         </div>
       `;
+      setRoutePreviewState("home", {
+        section: "overview",
+        stops,
+        emptyText: "No route stops planned for today."
+      });
       return;
     }
     const openStops = stops.filter((stop) => stop.status !== "Complete");
     els.todayRouteSnapshot.innerHTML = `
       <article class="route-snapshot-card">
-        <div class="home-route-map" aria-hidden="true">
-          <img src="${homeDashboardIcon("route-map-placeholder.svg")}" alt="">
-        </div>
+        ${routePreviewMapShell("home")}
         <strong>${openStops.length} open / ${stops.length} total</strong>
         <p>${escapeHtml(stops.slice(0, 3).map((stop) => stop.clientName).join(" / "))}${stops.length > 3 ? " / ..." : ""}</p>
         <button class="inline-action" type="button" data-action="go-route-planner">${buttonContent("Open Route Planner", "go-route-planner")}</button>
       </article>
     `;
+    setRoutePreviewState("home", {
+      section: "overview",
+      stops,
+      emptyText: "No route stops planned for today."
+    });
   }
 
   function renderDashboardAlerts(data) {
@@ -5661,24 +5805,32 @@
 
   function renderWorkRoute(data) {
     if (!els.workRoute) return;
-    const stops = filteredRouteStops(data.routeStops)
-      .filter((stop) => stop.routeDate === todayKey())
-      .sort((a, b) => a.stopOrder - b.stopOrder || a.createdAt.localeCompare(b.createdAt));
+    const stops = dashboardRouteStopsForDate(data, todayKey());
     if (!stops.length) {
       els.workRoute.innerHTML = `
-        <div class="work-route-map" aria-hidden="true"><img src="${workDashboardIcon("route-placeholder-map.svg")}" alt=""></div>
+        ${routePreviewMapShell("work")}
         ${renderWorkEmptyState("route.svg", "No route stops planned.", "Add stops to build your route.", "Open Route", "go-route-planner")}
       `;
+      setRoutePreviewState("work", {
+        section: "calendar",
+        stops,
+        emptyText: "No route stops planned."
+      });
       return;
     }
     const openStops = stops.filter((stop) => stop.status !== "Complete");
     els.workRoute.innerHTML = `
-      <div class="work-route-map" aria-hidden="true"><img src="${workDashboardIcon("route-placeholder-map.svg")}" alt=""></div>
+      ${routePreviewMapShell("work")}
       <button class="work-route-summary" type="button" data-action="go-route-planner">
         <strong>${escapeHtml(openStops.length)} open / ${escapeHtml(stops.length)} total</strong>
         <span>${escapeHtml(stops.slice(0, 3).map((stop) => stop.clientName).join(" / "))}${stops.length > 3 ? " / ..." : ""}</span>
       </button>
     `;
+    setRoutePreviewState("work", {
+      section: "calendar",
+      stops,
+      emptyText: "No route stops planned."
+    });
   }
 
   function renderWorkPipeline(data) {

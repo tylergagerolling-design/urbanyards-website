@@ -1102,9 +1102,11 @@
   }
 
   function googleVoiceCallUrl(phone) {
-    const info = phoneInfo(phone);
-    if (!info.valid) return GOOGLE_VOICE_HOME_URL;
-    return `${GOOGLE_VOICE_CALLS_URL}?a=nc,${encodeURIComponent(info.e164)}`;
+    const digits = String(phone || "").replace(/\D/g, "");
+    const normalizedDigits = digits.length === 11 && digits.startsWith("1") ? digits.slice(1) : digits;
+    if (normalizedDigits.length !== 10) return GOOGLE_VOICE_HOME_URL;
+    const normalized = `+1${normalizedDigits}`;
+    return `${GOOGLE_VOICE_CALLS_URL}?a=nc,${encodeURIComponent(normalized)}`;
   }
 
   async function copyPhoneSilently(phone) {
@@ -1118,15 +1120,30 @@
     }
   }
 
-  function openGoogleVoiceCall(phone) {
-    const url = googleVoiceCallUrl(phone);
-    const opened = window.open(url, "urbanYardsGoogleVoice", "width=520,height=720,menubar=no,toolbar=no,location=yes,status=no,scrollbars=yes,resizable=yes");
-    if (opened) {
-      opened.opener = null;
-      opened.focus();
+  function openGoogleVoiceWindow(phoneNumber) {
+    const voiceUrl = googleVoiceCallUrl(phoneNumber);
+    const features = [
+      "width=1030",
+      "height=810",
+      "left=0",
+      "top=90",
+      "resizable=yes",
+      "scrollbars=yes",
+      "status=no",
+      "toolbar=no",
+      "menubar=no",
+      "location=yes"
+    ].join(",");
+
+    // Browsers and operating systems can adjust exact popup bounds, but these
+    // features give Google Voice a consistent preferred call-window size.
+    const popup = window.open(voiceUrl, "UrbanYardsGoogleVoice", features);
+    if (popup) {
+      popup.focus();
       return true;
     }
-    window.location.href = url;
+
+    window.open(voiceUrl, "_blank");
     return false;
   }
 
@@ -1143,7 +1160,7 @@
         <a class="phone-call-link" href="${escapeHtml(info.href)}">${escapeHtml(info.display)}</a>
         <button class="inline-action phone-call-button" type="button" data-action="call-lead" data-id="${escapeHtml(leadId)}" data-lead-type="${escapeHtml(leadType)}" data-phone="${escapeHtml(info.e164)}">${buttonContent("Call", "call-lead")}</button>
         <button class="inline-action" type="button" data-action="copy-phone" data-phone="${escapeHtml(info.e164)}">${buttonContent("Copy number", "copy-phone")}</button>
-        ${options.helper === false ? "" : `<small>Opens Google Voice with the number ready when supported, and copies the number as backup. <a href="${escapeHtml(GOOGLE_VOICE_HOME_URL)}" target="_blank" rel="noopener noreferrer">Open Google Voice</a></small>`}
+        ${options.helper === false ? "" : `<small>Google Voice opens in a separate call window. Calls are handled by Google Voice. <a href="${escapeHtml(GOOGLE_VOICE_HOME_URL)}" target="_blank" rel="noopener noreferrer">Open Google Voice</a></small>`}
       </div>
     `;
   }
@@ -1272,7 +1289,7 @@
             <button class="inline-action" type="button" data-action="open-google-voice-call" data-phone="${escapeHtml(info.e164 || "")}">${buttonContent("Open Google Voice", "call-lead")}</button>
           </div>
         </div>
-        <p class="call-helper-note">This opens Google Voice in a small browser window when possible and copies the number as backup. Calls still happen in Google Voice, not inside the dashboard.</p>
+        <p class="call-helper-note">Google Voice opens in a separate call window. Calls are handled by Google Voice. The number is copied as a backup when your browser allows it.</p>
         <form class="call-panel-form" data-call-panel-form data-id="${escapeHtml(recent?.id || "")}" data-lead-id="${escapeHtml(context?.leadId || "")}" data-lead-type="${escapeHtml(context?.leadType || "lead")}" data-phone="${escapeHtml(info.e164 || "")}">
           <label>Outcome
             <select name="outcome">
@@ -8736,8 +8753,8 @@
       if (action === "open-google-voice-call") {
         const phone = phoneInfo(target.dataset.phone || "");
         if (phone.valid) await copyPhoneSilently(phone.e164);
-        openGoogleVoiceCall(phone.valid ? phone.e164 : "");
-        setDashboardState(phone.valid ? "Phone number copied. Paste into Google Voice to call." : "Google Voice opened.");
+        openGoogleVoiceWindow(phone.valid ? phone.e164 : "");
+        setDashboardState(phone.valid ? "Google Voice opened in the call window. Phone number copied as backup." : "Google Voice opened.");
         return;
       }
 
@@ -8747,7 +8764,7 @@
           setDashboardState("No valid phone number.", "error");
           return;
         }
-        openGoogleVoiceCall(phone.e164);
+        openGoogleVoiceWindow(phone.e164);
         const copied = await copyPhoneSilently(phone.e164);
         try {
           const activity = await insertLeadActivity({
@@ -8765,7 +8782,7 @@
           const slot = qs("[data-call-outcome-slot]");
           if (existingOutcomePanel) existingOutcomePanel.remove();
           if (existingPanel) {
-            setDashboardState(copied ? "Phone number copied. Paste into Google Voice to call. Call attempt logged." : "Google Voice opened. Call attempt logged.");
+            setDashboardState(copied ? "Google Voice opened in the call window. Phone number copied as backup. Call attempt logged." : "Google Voice opened. Call attempt logged.");
             return;
           }
           let outcomeSlot = slot;
@@ -8778,7 +8795,7 @@
           } else if (els.detailContent) {
             els.detailContent.insertAdjacentHTML("afterbegin", panel);
           }
-          setDashboardState(copied ? "Phone number copied. Paste into Google Voice to call. Call attempt logged." : "Google Voice opened. Call attempt logged.");
+          setDashboardState(copied ? "Google Voice opened in the call window. Phone number copied as backup. Call attempt logged." : "Google Voice opened. Call attempt logged.");
         } catch (error) {
           setDashboardState(error.message || "Google Voice opened, but the activity log could not be saved.", "error");
         }

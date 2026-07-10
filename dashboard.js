@@ -107,6 +107,20 @@
     "userProfiles",
     "auditLogs"
   ];
+  const GLOBAL_ADD_ITEMS = [
+    { key: "prospect", label: "Prospect", action: "new-outreach-prospect", icon: "outreach-send.svg", permission: "create" },
+    { key: "contact", label: "Contact", action: "quick-add-client", icon: "new-lead-user.svg", permission: "create" },
+    { key: "property", label: "Property", action: "quick-add-property", icon: "properties-building.svg", permission: "create" },
+    { key: "job", label: "Job", action: "quick-add-job", icon: "calendar.svg", permission: "create" },
+    { key: "follow-up", label: "Follow-up", action: "quick-add-follow-up", icon: "upcoming-clock.svg", permission: "create" },
+    { key: "equipment", label: "Equipment Item", action: "quick-add-equipment", icon: "activity-check-circle.svg", permission: "create" }
+  ];
+  const FOLLOW_UP_SUGGESTIONS = [
+    ["tomorrow", "Tomorrow", 1],
+    ["three-days", "3 Days", 3],
+    ["one-week", "1 Week", 7],
+    ["two-weeks", "2 Weeks", 14]
+  ];
 
   const config = window.URBAN_YARDS_DASHBOARD_CONFIG || {
     supabaseUrl: "",
@@ -166,6 +180,9 @@
     importExportPendingFile: null,
     importExportPreview: null,
     importExportHistoryLoadedAt: "",
+    addMenuOpen: false,
+    globalSearchOpen: false,
+    globalSearchActiveIndex: -1,
     trainingPreviewMode: "draft",
     trainingMessages: [],
     trainingPreviewMessages: [],
@@ -354,9 +371,12 @@
       "open-outreach-prospect": "-&gt;",
       "open-submission": "-&gt;",
       "print-document": "PDF",
+      "quick-add-equipment": "+",
       "quick-add-job": "+",
       "quick-add-operation": "+",
+      "quick-add-property": "+",
       "quick-add-quote": "+",
+      "review-import-history": "IN",
       "reschedule-job": "R",
       "route-outreach-prospect": "M",
       "sync-contact": "~",
@@ -388,6 +408,519 @@
 
   function loadingState(message) {
     return `<div class="loading-state">${escapeHtml(message)}</div>`;
+  }
+
+  function dashboardCanCreate() {
+    return hasDashboardPermission("create");
+  }
+
+  function setGlobalAddOpen(open) {
+    state.addMenuOpen = Boolean(open);
+    renderGlobalAddMenu();
+  }
+
+  function renderGlobalAddMenu() {
+    if (!els.globalAddMenu || !els.globalAddButton) return;
+    els.globalAddButton.setAttribute("aria-expanded", state.addMenuOpen ? "true" : "false");
+    els.globalAddMenu.hidden = !state.addMenuOpen;
+    if (!state.addMenuOpen) return;
+    const items = GLOBAL_ADD_ITEMS.filter((item) => !item.permission || hasDashboardPermission(item.permission));
+    els.globalAddMenu.innerHTML = items.length ? items.map((item) => `
+      <button type="button" role="menuitem" data-action="${escapeHtml(item.action)}">
+        <img src="${dashboardIcon(item.icon)}" alt="" aria-hidden="true">
+        <span>${escapeHtml(item.label)}</span>
+      </button>
+    `).join("") : `<div class="global-add-empty">You do not have permission to add records.</div>`;
+  }
+
+  function closeGlobalSearchPanel() {
+    state.globalSearchOpen = false;
+    state.globalSearchActiveIndex = -1;
+    renderGlobalSearchPanel();
+  }
+
+  function recordMatchesGlobalQuery(values, query) {
+    const normalizedQuery = normalizeLookup(query);
+    const digits = String(query || "").replace(/\D/g, "");
+    if (!normalizedQuery && digits.length < 3) return false;
+    return values.some((value) => {
+      const normalized = normalizeLookup(value);
+      const valueDigits = String(value || "").replace(/\D/g, "");
+      return Boolean(
+        (normalizedQuery && normalized.includes(normalizedQuery))
+        || (digits.length >= 3 && valueDigits.includes(digits))
+      );
+    });
+  }
+
+  function groupedGlobalSearchResults(query, data = state.data) {
+    const search = String(query || "").trim();
+    if (search.length < 2) return [];
+    const groups = [
+      {
+        label: "Contacts",
+        rows: data.contacts
+          .filter((item) => recordMatchesGlobalQuery([item.name, item.email, item.phone, item.city, item.type], search))
+          .slice(0, 5)
+          .map((item) => ({
+            title: item.name,
+            detail: [item.type, item.city, phoneInfo(item.phone).valid ? phoneInfo(item.phone).display : ""].filter(Boolean).join(" / "),
+            action: "open-contact",
+            id: item.id,
+            phone: item.phone,
+            leadType: "contact"
+          }))
+      },
+      {
+        label: "Companies",
+        rows: data.outreachCompanies
+          .filter((item) => recordMatchesGlobalQuery([item.company, item.contact, item.email, item.phone, item.website, item.serviceArea, item.notes], search))
+          .slice(0, 5)
+          .map((item) => ({
+            title: item.company,
+            detail: [item.contact, item.serviceArea || item.city, phoneInfo(item.phone).valid ? phoneInfo(item.phone).display : ""].filter(Boolean).join(" / "),
+            action: "open-outreach-company",
+            id: item.id,
+            phone: item.phone,
+            leadType: "outreach_company"
+          }))
+      },
+      {
+        label: "Properties",
+        rows: data.outreachProperties
+          .filter((item) => recordMatchesGlobalQuery([item.propertyName, item.company, item.address, item.city, item.neighborhood, item.visibleNeeds, item.notes], search))
+          .slice(0, 5)
+          .map((item) => ({
+            title: item.propertyName || item.address || "Managed property",
+            detail: [item.company, item.address, item.city].filter(Boolean).join(" / "),
+            action: "open-outreach-property",
+            id: item.id
+          }))
+      },
+      {
+        label: "Prospects",
+        rows: data.outreachProspects
+          .filter((item) => recordMatchesGlobalQuery([item.propertyName, item.managementCompany, item.contactName, item.email, item.phone, item.address, item.city, item.notes], search))
+          .slice(0, 5)
+          .map((item) => ({
+            title: item.contactName || item.propertyName || "Prospect",
+            detail: [item.managementCompany, item.city, phoneInfo(item.phone).valid ? phoneInfo(item.phone).display : ""].filter(Boolean).join(" / "),
+            action: "open-outreach-prospect",
+            id: item.id,
+            phone: item.phone,
+            leadType: "outreach_prospect"
+          }))
+      },
+      {
+        label: "Jobs",
+        rows: data.jobs
+          .filter((item) => recordMatchesGlobalQuery([item.site, item.city, item.service, item.status, item.date, item.window], search))
+          .slice(0, 5)
+          .map((item) => ({
+            title: item.site,
+            detail: [item.service, item.date, item.status].filter(Boolean).join(" / "),
+            action: "edit-job",
+            id: item.id
+          }))
+      },
+      {
+        label: "Notes",
+        rows: data.notes
+          .filter((item) => recordMatchesGlobalQuery([item.title, item.body, item.date], search))
+          .slice(0, 4)
+          .map((item) => ({
+            title: item.title,
+            detail: item.body || item.date,
+            action: "",
+            id: item.id
+          }))
+      }
+    ].map((group) => ({ ...group, rows: group.rows.filter(Boolean) })).filter((group) => group.rows.length);
+    return groups;
+  }
+
+  function globalSearchFlatResults(groups) {
+    return groups.flatMap((group) => group.rows.map((row) => ({ ...row, group: group.label })));
+  }
+
+  function renderGlobalSearchPanel() {
+    if (!els.globalSearchPanel) return;
+    const query = String(state.search || "").trim();
+    const groups = state.globalSearchOpen ? groupedGlobalSearchResults(query) : [];
+    const flat = globalSearchFlatResults(groups);
+    if (!state.globalSearchOpen || query.length < 2) {
+      els.globalSearchPanel.hidden = true;
+      els.globalSearchPanel.innerHTML = "";
+      return;
+    }
+    els.globalSearchPanel.hidden = false;
+    if (!flat.length) {
+      els.globalSearchPanel.innerHTML = `
+        <div class="global-search-empty">
+          <strong>No matching results</strong>
+          <span>Try another name, phone number, address, or email.</span>
+        </div>
+      `;
+      return;
+    }
+    let flatIndex = -1;
+    els.globalSearchPanel.innerHTML = groups.map((group) => `
+      <section class="global-search-group">
+        <h4>${escapeHtml(group.label)}</h4>
+        ${group.rows.map((row) => {
+          flatIndex += 1;
+          const isActive = flatIndex === state.globalSearchActiveIndex;
+          const phone = phoneInfo(row.phone);
+          return `
+            <div class="global-search-result-row${isActive ? " is-active" : ""}">
+              ${row.action ? `<button class="global-search-result" type="button" data-global-search-result data-action="${escapeHtml(row.action)}" data-id="${escapeHtml(row.id)}">
+                <span><strong>${escapeHtml(row.title)}</strong><small>${escapeHtml(row.detail || row.group || "")}</small></span>
+              </button>` : `<div class="global-search-result"><span><strong>${escapeHtml(row.title)}</strong><small>${escapeHtml(row.detail || "")}</small></span></div>`}
+              ${phone.valid ? `<button class="inline-action" type="button" data-action="call-lead" data-id="${escapeHtml(row.id)}" data-lead-type="${escapeHtml(row.leadType || "lead")}" data-phone="${escapeHtml(phone.e164)}">Call</button>` : ""}
+            </div>
+          `;
+        }).join("")}
+      </section>
+    `).join("");
+  }
+
+  function openGlobalSearchResult(row) {
+    if (!row || !row.action) return;
+    closeGlobalSearchPanel();
+    if (row.action === "open-contact") openContactDrawer(row.id);
+    else if (row.action === "open-outreach-company") openOutreachCompanyDrawer(row.id);
+    else if (row.action === "open-outreach-property") openOutreachPropertyDrawer(row.id);
+    else if (row.action === "open-outreach-prospect") openOutreachDrawer(row.id);
+    else if (row.action === "edit-job") openJobDrawer(row.id);
+  }
+
+  function dueStatusLabel(dateRaw) {
+    const today = todayKey();
+    if (!dateRaw) return "Upcoming";
+    if (dateRaw < today) return "Overdue";
+    if (dateRaw === today) return "Today";
+    return "Upcoming";
+  }
+
+  function urgencyRank(dateRaw, fallback = 3) {
+    const today = todayKey();
+    if (!dateRaw) return fallback;
+    if (dateRaw < today) return 0;
+    if (dateRaw === today) return 1;
+    return 2;
+  }
+
+  function todayActionItems(data = state.data) {
+    const today = todayKey();
+    const soon = daysFromToday(3);
+    const items = [];
+    const push = (item) => items.push({ id: `${item.type || "item"}-${item.id || items.length}`, ...item });
+
+    overdueJobs(data).slice(0, 4).forEach((job) => push({
+      type: "job",
+      status: "Overdue",
+      urgency: 0,
+      title: `${job.site} missed its deadline`,
+      detail: `${job.date} / ${job.service}`,
+      action: "reschedule-job",
+      actionLabel: "Reschedule",
+      id: job.id
+    }));
+
+    data.reminders
+      .filter((item) => item.status !== "Completed" && item.dueRaw && item.dueRaw <= soon)
+      .slice(0, 5)
+      .forEach((item) => push({
+        type: "follow-up",
+        status: dueStatusLabel(item.dueRaw),
+        urgency: urgencyRank(item.dueRaw),
+        title: item.task,
+        detail: item.dueRaw ? `Due ${item.due}` : "Follow-up",
+        action: "complete-reminder",
+        actionLabel: "Done",
+        id: item.id
+      }));
+
+    data.outreachProspects
+      .filter((item) => OUTREACH_ACTIVE_STATUSES.includes(item.status) && item.nextFollowUpAtRaw && item.nextFollowUpAtRaw <= soon)
+      .slice(0, 6)
+      .forEach((item) => {
+        const phone = phoneInfo(item.phone);
+        push({
+          type: "lead",
+          status: dueStatusLabel(item.nextFollowUpAtRaw),
+          urgency: urgencyRank(item.nextFollowUpAtRaw),
+          title: item.contactName || item.propertyName || "Prospect follow-up",
+          detail: [item.managementCompany, item.nextFollowUpAt].filter(Boolean).join(" / "),
+          action: phone.valid ? "call-lead" : "open-outreach-prospect",
+          actionLabel: phone.valid ? "Call" : "Open",
+          id: item.id,
+          leadType: "outreach_prospect",
+          phone: phone.e164
+        });
+      });
+
+    data.outreachCompanies
+      .filter((item) => OUTREACH_ACTIVE_STATUSES.includes(item.status) && item.followUpRaw && item.followUpRaw <= soon)
+      .slice(0, 4)
+      .forEach((item) => {
+        const phone = phoneInfo(item.phone);
+        push({
+          type: "company",
+          status: dueStatusLabel(item.followUpRaw),
+          urgency: urgencyRank(item.followUpRaw),
+          title: item.company,
+          detail: [item.contact, item.followUp].filter(Boolean).join(" / "),
+          action: phone.valid ? "call-lead" : "open-outreach-company",
+          actionLabel: phone.valid ? "Call" : "Open",
+          id: item.id,
+          leadType: "outreach_company",
+          phone: phone.e164
+        });
+      });
+
+    data.jobs
+      .filter((job) => job.dateRaw >= today && job.dateRaw <= soon && isIncompleteJob(job))
+      .slice(0, 5)
+      .forEach((job) => push({
+        type: "job",
+        status: dueStatusLabel(job.dateRaw),
+        urgency: urgencyRank(job.dateRaw),
+        title: job.site,
+        detail: `${job.date} / ${job.window} / ${job.service}`,
+        action: "edit-job",
+        actionLabel: "Open Job",
+        id: job.id
+      }));
+
+    data.documents
+      .filter((doc) => doc.type === "invoice" && doc.status !== "paid" && doc.dueDateRaw && doc.dueDateRaw <= soon)
+      .slice(0, 4)
+      .forEach((doc) => push({
+        type: "payment",
+        status: dueStatusLabel(doc.dueDateRaw),
+        urgency: urgencyRank(doc.dueDateRaw),
+        title: `${doc.clientName || "Client"} payment`,
+        detail: `${doc.number || "Invoice"} due ${doc.dueDate}`,
+        action: "open-document",
+        actionLabel: "Review",
+        id: doc.id
+      }));
+
+    (data.importExport?.history?.imports || [])
+      .filter((row) => !row.rollback_status && ["partial", "warning", "needs_review"].includes(String(row.status || "").toLowerCase()))
+      .slice(0, 3)
+      .forEach((row) => push({
+        type: "import",
+        status: "Review",
+        urgency: 3,
+        title: "Recent import needs review",
+        detail: row.created_at ? formatDate(row.created_at) : "Import history",
+        action: "review-import-history",
+        actionLabel: "Review Import",
+        id: row.id,
+        importView: "history"
+      }));
+
+    return items
+      .sort((a, b) => (a.urgency - b.urgency) || String(a.title).localeCompare(String(b.title)))
+      .slice(0, 8);
+  }
+
+  function renderTodayActionButton(item) {
+    const attrs = [`type="button"`, `data-action="${escapeHtml(item.action)}"`];
+    if (item.id) attrs.push(`data-id="${escapeHtml(item.id)}"`);
+    if (item.leadType) attrs.push(`data-lead-type="${escapeHtml(item.leadType)}"`);
+    if (item.phone) attrs.push(`data-phone="${escapeHtml(item.phone)}"`);
+    if (item.importView) attrs.push(`data-import-export-view="${escapeHtml(item.importView)}"`);
+    return `<button class="inline-action" ${attrs.join(" ")}>${buttonContent(item.actionLabel || "Open", item.action)}</button>`;
+  }
+
+  function renderTodayActions(data) {
+    if (!els.todayActions) return;
+    const items = todayActionItems(data);
+    if (!items.length) {
+      els.todayActions.innerHTML = `
+        <div class="home-empty-state compact today-caught-up">
+          <img src="${homeDashboardIcon("activity-check.svg")}" alt="" aria-hidden="true">
+          <strong>You're caught up.</strong>
+          <p>Nothing needs immediate attention today.</p>
+        </div>
+      `;
+      return;
+    }
+    els.todayActions.innerHTML = items.map((item) => `
+      <article class="today-action-item urgency-${escapeHtml(slug(item.status))}">
+        <span class="today-action-status">${escapeHtml(item.status)}</span>
+        <div>
+          <strong>${escapeHtml(item.title)}</strong>
+          <small>${escapeHtml(item.detail || "Review this item.")}</small>
+        </div>
+        ${renderTodayActionButton(item)}
+      </article>
+    `).join("");
+  }
+
+  function safeEmail(value) {
+    const email = String(value || "").trim();
+    return email && !/no email/i.test(email) && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) ? email : "";
+  }
+
+  function renderContactQuickActions(context = {}) {
+    const phone = phoneInfo(context.phone || "");
+    const email = safeEmail(context.email);
+    return `
+      <section class="contact-quick-actions" aria-label="Contact quick actions">
+        <button type="button" data-action="call-lead" data-id="${escapeHtml(context.leadId || "")}" data-lead-type="${escapeHtml(context.leadType || "lead")}" data-phone="${escapeHtml(phone.e164 || "")}"${phone.valid ? "" : " disabled title=\"No valid phone number\""}>${buttonContent("Call", "call-lead")}</button>
+        ${email ? `<a class="inline-action" href="mailto:${escapeHtml(email)}">${buttonContent("Email", "quick-add-client")}</a>` : `<button class="inline-action" type="button" disabled title="No email saved">${buttonContent("Email", "quick-add-client")}</button>`}
+        <button class="inline-action" type="button" data-action="quick-add-note-from-detail" data-related-title="${escapeHtml(context.name || "Contact")}">${buttonContent("Add Note", "quick-add-operation")}</button>
+        <button class="inline-action" type="button" data-action="schedule-follow-up-from-detail" data-related-title="${escapeHtml(context.name || "Contact")}" data-related-context="${escapeHtml(context.companyProperty || "")}">${buttonContent("Schedule Follow-Up", "quick-add-follow-up")}</button>
+        <button class="inline-action" type="button" data-action="focus-drawer-edit">${buttonContent("Edit", "edit-job")}</button>
+      </section>
+    `;
+  }
+
+  function activityEntry(type, title, detail, dateRaw, meta = {}) {
+    return {
+      type,
+      title,
+      detail,
+      dateRaw: dateRaw || "",
+      date: dateRaw ? formatDate(dateRaw) : "",
+      ...meta
+    };
+  }
+
+  function activityTimelineFor(context = {}) {
+    const terms = [context.name, context.companyProperty, context.email, context.phone].filter(Boolean);
+    const matchesContext = (values) => terms.some((term) => recordMatchesGlobalQuery(values, term));
+    const entries = [];
+    callHistoryFor(context.leadId || "").forEach((activity) => entries.push(activityEntry("Call", activity.outcomeLabel, activity.notes || activity.phoneDisplay, activity.createdAtRaw)));
+    state.data.reminders
+      .filter((item) => matchesContext([item.task, item.status, item.due]))
+      .slice(0, 6)
+      .forEach((item) => entries.push(activityEntry("Follow-Up", item.task, `Due ${item.due} / ${item.status}`, item.dueRaw)));
+    state.data.notes
+      .filter((item) => matchesContext([item.title, item.body]))
+      .slice(0, 6)
+      .forEach((item) => entries.push(activityEntry("Note", item.title, item.body, item.createdAtRaw)));
+    state.data.jobs
+      .filter((item) => matchesContext([item.site, item.city, item.service, item.status]))
+      .slice(0, 6)
+      .forEach((item) => entries.push(activityEntry("Job", item.site, `${item.service} / ${item.status}`, item.dateRaw)));
+    state.data.documents
+      .filter((item) => matchesContext([item.clientName, item.clientEmail, item.number, item.type, item.status]))
+      .slice(0, 6)
+      .forEach((item) => entries.push(activityEntry("Quote", item.number || item.type, `${item.type} / ${item.status}`, item.issueDateRaw || item.dueDateRaw)));
+    return entries
+      .sort((a, b) => String(b.dateRaw || "").localeCompare(String(a.dateRaw || "")))
+      .slice(0, 12);
+  }
+
+  function renderActivityTimeline(context = {}) {
+    const entries = activityTimelineFor(context);
+    if (!entries.length) {
+      return `<section class="activity-timeline-panel"><h4>Activity Timeline</h4>${emptyState("No calls, notes, jobs, or follow-ups are linked yet.")}</section>`;
+    }
+    return `
+      <section class="activity-timeline-panel">
+        <div class="panel-heading">
+          <div>
+            <h4>Activity Timeline</h4>
+            <p>Calls, notes, follow-ups, jobs, and quote activity in one place.</p>
+          </div>
+        </div>
+        <div class="activity-timeline-list">
+          ${entries.map((entry) => `
+            <article class="activity-timeline-item">
+              <span>${escapeHtml(entry.type)}</span>
+              <div>
+                <strong>${escapeHtml(entry.title)}</strong>
+                <p>${escapeHtml(entry.detail || "No extra detail.")}</p>
+                ${entry.date ? `<small>${escapeHtml(entry.date)}</small>` : ""}
+              </div>
+            </article>
+          `).join("")}
+        </div>
+      </section>
+    `;
+  }
+
+  function likelyDuplicateMatches(scope, form) {
+    const data = new FormData(form);
+    const name = String(data.get("name") || data.get("contact_name") || data.get("property_name") || data.get("company") || "").trim();
+    const company = String(data.get("management_company") || data.get("company") || "").trim();
+    const email = safeEmail(data.get("email"));
+    const phone = phoneInfo(data.get("phone"));
+    const address = String(data.get("address") || data.get("city") || "").trim();
+    const matches = [];
+    const pushMatch = (label, title, detail, action, id) => {
+      if (id && !matches.some((item) => item.id === id && item.action === action)) {
+        matches.push({ label, title, detail, action, id });
+      }
+    };
+
+    state.data.contacts.forEach((contact) => {
+      const contactPhone = phoneInfo(contact.phone);
+      const phoneMatch = phone.valid && contactPhone.valid && phone.e164 === contactPhone.e164;
+      const emailMatch = email && safeEmail(contact.email).toLowerCase() === email.toLowerCase();
+      const nameMatch = name && hasLookupMatch([name], [contact.name, contact.type, contact.city]);
+      if (phoneMatch || emailMatch || (scope === "contact" && nameMatch)) {
+        pushMatch("Contact", contact.name, [contact.email, contactPhone.display, contact.city].filter(Boolean).join(" / "), "open-contact", contact.id);
+      }
+    });
+
+    state.data.outreachProspects.forEach((prospect) => {
+      const prospectPhone = phoneInfo(prospect.phone);
+      const phoneMatch = phone.valid && prospectPhone.valid && phone.e164 === prospectPhone.e164;
+      const emailMatch = email && safeEmail(prospect.email).toLowerCase() === email.toLowerCase();
+      const nameCompanyMatch = name && company && hasLookupMatch([name, company], [prospect.propertyName, prospect.contactName, prospect.managementCompany]);
+      if (phoneMatch || emailMatch || nameCompanyMatch) {
+        pushMatch("Prospect", prospect.contactName || prospect.propertyName, [prospect.managementCompany, prospectPhone.display].filter(Boolean).join(" / "), "open-outreach-prospect", prospect.id);
+      }
+    });
+
+    state.data.outreachCompanies.forEach((item) => {
+      const companyPhone = phoneInfo(item.phone);
+      const phoneMatch = phone.valid && companyPhone.valid && phone.e164 === companyPhone.e164;
+      const emailMatch = email && safeEmail(item.email).toLowerCase() === email.toLowerCase();
+      const companyMatch = company && normalizeDedupeKey(company) === normalizeDedupeKey(item.company);
+      if (phoneMatch || emailMatch || companyMatch) {
+        pushMatch("Company", item.company, [item.contact, item.serviceArea, companyPhone.display].filter(Boolean).join(" / "), "open-outreach-company", item.id);
+      }
+    });
+
+    state.data.outreachProperties.forEach((property) => {
+      const addressMatch = address && normalizeDedupeKey(address) === normalizeDedupeKey(property.address);
+      const nameCompanyMatch = name && company && normalizeDedupeKey(`${name} ${company}`) === normalizeDedupeKey(`${property.propertyName} ${property.company}`);
+      if (addressMatch || nameCompanyMatch) {
+        pushMatch("Property", property.propertyName || property.address, [property.company, property.address, property.city].filter(Boolean).join(" / "), "open-outreach-property", property.id);
+      }
+    });
+    return matches.slice(0, 4);
+  }
+
+  function renderDuplicateWarning(form) {
+    const slot = form.querySelector("[data-duplicate-warning]");
+    if (!slot) return;
+    const scope = slot.dataset.duplicateScope || form.dataset.duplicateScope || "record";
+    const matches = likelyDuplicateMatches(scope, form);
+    slot.hidden = !matches.length;
+    slot.innerHTML = matches.length ? `
+      <strong>Possible duplicate found</strong>
+      <p>A similar ${escapeHtml(scope)} may already exist. You can open it or keep saving a separate record.</p>
+      <div>
+        ${matches.map((item) => `<button class="inline-action" type="button" data-action="${escapeHtml(item.action)}" data-id="${escapeHtml(item.id)}"><span>${escapeHtml(item.label)}:</span> ${escapeHtml(item.title)}</button>`).join("")}
+      </div>
+    ` : "";
+  }
+
+  function applyFollowUpSuggestion(form, days) {
+    const input = form?.querySelector("input[name='follow_up_date'], input[name='next_follow_up_at'], input[name='follow_up'], input[name='due_date']");
+    if (input) {
+      input.value = daysFromToday(days);
+      input.dispatchEvent(new Event("change", { bubbles: true }));
+    }
   }
 
   function setDashboardState(message, tone) {
@@ -1468,6 +2001,10 @@
           <label>Follow-up date
             <input name="follow_up_date" type="date" value="${escapeHtml(recent?.followUpDateRaw || "")}">
           </label>
+          <div class="follow-up-suggestions span-full" aria-label="Quick follow-up dates">
+            ${FOLLOW_UP_SUGGESTIONS.map(([key, label, days]) => `<button class="inline-action" type="button" data-action="set-follow-up-suggestion" data-days="${escapeHtml(days)}" data-suggestion="${escapeHtml(key)}">${escapeHtml(label)}</button>`).join("")}
+            <button class="inline-action" type="button" data-action="clear-follow-up-suggestion">No Follow-Up</button>
+          </div>
           <label class="span-full">Call notes
             <textarea name="notes" rows="3" placeholder="Notes from the call, voicemail, or next step...">${escapeHtml(recent?.notes || "")}</textarea>
           </label>
@@ -1498,6 +2035,10 @@
           </div>
           <label>Notes<textarea name="notes" rows="3" placeholder="Quick notes from the call">${escapeHtml(activity.notes || "")}</textarea></label>
           <label>Follow-up date<input name="follow_up_date" type="date" value="${escapeHtml(activity.followUpDateRaw || "")}"></label>
+          <div class="follow-up-suggestions">
+            ${FOLLOW_UP_SUGGESTIONS.map(([key, label, days]) => `<button class="inline-action" type="button" data-action="set-follow-up-suggestion" data-days="${escapeHtml(days)}" data-suggestion="${escapeHtml(key)}">${escapeHtml(label)}</button>`).join("")}
+            <button class="inline-action" type="button" data-action="clear-follow-up-suggestion">No Follow-Up</button>
+          </div>
           <button type="submit">${buttonContent("Save Call Outcome", "complete-reminder")}</button>
         </form>
       </section>
@@ -3219,15 +3760,15 @@
     return payload;
   }
 
-  function outreachPropertyPayloadFromForm(form, company) {
+  function outreachPropertyPayloadFromForm(form, company = {}) {
     const formData = new FormData(form);
     const propertyName = String(formData.get("property_name") || "").trim();
     const address = String(formData.get("address") || "").trim();
     const city = String(formData.get("city") || "").trim();
     if (!propertyName && !address) throw new Error("Add a property name or address.");
     return {
-      company_id: company.id,
-      company: company.company,
+      company_id: company.id || null,
+      company: company.company || String(formData.get("company") || "").trim() || null,
       property_name: propertyName || null,
       address: address || null,
       city: city || company.serviceArea || company.city || null,
@@ -6554,7 +7095,16 @@
       <div class="drawer-content outreach-drawer">
         <p class="eyebrow">Outreach</p>
         <h3>${escapeHtml(title)}</h3>
-        <form class="drawer-form outreach-form" data-outreach-form data-id="${escapeHtml(item?.id || "")}">
+        ${item ? renderContactQuickActions({
+          leadId: item.id,
+          leadType: "outreach_prospect",
+          name: item.contactName || item.propertyName || "Prospect",
+          companyProperty: [item.managementCompany, item.propertyName, item.city].filter(Boolean).join(" / "),
+          phone: item.phone,
+          email: item.email
+        }) : ""}
+        <form class="drawer-form outreach-form" data-outreach-form data-id="${escapeHtml(item?.id || "")}" data-duplicate-scope="prospect">
+          <div class="duplicate-warning span-full" data-duplicate-warning data-duplicate-scope="prospect" hidden></div>
           <label>Property name<input name="property_name" value="${escapeHtml(item?.propertyName || "")}" placeholder="Example: Cedar Court Apartments"></label>
           <label>Management company<input name="management_company" value="${escapeHtml(item?.managementCompany || "")}" placeholder="Company or owner group"></label>
           <label>Contact name<input name="contact_name" value="${escapeHtml(item?.contactName || "")}" placeholder="Primary contact"></label>
@@ -6579,7 +7129,14 @@
           </div>
         </form>
         ${item ? renderCallPanel(callPanelContext("outreach_prospect", item.id)) : ""}
-        ${item ? `<div data-call-outcome-slot></div>${renderCallHistory(item.id)}` : ""}
+        ${item ? `<div data-call-outcome-slot></div>${renderActivityTimeline({
+          leadId: item.id,
+          leadType: "outreach_prospect",
+          name: item.contactName || item.propertyName || "Prospect",
+          companyProperty: [item.managementCompany, item.propertyName, item.city].filter(Boolean).join(" / "),
+          phone: item.phone,
+          email: item.email
+        })}` : ""}
       </div>
     `;
   }
@@ -6645,6 +7202,14 @@
       <div class="drawer-content outreach-drawer">
         <p class="eyebrow">Outreach Company</p>
         <h3>${escapeHtml(company.company)}</h3>
+        ${renderContactQuickActions({
+          leadId: company.id,
+          leadType: "outreach_company",
+          name: company.contact || company.company,
+          companyProperty: [company.company, company.serviceArea || company.city].filter(Boolean).join(" / "),
+          phone: company.phone,
+          email: company.email
+        })}
         <form class="drawer-form outreach-form" data-outreach-company-form data-id="${escapeHtml(company.id)}">
           <label>Company name<input name="company" value="${escapeHtml(company.company)}" required></label>
           <label>Contact<input name="contact" value="${escapeHtml(company.contact || "")}"></label>
@@ -6664,7 +7229,14 @@
         </form>
         ${renderCallPanel(callPanelContext("outreach_company", company.id))}
         <div data-call-outcome-slot></div>
-        ${renderCallHistory(company.id)}
+        ${renderActivityTimeline({
+          leadId: company.id,
+          leadType: "outreach_company",
+          name: company.company,
+          companyProperty: [company.contact, company.serviceArea || company.city].filter(Boolean).join(" / "),
+          phone: company.phone,
+          email: company.email
+        })}
         <h4>Managed properties (${properties.length})</h4>
         <div class="profile-mini-list">
           ${properties.length ? properties.map((property) => `
@@ -6686,14 +7258,48 @@
     `;
   }
 
+  function openOutreachPropertyCreateDrawer() {
+    if (!els.detailDrawer || !els.detailContent) return;
+    openDetailDrawer();
+    els.detailContent.innerHTML = `
+      <div class="drawer-content outreach-drawer">
+        <p class="eyebrow">Managed Property</p>
+        <h3>Add Property</h3>
+        <form class="drawer-form outreach-form" data-outreach-property-quick-form data-duplicate-scope="property">
+          <div class="duplicate-warning span-full" data-duplicate-warning data-duplicate-scope="property" hidden></div>
+          <label>Property name<input name="property_name" placeholder="Example: Cedar Court Apartments"></label>
+          <label>Company<input name="company" placeholder="Management company or owner group"></label>
+          <label>Address<input name="address" placeholder="Street address" autocomplete="street-address" data-address-autocomplete></label>
+          <label>City<input name="city" placeholder="City or service area"></label>
+          <label>Neighborhood<input name="neighborhood" placeholder="Neighborhood / location notes"></label>
+          <label class="span-full">Notes<textarea name="notes" rows="4" placeholder="Visible needs, access notes, contact context..."></textarea></label>
+          <div class="drawer-actions span-full">
+            <button type="submit">${buttonContent("Add Property", "new-outreach-prospect")}</button>
+            <button class="inline-action" type="button" data-action="new-outreach-prospect">${buttonContent("Add as Prospect Instead", "new-outreach-prospect")}</button>
+          </div>
+        </form>
+      </div>
+    `;
+  }
+
   function openOutreachPropertyDrawer(id) {
     const property = state.data.outreachProperties.find((item) => item.id === id);
     if (!property || !els.detailDrawer || !els.detailContent) return;
+    const company = state.data.outreachCompanies.find((item) => item.id === property.companyId || normalizeDedupeKey(item.company) === normalizeDedupeKey(property.company));
+    const quickContext = {
+      leadId: company?.id || property.id,
+      leadType: company ? "outreach_company" : "lead",
+      name: property.propertyName || property.address || "Managed property",
+      companyProperty: [property.company, property.address, property.city].filter(Boolean).join(" / "),
+      phone: company?.phone || "",
+      email: company?.email || ""
+    };
     openDetailDrawer();
     els.detailContent.innerHTML = `
       <div class="drawer-content outreach-drawer">
         <p class="eyebrow">Managed Property</p>
         <h3>${escapeHtml(property.propertyName)}</h3>
+        ${renderContactQuickActions(quickContext)}
         <div class="drawer-grid">
           <div class="drawer-field"><span>Company</span>${escapeHtml(property.company || "Not set")}</div>
           <div class="drawer-field"><span>Address</span>${escapeHtml([property.address, property.city, property.state, property.zip].filter(Boolean).join(", ") || "Not set")}</div>
@@ -6718,6 +7324,7 @@
           <button type="button" data-action="geocode-outreach-property" data-id="${escapeHtml(property.id)}">${buttonContent("Find Map Pin", "find-stop-map")}</button>
           <button type="button" class="danger-action" data-action="delete-outreach-property" data-id="${escapeHtml(property.id)}">${buttonContent("Delete Property", "delete-outreach-property")}</button>
         </div>
+        ${renderActivityTimeline(quickContext)}
       </div>
     `;
   }
@@ -6851,6 +7458,14 @@
         <p class="eyebrow">Quote Detail</p>
         <h3>${escapeHtml(item.name)}</h3>
         ${statusBadge(item.status)}
+        ${renderContactQuickActions({
+          leadId: item.id,
+          leadType: "quote_submission",
+          name: item.name,
+          companyProperty: [item.propertyType, item.city, item.service].filter(Boolean).join(" / "),
+          phone: item.phone,
+          email: item.email
+        })}
         <div class="drawer-grid">
           <div class="drawer-field"><span>Email</span>${escapeHtml(item.email)}</div>
           <div class="drawer-field drawer-phone-field"><span>Phone</span>${escapeHtml(phoneInfo(item.phone).display)}</div>
@@ -6881,7 +7496,14 @@
 
         ${renderCallPanel(callPanelContext("quote_submission", item.id))}
         <div data-call-outcome-slot></div>
-        ${renderCallHistory(item.id)}
+        ${renderActivityTimeline({
+          leadId: item.id,
+          leadType: "quote_submission",
+          name: item.name,
+          companyProperty: [item.propertyType, item.city, item.service].filter(Boolean).join(" / "),
+          phone: item.phone,
+          email: item.email
+        })}
 
         <form class="schedule-form" data-schedule-form>
           <h4>Create scheduled job/visit</h4>
@@ -6895,8 +7517,6 @@
           </div>
         </form>
 
-        <h4>Contact timeline</h4>
-        ${renderTimeline(item)}
       </div>
     `;
   }
@@ -6910,6 +7530,14 @@
       <div class="drawer-content">
         <p class="eyebrow">Client / Property Profile</p>
         <h3>${escapeHtml(contact.name)}</h3>
+        ${renderContactQuickActions({
+          leadId: contact.id,
+          leadType: "contact",
+          name: contact.name,
+          companyProperty: [contact.type, contact.city].filter(Boolean).join(" / "),
+          phone: contact.phone,
+          email: contact.email
+        })}
         <div class="profile-drawer-metrics">
           ${miniCount("jobs", profile.jobs.length)}
           ${miniCount("route stops", profile.routeStops.length)}
@@ -6918,7 +7546,8 @@
           ${miniCount("open follow-ups", profile.openFollowUps.length)}
           ${miniCount("Square owed", formatCurrency(profile.amountOwedCents, "USD"))}
         </div>
-        <form class="drawer-form" data-contact-edit data-id="${escapeHtml(contact.id)}">
+        <form class="drawer-form" data-contact-edit data-id="${escapeHtml(contact.id)}" data-duplicate-scope="contact">
+          <div class="duplicate-warning span-full" data-duplicate-warning data-duplicate-scope="contact" hidden></div>
           <label>Name<input name="name" value="${escapeHtml(contact.name)}" required></label>
           <label>Email<input name="email" type="email" value="${escapeHtml(contact.email === "No email" ? "" : contact.email)}"></label>
           <label>Phone<input name="phone" value="${escapeHtml(contact.phone === "No phone" ? "" : contact.phone)}"></label>
@@ -6936,7 +7565,14 @@
         </form>
         ${renderCallPanel(callPanelContext("contact", contact.id))}
         <div data-call-outcome-slot></div>
-        ${renderCallHistory(contact.id)}
+        ${renderActivityTimeline({
+          leadId: contact.id,
+          leadType: "contact",
+          name: contact.name,
+          companyProperty: [contact.type, contact.city].filter(Boolean).join(" / "),
+          phone: contact.phone,
+          email: contact.email
+        })}
         <div class="profile-drawer-grid">
           <section>
             <h4>Jobs / Visits</h4>
@@ -8160,6 +8796,7 @@
     if (!preview?.preview) return "";
     const summary = preview.preview.summary || {};
     const rows = preview.preview.rows || [];
+    const mappingTable = renderImportMappingTable(module, preview);
     return `<section class="import-export-preview">
       <div class="import-export-preview-head">
         <div>
@@ -8180,7 +8817,12 @@
         ${importExportSummaryCard("Rejected", summary.rejected || 0, summary.rejected ? "Fix these before import" : "")}
         ${summary.validPhones || summary.invalidPhones || summary.missingPhones ? importExportSummaryCard("Valid phones", summary.validPhones || 0, summary.invalidPhones ? `${summary.invalidPhones} invalid` : "") : ""}
       </div>
-      ${renderImportMappingTable(module, preview)}
+      ${mappingTable ? `
+        <details class="import-export-advanced">
+          <summary>Advanced Options <span>Column mapping</span></summary>
+          ${mappingTable}
+        </details>
+      ` : ""}
       <div class="import-export-row-preview">
         <div class="import-export-table-head">
           <strong>Row review</strong>
@@ -8201,30 +8843,54 @@
     const limits = importExportSnapshot(data).limits || {};
     if (!module) return emptyState("Import/export modules could not be loaded. Refresh after running the Supabase SQL.");
     return `<div class="import-export-grid">
-      <section class="import-export-card">
+      <section class="import-export-card import-export-guided-card">
         <div class="panel-heading">
           <div>
-            <h3>Guided Import</h3>
-            <p>Upload Excel or CSV, review mappings, validate rows, then save through the protected backend.</p>
+            <h3>Guided Spreadsheet Import</h3>
+            <p>Download the workbook, fill it in, upload it back, then review changes before saving.</p>
           </div>
         </div>
-        <label>Data type
-          <select data-import-export-module>
-            ${importExportModuleOptions(module.key)}
-          </select>
-        </label>
-        <div class="import-export-drop">
-          <strong>${escapeHtml(state.importExportPendingFile?.filename || "Choose a spreadsheet")}</strong>
-          <span>Excel .xlsx or CSV. Maximum ${escapeHtml(Math.round((limits.maxImportBytes || 5242880) / 1024 / 1024))} MB / ${escapeHtml(limits.maxImportRows || 2000)} rows.</span>
-          <button type="button" data-action="choose-import-spreadsheet">${buttonContent("Upload Completed Workbook", "import-outreach-csv")}</button>
+        <div class="spreadsheet-workflow-steps">
+          <article>
+            <span>1</span>
+            <div>
+              <strong>Download Template</strong>
+              <p>Current workbook: ${escapeHtml(module.label || "Dashboard records")}.</p>
+            </div>
+            <button class="inline-action" type="button" data-action="download-import-template" data-format="xlsx">${buttonContent("Download Template", "export-full-backup")}</button>
+          </article>
+          <article>
+            <span>2</span>
+            <div>
+              <strong>Upload Completed Sheet</strong>
+              <p>${escapeHtml(state.importExportPendingFile?.filename || `Excel .xlsx or CSV. Max ${Math.round((limits.maxImportBytes || 5242880) / 1024 / 1024)} MB / ${limits.maxImportRows || 2000} rows.`)}</p>
+            </div>
+            <button type="button" data-action="choose-import-spreadsheet">${buttonContent("Upload Sheet", "import-outreach-csv")}</button>
+          </article>
+          <article>
+            <span>3</span>
+            <div>
+              <strong>Review Import</strong>
+              <p>${state.importExportPreview?.preview ? "Preview is ready below. Confirm only after checking duplicates and rejected rows." : "A preview appears here before records are saved."}</p>
+            </div>
+            <button class="inline-action" type="button" data-action="refresh-import-preview"${state.importExportPendingFile ? "" : " disabled"}>${buttonContent("Review Import", "refresh-dashboard")}</button>
+          </article>
         </div>
-        <label class="span-full">Or paste CSV
-          <textarea data-import-paste rows="7" placeholder="Paste a header row and CSV records here..."></textarea>
-        </label>
-        <div class="import-export-card-actions">
-          <button type="button" data-action="preview-import-paste">${buttonContent("Preview Pasted CSV", "import-outreach-csv")}</button>
-          <button class="inline-action" type="button" data-action="download-import-template" data-format="xlsx">${buttonContent("Download Template", "export-full-backup")}</button>
-        </div>
+        <details class="import-export-advanced">
+          <summary>Advanced Options <span>CSV paste, workbook type, and mapping tools</span></summary>
+          <label>Workbook type
+            <select data-import-export-module>
+              ${importExportModuleOptions(module.key)}
+            </select>
+          </label>
+          <label class="span-full">Paste CSV instead of uploading
+            <textarea data-import-paste rows="7" placeholder="Paste a header row and CSV records here..."></textarea>
+          </label>
+          <div class="import-export-card-actions">
+            <button type="button" data-action="preview-import-paste">${buttonContent("Preview Pasted CSV", "import-outreach-csv")}</button>
+            <button class="inline-action" type="button" data-action="review-import-history">${buttonContent("View Import History", "review-import-history")}</button>
+          </div>
+        </details>
       </section>
       <aside class="import-export-card import-export-guidance">
         <p class="eyebrow">Import Safety</p>
@@ -8565,6 +9231,7 @@
     renderMetrics(data);
     renderDashboardAlerts(data);
     renderOverdueJobAlerts(data);
+    renderTodayActions(data);
     renderSubmissions(data);
     renderUpcoming(data);
     renderHomeReminders(data);
@@ -8588,6 +9255,8 @@
     renderActivityLog(data);
     renderCurrentProfileAvatar(data);
     renderEnvironmentIndicator();
+    renderGlobalAddMenu();
+    renderGlobalSearchPanel();
     bindAvatarFallbacks();
     if (els.todayChip) els.todayChip.textContent = new Date().toLocaleDateString("en-US", { weekday: "long", month: "short", day: "numeric" });
     setActiveSection(state.activeSection);
@@ -8780,6 +9449,8 @@
       if (event.key === "Escape") {
         setSidebarOpen(false);
         setNotificationsOpen(false);
+        setGlobalAddOpen(false);
+        closeGlobalSearchPanel();
       }
     });
 
@@ -8788,6 +9459,16 @@
       const target = event.target;
       if (els.notificationButton?.contains(target) || els.notificationPanel?.contains(target)) return;
       setNotificationsOpen(false);
+    });
+
+    document.addEventListener("click", (event) => {
+      const target = event.target;
+      if (state.addMenuOpen && !target.closest("[data-global-add-menu]") && !target.closest("[data-global-add-button]")) {
+        setGlobalAddOpen(false);
+      }
+      if (state.globalSearchOpen && !target.closest("[data-global-search-panel]") && !target.closest("[data-global-search]")) {
+        closeGlobalSearchPanel();
+      }
     });
 
     [els.notificationButton, els.notificationPanel].filter(Boolean).forEach((node) => {
@@ -8830,11 +9511,34 @@
     if (els.globalSearch) {
       els.globalSearch.addEventListener("input", async () => {
         state.search = els.globalSearch.value;
+        state.globalSearchOpen = state.search.trim().length >= 2;
+        state.globalSearchActiveIndex = -1;
         if (els.search && els.search.value !== state.search) els.search.value = state.search;
         if (els.clientSearch && els.clientSearch.value !== state.search) els.clientSearch.value = state.search;
         if (els.overviewSearch && els.overviewSearch.value !== state.search) els.overviewSearch.value = state.search;
         if (els.workSearch && els.workSearch.value !== state.search) els.workSearch.value = state.search;
         await render();
+      });
+      els.globalSearch.addEventListener("keydown", (event) => {
+        const groups = groupedGlobalSearchResults(state.search);
+        const flat = globalSearchFlatResults(groups).filter((row) => row.action);
+        if (event.key === "ArrowDown") {
+          event.preventDefault();
+          state.globalSearchOpen = true;
+          state.globalSearchActiveIndex = flat.length ? Math.min(flat.length - 1, state.globalSearchActiveIndex + 1) : -1;
+          renderGlobalSearchPanel();
+        } else if (event.key === "ArrowUp") {
+          event.preventDefault();
+          state.globalSearchOpen = true;
+          state.globalSearchActiveIndex = flat.length ? Math.max(0, state.globalSearchActiveIndex - 1) : -1;
+          renderGlobalSearchPanel();
+        } else if (event.key === "Enter" && flat.length) {
+          event.preventDefault();
+          const selected = flat[Math.max(0, state.globalSearchActiveIndex)];
+          openGlobalSearchResult(selected);
+        } else if (event.key === "Escape") {
+          closeGlobalSearchPanel();
+        }
       });
     }
 
@@ -9220,15 +9924,29 @@
       }
     });
 
+    els.appView.addEventListener("input", (event) => {
+      const form = event.target?.closest?.("form");
+      if (!form || !form.querySelector("[data-duplicate-warning]")) return;
+      window.clearTimeout(form._duplicateTimer);
+      form._duplicateTimer = window.setTimeout(() => renderDuplicateWarning(form), 250);
+    });
+
     els.appView.addEventListener("click", async (event) => {
       const target = event.target.closest("[data-action], [data-export]");
       if (!target) return;
 
       const action = target.dataset.action;
       const id = target.dataset.id;
+      if (action !== "toggle-global-add") setGlobalAddOpen(false);
+      if (target.closest("[data-global-search-panel]")) closeGlobalSearchPanel();
 
       if (target.dataset.export) {
         exportData(target.dataset.export);
+        return;
+      }
+
+      if (action === "toggle-global-add") {
+        setGlobalAddOpen(!state.addMenuOpen);
         return;
       }
 
@@ -9244,6 +9962,14 @@
 
       if (action === "set-import-export-view") {
         state.importExportView = target.dataset.importExportView || "import";
+        await render();
+        return;
+      }
+
+      if (action === "review-import-history") {
+        state.importExportView = "history";
+        setActiveSection("import-export");
+        history.replaceState(null, "", "#import-export");
         await render();
         return;
       }
@@ -9426,6 +10152,58 @@
           setDashboardState("Opened voicemail lead.");
         } else {
           setDashboardState("This voicemail is logged, but it is not linked to a lead record.", "error");
+        }
+        return;
+      }
+
+      if (action === "set-follow-up-suggestion") {
+        const form = target.closest("form");
+        applyFollowUpSuggestion(form, Number(target.dataset.days || 1));
+        return;
+      }
+
+      if (action === "clear-follow-up-suggestion") {
+        const form = target.closest("form");
+        const input = form?.querySelector("input[name='follow_up_date'], input[name='next_follow_up_at'], input[name='follow_up'], input[name='due_date']");
+        if (input) input.value = "";
+        return;
+      }
+
+      if (action === "focus-drawer-edit") {
+        const input = els.detailContent?.querySelector("form input:not([type='hidden']), form select, form textarea");
+        if (input) input.focus();
+        return;
+      }
+
+      if (action === "quick-add-note-from-detail") {
+        setActiveSection("overview");
+        history.replaceState(null, "", "#overview");
+        const tools = qs(".home-secondary-tools");
+        if (tools) tools.open = true;
+        const form = qs("[data-operations-form]");
+        if (form) {
+          form.record_type.value = "task";
+          form.title.value = `Note: ${target.dataset.relatedTitle || "Contact"}`;
+          form.description.value = target.dataset.relatedContext || "";
+          form.status.value = "Open";
+          form.title.focus();
+        }
+        return;
+      }
+
+      if (action === "schedule-follow-up-from-detail") {
+        setActiveSection("overview");
+        history.replaceState(null, "", "#overview");
+        const tools = qs(".home-secondary-tools");
+        if (tools) tools.open = true;
+        const form = qs("[data-operations-form]");
+        if (form) {
+          form.record_type.value = "client";
+          form.title.value = `Follow up with ${target.dataset.relatedTitle || "contact"}`;
+          form.description.value = target.dataset.relatedContext || "";
+          form.due_date.value = daysFromToday(1);
+          form.status.value = "Open";
+          form.title.focus();
         }
         return;
       }
@@ -9949,6 +10727,15 @@
           form.status.value = "Open";
           form.title.focus();
         }
+      } else if (action === "quick-add-property") {
+        openOutreachPropertyCreateDrawer();
+      } else if (action === "quick-add-equipment") {
+        state.equipmentView = "inventory";
+        setActiveSection("equipment");
+        history.replaceState(null, "", "#equipment");
+        await render();
+        const input = qs("[data-equipment-form] input[name='name']");
+        if (input) input.focus();
       } else if (action === "quick-add-client") {
         setActiveSection("contacts");
         history.replaceState(null, "", "#contacts");
@@ -10754,6 +11541,33 @@
         } catch (error) {
           setDashboardState(error.message || "Unable to save company.", "error");
         }
+      } else if (event.target.matches("[data-outreach-property-quick-form]")) {
+        event.preventDefault();
+        const formData = new FormData(event.target);
+        const companyName = String(formData.get("company") || "").trim();
+        try {
+          setDashboardState("Adding property...");
+          let company = companyName
+            ? state.data.outreachCompanies.find((item) => normalizeDedupeKey(item.company) === normalizeDedupeKey(companyName))
+            : null;
+          if (companyName && !company) {
+            company = await insertOutreachCompany({
+              company: companyName,
+              status: "Prospect",
+              priority: "Normal"
+            });
+          }
+          const payload = outreachPropertyPayloadFromForm(event.target, company || {});
+          const saved = await insertOutreachProperty(payload);
+          if (saved?.address && (saved.lat === null || saved.lng === null)) {
+            geocodeAndStoreOutreachProperty(saved).catch(() => {});
+          }
+          await refreshDashboard();
+          openOutreachPropertyDrawer(saved?.id);
+          setDashboardState("Property added.");
+        } catch (error) {
+          setDashboardState(error.message || "Unable to add property.", "error");
+        }
       } else if (event.target.matches("[data-outreach-property-form]")) {
         event.preventDefault();
         const id = event.target.dataset.id || "";
@@ -11151,6 +11965,9 @@
     els.dashboardState = qs("[data-dashboard-state]");
     els.search = qs("[data-dashboard-search]");
     els.globalSearch = qs("[data-global-search]");
+    els.globalSearchPanel = qs("[data-global-search-panel]");
+    els.globalAddButton = qs("[data-global-add-button]");
+    els.globalAddMenu = qs("[data-global-add-menu]");
     els.overviewSearch = qs("[data-overview-search]");
     els.workSearch = qs("[data-work-search]");
     els.clientSearch = qs("[data-client-search]");
@@ -11254,6 +12071,7 @@
     els.aiLogsList = qs("[data-ai-logs-list]");
     els.homeReminders = qs("[data-home-reminders]");
     els.homeNotes = qs("[data-home-notes]");
+    els.todayActions = qs("[data-today-actions]");
     els.todayRouteSnapshot = qs("[data-today-route-snapshot]");
     els.dashboardAlerts = qs("[data-dashboard-alerts]");
     els.overdueJobs = qs("[data-overdue-jobs]");

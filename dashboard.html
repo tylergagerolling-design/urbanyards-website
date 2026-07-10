@@ -107,8 +107,15 @@
                 <span data-header-user-initials>UY</span>
               </span>
               <span data-owner-email>team@urbanyards.us</span>
-              <input data-global-search type="search" aria-label="Search dashboard" placeholder="Search everything...">
-              <button type="button" data-action="quick-add-job"><span class="button-icon" aria-hidden="true">+</span><span>Add Job</span></button>
+              <label class="global-search-control">
+                <span class="sr-only">Search dashboard</span>
+                <input data-global-search type="search" aria-label="Search dashboard" placeholder="Search everything...">
+                <div class="global-search-panel" data-global-search-panel hidden></div>
+              </label>
+              <div class="global-add-control">
+                <button type="button" data-action="toggle-global-add" data-global-add-button aria-haspopup="menu" aria-expanded="false" aria-controls="global-add-menu"><span class="button-icon" aria-hidden="true">+</span><span>Add</span></button>
+                <div class="global-add-menu" id="global-add-menu" data-global-add-menu role="menu" hidden></div>
+              </div>
             </div>
           </header>
           <div class="dashboard-state" data-dashboard-state role="status" hidden></div>
@@ -132,6 +139,16 @@
             </div>
             <div class="dashboard-alerts" data-dashboard-alerts></div>
             <div class="overdue-jobs-alert" data-overdue-jobs></div>
+
+            <article class="panel today-action-panel" aria-labelledby="today-action-title">
+              <div class="panel-heading">
+                <div>
+                  <p class="eyebrow">Today</p>
+                  <h3 id="today-action-title">What needs attention</h3>
+                </div>
+              </div>
+              <div class="today-action-list" data-today-actions></div>
+            </article>
 
             <article class="panel home-snapshot-card" aria-labelledby="today-snapshot-title">
               <div class="panel-heading">
@@ -885,7 +902,8 @@
                 <input data-client-search type="search" aria-label="Search client profiles" placeholder="Search clients, properties, email, phone...">
                 <button type="button" data-export="contacts"><span class="button-icon" aria-hidden="true">CSV</span><span>Export Contacts</span></button>
               </div>
-              <form class="client-form" data-client-form>
+              <form class="client-form" data-client-form data-duplicate-scope="contact">
+                <div class="duplicate-warning span-full" data-duplicate-warning data-duplicate-scope="contact" hidden></div>
                 <input name="name" placeholder="Client name" required>
                 <input name="email" type="email" placeholder="Email">
                 <input name="phone" placeholder="Phone">

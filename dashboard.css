@@ -6790,9 +6790,7 @@ body:not(.is-login-screen) .dashboard-nav {
   margin: 0 !important;
 }
 
-body:not(.is-login-screen) .dashboard-nav a,
-.sidebar-quick-action,
-.sidebar-manage-link {
+body:not(.is-login-screen) .dashboard-nav a {
   display: grid !important;
   grid-template-columns: 38px minmax(0, 1fr) !important;
   align-items: center !important;
@@ -6809,9 +6807,7 @@ body:not(.is-login-screen) .dashboard-nav a,
   transition: background .18s ease, border-color .18s ease, transform .18s ease, box-shadow .18s ease !important;
 }
 
-body:not(.is-login-screen) .dashboard-nav a:hover,
-.sidebar-quick-action:hover,
-.sidebar-manage-link:hover {
+body:not(.is-login-screen) .dashboard-nav a:hover {
   background: rgba(233, 239, 224, .72) !important;
   border-color: rgba(23, 54, 43, .08) !important;
   transform: translateY(-1px) !important;
@@ -6860,41 +6856,6 @@ body:not(.is-login-screen) .dashboard-nav a:hover .nav-icon,
 body:not(.is-login-screen) .dashboard-nav a:hover .nav-icon img {
   color: var(--uy-app-ink) !important;
   filter: none !important;
-}
-
-.sidebar-quick-actions {
-  margin-top: 22px;
-  padding-top: 18px;
-  border-top: 1px solid rgba(23, 54, 43, .1);
-}
-
-.sidebar-section-title {
-  margin: 0 0 12px 14px;
-  color: #707c70;
-  font-size: .7rem;
-  font-weight: 850;
-  letter-spacing: .16em;
-  text-transform: uppercase;
-}
-
-.sidebar-quick-action-list {
-  display: grid;
-  gap: 7px;
-}
-
-.sidebar-quick-action,
-.sidebar-manage-link {
-  width: 100%;
-  min-height: 42px !important;
-  border-color: rgba(23, 54, 43, .09) !important;
-  background: rgba(255, 253, 247, .68) !important;
-  font-size: .86rem !important;
-  text-align: left;
-}
-
-.sidebar-manage-link {
-  margin-top: 12px;
-  color: #697369 !important;
 }
 
 .sidebar-bottom {
@@ -9733,9 +9694,7 @@ body:not(.is-login-screen) :is(
   button,
   .button,
   .inline-action,
-  .overview-primary-action,
-  .sidebar-quick-action,
-  .sidebar-manage-link
+  .overview-primary-action
 ) {
   min-height: var(--uy-button-h);
 }
@@ -9894,9 +9853,7 @@ body:not(.is-login-screen) .record-more-menu[open] > div .inline-action {
 
   body:not(.is-login-screen) .app-view:not(.is-sidebar-open):not(:has(.dashboard-sidebar:hover)):not(:has(.dashboard-sidebar:focus-within)) .dashboard-sidebar :is(
     .dashboard-brand,
-    .dashboard-nav a,
-    .sidebar-quick-action,
-    .sidebar-manage-link
+    .dashboard-nav a
   ) {
     grid-template-columns: var(--uy-closed-sidebar-icon) 0 !important;
     justify-content: center !important;
@@ -9946,8 +9903,6 @@ body:not(.is-login-screen) .record-more-menu[open] > div .inline-action {
   }
 
   body:not(.is-login-screen) .dashboard-nav,
-  body:not(.is-login-screen) .sidebar-quick-action-list,
-  body:not(.is-login-screen) .sidebar-quick-actions,
   body:not(.is-login-screen) .sidebar-bottom {
     gap: var(--uy-nav-gap) !important;
     min-width: 0 !important;
@@ -9960,12 +9915,6 @@ body:not(.is-login-screen) .record-more-menu[open] > div .inline-action {
     overflow: visible !important;
   }
 
-  body:not(.is-login-screen) .sidebar-quick-actions {
-    flex: 0 1 auto !important;
-    min-height: 0 !important;
-    overflow: hidden !important;
-  }
-
   body:not(.is-login-screen) .sidebar-bottom {
     flex: 0 0 auto !important;
     margin-top: auto !important;
@@ -9975,8 +9924,6 @@ body:not(.is-login-screen) .record-more-menu[open] > div .inline-action {
   body:not(.is-login-screen) :is(
     .dashboard-brand,
     .dashboard-nav a,
-    .sidebar-quick-action,
-    .sidebar-manage-link,
     .sidebar-profile,
     .sign-out
   ) {
@@ -10058,9 +10005,6 @@ body:not(.is-login-screen) .record-more-menu[open] > div .inline-action {
 
   body:not(.is-login-screen) .dashboard-brand span,
   body:not(.is-login-screen) .nav-label,
-  body:not(.is-login-screen) .sidebar-section-title,
-  body:not(.is-login-screen) .sidebar-quick-action span:not(.nav-icon),
-  body:not(.is-login-screen) .sidebar-manage-link span:not(.nav-icon),
   body:not(.is-login-screen) .sidebar-profile span,
   body:not(.is-login-screen) .sign-out span:not(.button-icon) {
     max-width: 0 !important;
@@ -10076,16 +10020,10 @@ body:not(.is-login-screen) .record-more-menu[open] > div .inline-action {
 
   body:not(.is-login-screen) :is(.dashboard-sidebar:hover, .dashboard-sidebar:focus-within) .dashboard-brand span,
   body:not(.is-login-screen) :is(.dashboard-sidebar:hover, .dashboard-sidebar:focus-within) .nav-label,
-  body:not(.is-login-screen) :is(.dashboard-sidebar:hover, .dashboard-sidebar:focus-within) .sidebar-section-title,
-  body:not(.is-login-screen) :is(.dashboard-sidebar:hover, .dashboard-sidebar:focus-within) .sidebar-quick-action span:not(.nav-icon),
-  body:not(.is-login-screen) :is(.dashboard-sidebar:hover, .dashboard-sidebar:focus-within) .sidebar-manage-link span:not(.nav-icon),
   body:not(.is-login-screen) :is(.dashboard-sidebar:hover, .dashboard-sidebar:focus-within) .sidebar-profile span,
   body:not(.is-login-screen) :is(.dashboard-sidebar:hover, .dashboard-sidebar:focus-within) .sign-out span:not(.button-icon),
   body:not(.is-login-screen) .app-view.is-sidebar-open .dashboard-sidebar .dashboard-brand span,
   body:not(.is-login-screen) .app-view.is-sidebar-open .dashboard-sidebar .nav-label,
-  body:not(.is-login-screen) .app-view.is-sidebar-open .dashboard-sidebar .sidebar-section-title,
-  body:not(.is-login-screen) .app-view.is-sidebar-open .dashboard-sidebar .sidebar-quick-action span:not(.nav-icon),
-  body:not(.is-login-screen) .app-view.is-sidebar-open .dashboard-sidebar .sidebar-manage-link span:not(.nav-icon),
   body:not(.is-login-screen) .app-view.is-sidebar-open .dashboard-sidebar .sidebar-profile span,
   body:not(.is-login-screen) .app-view.is-sidebar-open .dashboard-sidebar .sign-out span:not(.button-icon) {
     max-width: 190px !important;
@@ -10143,10 +10081,6 @@ body:not(.is-login-screen) .record-more-menu[open] > div .inline-action {
     --uy-sidebar-icon-art: 19px;
     --uy-icon-art: var(--uy-sidebar-icon-art);
     --uy-nav-gap: 3px;
-  }
-
-  body:not(.is-login-screen) .sidebar-quick-actions {
-    display: none !important;
   }
 
   body:not(.is-login-screen) .sidebar-bottom {

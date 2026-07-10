@@ -74,12 +74,6 @@
   const DASHBOARD_ICON_PATH = "images/dashboard-icons/";
   const HOME_DASHBOARD_ICON_PATH = "images/home-dashboard/";
   const WORK_DASHBOARD_ICON_PATH = "images/work-dashboard/";
-  const SIDEBAR_QUICK_ACTIONS = [
-    { label: "New Job", action: "quick-add-job", icon: "plus.svg" },
-    { label: "Log Time", action: "quick-add-operation", icon: "log-time-clock.svg" },
-    { label: "New Lead", action: "new-outreach-prospect", icon: "new-lead-user.svg" },
-    { label: "Add Property", action: "quick-add-client", icon: "add-property-building.svg" }
-  ];
   const DASHBOARD_DATA_KEYS = [
     "submissions",
     "contacts",
@@ -4792,16 +4786,6 @@
     state.propertyFilter = els.propertyFilter.value;
   }
 
-  function renderSidebarQuickActions() {
-    if (!els.sidebarQuickActions) return;
-    els.sidebarQuickActions.innerHTML = SIDEBAR_QUICK_ACTIONS.map((item) => `
-      <button class="sidebar-quick-action" type="button" data-action="${escapeHtml(item.action)}">
-        <span class="nav-icon" aria-hidden="true"><img src="${dashboardIcon(item.icon)}" alt=""></span>
-        <span>${escapeHtml(item.label)}</span>
-      </button>
-    `).join("");
-  }
-
   function currentUserProfile(data = state.data) {
     const session = getSession() || {};
     const profiles = data.userProfiles || [];
@@ -7974,7 +7958,6 @@
 
   async function render() {
     const data = state.data;
-    renderSidebarQuickActions();
     renderNotifications(data);
     populatePropertyFilter(data);
     renderMetrics(data);
@@ -10450,7 +10433,6 @@
     els.pullRefresh = qs("[data-pull-refresh]");
     els.demoBadge = qs("[data-demo-badge]");
     els.metrics = qs("[data-metrics]");
-    els.sidebarQuickActions = qs("[data-sidebar-quick-actions]");
     els.notificationButton = qs("[data-notification-button]");
     els.notificationCount = qs("[data-notification-count]");
     els.notificationPanel = qs("[data-notification-panel]");

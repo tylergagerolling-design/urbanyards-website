@@ -35,6 +35,7 @@
   const GOOGLE_VOICE_HOME_URL = "https://voice.google.com/";
   const GOOGLE_VOICE_CALLS_URL = "https://voice.google.com/u/0/calls";
   const URBAN_YARDS_GOOGLE_VOICE_NUMBER = "(971) 258-1109";
+  const SIDEBAR_CLOSE_SETTLE_MS = 280;
   const USER_AVATAR_MAX_BYTES = 2 * 1024 * 1024;
   const USER_AVATAR_ALLOWED_TYPES = new Set(["image/jpeg", "image/png", "image/webp"]);
   const USER_AVATAR_ALLOWED_EXTENSIONS = new Set(["jpg", "jpeg", "png", "webp"]);
@@ -232,6 +233,7 @@
   let googleRouteLine = null;
   let googleMapsLoadPromise = null;
   let googleMapsBrowserKeyPromise = null;
+  let sidebarCloseTimer = null;
   let notificationCloseTimer = null;
   const addressAutocompleteInputs = new WeakSet();
   let googleRouteMarkers = [];
@@ -8038,9 +8040,32 @@
 
   function setSidebarOpen(isOpen) {
     if (!els.appView) return;
-    els.appView.classList.toggle("is-sidebar-open", Boolean(isOpen));
+    const shouldOpen = Boolean(isOpen);
+    const wasOpen = els.appView.classList.contains("is-sidebar-open");
+
+    if (sidebarCloseTimer) {
+      clearTimeout(sidebarCloseTimer);
+      sidebarCloseTimer = null;
+    }
+
+    if (shouldOpen) {
+      els.appView.classList.remove("is-sidebar-closing");
+      els.appView.classList.add("is-sidebar-open");
+    } else {
+      els.appView.classList.remove("is-sidebar-open");
+      if (wasOpen) {
+        els.appView.classList.add("is-sidebar-closing");
+        sidebarCloseTimer = setTimeout(() => {
+          els.appView?.classList.remove("is-sidebar-closing");
+          sidebarCloseTimer = null;
+        }, SIDEBAR_CLOSE_SETTLE_MS);
+      } else {
+        els.appView.classList.remove("is-sidebar-closing");
+      }
+    }
+
     if (els.sidebarToggle) {
-      els.sidebarToggle.setAttribute("aria-expanded", String(Boolean(isOpen)));
+      els.sidebarToggle.setAttribute("aria-expanded", String(shouldOpen));
     }
   }
 

@@ -18,6 +18,7 @@ const { buildAuthCallbackUrl } = require("./lib/site-url");
 
 const ADMIN_ROLES = new Set(["owner", "admin"]);
 const USER_ROLES = ROLE_ORDER.filter((role) => role !== "client" && role !== "staff");
+const PROTECTED_USER_EMAIL = "team@urbanyards.us";
 
 function parseBody(event) {
   try {
@@ -45,6 +46,10 @@ function cleanUserId(value) {
 
 function canManageUsers(actor) {
   return actor && ADMIN_ROLES.has(actor.role);
+}
+
+function isProtectedUserEmail(value) {
+  return cleanEmail(value) === PROTECTED_USER_EMAIL;
 }
 
 async function authAdminRequest(path, options = {}) {
@@ -78,6 +83,19 @@ async function authAdminRequest(path, options = {}) {
 async function safeRows(path) {
   try {
     const rows = await supabaseAdminRequest(path, { method: "GET" });
+    return Array.isArray(rows) ? rows : [];
+  } catch (error) {
+    if (/does not exist|schema cache|relation/i.test(error.message || "")) return [];
+    throw error;
+  }
+}
+
+async function safeDeleteRows(path) {
+  try {
+    const rows = await supabaseAdminRequest(path, {
+      method: "DELETE",
+      headers: { Prefer: "return=representation" }
+    });
     return Array.isArray(rows) ? rows : [];
   } catch (error) {
     if (/does not exist|schema cache|relation/i.test(error.message || "")) return [];
@@ -291,6 +309,57 @@ async function setDisabled(actor, event, payload, disabled) {
   return json(200, { ok: true, message: disabled ? "User disabled." : "User enabled." });
 }
 
+async function removeUser(actor, event, payload) {
+  const targetUserId = cleanUserId(payload.userId || payload.targetUserId);
+  const targetEmail = cleanEmail(payload.email);
+  if (!targetUserId && !targetEmail) return json(400, { error: "Choose a user to remove." });
+
+  const users = await listUsers();
+  const target = users.find((user) => targetUserId && cleanUserId(user.user_id || user.id) === targetUserId)
+    || users.find((user) => targetEmail && cleanEmail(user.email) === targetEmail)
+    || { user_id: targetUserId, id: targetUserId, email: targetEmail };
+  const email = cleanEmail(target.email || targetEmail);
+  const userId = cleanUserId(target.user_id || target.id || targetUserId);
+
+  if (isProtectedUserEmail(email)) {
+    return json(403, { error: "The primary Urban Yards owner account cannot be removed." });
+  }
+
+  if (userId) {
+    try {
+      await authAdminRequest(`admin/users/${encodeURIComponent(userId)}`, { method: "DELETE" });
+    } catch (error) {
+      if (error.statusCode !== 404) throw error;
+    }
+  }
+
+  const deletions = [];
+  if (userId) {
+    deletions.push(safeDeleteRows(`profiles?id=eq.${encodeURIComponent(userId)}`));
+    deletions.push(safeDeleteRows(`profiles?user_id=eq.${encodeURIComponent(userId)}`));
+    deletions.push(safeDeleteRows(`roles?user_id=eq.${encodeURIComponent(userId)}`));
+  }
+  if (email) {
+    deletions.push(safeDeleteRows(`roles?email=eq.${encodeURIComponent(email)}`));
+    deletions.push(safeDeleteRows(`profiles?email=eq.${encodeURIComponent(email)}`));
+  }
+  await Promise.all(deletions);
+
+  await writeAuditLog({
+    actor,
+    action: "user_removed",
+    entityType: "user",
+    entityId: userId || email,
+    oldValue: target,
+    newValue: { removed: true, userId: userId || null, email: email || null },
+    metadata: { userId: userId || null, email: email || null },
+    event,
+    module: "users"
+  });
+
+  return json(200, { ok: true, message: "User removed." });
+}
+
 async function userActivity(targetUserId) {
   const cleanUser = cleanUserId(targetUserId);
   if (!cleanUser) return [];
@@ -333,6 +402,7 @@ exports.handler = async (event) => {
     if (action === "update-role") return changeRole(actor, event, payload);
     if (action === "disable") return setDisabled(actor, event, payload, true);
     if (action === "enable") return setDisabled(actor, event, payload, false);
+    if (action === "remove") return removeUser(actor, event, payload);
     if (action === "activity") return json(200, { ok: true, logs: await userActivity(payload.userId), requestId });
 
     return json(400, { error: "Unsupported user admin action.", requestId });

@@ -35,6 +35,7 @@
   const USER_AVATAR_MAX_BYTES = 2 * 1024 * 1024;
   const USER_AVATAR_ALLOWED_TYPES = new Set(["image/jpeg", "image/png", "image/webp"]);
   const USER_AVATAR_ALLOWED_EXTENSIONS = new Set(["jpg", "jpeg", "png", "webp"]);
+  const PROTECTED_USER_EMAIL = "team@urbanyards.us";
   const DASHBOARD_ROLES = ["owner", "admin", "manager", "worker", "viewer"];
   const DASHBOARD_ROLE_LABELS = {
     owner: "Owner",
@@ -4697,9 +4698,11 @@
     els.usersAccessList.innerHTML = `${inviteForm}${profiles.map((profile) => {
       const name = profile.name || profile.email || "Dashboard user";
       const subtitle = [profile.email, profile.title || roleLabel(profile.role)].filter(Boolean).join(" / ");
-      const disabled = profile.userId ? "" : " disabled";
       const isDisabled = Boolean(profile.disabledAt);
-      const canEdit = isAdmin && profile.userId;
+      const canEdit = isAdmin && (profile.userId || profile.email);
+      const canEditAccess = isAdmin && profile.userId;
+      const canEditAvatar = (isAdmin && profile.userId) || profile.userId === getSession()?.userId;
+      const isProtectedUser = String(profile.email || "").toLowerCase() === PROTECTED_USER_EMAIL;
       return `
         <article class="users-access-row${isDisabled ? " is-disabled" : ""}">
           <div class="users-access-identity">
@@ -4716,10 +4719,12 @@
             <small>${profile.avatarUpdatedAt ? `Avatar updated ${escapeHtml(formatDate(profile.avatarUpdatedAt))}` : "No uploaded avatar"}</small>
           </div>
           <div class="users-access-actions">
-            <button class="inline-action" type="button" data-action="upload-user-avatar" data-user-id="${escapeHtml(profile.userId)}"${canEdit || profile.userId === getSession()?.userId ? "" : " disabled"}>Upload</button>
-            <button class="inline-action" type="button" data-action="remove-user-avatar" data-user-id="${escapeHtml(profile.userId)}"${profile.avatarUrl && (canEdit || profile.userId === getSession()?.userId) ? "" : " disabled"}>Remove</button>
-            ${canEdit ? `<button class="inline-action" type="button" data-action="${isDisabled ? "enable-dashboard-user" : "disable-dashboard-user"}" data-user-id="${escapeHtml(profile.userId)}">${isDisabled ? "Enable" : "Disable"}</button>` : ""}
-            ${canEdit ? `<button class="inline-action" type="button" data-action="view-user-activity" data-user-id="${escapeHtml(profile.userId)}">Activity</button>` : ""}
+            <button class="inline-action" type="button" data-action="upload-user-avatar" data-user-id="${escapeHtml(profile.userId)}"${canEditAvatar ? "" : " disabled"}>Upload</button>
+            <button class="inline-action" type="button" data-action="remove-user-avatar" data-user-id="${escapeHtml(profile.userId)}"${profile.avatarUrl && canEditAvatar ? "" : " disabled"}>Remove Avatar</button>
+            ${canEditAccess ? `<button class="inline-action" type="button" data-action="${isDisabled ? "enable-dashboard-user" : "disable-dashboard-user"}" data-user-id="${escapeHtml(profile.userId)}" data-user-email="${escapeHtml(profile.email)}">${isDisabled ? "Enable" : "Disable"}</button>` : ""}
+            ${profile.userId ? `<button class="inline-action" type="button" data-action="view-user-activity" data-user-id="${escapeHtml(profile.userId)}">Activity</button>` : ""}
+            ${canEdit && isProtectedUser ? `<button class="inline-action" type="button" disabled title="The primary Urban Yards owner account cannot be removed.">Protected</button>` : ""}
+            ${canEdit && !isProtectedUser ? `<button class="inline-action danger-action" type="button" data-action="remove-dashboard-user" data-user-id="${escapeHtml(profile.userId)}" data-user-email="${escapeHtml(profile.email)}">Remove User</button>` : ""}
           </div>
         </article>
       `;
@@ -8481,6 +8486,35 @@
           setDashboardState(disabling ? "User disabled." : "User enabled.");
         } catch (error) {
           setDashboardState(error.message || "Unable to update user access.", "error");
+        }
+        return;
+      }
+
+      if (action === "remove-dashboard-user") {
+        const targetUserId = target.dataset.userId || "";
+        const targetEmail = String(target.dataset.userEmail || "").trim().toLowerCase();
+        if (!targetUserId && !targetEmail) return;
+        if (targetEmail === PROTECTED_USER_EMAIL) {
+          setDashboardState("The primary Urban Yards owner account cannot be removed.", "error");
+          return;
+        }
+        if (!window.confirm(`Remove ${targetEmail || "this dashboard user"}? This removes their dashboard access and cannot be undone from this screen.`)) return;
+        try {
+          const session = getSession();
+          setDashboardState("Removing user...");
+          await dashboardUsersRequest("remove", { userId: targetUserId, email: targetEmail });
+          const removedSelf = (targetUserId && targetUserId === session?.userId) || (targetEmail && targetEmail === String(session?.email || "").toLowerCase());
+          if (removedSelf) {
+            clearSession();
+            showLogin();
+            setLoginStatus("Your dashboard account was removed.");
+            return;
+          }
+          await refreshDashboard();
+          setActiveSection("settings");
+          setDashboardState("User removed.");
+        } catch (error) {
+          setDashboardState(error.message || "Unable to remove user.", "error");
         }
         return;
       }

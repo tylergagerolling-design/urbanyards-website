@@ -11,6 +11,8 @@ Supported dashboard roles are `owner`, `admin`, `manager`, `worker`, and `viewer
 - `worker`: field-work access for schedules, routes, notes, calls, and equipment. Assigned-record policies can be tightened further as assigned-user columns are added.
 - `viewer`: read-only dashboard access.
 
+The primary owner account `team@urbanyards.us` is intentionally protected from dashboard user removal. Owner/admin users can remove other dashboard users through the protected backend user-management function.
+
 ## Secrets
 
 Private keys must stay server-side in Netlify environment variables. The browser must never receive OpenAI, Square, Google, or Supabase service-role keys.
@@ -32,7 +34,7 @@ Frontend hiding is not a security boundary. Backend functions verify the Supabas
 
 ## Audit Log
 
-Important admin and backend actions should write to `audit_logs`, including user invites, role changes, disable/enable actions, exports, protected mutations, avatar updates, and AI actions.
+Important admin and backend actions should write to `audit_logs`, including user invites, role changes, disable/enable/remove actions, exports, protected mutations, avatar updates, and AI actions.
 
 ## Uploads
 

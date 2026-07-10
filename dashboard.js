@@ -83,6 +83,39 @@
   const IMPORT_EXPORT_DEFAULT_MODULE = "outreach_prospects";
   const IMPORT_EXPORT_FORMATS = ["xlsx", "csv", "pdf", "json"];
   const IMPORT_EXPORT_TEMPLATE_FORMATS = ["xlsx", "csv"];
+  const DOCUMENTATION_DEFAULT_VIEW = "forms";
+  const DOCUMENTATION_STATUSES = ["Not Started", "In Progress", "Submitted", "Needs Correction", "Approved", "Overdue", "Archived"];
+  const DOCUMENTATION_CATEGORIES = [
+    "Property Cleaning",
+    "Property Inspection",
+    "Grounds Maintenance",
+    "Equipment Inspection",
+    "Incident Report",
+    "Job Completion",
+    "Employee Documentation",
+    "Customer Authorization",
+    "Safety Documentation",
+    "Custom Forms"
+  ];
+  const DOCUMENTATION_MAX_FILE_BYTES = 15 * 1024 * 1024;
+  const DOCUMENTATION_ALLOWED_EXTENSIONS = new Set(["pdf", "docx", "jpg", "jpeg", "png", "webp", "xlsx", "csv"]);
+  const DOCUMENTATION_ALLOWED_MIME_TYPES = new Set([
+    "application/pdf",
+    "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+    "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+    "image/jpeg",
+    "image/png",
+    "image/webp",
+    "text/csv",
+    "application/csv",
+    "application/octet-stream"
+  ]);
+  const DOCUMENTATION_VIEW_LABELS = {
+    forms: "Forms to Complete",
+    submitted: "Submitted Forms",
+    templates: "Template Library",
+    audit: "Audit History"
+  };
   const DEMO_QUERY_KEYS = ["demo", "test"];
   const DASHBOARD_ICON_PATH = "images/dashboard-icons/";
   const HOME_DASHBOARD_ICON_PATH = "images/home-dashboard/";
@@ -102,6 +135,7 @@
     "equipmentItems",
     "equipmentMaintenance",
     "hardwareGuide",
+    "documentation",
     "importExport",
     "leadActivity",
     "userProfiles",
@@ -173,6 +207,10 @@
     equipmentPriorityFilter: "All",
     groundskeeperAiView: "training",
     groundskeeperAiSearch: "",
+    documentationView: DOCUMENTATION_DEFAULT_VIEW,
+    documentationSearch: "",
+    documentationStatusFilter: "All",
+    documentationCategoryFilter: "All",
     importExportView: "import",
     importExportModule: IMPORT_EXPORT_DEFAULT_MODULE,
     importExportFormat: "xlsx",
@@ -207,6 +245,7 @@
     equipmentMaintenanceReady: true,
     hardwareGuideReady: true,
     groundskeeperAiReady: false,
+    documentationReady: false,
     importExportReady: false,
     leadActivityReady: true,
     userProfilesReady: true,
@@ -244,6 +283,12 @@
         feedback: [],
         fallback: {}
       },
+      documentation: {
+        assignments: [],
+        submissions: [],
+        templates: [],
+        audit: []
+      },
       importExport: {
         modules: [],
         limits: {},
@@ -262,6 +307,8 @@
     work: "calendar",
     properties: "contacts",
     more: "settings",
+    docs: "documentation",
+    forms: "documentation",
     quotes: "documents",
     pipeline: "documents",
     schedule: "calendar",
@@ -341,6 +388,7 @@
       "create-reminder": "+",
       "delete-contact": "x",
       "delete-document": "x",
+      "download-documentation-template": "DL",
       "delete-note": "x",
       "delete-operation": "x",
       "delete-outreach-property": "x",
@@ -368,15 +416,19 @@
       "open-route-map": "M",
       "open-contact": "-&gt;",
       "open-document": "-&gt;",
+      "open-documentation-form": "-&gt;",
       "open-outreach-prospect": "-&gt;",
       "open-submission": "-&gt;",
       "print-document": "PDF",
+      "request-documentation-corrections": "!",
       "quick-add-equipment": "+",
       "quick-add-job": "+",
       "quick-add-operation": "+",
       "quick-add-property": "+",
       "quick-add-quote": "+",
       "review-import-history": "IN",
+      "approve-documentation-submission": "OK",
+      "reject-documentation-submission": "x",
       "reschedule-job": "R",
       "route-outreach-prospect": "M",
       "sync-contact": "~",
@@ -2565,6 +2617,126 @@
     };
   }
 
+  function normalizeDocumentationStatus(value) {
+    const status = String(value || "").trim();
+    return DOCUMENTATION_STATUSES.includes(status) ? status : "Not Started";
+  }
+
+  function normalizeDocumentationCategory(value) {
+    const category = String(value || "").trim();
+    return category || "Custom Forms";
+  }
+
+  function normalizeDocumentationTemplate(row = {}) {
+    const version = Number(row.current_version || row.version || row.version_number || 1) || 1;
+    const allowedRoles = Array.isArray(row.allowed_roles)
+      ? row.allowed_roles
+      : String(row.allowed_roles || "owner,admin,manager,staff,worker")
+        .split(",")
+        .map((item) => item.trim())
+        .filter(Boolean);
+    return {
+      id: row.id || "",
+      name: row.name || row.template_name || "Untitled template",
+      category: normalizeDocumentationCategory(row.category),
+      status: row.status || (row.is_active === false ? "Inactive" : "Active"),
+      currentVersion: version,
+      versionLabel: row.version_label || `Version ${version}`,
+      instructions: row.instructions || "",
+      allowedRoles,
+      requiresSignature: Boolean(row.requires_signature || row.signature_required),
+      requiresPhotos: Boolean(row.requires_photos || row.photos_required),
+      isRecurring: Boolean(row.is_recurring || row.recurring),
+      recurrenceRule: row.recurrence_rule || row.recurrence || "",
+      requiredByDefault: Boolean(row.required_by_default || row.required),
+      fileBucket: row.file_bucket || "documentation-templates",
+      fileName: row.file_name || row.original_file_name || "",
+      filePath: row.file_path || row.storage_path || "",
+      updatedBy: row.updated_by_name || row.uploaded_by_name || row.created_by_name || "",
+      updatedAtRaw: row.updated_at || row.created_at || "",
+      updatedAt: formatDate(row.updated_at || row.created_at)
+    };
+  }
+
+  function normalizeDocumentationAssignment(row = {}) {
+    return {
+      id: row.id || "",
+      templateId: row.template_id || "",
+      templateName: row.template_name || row.form_name || row.title || "Assigned form",
+      category: normalizeDocumentationCategory(row.category),
+      assignedTo: row.assigned_to_name || row.assigned_person || row.assigned_to_email || row.assigned_to || "Unassigned",
+      assignedToEmail: row.assigned_to_email || "",
+      assignedUserId: row.assigned_user_id || row.assigned_to_user_id || "",
+      propertyName: row.property_name || row.property || "",
+      contactName: row.contact_name || row.contact || "",
+      jobName: row.job_name || row.job || row.visit_name || "",
+      equipmentName: row.equipment_name || "",
+      dueDateRaw: row.due_date || "",
+      dueDate: formatDate(row.due_date),
+      priority: row.priority || "Normal",
+      status: normalizeDocumentationStatus(row.status),
+      required: row.required !== false,
+      recurring: Boolean(row.recurring || row.is_recurring),
+      nextAction: row.next_action || "",
+      instructions: row.instructions || "",
+      notes: row.notes || "",
+      createdAtRaw: row.created_at || "",
+      createdAt: formatDate(row.created_at)
+    };
+  }
+
+  function normalizeDocumentationSubmission(row = {}) {
+    return {
+      id: row.id || "",
+      assignmentId: row.assignment_id || "",
+      templateId: row.template_id || "",
+      templateName: row.template_name || row.form_name || row.title || "Submitted form",
+      templateVersion: Number(row.template_version || row.version_number || 1) || 1,
+      category: normalizeDocumentationCategory(row.category),
+      propertyName: row.property_name || row.property || "",
+      contactName: row.contact_name || row.contact || "",
+      jobName: row.job_name || row.job || "",
+      equipmentName: row.equipment_name || "",
+      completedBy: row.completed_by_name || row.submitted_by_name || row.employee_name || row.completed_by_email || "Unknown",
+      submittedAtRaw: row.submitted_at || row.created_at || "",
+      submittedAt: formatDate(row.submitted_at || row.created_at),
+      status: normalizeDocumentationStatus(row.status || "Submitted"),
+      reviewer: row.reviewer_name || row.reviewed_by_name || "",
+      reviewedAtRaw: row.reviewed_at || "",
+      reviewedAt: formatDate(row.reviewed_at),
+      fileBucket: row.file_bucket || "documentation-submissions",
+      fileName: row.file_name || row.original_file_name || "",
+      filePath: row.file_path || row.storage_path || "",
+      documentType: row.document_type || row.file_type || "",
+      notes: row.notes || "",
+      correctionNotes: row.correction_notes || row.rejection_notes || ""
+    };
+  }
+
+  function normalizeDocumentationAudit(row = {}) {
+    return {
+      id: row.id || "",
+      action: row.action || "documentation_event",
+      templateName: row.template_name || row.form_name || "",
+      entityType: row.entity_type || row.record_type || "documentation",
+      entityId: row.entity_id || "",
+      actorName: row.actor_name || row.actor_email || row.user_email || "Dashboard user",
+      detail: row.detail || row.notes || row.description || "",
+      metadata: row.metadata || {},
+      createdAtRaw: row.created_at || "",
+      createdAt: formatDate(row.created_at)
+    };
+  }
+
+  function normalizeDocumentationBundle(raw = {}) {
+    return {
+      assignments: Array.isArray(raw.assignments) ? raw.assignments.map(normalizeDocumentationAssignment) : [],
+      submissions: Array.isArray(raw.submissions) ? raw.submissions.map(normalizeDocumentationSubmission) : [],
+      templates: Array.isArray(raw.templates) ? raw.templates.map(normalizeDocumentationTemplate) : [],
+      audit: Array.isArray(raw.audit) ? raw.audit.map(normalizeDocumentationAudit) : []
+    };
+  }
+
   function demoDashboardData() {
     const today = todayKey();
     const now = new Date().toISOString();
@@ -2669,6 +2841,165 @@
           notes: "Demo invoice draft."
         })
       ],
+      documentation: normalizeDocumentationBundle({
+        templates: [
+          {
+            id: "demo-template-1",
+            name: "Weekly Property Cleaning Checklist",
+            category: "Property Cleaning",
+            status: "Active",
+            current_version: 2,
+            instructions: "Confirm entries, walkways, trash area, and shared outdoor spaces are clean before submitting photos.",
+            allowed_roles: ["owner", "admin", "manager", "staff", "worker"],
+            requires_photos: true,
+            requires_signature: false,
+            is_recurring: true,
+            recurrence_rule: "Weekly",
+            file_name: "weekly-property-cleaning-checklist.pdf",
+            updated_by_name: "Urban Yards",
+            updated_at: daysFromToday(-5)
+          },
+          {
+            id: "demo-template-2",
+            name: "Monthly Property Inspection",
+            category: "Property Inspection",
+            status: "Active",
+            current_version: 1,
+            instructions: "Document visible maintenance needs, safety items, irrigation issues, weeds, and curb appeal notes.",
+            allowed_roles: ["owner", "admin", "manager"],
+            requires_photos: true,
+            requires_signature: true,
+            is_recurring: true,
+            recurrence_rule: "Monthly",
+            file_name: "monthly-property-inspection.docx",
+            updated_by_name: "Urban Yards",
+            updated_at: daysFromToday(-12)
+          },
+          {
+            id: "demo-template-3",
+            name: "Equipment Inspection Every 30 Days",
+            category: "Equipment Inspection",
+            status: "Active",
+            current_version: 1,
+            instructions: "Check batteries, blades, guards, charger condition, and storage location.",
+            allowed_roles: ["owner", "admin", "manager", "staff"],
+            requires_photos: false,
+            requires_signature: false,
+            is_recurring: true,
+            recurrence_rule: "Every 30 days",
+            file_name: "equipment-inspection.xlsx",
+            updated_by_name: "Urban Yards",
+            updated_at: daysFromToday(-18)
+          }
+        ],
+        assignments: [
+          {
+            id: "demo-form-1",
+            template_id: "demo-template-1",
+            template_name: "Weekly Property Cleaning Checklist",
+            category: "Property Cleaning",
+            assigned_to_name: "Demo User",
+            property_name: "The Kennedy Apartments",
+            job_name: "Friday common-area care",
+            due_date: today,
+            priority: "High",
+            status: "In Progress",
+            required: true,
+            recurring: true,
+            instructions: "Attach two photos: trash enclosure and front entry.",
+            created_at: daysFromToday(-1)
+          },
+          {
+            id: "demo-form-2",
+            template_id: "demo-template-2",
+            template_name: "Monthly Property Inspection",
+            category: "Property Inspection",
+            assigned_to_name: "Demo User",
+            property_name: "River Court HOA",
+            due_date: daysFromToday(3),
+            priority: "Normal",
+            status: "Not Started",
+            required: true,
+            recurring: true,
+            instructions: "Capture landscape condition, irrigation notes, and any trip hazards.",
+            created_at: now
+          },
+          {
+            id: "demo-form-3",
+            template_id: "demo-template-3",
+            template_name: "Equipment Inspection Every 30 Days",
+            category: "Equipment Inspection",
+            assigned_to_name: "Demo User",
+            equipment_name: "Electric mower",
+            due_date: daysFromToday(-1),
+            priority: "High",
+            status: "Overdue",
+            required: true,
+            recurring: true,
+            instructions: "Check mower deck, blade, battery, and charger.",
+            created_at: daysFromToday(-10)
+          }
+        ],
+        submissions: [
+          {
+            id: "demo-submission-1",
+            assignment_id: "demo-form-1",
+            template_id: "demo-template-1",
+            template_name: "Weekly Property Cleaning Checklist",
+            template_version: 2,
+            category: "Property Cleaning",
+            property_name: "Hannah Edge",
+            job_name: "Courtyard mow, blow, and pressure wash check",
+            completed_by_name: "Demo User",
+            submitted_at: daysFromToday(-2),
+            status: "Submitted",
+            file_name: "hannah-edge-cleaning-checklist.pdf",
+            notes: "Photos attached for entry beds and trash area."
+          },
+          {
+            id: "demo-submission-2",
+            assignment_id: "demo-form-4",
+            template_id: "demo-template-2",
+            template_name: "Monthly Property Inspection",
+            template_version: 1,
+            category: "Property Inspection",
+            property_name: "Cedar Court Apartments",
+            completed_by_name: "Demo User",
+            submitted_at: daysFromToday(-6),
+            status: "Approved",
+            reviewer_name: "Urban Yards",
+            reviewed_at: daysFromToday(-5),
+            file_name: "cedar-court-monthly-inspection.pdf",
+            notes: "Approved. Add mulch refresh recommendation to next estimate."
+          }
+        ],
+        audit: [
+          {
+            id: "demo-documentation-audit-1",
+            action: "template_version_uploaded",
+            template_name: "Weekly Property Cleaning Checklist",
+            actor_name: "Urban Yards",
+            detail: "Version 2 uploaded and marked active.",
+            created_at: daysFromToday(-5)
+          },
+          {
+            id: "demo-documentation-audit-2",
+            action: "form_assigned",
+            template_name: "Monthly Property Inspection",
+            actor_name: "Urban Yards",
+            detail: "Assigned to Demo User for River Court HOA.",
+            created_at: now
+          },
+          {
+            id: "demo-documentation-audit-3",
+            action: "submission_approved",
+            template_name: "Monthly Property Inspection",
+            actor_name: "Urban Yards",
+            detail: "Cedar Court monthly inspection approved.",
+            created_at: daysFromToday(-5)
+          }
+        ]
+      }),
       operations: [
         normalizeOperation({ id: "demo-operation-1", record_type: "client", title: "Call Hannah about estimate", description: "Hannah Edge", due_date: today, status: "Waiting", priority: "High", notes: "Confirm scope and next visit window.", created_at: now }),
         normalizeOperation({ id: "demo-operation-2", record_type: "deadline", title: "Friday recurring visit checklist", description: "Courtyard and frontage", due_date: daysFromToday(4), status: "Open", priority: "Normal", notes: "Mow, edge, blow, weeds at entry, check pressure wash stain.", created_at: now }),
@@ -3000,6 +3331,7 @@
       state.equipmentMaintenanceReady = true;
       state.hardwareGuideReady = true;
       state.groundskeeperAiReady = true;
+      state.documentationReady = true;
       state.importExportReady = true;
       state.leadActivityReady = true;
       state.userProfilesReady = true;
@@ -3007,7 +3339,7 @@
       return demoDashboardData();
     }
 
-    const [submissions, contacts, jobs, notes, reminders, documents, operations, outreachProspects, outreachCompanies, outreachProperties, routeStops, equipmentItems, equipmentMaintenance, hardwareGuide, groundskeeperAi, importExport, leadActivity, userProfiles, auditLogs] = await Promise.all([
+    const [submissions, contacts, jobs, notes, reminders, documents, operations, outreachProspects, outreachCompanies, outreachProperties, routeStops, equipmentItems, equipmentMaintenance, hardwareGuide, groundskeeperAi, documentation, importExport, leadActivity, userProfiles, auditLogs] = await Promise.all([
       supabaseRestRequest("quote_submissions?select=*&order=created_at.desc", { method: "GET" }),
       supabaseRestRequest("contacts?select=*&order=created_at.desc", { method: "GET" }),
       supabaseRestRequest("scheduled_jobs?select=*&order=visit_date.asc", { method: "GET" }),
@@ -3023,6 +3355,7 @@
       loadEquipmentMaintenance(),
       loadHardwareGuide(),
       loadGroundskeeperAi(),
+      loadDocumentation(),
       loadImportExportCenter(),
       loadLeadActivity(),
       loadUserProfiles(),
@@ -3045,6 +3378,7 @@
       equipmentMaintenance,
       hardwareGuide,
       groundskeeperAi,
+      documentation,
       importExport,
       leadActivity,
       userProfiles,
@@ -3093,6 +3427,22 @@
         feedback: [],
         fallback: {}
       };
+    }
+  }
+
+  async function loadDocumentation() {
+    try {
+      const [templates, assignments, submissions, audit] = await Promise.all([
+        supabaseRestRequest("documentation_templates?select=*&order=category.asc,name.asc", { method: "GET" }),
+        supabaseRestRequest("documentation_assignments?select=*&order=due_date.asc.nullslast,created_at.desc", { method: "GET" }),
+        supabaseRestRequest("documentation_submissions?select=*&order=submitted_at.desc.nullslast,created_at.desc", { method: "GET" }),
+        supabaseRestRequest("documentation_audit_logs?select=*&order=created_at.desc&limit=200", { method: "GET" })
+      ]);
+      state.documentationReady = true;
+      return normalizeDocumentationBundle({ templates, assignments, submissions, audit });
+    } catch (error) {
+      state.documentationReady = false;
+      return normalizeDocumentationBundle();
     }
   }
 
@@ -3245,10 +3595,19 @@
         equipment_items: "equipmentItems",
         equipment_maintenance: "equipmentMaintenance",
         hardware_guide: "hardwareGuide",
+        documentation_templates: "documentation.templates",
+        documentation_assignments: "documentation.assignments",
+        documentation_submissions: "documentation.submissions",
+        documentation_audit_logs: "documentation.audit",
         lead_activity: "leadActivity"
       };
       const key = map[table];
-      if (key && Array.isArray(state.data[key])) {
+      if (key && key.includes(".")) {
+        const [group, child] = key.split(".");
+        if (Array.isArray(state.data[group]?.[child])) {
+          state.data[group][child] = state.data[group][child].filter((item) => item.id !== id);
+        }
+      } else if (key && Array.isArray(state.data[key])) {
         state.data[key] = state.data[key].filter((item) => item.id !== id);
       }
       return;
@@ -3454,6 +3813,307 @@
       body: JSON.stringify(buildDocumentPayload(input))
     });
     return normalizeDocument(rows[0]);
+  }
+
+  function isDocumentationOwner() {
+    const session = getSession();
+    return normalizeDashboardRole(session?.role) === "owner";
+  }
+
+  function canReviewDocumentation() {
+    return ["owner", "admin", "manager"].includes(currentSessionRole());
+  }
+
+  function documentationFileExtension(fileName = "") {
+    const match = String(fileName || "").toLowerCase().match(/\.([a-z0-9]+)$/);
+    return match ? match[1] : "";
+  }
+
+  function validateDocumentationFile(file, { optional = true } = {}) {
+    if (!file) {
+      if (optional) return;
+      throw new Error("Choose a documentation file first.");
+    }
+    if (file.size > DOCUMENTATION_MAX_FILE_BYTES) throw new Error("Documentation files must be 15 MB or smaller.");
+    const extension = documentationFileExtension(file.name);
+    if (!DOCUMENTATION_ALLOWED_EXTENSIONS.has(extension)) {
+      throw new Error("Documentation files must be PDF, DOCX, JPG, PNG, WebP, XLSX, or CSV.");
+    }
+    if (file.type && !DOCUMENTATION_ALLOWED_MIME_TYPES.has(file.type)) {
+      throw new Error("That documentation file type is not allowed.");
+    }
+  }
+
+  function readFileAsBase64(file) {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => {
+        const result = String(reader.result || "");
+        resolve(result.includes(",") ? result.split(",").pop() : result);
+      };
+      reader.onerror = () => reject(new Error("Unable to read the selected file."));
+      reader.readAsDataURL(file);
+    });
+  }
+
+  async function documentationStorageRequest(payload) {
+    if (isDemoMode()) {
+      return {
+        bucket: payload.bucket || (payload.kind === "template" ? "documentation-templates" : "documentation-submissions"),
+        path: `demo/${payload.kind || "documentation"}/${Date.now()}-${slug(payload.fileName || "file")}`,
+        fileName: payload.fileName || "demo-file.pdf",
+        mimeType: payload.mimeType || "application/pdf",
+        size: payload.size || 0,
+        signedUrl: ""
+      };
+    }
+    const session = getSession();
+    if (!session || !session.accessToken) throw new Error("Please sign in again.");
+    const response = await fetch("/.netlify/functions/dashboard-documentation-storage", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${session.accessToken}`
+      },
+      body: JSON.stringify(payload)
+    });
+    const data = await response.json().catch(() => ({}));
+    if (!response.ok) throw new Error(data.error || "Documentation storage request failed.");
+    return data;
+  }
+
+  async function uploadDocumentationFile(file, { kind, templateId = "", assignmentId = "" } = {}) {
+    validateDocumentationFile(file, { optional: false });
+    const contentBase64 = await readFileAsBase64(file);
+    return documentationStorageRequest({
+      action: "upload",
+      kind,
+      templateId,
+      assignmentId,
+      fileName: file.name,
+      mimeType: file.type || "application/octet-stream",
+      size: file.size,
+      contentBase64
+    });
+  }
+
+  async function openDocumentationSignedFile({ bucket, path, label = "documentation file" } = {}) {
+    if (!bucket || !path) throw new Error(`No stored ${label} is attached yet.`);
+    const result = await documentationStorageRequest({ action: "signed-url", bucket, path });
+    if (!result.signedUrl) throw new Error("Unable to create a secure file link.");
+    window.open(result.signedUrl, "_blank", "noopener,noreferrer");
+    return result;
+  }
+
+  function chooseDocumentationFile() {
+    return new Promise((resolve) => {
+      const input = document.createElement("input");
+      input.type = "file";
+      input.accept = ".pdf,.docx,.jpg,.jpeg,.png,.webp,.xlsx,.csv,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document,image/jpeg,image/png,image/webp,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,text/csv";
+      input.addEventListener("change", () => resolve(input.files?.[0] || null), { once: true });
+      input.click();
+    });
+  }
+
+  function documentationTemplatePayloadFromForm(form) {
+    const data = new FormData(form);
+    const file = form.querySelector("input[type='file']")?.files?.[0] || null;
+    validateDocumentationFile(file);
+    return {
+      name: String(data.get("name") || "").trim(),
+      category: String(data.get("category") || "Custom Forms"),
+      instructions: String(data.get("instructions") || "").trim(),
+      allowed_roles: String(data.get("allowed_roles") || "owner,admin,manager,staff,worker").split(",").map((item) => item.trim()).filter(Boolean),
+      requires_signature: data.get("requires_signature") === "on",
+      requires_photos: data.get("requires_photos") === "on",
+      is_recurring: data.get("is_recurring") === "on",
+      recurrence_rule: String(data.get("recurrence_rule") || "").trim(),
+      required_by_default: data.get("required_by_default") === "on",
+      status: "Active",
+      current_version: Number(data.get("current_version") || 1) || 1,
+      file_name: file?.name || String(data.get("file_name") || "").trim(),
+      updated_at: new Date().toISOString()
+    };
+  }
+
+  function documentationAssignmentPayloadFromForm(form) {
+    const data = new FormData(form);
+    const templateId = String(data.get("template_id") || "").trim();
+    const template = state.data.documentation.templates.find((item) => item.id === templateId);
+    return {
+      template_id: templateId || null,
+      template_name: template?.name || String(data.get("template_name") || "").trim(),
+      category: template?.category || String(data.get("category") || "Custom Forms"),
+      assigned_to_name: String(data.get("assigned_to_name") || "").trim(),
+      assigned_to_email: String(data.get("assigned_to_email") || "").trim(),
+      property_name: String(data.get("property_name") || "").trim(),
+      job_name: String(data.get("job_name") || "").trim(),
+      equipment_name: String(data.get("equipment_name") || "").trim(),
+      due_date: String(data.get("due_date") || "") || null,
+      priority: String(data.get("priority") || "Normal"),
+      status: "Not Started",
+      required: data.get("required") !== "off",
+      recurring: Boolean(template?.isRecurring),
+      instructions: String(data.get("instructions") || template?.instructions || "").trim(),
+      created_at: new Date().toISOString()
+    };
+  }
+
+  async function insertDocumentationTemplate(payload) {
+    if (!isDocumentationOwner()) throw new Error("Only the Owner role can manage master templates.");
+    if (!payload.name) throw new Error("Template name is required.");
+    if (!state.documentationReady) throw new Error("Create the documentation tables first. See DASHBOARD_DOCUMENTATION_SQL.md.");
+    if (isDemoMode()) {
+      const template = normalizeDocumentationTemplate({ id: nextDemoId("documentation-template"), ...payload });
+      state.data.documentation.templates.unshift(template);
+      state.data.documentation.audit.unshift(normalizeDocumentationAudit({
+        id: nextDemoId("documentation-audit"),
+        action: "template_uploaded",
+        template_name: template.name,
+        actor_name: getSession()?.email || "Demo User",
+        detail: `${template.versionLabel} saved in demo mode.`,
+        created_at: new Date().toISOString()
+      }));
+      return template;
+    }
+    const rows = await supabaseRestRequest("documentation_templates", {
+      method: "POST",
+      headers: { Prefer: "return=representation" },
+      body: JSON.stringify(payload)
+    });
+    return normalizeDocumentationTemplate(rows[0]);
+  }
+
+  async function insertDocumentationTemplateFromForm(form) {
+    const payload = documentationTemplatePayloadFromForm(form);
+    const file = form.querySelector("input[type='file']")?.files?.[0] || null;
+    if (file && !isDemoMode()) {
+      const upload = await uploadDocumentationFile(file, { kind: "template" });
+      payload.file_bucket = upload.bucket;
+      payload.file_path = upload.path;
+      payload.file_name = upload.fileName || file.name;
+      payload.mime_type = upload.mimeType || file.type || "";
+      payload.file_size_bytes = upload.size || file.size || null;
+    }
+    return insertDocumentationTemplate(payload);
+  }
+
+  async function insertDocumentationAssignment(payload) {
+    if (!payload.template_name && !payload.template_id) throw new Error("Choose a template or enter a form name.");
+    if (!state.documentationReady) throw new Error("Create the documentation tables first. See DASHBOARD_DOCUMENTATION_SQL.md.");
+    if (isDemoMode()) {
+      const assignment = normalizeDocumentationAssignment({ id: nextDemoId("documentation-assignment"), ...payload });
+      state.data.documentation.assignments.unshift(assignment);
+      state.data.documentation.audit.unshift(normalizeDocumentationAudit({
+        id: nextDemoId("documentation-audit"),
+        action: "form_assigned",
+        template_name: assignment.templateName,
+        actor_name: getSession()?.email || "Demo User",
+        detail: `Assigned to ${assignment.assignedTo}.`,
+        created_at: new Date().toISOString()
+      }));
+      return assignment;
+    }
+    const rows = await supabaseRestRequest("documentation_assignments", {
+      method: "POST",
+      headers: { Prefer: "return=representation" },
+      body: JSON.stringify(payload)
+    });
+    return normalizeDocumentationAssignment(rows[0]);
+  }
+
+  async function updateDocumentationSubmission(id, payload) {
+    if (!state.documentationReady) throw new Error("Create the documentation tables first. See DASHBOARD_DOCUMENTATION_SQL.md.");
+    if (isDemoMode()) {
+      const index = state.data.documentation.submissions.findIndex((item) => item.id === id);
+      if (index >= 0) {
+        state.data.documentation.submissions[index] = normalizeDocumentationSubmission({
+          ...state.data.documentation.submissions[index],
+          ...payload,
+          reviewed_at: new Date().toISOString()
+        });
+      }
+      return state.data.documentation.submissions[index] || null;
+    }
+    const rows = await supabaseRestRequest(`documentation_submissions?id=eq.${encodeURIComponent(id)}`, {
+      method: "PATCH",
+      headers: { Prefer: "return=representation" },
+      body: JSON.stringify({ ...payload, reviewed_at: new Date().toISOString() })
+    });
+    return rows?.[0] ? normalizeDocumentationSubmission(rows[0]) : null;
+  }
+
+  async function uploadDocumentationSubmission(assignmentId) {
+    if (!state.documentationReady) throw new Error("Create the documentation tables first. See DASHBOARD_DOCUMENTATION_SQL.md.");
+    const assignment = state.data.documentation.assignments.find((item) => item.id === assignmentId);
+    if (!assignment) throw new Error("Assigned form was not found.");
+    const file = await chooseDocumentationFile();
+    if (!file) return null;
+    const upload = await uploadDocumentationFile(file, { kind: "submission", assignmentId });
+    const session = getSession() || {};
+    const payload = {
+      assignment_id: assignment.id,
+      template_id: assignment.templateId || null,
+      template_name: assignment.templateName,
+      template_version: assignment.templateVersion || 1,
+      category: assignment.category,
+      completed_by_name: session.email || assignment.assignedTo || "Dashboard user",
+      completed_by_email: session.email || assignment.assignedToEmail || "",
+      property_name: assignment.propertyName || "",
+      contact_name: assignment.contactName || "",
+      job_name: assignment.jobName || "",
+      equipment_name: assignment.equipmentName || "",
+      status: "Submitted",
+      file_bucket: upload.bucket,
+      file_path: upload.path,
+      file_name: upload.fileName || file.name,
+      mime_type: upload.mimeType || file.type || "",
+      file_size_bytes: upload.size || file.size || null,
+      submitted_at: new Date().toISOString(),
+      notes: assignment.instructions || "",
+      signature_required: false,
+      photos_required: false
+    };
+    if (isDemoMode()) {
+      const submission = normalizeDocumentationSubmission({ id: nextDemoId("documentation-submission"), ...payload });
+      state.data.documentation.submissions.unshift(submission);
+      const assignmentIndex = state.data.documentation.assignments.findIndex((item) => item.id === assignment.id);
+      if (assignmentIndex >= 0) {
+        state.data.documentation.assignments[assignmentIndex] = normalizeDocumentationAssignment({
+          ...state.data.documentation.assignments[assignmentIndex],
+          status: "Submitted",
+          submitted_at: payload.submitted_at,
+          completed_submission_id: submission.id
+        });
+      }
+      state.data.documentation.audit.unshift(normalizeDocumentationAudit({
+        id: nextDemoId("documentation-audit"),
+        action: "form_submitted",
+        template_name: assignment.templateName,
+        actor_name: payload.completed_by_name,
+        detail: `${payload.file_name} uploaded in demo mode.`,
+        created_at: new Date().toISOString()
+      }));
+      return submission;
+    }
+    const rows = await supabaseRestRequest("documentation_submissions", {
+      method: "POST",
+      headers: { Prefer: "return=representation" },
+      body: JSON.stringify(payload)
+    });
+    const submission = rows?.[0] ? normalizeDocumentationSubmission(rows[0]) : null;
+    if (submission) {
+      await supabaseRestRequest(`documentation_assignments?id=eq.${encodeURIComponent(assignment.id)}`, {
+        method: "PATCH",
+        headers: { Prefer: "return=representation" },
+        body: JSON.stringify({
+          status: "Submitted",
+          submitted_at: payload.submitted_at,
+          completed_submission_id: submission.id
+        })
+      });
+    }
+    return submission;
   }
 
   async function syncSquareInvoice(documentId) {
@@ -7390,6 +8050,246 @@
     `).join("");
   }
 
+  function documentationStatusBadge(status) {
+    const safeStatus = normalizeDocumentationStatus(status);
+    return `<span class="status status-${slug(safeStatus)}">${escapeHtml(safeStatus)}</span>`;
+  }
+
+  function documentationTargetLine(item = {}) {
+    return [
+      item.propertyName ? `Property: ${item.propertyName}` : "",
+      item.jobName ? `Job: ${item.jobName}` : "",
+      item.equipmentName ? `Equipment: ${item.equipmentName}` : "",
+      item.contactName ? `Contact: ${item.contactName}` : ""
+    ].filter(Boolean).join(" / ") || "General company record";
+  }
+
+  function documentationMatches(item = {}) {
+    const search = String(state.documentationSearch || "").trim().toLowerCase();
+    const status = state.documentationStatusFilter || "All";
+    const category = state.documentationCategoryFilter || "All";
+    if (status !== "All" && normalizeDocumentationStatus(item.status) !== status) return false;
+    if (category !== "All" && normalizeDocumentationCategory(item.category) !== category) return false;
+    if (!search) return true;
+    return [
+      item.templateName,
+      item.name,
+      item.category,
+      item.status,
+      item.assignedTo,
+      item.propertyName,
+      item.contactName,
+      item.jobName,
+      item.equipmentName,
+      item.completedBy,
+      item.fileName,
+      item.notes,
+      item.instructions,
+      item.detail
+    ].some((value) => String(value || "").toLowerCase().includes(search));
+  }
+
+  function documentationMetrics(documentation) {
+    const assignments = documentation.assignments || [];
+    const submissions = documentation.submissions || [];
+    const templates = documentation.templates || [];
+    return [
+      ["Assigned", assignments.filter((item) => !["Approved", "Archived"].includes(item.status)).length, "Open forms"],
+      ["Due Soon", assignments.filter((item) => item.dueDateRaw && item.dueDateRaw <= addDaysKey(todayKey(), 7) && item.status !== "Approved").length, "Next 7 days"],
+      ["Needs Review", submissions.filter((item) => item.status === "Submitted").length, "Owner action"],
+      ["Templates", templates.filter((item) => item.status !== "Archived").length, "Active library"]
+    ];
+  }
+
+  function renderDocumentationMetric([label, value, detail]) {
+    return `<article class="documentation-metric"><strong>${escapeHtml(value)}</strong><span>${escapeHtml(label)}</span><small>${escapeHtml(detail)}</small></article>`;
+  }
+
+  function renderDocumentationAssignmentCard(item) {
+    return `<article class="documentation-record">
+      <div class="documentation-record-head">
+        <div>
+          <p class="eyebrow">${escapeHtml(item.category)}</p>
+          <h4>${escapeHtml(item.templateName)}</h4>
+          <p>${escapeHtml(documentationTargetLine(item))}</p>
+        </div>
+        ${documentationStatusBadge(item.status)}
+      </div>
+      <div class="documentation-record-meta">
+        <span>Due ${escapeHtml(item.dueDate || "No due date")}</span>
+        <span>${escapeHtml(item.priority)} priority</span>
+        <span>Assigned to ${escapeHtml(item.assignedTo)}</span>
+        <span>${item.required ? "Required" : "Optional"}${item.recurring ? " / Recurring" : ""}</span>
+      </div>
+      ${item.instructions ? `<p class="item-body">${escapeHtml(item.instructions)}</p>` : ""}
+      <div class="documentation-record-actions">
+        ${actionButton("Open Form", "open-documentation-form", item.id)}
+        <button class="inline-action" type="button" data-action="download-documentation-template" data-id="${escapeHtml(item.templateId)}">${buttonContent("Download Template", "download-documentation-template")}</button>
+        <button class="inline-action" type="button" data-action="upload-documentation-submission" data-id="${escapeHtml(item.id)}">${buttonContent("Upload Completed Form", "open-document")}</button>
+      </div>
+    </article>`;
+  }
+
+  function renderDocumentationSubmissionCard(item) {
+    return `<article class="documentation-record">
+      <div class="documentation-record-head">
+        <div>
+          <p class="eyebrow">${escapeHtml(item.category)} / Version ${escapeHtml(item.templateVersion)}</p>
+          <h4>${escapeHtml(item.templateName)}</h4>
+          <p>${escapeHtml(documentationTargetLine(item))}</p>
+        </div>
+        ${documentationStatusBadge(item.status)}
+      </div>
+      <div class="documentation-record-meta">
+        <span>Completed by ${escapeHtml(item.completedBy)}</span>
+        <span>Submitted ${escapeHtml(item.submittedAt || "Not submitted")}</span>
+        <span>${escapeHtml(item.fileName || "No file attached")}</span>
+        ${item.reviewer ? `<span>Reviewed by ${escapeHtml(item.reviewer)}</span>` : ""}
+      </div>
+      ${item.notes ? `<p class="item-body">${escapeHtml(item.notes)}</p>` : ""}
+      ${item.correctionNotes ? `<p class="job-overdue-note">${escapeHtml(item.correctionNotes)}</p>` : ""}
+      <div class="documentation-record-actions">
+        <button class="inline-action" type="button" data-action="preview-documentation-submission" data-id="${escapeHtml(item.id)}">${buttonContent("Preview", "open-document")}</button>
+        ${canReviewDocumentation() ? `<button class="inline-action" type="button" data-action="approve-documentation-submission" data-id="${escapeHtml(item.id)}">${buttonContent("Approve", "approve-documentation-submission")}</button>` : ""}
+        ${canReviewDocumentation() ? `<button class="inline-action" type="button" data-action="request-documentation-corrections" data-id="${escapeHtml(item.id)}">${buttonContent("Request Corrections", "request-documentation-corrections")}</button>` : ""}
+        ${canReviewDocumentation() ? `<button class="inline-action danger-action" type="button" data-action="reject-documentation-submission" data-id="${escapeHtml(item.id)}">${buttonContent("Reject", "reject-documentation-submission")}</button>` : ""}
+      </div>
+    </article>`;
+  }
+
+  function renderDocumentationTemplateCard(item) {
+    return `<article class="documentation-record">
+      <div class="documentation-record-head">
+        <div>
+          <p class="eyebrow">${escapeHtml(item.category)}</p>
+          <h4>${escapeHtml(item.name)}</h4>
+          <p>${escapeHtml(item.versionLabel)}${item.fileName ? ` / ${item.fileName}` : ""}</p>
+        </div>
+        <span class="status status-${slug(item.status)}">${escapeHtml(item.status)}</span>
+      </div>
+      <div class="documentation-record-meta">
+        <span>${item.requiresPhotos ? "Photos required" : "Photos optional"}</span>
+        <span>${item.requiresSignature ? "Signature required" : "No signature required"}</span>
+        <span>${item.isRecurring ? `Recurring: ${item.recurrenceRule || "Yes"}` : "One-time template"}</span>
+        <span>Roles: ${escapeHtml(item.allowedRoles.join(", "))}</span>
+      </div>
+      ${item.instructions ? `<p class="item-body">${escapeHtml(item.instructions)}</p>` : ""}
+      <div class="documentation-record-actions">
+        <button class="inline-action" type="button" data-action="duplicate-documentation-template" data-id="${escapeHtml(item.id)}">${buttonContent("Duplicate", "open-document")}</button>
+        <button class="inline-action" type="button" data-action="assign-documentation-template" data-id="${escapeHtml(item.id)}">${buttonContent("Assign", "create-reminder")}</button>
+        <button class="inline-action" type="button" data-action="archive-documentation-template" data-id="${escapeHtml(item.id)}">${buttonContent("Archive", "delete-document")}</button>
+      </div>
+    </article>`;
+  }
+
+  function renderDocumentationAuditRow(item) {
+    return `<article class="documentation-audit-row">
+      <span>${escapeHtml(item.createdAt || "No date")}</span>
+      <strong>${escapeHtml(item.action.replace(/_/g, " "))}</strong>
+      <p>${escapeHtml(item.templateName || item.entityType)}${item.detail ? ` / ${escapeHtml(item.detail)}` : ""}</p>
+      <small>${escapeHtml(item.actorName)}</small>
+    </article>`;
+  }
+
+  function documentationTemplateOptions() {
+    const templates = state.data.documentation.templates || [];
+    const options = templates.map((item) => `<option value="${escapeHtml(item.id)}">${escapeHtml(item.name)} / ${escapeHtml(item.category)}</option>`).join("");
+    return `<option value="">Choose template...</option>${options}`;
+  }
+
+  function renderDocumentationAssignmentForm() {
+    return `<section class="documentation-card documentation-form-card">
+      <div class="panel-heading"><h3>Assign a form</h3><p>Create a required or optional documentation task for a user, property, job, or equipment record.</p></div>
+      <form class="documentation-form" data-documentation-assignment-form>
+        <select name="template_id">${documentationTemplateOptions()}</select>
+        <input name="template_name" placeholder="Or enter custom form name">
+        <input name="assigned_to_name" placeholder="Assigned person">
+        <input name="assigned_to_email" type="email" placeholder="Assigned email">
+        <input name="property_name" placeholder="Property / location">
+        <input name="job_name" placeholder="Job / scheduled visit">
+        <input name="equipment_name" placeholder="Equipment record">
+        <input name="due_date" type="date" aria-label="Due date">
+        <select name="priority"><option>Normal</option><option>High</option><option>Low</option></select>
+        <textarea name="instructions" placeholder="Instructions, photo requirements, correction notes..."></textarea>
+        <label class="compact-check"><input type="checkbox" name="required" checked> Required form</label>
+        <button type="submit"><span class="button-icon" aria-hidden="true">+</span><span>Assign Form</span></button>
+      </form>
+    </section>`;
+  }
+
+  function renderDocumentationTemplateForm() {
+    if (!isDocumentationOwner()) {
+      return `<section class="documentation-card">${emptyState("Only the Owner role can upload or change master templates.")}</section>`;
+    }
+    const categoryOptions = DOCUMENTATION_CATEGORIES.map((category) => `<option>${escapeHtml(category)}</option>`).join("");
+    return `<section class="documentation-card documentation-template-manager" data-documentation-template-manager>
+      <div class="panel-heading"><h3>Manage Templates</h3><p>Upload or publish reusable company forms. Advanced settings stay tucked away so basic uploads stay simple.</p></div>
+      <form class="documentation-form" data-documentation-template-form>
+        <input name="name" placeholder="Template name" required>
+        <select name="category">${categoryOptions}</select>
+        <input name="file_name" placeholder="Existing storage path or file name">
+        <input name="template_file" type="file" accept=".pdf,.docx,.jpg,.jpeg,.png,.webp,.xlsx,.csv,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document,image/jpeg,image/png,image/webp,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,text/csv">
+        <textarea name="instructions" placeholder="Instructions for completing this form"></textarea>
+        <details class="documentation-advanced">
+          <summary>Advanced Options</summary>
+          <div class="documentation-advanced-grid">
+            <label>Allowed roles <input name="allowed_roles" value="owner,admin,manager,staff,worker"></label>
+            <label>Version <input name="current_version" type="number" min="1" value="1"></label>
+            <label>Recurrence <input name="recurrence_rule" placeholder="Weekly, Monthly, Every 30 days..."></label>
+            <label class="compact-check"><input type="checkbox" name="requires_signature"> Signature required</label>
+            <label class="compact-check"><input type="checkbox" name="requires_photos"> Photos required</label>
+            <label class="compact-check"><input type="checkbox" name="is_recurring"> Recurring form</label>
+            <label class="compact-check"><input type="checkbox" name="required_by_default"> Required by default</label>
+          </div>
+        </details>
+        <button type="submit"><span class="button-icon" aria-hidden="true">+</span><span>Save and Publish Template</span></button>
+      </form>
+    </section>`;
+  }
+
+  function renderDocumentation(data = state.data) {
+    if (!els.documentationMain) return;
+    const documentation = data.documentation || normalizeDocumentationBundle();
+    const view = DOCUMENTATION_VIEW_LABELS[state.documentationView] ? state.documentationView : DOCUMENTATION_DEFAULT_VIEW;
+    state.documentationView = view;
+
+    if (els.documentationStatus) {
+      els.documentationStatus.innerHTML = state.documentationReady
+        ? `<span>Private documentation tables connected. Use Supabase Storage buckets for templates and submissions.</span><span>${escapeHtml(documentation.assignments.length)} assigned / ${escapeHtml(documentation.submissions.length)} submitted / ${escapeHtml(documentation.templates.length)} templates</span>`
+        : `<span>Documentation tables are not installed yet. Run <code>DASHBOARD_DOCUMENTATION_SQL.md</code>, then refresh.</span><span>Demo mode still shows the intended workflow.</span>`;
+    }
+    if (els.documentationSearch && els.documentationSearch.value !== state.documentationSearch) els.documentationSearch.value = state.documentationSearch;
+    if (els.documentationStatusFilter && els.documentationStatusFilter.value !== state.documentationStatusFilter) els.documentationStatusFilter.value = state.documentationStatusFilter;
+    if (els.documentationCategoryFilter && els.documentationCategoryFilter.value !== state.documentationCategoryFilter) els.documentationCategoryFilter.value = state.documentationCategoryFilter;
+    qsa("[data-documentation-view]").forEach((button) => {
+      const isActive = button.dataset.documentationView === view;
+      button.classList.toggle("is-active", isActive);
+      button.setAttribute("aria-selected", isActive ? "true" : "false");
+    });
+    qsa("[data-owner-only]").forEach((node) => {
+      node.hidden = !isDocumentationOwner();
+    });
+
+    const metrics = `<div class="documentation-metrics">${documentationMetrics(documentation).map(renderDocumentationMetric).join("")}</div>`;
+    if (view === "forms") {
+      const assignments = documentation.assignments.filter(documentationMatches);
+      els.documentationMain.innerHTML = `${metrics}<div class="documentation-grid">${renderDocumentationAssignmentForm()}<section class="documentation-card"><div class="panel-heading"><h3>Forms to Complete</h3><p>Assigned forms, due dates, priority, and next action.</p></div><div class="documentation-list">${assignments.length ? assignments.map(renderDocumentationAssignmentCard).join("") : emptyState("No assigned forms match this view.")}</div></section></div>`;
+      return;
+    }
+    if (view === "submitted") {
+      const submissions = documentation.submissions.filter(documentationMatches);
+      els.documentationMain.innerHTML = `${metrics}<section class="documentation-card"><div class="panel-heading"><h3>Submitted Forms</h3><p>Review completed forms, preview files, approve, reject, or request corrections.</p></div><div class="documentation-list">${submissions.length ? submissions.map(renderDocumentationSubmissionCard).join("") : emptyState("No submitted forms match this view.")}</div></section>`;
+      return;
+    }
+    if (view === "templates") {
+      const templates = documentation.templates.filter(documentationMatches);
+      els.documentationMain.innerHTML = `${metrics}<div class="documentation-grid">${renderDocumentationTemplateForm()}<section class="documentation-card"><div class="panel-heading"><h3>Template Library</h3><p>Reusable company forms and checklists with version labels and role access.</p></div><div class="documentation-list">${templates.length ? templates.map(renderDocumentationTemplateCard).join("") : emptyState("No templates match this view.")}</div></section></div>`;
+      return;
+    }
+    const audit = documentation.audit.filter(documentationMatches);
+    els.documentationMain.innerHTML = `${metrics}<section class="documentation-card"><div class="panel-heading"><h3>Audit History</h3><p>Template uploads, assignments, draft saves, submissions, review decisions, corrections, and file replacement history.</p></div><div class="documentation-audit-list">${audit.length ? audit.map(renderDocumentationAuditRow).join("") : emptyState("No documentation audit records yet.")}</div></section>`;
+  }
+
   function renderNotes() {
     if (!els.notes) return;
     const notes = filteredNotes();
@@ -7716,6 +8616,39 @@
     `;
   }
 
+  function openDocumentationDrawer(id) {
+    const assignment = state.data.documentation.assignments.find((item) => item.id === id);
+    const submission = state.data.documentation.submissions.find((item) => item.id === id);
+    const item = assignment || submission;
+    if (!item || !els.detailDrawer || !els.detailContent) return;
+    const isSubmission = Boolean(submission);
+    openDetailDrawer();
+    els.detailContent.innerHTML = `
+      <div class="drawer-content documentation-drawer">
+        <p class="eyebrow">${escapeHtml(isSubmission ? "Submitted Documentation" : "Assigned Form")}</p>
+        <h3>${escapeHtml(item.templateName)}</h3>
+        <div class="drawer-grid">
+          <div class="drawer-field"><span>Status</span>${escapeHtml(item.status)}</div>
+          <div class="drawer-field"><span>Category</span>${escapeHtml(item.category)}</div>
+          <div class="drawer-field"><span>Connected record</span>${escapeHtml(documentationTargetLine(item))}</div>
+          <div class="drawer-field"><span>${isSubmission ? "Completed by" : "Assigned to"}</span>${escapeHtml(isSubmission ? item.completedBy : item.assignedTo)}</div>
+          <div class="drawer-field"><span>${isSubmission ? "Submitted" : "Due date"}</span>${escapeHtml(isSubmission ? item.submittedAt : item.dueDate || "No date")}</div>
+          <div class="drawer-field"><span>File</span>${escapeHtml(item.fileName || "No file attached")}</div>
+        </div>
+        ${item.instructions ? `<h4>Instructions</h4><p class="item-body">${escapeHtml(item.instructions)}</p>` : ""}
+        ${item.notes ? `<h4>Notes</h4><p class="item-body">${escapeHtml(item.notes)}</p>` : ""}
+        ${item.correctionNotes ? `<h4>Corrections Requested</h4><p class="job-overdue-note">${escapeHtml(item.correctionNotes)}</p>` : ""}
+        <div class="drawer-actions">
+          ${!isSubmission ? `<button type="button" data-action="download-documentation-template" data-id="${escapeHtml(item.templateId)}">${buttonContent("Download Template", "download-documentation-template")}</button>` : ""}
+          ${!isSubmission ? `<button type="button" data-action="upload-documentation-submission" data-id="${escapeHtml(item.id)}">${buttonContent("Upload Completed Form", "open-document")}</button>` : ""}
+          ${isSubmission ? `<button type="button" data-action="preview-documentation-submission" data-id="${escapeHtml(item.id)}">${buttonContent("Preview", "open-document")}</button>` : ""}
+          ${isSubmission && canReviewDocumentation() ? `<button type="button" data-action="approve-documentation-submission" data-id="${escapeHtml(item.id)}">${buttonContent("Approve", "approve-documentation-submission")}</button>` : ""}
+          ${isSubmission && canReviewDocumentation() ? `<button type="button" data-action="request-documentation-corrections" data-id="${escapeHtml(item.id)}">${buttonContent("Request Corrections", "request-documentation-corrections")}</button>` : ""}
+        </div>
+      </div>
+    `;
+  }
+
   function renderPrintableDocument(doc) {
     const lineItems = doc.lineItems.length ? doc.lineItems : [{
       description: "Landscape service",
@@ -7877,6 +8810,9 @@
     restored.groundskeeperAi = imported.groundskeeperAi && typeof imported.groundskeeperAi === "object"
       ? imported.groundskeeperAi
       : fallback.groundskeeperAi;
+    restored.documentation = imported.documentation && typeof imported.documentation === "object"
+      ? normalizeDocumentationBundle(imported.documentation)
+      : fallback.documentation;
     state.data = restored;
     await render();
     setDashboardState("Backup imported into demo mode.");
@@ -9240,6 +10176,7 @@
     renderQuoteTable(data);
     renderPipeline(data);
     renderDocuments(data);
+    renderDocumentation(data);
     renderContacts(data);
     renderOutreach(data);
     renderEquipment(data);
@@ -9640,6 +10577,24 @@
       });
     }
 
+    if (els.documentationSearch) {
+      els.documentationSearch.addEventListener("input", async () => {
+        state.documentationSearch = els.documentationSearch.value;
+        await render();
+      });
+    }
+
+    [
+      [els.documentationStatusFilter, "documentationStatusFilter"],
+      [els.documentationCategoryFilter, "documentationCategoryFilter"]
+    ].forEach(([element, key]) => {
+      if (!element) return;
+      element.addEventListener("change", async () => {
+        state[key] = element.value;
+        await render();
+      });
+    });
+
     qsa("[data-equipment-view]").forEach((button) => {
       button.addEventListener("click", async () => {
         state.equipmentView = button.dataset.equipmentView || "inventory";
@@ -9958,6 +10913,155 @@
 
       if (action !== "toggle-notifications") {
         setNotificationsOpen(false);
+      }
+
+      if (action === "set-documentation-view") {
+        state.documentationView = target.dataset.documentationView || DOCUMENTATION_DEFAULT_VIEW;
+        await render();
+        return;
+      }
+
+      if (action === "refresh-documentation") {
+        try {
+          setDashboardState("Refreshing documentation...");
+          state.data.documentation = await loadDocumentation();
+          await render();
+          setDashboardState(state.documentationReady ? "Documentation refreshed." : "Documentation tables are not installed yet.");
+        } catch (error) {
+          setDashboardState(error.message || "Unable to refresh documentation.", "error");
+        }
+        return;
+      }
+
+      if (action === "manage-documentation-templates") {
+        state.documentationView = "templates";
+        setActiveSection("documentation");
+        history.replaceState(null, "", "#documentation");
+        await render();
+        qs("[data-documentation-template-manager]")?.scrollIntoView({ behavior: "smooth", block: "start" });
+        return;
+      }
+
+      if (action === "open-documentation-form") {
+        openDocumentationDrawer(id);
+        return;
+      }
+
+      if (action === "download-documentation-template") {
+        const template = state.data.documentation.templates.find((item) => item.id === id);
+        try {
+          await openDocumentationSignedFile({
+            bucket: template?.fileBucket || "documentation-templates",
+            path: template?.filePath,
+            label: "template file"
+          });
+          setDashboardState("Secure template link opened.");
+        } catch (error) {
+          setDashboardState(error.message || "Unable to open the template file.", "error");
+        }
+        return;
+      }
+
+      if (action === "upload-documentation-submission") {
+        try {
+          setDashboardState("Uploading completed form...");
+          const submission = await uploadDocumentationSubmission(id);
+          if (!submission) {
+            setDashboardState("Upload cancelled.");
+            return;
+          }
+          state.documentationView = "submitted";
+          await refreshDashboard();
+          setActiveSection("documentation");
+          openDocumentationDrawer(submission.id);
+          setDashboardState("Completed form submitted for review.");
+        } catch (error) {
+          setDashboardState(error.message || "Unable to upload completed form.", "error");
+        }
+        return;
+      }
+
+      if (action === "preview-documentation-submission") {
+        const submission = state.data.documentation.submissions.find((item) => item.id === id);
+        try {
+          await openDocumentationSignedFile({
+            bucket: submission?.fileBucket || "documentation-submissions",
+            path: submission?.filePath,
+            label: "submission file"
+          });
+          openDocumentationDrawer(id);
+          setDashboardState("Secure submission preview opened.");
+        } catch (error) {
+          openDocumentationDrawer(id);
+          setDashboardState(error.message || "Unable to preview submission.", "error");
+        }
+        return;
+      }
+
+      if (action === "approve-documentation-submission" || action === "reject-documentation-submission" || action === "request-documentation-corrections") {
+        const nextStatus = action === "approve-documentation-submission"
+          ? "Approved"
+          : action === "reject-documentation-submission"
+            ? "Archived"
+            : "Needs Correction";
+        try {
+          setDashboardState("Updating documentation review...");
+          const correctionNotes = action === "request-documentation-corrections"
+            ? window.prompt("What corrections are needed?", "") || ""
+            : "";
+          await updateDocumentationSubmission(id, {
+            status: nextStatus,
+            reviewer_name: getSession()?.email || "Dashboard user",
+            correction_notes: correctionNotes
+          });
+          state.documentationView = "submitted";
+          await refreshDashboard();
+          setActiveSection("documentation");
+          openDocumentationDrawer(id);
+          setDashboardState(`Documentation marked ${nextStatus.toLowerCase()}.`);
+        } catch (error) {
+          setDashboardState(error.message || "Unable to update documentation review.", "error");
+        }
+        return;
+      }
+
+      if (action === "assign-documentation-template") {
+        const template = state.data.documentation.templates.find((item) => item.id === id);
+        state.documentationView = "forms";
+        setActiveSection("documentation");
+        history.replaceState(null, "", "#documentation");
+        await render();
+        const select = qs("[data-documentation-assignment-form] select[name='template_id']");
+        if (select && template) select.value = template.id;
+        qs("[data-documentation-assignment-form]")?.scrollIntoView({ behavior: "smooth", block: "start" });
+        return;
+      }
+
+      if (action === "duplicate-documentation-template") {
+        const template = state.data.documentation.templates.find((item) => item.id === id);
+        if (!template) return;
+        state.documentationView = "templates";
+        await render();
+        const form = qs("[data-documentation-template-form]");
+        if (form) {
+          form.elements.name.value = `${template.name} Copy`;
+          form.elements.category.value = template.category;
+          form.elements.instructions.value = template.instructions;
+          form.elements.allowed_roles.value = template.allowedRoles.join(",");
+          form.elements.current_version.value = String(template.currentVersion + 1);
+          form.elements.recurrence_rule.value = template.recurrenceRule;
+          form.elements.requires_signature.checked = template.requiresSignature;
+          form.elements.requires_photos.checked = template.requiresPhotos;
+          form.elements.is_recurring.checked = template.isRecurring;
+          form.elements.required_by_default.checked = template.requiredByDefault;
+          form.scrollIntoView({ behavior: "smooth", block: "start" });
+        }
+        return;
+      }
+
+      if (action === "archive-documentation-template") {
+        setDashboardState("Archive template will be enabled once template update storage is connected. Previous versions must remain preserved.", "error");
+        return;
       }
 
       if (action === "set-import-export-view") {
@@ -11520,6 +12624,32 @@
         } catch (error) {
           setDashboardState(error.message || "Unable to create document.", "error");
         }
+      } else if (event.target.matches("[data-documentation-template-form]")) {
+        event.preventDefault();
+        try {
+          setDashboardState("Saving documentation template...");
+          await insertDocumentationTemplateFromForm(event.target);
+          event.target.reset();
+          state.documentationView = "templates";
+          await refreshDashboard();
+          setActiveSection("documentation");
+          setDashboardState("Documentation template saved.");
+        } catch (error) {
+          setDashboardState(error.message || "Unable to save documentation template.", "error");
+        }
+      } else if (event.target.matches("[data-documentation-assignment-form]")) {
+        event.preventDefault();
+        try {
+          setDashboardState("Assigning documentation form...");
+          await insertDocumentationAssignment(documentationAssignmentPayloadFromForm(event.target));
+          event.target.reset();
+          state.documentationView = "forms";
+          await refreshDashboard();
+          setActiveSection("documentation");
+          setDashboardState("Documentation form assigned.");
+        } catch (error) {
+          setDashboardState(error.message || "Unable to assign documentation form.", "error");
+        }
       } else if (event.target.matches("[data-outreach-company-form]")) {
         event.preventDefault();
         const id = event.target.dataset.id;
@@ -12020,6 +13150,11 @@
     els.propertyFilter = qs("[data-property-filter]");
     els.pipeline = qs("[data-pipeline]");
     els.documents = qs("[data-documents]");
+    els.documentationStatus = qs("[data-documentation-status]");
+    els.documentationMain = qs("[data-documentation-main]");
+    els.documentationSearch = qs("[data-documentation-search]");
+    els.documentationStatusFilter = qs("[data-documentation-status-filter]");
+    els.documentationCategoryFilter = qs("[data-documentation-category-filter]");
     els.calendarFilter = qs("[data-calendar-filter]");
     els.calendarRangeControls = qs("[data-calendar-range-controls]");
     els.calendarRangeLabel = qs("[data-calendar-range-label]");

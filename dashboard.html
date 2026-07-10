@@ -11,7 +11,7 @@
     <link rel="icon" href="/favicon.ico" sizes="any">
     <link rel="apple-touch-icon" href="/apple-touch-icon.png">
     <link rel="manifest" href="/dashboard.webmanifest">
-    <link rel="stylesheet" href="dashboard.css?v=20260710-roundtrip-1">
+    <link rel="stylesheet" href="dashboard.css?v=20260710-option8-icons-1">
     <script src="dashboard-config.js?v=20260623-1" defer></script>
     <script src="dashboard.js?v=20260710-roundtrip-1" defer></script>
   </head>
@@ -57,20 +57,21 @@
               <span><strong>Urban Yards</strong><small>Owner Dashboard</small></span>
             </a>
             <nav class="dashboard-nav" aria-label="Dashboard navigation">
-              <a href="#overview" data-dashboard-link="overview"><span class="nav-icon" aria-hidden="true"><img src="images/dashboard-icons/home.svg" alt=""></span><span class="nav-label">Home</span></a>
-              <a href="#calendar" data-dashboard-link="calendar"><span class="nav-icon" aria-hidden="true"><img src="images/dashboard-icons/work-briefcase.svg" alt=""></span><span class="nav-label">Work</span></a>
-              <a href="#outreach" data-dashboard-link="outreach"><span class="nav-icon" aria-hidden="true"><img src="images/dashboard-icons/outreach-send.svg" alt=""></span><span class="nav-label">Leads</span></a>
-              <a href="#contacts" data-dashboard-link="contacts"><span class="nav-icon" aria-hidden="true"><img src="images/dashboard-icons/properties-building.svg" alt=""></span><span class="nav-label">Clients</span></a>
-              <a href="#documents" data-dashboard-link="documents"><span class="nav-icon" aria-hidden="true"><img src="images/dashboard-icons/tasks-check-square.svg" alt=""></span><span class="nav-label">Money</span></a>
-              <a href="#import-export" data-dashboard-link="import-export"><span class="nav-icon" aria-hidden="true"><img src="images/dashboard-icons/import-export.svg" alt=""></span><span class="nav-label">Import &amp; Export</span></a>
-              <a href="#route-planner" data-dashboard-link="route-planner"><span class="nav-icon" aria-hidden="true"><img src="images/dashboard-icons/menu-grid.svg" alt=""></span><span class="nav-label">Route Planner</span></a>
-              <a href="#equipment" data-dashboard-link="equipment"><span class="nav-icon" aria-hidden="true"><img src="images/dashboard-icons/activity-check-circle.svg" alt=""></span><span class="nav-label">Equipment</span></a>
-              <a href="#groundskeeper-ai" data-dashboard-link="groundskeeper-ai"><span class="nav-icon" aria-hidden="true"><img src="images/dashboard-icons/quick-actions-spark.svg" alt=""></span><span class="nav-label">Groundskeeper AI</span></a>
-              <a href="#settings" data-dashboard-link="settings"><span class="nav-icon" aria-hidden="true"><img src="images/dashboard-icons/more-horizontal.svg" alt=""></span><span class="nav-label">Tools</span></a>
+              <a href="#overview" data-dashboard-link="overview"><span class="nav-icon" aria-hidden="true"><svg><use href="images/dashboard-icons/option8-sidebar.svg#uy-icon-home"></use></svg></span><span class="nav-label">Home</span></a>
+              <a href="#calendar" data-dashboard-link="calendar"><span class="nav-icon" aria-hidden="true"><svg><use href="images/dashboard-icons/option8-sidebar.svg#uy-icon-work"></use></svg></span><span class="nav-label">Work</span></a>
+              <a href="#outreach" data-dashboard-link="outreach"><span class="nav-icon" aria-hidden="true"><svg><use href="images/dashboard-icons/option8-sidebar.svg#uy-icon-leads"></use></svg></span><span class="nav-label">Leads</span></a>
+              <a href="#contacts" data-dashboard-link="contacts"><span class="nav-icon" aria-hidden="true"><svg><use href="images/dashboard-icons/option8-sidebar.svg#uy-icon-clients"></use></svg></span><span class="nav-label">Clients</span></a>
+              <a href="#documents" data-dashboard-link="documents"><span class="nav-icon" aria-hidden="true"><svg><use href="images/dashboard-icons/option8-sidebar.svg#uy-icon-money"></use></svg></span><span class="nav-label">Money</span></a>
+              <a href="#documentation" data-dashboard-link="documentation"><span class="nav-icon" aria-hidden="true"><svg><use href="images/dashboard-icons/option8-sidebar.svg#uy-icon-documentation"></use></svg></span><span class="nav-label">Documentation</span></a>
+              <a href="#import-export" data-dashboard-link="import-export"><span class="nav-icon" aria-hidden="true"><svg><use href="images/dashboard-icons/option8-sidebar.svg#uy-icon-import-export"></use></svg></span><span class="nav-label">Import &amp; Export</span></a>
+              <a href="#route-planner" data-dashboard-link="route-planner"><span class="nav-icon" aria-hidden="true"><svg><use href="images/dashboard-icons/option8-sidebar.svg#uy-icon-route-planner"></use></svg></span><span class="nav-label">Route Planner</span></a>
+              <a href="#equipment" data-dashboard-link="equipment"><span class="nav-icon" aria-hidden="true"><svg><use href="images/dashboard-icons/option8-sidebar.svg#uy-icon-equipment"></use></svg></span><span class="nav-label">Equipment</span></a>
+              <a href="#groundskeeper-ai" data-dashboard-link="groundskeeper-ai"><span class="nav-icon" aria-hidden="true"><svg><use href="images/dashboard-icons/option8-sidebar.svg#uy-icon-groundskeeper-ai"></use></svg></span><span class="nav-label">Groundskeeper AI</span></a>
+              <a href="#settings" data-dashboard-link="settings"><span class="nav-icon" aria-hidden="true"><svg><use href="images/dashboard-icons/option8-sidebar.svg#uy-icon-tools"></use></svg></span><span class="nav-label">Tools</span></a>
             </nav>
             <div class="sidebar-bottom">
               <button class="sidebar-notification-button" type="button" data-action="toggle-notifications" data-notification-button aria-expanded="false" aria-controls="dashboard-notifications-panel" aria-label="Notifications">
-                <img src="images/dashboard-icons/notifications-bell.svg" alt="">
+                <svg aria-hidden="true"><use href="images/dashboard-icons/option8-sidebar.svg#uy-icon-notifications"></use></svg>
                 <span class="notification-count" data-notification-count hidden>0</span>
               </button>
               <div class="sidebar-notifications-panel" id="dashboard-notifications-panel" data-notification-panel hidden>
@@ -87,7 +88,7 @@
                 </span>
                 <span><strong data-sidebar-user-name>team@urbanyards.us</strong><small data-sidebar-user-role hidden></small></span>
               </div>
-              <button class="sign-out" type="button" data-sign-out><span class="button-icon" aria-hidden="true">x</span><span>Sign Out</span></button>
+              <button class="sign-out" type="button" data-sign-out><span class="button-icon" aria-hidden="true"><svg><use href="images/dashboard-icons/option8-sidebar.svg#uy-icon-sign-out"></use></svg></span><span>Sign Out</span></button>
             </div>
           </div>
         </aside>
@@ -889,6 +890,54 @@
             </div>
           </section>
 
+          <section class="dashboard-section documentation-center" id="documentation" data-section="documentation">
+            <div class="documentation-hero">
+              <div>
+                <p class="eyebrow">Documentation</p>
+                <h3>Forms, checklists, inspections, and reports</h3>
+                <p>Assign required forms, review submitted paperwork, manage reusable templates, and keep a clean audit trail for properties, jobs, equipment, and staff records.</p>
+              </div>
+              <div class="documentation-actions">
+                <button type="button" data-action="refresh-documentation"><span class="button-icon" aria-hidden="true">R</span><span>Refresh</span></button>
+                <button type="button" data-action="manage-documentation-templates" data-owner-only><span class="button-icon" aria-hidden="true">+</span><span>Manage Templates</span></button>
+              </div>
+            </div>
+            <div class="documentation-status" data-documentation-status></div>
+            <div class="documentation-tabs" role="tablist" aria-label="Documentation views">
+              <button type="button" data-action="set-documentation-view" data-documentation-view="forms">Forms to Complete</button>
+              <button type="button" data-action="set-documentation-view" data-documentation-view="submitted">Submitted Forms</button>
+              <button type="button" data-action="set-documentation-view" data-documentation-view="templates">Template Library</button>
+              <button type="button" data-action="set-documentation-view" data-documentation-view="audit">Audit History</button>
+            </div>
+            <div class="documentation-toolbar">
+              <input data-documentation-search type="search" aria-label="Search documentation" placeholder="Search property, job, employee, type, status...">
+              <select data-documentation-status-filter aria-label="Filter documentation by status">
+                <option value="All">All Statuses</option>
+                <option>Not Started</option>
+                <option>In Progress</option>
+                <option>Submitted</option>
+                <option>Needs Correction</option>
+                <option>Approved</option>
+                <option>Overdue</option>
+                <option>Archived</option>
+              </select>
+              <select data-documentation-category-filter aria-label="Filter documentation by category">
+                <option value="All">All Categories</option>
+                <option>Property Cleaning</option>
+                <option>Property Inspection</option>
+                <option>Grounds Maintenance</option>
+                <option>Equipment Inspection</option>
+                <option>Incident Report</option>
+                <option>Job Completion</option>
+                <option>Employee Documentation</option>
+                <option>Customer Authorization</option>
+                <option>Safety Documentation</option>
+                <option>Custom Forms</option>
+              </select>
+            </div>
+            <div class="documentation-main" data-documentation-main></div>
+          </section>
+
           <section class="dashboard-section" id="contacts" data-section="contacts">
             <div class="panel">
               <div class="panel-heading">
@@ -1011,6 +1060,7 @@
           <a href="#outreach" data-dashboard-link="outreach">Leads</a>
           <a href="#contacts" data-dashboard-link="contacts">Clients</a>
           <a href="#documents" data-dashboard-link="documents">Money</a>
+          <a href="#documentation" data-dashboard-link="documentation">Docs</a>
           <a href="#import-export" data-dashboard-link="import-export">Data</a>
           <a href="#settings" data-dashboard-link="settings">Tools</a>
         </nav>

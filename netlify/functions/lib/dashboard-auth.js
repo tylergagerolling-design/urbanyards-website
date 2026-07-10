@@ -19,12 +19,16 @@ const ROLE_PERMISSIONS = {
     "clients:read", "clients:write",
     "appointments:read", "appointments:write", "appointments:delete",
     "equipment:read", "equipment:write", "equipment:delete",
+    "documentation:read", "documentation:write", "documentation:review",
     "notes:read", "notes:write", "notes:delete",
     "call_logs:read", "call_logs:write",
     "route:read", "route:write", "route:delete",
     "invoices:read",
     "settings:read",
-    "exports:read"
+    "exports:read",
+    "imports:read", "imports:write", "imports:rollback",
+    "backups:download",
+    "sheets:manage"
   ],
   staff: [
     "dashboard:read",
@@ -32,17 +36,21 @@ const ROLE_PERMISSIONS = {
     "clients:read", "clients:write",
     "appointments:read", "appointments:write",
     "equipment:read", "equipment:write",
+    "documentation:read", "documentation:write",
     "notes:read", "notes:write",
     "call_logs:read", "call_logs:write",
     "route:read", "route:write",
     "invoices:read",
-    "settings:read"
+    "settings:read",
+    "exports:read",
+    "imports:read", "imports:write"
   ],
   worker: [
     "dashboard:read",
     "clients:read",
     "appointments:read", "appointments:write",
     "equipment:read",
+    "documentation:read", "documentation:write",
     "notes:read", "notes:write",
     "call_logs:read", "call_logs:write",
     "route:read", "route:write"
@@ -53,6 +61,7 @@ const ROLE_PERMISSIONS = {
     "clients:read",
     "appointments:read",
     "equipment:read",
+    "documentation:read",
     "notes:read",
     "call_logs:read",
     "route:read"
@@ -83,6 +92,12 @@ const TABLE_PERMISSIONS = {
   hardware_guide: { GET: "equipment:read", POST: "equipment:write", PATCH: "equipment:write", DELETE: "equipment:delete" },
   sales_documents: { GET: "invoices:read", POST: "admin:manage", PATCH: "admin:manage", DELETE: "admin:manage" },
   invoices: { GET: "invoices:read", POST: "admin:manage", PATCH: "admin:manage", DELETE: "admin:manage" },
+  documentation_templates: { GET: "documentation:read", POST: "owner:manage", PATCH: "owner:manage", DELETE: "owner:manage" },
+  documentation_template_versions: { GET: "documentation:read", POST: "owner:manage", PATCH: "owner:manage", DELETE: "owner:manage" },
+  documentation_assignments: { GET: "documentation:read", POST: "documentation:write", PATCH: "documentation:write", DELETE: "admin:manage" },
+  documentation_submissions: { GET: "documentation:read", POST: "documentation:write", PATCH: "documentation:review", DELETE: "admin:manage" },
+  documentation_attachments: { GET: "documentation:read", POST: "documentation:write", PATCH: "documentation:write", DELETE: "admin:manage" },
+  documentation_audit_logs: { GET: "documentation:review", POST: "documentation:write", PATCH: "admin:manage", DELETE: "admin:manage" },
   ai_settings: { GET: "ai:manage", POST: "ai:manage", PATCH: "ai:manage", DELETE: "ai:manage" },
   ai_knowledge: { GET: "ai:manage", POST: "ai:manage", PATCH: "ai:manage", DELETE: "ai:manage" },
   ai_faqs: { GET: "ai:manage", POST: "ai:manage", PATCH: "ai:manage", DELETE: "ai:manage" },
@@ -94,6 +109,16 @@ const TABLE_PERMISSIONS = {
   ai_feedback: { GET: "ai:manage", POST: "ai:manage", PATCH: "ai:manage", DELETE: "ai:manage" },
   settings: { GET: "settings:read", POST: "admin:manage", PATCH: "admin:manage", DELETE: "admin:manage" },
   feature_flags: { GET: "settings:read", POST: "admin:manage", PATCH: "admin:manage", DELETE: "admin:manage" },
+  import_batches: { GET: "imports:read", POST: "imports:write", PATCH: "imports:rollback", DELETE: "admin:manage" },
+  import_rows: { GET: "imports:read", POST: "imports:write", PATCH: "admin:manage", DELETE: "admin:manage" },
+  import_changes: { GET: "imports:read", POST: "imports:write", PATCH: "admin:manage", DELETE: "admin:manage" },
+  import_mappings: { GET: "imports:read", POST: "imports:write", PATCH: "imports:write", DELETE: "admin:manage" },
+  export_jobs: { GET: "exports:read", POST: "exports:read", PATCH: "admin:manage", DELETE: "admin:manage" },
+  google_connections: { GET: "sheets:manage", POST: "sheets:manage", PATCH: "sheets:manage", DELETE: "sheets:manage" },
+  sheet_connections: { GET: "sheets:manage", POST: "sheets:manage", PATCH: "sheets:manage", DELETE: "sheets:manage" },
+  sync_runs: { GET: "sheets:manage", POST: "sheets:manage", PATCH: "sheets:manage", DELETE: "admin:manage" },
+  sync_conflicts: { GET: "sheets:manage", POST: "sheets:manage", PATCH: "sheets:manage", DELETE: "admin:manage" },
+  backup_history: { GET: "imports:read", POST: "backups:download", PATCH: "admin:manage", DELETE: "admin:manage" },
   profiles: { GET: "admin:manage", POST: "admin:manage", PATCH: "admin:manage", DELETE: "admin:manage" },
   roles: { GET: "admin:manage", POST: "admin:manage", PATCH: "admin:manage", DELETE: "admin:manage" },
   audit_logs: { GET: "admin:manage", POST: "admin:manage", PATCH: "admin:manage", DELETE: "admin:manage" },
@@ -119,7 +144,13 @@ const FEATURE_BY_TABLE = {
   appointments: "scheduler_enabled",
   route_stops: "scheduler_enabled",
   sales_documents: "square_invoices_enabled",
-  invoices: "square_invoices_enabled"
+  invoices: "square_invoices_enabled",
+  documentation_templates: "documentation_enabled",
+  documentation_template_versions: "documentation_enabled",
+  documentation_assignments: "documentation_enabled",
+  documentation_submissions: "documentation_enabled",
+  documentation_attachments: "documentation_enabled",
+  documentation_audit_logs: "documentation_enabled"
 };
 
 function json(statusCode, body, headers = {}) {
@@ -179,6 +210,7 @@ function hasRoleAtLeast(role, minimum) {
 function hasPermission(role, permission) {
   const normalizedRole = normalizeRole(role);
   const permissions = ROLE_PERMISSIONS[normalizedRole] || [];
+  if (String(permission || "").startsWith("owner:")) return normalizedRole === "owner";
   if (permissions.includes("*")) return true;
   if (permissions.includes(permission)) return true;
   const [area, verb] = String(permission || "").split(":");

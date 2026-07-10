@@ -74,6 +74,15 @@
     archived: "Archived",
     published: "Live"
   };
+  const IMPORT_EXPORT_VIEWS = {
+    import: "Import Data",
+    export: "Export Data",
+    sheets: "Google Sheets",
+    history: "Backups & History"
+  };
+  const IMPORT_EXPORT_DEFAULT_MODULE = "outreach_prospects";
+  const IMPORT_EXPORT_FORMATS = ["xlsx", "csv", "pdf", "json"];
+  const IMPORT_EXPORT_TEMPLATE_FORMATS = ["xlsx", "csv"];
   const DEMO_QUERY_KEYS = ["demo", "test"];
   const DASHBOARD_ICON_PATH = "images/dashboard-icons/";
   const HOME_DASHBOARD_ICON_PATH = "images/home-dashboard/";
@@ -93,6 +102,7 @@
     "equipmentItems",
     "equipmentMaintenance",
     "hardwareGuide",
+    "importExport",
     "leadActivity",
     "userProfiles",
     "auditLogs"
@@ -149,6 +159,13 @@
     equipmentPriorityFilter: "All",
     groundskeeperAiView: "training",
     groundskeeperAiSearch: "",
+    importExportView: "import",
+    importExportModule: IMPORT_EXPORT_DEFAULT_MODULE,
+    importExportFormat: "xlsx",
+    importExportTemplateFormat: "xlsx",
+    importExportPendingFile: null,
+    importExportPreview: null,
+    importExportHistoryLoadedAt: "",
     trainingPreviewMode: "draft",
     trainingMessages: [],
     trainingPreviewMessages: [],
@@ -173,6 +190,7 @@
     equipmentMaintenanceReady: true,
     hardwareGuideReady: true,
     groundskeeperAiReady: false,
+    importExportReady: false,
     leadActivityReady: true,
     userProfilesReady: true,
     auditLogsReady: true,
@@ -208,6 +226,13 @@
         logs: [],
         feedback: [],
         fallback: {}
+      },
+      importExport: {
+        modules: [],
+        limits: {},
+        history: { imports: [], exports: [], syncs: [], backups: [] },
+        google: { configured: false, connections: [] },
+        fallback: ""
       }
     },
     loading: false,
@@ -907,6 +932,131 @@
     return result;
   }
 
+  function demoImportExportSnapshot() {
+    return {
+      modules: [
+        { key: "contacts", label: "Contacts", pluralLabel: "Contacts", description: "Demo client contacts.", fields: [] },
+        { key: "contact_call_list", label: "Call List", pluralLabel: "Call List", description: "Demo contact call list.", fields: [] },
+        { key: "jobs", label: "Jobs", pluralLabel: "Jobs", description: "Demo scheduled jobs.", fields: [] },
+        { key: "outreach_prospects", label: "Prospects", pluralLabel: "Prospects", description: "Demo outreach prospects.", fields: [] },
+        { key: "equipment", label: "Equipment", pluralLabel: "Equipment", description: "Demo equipment records.", fields: [] }
+      ],
+      limits: { maxImportRows: 2000, maxImportBytes: 5242880, rollbackRetentionDays: 30 },
+      history: { imports: [], exports: [], syncs: [], backups: [] },
+      google: { configured: false, connections: [] },
+      fallback: "Demo mode can export local JSON/CSV shortcuts. Live imports, rollback, and Google Sheets run through the protected backend after sign-in."
+    };
+  }
+
+  async function importExportRequest(action, payload = {}) {
+    if (isDemoMode()) throw new Error("Import & Export Center is available after signing in to the live dashboard.");
+    const session = getSession();
+    if (!session || !session.accessToken) throw new Error("Please sign in again.");
+    const response = await fetch(`/.netlify/functions/dashboard-import-export?action=${encodeURIComponent(action)}`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${session.accessToken}`
+      },
+      body: JSON.stringify({ action, ...payload })
+    });
+    const result = await response.json().catch(() => ({}));
+    if (!response.ok) throw new Error(result.error || "Import/export request failed.");
+    return result;
+  }
+
+  function filenameFromDisposition(disposition, fallback) {
+    const match = String(disposition || "").match(/filename="?([^";]+)"?/i);
+    return match ? match[1] : fallback;
+  }
+
+  async function importExportDownload(action, payload = {}, fallbackName = "urban-yards-export.dat") {
+    if (isDemoMode()) {
+      exportFullBackup();
+      return;
+    }
+    const session = getSession();
+    if (!session || !session.accessToken) throw new Error("Please sign in again.");
+    const response = await fetch(`/.netlify/functions/dashboard-import-export?action=${encodeURIComponent(action)}`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${session.accessToken}`
+      },
+      body: JSON.stringify({ action, ...payload })
+    });
+    const contentType = response.headers.get("Content-Type") || "";
+    if (!response.ok) {
+      const result = contentType.includes("application/json") ? await response.json().catch(() => ({})) : {};
+      throw new Error(result.error || "Download failed.");
+    }
+    const blob = await response.blob();
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = filenameFromDisposition(response.headers.get("Content-Disposition"), fallbackName);
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    URL.revokeObjectURL(url);
+  }
+
+  async function readFileAsBase64(file) {
+    const buffer = await file.arrayBuffer();
+    const bytes = new Uint8Array(buffer);
+    let binary = "";
+    const chunkSize = 0x8000;
+    for (let index = 0; index < bytes.length; index += chunkSize) {
+      binary += String.fromCharCode(...bytes.subarray(index, index + chunkSize));
+    }
+    return btoa(binary);
+  }
+
+  async function loadImportExportCenter() {
+    if (isDemoMode()) {
+      state.importExportReady = true;
+      return demoImportExportSnapshot();
+    }
+    try {
+      const [registry, history, google] = await Promise.all([
+        importExportRequest("registry"),
+        importExportRequest("history").catch(() => ({ imports: [], exports: [], syncs: [], backups: [] })),
+        importExportRequest("google-status").catch((error) => ({ configured: false, connections: [], error: error.message }))
+      ]);
+      state.importExportReady = true;
+      state.importExportHistoryLoadedAt = new Date().toISOString();
+      const modules = Array.isArray(registry.modules) ? registry.modules : [];
+      if (!modules.some((module) => module.key === state.importExportModule) && modules[0]) {
+        state.importExportModule = modules[0].key;
+      }
+      return {
+        modules,
+        limits: registry.limits || {},
+        history: {
+          imports: history.imports || [],
+          exports: history.exports || [],
+          syncs: history.syncs || [],
+          backups: history.backups || []
+        },
+        google: {
+          configured: Boolean(google.configured),
+          connections: google.connections || [],
+          error: google.error || ""
+        },
+        fallback: ""
+      };
+    } catch (error) {
+      state.importExportReady = false;
+      return {
+        modules: [],
+        limits: {},
+        history: { imports: [], exports: [], syncs: [], backups: [] },
+        google: { configured: false, connections: [] },
+        fallback: error.message || "Import & Export Center could not be loaded."
+      };
+    }
+  }
+
   async function groundskeeperChat(message) {
     const session = getSession();
     if (!session || !session.accessToken) throw new Error("Please sign in again.");
@@ -1555,11 +1705,30 @@
   function normalizeContact(row) {
     return {
       id: row.id,
+      firstName: row.first_name || "",
+      lastName: row.last_name || "",
       name: row.name || "Unnamed contact",
+      jobTitle: row.job_title || "",
+      company: row.company || "",
+      property: row.property || "",
       type: row.contact_type || "Contact",
       city: row.city || "Not provided",
+      state: row.state || "",
+      zip: row.zip || "",
+      address: row.address || "",
       email: row.email || "No email",
-      phone: row.phone || "No phone",
+      phone: row.phone_display || row.phone || row.phone_e164 || "No phone",
+      phoneE164: row.phone_e164 || "",
+      phoneExtension: row.phone_extension || "",
+      secondaryPhone: row.secondary_phone || "",
+      preferredContactMethod: row.preferred_contact_method || "No Preference",
+      priority: row.priority || "Normal",
+      assignedUser: row.assigned_user || "",
+      lastContactedAtRaw: row.last_contacted_at || "",
+      nextFollowUpAtRaw: row.next_follow_up_at || "",
+      callOutcome: row.call_outcome || "Not Called",
+      notes: row.notes || "",
+      source: row.source || "",
       status: row.status || "New"
     };
   }
@@ -2168,6 +2337,7 @@
         feedback: [],
         fallback: {}
       },
+      importExport: demoImportExportSnapshot(),
       leadActivity: [],
       userProfiles: [
         normalizeUserProfile({
@@ -2289,13 +2459,14 @@
       state.equipmentMaintenanceReady = true;
       state.hardwareGuideReady = true;
       state.groundskeeperAiReady = true;
+      state.importExportReady = true;
       state.leadActivityReady = true;
       state.userProfilesReady = true;
       state.auditLogsReady = true;
       return demoDashboardData();
     }
 
-    const [submissions, contacts, jobs, notes, reminders, documents, operations, outreachProspects, outreachCompanies, outreachProperties, routeStops, equipmentItems, equipmentMaintenance, hardwareGuide, groundskeeperAi, leadActivity, userProfiles, auditLogs] = await Promise.all([
+    const [submissions, contacts, jobs, notes, reminders, documents, operations, outreachProspects, outreachCompanies, outreachProperties, routeStops, equipmentItems, equipmentMaintenance, hardwareGuide, groundskeeperAi, importExport, leadActivity, userProfiles, auditLogs] = await Promise.all([
       supabaseRestRequest("quote_submissions?select=*&order=created_at.desc", { method: "GET" }),
       supabaseRestRequest("contacts?select=*&order=created_at.desc", { method: "GET" }),
       supabaseRestRequest("scheduled_jobs?select=*&order=visit_date.asc", { method: "GET" }),
@@ -2311,6 +2482,7 @@
       loadEquipmentMaintenance(),
       loadHardwareGuide(),
       loadGroundskeeperAi(),
+      loadImportExportCenter(),
       loadLeadActivity(),
       loadUserProfiles(),
       loadAuditLogs()
@@ -2332,6 +2504,7 @@
       equipmentMaintenance,
       hardwareGuide,
       groundskeeperAi,
+      importExport,
       leadActivity,
       userProfiles,
       auditLogs
@@ -7913,6 +8086,413 @@
     renderAiWorkspace(ai);
   }
 
+  function importExportSnapshot(data = state.data) {
+    return data.importExport || demoImportExportSnapshot();
+  }
+
+  function importExportModules(data = state.data) {
+    return importExportSnapshot(data).modules || [];
+  }
+
+  function selectedImportExportModule(data = state.data) {
+    const modules = importExportModules(data);
+    return modules.find((module) => module.key === state.importExportModule) || modules[0] || null;
+  }
+
+  function importExportModuleOptions(selectedKey = state.importExportModule) {
+    return importExportModules().map((module) => (
+      `<option value="${escapeHtml(module.key)}"${module.key === selectedKey ? " selected" : ""}>${escapeHtml(module.label || module.key)}</option>`
+    )).join("");
+  }
+
+  function importExportSummaryCard(label, value, detail = "") {
+    return `<article class="import-export-metric"><strong>${escapeHtml(value)}</strong><span>${escapeHtml(label)}</span>${detail ? `<small>${escapeHtml(detail)}</small>` : ""}</article>`;
+  }
+
+  function importExportMappingsFromDom() {
+    return qsa("[data-import-map-source]").map((select) => ({
+      sourceColumn: select.dataset.importMapSource || "",
+      field: select.value || "",
+      suggestedField: select.dataset.suggestedField || "",
+      confidence: Number(select.dataset.confidence || 0),
+      status: select.value ? "Mapped" : "Ignored"
+    })).filter((item) => item.sourceColumn);
+  }
+
+  function renderImportMappingTable(module, preview) {
+    const fields = (module?.fields || []).filter((field) => field.import !== false && !field.readOnly);
+    const fieldOptions = (selected = "") => [
+      `<option value="">Ignore column</option>`,
+      ...fields.map((field) => `<option value="${escapeHtml(field.key)}"${field.key === selected ? " selected" : ""}>${escapeHtml(field.label)}</option>`)
+    ].join("");
+    const mappings = preview?.mappings || [];
+    if (!mappings.length) return "";
+    return `<div class="import-export-map">
+      <div class="import-export-table-head">
+        <strong>Column mapping</strong>
+        <span>Review before saving. Unmapped columns are ignored.</span>
+      </div>
+      <div class="import-export-table-wrap">
+        <table>
+          <thead><tr><th>Spreadsheet column</th><th>Maps to</th><th>Examples</th><th>Status</th></tr></thead>
+          <tbody>
+            ${mappings.map((mapping) => {
+              const selected = mapping.field || mapping.suggestedField || "";
+              return `<tr>
+                <td><strong>${escapeHtml(mapping.sourceColumn)}</strong></td>
+                <td>
+                  <select data-import-map-source="${escapeHtml(mapping.sourceColumn)}" data-suggested-field="${escapeHtml(mapping.suggestedField || "")}" data-confidence="${escapeHtml(mapping.confidence || 0)}">
+                    ${fieldOptions(selected)}
+                  </select>
+                </td>
+                <td>${(mapping.examples || []).map((example) => `<code>${escapeHtml(String(example).slice(0, 42))}</code>`).join(" ") || "<span class=\"muted\">No samples</span>"}</td>
+                <td><span class="status-pill">${escapeHtml(mapping.status || (selected ? "Matched" : "Ignored"))}</span></td>
+              </tr>`;
+            }).join("")}
+          </tbody>
+        </table>
+      </div>
+    </div>`;
+  }
+
+  function renderImportPreview(module) {
+    const preview = state.importExportPreview;
+    if (!preview?.preview) return "";
+    const summary = preview.preview.summary || {};
+    const rows = preview.preview.rows || [];
+    return `<section class="import-export-preview">
+      <div class="import-export-preview-head">
+        <div>
+          <p class="eyebrow">Preview</p>
+          <h4>${escapeHtml(preview.filename || "Imported data")}</h4>
+          <p>${escapeHtml(summary.totalRows || 0)} rows reviewed before anything is saved.</p>
+        </div>
+        <div class="import-export-preview-actions">
+          <button class="inline-action" type="button" data-action="refresh-import-preview">${buttonContent("Recheck Mapping", "refresh-dashboard")}</button>
+          <button type="button" data-action="confirm-import-file"${summary.rejected ? " disabled" : ""}>${buttonContent("Confirm Import", "import-outreach-csv")}</button>
+        </div>
+      </div>
+      <div class="import-export-metrics">
+        ${importExportSummaryCard("Total rows", summary.totalRows || 0)}
+        ${importExportSummaryCard("New records", summary.newRecords || 0)}
+        ${importExportSummaryCard("Updates", summary.updates || 0)}
+        ${importExportSummaryCard("Possible duplicates", summary.duplicates || 0)}
+        ${importExportSummaryCard("Rejected", summary.rejected || 0, summary.rejected ? "Fix these before import" : "")}
+        ${summary.validPhones || summary.invalidPhones || summary.missingPhones ? importExportSummaryCard("Valid phones", summary.validPhones || 0, summary.invalidPhones ? `${summary.invalidPhones} invalid` : "") : ""}
+      </div>
+      ${renderImportMappingTable(module, preview)}
+      <div class="import-export-row-preview">
+        <div class="import-export-table-head">
+          <strong>Row review</strong>
+          <span>Showing the first ${escapeHtml(Math.min(rows.length, 8))} rows.</span>
+        </div>
+        <div class="import-export-preview-list">
+          ${rows.slice(0, 8).map((row) => `<article class="import-export-row is-${escapeHtml(row.action)}">
+            <div><strong>Row ${escapeHtml(row.rowNumber)}</strong><span>${escapeHtml(row.action)}</span></div>
+            <p>${escapeHtml((row.errors || [])[0]?.message || (row.warnings || [])[0]?.message || row.changedFields?.join(", ") || "Ready")}</p>
+          </article>`).join("")}
+        </div>
+      </div>
+    </section>`;
+  }
+
+  function renderImportView(data) {
+    const module = selectedImportExportModule(data);
+    const limits = importExportSnapshot(data).limits || {};
+    if (!module) return emptyState("Import/export modules could not be loaded. Refresh after running the Supabase SQL.");
+    return `<div class="import-export-grid">
+      <section class="import-export-card">
+        <div class="panel-heading">
+          <div>
+            <h3>Guided Import</h3>
+            <p>Upload Excel or CSV, review mappings, validate rows, then save through the protected backend.</p>
+          </div>
+        </div>
+        <label>Data type
+          <select data-import-export-module>
+            ${importExportModuleOptions(module.key)}
+          </select>
+        </label>
+        <div class="import-export-drop">
+          <strong>${escapeHtml(state.importExportPendingFile?.filename || "Choose a spreadsheet")}</strong>
+          <span>Excel .xlsx or CSV. Maximum ${escapeHtml(Math.round((limits.maxImportBytes || 5242880) / 1024 / 1024))} MB / ${escapeHtml(limits.maxImportRows || 2000)} rows.</span>
+          <button type="button" data-action="choose-import-spreadsheet">${buttonContent("Upload Completed Workbook", "import-outreach-csv")}</button>
+        </div>
+        <label class="span-full">Or paste CSV
+          <textarea data-import-paste rows="7" placeholder="Paste a header row and CSV records here..."></textarea>
+        </label>
+        <div class="import-export-card-actions">
+          <button type="button" data-action="preview-import-paste">${buttonContent("Preview Pasted CSV", "import-outreach-csv")}</button>
+          <button class="inline-action" type="button" data-action="download-import-template" data-format="xlsx">${buttonContent("Download Template", "export-full-backup")}</button>
+        </div>
+      </section>
+      <aside class="import-export-card import-export-guidance">
+        <p class="eyebrow">Import Safety</p>
+        <h3>${escapeHtml(module.label)}</h3>
+        <p>${escapeHtml(module.description || "Dashboard records")}</p>
+        <ul>
+          <li>Supabase stays the source of truth.</li>
+          <li>Existing Record ID values update records.</li>
+          <li>Blank Record ID values create new records.</li>
+          <li>Duplicates are flagged before saving.</li>
+          <li>Recent imports can be rolled back from History.</li>
+          <li>Contact and Call List workbooks keep phone numbers as text and validate call outcomes before saving.</li>
+        </ul>
+      </aside>
+      <div class="span-full">${renderImportPreview(module)}</div>
+    </div>`;
+  }
+
+  function contactWorkbookButtons() {
+    const options = [
+      ["blank", "Blank Contact Template", "Start fresh with fillable contact rows"],
+      ["current_contacts", "Current Contacts", "Round-trip existing contacts"],
+      ["current_prospects", "Current Prospects", "Turn outreach prospects into contacts"],
+      ["properties_without_contacts", "Properties Without Contacts", "Fill missing contact details"],
+      ["follow_up_call_list", "Follow-Up Call List", "Log outcomes after calls"],
+      ["all_outreach", "All Outreach Records", "Contacts, prospects, companies, and properties"]
+    ];
+    return options.map(([type, label, detail]) => (
+      `<button type="button" data-action="download-contact-workbook" data-workbook-type="${escapeHtml(type)}">${buttonContent(label, "export-full-backup")}<small>${escapeHtml(detail)}</small></button>`
+    )).join("");
+  }
+
+  function renderExportView(data) {
+    const module = selectedImportExportModule(data);
+    if (!module) return emptyState("Export modules could not be loaded.");
+    return `<div class="import-export-grid is-export">
+      <section class="import-export-card">
+        <div class="panel-heading">
+          <div>
+            <h3>Export Records</h3>
+            <p>Download clean files for reporting, offline review, Excel edits, or backup snapshots.</p>
+          </div>
+        </div>
+        <label>Data type
+          <select data-import-export-module>${importExportModuleOptions(module.key)}</select>
+        </label>
+        <div class="import-export-button-grid">
+          ${IMPORT_EXPORT_FORMATS.map((format) => `<button type="button" data-action="export-import-module" data-format="${format}">${buttonContent(format.toUpperCase(), "export-full-backup")}<small>${escapeHtml(format === "xlsx" ? "Excel workbook" : format === "pdf" ? "Printable report" : format === "json" ? "Raw backup data" : "CSV file")}</small></button>`).join("")}
+        </div>
+      </section>
+      <section class="import-export-card">
+        <div class="panel-heading">
+          <div>
+            <h3>Templates</h3>
+            <p>Start with the correct columns, allowed values, required fields, and import instructions.</p>
+          </div>
+        </div>
+        <div class="import-export-button-grid">
+          ${IMPORT_EXPORT_TEMPLATE_FORMATS.map((format) => `<button type="button" data-action="download-import-template" data-format="${format}">${buttonContent(`${format.toUpperCase()} Template`, "export-full-backup")}<small>${escapeHtml(format === "xlsx" ? "Recommended" : "Simple CSV")}</small></button>`).join("")}
+        </div>
+      </section>
+      <section class="import-export-card span-full">
+        <div class="panel-heading">
+          <div>
+            <h3>Round-Trip Contact Workbooks</h3>
+            <p>Download a fillable Excel workbook, complete contacts or call outcomes, then upload it back through Import Data for preview and confirmation.</p>
+          </div>
+        </div>
+        <div class="import-export-button-grid">
+          ${contactWorkbookButtons()}
+        </div>
+      </section>
+    </div>`;
+  }
+
+  function renderSheetsView(data) {
+    const module = selectedImportExportModule(data);
+    const google = importExportSnapshot(data).google || {};
+    const connection = (google.connections || []).find((item) => item.status === "connected") || (google.connections || [])[0];
+    return `<div class="import-export-grid">
+      <section class="import-export-card">
+        <div class="panel-heading">
+          <div>
+            <h3>Google Sheets Connection</h3>
+            <p>Use Google Sheets for collaboration while Supabase remains the primary dashboard database.</p>
+          </div>
+        </div>
+        <div class="google-sheets-status ${connection ? "is-connected" : ""}">
+          <strong>${connection ? "Connected" : google.configured ? "Ready to connect" : "Setup needed"}</strong>
+          <span>${escapeHtml(connection?.account_email || google.error || "Add Google OAuth environment variables in Netlify, then connect your Google account.")}</span>
+        </div>
+        <div class="import-export-card-actions">
+          <button type="button" data-action="connect-google-sheets">${buttonContent(connection ? "Reconnect Google Sheets" : "Connect Google Sheets", "go-route-planner")}</button>
+          <button class="inline-action" type="button" data-action="refresh-google-sheets-status">${buttonContent("Refresh Status", "refresh-dashboard")}</button>
+        </div>
+      </section>
+      <section class="import-export-card">
+        <div class="panel-heading">
+          <div>
+            <h3>Send Dashboard Data to Sheets</h3>
+            <p>Create or update a Google Sheet using the selected module export.</p>
+          </div>
+        </div>
+        <label>Data type
+          <select data-import-export-module>${importExportModuleOptions(module?.key)}</select>
+        </label>
+        <label>Optional spreadsheet ID
+          <input data-google-spreadsheet-id placeholder="Leave blank to create a new Google Sheet">
+        </label>
+        <button type="button" data-action="export-google-sheet"${connection ? "" : " disabled"}>${buttonContent("Export to Google Sheets", "export-full-backup")}</button>
+      </section>
+    </div>`;
+  }
+
+  function renderHistoryRows(rows, type) {
+    if (!rows.length) return emptyState(`No ${type} history yet.`);
+    return `<div class="import-export-history-list">
+      ${rows.slice(0, 20).map((row) => `<article class="import-export-history-row">
+        <div>
+          <strong>${escapeHtml(row.source_name || row.module || row.action_type || row.backup_type || row.sync_type || "Dashboard action")}</strong>
+          <span>${escapeHtml(row.status || row.rollback_status || "complete")} / ${escapeHtml(row.created_at ? formatDate(row.created_at) : "recent")}</span>
+        </div>
+        <small>${escapeHtml([row.total_rows && `${row.total_rows} rows`, row.created_count && `${row.created_count} new`, row.updated_count && `${row.updated_count} updated`, row.destination_type].filter(Boolean).join(" / ") || "Tracked dashboard data action")}</small>
+        ${type === "imports" && !row.rollback_status ? `<button class="inline-action" type="button" data-action="undo-import-batch" data-id="${escapeHtml(row.id)}">${buttonContent("Undo Import", "delete-outreach-prospect")}</button>` : ""}
+      </article>`).join("")}
+    </div>`;
+  }
+
+  function renderHistoryView(data) {
+    const history = importExportSnapshot(data).history || {};
+    return `<div class="import-export-grid">
+      <section class="import-export-card span-full">
+        <div class="panel-heading">
+          <div>
+            <h3>Backups & History</h3>
+            <p>Review imports, exports, Sheets syncs, and JSON backups. Recent imports can be rolled back.</p>
+          </div>
+          <div class="import-export-card-actions">
+            <button type="button" data-action="refresh-import-export-history">${buttonContent("Refresh History", "refresh-dashboard")}</button>
+            <button class="inline-action" type="button" data-action="download-json-backup">${buttonContent("Download Full Backup", "export-full-backup")}</button>
+          </div>
+        </div>
+      </section>
+      <section class="import-export-card"><h3>Imports</h3>${renderHistoryRows(history.imports || [], "imports")}</section>
+      <section class="import-export-card"><h3>Exports</h3>${renderHistoryRows(history.exports || [], "exports")}</section>
+      <section class="import-export-card"><h3>Google Sheets</h3>${renderHistoryRows(history.syncs || [], "syncs")}</section>
+      <section class="import-export-card"><h3>Backups</h3>${renderHistoryRows(history.backups || [], "backups")}</section>
+    </div>`;
+  }
+
+  function renderImportExport(data = state.data) {
+    if (!els.importExportMain) return;
+    const snapshot = importExportSnapshot(data);
+    const modules = snapshot.modules || [];
+    if (els.importExportStatus) {
+      els.importExportStatus.innerHTML = snapshot.fallback
+        ? `<span>${escapeHtml(snapshot.fallback)}</span>`
+        : `<span>Protected backend: <code>/.netlify/functions/dashboard-import-export</code></span><span>${escapeHtml(modules.length)} modules / ${escapeHtml(snapshot.limits?.maxImportRows || 0)} row import limit</span>`;
+    }
+    qsa("[data-import-export-view]").forEach((button) => {
+      button.classList.toggle("is-active", button.dataset.importExportView === state.importExportView);
+    });
+    if (!modules.length) {
+      els.importExportMain.innerHTML = emptyState(snapshot.fallback || "Import & Export Center needs the Supabase SQL tables before it can load.");
+      return;
+    }
+    if (state.importExportView === "export") {
+      els.importExportMain.innerHTML = renderExportView(data);
+    } else if (state.importExportView === "sheets") {
+      els.importExportMain.innerHTML = renderSheetsView(data);
+    } else if (state.importExportView === "history") {
+      els.importExportMain.innerHTML = renderHistoryView(data);
+    } else {
+      els.importExportMain.innerHTML = renderImportView(data);
+    }
+  }
+
+  function currentImportExportModuleKey() {
+    return qs("[data-import-export-module]")?.value || state.importExportModule || IMPORT_EXPORT_DEFAULT_MODULE;
+  }
+
+  function importExportFileFormat(filename, fallback = "csv") {
+    const match = String(filename || "").toLowerCase().match(/\.([a-z0-9]+)$/);
+    return match ? match[1] : fallback;
+  }
+
+  async function refreshImportExportData(message = "") {
+    if (message) setDashboardState(message);
+    state.data.importExport = await loadImportExportCenter();
+    renderImportExport(state.data);
+  }
+
+  async function previewImportPayload(payload) {
+    const moduleKey = currentImportExportModuleKey();
+    state.importExportModule = moduleKey;
+    setDashboardState("Checking import file...");
+    const result = await importExportRequest("preview-import", {
+      module: moduleKey,
+      ...payload
+    });
+    state.importExportPreview = result;
+    state.importExportPendingFile = {
+      filename: result.filename || payload.filename || payload.sourceName || "Imported data",
+      format: payload.format || "csv",
+      fileBase64: payload.fileBase64 || "",
+      content: payload.content || ""
+    };
+    renderImportExport(state.data);
+    const rejected = result.preview?.summary?.rejected || 0;
+    const duplicates = result.preview?.summary?.duplicates || 0;
+    setDashboardState(rejected ? `${rejected} row${rejected === 1 ? "" : "s"} need fixes before import.` : duplicates ? `${duplicates} possible duplicate${duplicates === 1 ? "" : "s"} found. Review before saving.` : "Import preview is ready.");
+  }
+
+  async function previewImportFile(file) {
+    if (!file) return;
+    const format = importExportFileFormat(file.name);
+    if (!["csv", "xlsx"].includes(format)) throw new Error("Choose a .csv or .xlsx file.");
+    const fileBase64 = await readFileAsBase64(file);
+    await previewImportPayload({
+      filename: file.name,
+      format,
+      fileBase64
+    });
+  }
+
+  async function confirmImportPreview() {
+    const pending = state.importExportPendingFile;
+    if (!pending) throw new Error("Preview an import file before confirming.");
+    const mappings = importExportMappingsFromDom();
+    setDashboardState("Saving import through the secure backend...");
+    const result = await importExportRequest("confirm-import", {
+      module: state.importExportModule,
+      filename: pending.filename,
+      format: pending.format,
+      fileBase64: pending.fileBase64,
+      content: pending.content,
+      mappings
+    });
+    state.importExportPreview = null;
+    state.importExportPendingFile = null;
+    await refreshDashboard();
+    setActiveSection("import-export");
+    history.replaceState(null, "", "#import-export");
+    const summary = result.summary || {};
+    setDashboardState(`Import complete: ${summary.created || 0} created, ${summary.updated || 0} updated, ${summary.skipped || 0} skipped.`);
+  }
+
+  async function downloadImportExport(format, action = "export") {
+    const moduleKey = currentImportExportModuleKey();
+    state.importExportModule = moduleKey;
+    setDashboardState(action === "template" ? "Preparing import template..." : "Preparing export...");
+    await importExportDownload(action, { module: moduleKey, format }, `urban-yards-${moduleKey}.${format}`);
+    await refreshImportExportData(action === "template" ? "Template downloaded." : "Export downloaded.");
+  }
+
+  async function downloadContactWorkbook(workbookType) {
+    const type = workbookType || "blank";
+    setDashboardState("Preparing contact workbook...");
+    await importExportDownload("contact-workbook", { workbookType: type }, `urban-yards-${type}-${todayKey()}.xlsx`);
+    await refreshImportExportData("Contact workbook downloaded.");
+  }
+
+  async function downloadDashboardBackup() {
+    setDashboardState("Preparing full JSON backup...");
+    await importExportDownload("backup", { limit: 10000 }, `urban-yards-dashboard-backup-${todayKey()}.json`);
+    await refreshImportExportData("Full backup downloaded.");
+  }
+
   function aiEntryPayloadFromForm(form) {
     const data = new FormData(form);
     const table = String(data.get("table") || "ai_knowledge");
@@ -8003,6 +8583,7 @@
     renderOperations(data);
     renderRoutePlanner(data);
     renderGroundskeeperAi(data);
+    renderImportExport(data);
     renderUsersAccess(data);
     renderActivityLog(data);
     renderCurrentProfileAvatar(data);
@@ -8483,6 +9064,33 @@
         return;
       }
 
+      if (target.matches("[data-import-export-file]")) {
+        const file = target.files && target.files[0];
+        try {
+          await previewImportFile(file);
+        } catch (error) {
+          setDashboardState(error.message || "Unable to preview import file.", "error");
+        } finally {
+          target.value = "";
+        }
+        return;
+      }
+
+      if (target.matches("[data-import-export-module]")) {
+        state.importExportModule = target.value || IMPORT_EXPORT_DEFAULT_MODULE;
+        state.importExportPreview = null;
+        state.importExportPendingFile = null;
+        await render();
+        return;
+      }
+
+      if (target.matches("[data-import-map-source]")) {
+        if (state.importExportPreview) {
+          state.importExportPreview.mappings = importExportMappingsFromDom();
+        }
+        return;
+      }
+
       if (target.matches("[data-recurring-toggle]")) {
         const form = target.closest("form");
         const controls = form?.querySelector("[data-recurring-controls]");
@@ -8632,6 +9240,182 @@
 
       if (action !== "toggle-notifications") {
         setNotificationsOpen(false);
+      }
+
+      if (action === "set-import-export-view") {
+        state.importExportView = target.dataset.importExportView || "import";
+        await render();
+        return;
+      }
+
+      if (action === "refresh-import-export") {
+        try {
+          await refreshImportExportData("Refreshing Import & Export Center...");
+          setDashboardState("Import & Export Center refreshed.");
+        } catch (error) {
+          setDashboardState(error.message || "Unable to refresh Import & Export Center.", "error");
+        }
+        return;
+      }
+
+      if (action === "choose-import-spreadsheet") {
+        if (els.importExportFile) els.importExportFile.click();
+        return;
+      }
+
+      if (action === "preview-import-paste") {
+        const textarea = qs("[data-import-paste]");
+        const content = String(textarea?.value || "").trim();
+        if (!content) {
+          setDashboardState("Paste CSV content first.", "error");
+          return;
+        }
+        try {
+          await previewImportPayload({
+            filename: "pasted-import.csv",
+            format: "csv",
+            content
+          });
+        } catch (error) {
+          setDashboardState(error.message || "Unable to preview pasted CSV.", "error");
+        }
+        return;
+      }
+
+      if (action === "refresh-import-preview") {
+        const pending = state.importExportPendingFile;
+        if (!pending) {
+          setDashboardState("Preview a file before rechecking mappings.", "error");
+          return;
+        }
+        try {
+          await previewImportPayload({
+            filename: pending.filename,
+            format: pending.format,
+            fileBase64: pending.fileBase64,
+            content: pending.content,
+            mappings: importExportMappingsFromDom()
+          });
+        } catch (error) {
+          setDashboardState(error.message || "Unable to recheck mappings.", "error");
+        }
+        return;
+      }
+
+      if (action === "confirm-import-file") {
+        if (!window.confirm("Import the valid rows into Supabase now?")) return;
+        try {
+          await confirmImportPreview();
+        } catch (error) {
+          setDashboardState(error.message || "Unable to confirm import.", "error");
+        }
+        return;
+      }
+
+      if (action === "download-import-template") {
+        try {
+          await downloadImportExport(target.dataset.format || "xlsx", "template");
+        } catch (error) {
+          setDashboardState(error.message || "Unable to download template.", "error");
+        }
+        return;
+      }
+
+      if (action === "export-import-module") {
+        try {
+          await downloadImportExport(target.dataset.format || state.importExportFormat || "xlsx", "export");
+        } catch (error) {
+          setDashboardState(error.message || "Unable to export records.", "error");
+        }
+        return;
+      }
+
+      if (action === "download-contact-workbook") {
+        try {
+          await downloadContactWorkbook(target.dataset.workbookType || "blank");
+        } catch (error) {
+          setDashboardState(error.message || "Unable to download contact workbook.", "error");
+        }
+        return;
+      }
+
+      if (action === "download-json-backup") {
+        try {
+          await downloadDashboardBackup();
+        } catch (error) {
+          setDashboardState(error.message || "Unable to download backup.", "error");
+        }
+        return;
+      }
+
+      if (action === "refresh-import-export-history") {
+        try {
+          await refreshImportExportData("Refreshing import/export history...");
+          setDashboardState("History refreshed.");
+        } catch (error) {
+          setDashboardState(error.message || "Unable to refresh history.", "error");
+        }
+        return;
+      }
+
+      if (action === "undo-import-batch") {
+        if (!id || !window.confirm("Undo this import batch? Created rows will be removed and updated rows will be restored when possible.")) return;
+        try {
+          setDashboardState("Rolling back import...");
+          const result = await importExportRequest("undo-import", { batchId: id });
+          await refreshDashboard();
+          setActiveSection("import-export");
+          history.replaceState(null, "", "#import-export");
+          const summary = result.summary || {};
+          setDashboardState(`Import rollback complete: ${summary.deleted || 0} deleted, ${summary.restored || 0} restored, ${summary.conflicts || 0} conflicts.`);
+        } catch (error) {
+          setDashboardState(error.message || "Unable to undo import.", "error");
+        }
+        return;
+      }
+
+      if (action === "connect-google-sheets") {
+        try {
+          setDashboardState("Preparing Google Sheets connection...");
+          const result = await importExportRequest("google-start", {});
+          if (result.setupRequired) {
+            setDashboardState(result.error || "Google Sheets is not configured yet.", "error");
+            return;
+          }
+          if (result.authorizationUrl) {
+            window.open(result.authorizationUrl, "UrbanYardsGoogleSheets", "width=920,height=760,resizable=yes,scrollbars=yes");
+            setDashboardState("Google authorization opened. Return here after connecting.");
+          }
+        } catch (error) {
+          setDashboardState(error.message || "Unable to connect Google Sheets.", "error");
+        }
+        return;
+      }
+
+      if (action === "refresh-google-sheets-status") {
+        try {
+          await refreshImportExportData("Refreshing Google Sheets status...");
+          setDashboardState("Google Sheets status refreshed.");
+        } catch (error) {
+          setDashboardState(error.message || "Unable to refresh Google Sheets status.", "error");
+        }
+        return;
+      }
+
+      if (action === "export-google-sheet") {
+        try {
+          const spreadsheetId = String(qs("[data-google-spreadsheet-id]")?.value || "").trim();
+          setDashboardState("Sending records to Google Sheets...");
+          const result = await importExportRequest("google-export", {
+            module: currentImportExportModuleKey(),
+            spreadsheetId
+          });
+          if (result.spreadsheetUrl) window.open(result.spreadsheetUrl, "_blank", "noopener");
+          await refreshImportExportData(`Google Sheet updated with ${result.rows || 0} rows.`);
+        } catch (error) {
+          setDashboardState(error.message || "Unable to export to Google Sheets.", "error");
+        }
+        return;
       }
 
       if (action === "open-call-activity") {
@@ -10447,6 +11231,9 @@
     els.routeSummary = qs("[data-route-summary]");
     els.routeMap = qs("[data-route-map]");
     els.routeMapStatus = qs("[data-route-map-status]");
+    els.importExportStatus = qs("[data-import-export-status]");
+    els.importExportMain = qs("[data-import-export-main]");
+    els.importExportFile = qs("[data-import-export-file]");
     els.importBackup = qs("[data-import-backup]");
     els.userAvatarUpload = qs("[data-user-avatar-upload]");
     els.usersAccessStatus = qs("[data-users-access-status]");

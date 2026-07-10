@@ -11,9 +11,9 @@
     <link rel="icon" href="/favicon.ico" sizes="any">
     <link rel="apple-touch-icon" href="/apple-touch-icon.png">
     <link rel="manifest" href="/dashboard.webmanifest">
-    <link rel="stylesheet" href="dashboard.css?v=20260710-sidebar-close-1">
+    <link rel="stylesheet" href="dashboard.css?v=20260710-roundtrip-1">
     <script src="dashboard-config.js?v=20260623-1" defer></script>
-    <script src="dashboard.js?v=20260710-sidebar-close-1" defer></script>
+    <script src="dashboard.js?v=20260710-roundtrip-1" defer></script>
   </head>
   <body>
     <main class="dashboard-shell" aria-labelledby="dashboard-title">
@@ -62,6 +62,7 @@
               <a href="#outreach" data-dashboard-link="outreach"><span class="nav-icon" aria-hidden="true"><img src="images/dashboard-icons/outreach-send.svg" alt=""></span><span class="nav-label">Leads</span></a>
               <a href="#contacts" data-dashboard-link="contacts"><span class="nav-icon" aria-hidden="true"><img src="images/dashboard-icons/properties-building.svg" alt=""></span><span class="nav-label">Clients</span></a>
               <a href="#documents" data-dashboard-link="documents"><span class="nav-icon" aria-hidden="true"><img src="images/dashboard-icons/tasks-check-square.svg" alt=""></span><span class="nav-label">Money</span></a>
+              <a href="#import-export" data-dashboard-link="import-export"><span class="nav-icon" aria-hidden="true"><img src="images/dashboard-icons/import-export.svg" alt=""></span><span class="nav-label">Import &amp; Export</span></a>
               <a href="#route-planner" data-dashboard-link="route-planner"><span class="nav-icon" aria-hidden="true"><img src="images/dashboard-icons/menu-grid.svg" alt=""></span><span class="nav-label">Route Planner</span></a>
               <a href="#equipment" data-dashboard-link="equipment"><span class="nav-icon" aria-hidden="true"><img src="images/dashboard-icons/activity-check-circle.svg" alt=""></span><span class="nav-label">Equipment</span></a>
               <a href="#groundskeeper-ai" data-dashboard-link="groundskeeper-ai"><span class="nav-icon" aria-hidden="true"><img src="images/dashboard-icons/quick-actions-spark.svg" alt=""></span><span class="nav-label">Groundskeeper AI</span></a>
@@ -919,6 +920,29 @@
             </div>
           </section>
 
+          <section class="dashboard-section import-export-center" id="import-export" data-section="import-export">
+            <div class="import-export-hero">
+              <div>
+                <p class="eyebrow">Data Center</p>
+                <h3>Import, Export &amp; Google Sheets</h3>
+                <p>Safely move dashboard records through Excel, CSV, Google Sheets, PDF reports, and full JSON backups.</p>
+              </div>
+              <div class="import-export-actions">
+                <button type="button" data-action="refresh-import-export"><span class="button-icon" aria-hidden="true">R</span><span>Refresh</span></button>
+                <button type="button" data-action="download-json-backup"><span class="button-icon" aria-hidden="true">JSON</span><span>Full Backup</span></button>
+              </div>
+            </div>
+            <div class="import-export-status" data-import-export-status></div>
+            <div class="import-export-tabs" role="tablist" aria-label="Import and export tools">
+              <button type="button" data-action="set-import-export-view" data-import-export-view="import">Import Data</button>
+              <button type="button" data-action="set-import-export-view" data-import-export-view="export">Export Data</button>
+              <button type="button" data-action="set-import-export-view" data-import-export-view="sheets">Google Sheets</button>
+              <button type="button" data-action="set-import-export-view" data-import-export-view="history">Backups &amp; History</button>
+            </div>
+            <div class="import-export-main" data-import-export-main></div>
+            <input data-import-export-file type="file" accept=".csv,.xlsx,text/csv,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" hidden>
+          </section>
+
           <section class="dashboard-section" id="settings" data-section="settings">
             <div class="panel">
               <div class="panel-heading">
@@ -969,6 +993,7 @@
           <a href="#outreach" data-dashboard-link="outreach">Leads</a>
           <a href="#contacts" data-dashboard-link="contacts">Clients</a>
           <a href="#documents" data-dashboard-link="documents">Money</a>
+          <a href="#import-export" data-dashboard-link="import-export">Data</a>
           <a href="#settings" data-dashboard-link="settings">Tools</a>
         </nav>
 

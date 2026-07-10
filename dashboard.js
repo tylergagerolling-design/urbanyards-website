@@ -8167,7 +8167,7 @@
           }
         });
       });
-      document.addEventListener("pointermove", closeSidebarWhenPointerIsOutside);
+      document.addEventListener("pointerdown", closeSidebarWhenPointerIsOutside);
     }
 
     document.addEventListener("keydown", (event) => {

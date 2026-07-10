@@ -73,7 +73,7 @@
 
   --transition-fast: 120ms ease;
   --transition-normal: 200ms ease;
-  --transition-drawer: 300ms cubic-bezier(.22, 1, .36, 1);
+  --transition-drawer: 220ms cubic-bezier(.22, 1, .36, 1);
 }
 
 html[data-theme="urban-yards"] {
@@ -9651,7 +9651,7 @@ body:not(.is-login-screen) {
   --uy-rail-width: 76px;
   --uy-drawer-width: 292px;
   --uy-sidebar-icon: 48px;
-  --uy-closed-sidebar-icon: 44px;
+  --uy-closed-sidebar-icon: var(--uy-sidebar-icon);
   --uy-sidebar-icon-art: 22px;
   --uy-icon-art: var(--uy-sidebar-icon-art);
   --uy-nav-gap: 6px;
@@ -10148,11 +10148,11 @@ body:not(.is-login-screen) .record-more-menu[open] > div .inline-action {
     max-height: calc(100dvh - (var(--uy-page-pad) * 2)) !important;
     overflow: hidden !important;
     transition:
-      width .3s var(--uy-drawer-ease),
-      min-width .3s var(--uy-drawer-ease),
-      max-width .3s var(--uy-drawer-ease),
-      box-shadow .3s var(--uy-drawer-ease) !important;
-    will-change: width, min-width, max-width;
+      width var(--transition-drawer),
+      min-width var(--transition-drawer),
+      max-width var(--transition-drawer),
+      box-shadow var(--transition-drawer) !important;
+    will-change: width, min-width, max-width, box-shadow;
   }
 
   body:not(.is-login-screen) .dashboard-sidebar:hover,
@@ -10175,8 +10175,8 @@ body:not(.is-login-screen) .record-more-menu[open] > div .inline-action {
     .dashboard-brand,
     .dashboard-nav a
   ) {
-    grid-template-columns: var(--uy-closed-sidebar-icon) 0 !important;
-    justify-content: center !important;
+    grid-template-columns: var(--uy-sidebar-icon) minmax(0, 1fr) !important;
+    justify-content: start !important;
     gap: 0 !important;
     overflow: hidden !important;
   }
@@ -10186,8 +10186,8 @@ body:not(.is-login-screen) .record-more-menu[open] > div .inline-action {
   }
 
   body:not(.is-login-screen) .app-view:not(.is-sidebar-open):not(:has(.dashboard-sidebar:hover)):not(:has(.dashboard-sidebar:focus-within)) .dashboard-sidebar .sidebar-profile {
-    grid-template-columns: var(--uy-closed-sidebar-icon) 0 0 !important;
-    justify-content: center !important;
+    grid-template-columns: var(--uy-sidebar-icon) minmax(0, 1fr) !important;
+    justify-content: start !important;
     gap: 0 !important;
     overflow: hidden !important;
   }
@@ -10201,13 +10201,13 @@ body:not(.is-login-screen) .record-more-menu[open] > div .inline-action {
     content: none !important;
   }
 
-  body:not(.is-login-screen) .app-view:not(.is-sidebar-open):not(:has(.dashboard-sidebar:hover)):not(:has(.dashboard-sidebar:focus-within)) .dashboard-sidebar :is(.dashboard-brand img, .nav-icon, .sidebar-notification-button, .sidebar-profile > img:first-child) {
-    width: var(--uy-closed-sidebar-icon) !important;
-    min-width: var(--uy-closed-sidebar-icon) !important;
-    max-width: var(--uy-closed-sidebar-icon) !important;
-    height: var(--uy-closed-sidebar-icon) !important;
-    min-height: var(--uy-closed-sidebar-icon) !important;
-    max-height: var(--uy-closed-sidebar-icon) !important;
+  body:not(.is-login-screen) .app-view:not(.is-sidebar-open):not(:has(.dashboard-sidebar:hover)):not(:has(.dashboard-sidebar:focus-within)) .dashboard-sidebar :is(.dashboard-brand img, .nav-icon, .sidebar-notification-button, .sidebar-user-avatar) {
+    width: var(--uy-sidebar-icon) !important;
+    min-width: var(--uy-sidebar-icon) !important;
+    max-width: var(--uy-sidebar-icon) !important;
+    height: var(--uy-sidebar-icon) !important;
+    min-height: var(--uy-sidebar-icon) !important;
+    max-height: var(--uy-sidebar-icon) !important;
   }
 
   body:not(.is-login-screen) .dashboard-sidebar-inner {
@@ -10265,6 +10265,7 @@ body:not(.is-login-screen) .record-more-menu[open] > div .inline-action {
     min-height: var(--uy-sidebar-icon) !important;
     max-height: var(--uy-sidebar-icon) !important;
     padding: 0 !important;
+    transform: none !important;
   }
 
   body:not(.is-login-screen) :is(.dashboard-brand img, .nav-icon, .sidebar-notification-button) {
@@ -10275,6 +10276,11 @@ body:not(.is-login-screen) .record-more-menu[open] > div .inline-action {
     min-height: var(--uy-sidebar-icon) !important;
     max-height: var(--uy-sidebar-icon) !important;
     padding: 0 !important;
+  }
+
+  body:not(.is-login-screen) .dashboard-brand img {
+    object-fit: contain !important;
+    padding: 2px !important;
   }
 
   body:not(.is-login-screen) .sidebar-bottom .sign-out {
@@ -10311,6 +10317,10 @@ body:not(.is-login-screen) .record-more-menu[open] > div .inline-action {
     background: rgba(206, 225, 191, .95) !important;
   }
 
+  body:not(.is-login-screen) .dashboard-nav a:hover {
+    transform: none !important;
+  }
+
   body:not(.is-login-screen) .app-view:not(.is-sidebar-open):not(:has(.dashboard-sidebar:hover)):not(:has(.dashboard-sidebar:focus-within)) .dashboard-nav a.is-active {
     background: transparent !important;
     border-color: transparent !important;
@@ -10333,9 +10343,9 @@ body:not(.is-login-screen) .record-more-menu[open] > div .inline-action {
     transform: translateX(-4px) !important;
     pointer-events: none !important;
     transition:
-      opacity .22s var(--uy-drawer-ease),
-      transform .26s var(--uy-drawer-ease),
-      max-width .3s var(--uy-drawer-ease) !important;
+      opacity .16s var(--uy-drawer-ease),
+      transform .2s var(--uy-drawer-ease),
+      max-width .2s var(--uy-drawer-ease) !important;
   }
 
   body:not(.is-login-screen) :is(.dashboard-sidebar:hover, .dashboard-sidebar:focus-within) .dashboard-brand span,
@@ -10370,7 +10380,7 @@ body:not(.is-login-screen) .record-more-menu[open] > div .inline-action {
     --uy-card-pad: 18px;
     --uy-button-h: 38px;
     --uy-sidebar-icon: 44px;
-    --uy-closed-sidebar-icon: 42px;
+    --uy-closed-sidebar-icon: var(--uy-sidebar-icon);
     --uy-sidebar-icon-art: 20px;
     --uy-icon-art: var(--uy-sidebar-icon-art);
     --uy-nav-gap: 4px;
@@ -10397,7 +10407,7 @@ body:not(.is-login-screen) .record-more-menu[open] > div .inline-action {
     --uy-section-gap: 10px;
     --uy-card-pad: 16px;
     --uy-sidebar-icon: 42px;
-    --uy-closed-sidebar-icon: 40px;
+    --uy-closed-sidebar-icon: var(--uy-sidebar-icon);
     --uy-sidebar-icon-art: 19px;
     --uy-icon-art: var(--uy-sidebar-icon-art);
     --uy-nav-gap: 3px;
@@ -10558,7 +10568,7 @@ body:not(.is-login-screen) .pipeline-card .meta {
   }
 
   body:not(.is-login-screen) .app-view:not(.is-sidebar-open):not(:has(.dashboard-sidebar:hover)):not(:has(.dashboard-sidebar:focus-within)) .dashboard-sidebar .sidebar-user-avatar {
-    width: 42px !important;
-    height: 42px !important;
+    width: var(--uy-sidebar-icon) !important;
+    height: var(--uy-sidebar-icon) !important;
   }
 }

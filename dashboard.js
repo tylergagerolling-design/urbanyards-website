@@ -3815,9 +3815,8 @@
     return normalizeDocument(rows[0]);
   }
 
-  function isDocumentationOwner() {
-    const session = getSession();
-    return normalizeDashboardRole(session?.role) === "owner";
+  function canManageDocumentationTemplates() {
+    return ["owner", "admin"].includes(currentSessionRole());
   }
 
   function canReviewDocumentation() {
@@ -3960,7 +3959,7 @@
   }
 
   async function insertDocumentationTemplate(payload) {
-    if (!isDocumentationOwner()) throw new Error("Only the Owner role can manage master templates.");
+    if (!canManageDocumentationTemplates()) throw new Error("Only Owner and Admin users can manage master templates.");
     if (!payload.name) throw new Error("Template name is required.");
     if (!state.documentationReady) throw new Error("Create the documentation tables first. See DASHBOARD_DOCUMENTATION_SQL.md.");
     if (isDemoMode()) {
@@ -8218,16 +8217,16 @@
   }
 
   function renderDocumentationTemplateForm() {
-    if (!isDocumentationOwner()) {
-      return `<section class="documentation-card">${emptyState("Only the Owner role can upload or change master templates.")}</section>`;
+    if (!canManageDocumentationTemplates()) {
+      return `<section class="documentation-card">${emptyState("Only Owner and Admin users can upload or change master templates.")}</section>`;
     }
     const categoryOptions = DOCUMENTATION_CATEGORIES.map((category) => `<option>${escapeHtml(category)}</option>`).join("");
     return `<section class="documentation-card documentation-template-manager" data-documentation-template-manager>
-      <div class="panel-heading"><h3>Manage Templates</h3><p>Upload or publish reusable company forms. Advanced settings stay tucked away so basic uploads stay simple.</p></div>
+      <div class="panel-heading"><h3>Upload Form Templates</h3><p>Upload reusable company forms, checklists, inspections, and reports for the Documentation library.</p></div>
       <form class="documentation-form" data-documentation-template-form>
         <input name="name" placeholder="Template name" required>
         <select name="category">${categoryOptions}</select>
-        <input name="file_name" placeholder="Existing storage path or file name">
+        <input name="file_name" placeholder="Optional existing storage path or file name">
         <input name="template_file" type="file" accept=".pdf,.docx,.jpg,.jpeg,.png,.webp,.xlsx,.csv,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document,image/jpeg,image/png,image/webp,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,text/csv">
         <textarea name="instructions" placeholder="Instructions for completing this form"></textarea>
         <details class="documentation-advanced">
@@ -8266,8 +8265,8 @@
       button.classList.toggle("is-active", isActive);
       button.setAttribute("aria-selected", isActive ? "true" : "false");
     });
-    qsa("[data-owner-only]").forEach((node) => {
-      node.hidden = !isDocumentationOwner();
+    qsa("[data-documentation-template-admin]").forEach((node) => {
+      node.hidden = !canManageDocumentationTemplates();
     });
 
     const metrics = `<div class="documentation-metrics">${documentationMetrics(documentation).map(renderDocumentationMetric).join("")}</div>`;

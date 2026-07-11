@@ -15,4 +15,4 @@ That migration creates:
 
 After running the SQL, refresh the dashboard and open **Documentation** from the left drawer.
 
-Owner-only template upload/replace actions are protected by the dashboard backend permission map. Secure file upload and signed-download behavior should stay server-side when the storage function layer is expanded.
+Owner/admin template upload and replace actions are protected by the dashboard backend permission map. Secure file upload and signed-download behavior stays server-side in the Documentation storage function.

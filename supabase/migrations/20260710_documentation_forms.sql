@@ -386,6 +386,18 @@ create policy "admin manager read template versions"
   on public.documentation_template_versions for select
   using (public.dashboard_role_at_least('viewer'));
 
+drop policy if exists "admin manages documentation templates" on public.documentation_templates;
+create policy "admin manages documentation templates"
+  on public.documentation_templates for all
+  using (public.dashboard_role_at_least('admin'))
+  with check (public.dashboard_role_at_least('admin'));
+
+drop policy if exists "admin manages documentation template versions" on public.documentation_template_versions;
+create policy "admin manages documentation template versions"
+  on public.documentation_template_versions for all
+  using (public.dashboard_role_at_least('admin'))
+  with check (public.dashboard_role_at_least('admin'));
+
 drop policy if exists "admin manager assignment access" on public.documentation_assignments;
 create policy "admin manager assignment access"
   on public.documentation_assignments for all
@@ -502,17 +514,18 @@ create policy "documentation users read private files"
   );
 
 drop policy if exists "owner manages documentation templates" on storage.objects;
-create policy "owner manages documentation templates"
+drop policy if exists "admin manages documentation templates" on storage.objects;
+create policy "admin manages documentation templates"
   on storage.objects for all
   using (
     bucket_id = 'documentation-templates'
     and auth.role() = 'authenticated'
-    and public.dashboard_current_role() = 'owner'
+    and public.dashboard_role_at_least('admin')
   )
   with check (
     bucket_id = 'documentation-templates'
     and auth.role() = 'authenticated'
-    and public.dashboard_current_role() = 'owner'
+    and public.dashboard_role_at_least('admin')
   );
 
 drop policy if exists "documentation users upload submissions" on storage.objects;

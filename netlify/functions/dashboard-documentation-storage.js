@@ -194,7 +194,7 @@ exports.handler = async (event) => {
 
     const kind = String(body.kind || "").trim() === "template" ? "template" : "submission";
     const bucket = kind === "template" ? "documentation-templates" : "documentation-submissions";
-    const auth = await requirePermission(event, kind === "template" ? "owner:manage" : "documentation:write", { entityType: "documentation_file", bucket, kind });
+    const auth = await requirePermission(event, kind === "template" ? "admin:manage" : "documentation:write", { entityType: "documentation_file", bucket, kind });
     actor = auth.actor;
     if (!auth.ok) return json(auth.statusCode, { error: auth.error, requestId });
 

@@ -10348,6 +10348,7 @@ body:not(.is-login-screen) .record-more-menu[open] > div .inline-action {
   body:not(.is-login-screen) .nav-label,
   body:not(.is-login-screen) .sidebar-profile > span:not(.user-avatar),
   body:not(.is-login-screen) .sign-out span:not(.button-icon) {
+    min-width: 0 !important;
     max-width: 0 !important;
     opacity: 0 !important;
     visibility: hidden !important;
@@ -10372,6 +10373,15 @@ body:not(.is-login-screen) .record-more-menu[open] > div .inline-action {
     visibility: visible !important;
     transform: translateX(0) !important;
     pointer-events: auto !important;
+  }
+
+  body:not(.is-login-screen) .dashboard-nav .nav-label {
+    display: block !important;
+    min-width: 0 !important;
+    white-space: nowrap !important;
+    overflow: hidden !important;
+    text-overflow: ellipsis !important;
+    line-height: 1 !important;
   }
 
   body:not(.is-login-screen) .dashboard-main {

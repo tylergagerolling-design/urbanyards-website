@@ -83,8 +83,9 @@
   const IMPORT_EXPORT_DEFAULT_MODULE = "outreach_prospects";
   const IMPORT_EXPORT_FORMATS = ["xlsx", "csv", "pdf", "json"];
   const IMPORT_EXPORT_TEMPLATE_FORMATS = ["xlsx", "csv"];
-  const DOCUMENTATION_DEFAULT_VIEW = "forms";
-  const DOCUMENTATION_STATUSES = ["Not Started", "In Progress", "Submitted", "Needs Correction", "Approved", "Overdue", "Archived"];
+  const DOCUMENTATION_DEFAULT_VIEW = "archive";
+  const DOCUMENTATION_STATUSES = ["Active", "Inactive", "Not Started", "In Progress", "Submitted", "Needs Correction", "Approved", "Overdue", "Archived"];
+  const DOCUMENTATION_ARCHIVE_TYPES = ["Template", "Submission", "Attachment"];
   const DOCUMENTATION_CATEGORIES = [
     "Property Cleaning",
     "Property Inspection",
@@ -111,7 +112,10 @@
     "application/octet-stream"
   ]);
   const DOCUMENTATION_VIEW_LABELS = {
-    forms: "Forms to Complete",
+    archive: "Forms Archive",
+    upload: "Upload Form",
+    assign: "Assign Forms",
+    forms: "Assign Forms",
     submitted: "Submitted Forms",
     templates: "Template Library",
     audit: "Audit History"
@@ -209,6 +213,7 @@
     groundskeeperAiSearch: "",
     documentationView: DOCUMENTATION_DEFAULT_VIEW,
     documentationSearch: "",
+    documentationTypeFilter: "All",
     documentationStatusFilter: "All",
     documentationCategoryFilter: "All",
     importExportView: "import",
@@ -2652,6 +2657,8 @@
       fileBucket: row.file_bucket || "documentation-templates",
       fileName: row.file_name || row.original_file_name || "",
       filePath: row.file_path || row.storage_path || "",
+      mimeType: row.mime_type || "",
+      fileSizeBytes: Number(row.file_size_bytes || 0) || 0,
       updatedBy: row.updated_by_name || row.uploaded_by_name || row.created_by_name || "",
       updatedAtRaw: row.updated_at || row.created_at || "",
       updatedAt: formatDate(row.updated_at || row.created_at)
@@ -2707,9 +2714,35 @@
       fileBucket: row.file_bucket || "documentation-submissions",
       fileName: row.file_name || row.original_file_name || "",
       filePath: row.file_path || row.storage_path || "",
+      mimeType: row.mime_type || "",
+      fileSizeBytes: Number(row.file_size_bytes || 0) || 0,
       documentType: row.document_type || row.file_type || "",
       notes: row.notes || "",
       correctionNotes: row.correction_notes || row.rejection_notes || ""
+    };
+  }
+
+  function normalizeDocumentationAttachment(row = {}) {
+    return {
+      id: row.id || "",
+      assignmentId: row.assignment_id || "",
+      submissionId: row.submission_id || "",
+      attachmentType: row.attachment_type || "other",
+      category: normalizeDocumentationCategory(row.category),
+      status: row.status || "Submitted",
+      propertyName: row.property_name || row.property || "",
+      contactName: row.contact_name || row.contact || "",
+      jobName: row.job_name || row.job || "",
+      equipmentName: row.equipment_name || "",
+      completedBy: row.uploaded_by_name || row.uploaded_by_email || "Dashboard user",
+      fileBucket: row.file_bucket || "documentation-submissions",
+      fileName: row.file_name || row.original_file_name || "",
+      filePath: row.file_path || row.storage_path || "",
+      mimeType: row.mime_type || "",
+      fileSizeBytes: Number(row.file_size_bytes || 0) || 0,
+      createdAtRaw: row.created_at || "",
+      createdAt: formatDate(row.created_at),
+      metadata: row.metadata || {}
     };
   }
 
@@ -2733,6 +2766,7 @@
       assignments: Array.isArray(raw.assignments) ? raw.assignments.map(normalizeDocumentationAssignment) : [],
       submissions: Array.isArray(raw.submissions) ? raw.submissions.map(normalizeDocumentationSubmission) : [],
       templates: Array.isArray(raw.templates) ? raw.templates.map(normalizeDocumentationTemplate) : [],
+      attachments: Array.isArray(raw.attachments) ? raw.attachments.map(normalizeDocumentationAttachment) : [],
       audit: Array.isArray(raw.audit) ? raw.audit.map(normalizeDocumentationAudit) : []
     };
   }
@@ -3438,8 +3472,14 @@
         supabaseRestRequest("documentation_submissions?select=*&order=submitted_at.desc.nullslast,created_at.desc", { method: "GET" }),
         supabaseRestRequest("documentation_audit_logs?select=*&order=created_at.desc&limit=200", { method: "GET" })
       ]);
+      let attachments = [];
+      try {
+        attachments = await supabaseRestRequest("documentation_attachments?select=*&order=created_at.desc&limit=500", { method: "GET" });
+      } catch {
+        attachments = [];
+      }
       state.documentationReady = true;
-      return normalizeDocumentationBundle({ templates, assignments, submissions, audit });
+      return normalizeDocumentationBundle({ templates, assignments, submissions, attachments, audit });
     } catch (error) {
       state.documentationReady = false;
       return normalizeDocumentationBundle();
@@ -8063,11 +8103,118 @@
     ].filter(Boolean).join(" / ") || "General company record";
   }
 
+  function documentationFileExtensionFromName(fileName = "", mimeType = "") {
+    const extension = String(fileName || "").toLowerCase().match(/\.([a-z0-9]+)$/)?.[1];
+    if (extension) return extension.toUpperCase();
+    if (String(mimeType || "").includes("pdf")) return "PDF";
+    if (String(mimeType || "").includes("wordprocessing")) return "DOCX";
+    if (String(mimeType || "").includes("spreadsheet")) return "XLSX";
+    if (String(mimeType || "").includes("csv")) return "CSV";
+    if (String(mimeType || "").includes("image/")) return String(mimeType).split("/").pop().toUpperCase();
+    return "File";
+  }
+
+  function documentationFileSizeLabel(bytes) {
+    const size = Number(bytes || 0);
+    if (!size) return "Size unknown";
+    if (size < 1024) return `${size} B`;
+    if (size < 1024 * 1024) return `${(size / 1024).toFixed(size < 10240 ? 1 : 0)} KB`;
+    return `${(size / (1024 * 1024)).toFixed(1)} MB`;
+  }
+
+  function buildDocumentationArchive(documentation = normalizeDocumentationBundle()) {
+    const templateItems = (documentation.templates || [])
+      .filter((item) => item.filePath)
+      .map((item) => ({
+        id: `template:${item.id}`,
+        recordId: item.id,
+        type: "Template",
+        title: item.name,
+        category: item.category,
+        status: item.status || "Active",
+        related: "Master form",
+        dateRaw: item.updatedAtRaw,
+        dateLabel: item.updatedAt || "No date",
+        fileBucket: item.fileBucket || "documentation-templates",
+        filePath: item.filePath,
+        fileName: item.fileName,
+        mimeType: item.mimeType,
+        fileSizeBytes: item.fileSizeBytes,
+        notes: item.instructions
+      }));
+
+    const submissionItems = (documentation.submissions || [])
+      .filter((item) => item.filePath)
+      .map((item) => ({
+        id: `submission:${item.id}`,
+        recordId: item.id,
+        type: "Submission",
+        title: item.templateName,
+        category: item.category,
+        status: item.status,
+        related: documentationTargetLine(item),
+        dateRaw: item.submittedAtRaw,
+        dateLabel: item.submittedAt || "No date",
+        fileBucket: item.fileBucket || "documentation-submissions",
+        filePath: item.filePath,
+        fileName: item.fileName,
+        mimeType: item.mimeType,
+        fileSizeBytes: item.fileSizeBytes,
+        notes: item.notes,
+        person: item.completedBy
+      }));
+
+    const attachmentItems = (documentation.attachments || [])
+      .filter((item) => item.filePath)
+      .map((item) => ({
+        id: `attachment:${item.id}`,
+        recordId: item.id,
+        type: "Attachment",
+        title: item.fileName || item.attachmentType.replace(/_/g, " "),
+        category: item.category,
+        status: item.status || "Submitted",
+        related: documentationTargetLine(item),
+        dateRaw: item.createdAtRaw,
+        dateLabel: item.createdAt || "No date",
+        fileBucket: item.fileBucket || "documentation-submissions",
+        filePath: item.filePath,
+        fileName: item.fileName,
+        mimeType: item.mimeType,
+        fileSizeBytes: item.fileSizeBytes,
+        notes: item.attachmentType.replace(/_/g, " "),
+        person: item.completedBy
+      }));
+
+    return [...templateItems, ...submissionItems, ...attachmentItems]
+      .sort((a, b) => String(b.dateRaw || "").localeCompare(String(a.dateRaw || "")));
+  }
+
+  function documentationArchiveMatches(item = {}) {
+    const search = String(state.documentationSearch || "").trim().toLowerCase();
+    const type = state.documentationTypeFilter || "All";
+    const status = state.documentationStatusFilter || "All";
+    const category = state.documentationCategoryFilter || "All";
+    if (type !== "All" && item.type !== type) return false;
+    if (status !== "All" && String(item.status || "") !== status) return false;
+    if (category !== "All" && normalizeDocumentationCategory(item.category) !== category) return false;
+    if (!search) return true;
+    return [
+      item.title,
+      item.type,
+      item.category,
+      item.status,
+      item.related,
+      item.person,
+      item.fileName,
+      item.notes
+    ].some((value) => String(value || "").toLowerCase().includes(search));
+  }
+
   function documentationMatches(item = {}) {
     const search = String(state.documentationSearch || "").trim().toLowerCase();
     const status = state.documentationStatusFilter || "All";
     const category = state.documentationCategoryFilter || "All";
-    if (status !== "All" && normalizeDocumentationStatus(item.status) !== status) return false;
+    if (status !== "All" && String(item.status || "") !== status) return false;
     if (category !== "All" && normalizeDocumentationCategory(item.category) !== category) return false;
     if (!search) return true;
     return [
@@ -8092,7 +8239,9 @@
     const assignments = documentation.assignments || [];
     const submissions = documentation.submissions || [];
     const templates = documentation.templates || [];
+    const archiveItems = buildDocumentationArchive(documentation);
     return [
+      ["Archive Files", archiveItems.length, "Downloadable records"],
       ["Assigned", assignments.filter((item) => !["Approved", "Archived"].includes(item.status)).length, "Open forms"],
       ["Due Soon", assignments.filter((item) => item.dueDateRaw && item.dueDateRaw <= addDaysKey(todayKey(), 7) && item.status !== "Approved").length, "Next 7 days"],
       ["Needs Review", submissions.filter((item) => item.status === "Submitted").length, "Owner action"],
@@ -8181,6 +8330,35 @@
     </article>`;
   }
 
+  function renderDocumentationArchiveItem(item) {
+    const hasFile = Boolean(item.fileBucket && item.filePath);
+    const fileType = documentationFileExtensionFromName(item.fileName, item.mimeType);
+    const sizeLabel = documentationFileSizeLabel(item.fileSizeBytes);
+    return `<article class="documentation-record documentation-archive-row">
+      <div class="documentation-record-head">
+        <div>
+          <p class="eyebrow">${escapeHtml(item.type)} / ${escapeHtml(item.category)}</p>
+          <h4>${escapeHtml(item.title || item.fileName || "Untitled form")}</h4>
+          <p>${escapeHtml(item.related || "General company record")}</p>
+        </div>
+        ${documentationStatusBadge(item.status)}
+      </div>
+      <div class="documentation-record-meta">
+        <span>${escapeHtml(fileType)}</span>
+        <span>${escapeHtml(sizeLabel)}</span>
+        <span>${escapeHtml(item.dateLabel || "No date")}</span>
+        ${item.person ? `<span>${escapeHtml(item.person)}</span>` : ""}
+        ${item.fileName ? `<span>${escapeHtml(item.fileName)}</span>` : ""}
+      </div>
+      ${item.notes ? `<p class="item-body">${escapeHtml(item.notes)}</p>` : ""}
+      <div class="documentation-record-actions">
+        ${hasFile
+          ? `<button class="inline-action" type="button" data-action="open-documentation-archive-file" data-archive-id="${escapeHtml(item.id)}">${buttonContent("Open / Download", "open-document")}</button>`
+          : `<span class="status status-archived">No file attached</span>`}
+      </div>
+    </article>`;
+  }
+
   function renderDocumentationAuditRow(item) {
     return `<article class="documentation-audit-row">
       <span>${escapeHtml(item.createdAt || "No date")}</span>
@@ -8222,7 +8400,7 @@
     }
     const categoryOptions = DOCUMENTATION_CATEGORIES.map((category) => `<option>${escapeHtml(category)}</option>`).join("");
     return `<section class="documentation-card documentation-template-manager" data-documentation-template-manager>
-      <div class="panel-heading"><h3>Upload Form Templates</h3><p>Upload reusable company forms, checklists, inspections, and reports for the Documentation library.</p></div>
+      <div class="panel-heading"><h3>Upload Form</h3><p>Add a reusable company form, checklist, inspection, or report to the Documentation library.</p></div>
       <form class="documentation-form" data-documentation-template-form>
         <input name="name" placeholder="Template name" required>
         <select name="category">${categoryOptions}</select>
@@ -8241,7 +8419,7 @@
             <label class="compact-check"><input type="checkbox" name="required_by_default"> Required by default</label>
           </div>
         </details>
-        <button type="submit"><span class="button-icon" aria-hidden="true">+</span><span>Save and Publish Template</span></button>
+        <button type="submit"><span class="button-icon" aria-hidden="true">+</span><span>Upload Form to Library</span></button>
       </form>
     </section>`;
   }
@@ -8258,6 +8436,7 @@
         : `<span>Documentation tables are not installed yet. Run <code>DASHBOARD_DOCUMENTATION_SQL.md</code>, then refresh.</span><span>Demo mode still shows the intended workflow.</span>`;
     }
     if (els.documentationSearch && els.documentationSearch.value !== state.documentationSearch) els.documentationSearch.value = state.documentationSearch;
+    if (els.documentationTypeFilter && els.documentationTypeFilter.value !== state.documentationTypeFilter) els.documentationTypeFilter.value = state.documentationTypeFilter;
     if (els.documentationStatusFilter && els.documentationStatusFilter.value !== state.documentationStatusFilter) els.documentationStatusFilter.value = state.documentationStatusFilter;
     if (els.documentationCategoryFilter && els.documentationCategoryFilter.value !== state.documentationCategoryFilter) els.documentationCategoryFilter.value = state.documentationCategoryFilter;
     qsa("[data-documentation-view]").forEach((button) => {
@@ -8270,9 +8449,19 @@
     });
 
     const metrics = `<div class="documentation-metrics">${documentationMetrics(documentation).map(renderDocumentationMetric).join("")}</div>`;
-    if (view === "forms") {
+    if (view === "archive") {
+      const archiveItems = buildDocumentationArchive(documentation).filter(documentationArchiveMatches);
+      els.documentationMain.innerHTML = `${metrics}<section class="documentation-card documentation-archive-card"><div class="panel-heading"><h3>Forms Archive</h3><p>Downloadable templates, submitted forms, and supporting attachments in one searchable archive.</p></div><div class="documentation-list">${archiveItems.length ? archiveItems.map(renderDocumentationArchiveItem).join("") : emptyState("No archived form files match this view.")}</div></section>`;
+      return;
+    }
+    if (view === "upload") {
+      const recentTemplates = documentation.templates.slice(0, 5);
+      els.documentationMain.innerHTML = `${metrics}<div class="documentation-grid">${renderDocumentationTemplateForm()}<section class="documentation-card"><div class="panel-heading"><h3>Recent Uploads</h3><p>The latest forms available in the template library.</p></div><div class="documentation-list">${recentTemplates.length ? recentTemplates.map(renderDocumentationTemplateCard).join("") : emptyState("No form templates have been uploaded yet.")}</div></section></div>`;
+      return;
+    }
+    if (view === "assign" || view === "forms") {
       const assignments = documentation.assignments.filter(documentationMatches);
-      els.documentationMain.innerHTML = `${metrics}<div class="documentation-grid">${renderDocumentationAssignmentForm()}<section class="documentation-card"><div class="panel-heading"><h3>Forms to Complete</h3><p>Assigned forms, due dates, priority, and next action.</p></div><div class="documentation-list">${assignments.length ? assignments.map(renderDocumentationAssignmentCard).join("") : emptyState("No assigned forms match this view.")}</div></section></div>`;
+      els.documentationMain.innerHTML = `${metrics}<div class="documentation-grid">${renderDocumentationAssignmentForm()}<section class="documentation-card"><div class="panel-heading"><h3>Assigned Forms</h3><p>Assigned forms, due dates, priority, and next action.</p></div><div class="documentation-list">${assignments.length ? assignments.map(renderDocumentationAssignmentCard).join("") : emptyState("No assigned forms match this view.")}</div></section></div>`;
       return;
     }
     if (view === "submitted") {
@@ -8282,7 +8471,7 @@
     }
     if (view === "templates") {
       const templates = documentation.templates.filter(documentationMatches);
-      els.documentationMain.innerHTML = `${metrics}<div class="documentation-grid">${renderDocumentationTemplateForm()}<section class="documentation-card"><div class="panel-heading"><h3>Template Library</h3><p>Reusable company forms and checklists with version labels and role access.</p></div><div class="documentation-list">${templates.length ? templates.map(renderDocumentationTemplateCard).join("") : emptyState("No templates match this view.")}</div></section></div>`;
+      els.documentationMain.innerHTML = `${metrics}<section class="documentation-card"><div class="panel-heading"><h3>Template Library</h3><p>Reusable company forms and checklists with version labels and role access.</p></div><div class="documentation-list">${templates.length ? templates.map(renderDocumentationTemplateCard).join("") : emptyState("No templates match this view.")}</div></section>`;
       return;
     }
     const audit = documentation.audit.filter(documentationMatches);
@@ -10584,6 +10773,7 @@
     }
 
     [
+      [els.documentationTypeFilter, "documentationTypeFilter"],
       [els.documentationStatusFilter, "documentationStatusFilter"],
       [els.documentationCategoryFilter, "documentationCategoryFilter"]
     ].forEach(([element, key]) => {
@@ -10933,7 +11123,7 @@
       }
 
       if (action === "manage-documentation-templates") {
-        state.documentationView = "templates";
+        state.documentationView = "upload";
         setActiveSection("documentation");
         history.replaceState(null, "", "#documentation");
         await render();
@@ -10957,6 +11147,26 @@
           setDashboardState("Secure template link opened.");
         } catch (error) {
           setDashboardState(error.message || "Unable to open the template file.", "error");
+        }
+        return;
+      }
+
+      if (action === "open-documentation-archive-file") {
+        const archiveId = target.dataset.archiveId || "";
+        const archiveItem = buildDocumentationArchive(state.data.documentation).find((item) => item.id === archiveId);
+        if (!archiveItem) {
+          setDashboardState("Archive file not found.", "error");
+          return;
+        }
+        try {
+          await openDocumentationSignedFile({
+            bucket: archiveItem.fileBucket,
+            path: archiveItem.filePath,
+            label: archiveItem.fileName || archiveItem.title || "archive file"
+          });
+          setDashboardState("Secure archive file opened.");
+        } catch (error) {
+          setDashboardState(error.message || "Unable to open the archive file.", "error");
         }
         return;
       }
@@ -11026,7 +11236,7 @@
 
       if (action === "assign-documentation-template") {
         const template = state.data.documentation.templates.find((item) => item.id === id);
-        state.documentationView = "forms";
+        state.documentationView = "assign";
         setActiveSection("documentation");
         history.replaceState(null, "", "#documentation");
         await render();
@@ -11039,7 +11249,7 @@
       if (action === "duplicate-documentation-template") {
         const template = state.data.documentation.templates.find((item) => item.id === id);
         if (!template) return;
-        state.documentationView = "templates";
+        state.documentationView = "upload";
         await render();
         const form = qs("[data-documentation-template-form]");
         if (form) {
@@ -12650,10 +12860,10 @@
           setDashboardState("Saving documentation template...");
           await insertDocumentationTemplateFromForm(event.target);
           event.target.reset();
-          state.documentationView = "templates";
+          state.documentationView = "archive";
           await refreshDashboard();
           setActiveSection("documentation");
-          setDashboardState("Documentation template saved.");
+          setDashboardState("Documentation form saved to the archive.");
         } catch (error) {
           setDashboardState(error.message || "Unable to save documentation template.", "error");
         }
@@ -12663,7 +12873,7 @@
           setDashboardState("Assigning documentation form...");
           await insertDocumentationAssignment(documentationAssignmentPayloadFromForm(event.target));
           event.target.reset();
-          state.documentationView = "forms";
+          state.documentationView = "assign";
           await refreshDashboard();
           setActiveSection("documentation");
           setDashboardState("Documentation form assigned.");
@@ -13173,6 +13383,7 @@
     els.documentationStatus = qs("[data-documentation-status]");
     els.documentationMain = qs("[data-documentation-main]");
     els.documentationSearch = qs("[data-documentation-search]");
+    els.documentationTypeFilter = qs("[data-documentation-type-filter]");
     els.documentationStatusFilter = qs("[data-documentation-status-filter]");
     els.documentationCategoryFilter = qs("[data-documentation-category-filter]");
     els.calendarFilter = qs("[data-calendar-filter]");

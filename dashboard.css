@@ -11391,7 +11391,7 @@ body:not(.is-login-screen) .duplicate-warning > div {
 
 .documentation-toolbar {
   display: grid;
-  grid-template-columns: minmax(240px, 1fr) minmax(180px, auto) minmax(220px, auto);
+  grid-template-columns: minmax(240px, 1fr) minmax(150px, auto) minmax(180px, auto) minmax(220px, auto);
   gap: 10px;
   align-items: center;
 }
@@ -11531,6 +11531,19 @@ body:not(.is-login-screen) .duplicate-warning > div {
   padding: 5px 9px;
   border-radius: 999px;
   background: rgba(206, 225, 191, .34);
+}
+
+.documentation-archive-card .documentation-list {
+  gap: 10px;
+}
+
+.documentation-archive-row {
+  grid-template-columns: minmax(0, 1fr);
+}
+
+.documentation-archive-row .item-body {
+  margin: 0;
+  max-width: 82ch;
 }
 
 .documentation-advanced {

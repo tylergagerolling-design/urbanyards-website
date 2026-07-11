@@ -899,20 +899,30 @@
               </div>
               <div class="documentation-actions">
                 <button type="button" data-action="refresh-documentation"><span class="button-icon" aria-hidden="true">R</span><span>Refresh</span></button>
-                <button type="button" data-action="manage-documentation-templates" data-documentation-template-admin><span class="button-icon" aria-hidden="true">+</span><span>Upload Form Template</span></button>
+                <button type="button" data-action="manage-documentation-templates" data-documentation-template-admin><span class="button-icon" aria-hidden="true">+</span><span>Upload Form</span></button>
               </div>
             </div>
             <div class="documentation-status" data-documentation-status></div>
             <div class="documentation-tabs" role="tablist" aria-label="Documentation views">
-              <button type="button" data-action="set-documentation-view" data-documentation-view="forms">Forms to Complete</button>
+              <button type="button" data-action="set-documentation-view" data-documentation-view="archive">Forms Archive</button>
+              <button type="button" data-action="set-documentation-view" data-documentation-view="upload" data-documentation-template-admin>Upload Form</button>
+              <button type="button" data-action="set-documentation-view" data-documentation-view="assign">Assign Forms</button>
               <button type="button" data-action="set-documentation-view" data-documentation-view="submitted">Submitted Forms</button>
               <button type="button" data-action="set-documentation-view" data-documentation-view="templates">Template Library</button>
               <button type="button" data-action="set-documentation-view" data-documentation-view="audit">Audit History</button>
             </div>
             <div class="documentation-toolbar">
-              <input data-documentation-search type="search" aria-label="Search documentation" placeholder="Search property, job, employee, type, status...">
+              <input data-documentation-search type="search" aria-label="Search documentation" placeholder="Search forms, property, job, person, type, status...">
+              <select data-documentation-type-filter aria-label="Filter documentation by file type">
+                <option value="All">All Types</option>
+                <option>Template</option>
+                <option>Submission</option>
+                <option>Attachment</option>
+              </select>
               <select data-documentation-status-filter aria-label="Filter documentation by status">
                 <option value="All">All Statuses</option>
+                <option>Active</option>
+                <option>Inactive</option>
                 <option>Not Started</option>
                 <option>In Progress</option>
                 <option>Submitted</option>

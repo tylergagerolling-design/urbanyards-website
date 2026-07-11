@@ -8176,7 +8176,7 @@
       <div class="documentation-record-actions">
         <button class="inline-action" type="button" data-action="duplicate-documentation-template" data-id="${escapeHtml(item.id)}">${buttonContent("Duplicate", "open-document")}</button>
         <button class="inline-action" type="button" data-action="assign-documentation-template" data-id="${escapeHtml(item.id)}">${buttonContent("Assign", "create-reminder")}</button>
-        <button class="inline-action" type="button" data-action="archive-documentation-template" data-id="${escapeHtml(item.id)}">${buttonContent("Archive", "delete-document")}</button>
+        <button class="inline-action danger-action" type="button" data-action="delete-documentation-template" data-id="${escapeHtml(item.id)}">${buttonContent("Delete", "delete-document")}</button>
       </div>
     </article>`;
   }
@@ -11058,8 +11058,29 @@
         return;
       }
 
-      if (action === "archive-documentation-template") {
-        setDashboardState("Archive template will be enabled once template update storage is connected. Previous versions must remain preserved.", "error");
+      if (action === "delete-documentation-template") {
+        const template = state.data.documentation.templates.find((item) => item.id === id);
+        if (!template) return;
+        if (!canManageDocumentationTemplates()) {
+          setDashboardState("Only Owner and Admin users can delete form templates.", "error");
+          return;
+        }
+        const confirmed = window.confirm(`Delete "${template.name}" from the Template Library? Submitted forms and audit history remain, but this template will no longer be available to assign.`);
+        if (!confirmed) {
+          setDashboardState("Template delete cancelled.");
+          return;
+        }
+        try {
+          setDashboardState("Deleting form template...");
+          await deleteRow("documentation_templates", id);
+          state.documentationView = "templates";
+          state.data.documentation = await loadDocumentation();
+          await render();
+          setActiveSection("documentation");
+          setDashboardState("Form template deleted from the library.");
+        } catch (error) {
+          setDashboardState(error.message || "Unable to delete form template.", "error");
+        }
         return;
       }
 

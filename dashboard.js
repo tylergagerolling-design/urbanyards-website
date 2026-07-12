@@ -2666,17 +2666,22 @@
   }
 
   function normalizeDocumentationAssignment(row = {}) {
+    const metadata = row.metadata || {};
     return {
       id: row.id || "",
       templateId: row.template_id || "",
       templateName: row.template_name || row.form_name || row.title || "Assigned form",
+      templateVersion: Number(row.template_version || row.version_number || 1) || 1,
       category: normalizeDocumentationCategory(row.category),
       assignedTo: row.assigned_to_name || row.assigned_person || row.assigned_to_email || row.assigned_to || "Unassigned",
       assignedToEmail: row.assigned_to_email || "",
       assignedUserId: row.assigned_user_id || row.assigned_to_user_id || "",
+      targetType: row.target_type || metadata.targetType || "general",
+      targetId: row.target_id || metadata.targetId || metadata.scheduledJobId || "",
       propertyName: row.property_name || row.property || "",
       contactName: row.contact_name || row.contact || "",
       jobName: row.job_name || row.job || row.visit_name || "",
+      scheduledVisitName: row.scheduled_visit_name || metadata.scheduledVisitName || "",
       equipmentName: row.equipment_name || "",
       dueDateRaw: row.due_date || "",
       dueDate: formatDate(row.due_date),
@@ -2688,11 +2693,13 @@
       instructions: row.instructions || "",
       notes: row.notes || "",
       createdAtRaw: row.created_at || "",
-      createdAt: formatDate(row.created_at)
+      createdAt: formatDate(row.created_at),
+      metadata
     };
   }
 
   function normalizeDocumentationSubmission(row = {}) {
+    const metadata = row.metadata || {};
     return {
       id: row.id || "",
       assignmentId: row.assignment_id || "",
@@ -2700,9 +2707,11 @@
       templateName: row.template_name || row.form_name || row.title || "Submitted form",
       templateVersion: Number(row.template_version || row.version_number || 1) || 1,
       category: normalizeDocumentationCategory(row.category),
+      targetId: row.target_id || metadata.targetId || metadata.scheduledJobId || "",
       propertyName: row.property_name || row.property || "",
       contactName: row.contact_name || row.contact || "",
       jobName: row.job_name || row.job || "",
+      scheduledVisitName: row.scheduled_visit_name || metadata.scheduledVisitName || "",
       equipmentName: row.equipment_name || "",
       completedBy: row.completed_by_name || row.submitted_by_name || row.employee_name || row.completed_by_email || "Unknown",
       submittedAtRaw: row.submitted_at || row.created_at || "",
@@ -2718,22 +2727,26 @@
       fileSizeBytes: Number(row.file_size_bytes || 0) || 0,
       documentType: row.document_type || row.file_type || "",
       notes: row.notes || "",
-      correctionNotes: row.correction_notes || row.rejection_notes || ""
+      correctionNotes: row.correction_notes || row.rejection_notes || "",
+      metadata
     };
   }
 
   function normalizeDocumentationAttachment(row = {}) {
+    const metadata = row.metadata || {};
     return {
       id: row.id || "",
       assignmentId: row.assignment_id || "",
       submissionId: row.submission_id || "",
       attachmentType: row.attachment_type || "other",
-      category: normalizeDocumentationCategory(row.category),
-      status: row.status || "Submitted",
-      propertyName: row.property_name || row.property || "",
-      contactName: row.contact_name || row.contact || "",
-      jobName: row.job_name || row.job || "",
-      equipmentName: row.equipment_name || "",
+      category: normalizeDocumentationCategory(row.category || metadata.category),
+      status: row.status || metadata.status || "Submitted",
+      targetId: row.target_id || metadata.targetId || metadata.scheduledJobId || "",
+      propertyName: row.property_name || row.property || metadata.propertyName || "",
+      contactName: row.contact_name || row.contact || metadata.contactName || "",
+      jobName: row.job_name || row.job || metadata.jobName || "",
+      scheduledVisitName: row.scheduled_visit_name || metadata.scheduledVisitName || "",
+      equipmentName: row.equipment_name || metadata.equipmentName || "",
       completedBy: row.uploaded_by_name || row.uploaded_by_email || "Dashboard user",
       fileBucket: row.file_bucket || "documentation-submissions",
       fileName: row.file_name || row.original_file_name || "",
@@ -2742,7 +2755,7 @@
       fileSizeBytes: Number(row.file_size_bytes || 0) || 0,
       createdAtRaw: row.created_at || "",
       createdAt: formatDate(row.created_at),
-      metadata: row.metadata || {}
+      metadata
     };
   }
 
@@ -4153,6 +4166,136 @@
       });
     }
     return submission;
+  }
+
+  function jobDocumentationTemplates() {
+    return (state.data.documentation.templates || [])
+      .filter((item) => item.status !== "Archived" && item.status !== "Inactive")
+      .sort((a, b) => a.name.localeCompare(b.name));
+  }
+
+  function documentationAssignmentsForJob(job = {}) {
+    return (state.data.documentation.assignments || []).filter((item) => (
+      item.targetId === job.id
+      || item.metadata?.scheduledJobId === job.id
+      || (item.targetType === "scheduled_visit" && item.jobName === job.site)
+    ));
+  }
+
+  function documentationAttachmentsForJob(job = {}, photoStage = "") {
+    return (state.data.documentation.attachments || []).filter((item) => {
+      const metadata = item.metadata || {};
+      const matchesJob = item.targetId === job.id || metadata.scheduledJobId === job.id || metadata.targetId === job.id;
+      const matchesStage = !photoStage || metadata.photoStage === photoStage;
+      return matchesJob && matchesStage;
+    });
+  }
+
+  function validateJobSitePhoto(file) {
+    validateDocumentationFile(file, { optional: false });
+    const extension = documentationFileExtension(file.name);
+    const isImageExtension = ["jpg", "jpeg", "png", "webp"].includes(extension);
+    const isImageMime = !file.type || file.type.startsWith("image/");
+    if (!isImageExtension || !isImageMime) {
+      throw new Error("Job site photos must be JPG, PNG, or WebP images.");
+    }
+  }
+
+  async function insertDocumentationAttachment(payload) {
+    if (!state.documentationReady) throw new Error("Create the documentation tables first. See DASHBOARD_DOCUMENTATION_SQL.md.");
+    if (isDemoMode()) {
+      const attachment = normalizeDocumentationAttachment({
+        id: nextDemoId("documentation-attachment"),
+        ...payload,
+        created_at: new Date().toISOString()
+      });
+      state.data.documentation.attachments.unshift(attachment);
+      state.data.documentation.audit.unshift(normalizeDocumentationAudit({
+        id: nextDemoId("documentation-audit"),
+        action: "attachment_uploaded",
+        entity_type: "documentation_attachment",
+        entity_id: attachment.id,
+        actor_name: payload.uploaded_by_email || "Demo User",
+        detail: `${attachment.fileName || "Photo"} uploaded in demo mode.`,
+        created_at: new Date().toISOString()
+      }));
+      return attachment;
+    }
+    const rows = await supabaseRestRequest("documentation_attachments", {
+      method: "POST",
+      headers: { Prefer: "return=representation" },
+      body: JSON.stringify(payload)
+    });
+    return rows?.[0] ? normalizeDocumentationAttachment(rows[0]) : null;
+  }
+
+  async function assignDocumentationTemplateToJob(jobId, templateId) {
+    const job = state.data.jobs.find((item) => item.id === jobId);
+    const template = state.data.documentation.templates.find((item) => item.id === templateId);
+    if (!job) throw new Error("Scheduled visit was not found.");
+    if (!template) throw new Error("Choose a documentation template first.");
+    const session = getSession() || {};
+    return insertDocumentationAssignment({
+      template_id: template.id,
+      template_name: template.name,
+      template_version: template.currentVersion || 1,
+      category: template.category,
+      assigned_to_name: session.email || "Dashboard user",
+      assigned_to_email: session.email || "",
+      assigned_by_email: session.email || "",
+      target_type: "scheduled_visit",
+      target_id: job.id,
+      property_name: job.city === "Not provided" ? "" : job.city,
+      job_name: job.site,
+      scheduled_visit_name: job.service,
+      due_date: job.dateRaw || null,
+      priority: "Normal",
+      status: "Not Started",
+      required: true,
+      recurring: false,
+      instructions: template.instructions || "",
+      metadata: {
+        scheduledJobId: job.id,
+        targetType: "scheduled_visit",
+        targetId: job.id,
+        jobName: job.site,
+        scheduledVisitName: job.service,
+        visitDate: job.dateRaw,
+        visitWindow: job.window,
+        category: template.category
+      }
+    });
+  }
+
+  async function uploadJobSitePhoto(jobId, file, photoStage) {
+    const job = state.data.jobs.find((item) => item.id === jobId);
+    if (!job) throw new Error("Scheduled visit was not found.");
+    validateJobSitePhoto(file);
+    const upload = await uploadDocumentationFile(file, { kind: "submission", assignmentId: job.id });
+    const session = getSession() || {};
+    return insertDocumentationAttachment({
+      attachment_type: "supporting_photo",
+      file_bucket: upload.bucket,
+      file_path: upload.path,
+      file_name: upload.fileName || file.name,
+      mime_type: upload.mimeType || file.type || "",
+      file_size_bytes: upload.size || file.size || null,
+      uploaded_by: session.userId || null,
+      uploaded_by_email: session.email || "",
+      metadata: {
+        scheduledJobId: job.id,
+        targetType: "scheduled_visit",
+        targetId: job.id,
+        photoStage,
+        status: "Submitted",
+        category: "Job Completion",
+        jobName: job.site,
+        scheduledVisitName: job.service,
+        propertyName: job.city === "Not provided" ? "" : job.city,
+        visitDate: job.dateRaw,
+        visitWindow: job.window
+      }
+    });
   }
 
   async function syncSquareInvoice(documentId) {
@@ -8098,6 +8241,7 @@
     return [
       item.propertyName ? `Property: ${item.propertyName}` : "",
       item.jobName ? `Job: ${item.jobName}` : "",
+      item.scheduledVisitName ? `Visit: ${item.scheduledVisitName}` : "",
       item.equipmentName ? `Equipment: ${item.equipmentName}` : "",
       item.contactName ? `Contact: ${item.contactName}` : ""
     ].filter(Boolean).join(" / ") || "General company record";
@@ -8691,6 +8835,83 @@
     `;
   }
 
+  function renderJobDocumentationSection(job) {
+    const templates = jobDocumentationTemplates();
+    const assignments = documentationAssignmentsForJob(job);
+    const templateOptions = templates.map((template) => `<option value="${escapeHtml(template.id)}">${escapeHtml(template.name)} / ${escapeHtml(template.category)}</option>`).join("");
+    return `<section class="job-support-card">
+      <div class="job-support-heading">
+        <div>
+          <h4>Supporting Documentation</h4>
+          <p>Pick a form from the Documentation template library for this visit.</p>
+        </div>
+        <button type="button" class="inline-action" data-action="set-documentation-view" data-documentation-view="templates">${buttonContent("Template Library", "documentation")}</button>
+      </div>
+      <form class="job-support-form" data-job-documentation-form data-id="${escapeHtml(job.id)}">
+        <select name="template_id" required>
+          <option value="">Choose documentation template...</option>
+          ${templateOptions}
+        </select>
+        <button type="submit"${templates.length ? "" : " disabled"}>${buttonContent("Add to Visit", "create-reminder")}</button>
+      </form>
+      <div class="profile-mini-list">
+        ${assignments.length ? assignments.map((item) => `<div class="profile-mini-item">
+          <strong>${escapeHtml(item.templateName)}</strong>
+          <span>${escapeHtml([item.category, item.status, item.dueDate ? `Due ${item.dueDate}` : ""].filter(Boolean).join(" / "))}</span>
+          <div class="job-support-actions">
+            <button class="inline-action" type="button" data-action="open-documentation-form" data-id="${escapeHtml(item.id)}">${buttonContent("Open", "open-document")}</button>
+            ${item.templateId ? `<button class="inline-action" type="button" data-action="download-documentation-template" data-id="${escapeHtml(item.templateId)}">${buttonContent("Download", "download-documentation-template")}</button>` : ""}
+            <button class="inline-action" type="button" data-action="upload-documentation-submission" data-id="${escapeHtml(item.id)}">${buttonContent("Upload Completed", "open-document")}</button>
+          </div>
+        </div>`).join("") : emptyState(templates.length ? "No documentation forms are attached to this visit yet." : "No templates are available yet. Upload forms in Documentation first.")}
+      </div>
+    </section>`;
+  }
+
+  function renderJobPhotoList(job, photoStage) {
+    const photos = documentationAttachmentsForJob(job, photoStage);
+    return `<div class="profile-mini-list">
+      ${photos.length ? photos.map((photo) => `<div class="profile-mini-item">
+        <strong>${escapeHtml(photoStage === "arrival" ? "Arrival photo" : "Completion photo")}</strong>
+        <span>${escapeHtml([photo.fileName, photo.createdAt].filter(Boolean).join(" / "))}</span>
+        <div class="job-support-actions">
+          <button class="inline-action" type="button" data-action="open-documentation-archive-file" data-archive-id="attachment:${escapeHtml(photo.id)}">${buttonContent("Open Photo", "open-document")}</button>
+        </div>
+      </div>`).join("") : emptyState(`No ${photoStage === "arrival" ? "arrival" : "completion"} photos uploaded yet.`)}
+    </div>`;
+  }
+
+  function renderJobPhotosSection(job) {
+    return `<section class="job-support-card">
+      <div class="job-support-heading">
+        <div>
+          <h4>Job Site Photos</h4>
+          <p>On a phone, the upload buttons can open the camera. Use arrival photos before work and completion photos after work.</p>
+        </div>
+      </div>
+      <div class="job-photo-grid">
+        <div>
+          <form class="job-support-form job-photo-form" data-job-photo-form data-id="${escapeHtml(job.id)}" data-photo-stage="arrival">
+            <label>Arrival photo
+              <input name="photo" type="file" accept="image/*" capture="environment" required>
+            </label>
+            <button type="submit">${buttonContent("Upload Arrival Photo", "open-document")}</button>
+          </form>
+          ${renderJobPhotoList(job, "arrival")}
+        </div>
+        <div>
+          <form class="job-support-form job-photo-form" data-job-photo-form data-id="${escapeHtml(job.id)}" data-photo-stage="completion">
+            <label>Completion photo
+              <input name="photo" type="file" accept="image/*" capture="environment" required>
+            </label>
+            <button type="submit">${buttonContent("Upload Completion Photo", "open-document")}</button>
+          </form>
+          ${renderJobPhotoList(job, "completion")}
+        </div>
+      </div>
+    </section>`;
+  }
+
   function openJobDrawer(id, options = {}) {
     const job = state.data.jobs.find((item) => item.id === id);
     if (!job || !els.detailDrawer || !els.detailContent) return;
@@ -8722,12 +8943,16 @@
           <label>Status
             <select name="status">${STATUSES.map((status) => `<option value="${status}"${status === job.status ? " selected" : ""}>${status}</option>`).join("")}</select>
           </label>
-          <div class="drawer-actions">
+          <div class="drawer-actions job-drawer-actions">
             <button type="submit">${buttonContent(isReschedule ? "Save New Date" : "Save Visit", "complete-reminder")}</button>
             ${job.status !== "Completed" ? `<button type="button" data-action="complete-job" data-id="${escapeHtml(job.id)}">${buttonContent("Mark Complete", "complete-reminder")}</button>` : ""}
             <button type="button" class="danger-action" data-action="cancel-job" data-id="${escapeHtml(job.id)}">${buttonContent("Cancel Visit", "cancel-job")}</button>
           </div>
         </form>
+        <div class="job-support-sections">
+          ${renderJobDocumentationSection(job)}
+          ${renderJobPhotosSection(job)}
+        </div>
       </div>
     `;
   }
@@ -11106,6 +11331,10 @@
 
       if (action === "set-documentation-view") {
         state.documentationView = target.dataset.documentationView || DOCUMENTATION_DEFAULT_VIEW;
+        if (!target.closest(".documentation-center")) {
+          setActiveSection("documentation");
+          history.replaceState(null, "", "#documentation");
+        }
         await render();
         return;
       }
@@ -12832,6 +13061,36 @@
           setDashboardState("");
         } catch (error) {
           setDashboardState(error.message || "Unable to save visit.", "error");
+        }
+      } else if (event.target.matches("[data-job-documentation-form]")) {
+        event.preventDefault();
+        const jobId = event.target.dataset.id || "";
+        const formData = new FormData(event.target);
+        const templateId = String(formData.get("template_id") || "").trim();
+        try {
+          setDashboardState("Adding documentation to visit...");
+          await assignDocumentationTemplateToJob(jobId, templateId);
+          event.target.reset();
+          await refreshDashboard();
+          openJobDrawer(jobId);
+          setDashboardState("Documentation added to this visit.");
+        } catch (error) {
+          setDashboardState(error.message || "Unable to add documentation to visit.", "error");
+        }
+      } else if (event.target.matches("[data-job-photo-form]")) {
+        event.preventDefault();
+        const jobId = event.target.dataset.id || "";
+        const photoStage = event.target.dataset.photoStage || "arrival";
+        const file = event.target.querySelector("input[type='file']")?.files?.[0] || null;
+        try {
+          setDashboardState(photoStage === "arrival" ? "Uploading arrival photo..." : "Uploading completion photo...");
+          await uploadJobSitePhoto(jobId, file, photoStage);
+          event.target.reset();
+          await refreshDashboard();
+          openJobDrawer(jobId);
+          setDashboardState(photoStage === "arrival" ? "Arrival photo uploaded." : "Completion photo uploaded.");
+        } catch (error) {
+          setDashboardState(error.message || "Unable to upload job site photo.", "error");
         }
       } else if (event.target.matches("[data-document-form]")) {
         event.preventDefault();

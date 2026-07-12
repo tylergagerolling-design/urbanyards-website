@@ -7704,6 +7704,98 @@ body.is-detail-drawer-open {
   margin-left: auto !important;
 }
 
+.job-drawer-actions .danger-action {
+  margin-left: 0 !important;
+}
+
+.job-support-sections {
+  display: grid;
+  gap: 14px;
+  grid-column: 1 / -1;
+  margin-top: 4px;
+}
+
+.job-support-card {
+  display: grid;
+  gap: 12px;
+  padding: 14px;
+  border: 1px solid rgba(23, 54, 43, .1);
+  border-radius: 16px;
+  background: rgba(255, 253, 247, .78);
+  box-shadow: 0 10px 24px rgba(23, 54, 43, .045);
+}
+
+.job-support-heading {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  align-items: flex-start;
+}
+
+.job-support-heading h4 {
+  margin: 0 0 4px;
+  color: var(--uy-app-ink, #102f25);
+  font-size: 1rem;
+}
+
+.job-support-heading p {
+  margin: 0;
+  color: var(--uy-app-muted, #6f776e);
+  font-size: .86rem;
+  line-height: 1.45;
+}
+
+.job-support-form {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 10px;
+  align-items: end;
+}
+
+.job-support-form label {
+  display: grid;
+  gap: 6px;
+  min-width: 0;
+  color: var(--uy-app-ink, #102f25);
+  font-size: .78rem;
+  font-weight: 850;
+}
+
+.job-support-form :is(input, select) {
+  width: 100%;
+  min-height: 42px;
+  border: 1px solid rgba(23, 54, 43, .16);
+  border-radius: 12px;
+  background: rgba(255, 255, 255, .88);
+  color: var(--uy-app-ink, #102f25);
+  padding: 8px 10px;
+  font: inherit;
+  font-weight: 750;
+}
+
+.job-support-form button,
+.job-support-actions .inline-action {
+  min-height: 38px;
+}
+
+.job-support-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 4px;
+}
+
+.job-photo-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.job-photo-form {
+  grid-template-columns: minmax(0, 1fr);
+  margin-bottom: 10px;
+}
+
 .profile-drawer-grid {
   display: grid !important;
   grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
@@ -7766,6 +7858,13 @@ body.is-detail-drawer-open {
   .drawer-actions .danger-action,
   .document-delete-action {
     margin-left: 0 !important;
+  }
+
+  .job-support-heading,
+  .job-support-form,
+  .job-photo-grid {
+    display: grid;
+    grid-template-columns: 1fr;
   }
 }
 

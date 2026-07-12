@@ -99,6 +99,7 @@
     "Custom Forms"
   ];
   const DOCUMENTATION_MAX_FILE_BYTES = 15 * 1024 * 1024;
+  const JOB_SITE_PHOTO_MAX_FILES = 10;
   const DOCUMENTATION_ALLOWED_EXTENSIONS = new Set(["pdf", "docx", "jpg", "jpeg", "png", "webp", "xlsx", "csv"]);
   const DOCUMENTATION_ALLOWED_MIME_TYPES = new Set([
     "application/pdf",
@@ -4201,6 +4202,16 @@
     }
   }
 
+  function validateJobSitePhotos(files = []) {
+    const photoFiles = Array.from(files || []);
+    if (!photoFiles.length) throw new Error("Choose at least one job site photo first.");
+    if (photoFiles.length > JOB_SITE_PHOTO_MAX_FILES) {
+      throw new Error(`Upload ${JOB_SITE_PHOTO_MAX_FILES} photos or fewer at a time.`);
+    }
+    photoFiles.forEach(validateJobSitePhoto);
+    return photoFiles;
+  }
+
   async function insertDocumentationAttachment(payload) {
     if (!state.documentationReady) throw new Error("Create the documentation tables first. See DASHBOARD_DOCUMENTATION_SQL.md.");
     if (isDemoMode()) {
@@ -4296,6 +4307,15 @@
         visitWindow: job.window
       }
     });
+  }
+
+  async function uploadJobSitePhotos(jobId, files, photoStage) {
+    const photoFiles = validateJobSitePhotos(files);
+    const uploads = [];
+    for (const file of photoFiles) {
+      uploads.push(await uploadJobSitePhoto(jobId, file, photoStage));
+    }
+    return uploads;
   }
 
   async function syncSquareInvoice(documentId) {
@@ -8886,25 +8906,25 @@
       <div class="job-support-heading">
         <div>
           <h4>Job Site Photos</h4>
-          <p>On a phone, the upload buttons can open the camera. Use arrival photos before work and completion photos after work.</p>
+          <p>Upload up to ${JOB_SITE_PHOTO_MAX_FILES} arrival photos and up to ${JOB_SITE_PHOTO_MAX_FILES} completion photos at a time. On supported phones, the picker can use the camera.</p>
         </div>
       </div>
       <div class="job-photo-grid">
         <div>
           <form class="job-support-form job-photo-form" data-job-photo-form data-id="${escapeHtml(job.id)}" data-photo-stage="arrival">
-            <label>Arrival photo
-              <input name="photo" type="file" accept="image/*" capture="environment" required>
+            <label>Arrival photos
+              <input name="photo" type="file" accept="image/*" capture="environment" multiple required>
             </label>
-            <button type="submit">${buttonContent("Upload Arrival Photo", "open-document")}</button>
+            <button type="submit">${buttonContent("Upload Arrival Photos", "open-document")}</button>
           </form>
           ${renderJobPhotoList(job, "arrival")}
         </div>
         <div>
           <form class="job-support-form job-photo-form" data-job-photo-form data-id="${escapeHtml(job.id)}" data-photo-stage="completion">
-            <label>Completion photo
-              <input name="photo" type="file" accept="image/*" capture="environment" required>
+            <label>Completion photos
+              <input name="photo" type="file" accept="image/*" capture="environment" multiple required>
             </label>
-            <button type="submit">${buttonContent("Upload Completion Photo", "open-document")}</button>
+            <button type="submit">${buttonContent("Upload Completion Photos", "open-document")}</button>
           </form>
           ${renderJobPhotoList(job, "completion")}
         </div>
@@ -13081,14 +13101,15 @@
         event.preventDefault();
         const jobId = event.target.dataset.id || "";
         const photoStage = event.target.dataset.photoStage || "arrival";
-        const file = event.target.querySelector("input[type='file']")?.files?.[0] || null;
+        const files = Array.from(event.target.querySelector("input[type='file']")?.files || []);
+        const stageLabel = photoStage === "arrival" ? "Arrival" : "Completion";
         try {
-          setDashboardState(photoStage === "arrival" ? "Uploading arrival photo..." : "Uploading completion photo...");
-          await uploadJobSitePhoto(jobId, file, photoStage);
+          setDashboardState(`Uploading ${files.length || ""} ${stageLabel.toLowerCase()} photo${files.length === 1 ? "" : "s"}...`);
+          const uploads = await uploadJobSitePhotos(jobId, files, photoStage);
           event.target.reset();
           await refreshDashboard();
           openJobDrawer(jobId);
-          setDashboardState(photoStage === "arrival" ? "Arrival photo uploaded." : "Completion photo uploaded.");
+          setDashboardState(`${stageLabel} photo${uploads.length === 1 ? "" : "s"} uploaded.`);
         } catch (error) {
           setDashboardState(error.message || "Unable to upload job site photo.", "error");
         }

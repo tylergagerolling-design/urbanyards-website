@@ -11696,6 +11696,555 @@ body:not(.is-login-screen) .duplicate-warning > div {
   align-items: stretch;
 }
 
+/* Editable dashboard page standardization.
+   Home (#overview) and Work (#calendar) are intentionally excluded by using the
+   uy-standard-page hook only on the other dashboard sections. */
+body:not(.is-login-screen) .dashboard-section.uy-standard-page.is-active {
+  display: grid !important;
+  align-content: start !important;
+  gap: var(--uy-section-gap) !important;
+  width: 100% !important;
+  max-width: 100% !important;
+  min-width: 0 !important;
+  overflow: visible !important;
+}
+
+body:not(.is-login-screen) .uy-standard-page :is(
+  .uy-page-header,
+  .uy-page-intro-panel,
+  .panel,
+  .outreach-main-panel,
+  .outreach-priority-panel,
+  .outreach-archive-panel,
+  .route-form-panel,
+  .route-map-panel,
+  .equipment-form-panel,
+  .equipment-main-panel,
+  .documentation-card,
+  .import-export-card,
+  .users-access-panel,
+  .activity-log-panel
+) {
+  min-width: 0 !important;
+  max-width: 100% !important;
+  border: 1px solid rgba(23, 54, 43, .1) !important;
+  border-radius: 24px !important;
+  background:
+    radial-gradient(circle at 100% 0%, rgba(230, 238, 219, .34), transparent 34%),
+    rgba(255, 253, 247, .9) !important;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, .78),
+    0 18px 42px rgba(23, 54, 43, .075) !important;
+}
+
+body:not(.is-login-screen) .uy-standard-page :is(
+  .uy-page-header,
+  .panel,
+  .outreach-main-panel,
+  .outreach-priority-panel,
+  .outreach-archive-panel,
+  .route-form-panel,
+  .route-map-panel,
+  .equipment-form-panel,
+  .equipment-main-panel,
+  .documentation-card,
+  .import-export-card,
+  .users-access-panel,
+  .activity-log-panel
+) {
+  padding: var(--uy-card-pad) !important;
+}
+
+body:not(.is-login-screen) .uy-standard-page .uy-page-header {
+  display: grid !important;
+  grid-template-columns: minmax(0, 1fr) auto !important;
+  align-items: center !important;
+  gap: clamp(16px, 2vw, 28px) !important;
+  margin: 0 !important;
+}
+
+body:not(.is-login-screen) .uy-standard-page .uy-page-header h3,
+body:not(.is-login-screen) .uy-standard-page .uy-page-intro-panel > .panel-heading h3 {
+  margin: 0 0 5px !important;
+  color: var(--color-primary) !important;
+  font-size: clamp(1.8rem, 3vw, 2.7rem) !important;
+  font-weight: 900 !important;
+  line-height: .98 !important;
+  letter-spacing: 0 !important;
+}
+
+body:not(.is-login-screen) .uy-standard-page .uy-page-header p:not(.eyebrow),
+body:not(.is-login-screen) .uy-standard-page .uy-page-intro-panel > .panel-heading p {
+  max-width: 78ch !important;
+  margin: 0 !important;
+  color: var(--color-muted) !important;
+  font-size: .98rem !important;
+  line-height: 1.45 !important;
+}
+
+body:not(.is-login-screen) .uy-standard-page .uy-page-intro-panel {
+  display: grid !important;
+  gap: var(--space-md) !important;
+}
+
+body:not(.is-login-screen) .uy-standard-page .uy-page-intro-panel > .panel-heading {
+  display: grid !important;
+  grid-template-columns: minmax(0, 1fr) auto !important;
+  align-items: center !important;
+  gap: clamp(14px, 2vw, 24px) !important;
+  margin: 0 !important;
+  padding: 0 0 var(--space-md) !important;
+}
+
+body:not(.is-login-screen) .uy-standard-page .panel-heading {
+  display: flex !important;
+  align-items: flex-start !important;
+  justify-content: space-between !important;
+  gap: 14px !important;
+  margin: 0 0 14px !important;
+  padding: 0 0 14px !important;
+  border-bottom: 1px solid rgba(23, 54, 43, .08) !important;
+}
+
+body:not(.is-login-screen) .uy-standard-page .panel-heading h3 {
+  margin: 0 !important;
+  color: var(--color-primary) !important;
+  font-size: 1.08rem !important;
+  line-height: 1.15 !important;
+}
+
+body:not(.is-login-screen) .uy-standard-page .panel-heading p {
+  margin: 4px 0 0 !important;
+  color: var(--color-muted) !important;
+  font-size: .9rem !important;
+  line-height: 1.45 !important;
+}
+
+body:not(.is-login-screen) .uy-standard-page :is(
+  .outreach-hero-actions,
+  .documentation-actions,
+  .import-export-actions,
+  .groundskeeper-ai-toolbar,
+  .route-date-card,
+  .equipment-tabs,
+  .toolbar,
+  .outreach-toolbar,
+  .outreach-property-toolbar,
+  .equipment-toolbar,
+  .documentation-toolbar
+) {
+  min-width: 0 !important;
+}
+
+body:not(.is-login-screen) .uy-standard-page :is(
+  .outreach-hero-actions,
+  .documentation-actions,
+  .import-export-actions,
+  .groundskeeper-ai-toolbar,
+  .route-date-card
+) {
+  display: flex !important;
+  flex-wrap: wrap !important;
+  align-items: center !important;
+  justify-content: flex-end !important;
+  gap: 10px !important;
+}
+
+body:not(.is-login-screen) .uy-standard-page :is(
+  .toolbar,
+  .outreach-toolbar,
+  .outreach-property-toolbar,
+  .equipment-toolbar,
+  .documentation-toolbar
+) {
+  display: grid !important;
+  grid-template-columns: minmax(260px, 1fr) repeat(auto-fit, minmax(160px, auto)) !important;
+  align-items: center !important;
+  gap: 10px !important;
+  padding: 10px !important;
+  border: 1px solid rgba(23, 54, 43, .09) !important;
+  border-radius: 20px !important;
+  background: rgba(255, 253, 247, .68) !important;
+}
+
+body:not(.is-login-screen) .uy-standard-page :is(
+  .toolbar,
+  .outreach-toolbar,
+  .outreach-property-toolbar,
+  .equipment-toolbar,
+  .documentation-toolbar
+) > * {
+  width: 100% !important;
+  min-width: 0 !important;
+}
+
+body:not(.is-login-screen) .uy-standard-page :is(
+  .outreach-view-tabs,
+  .equipment-tabs,
+  .documentation-tabs,
+  .import-export-tabs
+) {
+  display: flex !important;
+  flex-wrap: nowrap !important;
+  gap: 6px !important;
+  width: fit-content !important;
+  max-width: 100% !important;
+  overflow-x: auto !important;
+  overflow-y: hidden !important;
+  padding: 6px !important;
+  border: 1px solid rgba(23, 54, 43, .1) !important;
+  border-radius: 999px !important;
+  background: rgba(255, 253, 247, .78) !important;
+  scrollbar-width: thin !important;
+}
+
+body:not(.is-login-screen) .uy-standard-page :is(
+  .outreach-view-tabs,
+  .equipment-tabs,
+  .documentation-tabs,
+  .import-export-tabs
+) button {
+  flex: 0 0 auto !important;
+  min-height: 38px !important;
+  padding: 0 16px !important;
+  border: 0 !important;
+  border-radius: 999px !important;
+  background: transparent !important;
+  color: var(--color-primary) !important;
+  font-weight: 900 !important;
+  box-shadow: none !important;
+}
+
+body:not(.is-login-screen) .uy-standard-page :is(
+  .outreach-view-tabs,
+  .equipment-tabs,
+  .documentation-tabs,
+  .import-export-tabs
+) button:is(.is-active, [aria-selected="true"]) {
+  background: rgba(206, 225, 191, .86) !important;
+  box-shadow: inset 0 0 0 1px rgba(91, 129, 73, .14) !important;
+}
+
+body:not(.is-login-screen) .uy-standard-page :is(
+  .outreach-primary-action,
+  .overview-primary-action,
+  .documentation-actions button:last-child,
+  .import-export-actions button:last-child,
+  .groundskeeper-ai-toolbar button:last-child,
+  .route-date-card button,
+  .client-form button[type="submit"],
+  .document-form button[type="submit"],
+  .equipment-form button[type="submit"],
+  .equipment-maintenance-form button[type="submit"],
+  .hardware-guide-form button[type="submit"],
+  .documentation-form button[type="submit"],
+  .ai-editor-actions button[type="submit"],
+  .training-chat-form button[type="submit"],
+  .groundskeeper-ai-chat-form button[type="submit"]
+) {
+  border: 1px solid rgba(18, 63, 49, .16) !important;
+  background: linear-gradient(180deg, #5f8f46 0%, var(--color-primary) 100%) !important;
+  color: var(--color-inverse) !important;
+  box-shadow: var(--shadow-button) !important;
+}
+
+body:not(.is-login-screen) .uy-standard-page :is(
+  button,
+  .inline-action,
+  .outreach-secondary-action,
+  .documentation-actions button,
+  .import-export-actions button,
+  .groundskeeper-ai-toolbar button,
+  .route-date-card button,
+  .documentation-record-actions button,
+  .import-export-card-actions button,
+  .import-export-preview-actions button
+) {
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  gap: var(--button-gap) !important;
+  min-height: var(--uy-button-h) !important;
+  min-width: 0 !important;
+  padding: 0 var(--button-pad-x) !important;
+  border-radius: var(--radius-pill) !important;
+  font-weight: 850 !important;
+  line-height: 1 !important;
+  text-decoration: none !important;
+}
+
+body:not(.is-login-screen) .uy-standard-page :is(
+  .outreach-secondary-action,
+  .documentation-actions button:not(:last-child),
+  .import-export-actions button:not(:last-child),
+  .groundskeeper-ai-toolbar button:not(:last-child),
+  .inline-action
+) {
+  border: 1px solid var(--color-border-strong) !important;
+  background: rgba(255, 253, 247, .9) !important;
+  color: var(--color-primary) !important;
+  box-shadow: 0 8px 18px rgba(19, 36, 28, .05) !important;
+}
+
+body:not(.is-login-screen) .uy-standard-page :is(
+  input,
+  select,
+  textarea
+) {
+  min-width: 0 !important;
+  border: 1px solid var(--field-border) !important;
+  border-radius: 16px !important;
+  background: var(--field-bg) !important;
+  color: var(--color-text) !important;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, .72) !important;
+}
+
+body:not(.is-login-screen) .uy-standard-page :is(input, select) {
+  min-height: var(--uy-button-h) !important;
+}
+
+body:not(.is-login-screen) .uy-standard-page :is(input, select, textarea):focus {
+  border-color: rgba(95, 143, 70, .64) !important;
+  box-shadow: var(--focus-ring) !important;
+  outline: 0 !important;
+}
+
+body:not(.is-login-screen) .uy-standard-page :is(
+  .client-form,
+  .document-form,
+  .equipment-form,
+  .equipment-maintenance-form,
+  .hardware-guide-form,
+  .documentation-form,
+  .route-stop-form
+) {
+  display: grid !important;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)) !important;
+  gap: 10px !important;
+  align-items: end !important;
+  min-width: 0 !important;
+}
+
+body:not(.is-login-screen) .uy-standard-page :is(
+  .client-form textarea,
+  .document-form textarea,
+  .equipment-form textarea,
+  .hardware-guide-form textarea,
+  .documentation-form textarea,
+  .route-stop-form textarea,
+  .span-full,
+  .documentation-advanced
+) {
+  grid-column: 1 / -1 !important;
+}
+
+body:not(.is-login-screen) .uy-standard-page :is(
+  .metric-card,
+  .outreach-metric,
+  .documentation-metric,
+  .import-export-metric,
+  .equipment-metric
+) {
+  min-width: 0 !important;
+  padding: 16px !important;
+  border: 1px solid rgba(23, 54, 43, .09) !important;
+  border-radius: 18px !important;
+  background: rgba(255, 255, 250, .68) !important;
+}
+
+body:not(.is-login-screen) .uy-standard-page :is(
+  .outreach-metrics,
+  .documentation-metrics,
+  .import-export-metrics,
+  .equipment-metrics,
+  .settings-grid
+) {
+  display: grid !important;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)) !important;
+  gap: 10px !important;
+}
+
+body:not(.is-login-screen) .uy-standard-page :is(
+  .documentation-record,
+  .import-export-row,
+  .import-export-history-row,
+  .route-stop-card,
+  .contact-card,
+  .document-card,
+  .users-access-row,
+  .activity-log-row,
+  .ai-entry-row,
+  .ai-log-item,
+  .training-rule-card
+) {
+  min-width: 0 !important;
+  border: 1px solid rgba(23, 54, 43, .09) !important;
+  border-radius: 18px !important;
+  background: rgba(255, 255, 250, .7) !important;
+}
+
+body:not(.is-login-screen) .uy-standard-page :is(
+  .table-wrap,
+  .outreach-table-wrap,
+  .equipment-table-wrap,
+  .import-export-table-wrap
+) {
+  width: 100% !important;
+  max-width: 100% !important;
+  overflow-x: auto !important;
+  overflow-y: visible !important;
+  border: 1px solid rgba(23, 54, 43, .09) !important;
+  border-radius: 18px !important;
+  background: rgba(255, 253, 247, .58) !important;
+}
+
+body:not(.is-login-screen) .uy-standard-page :is(
+  .table-wrap table,
+  .outreach-table-wrap table,
+  .equipment-table-wrap table,
+  .import-export-table-wrap table
+) {
+  min-width: 760px !important;
+  border-collapse: collapse !important;
+}
+
+body:not(.is-login-screen) .uy-standard-page :is(th, td) {
+  padding: 12px !important;
+  border-bottom: 1px solid rgba(23, 54, 43, .08) !important;
+  vertical-align: middle !important;
+}
+
+body:not(.is-login-screen) .uy-standard-page th {
+  color: var(--color-primary) !important;
+  font-size: .76rem !important;
+  letter-spacing: .06em !important;
+  text-transform: uppercase !important;
+}
+
+body:not(.is-login-screen) .uy-standard-page :is(
+  .empty-state,
+  .loading-state
+) {
+  min-height: 104px !important;
+  border: 1px dashed rgba(23, 54, 43, .14) !important;
+  border-radius: 20px !important;
+  background: rgba(250, 248, 240, .68) !important;
+  color: var(--color-muted) !important;
+}
+
+body:not(.is-login-screen) .uy-standard-page :is(
+  .route-layout,
+  .equipment-layout,
+  .documentation-grid,
+  .import-export-grid,
+  .groundskeeper-ai-workspace,
+  .ai-training-layout
+) {
+  display: grid !important;
+  gap: var(--uy-section-gap) !important;
+  align-items: start !important;
+  min-width: 0 !important;
+  max-width: 100% !important;
+}
+
+body:not(.is-login-screen) .uy-standard-page .route-layout {
+  grid-template-columns: minmax(280px, .82fr) minmax(0, 1.18fr) !important;
+}
+
+body:not(.is-login-screen) .uy-standard-page .equipment-layout {
+  grid-template-columns: minmax(280px, .74fr) minmax(0, 1.26fr) !important;
+}
+
+body:not(.is-login-screen) .uy-standard-page .documentation-grid,
+body:not(.is-login-screen) .uy-standard-page .import-export-grid {
+  grid-template-columns: minmax(280px, .86fr) minmax(0, 1.14fr) !important;
+}
+
+body:not(.is-login-screen) .uy-standard-page .groundskeeper-ai-workspace {
+  grid-template-columns: minmax(220px, .28fr) minmax(0, 1fr) !important;
+}
+
+body:not(.is-login-screen) .uy-standard-page :is(
+  .outreach-card-list,
+  .documentation-list,
+  .documentation-audit-list,
+  .equipment-card-list,
+  .contact-grid,
+  .document-list,
+  .import-export-preview-list,
+  .import-export-history-list,
+  .users-access-list,
+  .activity-log-list
+) {
+  display: grid !important;
+  gap: 10px !important;
+  min-width: 0 !important;
+}
+
+@media (max-width: 1180px) {
+  body:not(.is-login-screen) .uy-standard-page .uy-page-header,
+  body:not(.is-login-screen) .uy-standard-page .uy-page-intro-panel > .panel-heading {
+    grid-template-columns: 1fr !important;
+    align-items: start !important;
+  }
+
+  body:not(.is-login-screen) .uy-standard-page :is(
+    .outreach-hero-actions,
+    .documentation-actions,
+    .import-export-actions,
+    .groundskeeper-ai-toolbar,
+    .route-date-card
+  ) {
+    justify-content: flex-start !important;
+  }
+}
+
+@media (max-width: 900px) {
+  body:not(.is-login-screen) .uy-standard-page :is(
+    .route-layout,
+    .equipment-layout,
+    .documentation-grid,
+    .import-export-grid,
+    .groundskeeper-ai-workspace,
+    .ai-training-layout
+  ) {
+    grid-template-columns: 1fr !important;
+  }
+
+  body:not(.is-login-screen) .uy-standard-page :is(
+    .toolbar,
+    .outreach-toolbar,
+    .outreach-property-toolbar,
+    .equipment-toolbar,
+    .documentation-toolbar
+  ) {
+    grid-template-columns: 1fr !important;
+  }
+}
+
+@media (max-width: 640px) {
+  body:not(.is-login-screen) .uy-standard-page .uy-page-header,
+  body:not(.is-login-screen) .uy-standard-page .uy-page-intro-panel,
+  body:not(.is-login-screen) .uy-standard-page :is(.panel, .documentation-card, .import-export-card) {
+    border-radius: 20px !important;
+  }
+
+  body:not(.is-login-screen) .uy-standard-page .uy-page-header h3,
+  body:not(.is-login-screen) .uy-standard-page .uy-page-intro-panel > .panel-heading h3 {
+    font-size: clamp(1.55rem, 9vw, 2.05rem) !important;
+  }
+
+  body:not(.is-login-screen) .uy-standard-page :is(
+    .outreach-hero-actions,
+    .documentation-actions,
+    .import-export-actions,
+    .groundskeeper-ai-toolbar,
+    .route-date-card
+  ) > * {
+    width: 100% !important;
+  }
+}
+
 @media (max-width: 760px) {
   body:not(.is-login-screen) {
     --uy-section-gap: 10px;
@@ -11938,5 +12487,767 @@ body:not(.is-login-screen) .duplicate-warning > div {
     grid-template-columns: var(--uy-sidebar-icon) minmax(0, 0) !important;
     justify-content: center !important;
     justify-items: center !important;
+  }
+}
+
+/* Dashboard-wide Forest Green button system.
+   Scoped to authenticated dashboard work areas so the login button, sidebar,
+   sidebar nav, and mobile nav keep their existing protected styling. */
+body:not(.is-login-screen) {
+  --button-forest-900: #263d2c;
+  --button-forest-800: #344d39;
+  --button-forest-700: #49664d;
+  --button-forest-600: #5f7d62;
+  --button-forest-500: #789179;
+  --button-forest-300: #b9c9b9;
+  --button-forest-200: #d5dfd4;
+  --button-forest-100: #edf2ec;
+  --button-forest-50: #f7f9f6;
+  --button-danger-700: #b42318;
+  --button-danger-600: #d92d20;
+  --button-danger-100: #fee4e2;
+  --button-danger-50: #fff6f5;
+  --button-warning-700: #9a6700;
+  --button-warning-600: #b7791f;
+  --button-warning-100: #f8ecc8;
+  --button-warning-50: #fffaf0;
+  --button-info-700: #35576f;
+  --button-info-100: #e7eff4;
+  --button-neutral-900: #202622;
+  --button-neutral-700: #525b54;
+  --button-neutral-400: #a5ada6;
+  --button-neutral-300: #cbd1cb;
+  --button-neutral-200: #dde2dd;
+  --button-neutral-100: #f1f3f1;
+  --button-white: #ffffff;
+  --dashboard-button-height: 38px;
+  --dashboard-button-height-compact: 32px;
+  --dashboard-button-height-large: 44px;
+  --dashboard-button-radius: 7px;
+  --dashboard-button-radius-compact: 6px;
+  --dashboard-button-radius-large: 8px;
+  --dashboard-button-pad-x: 14px;
+  --dashboard-button-gap: 7px;
+  --dashboard-button-focus: 0 0 0 3px rgba(95, 125, 98, .28);
+  --dashboard-button-transition:
+    background-color 140ms ease,
+    border-color 140ms ease,
+    color 140ms ease,
+    box-shadow 140ms ease,
+    transform 80ms ease;
+}
+
+body:not(.is-login-screen) .app-view :is(.dashboard-main, .detail-drawer) :is(
+  button:not(.overview-activity-row):not(.work-list-row):not(.work-route-summary):not(.work-pipeline-row):not(.work-activity-item):not(.pipeline-card):not(.profile-mini-item):not(.calendar-pill):not(.global-search-result),
+  a.button,
+  a.inline-action,
+  .inline-action,
+  .overview-primary-action,
+  .work-primary-action,
+  .quick-action-link,
+  .uy-button
+) {
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  gap: var(--dashboard-button-gap) !important;
+  min-height: var(--dashboard-button-height) !important;
+  min-width: 0 !important;
+  max-width: 100% !important;
+  padding: 0 var(--dashboard-button-pad-x) !important;
+  border: 1px solid var(--button-forest-300) !important;
+  border-radius: var(--dashboard-button-radius) !important;
+  background: var(--button-forest-100) !important;
+  color: var(--button-forest-900) !important;
+  box-shadow: 0 5px 14px rgba(32, 38, 34, .05) !important;
+  font: inherit !important;
+  font-size: 14px !important;
+  font-weight: 650 !important;
+  line-height: 1 !important;
+  letter-spacing: 0 !important;
+  text-align: center !important;
+  text-decoration: none !important;
+  white-space: nowrap !important;
+  cursor: pointer !important;
+  transition: var(--dashboard-button-transition) !important;
+  -webkit-tap-highlight-color: transparent;
+}
+
+body:not(.is-login-screen) .app-view :is(.dashboard-main, .detail-drawer) :is(
+  button:not(.overview-activity-row):not(.work-list-row):not(.work-route-summary):not(.work-pipeline-row):not(.work-activity-item):not(.pipeline-card):not(.profile-mini-item):not(.calendar-pill):not(.global-search-result),
+  a.button,
+  a.inline-action,
+  .inline-action,
+  .overview-primary-action,
+  .work-primary-action,
+  .quick-action-link,
+  .uy-button
+):hover:not(:disabled):not([aria-disabled="true"]) {
+  border-color: var(--button-forest-500) !important;
+  background: var(--button-forest-200) !important;
+  color: var(--button-forest-900) !important;
+  box-shadow: 0 8px 18px rgba(32, 61, 44, .08) !important;
+  transform: translateY(-1px) !important;
+}
+
+body:not(.is-login-screen) .app-view :is(.dashboard-main, .detail-drawer) :is(
+  button:not(.overview-activity-row):not(.work-list-row):not(.work-route-summary):not(.work-pipeline-row):not(.work-activity-item):not(.pipeline-card):not(.profile-mini-item):not(.calendar-pill):not(.global-search-result),
+  a.button,
+  a.inline-action,
+  .inline-action,
+  .overview-primary-action,
+  .work-primary-action,
+  .quick-action-link,
+  .uy-button
+):active:not(:disabled):not([aria-disabled="true"]) {
+  transform: translateY(0) !important;
+  box-shadow: inset 0 1px 2px rgba(32, 38, 34, .12) !important;
+}
+
+body:not(.is-login-screen) .app-view :is(.dashboard-main, .detail-drawer) :is(
+  button:not(.overview-activity-row):not(.work-list-row):not(.work-route-summary):not(.work-pipeline-row):not(.work-activity-item):not(.pipeline-card):not(.profile-mini-item):not(.calendar-pill):not(.global-search-result),
+  a.button,
+  a.inline-action,
+  .inline-action,
+  .overview-primary-action,
+  .work-primary-action,
+  .quick-action-link,
+  .uy-button
+):focus-visible {
+  outline: 3px solid rgba(95, 125, 98, .28) !important;
+  outline-offset: 2px !important;
+  box-shadow: var(--dashboard-button-focus) !important;
+}
+
+body:not(.is-login-screen) .app-view :is(.dashboard-main, .detail-drawer) :is(
+  button,
+  a.button,
+  a.inline-action,
+  .inline-action,
+  .uy-button
+):disabled,
+body:not(.is-login-screen) .app-view :is(.dashboard-main, .detail-drawer) :is(
+  button,
+  a.button,
+  a.inline-action,
+  .inline-action,
+  .uy-button
+)[aria-disabled="true"] {
+  border-color: var(--button-neutral-200) !important;
+  background: var(--button-neutral-100) !important;
+  color: var(--button-neutral-400) !important;
+  box-shadow: none !important;
+  cursor: not-allowed !important;
+  opacity: 1 !important;
+  transform: none !important;
+}
+
+body:not(.is-login-screen) .app-view :is(.dashboard-main, .detail-drawer) :is(
+  .uy-button--primary,
+  .overview-primary-action,
+  .work-primary-action,
+  .outreach-primary-action,
+  .documentation-actions button[data-action="manage-documentation-templates"],
+  .import-export-actions button[data-action="download-json-backup"],
+  .global-add-control > button,
+  .quick-actions button:first-child,
+  .document-form button[type="submit"],
+  .client-form button[type="submit"],
+  .operations-form button[type="submit"],
+  .note-form button[type="submit"],
+  .schedule-create-form button[type="submit"],
+  .route-date-card button[data-action="open-route-map"],
+  .route-stop-form button[type="submit"],
+  .equipment-form button[type="submit"],
+  .equipment-form-actions button[type="submit"],
+  .equipment-maintenance-form button[type="submit"],
+  .hardware-guide-form button[type="submit"],
+  .documentation-form button[type="submit"],
+  .ai-editor-actions button[type="submit"],
+  .training-chat-form button[type="submit"],
+  .groundskeeper-ai-chat-form button[type="submit"],
+  .call-notes-form button[type="submit"],
+  .call-outcome-form button[type="submit"],
+  [data-action="quick-add-job"],
+  [data-action="quick-add-client"],
+  [data-action="new-outreach-prospect"],
+  [data-action="add-company-as-prospect"],
+  [data-action="add-property-as-prospect"],
+  [data-action="add-client-job"],
+  [data-action="add-client-route"],
+  [data-action="add-client-follow-up"],
+  [data-action="add-client-document"],
+  [data-action="choose-import-spreadsheet"],
+  [data-action="preview-import-paste"],
+  [data-action="connect-google-sheets"],
+  [data-action="export-google-sheet"],
+  [data-action="confirm-publish-training"],
+  [data-action="publish-groundskeeper-ai"],
+  [data-action="new-ai-entry"],
+  [data-action="invite-dashboard-user"]
+) {
+  border-color: var(--button-forest-700) !important;
+  background: var(--button-forest-700) !important;
+  color: var(--button-white) !important;
+  box-shadow: 0 8px 18px rgba(38, 61, 44, .16) !important;
+}
+
+body:not(.is-login-screen) .app-view :is(.dashboard-main, .detail-drawer) :is(
+  .uy-button--primary,
+  .overview-primary-action,
+  .work-primary-action,
+  .outreach-primary-action,
+  .documentation-actions button[data-action="manage-documentation-templates"],
+  .import-export-actions button[data-action="download-json-backup"],
+  .global-add-control > button,
+  .quick-actions button:first-child,
+  .document-form button[type="submit"],
+  .client-form button[type="submit"],
+  .operations-form button[type="submit"],
+  .note-form button[type="submit"],
+  .schedule-create-form button[type="submit"],
+  .route-date-card button[data-action="open-route-map"],
+  .route-stop-form button[type="submit"],
+  .equipment-form button[type="submit"],
+  .equipment-form-actions button[type="submit"],
+  .equipment-maintenance-form button[type="submit"],
+  .hardware-guide-form button[type="submit"],
+  .documentation-form button[type="submit"],
+  .ai-editor-actions button[type="submit"],
+  .training-chat-form button[type="submit"],
+  .groundskeeper-ai-chat-form button[type="submit"],
+  .call-notes-form button[type="submit"],
+  .call-outcome-form button[type="submit"],
+  [data-action="quick-add-job"],
+  [data-action="quick-add-client"],
+  [data-action="new-outreach-prospect"],
+  [data-action="add-company-as-prospect"],
+  [data-action="add-property-as-prospect"],
+  [data-action="add-client-job"],
+  [data-action="add-client-route"],
+  [data-action="add-client-follow-up"],
+  [data-action="add-client-document"],
+  [data-action="choose-import-spreadsheet"],
+  [data-action="preview-import-paste"],
+  [data-action="connect-google-sheets"],
+  [data-action="export-google-sheet"],
+  [data-action="confirm-publish-training"],
+  [data-action="publish-groundskeeper-ai"],
+  [data-action="new-ai-entry"],
+  [data-action="invite-dashboard-user"]
+):hover:not(:disabled):not([aria-disabled="true"]) {
+  border-color: var(--button-forest-800) !important;
+  background: var(--button-forest-800) !important;
+  color: var(--button-white) !important;
+  box-shadow: 0 10px 22px rgba(38, 61, 44, .18) !important;
+}
+
+body:not(.is-login-screen) .app-view :is(.dashboard-main, .detail-drawer) :is(
+  .uy-button--primary,
+  .overview-primary-action,
+  .work-primary-action,
+  .outreach-primary-action,
+  .global-add-control > button,
+  .document-form button[type="submit"],
+  .client-form button[type="submit"],
+  .operations-form button[type="submit"],
+  .note-form button[type="submit"],
+  .schedule-create-form button[type="submit"],
+  .route-stop-form button[type="submit"],
+  .equipment-form button[type="submit"],
+  .equipment-form-actions button[type="submit"],
+  .equipment-maintenance-form button[type="submit"],
+  .hardware-guide-form button[type="submit"],
+  .documentation-form button[type="submit"],
+  .ai-editor-actions button[type="submit"],
+  .training-chat-form button[type="submit"],
+  .groundskeeper-ai-chat-form button[type="submit"],
+  .call-notes-form button[type="submit"],
+  .call-outcome-form button[type="submit"],
+  [data-action="quick-add-job"],
+  [data-action="quick-add-client"],
+  [data-action="new-outreach-prospect"],
+  [data-action="confirm-publish-training"],
+  [data-action="publish-groundskeeper-ai"],
+  [data-action="new-ai-entry"]
+):active:not(:disabled):not([aria-disabled="true"]) {
+  border-color: var(--button-forest-900) !important;
+  background: var(--button-forest-900) !important;
+}
+
+body:not(.is-login-screen) .app-view :is(.dashboard-main, .detail-drawer) :is(
+  .uy-button--outline,
+  .toolbar button,
+  .outreach-toolbar button,
+  .equipment-toolbar button,
+  .documentation-toolbar button,
+  .import-export-card-actions button,
+  .import-export-preview-actions button,
+  .documentation-record-actions button,
+  [data-export],
+  [data-action*="download"],
+  [data-action*="copy"],
+  [data-action*="open-google"],
+  [data-action="open-route-map"],
+  [data-action="open-documentation-form"],
+  [data-action="open-documentation-archive-file"],
+  [data-action="open-document"],
+  [data-action="print-document"],
+  [data-action="sync-contact"],
+  [data-action="sync-square-document"],
+  [data-action="refresh-google-sheets-status"],
+  a.inline-action[href^="mailto:"],
+  a.inline-action[target="_blank"]
+) {
+  border-color: var(--button-forest-300) !important;
+  background: var(--button-white) !important;
+  color: var(--button-forest-800) !important;
+  box-shadow: 0 4px 12px rgba(32, 38, 34, .04) !important;
+}
+
+body:not(.is-login-screen) .app-view :is(.dashboard-main, .detail-drawer) :is(
+  .uy-button--outline,
+  .toolbar button,
+  .outreach-toolbar button,
+  .equipment-toolbar button,
+  .documentation-toolbar button,
+  .import-export-card-actions button,
+  .import-export-preview-actions button,
+  .documentation-record-actions button,
+  [data-export],
+  [data-action*="download"],
+  [data-action*="copy"],
+  [data-action*="open-google"],
+  [data-action="open-route-map"],
+  [data-action="open-documentation-form"],
+  [data-action="open-documentation-archive-file"],
+  [data-action="open-document"],
+  [data-action="print-document"],
+  [data-action="sync-contact"],
+  [data-action="sync-square-document"],
+  [data-action="refresh-google-sheets-status"],
+  a.inline-action[href^="mailto:"],
+  a.inline-action[target="_blank"]
+):hover:not(:disabled):not([aria-disabled="true"]) {
+  border-color: var(--button-forest-600) !important;
+  background: var(--button-forest-50) !important;
+}
+
+body:not(.is-login-screen) .app-view :is(.dashboard-main, .detail-drawer) :is(
+  .uy-button--ghost,
+  .drawer-close,
+  [data-close-detail],
+  [data-action*="close"],
+  [data-action*="clear"],
+  [data-action*="dismiss"],
+  [data-action*="ignore"],
+  [data-action="go-calendar"],
+  [data-action="go-settings"],
+  [data-action="quick-add-operation"],
+  [data-action="clear-follow-up-suggestion"],
+  [data-action="cancel-managed-property-edit"],
+  [data-action="open-outreach-company"],
+  [data-action="cancel-outreach-import"]
+) {
+  border-color: transparent !important;
+  background: transparent !important;
+  color: var(--button-neutral-700) !important;
+  box-shadow: none !important;
+}
+
+body:not(.is-login-screen) .app-view :is(.dashboard-main, .detail-drawer) :is(
+  .uy-button--ghost,
+  .drawer-close,
+  [data-close-detail],
+  [data-action*="close"],
+  [data-action*="clear"],
+  [data-action*="dismiss"],
+  [data-action*="ignore"],
+  [data-action="go-calendar"],
+  [data-action="go-settings"],
+  [data-action="quick-add-operation"],
+  [data-action="clear-follow-up-suggestion"],
+  [data-action="cancel-managed-property-edit"],
+  [data-action="open-outreach-company"],
+  [data-action="cancel-outreach-import"]
+):hover:not(:disabled):not([aria-disabled="true"]) {
+  border-color: transparent !important;
+  background: var(--button-forest-100) !important;
+  color: var(--button-forest-900) !important;
+  box-shadow: none !important;
+}
+
+body:not(.is-login-screen) .app-view :is(.dashboard-main, .detail-drawer) :is(
+  .uy-button--positive,
+  [data-action*="complete"],
+  [data-action*="approve"],
+  [data-action="mark-route-complete"],
+  [data-action="confirm-import-file"],
+  [data-action="confirm-outreach-import"],
+  [data-action="save-call-note"],
+  [data-action="save-call-outcome"],
+  [data-action="upload-documentation-submission"]
+) {
+  border-color: #a8c896 !important;
+  background: #eaf5e1 !important;
+  color: var(--button-forest-900) !important;
+  box-shadow: 0 4px 12px rgba(95, 125, 98, .08) !important;
+}
+
+body:not(.is-login-screen) .app-view :is(.dashboard-main, .detail-drawer) :is(
+  .uy-button--positive,
+  [data-action*="complete"],
+  [data-action*="approve"],
+  [data-action="mark-route-complete"],
+  [data-action="confirm-import-file"],
+  [data-action="confirm-outreach-import"],
+  [data-action="upload-documentation-submission"]
+):hover:not(:disabled):not([aria-disabled="true"]) {
+  border-color: #8dbb76 !important;
+  background: #d9eccb !important;
+}
+
+body:not(.is-login-screen) .app-view :is(.dashboard-main, .detail-drawer) :is(
+  .uy-button--warning,
+  [data-action*="correction"],
+  [data-action*="recheck"],
+  [data-action*="archive"],
+  [data-action="disable-dashboard-user"],
+  [data-action="refresh-import-preview"],
+  [data-outreach-preset="unverified-properties"]
+) {
+  border-color: #e5bb68 !important;
+  background: var(--button-warning-50) !important;
+  color: var(--button-warning-700) !important;
+  box-shadow: 0 4px 12px rgba(154, 103, 0, .06) !important;
+}
+
+body:not(.is-login-screen) .app-view :is(.dashboard-main, .detail-drawer) :is(
+  .uy-button--warning,
+  [data-action*="correction"],
+  [data-action*="recheck"],
+  [data-action*="archive"],
+  [data-action="disable-dashboard-user"],
+  [data-action="refresh-import-preview"],
+  [data-outreach-preset="unverified-properties"]
+):hover:not(:disabled):not([aria-disabled="true"]) {
+  border-color: #d59b31 !important;
+  background: var(--button-warning-100) !important;
+}
+
+body:not(.is-login-screen) .app-view :is(.dashboard-main, .detail-drawer) :is(
+  .uy-button--danger,
+  .danger-action,
+  [data-action*="delete"],
+  [data-action*="remove"],
+  [data-action*="reject"],
+  [data-action*="undo"],
+  [data-action*="cancel-job"],
+  [data-action="clear-demo-data"]
+) {
+  border-color: rgba(217, 45, 32, .7) !important;
+  background: var(--button-danger-50) !important;
+  color: var(--button-danger-700) !important;
+  box-shadow: none !important;
+}
+
+body:not(.is-login-screen) .app-view :is(.dashboard-main, .detail-drawer) :is(
+  .uy-button--danger,
+  .danger-action,
+  [data-action*="delete"],
+  [data-action*="remove"],
+  [data-action*="reject"],
+  [data-action*="undo"],
+  [data-action*="cancel-job"],
+  [data-action="clear-demo-data"]
+):hover:not(:disabled):not([aria-disabled="true"]) {
+  border-color: var(--button-danger-600) !important;
+  background: var(--button-danger-100) !important;
+  color: var(--button-danger-700) !important;
+}
+
+body:not(.is-login-screen) .app-view :is(.dashboard-main, .detail-drawer) :is(
+  .uy-button--info,
+  .outreach-saved-views button,
+  [data-action="set-follow-up-suggestion"],
+  [data-action="preview-sample-question"],
+  [data-action="training-quick-prompt"],
+  [data-action="ai-quick-prompt"]
+) {
+  border-color: rgba(53, 87, 111, .2) !important;
+  background: var(--button-info-100) !important;
+  color: var(--button-info-700) !important;
+  box-shadow: none !important;
+}
+
+body:not(.is-login-screen) .app-view :is(.dashboard-main, .detail-drawer) :is(
+  .uy-button--compact,
+  .inline-action,
+  .toolbar button,
+  .outreach-toolbar button,
+  .equipment-toolbar button,
+  .documentation-toolbar button,
+  .route-map-zoom button,
+  .training-preview-toggle button,
+  .outreach-saved-views button
+) {
+  min-height: var(--dashboard-button-height-compact) !important;
+  padding-inline: 10px !important;
+  border-radius: var(--dashboard-button-radius-compact) !important;
+  font-size: 13px !important;
+}
+
+body:not(.is-login-screen) .app-view :is(.dashboard-main, .detail-drawer) :is(
+  .uy-button--large,
+  .overview-primary-action,
+  .work-primary-action,
+  .outreach-primary-action
+) {
+  min-height: var(--dashboard-button-height-large) !important;
+  padding-inline: 18px !important;
+  border-radius: var(--dashboard-button-radius-large) !important;
+  font-size: 15px !important;
+}
+
+body:not(.is-login-screen) .app-view :is(.dashboard-main, .detail-drawer) :is(
+  .route-map-zoom button,
+  .global-add-control > button:not(:has(span:last-child)),
+  .toolbar button:empty
+) {
+  width: 36px !important;
+  min-width: 36px !important;
+  max-width: 36px !important;
+  height: 36px !important;
+  min-height: 36px !important;
+  padding: 0 !important;
+}
+
+body:not(.is-login-screen) .app-view :is(.dashboard-main, .detail-drawer) :is(
+  .button-icon,
+  button img,
+  button svg,
+  a.inline-action img,
+  a.inline-action svg,
+  a.button img,
+  a.button svg
+) {
+  flex: 0 0 auto !important;
+  width: 18px !important;
+  height: 18px !important;
+  display: inline-grid !important;
+  place-items: center !important;
+  color: currentColor !important;
+  line-height: 1 !important;
+}
+
+body:not(.is-login-screen) .app-view .dashboard-main .import-export-button-grid button {
+  display: grid !important;
+  justify-items: start !important;
+  align-content: center !important;
+  gap: 5px !important;
+  min-height: 74px !important;
+  padding: 14px !important;
+  text-align: left !important;
+  white-space: normal !important;
+}
+
+body:not(.is-login-screen) .app-view .dashboard-main .import-export-button-grid button small {
+  color: var(--button-neutral-700) !important;
+  font-size: .78rem !important;
+  font-weight: 700 !important;
+}
+
+body:not(.is-login-screen) .app-view .dashboard-main :is(
+  .global-add-menu button,
+  .groundskeeper-ai-sidebar .ai-nav-item
+) {
+  justify-content: flex-start !important;
+  width: 100% !important;
+  text-align: left !important;
+}
+
+body:not(.is-login-screen) .app-view :is(.dashboard-main, .detail-drawer) :is(
+  .calendar-tabs,
+  .outreach-view-tabs,
+  .equipment-tabs,
+  .documentation-tabs,
+  .import-export-tabs,
+  .training-preview-toggle
+) {
+  display: inline-flex !important;
+  flex-wrap: wrap !important;
+  gap: 4px !important;
+  width: fit-content !important;
+  max-width: 100% !important;
+  padding: 4px !important;
+  border: 1px solid var(--button-neutral-200) !important;
+  border-radius: 9px !important;
+  background: rgba(255, 255, 255, .72) !important;
+  box-shadow: none !important;
+}
+
+body:not(.is-login-screen) .app-view :is(.dashboard-main, .detail-drawer) :is(
+  .calendar-tabs,
+  .outreach-view-tabs,
+  .equipment-tabs,
+  .documentation-tabs,
+  .import-export-tabs,
+  .training-preview-toggle
+) button {
+  min-height: 32px !important;
+  padding: 0 11px !important;
+  border: 1px solid transparent !important;
+  border-radius: 6px !important;
+  background: transparent !important;
+  color: var(--button-neutral-700) !important;
+  box-shadow: none !important;
+  font-size: 13px !important;
+  font-weight: 650 !important;
+  transform: none !important;
+}
+
+body:not(.is-login-screen) .app-view :is(.dashboard-main, .detail-drawer) :is(
+  .calendar-tabs,
+  .outreach-view-tabs,
+  .equipment-tabs,
+  .documentation-tabs,
+  .import-export-tabs,
+  .training-preview-toggle
+) button:hover:not(:disabled) {
+  border-color: var(--button-forest-200) !important;
+  background: var(--button-forest-50) !important;
+  color: var(--button-forest-900) !important;
+  box-shadow: none !important;
+}
+
+body:not(.is-login-screen) .app-view :is(.dashboard-main, .detail-drawer) :is(
+  .calendar-tabs,
+  .outreach-view-tabs,
+  .equipment-tabs,
+  .documentation-tabs,
+  .import-export-tabs,
+  .training-preview-toggle
+) button:is(.is-active, [aria-selected="true"]) {
+  border-color: var(--button-forest-300) !important;
+  background: var(--button-forest-200) !important;
+  color: var(--button-forest-900) !important;
+  font-weight: 750 !important;
+  box-shadow: inset 0 0 0 1px rgba(73, 102, 77, .08) !important;
+}
+
+body:not(.is-login-screen) .app-view :is(.dashboard-main, .detail-drawer) :is(
+  .topbar-actions,
+  .overview-header-actions,
+  .work-header-actions,
+  .outreach-hero-actions,
+  .documentation-actions,
+  .import-export-actions,
+  .groundskeeper-ai-toolbar,
+  .drawer-actions,
+  .route-form-actions,
+  .equipment-form-actions,
+  .documentation-record-actions,
+  .import-export-card-actions,
+  .import-export-preview-actions,
+  .phone-call-control,
+  .call-panel-actions,
+  .training-suggestion-actions,
+  .training-rule-actions,
+  .ai-log-actions
+) {
+  display: flex !important;
+  flex-wrap: wrap !important;
+  align-items: center !important;
+  gap: 8px !important;
+}
+
+body:not(.is-login-screen) .app-view :is(.dashboard-main, .detail-drawer) :is(
+  button.is-loading,
+  button[aria-busy="true"],
+  .uy-button.is-loading,
+  .uy-button[aria-busy="true"]
+) {
+  position: relative !important;
+  pointer-events: none !important;
+  color: transparent !important;
+}
+
+body:not(.is-login-screen) .app-view :is(.dashboard-main, .detail-drawer) :is(
+  button.is-loading,
+  button[aria-busy="true"],
+  .uy-button.is-loading,
+  .uy-button[aria-busy="true"]
+)::after {
+  width: 14px;
+  height: 14px;
+  border: 2px solid var(--button-forest-700);
+  border-right-color: transparent;
+  border-radius: 50%;
+  content: "";
+  position: absolute;
+  animation: uy-button-spin .75s linear infinite;
+}
+
+body:not(.is-login-screen) .app-view :is(.dashboard-main, .detail-drawer) :is(
+  .overview-primary-action,
+  .work-primary-action,
+  .outreach-primary-action,
+  .global-add-control > button,
+  .document-form button[type="submit"],
+  .client-form button[type="submit"],
+  .operations-form button[type="submit"],
+  .note-form button[type="submit"],
+  .schedule-create-form button[type="submit"],
+  .route-stop-form button[type="submit"],
+  .equipment-form button[type="submit"],
+  .documentation-form button[type="submit"],
+  [data-action="quick-add-job"],
+  [data-action="new-outreach-prospect"],
+  [data-action="confirm-publish-training"],
+  [data-action="publish-groundskeeper-ai"]
+):is(.is-loading, [aria-busy="true"])::after {
+  border-color: rgba(255, 255, 255, .88);
+  border-right-color: transparent;
+}
+
+@keyframes uy-button-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@media (max-width: 760px) {
+  body:not(.is-login-screen) {
+    --dashboard-button-height: 42px;
+    --dashboard-button-height-compact: 40px;
+  }
+
+  body:not(.is-login-screen) .app-view :is(.dashboard-main, .detail-drawer) :is(
+    .drawer-actions,
+    .documentation-actions,
+    .import-export-actions,
+    .groundskeeper-ai-toolbar,
+    .route-form-actions,
+    .equipment-form-actions,
+    .documentation-record-actions,
+    .import-export-card-actions,
+    .import-export-preview-actions,
+    .phone-call-control,
+    .call-panel-actions
+  ) > :is(button, a.button, a.inline-action, .inline-action, .uy-button) {
+    flex: 1 1 160px !important;
+    white-space: normal !important;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  body:not(.is-login-screen) .app-view :is(.dashboard-main, .detail-drawer) :is(
+    button,
+    a.button,
+    a.inline-action,
+    .inline-action,
+    .uy-button
+  ) {
+    transition: none !important;
   }
 }

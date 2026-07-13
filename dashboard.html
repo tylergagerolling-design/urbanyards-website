@@ -60,6 +60,7 @@
             <nav class="dashboard-nav" aria-label="Dashboard navigation">
               <a href="#overview" data-dashboard-link="overview"><span class="nav-icon" aria-hidden="true"><svg><use href="images/dashboard-icons/option8-sidebar.svg#uy-icon-home"></use></svg></span><span class="nav-label">Home</span></a>
               <a href="#calendar" data-dashboard-link="calendar"><span class="nav-icon" aria-hidden="true"><svg><use href="images/dashboard-icons/option8-sidebar.svg#uy-icon-work"></use></svg></span><span class="nav-label">Work</span></a>
+              <a href="#connected-operations" data-dashboard-link="connected-operations"><span class="nav-icon" aria-hidden="true"><svg><use href="images/dashboard-icons/option8-sidebar.svg#uy-icon-apps"></use></svg></span><span class="nav-label">Operations</span></a>
               <a href="#outreach" data-dashboard-link="outreach"><span class="nav-icon" aria-hidden="true"><svg><use href="images/dashboard-icons/option8-sidebar.svg#uy-icon-leads"></use></svg></span><span class="nav-label">Leads</span></a>
               <a href="#contacts" data-dashboard-link="contacts"><span class="nav-icon" aria-hidden="true"><svg><use href="images/dashboard-icons/option8-sidebar.svg#uy-icon-clients"></use></svg></span><span class="nav-label">Clients</span></a>
               <a href="#documents" data-dashboard-link="documents"><span class="nav-icon" aria-hidden="true"><svg><use href="images/dashboard-icons/option8-sidebar.svg#uy-icon-money"></use></svg></span><span class="nav-label">Money</span></a>
@@ -837,6 +838,32 @@
             </details>
           </section>
 
+          <section class="dashboard-section connected-ops-center uy-standard-page" id="connected-operations" data-section="connected-operations">
+            <div class="connected-ops-hero uy-page-header">
+              <div>
+                <p class="eyebrow">Operations</p>
+                <h3>Connected operations command center</h3>
+                <p>Manage recurring service, field checklists, approvals, client communications, secure share links, maintenance planning, reports, and automation rules.</p>
+              </div>
+              <div class="connected-ops-actions">
+                <button type="button" data-action="refresh-connected-operations"><span class="button-icon" aria-hidden="true">R</span><span>Refresh</span></button>
+                <button type="button" data-action="set-connected-ops-view" data-connected-ops-view="recurring"><span class="button-icon" aria-hidden="true">+</span><span>New Recurring Service</span></button>
+              </div>
+            </div>
+            <div class="connected-ops-status" data-connected-ops-status></div>
+            <div class="connected-ops-metrics" data-connected-ops-metrics></div>
+            <div class="connected-ops-tabs" role="tablist" aria-label="Connected operations views">
+              <button type="button" data-action="set-connected-ops-view" data-connected-ops-view="recurring">Recurring</button>
+              <button type="button" data-action="set-connected-ops-view" data-connected-ops-view="field">Field Mode</button>
+              <button type="button" data-action="set-connected-ops-view" data-connected-ops-view="approvals">Approvals</button>
+              <button type="button" data-action="set-connected-ops-view" data-connected-ops-view="communications">Communications</button>
+              <button type="button" data-action="set-connected-ops-view" data-connected-ops-view="shares">Share Links</button>
+              <button type="button" data-action="set-connected-ops-view" data-connected-ops-view="automation">Automation</button>
+              <button type="button" data-action="set-connected-ops-view" data-connected-ops-view="reports">Reports</button>
+            </div>
+            <div class="connected-ops-main" data-connected-ops-main></div>
+          </section>
+
           <section class="dashboard-section uy-standard-page" id="route-planner" data-section="route-planner">
             <div class="route-planner-shell">
               <div class="route-hero uy-page-header">
@@ -1262,6 +1289,7 @@
         <nav class="mobile-tabbar" aria-label="Mobile dashboard navigation">
           <a href="#overview" data-dashboard-link="overview">Home</a>
           <a href="#calendar" data-dashboard-link="calendar">Work</a>
+          <a href="#connected-operations" data-dashboard-link="connected-operations">Ops</a>
           <a href="#outreach" data-dashboard-link="outreach">Leads</a>
           <a href="#contacts" data-dashboard-link="contacts">Clients</a>
           <a href="#documents" data-dashboard-link="documents">Money</a>

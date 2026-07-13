@@ -3,6 +3,13 @@
 /budgets  /dashboard.html  200
 /budgets/*  /dashboard.html  200
 /jobs/*/budget  /dashboard.html  200
+/operations  /dashboard.html  200
+/operations/*  /dashboard.html  200
+/recurring-services  /dashboard.html  200
+/recurring-services/*  /dashboard.html  200
+/approvals  /dashboard.html  200
+/reports  /dashboard.html  200
+/field  /dashboard.html  200
 /pay  /pay.html  200
 /pay/  /pay.html  200
 /api/*  /.netlify/functions/:splat  200

@@ -166,6 +166,7 @@
     "documentation",
     "importExport",
     "budgets",
+    "connectedOps",
     "leadActivity",
     "userProfiles",
     "auditLogs"
@@ -250,6 +251,7 @@
     budgetDateEnd: "",
     selectedBudgetId: "",
     budgetDetailTab: "overview",
+    connectedOpsView: "recurring",
     importExportView: "import",
     importExportModule: IMPORT_EXPORT_DEFAULT_MODULE,
     importExportFormat: "xlsx",
@@ -286,6 +288,7 @@
     groundskeeperAiReady: false,
     documentationReady: false,
     budgetsReady: false,
+    connectedOpsReady: false,
     importExportReady: false,
     leadActivityReady: true,
     userProfilesReady: true,
@@ -343,6 +346,25 @@
         templateItems: [],
         history: []
       },
+      connectedOps: {
+        recurringServices: [],
+        recurringVisits: [],
+        checklistTemplates: [],
+        checklists: [],
+        checklistItems: [],
+        timeEntries: [],
+        sitePhotos: [],
+        approvals: [],
+        communications: [],
+        communicationTemplates: [],
+        shareLinks: [],
+        shareEvents: [],
+        maintenanceSchedules: [],
+        maintenanceRecords: [],
+        automationRules: [],
+        automationRuns: [],
+        commandHistory: []
+      },
       importExport: {
         modules: [],
         limits: {},
@@ -367,6 +389,14 @@
     pipeline: "documents",
     schedule: "calendar",
     operations: "overview",
+    "connected-ops": "connected-operations",
+    "connected-operations": "connected-operations",
+    recurring: "connected-operations",
+    approvals: "connected-operations",
+    communications: "connected-operations",
+    automation: "connected-operations",
+    reports: "connected-operations",
+    field: "connected-operations",
     "command-center": "overview",
     notes: "settings",
     reminders: "settings",
@@ -464,6 +494,7 @@
       "find-stop-map": "M",
       "go-calendar": "+",
       "go-budgets": "$",
+      "go-connected-operations": "OP",
       "go-contacts": "-&gt;",
       "go-documents": "$",
       "go-route-planner": "M",
@@ -494,6 +525,7 @@
       "reject-documentation-submission": "x",
       "reschedule-job": "R",
       "route-outreach-prospect": "M",
+      "save": "OK",
       "sync-contact": "~",
       "sync-square-document": "~"
     };
@@ -2262,7 +2294,32 @@
         sort: activity.createdAtRaw || ""
       }));
 
-    return [...websiteRequests, ...overduePayments, ...rescheduleNeeded, ...voicemails]
+    const ops = normalizeConnectedOpsBundle(data.connectedOps || {});
+    const openApprovals = ops.approvals
+      .filter((approval) => ["Pending", "Needs More Info"].includes(approval.status))
+      .map((approval) => ({
+        id: approval.id,
+        type: "approval",
+        label: "Approval needed",
+        title: approval.title || "Approval needs review",
+        detail: [approval.requestType, approval.priority, approval.dueAt ? `Due ${approval.dueAt}` : ""].filter(Boolean).join(" / "),
+        action: "go-connected-operations",
+        sort: approval.dueAtRaw || approval.createdAtRaw || ""
+      }));
+
+    const missedRecurringVisits = ops.recurringVisits
+      .filter((visit) => visit.visitDateRaw && visit.visitDateRaw < todayKey() && !["Completed", "Skipped", "Canceled"].includes(visit.status))
+      .map((visit) => ({
+        id: visit.id,
+        type: "schedule",
+        label: "Recurring visit missed",
+        title: "Recurring service needs reschedule",
+        detail: [visit.visitDate, visit.visitWindow, visit.status].filter(Boolean).join(" / "),
+        action: "go-connected-operations",
+        sort: visit.visitDateRaw || ""
+      }));
+
+    return [...websiteRequests, ...overduePayments, ...rescheduleNeeded, ...voicemails, ...openApprovals, ...missedRecurringVisits]
       .sort((a, b) => String(b.sort || "").localeCompare(String(a.sort || "")));
   }
 
@@ -2766,6 +2823,223 @@
     };
   }
 
+  function emptyConnectedOpsBundle() {
+    return {
+      recurringServices: [],
+      recurringVisits: [],
+      checklistTemplates: [],
+      checklists: [],
+      checklistItems: [],
+      timeEntries: [],
+      sitePhotos: [],
+      approvals: [],
+      communications: [],
+      communicationTemplates: [],
+      shareLinks: [],
+      shareEvents: [],
+      maintenanceSchedules: [],
+      maintenanceRecords: [],
+      automationRules: [],
+      automationRuns: [],
+      commandHistory: []
+    };
+  }
+
+  function normalizeRecurringService(row = {}) {
+    return {
+      id: row.id || "",
+      serviceName: row.service_name || "Recurring service",
+      serviceType: row.service_type || "Property care",
+      description: row.description || "",
+      frequency: row.frequency || "Weekly",
+      intervalCount: Number(row.interval_count || 1),
+      preferredWeekdays: Array.isArray(row.preferred_weekdays) ? row.preferred_weekdays : [],
+      visitWindow: row.visit_window || "",
+      assignedUserIds: Array.isArray(row.assigned_user_ids) ? row.assigned_user_ids : [],
+      startDateRaw: dateKey(row.start_date),
+      startDate: formatDate(row.start_date),
+      endDateRaw: dateKey(row.end_date),
+      endDate: formatDate(row.end_date),
+      nextVisitDateRaw: dateKey(row.next_visit_date),
+      nextVisitDate: formatDate(row.next_visit_date),
+      lastVisitDateRaw: dateKey(row.last_visit_date),
+      lastVisitDate: formatDate(row.last_visit_date),
+      status: row.status || "Active",
+      pricePerVisit: Number(row.price_per_visit || 0),
+      notes: row.notes || "",
+      createdAtRaw: row.created_at || "",
+      updatedAtRaw: row.updated_at || "",
+      updatedAt: formatDate(row.updated_at)
+    };
+  }
+
+  function normalizeRecurringVisit(row = {}) {
+    return {
+      id: row.id || "",
+      recurringServiceId: row.recurring_service_id || "",
+      scheduledJobId: row.scheduled_job_id || "",
+      visitDateRaw: dateKey(row.visit_date),
+      visitDate: formatDate(row.visit_date),
+      visitWindow: row.visit_window || "",
+      status: row.status || "Scheduled",
+      completionPercent: Number(row.completion_percent || 0),
+      notes: row.notes || "",
+      createdAtRaw: row.created_at || "",
+      updatedAtRaw: row.updated_at || ""
+    };
+  }
+
+  function normalizeChecklistTemplate(row = {}) {
+    return {
+      id: row.id || "",
+      title: row.title || row.name || "Checklist template",
+      category: row.category || "General",
+      serviceType: row.service_type || "",
+      description: row.description || "",
+      status: row.status || "Active",
+      visibility: row.visibility || "Internal",
+      updatedAtRaw: row.updated_at || "",
+      updatedAt: formatDate(row.updated_at)
+    };
+  }
+
+  function normalizeJobChecklist(row = {}) {
+    return {
+      id: row.id || "",
+      templateId: row.template_id || "",
+      jobId: row.job_id || "",
+      scheduledJobId: row.scheduled_job_id || "",
+      title: row.title || "Job checklist",
+      status: row.status || "Not Started",
+      dueDateRaw: dateKey(row.due_date),
+      dueDate: formatDate(row.due_date),
+      completedAtRaw: row.completed_at || "",
+      completedAt: formatDate(row.completed_at),
+      notes: row.notes || "",
+      updatedAtRaw: row.updated_at || "",
+      updatedAt: formatDate(row.updated_at)
+    };
+  }
+
+  function normalizeApprovalRequest(row = {}) {
+    return {
+      id: row.id || "",
+      requestType: row.request_type || "General",
+      relatedTable: row.related_table || "",
+      relatedId: row.related_id || "",
+      title: row.title || "Approval request",
+      description: row.description || "",
+      priority: row.priority || "Normal",
+      status: row.status || "Pending",
+      dueAtRaw: row.due_at || "",
+      dueAt: formatDate(row.due_at),
+      reviewedAtRaw: row.reviewed_at || "",
+      reviewedAt: formatDate(row.reviewed_at),
+      decisionNotes: row.decision_notes || "",
+      createdAtRaw: row.created_at || "",
+      createdAt: formatDate(row.created_at),
+      updatedAtRaw: row.updated_at || "",
+      updatedAt: formatDate(row.updated_at)
+    };
+  }
+
+  function normalizeCommunication(row = {}) {
+    return {
+      id: row.id || "",
+      direction: row.direction || "outbound",
+      channel: row.channel || "note",
+      relatedTable: row.related_table || "",
+      relatedId: row.related_id || "",
+      contactName: row.contact_name || "",
+      contactEmail: row.contact_email || "",
+      contactPhone: row.contact_phone || "",
+      subject: row.subject || "",
+      body: row.body || "",
+      outcome: row.outcome || "",
+      followUpDateRaw: dateKey(row.follow_up_date),
+      followUpDate: formatDate(row.follow_up_date),
+      sentAtRaw: row.sent_at || "",
+      sentAt: formatDate(row.sent_at || row.created_at),
+      createdAtRaw: row.created_at || "",
+      createdAt: formatDate(row.created_at)
+    };
+  }
+
+  function normalizeShareLink(row = {}) {
+    return {
+      id: row.id || "",
+      title: row.title || "Client share link",
+      relatedTable: row.related_table || "",
+      relatedId: row.related_id || "",
+      contactEmail: row.contact_email || "",
+      tokenHint: row.token_hint || "",
+      status: row.status || "Active",
+      expiresAtRaw: row.expires_at || "",
+      expiresAt: formatDate(row.expires_at),
+      lastViewedAtRaw: row.last_viewed_at || "",
+      lastViewedAt: formatDate(row.last_viewed_at),
+      viewCount: Number(row.view_count || 0),
+      allowedSections: Array.isArray(row.allowed_sections) ? row.allowed_sections : [],
+      createdAtRaw: row.created_at || "",
+      createdAt: formatDate(row.created_at)
+    };
+  }
+
+  function normalizeMaintenanceSchedule(row = {}) {
+    return {
+      id: row.id || "",
+      equipmentId: row.equipment_id || "",
+      equipmentName: row.equipment_name || "Equipment",
+      maintenanceType: row.maintenance_type || "Maintenance",
+      frequency: row.frequency || "Monthly",
+      nextDueDateRaw: dateKey(row.next_due_date),
+      nextDueDate: formatDate(row.next_due_date),
+      nextDueHours: Number(row.next_due_hours || 0),
+      assignedTo: row.assigned_to || "",
+      status: row.status || "Active",
+      notes: row.notes || "",
+      updatedAtRaw: row.updated_at || "",
+      updatedAt: formatDate(row.updated_at)
+    };
+  }
+
+  function normalizeAutomationRule(row = {}) {
+    return {
+      id: row.id || "",
+      title: row.title || "Automation rule",
+      triggerKey: row.trigger_key || "",
+      actionKey: row.action_key || "",
+      enabled: Boolean(row.enabled),
+      lastRunAtRaw: row.last_run_at || "",
+      lastRunAt: formatDate(row.last_run_at),
+      createdAtRaw: row.created_at || "",
+      updatedAtRaw: row.updated_at || "",
+      updatedAt: formatDate(row.updated_at)
+    };
+  }
+
+  function normalizeConnectedOpsBundle(raw = {}) {
+    return {
+      recurringServices: (raw.recurringServices || raw.recurring_services || []).map(normalizeRecurringService),
+      recurringVisits: (raw.recurringVisits || raw.recurring_service_visits || []).map(normalizeRecurringVisit),
+      checklistTemplates: (raw.checklistTemplates || raw.job_checklist_templates || []).map(normalizeChecklistTemplate),
+      checklists: (raw.checklists || raw.job_checklists || []).map(normalizeJobChecklist),
+      checklistItems: raw.checklistItems || raw.job_checklist_items || [],
+      timeEntries: raw.timeEntries || raw.job_time_entries || [],
+      sitePhotos: raw.sitePhotos || raw.job_site_photos || [],
+      approvals: (raw.approvals || raw.approval_requests || []).map(normalizeApprovalRequest),
+      communications: (raw.communications || []).map(normalizeCommunication),
+      communicationTemplates: raw.communicationTemplates || raw.communication_templates || [],
+      shareLinks: (raw.shareLinks || raw.client_share_links || []).map(normalizeShareLink),
+      shareEvents: raw.shareEvents || raw.client_share_link_events || [],
+      maintenanceSchedules: (raw.maintenanceSchedules || raw.equipment_maintenance_schedules || []).map(normalizeMaintenanceSchedule),
+      maintenanceRecords: raw.maintenanceRecords || raw.equipment_maintenance_records || [],
+      automationRules: (raw.automationRules || raw.automation_rules || []).map(normalizeAutomationRule),
+      automationRuns: raw.automationRuns || raw.automation_runs || [],
+      commandHistory: raw.commandHistory || raw.command_usage_history || []
+    };
+  }
+
   function normalizeOutreachProspect(row) {
     const status = OUTREACH_STATUSES.includes(row.status) ? row.status : "Prospect";
     const priority = OUTREACH_PRIORITIES.includes(row.priority) ? row.priority : "Normal";
@@ -3145,6 +3419,77 @@
       history: [
         { id: "demo-budget-history-1", budget_id: "demo-budget-1", action: "budget_created", actor_name: "Demo User", new_value: "Budget created from walkthrough estimate", created_at: daysFromToday(-2) }
       ]
+    };
+  }
+
+  function demoConnectedOpsBundle() {
+    const today = todayKey();
+    const now = new Date().toISOString();
+    return {
+      recurringServices: [
+        {
+          id: "demo-recurring-1",
+          service_name: "Kennedy Apartments weekly care",
+          service_type: "Apartment groundskeeping",
+          description: "Weekly mow, blow, entry check, trash enclosure scan, and quick exterior notes.",
+          frequency: "Weekly",
+          preferred_weekdays: ["Friday"],
+          visit_window: "8-11am",
+          start_date: today,
+          next_visit_date: daysFromToday(4),
+          status: "Active",
+          price_per_visit: 425,
+          notes: "Use arrival and completion photos for the first month.",
+          updated_at: now
+        },
+        {
+          id: "demo-recurring-2",
+          service_name: "River Court HOA seasonal route",
+          service_type: "HOA landscape maintenance",
+          frequency: "Monthly",
+          preferred_weekdays: ["Wednesday"],
+          visit_window: "Morning",
+          start_date: daysFromToday(-15),
+          next_visit_date: daysFromToday(12),
+          status: "Needs Review",
+          price_per_visit: 680,
+          notes: "Review common-area weeds before next visit.",
+          updated_at: daysFromToday(-1)
+        }
+      ],
+      recurringVisits: [
+        { id: "demo-recurring-visit-1", recurring_service_id: "demo-recurring-1", visit_date: daysFromToday(4), visit_window: "8-11am", status: "Scheduled" },
+        { id: "demo-recurring-visit-2", recurring_service_id: "demo-recurring-2", visit_date: daysFromToday(12), visit_window: "Morning", status: "Needs Reschedule" }
+      ],
+      checklistTemplates: [
+        { id: "demo-check-template-1", title: "Arrival and completion photo checklist", category: "Field Photos", service_type: "Property care", status: "Active", visibility: "Field", description: "Capture arrival condition, completed work, and visible exceptions." },
+        { id: "demo-check-template-2", title: "Trash area inspection", category: "Apartment Support", service_type: "Trash Area Care", status: "Active", visibility: "Field", description: "Document bins, overflow, enclosure, and follow-up notes." }
+      ],
+      checklists: [
+        { id: "demo-checklist-1", template_id: "demo-check-template-1", scheduled_job_id: "demo-job-1", title: "Kennedy visit field proof", status: "In Progress", due_date: today },
+        { id: "demo-checklist-2", template_id: "demo-check-template-2", title: "Cedar Court trash enclosure", status: "Not Started", due_date: daysFromToday(2) }
+      ],
+      approvals: [
+        { id: "demo-approval-1", request_type: "Change Order", title: "Approve courtyard weed pull add-on", description: "Adds two labor hours and $175 revenue to Kennedy refresh.", priority: "High", status: "Pending", due_at: daysFromToday(1), created_at: now },
+        { id: "demo-approval-2", request_type: "Schedule Exception", title: "Move River Court recurring visit", description: "Weather conflict requires a new service window.", priority: "Normal", status: "Needs More Info", due_at: daysFromToday(2), created_at: daysFromToday(-1) }
+      ],
+      communications: [
+        { id: "demo-comm-1", direction: "outbound", channel: "email", contact_name: "Hannah Edge", subject: "Walkthrough follow-up", body: "Sent estimate and photo request.", follow_up_date: daysFromToday(1), created_at: now },
+        { id: "demo-comm-2", direction: "inbound", channel: "phone", contact_name: "River Court HOA", subject: "Common area schedule", body: "Requested Wednesday morning if possible.", created_at: daysFromToday(-1) }
+      ],
+      shareLinks: [
+        { id: "demo-share-1", title: "Kennedy project photo proof", contact_email: "hannah@edgemgt.com", token_hint: "ken...", status: "Active", view_count: 2, allowed_sections: ["photos", "invoice"], created_at: daysFromToday(-1) }
+      ],
+      maintenanceSchedules: [
+        { id: "demo-maint-1", equipment_name: "Electric mower", maintenance_type: "Blade and deck check", frequency: "Every Use", next_due_date: today, status: "Active" },
+        { id: "demo-maint-2", equipment_name: "Pressure washer", maintenance_type: "Hose and pump inspection", frequency: "Monthly", next_due_date: daysFromToday(7), status: "Active" }
+      ],
+      automationRules: [
+        { id: "demo-auto-1", title: "Overdue visit creates reschedule approval", trigger_key: "visit_overdue", action_key: "create_approval", enabled: true, updated_at: now },
+        { id: "demo-auto-2", title: "Approved change order prompts invoice check", trigger_key: "change_order_approved", action_key: "create_reminder", enabled: false, updated_at: daysFromToday(-2) }
+      ],
+      automationRuns: [],
+      commandHistory: []
     };
   }
 
@@ -3621,6 +3966,7 @@
         fallback: {}
       },
       budgets: normalizeBudgetBundle(demoBudgetBundle()),
+      connectedOps: normalizeConnectedOpsBundle(demoConnectedOpsBundle()),
       importExport: demoImportExportSnapshot(),
       leadActivity: [],
       userProfiles: [
@@ -3745,6 +4091,7 @@
       state.groundskeeperAiReady = true;
       state.documentationReady = true;
       state.budgetsReady = true;
+      state.connectedOpsReady = true;
       state.importExportReady = true;
       state.leadActivityReady = true;
       state.userProfilesReady = true;
@@ -3752,7 +4099,7 @@
       return demoDashboardData();
     }
 
-    const [submissions, contacts, jobs, notes, reminders, documents, operations, outreachProspects, outreachCompanies, outreachProperties, routeStops, equipmentItems, equipmentMaintenance, hardwareGuide, groundskeeperAi, documentation, budgets, importExport, leadActivity, userProfiles, auditLogs] = await Promise.all([
+    const [submissions, contacts, jobs, notes, reminders, documents, operations, outreachProspects, outreachCompanies, outreachProperties, routeStops, equipmentItems, equipmentMaintenance, hardwareGuide, groundskeeperAi, documentation, budgets, connectedOps, importExport, leadActivity, userProfiles, auditLogs] = await Promise.all([
       supabaseRestRequest("quote_submissions?select=*&order=created_at.desc", { method: "GET" }),
       supabaseRestRequest("contacts?select=*&order=created_at.desc", { method: "GET" }),
       supabaseRestRequest("scheduled_jobs?select=*&order=visit_date.asc", { method: "GET" }),
@@ -3770,6 +4117,7 @@
       loadGroundskeeperAi(),
       loadDocumentation(),
       loadBudgets(),
+      loadConnectedOperations(),
       loadImportExportCenter(),
       loadLeadActivity(),
       loadUserProfiles(),
@@ -3794,6 +4142,7 @@
       groundskeeperAi,
       documentation,
       budgets,
+      connectedOps,
       importExport,
       leadActivity,
       userProfiles,
@@ -3906,6 +4255,76 @@
     } catch (error) {
       state.budgetsReady = false;
       return emptyBudgetBundle();
+    }
+  }
+
+  async function loadConnectedOperations() {
+    if (isDemoMode()) {
+      state.connectedOpsReady = true;
+      return normalizeConnectedOpsBundle(demoConnectedOpsBundle());
+    }
+
+    try {
+      const [
+        recurringServices,
+        recurringVisits,
+        checklistTemplates,
+        checklists,
+        checklistItems,
+        timeEntries,
+        sitePhotos,
+        approvals,
+        communications,
+        communicationTemplates,
+        shareLinks,
+        shareEvents,
+        maintenanceSchedules,
+        maintenanceRecords,
+        automationRules,
+        automationRuns,
+        commandHistory
+      ] = await Promise.all([
+        supabaseRestRequest("recurring_services?select=*&order=next_visit_date.asc.nullslast,updated_at.desc", { method: "GET" }),
+        supabaseRestRequest("recurring_service_visits?select=*&order=visit_date.asc", { method: "GET" }),
+        supabaseRestRequest("job_checklist_templates?select=*&order=category.asc,title.asc", { method: "GET" }),
+        supabaseRestRequest("job_checklists?select=*&order=due_date.asc.nullslast,updated_at.desc", { method: "GET" }),
+        supabaseRestRequest("job_checklist_items?select=*&order=sort_order.asc,created_at.asc", { method: "GET" }),
+        supabaseRestRequest("job_time_entries?select=*&order=entry_date.desc,created_at.desc&limit=500", { method: "GET" }),
+        supabaseRestRequest("job_site_photos?select=*&order=created_at.desc&limit=500", { method: "GET" }),
+        supabaseRestRequest("approval_requests?select=*&order=due_at.asc.nullslast,created_at.desc", { method: "GET" }),
+        supabaseRestRequest("communications?select=*&order=created_at.desc&limit=500", { method: "GET" }),
+        supabaseRestRequest("communication_templates?select=*&order=category.asc,title.asc", { method: "GET" }),
+        supabaseRestRequest("client_share_links?select=*&order=created_at.desc", { method: "GET" }),
+        supabaseRestRequest("client_share_link_events?select=*&order=created_at.desc&limit=500", { method: "GET" }),
+        supabaseRestRequest("equipment_maintenance_schedules?select=*&order=next_due_date.asc.nullslast,updated_at.desc", { method: "GET" }),
+        supabaseRestRequest("equipment_maintenance_records?select=*&order=performed_at.desc&limit=500", { method: "GET" }),
+        supabaseRestRequest("automation_rules?select=*&order=updated_at.desc", { method: "GET" }),
+        supabaseRestRequest("automation_runs?select=*&order=created_at.desc&limit=200", { method: "GET" }),
+        supabaseRestRequest("command_usage_history?select=*&order=created_at.desc&limit=200", { method: "GET" })
+      ]);
+      state.connectedOpsReady = true;
+      return normalizeConnectedOpsBundle({
+        recurringServices,
+        recurringVisits,
+        checklistTemplates,
+        checklists,
+        checklistItems,
+        timeEntries,
+        sitePhotos,
+        approvals,
+        communications,
+        communicationTemplates,
+        shareLinks,
+        shareEvents,
+        maintenanceSchedules,
+        maintenanceRecords,
+        automationRules,
+        automationRuns,
+        commandHistory
+      });
+    } catch (error) {
+      state.connectedOpsReady = false;
+      return emptyConnectedOpsBundle();
     }
   }
 
@@ -6393,6 +6812,7 @@
   function dashboardSectionFromPath(pathname = window.location.pathname) {
     const path = String(pathname || "").replace(/\/+$/, "");
     if (path === "/budgets" || path.startsWith("/budgets/") || /^\/jobs\/[^/]+\/budget$/.test(path)) return "budgets";
+    if (path === "/operations" || path.startsWith("/operations/") || path === "/recurring-services" || path.startsWith("/recurring-services/") || path === "/approvals" || path === "/reports" || path === "/field") return "connected-operations";
     return "";
   }
 
@@ -7616,6 +8036,33 @@
         actionLabel: "Add Task",
         type: "daily_check",
         priority: "Normal"
+      });
+    }
+
+    const connectedOps = normalizeConnectedOpsBundle(data.connectedOps || {});
+    const pendingApprovals = connectedOps.approvals.filter((item) => ["Pending", "Needs More Info"].includes(item.status));
+    if (pendingApprovals.length) {
+      pushCommand({
+        label: "Approval queue",
+        title: `${pendingApprovals.length} approval${pendingApprovals.length === 1 ? "" : "s"} need review`,
+        detail: pendingApprovals[0].title,
+        action: "go-connected-operations",
+        actionLabel: "Open Ops",
+        type: "admin_task",
+        priority: "High"
+      });
+    }
+
+    const missedRecurring = connectedOps.recurringVisits.filter((visit) => visit.visitDateRaw && visit.visitDateRaw < today && !["Completed", "Skipped", "Canceled"].includes(visit.status));
+    if (missedRecurring.length) {
+      pushCommand({
+        label: "Recurring service",
+        title: `${missedRecurring.length} recurring visit${missedRecurring.length === 1 ? "" : "s"} need reschedule`,
+        detail: missedRecurring[0].visitDate || missedRecurring[0].status,
+        action: "go-connected-operations",
+        actionLabel: "Open Ops",
+        type: "daily_check",
+        priority: "High"
       });
     }
 
@@ -9828,6 +10275,349 @@
     }
   }
 
+  function activeConnectedOpsBundle() {
+    return normalizeConnectedOpsBundle(state.data.connectedOps || {});
+  }
+
+  function connectedOpsMetric(label, value, detail, tone = "") {
+    return `<article class="connected-ops-metric ${tone ? `connected-ops-metric-${escapeHtml(slug(tone))}` : ""}">
+      <span>${escapeHtml(label)}</span>
+      <strong>${escapeHtml(value)}</strong>
+      <small>${escapeHtml(detail || "")}</small>
+    </article>`;
+  }
+
+  function connectedOpsBadge(label, tone = "") {
+    return `<span class="connected-ops-badge ${tone ? `connected-ops-badge-${escapeHtml(slug(tone))}` : ""}">${escapeHtml(label || "Not set")}</span>`;
+  }
+
+  function connectedOpsRow(title, detail, meta, actions = "") {
+    return `<article class="connected-ops-row">
+      <div>
+        <strong>${escapeHtml(title)}</strong>
+        <span>${escapeHtml(detail || "")}</span>
+      </div>
+      <em>${escapeHtml(meta || "")}</em>
+      ${actions ? `<div class="connected-ops-row-actions">${actions}</div>` : ""}
+    </article>`;
+  }
+
+  function renderConnectedOpsTabs() {
+    qsa("[data-connected-ops-view]").forEach((button) => {
+      const isActive = button.dataset.connectedOpsView === state.connectedOpsView;
+      button.classList.toggle("is-active", isActive);
+      button.setAttribute("aria-selected", String(isActive));
+    });
+  }
+
+  function renderRecurringOperations(ops) {
+    const services = ops.recurringServices.filter((item) => item.status !== "Archived");
+    const upcomingVisits = ops.recurringVisits
+      .filter((visit) => visit.visitDateRaw && visit.visitDateRaw >= todayKey())
+      .sort((a, b) => a.visitDateRaw.localeCompare(b.visitDateRaw))
+      .slice(0, 6);
+    return `<div class="connected-ops-grid">
+      <article class="panel connected-ops-form-card">
+        <div class="panel-heading">
+          <div>
+            <h3>Recurring Service</h3>
+            <p>Create reusable service plans that can feed calendar visits and field checklists.</p>
+          </div>
+        </div>
+        <form class="connected-ops-form" data-connected-ops-form="recurring">
+          <input name="service_name" placeholder="Service name" required>
+          <input name="service_type" placeholder="Service type">
+          <select name="frequency" aria-label="Frequency">
+            <option>Weekly</option>
+            <option>Biweekly</option>
+            <option>Monthly</option>
+            <option>Quarterly</option>
+            <option>Custom</option>
+          </select>
+          <input name="next_visit_date" type="date" aria-label="Next visit date">
+          <input name="visit_window" placeholder="Preferred visit window">
+          <input name="price_per_visit" type="number" min="0" step="0.01" placeholder="Price per visit">
+          <textarea name="notes" rows="3" placeholder="Service notes"></textarea>
+          <button type="submit">${buttonContent("Save Service", "save")}</button>
+        </form>
+      </article>
+      <article class="panel connected-ops-list-card">
+        <div class="panel-heading">
+          <div>
+            <h3>Active Plans</h3>
+            <p>${escapeHtml(String(services.length))} recurring plan${services.length === 1 ? "" : "s"} tracked.</p>
+          </div>
+        </div>
+        <div class="connected-ops-list">
+          ${services.length ? services.map((service) => connectedOpsRow(
+            service.serviceName,
+            [service.serviceType, service.frequency, service.visitWindow].filter(Boolean).join(" / "),
+            service.nextVisitDate ? `Next ${service.nextVisitDate}` : "No next visit",
+            connectedOpsBadge(service.status, service.status)
+          )).join("") : emptyState("No recurring services yet.")}
+        </div>
+      </article>
+      <article class="panel connected-ops-wide-card">
+        <div class="panel-heading">
+          <div>
+            <h3>Upcoming Recurring Visits</h3>
+            <p>Generated or planned recurring service occurrences.</p>
+          </div>
+        </div>
+        <div class="connected-ops-list">
+          ${upcomingVisits.length ? upcomingVisits.map((visit) => {
+            const service = services.find((item) => item.id === visit.recurringServiceId);
+            return connectedOpsRow(service?.serviceName || "Recurring visit", [visit.visitDate, visit.visitWindow].filter(Boolean).join(" / "), visit.status, connectedOpsBadge(`${visit.completionPercent}%`, "progress"));
+          }).join("") : emptyState("No upcoming recurring visits yet.")}
+        </div>
+      </article>
+    </div>`;
+  }
+
+  function renderFieldOperations(ops) {
+    const activeJobs = state.data.jobs.filter((job) => job.dateRaw >= todayKey()).slice(0, 6);
+    const activeChecklists = ops.checklists.filter((item) => !["Completed", "Archived"].includes(item.status));
+    const arrivalPhotos = ops.sitePhotos.filter((item) => item.photo_type === "arrival" || item.photoType === "arrival").length;
+    const completionPhotos = ops.sitePhotos.filter((item) => item.photo_type === "completion" || item.photoType === "completion").length;
+    return `<div class="connected-ops-grid">
+      <article class="panel connected-ops-wide-card">
+        <div class="panel-heading">
+          <div>
+            <h3>Mobile Field Mode</h3>
+            <p>Field-friendly job view with checklists, time capture, and camera/photo proof hooks.</p>
+          </div>
+        </div>
+        <div class="connected-ops-field-summary">
+          ${connectedOpsMetric("Open Checklists", String(activeChecklists.length), "Assigned job tasks")}
+          ${connectedOpsMetric("Arrival Photos", String(arrivalPhotos), "Uploaded site proof")}
+          ${connectedOpsMetric("Completion Photos", String(completionPhotos), "Uploaded closeout proof")}
+        </div>
+        <p class="form-note">Phone camera uploads should use the browser file picker with camera capture where supported. The database and private storage bucket now support job-site photos.</p>
+      </article>
+      <article class="panel connected-ops-list-card">
+        <div class="panel-heading"><h3>Checklist Templates</h3></div>
+        <div class="connected-ops-list">
+          ${ops.checklistTemplates.length ? ops.checklistTemplates.map((template) => connectedOpsRow(template.title, [template.category, template.visibility].filter(Boolean).join(" / "), template.status)).join("") : emptyState("No field checklist templates yet.")}
+        </div>
+      </article>
+      <article class="panel connected-ops-list-card">
+        <div class="panel-heading"><h3>Upcoming Field Jobs</h3></div>
+        <div class="connected-ops-list">
+          ${activeJobs.length ? activeJobs.map((job) => connectedOpsRow(job.site, [job.date, job.window, job.service].filter(Boolean).join(" / "), job.status, `<button class="inline-action" type="button" data-action="edit-job" data-id="${escapeHtml(job.id)}">Open</button>`)).join("") : emptyState("No upcoming field jobs.")}
+        </div>
+      </article>
+    </div>`;
+  }
+
+  function renderApprovalOperations(ops) {
+    const approvals = ops.approvals.filter((item) => item.status !== "Archived");
+    return `<div class="connected-ops-grid">
+      <article class="panel connected-ops-form-card">
+        <div class="panel-heading"><h3>New Approval</h3></div>
+        <form class="connected-ops-form" data-connected-ops-form="approval">
+          <input name="title" placeholder="Approval title" required>
+          <select name="request_type" aria-label="Approval type">
+            <option>Change Order</option>
+            <option>Schedule Exception</option>
+            <option>Budget Review</option>
+            <option>Client Approval</option>
+            <option>Equipment Maintenance</option>
+          </select>
+          <select name="priority" aria-label="Priority">
+            <option>Normal</option>
+            <option>High</option>
+            <option>Urgent</option>
+            <option>Low</option>
+          </select>
+          <input name="due_at" type="datetime-local" aria-label="Due date">
+          <textarea name="description" rows="4" placeholder="What needs approval?"></textarea>
+          <button type="submit">${buttonContent("Request Approval", "save")}</button>
+        </form>
+      </article>
+      <article class="panel connected-ops-list-card connected-ops-span-2">
+        <div class="panel-heading">
+          <div>
+            <h3>Approval Queue</h3>
+            <p>Exceptions, change orders, missed visits, and decision points.</p>
+          </div>
+        </div>
+        <div class="connected-ops-list">
+          ${approvals.length ? approvals.map((approval) => connectedOpsRow(
+            approval.title,
+            [approval.requestType, approval.description].filter(Boolean).join(" / "),
+            [approval.priority, approval.dueAt ? `Due ${approval.dueAt}` : ""].filter(Boolean).join(" / "),
+            approval.status === "Pending" ? `
+              <button class="inline-action" type="button" data-action="resolve-approval" data-id="${escapeHtml(approval.id)}" data-status="Approved">Approve</button>
+              <button class="inline-action danger-action" type="button" data-action="resolve-approval" data-id="${escapeHtml(approval.id)}" data-status="Declined">Decline</button>
+            ` : connectedOpsBadge(approval.status, approval.status)
+          )).join("") : emptyState("No approvals are waiting.")}
+        </div>
+      </article>
+    </div>`;
+  }
+
+  function renderCommunicationOperations(ops) {
+    return `<div class="connected-ops-grid">
+      <article class="panel connected-ops-form-card">
+        <div class="panel-heading"><h3>Log Communication</h3></div>
+        <form class="connected-ops-form" data-connected-ops-form="communication">
+          <input name="contact_name" placeholder="Contact name">
+          <input name="contact_email" type="email" placeholder="Email">
+          <input name="contact_phone" placeholder="Phone">
+          <select name="channel" aria-label="Channel">
+            <option value="email">Email</option>
+            <option value="phone">Phone</option>
+            <option value="sms">SMS</option>
+            <option value="voicemail">Voicemail</option>
+            <option value="website">Website</option>
+            <option value="note">Note</option>
+          </select>
+          <input name="subject" placeholder="Subject">
+          <textarea name="body" rows="4" placeholder="Conversation notes"></textarea>
+          <input name="follow_up_date" type="date" aria-label="Follow-up date">
+          <button type="submit">${buttonContent("Save Communication", "save")}</button>
+        </form>
+      </article>
+      <article class="panel connected-ops-list-card connected-ops-span-2">
+        <div class="panel-heading">
+          <div>
+            <h3>Client Timeline</h3>
+            <p>Calls, emails, website requests, voicemails, notes, and follow-up prompts.</p>
+          </div>
+        </div>
+        <div class="connected-ops-list">
+          ${ops.communications.length ? ops.communications.slice(0, 12).map((item) => connectedOpsRow(
+            item.subject || item.contactName || "Communication",
+            [item.contactName, item.channel, item.body].filter(Boolean).join(" / "),
+            [item.sentAt || item.createdAt, item.followUpDate ? `Follow up ${item.followUpDate}` : ""].filter(Boolean).join(" / ")
+          )).join("") : emptyState("No communication history yet.")}
+        </div>
+      </article>
+    </div>`;
+  }
+
+  function renderShareOperations(ops) {
+    return `<div class="connected-ops-grid">
+      <article class="panel connected-ops-wide-card">
+        <div class="panel-heading">
+          <div>
+            <h3>Secure Client Share Links</h3>
+            <p>Share estimates, invoices, job status, photos, and documents without exposing private dashboard records.</p>
+          </div>
+        </div>
+        <p class="form-note">Share link tokens are stored as hashes only. Public endpoints should look up links by token hash and return only the approved sections.</p>
+      </article>
+      <article class="panel connected-ops-list-card connected-ops-span-2">
+        <div class="panel-heading"><h3>Active Links</h3></div>
+        <div class="connected-ops-list">
+          ${ops.shareLinks.length ? ops.shareLinks.map((link) => connectedOpsRow(
+            link.title,
+            [link.contactEmail, link.allowedSections.join(", ")].filter(Boolean).join(" / "),
+            [link.status, `${link.viewCount} views`, link.expiresAt ? `Expires ${link.expiresAt}` : ""].filter(Boolean).join(" / ")
+          )).join("") : emptyState("No secure share links yet.")}
+        </div>
+      </article>
+    </div>`;
+  }
+
+  function renderAutomationOperations(ops) {
+    const schedules = ops.maintenanceSchedules.filter((item) => item.status === "Active");
+    return `<div class="connected-ops-grid">
+      <article class="panel connected-ops-form-card">
+        <div class="panel-heading"><h3>Automation Rule</h3></div>
+        <form class="connected-ops-form" data-connected-ops-form="automation">
+          <input name="title" placeholder="Automation title" required>
+          <input name="trigger_key" placeholder="Trigger key, ex: visit_overdue" required>
+          <input name="action_key" placeholder="Action key, ex: create_approval" required>
+          <label class="recurring-toggle">
+            <input name="enabled" type="checkbox">
+            <span>Enabled</span>
+          </label>
+          <button type="submit">${buttonContent("Save Rule", "save")}</button>
+        </form>
+      </article>
+      <article class="panel connected-ops-list-card">
+        <div class="panel-heading"><h3>Automation Rules</h3></div>
+        <div class="connected-ops-list">
+          ${ops.automationRules.length ? ops.automationRules.map((rule) => connectedOpsRow(rule.title, [rule.triggerKey, rule.actionKey].filter(Boolean).join(" / "), rule.enabled ? "Enabled" : "Paused", connectedOpsBadge(rule.enabled ? "On" : "Off", rule.enabled ? "healthy" : "paused"))).join("") : emptyState("No automation rules yet.")}
+        </div>
+      </article>
+      <article class="panel connected-ops-list-card">
+        <div class="panel-heading"><h3>Maintenance Planning</h3></div>
+        <div class="connected-ops-list">
+          ${schedules.length ? schedules.map((schedule) => connectedOpsRow(schedule.equipmentName, [schedule.maintenanceType, schedule.frequency].filter(Boolean).join(" / "), schedule.nextDueDate ? `Due ${schedule.nextDueDate}` : "No due date")).join("") : emptyState("No maintenance schedules yet.")}
+        </div>
+      </article>
+    </div>`;
+  }
+
+  function renderReportOperations(ops) {
+    const openApprovals = ops.approvals.filter((item) => ["Pending", "Needs More Info"].includes(item.status)).length;
+    const activeRecurring = ops.recurringServices.filter((item) => item.status === "Active").length;
+    const overdueRecurring = ops.recurringVisits.filter((item) => item.visitDateRaw && item.visitDateRaw < todayKey() && !["Completed", "Skipped", "Canceled"].includes(item.status)).length;
+    const dueMaintenance = ops.maintenanceSchedules.filter((item) => item.nextDueDateRaw && item.nextDueDateRaw <= daysFromToday(7) && item.status === "Active").length;
+    return `<div class="connected-ops-grid">
+      <article class="panel connected-ops-wide-card">
+        <div class="panel-heading">
+          <div>
+            <h3>Operations Reports</h3>
+            <p>Compact reporting hooks for recurring work, approvals, maintenance, communications, and field proof.</p>
+          </div>
+        </div>
+        <div class="connected-ops-field-summary">
+          ${connectedOpsMetric("Active Recurring", String(activeRecurring), "Live service plans")}
+          ${connectedOpsMetric("Missed Recurring", String(overdueRecurring), "Needs reschedule", overdueRecurring ? "warning" : "")}
+          ${connectedOpsMetric("Open Approvals", String(openApprovals), "Pending decisions", openApprovals ? "warning" : "")}
+          ${connectedOpsMetric("Maintenance Due", String(dueMaintenance), "Next 7 days", dueMaintenance ? "warning" : "")}
+        </div>
+      </article>
+      <article class="panel connected-ops-list-card connected-ops-span-2">
+        <div class="panel-heading"><h3>Recent Communication</h3></div>
+        <div class="connected-ops-list">
+          ${ops.communications.slice(0, 8).map((item) => connectedOpsRow(item.subject || item.contactName || "Communication", [item.channel, item.contactName].filter(Boolean).join(" / "), item.createdAt)).join("") || emptyState("No communication records yet.")}
+        </div>
+      </article>
+    </div>`;
+  }
+
+  function renderConnectedOperations(data = state.data) {
+    if (!els.connectedOpsMain && !els.connectedOpsMetrics) return;
+    const ops = activeConnectedOpsBundle();
+    const activeRecurring = ops.recurringServices.filter((item) => item.status === "Active").length;
+    const openApprovals = ops.approvals.filter((item) => ["Pending", "Needs More Info"].includes(item.status)).length;
+    const dueChecklists = ops.checklists.filter((item) => !["Completed", "Archived"].includes(item.status)).length;
+    const dueMaintenance = ops.maintenanceSchedules.filter((item) => item.nextDueDateRaw && item.nextDueDateRaw <= daysFromToday(7) && item.status === "Active").length;
+
+    if (els.connectedOpsStatus) {
+      els.connectedOpsStatus.textContent = state.connectedOpsReady || isDemoMode()
+        ? "Connected operations uses the shared dashboard records and protected Supabase tables."
+        : "Connected operations tables are not installed yet. Run supabase/migrations/20260713_connected_operations.sql, then refresh.";
+    }
+    if (els.connectedOpsMetrics) {
+      els.connectedOpsMetrics.innerHTML = [
+        connectedOpsMetric("Active Recurring", String(activeRecurring), "Recurring service plans"),
+        connectedOpsMetric("Field Checklists", String(dueChecklists), "Open job checklists"),
+        connectedOpsMetric("Approvals", String(openApprovals), "Need decisions", openApprovals ? "warning" : ""),
+        connectedOpsMetric("Maintenance Due", String(dueMaintenance), "Next 7 days", dueMaintenance ? "warning" : ""),
+        connectedOpsMetric("Communications", String(ops.communications.length), "Client timeline records")
+      ].join("");
+    }
+    renderConnectedOpsTabs();
+    if (!els.connectedOpsMain) return;
+    if (!state.connectedOpsReady && !isDemoMode()) {
+      els.connectedOpsMain.innerHTML = emptyState("Connected operations tables are not installed yet.");
+      return;
+    }
+    const view = state.connectedOpsView;
+    if (view === "field") els.connectedOpsMain.innerHTML = renderFieldOperations(ops);
+    else if (view === "approvals") els.connectedOpsMain.innerHTML = renderApprovalOperations(ops);
+    else if (view === "communications") els.connectedOpsMain.innerHTML = renderCommunicationOperations(ops);
+    else if (view === "shares") els.connectedOpsMain.innerHTML = renderShareOperations(ops);
+    else if (view === "automation") els.connectedOpsMain.innerHTML = renderAutomationOperations(ops);
+    else if (view === "reports") els.connectedOpsMain.innerHTML = renderReportOperations(ops);
+    else els.connectedOpsMain.innerHTML = renderRecurringOperations(ops);
+  }
+
   function renderNotes() {
     if (!els.notes) return;
     const notes = filteredNotes();
@@ -10438,6 +11228,9 @@
     restored.budgets = imported.budgets && typeof imported.budgets === "object"
       ? normalizeBudgetBundle(imported.budgets)
       : fallback.budgets;
+    restored.connectedOps = imported.connectedOps && typeof imported.connectedOps === "object"
+      ? normalizeConnectedOpsBundle(imported.connectedOps)
+      : fallback.connectedOps;
     state.data = restored;
     await render();
     setDashboardState("Backup imported into demo mode.");
@@ -11785,6 +12578,125 @@
     });
   }
 
+  async function refreshConnectedOperationsData(message = "Connected operations refreshed.") {
+    state.data.connectedOps = await loadConnectedOperations();
+    await render();
+    setActiveSection("connected-operations");
+    setDashboardState(state.connectedOpsReady || isDemoMode() ? message : "Connected operations tables are not installed yet.");
+  }
+
+  function connectedOpsPayloadFromForm(form) {
+    const data = new FormData(form);
+    const formType = form.dataset.connectedOpsForm || "recurring";
+    if (formType === "communication") {
+      return {
+        table: "communications",
+        record: {
+          direction: "outbound",
+          channel: String(data.get("channel") || "note"),
+          contact_name: String(data.get("contact_name") || "").trim(),
+          contact_email: String(data.get("contact_email") || "").trim() || null,
+          contact_phone: String(data.get("contact_phone") || "").trim() || null,
+          subject: String(data.get("subject") || "").trim(),
+          body: String(data.get("body") || "").trim(),
+          follow_up_date: String(data.get("follow_up_date") || "") || null
+        }
+      };
+    }
+    if (formType === "approval") {
+      return {
+        table: "approval_requests",
+        record: {
+          request_type: String(data.get("request_type") || "General"),
+          title: String(data.get("title") || "").trim(),
+          description: String(data.get("description") || "").trim(),
+          priority: String(data.get("priority") || "Normal"),
+          due_at: String(data.get("due_at") || "") || null,
+          status: "Pending"
+        }
+      };
+    }
+    if (formType === "automation") {
+      return {
+        table: "automation_rules",
+        record: {
+          title: String(data.get("title") || "").trim(),
+          trigger_key: String(data.get("trigger_key") || "").trim(),
+          action_key: String(data.get("action_key") || "").trim(),
+          enabled: Boolean(data.get("enabled"))
+        }
+      };
+    }
+    return {
+      table: "recurring_services",
+      record: {
+        service_name: String(data.get("service_name") || "").trim(),
+        service_type: String(data.get("service_type") || "").trim(),
+        frequency: String(data.get("frequency") || "Weekly"),
+        next_visit_date: String(data.get("next_visit_date") || "") || null,
+        visit_window: String(data.get("visit_window") || "").trim(),
+        price_per_visit: Number(data.get("price_per_visit") || 0),
+        notes: String(data.get("notes") || "").trim(),
+        status: "Active"
+      }
+    };
+  }
+
+  async function saveConnectedOperationsForm(form) {
+    const { table, record } = connectedOpsPayloadFromForm(form);
+    if (!record.title && !record.service_name && !record.subject && !record.contact_name) throw new Error("Add a title, service name, subject, or contact first.");
+    if (!state.connectedOpsReady && !isDemoMode()) throw new Error("Run supabase/migrations/20260713_connected_operations.sql first.");
+
+    if (isDemoMode()) {
+      const now = new Date().toISOString();
+      const id = nextDemoId(table);
+      if (table === "recurring_services") {
+        state.data.connectedOps.recurringServices.unshift(normalizeRecurringService({ id, ...record, created_at: now, updated_at: now }));
+      } else if (table === "approval_requests") {
+        state.data.connectedOps.approvals.unshift(normalizeApprovalRequest({ id, ...record, created_at: now, updated_at: now }));
+      } else if (table === "communications") {
+        state.data.connectedOps.communications.unshift(normalizeCommunication({ id, ...record, created_at: now, updated_at: now }));
+      } else if (table === "automation_rules") {
+        state.data.connectedOps.automationRules.unshift(normalizeAutomationRule({ id, ...record, created_at: now, updated_at: now }));
+      }
+      form.reset();
+      await render();
+      return;
+    }
+
+    await supabaseRestRequest(table, {
+      method: "POST",
+      headers: { Prefer: "return=representation" },
+      body: JSON.stringify(record)
+    });
+    form.reset();
+    await refreshConnectedOperationsData("Connected operations record saved.");
+  }
+
+  async function resolveConnectedApproval(id, status) {
+    if (!id) return;
+    if (isDemoMode()) {
+      const item = state.data.connectedOps.approvals.find((approval) => approval.id === id);
+      if (item) {
+        item.status = status;
+        item.reviewedAtRaw = new Date().toISOString();
+        item.reviewedAt = formatDate(item.reviewedAtRaw);
+      }
+      await render();
+      return;
+    }
+    if (!state.connectedOpsReady) throw new Error("Run supabase/migrations/20260713_connected_operations.sql first.");
+    await supabaseRestRequest(`approval_requests?id=eq.${encodeURIComponent(id)}`, {
+      method: "PATCH",
+      headers: { Prefer: "return=representation" },
+      body: JSON.stringify({
+        status,
+        reviewed_at: new Date().toISOString()
+      })
+    });
+    await refreshConnectedOperationsData(`Approval marked ${status.toLowerCase()}.`);
+  }
+
   async function render() {
     const data = state.data;
     renderNotifications(data);
@@ -11804,6 +12716,7 @@
     renderDocuments(data);
     renderDocumentation(data);
     renderBudgets(data);
+    renderConnectedOperations(data);
     renderContacts(data);
     renderOutreach(data);
     renderEquipment(data);
@@ -13474,6 +14387,35 @@
         return;
       }
 
+      if (action === "set-connected-ops-view") {
+        state.connectedOpsView = target.dataset.connectedOpsView || "recurring";
+        setActiveSection("connected-operations");
+        history.replaceState(null, "", "#connected-operations");
+        await render();
+        return;
+      }
+
+      if (action === "refresh-connected-operations") {
+        try {
+          setDashboardState("Refreshing connected operations...");
+          await refreshConnectedOperationsData("Connected operations refreshed.");
+        } catch (error) {
+          setDashboardState(error.message || "Unable to refresh connected operations.", "error");
+        }
+        return;
+      }
+
+      if (action === "resolve-approval") {
+        try {
+          setDashboardState("Updating approval...");
+          await resolveConnectedApproval(id, target.dataset.status || "Approved");
+          setDashboardState(`Approval marked ${(target.dataset.status || "Approved").toLowerCase()}.`);
+        } catch (error) {
+          setDashboardState(error.message || "Unable to update approval.", "error");
+        }
+        return;
+      }
+
       if (action === "clear-equipment-form") {
         const form = qs("[data-equipment-form]");
         if (form) {
@@ -13849,6 +14791,11 @@
       } else if (action === "go-route-planner") {
         setActiveSection("route-planner");
         history.replaceState(null, "", "#route-planner");
+      } else if (action === "go-connected-operations") {
+        state.connectedOpsView = "approvals";
+        setActiveSection("connected-operations");
+        history.replaceState(null, "", "#connected-operations");
+        await render();
       } else if (action === "go-calendar") {
         setActiveSection("calendar");
         history.replaceState(null, "", "#calendar");
@@ -14335,6 +15282,16 @@
           setDashboardState("Budget settings saved.");
         } catch (error) {
           setDashboardState(error.message || "Unable to save budget settings.", "error");
+        }
+      } else if (event.target.matches("[data-connected-ops-form]")) {
+        event.preventDefault();
+        try {
+          setDashboardState("Saving connected operations record...");
+          await saveConnectedOperationsForm(event.target);
+          setActiveSection("connected-operations");
+          setDashboardState("Connected operations record saved.");
+        } catch (error) {
+          setDashboardState(error.message || "Unable to save connected operations record.", "error");
         }
       } else if (event.target.matches("[data-users-invite-form]")) {
         event.preventDefault();
@@ -15072,6 +16029,9 @@
     els.budgetLineForm = qs("[data-budget-line-form]");
     els.budgetLineBudgetOptions = qs("[data-budget-line-budget-options]");
     els.budgetSettingsForm = qs("[data-budget-settings-form]");
+    els.connectedOpsStatus = qs("[data-connected-ops-status]");
+    els.connectedOpsMetrics = qs("[data-connected-ops-metrics]");
+    els.connectedOpsMain = qs("[data-connected-ops-main]");
     els.calendarFilter = qs("[data-calendar-filter]");
     els.calendarRangeControls = qs("[data-calendar-range-controls]");
     els.calendarRangeLabel = qs("[data-calendar-range-label]");

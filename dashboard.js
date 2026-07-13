@@ -6546,7 +6546,7 @@
             <span>${escapeHtml(metric.label)}</span>
             <strong>${escapeHtml(metric.value)}</strong>
             <p>${escapeHtml(metric.detail)}</p>
-            <button type="button" data-action="${escapeHtml(metric.action)}">${escapeHtml(metric.link)} <img src="${dashboardIcon("chevron-right.svg")}" alt="" aria-hidden="true"></button>
+            <button type="button" data-action="${escapeHtml(metric.action)}">${escapeHtml(metric.link)}</button>
           </div>
         </article>
       `)
@@ -6623,7 +6623,7 @@
         <span><i class="is-progress"></i>In Progress <strong>${escapeHtml(counts.inProgress)}</strong></span>
         <span><i class="is-todo"></i>To Do <strong>${escapeHtml(counts.todo)}</strong></span>
       </div>
-      <button class="overview-task-link" type="button" data-action="quick-add-operation">View all tasks <img src="${dashboardIcon("chevron-right.svg")}" alt="" aria-hidden="true"></button>
+      <button class="overview-task-link" type="button" data-action="quick-add-operation">View all tasks</button>
     `;
   }
 

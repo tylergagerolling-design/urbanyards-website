@@ -13216,6 +13216,155 @@ body:not(.is-login-screen) .app-view :is(.dashboard-main, .detail-drawer) :is(
   }
 }
 
+/* Home and Work inherit the shared button system, even over older page-specific rules. */
+body:not(.is-login-screen) .app-view .dashboard-main :is(#overview, #calendar) :is(
+  button:not(.overview-activity-row):not(.work-list-row):not(.work-route-summary):not(.work-pipeline-row):not(.work-activity-item):not(.pipeline-card):not(.profile-mini-item):not(.calendar-pill):not(.global-search-result),
+  a.inline-action,
+  .inline-action,
+  .overview-primary-action,
+  .work-primary-action,
+  .quick-action-link
+) {
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  gap: var(--dashboard-button-gap) !important;
+  min-height: var(--dashboard-button-height) !important;
+  min-width: 0 !important;
+  max-width: 100% !important;
+  padding: 0 var(--dashboard-button-pad-x) !important;
+  border: 1px solid var(--button-forest-300) !important;
+  border-radius: var(--dashboard-button-radius) !important;
+  background: var(--button-forest-100) !important;
+  color: var(--button-forest-900) !important;
+  box-shadow: 0 5px 14px rgba(32, 38, 34, .05) !important;
+  font: inherit !important;
+  font-size: 14px !important;
+  font-weight: 650 !important;
+  line-height: 1 !important;
+  letter-spacing: 0 !important;
+  text-align: center !important;
+  text-decoration: none !important;
+  white-space: nowrap !important;
+  cursor: pointer !important;
+  transition: var(--dashboard-button-transition) !important;
+}
+
+body:not(.is-login-screen) .app-view .dashboard-main :is(#overview, #calendar) :is(
+  button:not(.overview-activity-row):not(.work-list-row):not(.work-route-summary):not(.work-pipeline-row):not(.work-activity-item):not(.pipeline-card):not(.profile-mini-item):not(.calendar-pill):not(.global-search-result),
+  a.inline-action,
+  .inline-action,
+  .overview-primary-action,
+  .work-primary-action,
+  .quick-action-link
+):hover:not(:disabled):not([aria-disabled="true"]) {
+  border-color: var(--button-forest-500) !important;
+  background: var(--button-forest-200) !important;
+  color: var(--button-forest-900) !important;
+  box-shadow: 0 8px 18px rgba(32, 61, 44, .08) !important;
+  transform: translateY(-1px) !important;
+}
+
+body:not(.is-login-screen) .app-view .dashboard-main :is(#overview, #calendar) :is(
+  .overview-primary-action,
+  .work-primary-action,
+  [data-action="quick-add-job"],
+  .schedule-create-form button[type="submit"]
+) {
+  min-height: var(--dashboard-button-height-large) !important;
+  padding-inline: 18px !important;
+  border-color: var(--button-forest-700) !important;
+  border-radius: var(--dashboard-button-radius-large) !important;
+  background: var(--button-forest-700) !important;
+  color: var(--button-white) !important;
+  box-shadow: 0 8px 18px rgba(38, 61, 44, .16) !important;
+  font-size: 15px !important;
+}
+
+body:not(.is-login-screen) .app-view .dashboard-main :is(#overview, #calendar) :is(
+  .overview-primary-action,
+  .work-primary-action,
+  [data-action="quick-add-job"],
+  .schedule-create-form button[type="submit"]
+):hover:not(:disabled):not([aria-disabled="true"]) {
+  border-color: var(--button-forest-800) !important;
+  background: var(--button-forest-800) !important;
+  color: var(--button-white) !important;
+  box-shadow: 0 10px 22px rgba(38, 61, 44, .18) !important;
+}
+
+body:not(.is-login-screen) .app-view .dashboard-main :is(#overview, #calendar) :is(
+  .inline-action,
+  a.inline-action,
+  .overview-summary-body button,
+  .dashboard-alerts button,
+  .today-action-item button,
+  .calendar-range-controls button
+) {
+  min-height: var(--dashboard-button-height-compact) !important;
+  padding-inline: 10px !important;
+  border-color: var(--button-forest-300) !important;
+  border-radius: var(--dashboard-button-radius-compact) !important;
+  background: var(--button-white) !important;
+  color: var(--button-forest-800) !important;
+  box-shadow: 0 4px 12px rgba(32, 38, 34, .04) !important;
+  font-size: 13px !important;
+}
+
+body:not(.is-login-screen) .app-view .dashboard-main :is(#overview, #calendar) :is(
+  [data-action="go-calendar"],
+  [data-action="go-settings"],
+  [data-action="quick-add-operation"],
+  [data-action*="clear"],
+  [data-action*="close"]
+) {
+  border-color: transparent !important;
+  background: transparent !important;
+  color: var(--button-neutral-700) !important;
+  box-shadow: none !important;
+}
+
+body:not(.is-login-screen) .app-view .dashboard-main #calendar .calendar-tabs {
+  display: inline-flex !important;
+  flex-wrap: wrap !important;
+  gap: 4px !important;
+  width: fit-content !important;
+  max-width: 100% !important;
+  padding: 4px !important;
+  border: 1px solid var(--button-neutral-200) !important;
+  border-radius: 9px !important;
+  background: rgba(255, 255, 255, .72) !important;
+  box-shadow: none !important;
+}
+
+body:not(.is-login-screen) .app-view .dashboard-main #calendar .calendar-tabs button {
+  min-height: 32px !important;
+  padding: 0 11px !important;
+  border: 1px solid transparent !important;
+  border-radius: 6px !important;
+  background: transparent !important;
+  color: var(--button-neutral-700) !important;
+  box-shadow: none !important;
+  font-size: 13px !important;
+  font-weight: 650 !important;
+  transform: none !important;
+}
+
+body:not(.is-login-screen) .app-view .dashboard-main #calendar .calendar-tabs button:hover:not(:disabled) {
+  border-color: var(--button-forest-200) !important;
+  background: var(--button-forest-50) !important;
+  color: var(--button-forest-900) !important;
+  box-shadow: none !important;
+}
+
+body:not(.is-login-screen) .app-view .dashboard-main #calendar .calendar-tabs button:is(.is-active, [aria-selected="true"]) {
+  border-color: var(--button-forest-300) !important;
+  background: var(--button-forest-200) !important;
+  color: var(--button-forest-900) !important;
+  font-weight: 750 !important;
+  box-shadow: inset 0 0 0 1px rgba(73, 102, 77, .08) !important;
+}
+
 @media (max-width: 760px) {
   body:not(.is-login-screen) {
     --dashboard-button-height: 42px;

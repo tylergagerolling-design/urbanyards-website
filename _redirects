@@ -1,5 +1,8 @@
 /dashboard  /dashboard.html  200
 /dashboard/  /dashboard.html  200
+/budgets  /dashboard.html  200
+/budgets/*  /dashboard.html  200
+/jobs/*/budget  /dashboard.html  200
 /pay  /pay.html  200
 /pay/  /pay.html  200
 /api/*  /.netlify/functions/:splat  200

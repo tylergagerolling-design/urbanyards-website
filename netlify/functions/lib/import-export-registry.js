@@ -8,6 +8,12 @@ const JOB_STATUSES = ["New", "Contacted", "Scheduled", "Completed", "Invoiced"];
 const EQUIPMENT_STATUSES = ["Ready", "In Use", "Needs Maintenance", "Needs Repair", "Missing", "Retired"];
 const EQUIPMENT_CONDITIONS = ["New", "Good", "Fair", "Needs Repair", "Replace Soon", "Retired"];
 const DOCUMENT_STATUSES = ["Draft", "Sent", "Viewed", "Accepted", "Paid", "Canceled", "Overdue"];
+const BUDGET_STATUSES = ["Draft", "Ready for Review", "Approved", "Active", "At Risk", "Over Budget", "Completed", "Archived"];
+const BUDGET_JOB_STATUSES = ["Not Scheduled", "Scheduled", "In Progress", "Completed", "Invoiced"];
+const BUDGET_COST_CATEGORIES = ["Disposal and dump fees", "Delivery fees", "Mileage", "Travel time", "Parking", "Permits", "Subcontractors", "Equipment rentals", "Payment processing fees", "Administrative costs", "Miscellaneous expenses", "Contingency"];
+const BUDGET_MATERIAL_CATEGORIES = ["Plants", "Mulch", "Soil", "Gravel", "Fertilizer", "Cleaning supplies", "Hardware", "Replacement parts", "Consumables", "Other"];
+const BUDGET_EQUIPMENT_USAGE_TYPES = ["Owned", "Rental", "Vehicle", "Fuel", "Wear Allowance", "Maintenance Allocation", "Other"];
+const BUDGET_CHANGE_ORDER_STATUSES = ["Draft", "Sent", "Approved", "Declined", "Completed", "Invoiced"];
 const CONTACT_TYPES = ["Property Manager", "Assistant Property Manager", "Community Manager", "Maintenance Manager", "Facilities Manager", "Building Manager", "Owner", "Vendor Contact", "Leasing Contact", "Homeowner", "HOA Contact", "Other"];
 const CONTACT_METHODS = ["Phone", "Email", "Text", "No Preference"];
 const CALL_OUTCOME_VALUES = ["Not Called", "No Answer", "Left Voicemail", "Spoke With Contact", "Wrong Number", "Call Back Requested", "Send Information", "Not Interested", "Interested", "Quote Requested", "Follow-Up Needed"];
@@ -324,6 +330,220 @@ const MODULES = {
       field("due_date", "Due Date", "date"),
       field("payment_url", "Payment URL", "url", { import: false }),
       field("notes", "Notes", "textarea"),
+      field("created_at", "Created At", "datetime", { import: false }),
+      field("updated_at", "Updated At", "datetime", { import: false })
+    ]
+  },
+  job_budgets: {
+    key: "job_budgets",
+    label: "Job Budgets",
+    pluralLabel: "Job Budgets",
+    table: "job_budgets",
+    permissionArea: "budgets",
+    description: "Internal job budgets, revenue, margin targets, and job links.",
+    uniqueBy: [["id"], ["budget_name", "client_name", "property_name"]],
+    fields: [
+      field("id", "Budget ID", "uuid", { import: true, export: true, readOnly: true, aliases: ["id", "record id"] }),
+      field("budget_name", "Budget Name", "text", { required: true, aliases: ["name", "job budget"] }),
+      field("job_id", "Job ID", "uuid", { aliases: ["scheduled job id"] }),
+      field("quote_id", "Quote ID", "uuid"),
+      field("invoice_id", "Invoice ID", "uuid"),
+      field("client_id", "Client ID", "uuid"),
+      field("client_name", "Client", "text", { aliases: ["client name", "customer"] }),
+      field("property_name", "Property", "text", { aliases: ["property", "site"] }),
+      field("job_name", "Job", "text", { aliases: ["job title"] }),
+      field("service_type", "Service Type", "text", { aliases: ["service"] }),
+      field("job_description", "Job Description", "textarea", { aliases: ["description", "scope"] }),
+      field("proposed_start_date", "Proposed Start", "date"),
+      field("proposed_completion_date", "Proposed Completion", "date"),
+      field("status", "Budget Status", "enum", { enum: BUDGET_STATUSES, defaultValue: "Draft", aliases: ["status"] }),
+      field("job_status", "Job Status", "enum", { enum: BUDGET_JOB_STATUSES, defaultValue: "Not Scheduled" }),
+      field("target_margin_percent", "Target Margin %", "decimal", { defaultValue: 35 }),
+      field("base_quoted_price", "Base Quoted Price", "currency", { defaultValue: 0 }),
+      field("approved_addons", "Approved Add-ons", "currency", { defaultValue: 0 }),
+      field("discounts", "Discounts", "currency", { defaultValue: 0 }),
+      field("taxes", "Taxes", "currency", { defaultValue: 0 }),
+      field("other_revenue", "Other Revenue", "currency", { defaultValue: 0 }),
+      field("expected_revenue", "Expected Revenue", "currency", { import: false }),
+      field("final_invoiced_revenue", "Final Invoiced Revenue", "currency", { defaultValue: 0 }),
+      field("amount_paid", "Amount Paid", "currency", { defaultValue: 0 }),
+      field("outstanding_balance", "Outstanding Balance", "currency", { import: false }),
+      field("notes", "Notes", "textarea"),
+      field("created_at", "Created At", "datetime", { import: false }),
+      field("updated_at", "Updated At", "datetime", { import: false })
+    ]
+  },
+  job_budget_labor: {
+    key: "job_budget_labor",
+    label: "Budget Labor",
+    pluralLabel: "Budget Labor",
+    table: "job_budget_labor",
+    permissionArea: "budgets",
+    description: "Estimated and actual labor rows for job budgets.",
+    uniqueBy: [["id"], ["budget_id", "task", "role"]],
+    fields: [
+      field("id", "Labor ID", "uuid", { import: true, export: true, readOnly: true }),
+      field("budget_id", "Budget ID", "uuid", { required: true }),
+      field("employee_name", "Employee", "text"),
+      field("role", "Role", "text"),
+      field("crew", "Crew", "text"),
+      field("task", "Task", "text", { required: true }),
+      field("estimated_hours", "Estimated Hours", "decimal", { defaultValue: 0 }),
+      field("hourly_wage", "Hourly Wage", "currency", { defaultValue: 0 }),
+      field("payroll_burden_percent", "Payroll Burden %", "decimal", { defaultValue: 0 }),
+      field("workers_comp_percent", "Workers Comp %", "decimal", { defaultValue: 0 }),
+      field("other_burden_amount", "Other Labor Burden", "currency", { defaultValue: 0 }),
+      field("true_hourly_cost", "True Hourly Cost", "currency", { import: false }),
+      field("estimated_cost", "Estimated Cost", "currency", { import: false }),
+      field("actual_hours", "Actual Hours", "decimal", { defaultValue: 0 }),
+      field("actual_cost", "Actual Cost", "currency", { defaultValue: 0 }),
+      field("notes", "Notes", "textarea"),
+      field("created_at", "Created At", "datetime", { import: false }),
+      field("updated_at", "Updated At", "datetime", { import: false })
+    ]
+  },
+  job_budget_materials: {
+    key: "job_budget_materials",
+    label: "Budget Materials",
+    pluralLabel: "Budget Materials",
+    table: "job_budget_materials",
+    permissionArea: "budgets",
+    description: "Material estimates, actuals, and receipt tracking.",
+    uniqueBy: [["id"], ["budget_id", "material_name", "vendor"]],
+    fields: [
+      field("id", "Material ID", "uuid", { import: true, export: true, readOnly: true }),
+      field("budget_id", "Budget ID", "uuid", { required: true }),
+      field("material_name", "Material", "text", { required: true, aliases: ["name"] }),
+      field("category", "Category", "enum", { enum: BUDGET_MATERIAL_CATEGORIES, defaultValue: "Other" }),
+      field("vendor", "Vendor", "text"),
+      field("quantity", "Quantity", "decimal", { defaultValue: 0 }),
+      field("unit", "Unit", "text"),
+      field("unit_cost", "Unit Cost", "currency", { defaultValue: 0 }),
+      field("estimated_cost", "Estimated Cost", "currency", { import: false }),
+      field("actual_quantity", "Actual Quantity", "decimal", { defaultValue: 0 }),
+      field("actual_unit_cost", "Actual Unit Cost", "currency", { defaultValue: 0 }),
+      field("actual_cost", "Actual Cost", "currency", { defaultValue: 0 }),
+      field("tax", "Tax", "currency", { defaultValue: 0 }),
+      field("delivery_fee", "Delivery Fee", "currency", { defaultValue: 0 }),
+      field("notes", "Notes", "textarea"),
+      field("created_at", "Created At", "datetime", { import: false }),
+      field("updated_at", "Updated At", "datetime", { import: false })
+    ]
+  },
+  budget_material_catalog: {
+    key: "budget_material_catalog",
+    label: "Material Catalog",
+    pluralLabel: "Material Catalog",
+    table: "budget_material_catalog",
+    permissionArea: "budgets",
+    description: "Reusable material names and default prices for budget templates.",
+    uniqueBy: [["material_name", "vendor", "unit"]],
+    fields: [
+      field("id", "Catalog ID", "uuid", { readOnly: true }),
+      field("material_name", "Material", "text", { required: true }),
+      field("category", "Category", "enum", { enum: BUDGET_MATERIAL_CATEGORIES, defaultValue: "Other" }),
+      field("vendor", "Vendor", "text"),
+      field("unit", "Unit", "text"),
+      field("default_unit_cost", "Default Unit Cost", "currency", { defaultValue: 0 }),
+      field("notes", "Notes", "textarea"),
+      field("archived_at", "Archived At", "datetime", { import: false }),
+      field("created_at", "Created At", "datetime", { import: false }),
+      field("updated_at", "Updated At", "datetime", { import: false })
+    ]
+  },
+  job_budget_equipment: {
+    key: "job_budget_equipment",
+    label: "Budget Equipment",
+    pluralLabel: "Budget Equipment",
+    table: "job_budget_equipment",
+    permissionArea: "budgets",
+    description: "Owned equipment, rentals, vehicle use, fuel, and wear allowances.",
+    uniqueBy: [["id"], ["budget_id", "equipment_name", "usage_type"]],
+    fields: [
+      field("id", "Equipment Cost ID", "uuid", { import: true, export: true, readOnly: true }),
+      field("budget_id", "Budget ID", "uuid", { required: true }),
+      field("equipment_id", "Equipment ID", "uuid"),
+      field("equipment_name", "Equipment", "text", { required: true }),
+      field("usage_type", "Usage Type", "enum", { enum: BUDGET_EQUIPMENT_USAGE_TYPES, defaultValue: "Owned" }),
+      field("estimated_hours", "Estimated Hours", "decimal", { defaultValue: 0 }),
+      field("estimated_days", "Estimated Days", "decimal", { defaultValue: 0 }),
+      field("internal_hourly_rate", "Internal Hourly Rate", "currency", { defaultValue: 0 }),
+      field("internal_daily_rate", "Internal Daily Rate", "currency", { defaultValue: 0 }),
+      field("rental_rate", "Rental Rate", "currency", { defaultValue: 0 }),
+      field("estimated_cost", "Estimated Cost", "currency", { defaultValue: 0 }),
+      field("actual_usage", "Actual Usage", "decimal", { defaultValue: 0 }),
+      field("actual_cost", "Actual Cost", "currency", { defaultValue: 0 }),
+      field("notes", "Notes", "textarea"),
+      field("created_at", "Created At", "datetime", { import: false }),
+      field("updated_at", "Updated At", "datetime", { import: false })
+    ]
+  },
+  job_budget_costs: {
+    key: "job_budget_costs",
+    label: "Budget Other Costs",
+    pluralLabel: "Budget Other Costs",
+    table: "job_budget_costs",
+    permissionArea: "budgets",
+    description: "Disposal, delivery, mileage, subcontractors, fees, contingency, and miscellaneous costs.",
+    uniqueBy: [["id"], ["budget_id", "category", "description"]],
+    fields: [
+      field("id", "Cost ID", "uuid", { import: true, export: true, readOnly: true }),
+      field("budget_id", "Budget ID", "uuid", { required: true }),
+      field("category", "Category", "enum", { enum: BUDGET_COST_CATEGORIES, defaultValue: "Miscellaneous expenses" }),
+      field("description", "Description", "text", { required: true }),
+      field("estimated_cost", "Estimated Cost", "currency", { defaultValue: 0 }),
+      field("actual_cost", "Actual Cost", "currency", { defaultValue: 0 }),
+      field("contingency_type", "Contingency Type", "enum", { enum: ["Fixed", "Percent"] }),
+      field("contingency_percent", "Contingency %", "decimal"),
+      field("notes", "Notes", "textarea"),
+      field("created_at", "Created At", "datetime", { import: false }),
+      field("updated_at", "Updated At", "datetime", { import: false })
+    ]
+  },
+  job_budget_change_orders: {
+    key: "job_budget_change_orders",
+    label: "Budget Change Orders",
+    pluralLabel: "Budget Change Orders",
+    table: "job_budget_change_orders",
+    permissionArea: "budgets",
+    description: "Budget add-ons, approvals, and unbilled change orders.",
+    uniqueBy: [["id"], ["budget_id", "title", "requested_date"]],
+    fields: [
+      field("id", "Change Order ID", "uuid", { import: true, export: true, readOnly: true }),
+      field("budget_id", "Budget ID", "uuid", { required: true }),
+      field("title", "Title", "text", { required: true }),
+      field("description", "Description", "textarea"),
+      field("requested_date", "Requested Date", "date"),
+      field("requested_by", "Requested By", "text"),
+      field("additional_revenue", "Additional Revenue", "currency", { defaultValue: 0 }),
+      field("additional_labor_cost", "Additional Labor Cost", "currency", { defaultValue: 0 }),
+      field("additional_material_cost", "Additional Material Cost", "currency", { defaultValue: 0 }),
+      field("additional_other_cost", "Additional Other Cost", "currency", { defaultValue: 0 }),
+      field("approval_status", "Approval Status", "enum", { enum: BUDGET_CHANGE_ORDER_STATUSES, defaultValue: "Draft" }),
+      field("approved_date", "Approved Date", "date"),
+      field("client_approval_notes", "Client Approval Notes", "textarea"),
+      field("internal_notes", "Internal Notes", "textarea"),
+      field("invoiced_at", "Invoiced At", "datetime", { import: false }),
+      field("created_at", "Created At", "datetime", { import: false }),
+      field("updated_at", "Updated At", "datetime", { import: false })
+    ]
+  },
+  job_budget_templates: {
+    key: "job_budget_templates",
+    label: "Budget Templates",
+    pluralLabel: "Budget Templates",
+    table: "job_budget_templates",
+    permissionArea: "budgets",
+    description: "Reusable budget templates for common Urban Yards job types.",
+    uniqueBy: [["template_name"], ["service_type", "template_name"]],
+    fields: [
+      field("id", "Template ID", "uuid", { readOnly: true }),
+      field("template_name", "Template Name", "text", { required: true, aliases: ["name"] }),
+      field("service_type", "Service Type", "text", { aliases: ["service"] }),
+      field("target_margin_percent", "Target Margin %", "decimal", { defaultValue: 35 }),
+      field("default_contingency_percent", "Default Contingency %", "decimal", { defaultValue: 10 }),
+      field("notes", "Notes", "textarea"),
+      field("archived_at", "Archived At", "datetime", { import: false }),
       field("created_at", "Created At", "datetime", { import: false }),
       field("updated_at", "Updated At", "datetime", { import: false })
     ]

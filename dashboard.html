@@ -11,9 +11,10 @@
     <link rel="icon" href="/favicon.ico" sizes="any">
     <link rel="apple-touch-icon" href="/apple-touch-icon.png">
     <link rel="manifest" href="/dashboard.webmanifest">
-    <link rel="stylesheet" href="dashboard.css?v=20260713-forest-button-system-2">
+    <link rel="stylesheet" href="dashboard.css?v=20260713-job-budgeter-1">
     <script src="dashboard-config.js?v=20260623-1" defer></script>
-    <script src="dashboard.js?v=20260713-remove-button-arrows-1" defer></script>
+    <script src="scripts/budget-calculations.js?v=20260713-1" defer></script>
+    <script src="dashboard.js?v=20260713-job-budgeter-1" defer></script>
   </head>
   <body>
     <main class="dashboard-shell" aria-labelledby="dashboard-title">
@@ -62,6 +63,7 @@
               <a href="#outreach" data-dashboard-link="outreach"><span class="nav-icon" aria-hidden="true"><svg><use href="images/dashboard-icons/option8-sidebar.svg#uy-icon-leads"></use></svg></span><span class="nav-label">Leads</span></a>
               <a href="#contacts" data-dashboard-link="contacts"><span class="nav-icon" aria-hidden="true"><svg><use href="images/dashboard-icons/option8-sidebar.svg#uy-icon-clients"></use></svg></span><span class="nav-label">Clients</span></a>
               <a href="#documents" data-dashboard-link="documents"><span class="nav-icon" aria-hidden="true"><svg><use href="images/dashboard-icons/option8-sidebar.svg#uy-icon-money"></use></svg></span><span class="nav-label">Money</span></a>
+              <a href="#budgets" data-dashboard-link="budgets"><span class="nav-icon" aria-hidden="true"><svg><use href="images/dashboard-icons/option8-sidebar.svg#uy-icon-budgets"></use></svg></span><span class="nav-label">Budgets</span></a>
               <a href="#documentation" data-dashboard-link="documentation"><span class="nav-icon" aria-hidden="true"><svg><use href="images/dashboard-icons/option8-sidebar.svg#uy-icon-documentation"></use></svg></span><span class="nav-label">Documentation</span></a>
               <a href="#import-export" data-dashboard-link="import-export"><span class="nav-icon" aria-hidden="true"><svg><use href="images/dashboard-icons/option8-sidebar.svg#uy-icon-import-export"></use></svg></span><span class="nav-label">Import &amp; Export</span></a>
               <a href="#route-planner" data-dashboard-link="route-planner"><span class="nav-icon" aria-hidden="true"><svg><use href="images/dashboard-icons/option8-sidebar.svg#uy-icon-route-planner"></use></svg></span><span class="nav-label">Route Planner</span></a>
@@ -195,6 +197,16 @@
                 </div>
                 <div class="operations-command-list" data-command-deadlines></div>
               </article>
+              <article class="panel home-dashboard-card home-budget-card">
+                <div class="panel-heading">
+                  <div>
+                    <p class="eyebrow">Budget Health</p>
+                    <h3>Job Budget Overview</h3>
+                  </div>
+                  <button class="inline-action" type="button" data-action="go-budgets">View Budgets</button>
+                </div>
+                <div class="home-budget-summary" data-home-budgets></div>
+              </article>
               <article class="panel home-dashboard-card overview-activity-card">
                 <div class="panel-heading">
                   <div>
@@ -312,6 +324,189 @@
                 </article>
               </div>
             </details>
+          </section>
+
+          <section class="dashboard-section budget-center uy-standard-page" id="budgets" data-section="budgets">
+            <div class="budget-hero uy-page-header">
+              <div>
+                <p class="eyebrow">Job Budgeter</p>
+                <h3>Job Budgets</h3>
+                <p>Estimate revenue, labor, materials, equipment, actual costs, change orders, and margin performance for every job.</p>
+              </div>
+              <div class="budget-actions">
+                <button type="button" data-action="refresh-budgets"><span class="button-icon" aria-hidden="true">R</span><span>Refresh</span></button>
+                <button type="button" data-action="export-budgets-csv"><span class="button-icon" aria-hidden="true">CSV</span><span>Export CSV</span></button>
+                <button type="button" data-action="new-budget"><span class="button-icon" aria-hidden="true">+</span><span>New Budget</span></button>
+              </div>
+            </div>
+
+            <div class="budget-status" data-budget-status></div>
+            <div class="budget-summary-grid" data-budget-metrics></div>
+
+            <div class="budget-toolbar">
+              <input data-budget-search type="search" aria-label="Search budgets" placeholder="Search budget, job, client, property, service...">
+              <select data-budget-status-filter aria-label="Filter by budget status"><option value="All">All Budget Statuses</option></select>
+              <select data-budget-job-status-filter aria-label="Filter by job status"><option value="All">All Job Statuses</option></select>
+              <select data-budget-client-filter aria-label="Filter by client"><option value="All">All Clients</option></select>
+              <select data-budget-service-filter aria-label="Filter by service type"><option value="All">All Services</option></select>
+              <input data-budget-date-start type="date" aria-label="Start date">
+              <input data-budget-date-end type="date" aria-label="End date">
+            </div>
+
+            <div class="budget-workspace">
+              <section class="panel budget-list-panel">
+                <div class="panel-heading">
+                  <div>
+                    <h3>Budget Records</h3>
+                    <p>Open a budget to review estimate versus actual performance, change orders, and audit history.</p>
+                  </div>
+                </div>
+                <div class="budget-list" data-budget-list></div>
+              </section>
+              <aside class="panel budget-summary-panel" data-budget-detail aria-live="polite"></aside>
+            </div>
+
+            <div class="budget-editor-grid">
+              <section class="panel budget-editor-panel" aria-labelledby="budget-form-title">
+                <div class="panel-heading">
+                  <div>
+                    <p class="eyebrow">Budget Setup</p>
+                    <h3 id="budget-form-title">Create or Edit Budget</h3>
+                  </div>
+                </div>
+                <form class="budget-form" data-budget-form>
+                  <input type="hidden" name="id">
+                  <label>Budget name
+                    <input name="budget_name" placeholder="Example: Kennedy Apartments mulch refresh" required>
+                  </label>
+                  <label>Job
+                    <select name="job_id" data-budget-job-options><option value="">No job linked yet</option></select>
+                  </label>
+                  <label>Quote
+                    <select name="quote_id" data-budget-quote-options><option value="">No quote linked</option></select>
+                  </label>
+                  <label>Invoice
+                    <select name="invoice_id" data-budget-invoice-options><option value="">No invoice linked</option></select>
+                  </label>
+                  <label>Client
+                    <select name="client_id" data-budget-client-options><option value="">No client linked</option></select>
+                  </label>
+                  <label>Property
+                    <input name="property_name" placeholder="Property or site">
+                  </label>
+                  <label>Service type
+                    <input name="service_type" placeholder="Mulch refresh, cleanup, mowing...">
+                  </label>
+                  <label>Budget status
+                    <select name="status" data-budget-status-options></select>
+                  </label>
+                  <label>Job status
+                    <select name="job_status">
+                      <option>Not Scheduled</option>
+                      <option>Scheduled</option>
+                      <option>In Progress</option>
+                      <option>Completed</option>
+                      <option>Invoiced</option>
+                    </select>
+                  </label>
+                  <label>Target margin %
+                    <input name="target_margin_percent" type="number" min="0" max="95" step="0.01" value="35">
+                  </label>
+                  <label>Proposed start
+                    <input name="proposed_start_date" type="date">
+                  </label>
+                  <label>Proposed completion
+                    <input name="proposed_completion_date" type="date">
+                  </label>
+                  <label class="span-full">Job description
+                    <textarea name="job_description" rows="3" placeholder="Scope, access notes, expected work, assumptions..."></textarea>
+                  </label>
+                  <div class="budget-revenue-fields span-full">
+                    <label>Base quoted price <input name="base_quoted_price" type="number" min="0" step="0.01"></label>
+                    <label>Approved add-ons <input name="approved_addons" type="number" min="0" step="0.01"></label>
+                    <label>Discounts <input name="discounts" type="number" min="0" step="0.01"></label>
+                    <label>Taxes <input name="taxes" type="number" min="0" step="0.01"></label>
+                    <label>Other revenue <input name="other_revenue" type="number" min="0" step="0.01"></label>
+                    <label>Final invoiced revenue <input name="final_invoiced_revenue" type="number" min="0" step="0.01"></label>
+                    <label>Amount paid <input name="amount_paid" type="number" min="0" step="0.01"></label>
+                  </div>
+                  <label class="span-full">Notes
+                    <textarea name="notes" rows="3" placeholder="Internal notes, assumptions, exclusions, walkthrough details..."></textarea>
+                  </label>
+                  <div class="form-actions span-full">
+                    <button type="submit"><span class="button-icon" aria-hidden="true">OK</span><span>Save Budget</span></button>
+                    <button class="inline-action" type="button" data-action="reset-budget-form">Reset</button>
+                  </div>
+                </form>
+              </section>
+
+              <section class="panel budget-line-panel">
+                <div class="panel-heading">
+                  <div>
+                    <p class="eyebrow">Line Items</p>
+                    <h3>Labor, Materials, Equipment &amp; Costs</h3>
+                  </div>
+                </div>
+                <form class="budget-line-form" data-budget-line-form>
+                  <label>Budget
+                    <select name="budget_id" data-budget-line-budget-options required></select>
+                  </label>
+                  <label>Section
+                    <select name="line_type" required>
+                      <option value="labor">Labor</option>
+                      <option value="materials">Materials</option>
+                      <option value="equipment">Equipment</option>
+                      <option value="costs">Other Cost</option>
+                      <option value="change_order">Change Order</option>
+                    </select>
+                  </label>
+                  <label>Title / item
+                    <input name="title" placeholder="Crew labor, mulch, dump fee..." required>
+                  </label>
+                  <label>Category
+                    <input name="category" placeholder="Labor, mulch, disposal...">
+                  </label>
+                  <label>Estimated hours / qty
+                    <input name="estimated_quantity" type="number" min="0" step="0.01">
+                  </label>
+                  <label>Rate / unit cost
+                    <input name="unit_cost" type="number" min="0" step="0.01">
+                  </label>
+                  <label>Estimated cost
+                    <input name="estimated_cost" type="number" min="0" step="0.01">
+                  </label>
+                  <label>Actual hours / qty
+                    <input name="actual_quantity" type="number" min="0" step="0.01">
+                  </label>
+                  <label>Actual cost
+                    <input name="actual_cost" type="number" min="0" step="0.01">
+                  </label>
+                  <label class="span-full">Notes
+                    <textarea name="notes" rows="2"></textarea>
+                  </label>
+                  <button type="submit"><span class="button-icon" aria-hidden="true">+</span><span>Add Line Item</span></button>
+                </form>
+              </section>
+
+              <section class="panel budget-settings-panel">
+                <div class="panel-heading">
+                  <div>
+                    <p class="eyebrow">Defaults</p>
+                    <h3>Budget Settings</h3>
+                  </div>
+                </div>
+                <form class="budget-settings-form" data-budget-settings-form>
+                  <label>Target margin % <input name="default_target_margin" type="number" min="0" max="95" step="0.01"></label>
+                  <label>Warning margin % <input name="warning_margin" type="number" min="0" max="95" step="0.01"></label>
+                  <label>Minimum margin % <input name="minimum_margin" type="number" min="0" max="95" step="0.01"></label>
+                  <label>Default contingency % <input name="default_contingency_percent" type="number" min="0" max="100" step="0.01"></label>
+                  <label>Default labor burden % <input name="default_labor_burden_percent" type="number" min="0" max="100" step="0.01"></label>
+                  <label>Payment processing % <input name="payment_processing_percent" type="number" min="0" max="100" step="0.01"></label>
+                  <label>Owner hourly value <input name="owner_hourly_rate" type="number" min="0" step="0.01"></label>
+                  <button type="submit"><span class="button-icon" aria-hidden="true">OK</span><span>Save Settings</span></button>
+                </form>
+              </section>
+            </div>
           </section>
 
           <section class="dashboard-section uy-standard-page" id="outreach" data-section="outreach">
@@ -1070,6 +1265,7 @@
           <a href="#outreach" data-dashboard-link="outreach">Leads</a>
           <a href="#contacts" data-dashboard-link="contacts">Clients</a>
           <a href="#documents" data-dashboard-link="documents">Money</a>
+          <a href="#budgets" data-dashboard-link="budgets">Budgets</a>
           <a href="#documentation" data-dashboard-link="documentation">Docs</a>
           <a href="#import-export" data-dashboard-link="import-export">Data</a>
           <a href="#settings" data-dashboard-link="settings">Tools</a>

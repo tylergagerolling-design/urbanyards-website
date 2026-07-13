@@ -121,6 +121,29 @@
     templates: "Template Library",
     audit: "Audit History"
   };
+  const BUDGET_STATUSES = ["Draft", "Ready for Review", "Approved", "Active", "At Risk", "Over Budget", "Completed", "Archived"];
+  const BUDGET_JOB_STATUSES = ["Not Scheduled", "Scheduled", "In Progress", "Completed", "Invoiced"];
+  const BUDGET_COST_CATEGORIES = ["Disposal and dump fees", "Delivery fees", "Mileage", "Travel time", "Parking", "Permits", "Subcontractors", "Equipment rentals", "Payment processing fees", "Administrative costs", "Miscellaneous expenses", "Contingency"];
+  const BUDGET_DEFAULT_SETTINGS = {
+    default_target_margin: 35,
+    minimum_margin: 15,
+    warning_margin: 25,
+    default_contingency_percent: 10,
+    default_labor_burden_percent: 18,
+    payment_processing_percent: 3,
+    owner_hourly_rate: 55
+  };
+  const BUDGET_DETAIL_TABS = [
+    { key: "overview", label: "Overview" },
+    { key: "labor", label: "Labor" },
+    { key: "materials", label: "Materials" },
+    { key: "equipment", label: "Equipment" },
+    { key: "costs", label: "Other Costs" },
+    { key: "change_orders", label: "Change Orders" },
+    { key: "documents", label: "Documents" },
+    { key: "history", label: "History" },
+    { key: "reports", label: "Reports" }
+  ];
   const DEMO_QUERY_KEYS = ["demo", "test"];
   const DASHBOARD_ICON_PATH = "images/dashboard-icons/";
   const HOME_DASHBOARD_ICON_PATH = "images/home-dashboard/";
@@ -142,6 +165,7 @@
     "hardwareGuide",
     "documentation",
     "importExport",
+    "budgets",
     "leadActivity",
     "userProfiles",
     "auditLogs"
@@ -217,6 +241,15 @@
     documentationTypeFilter: "All",
     documentationStatusFilter: "All",
     documentationCategoryFilter: "All",
+    budgetSearch: "",
+    budgetStatusFilter: "All",
+    budgetJobStatusFilter: "All",
+    budgetClientFilter: "All",
+    budgetServiceFilter: "All",
+    budgetDateStart: "",
+    budgetDateEnd: "",
+    selectedBudgetId: "",
+    budgetDetailTab: "overview",
     importExportView: "import",
     importExportModule: IMPORT_EXPORT_DEFAULT_MODULE,
     importExportFormat: "xlsx",
@@ -252,6 +285,7 @@
     hardwareGuideReady: true,
     groundskeeperAiReady: false,
     documentationReady: false,
+    budgetsReady: false,
     importExportReady: false,
     leadActivityReady: true,
     userProfilesReady: true,
@@ -295,6 +329,20 @@
         templates: [],
         audit: []
       },
+      budgets: {
+        settings: { ...BUDGET_DEFAULT_SETTINGS },
+        budgets: [],
+        labor: [],
+        materials: [],
+        materialCatalog: [],
+        equipment: [],
+        costs: [],
+        changeOrders: [],
+        documents: [],
+        templates: [],
+        templateItems: [],
+        history: []
+      },
       importExport: {
         modules: [],
         limits: {},
@@ -321,7 +369,10 @@
     operations: "overview",
     "command-center": "overview",
     notes: "settings",
-    reminders: "settings"
+    reminders: "settings",
+    budget: "budgets",
+    "job-budget": "budgets",
+    "job-budgets": "budgets"
   };
   let demoIdCount = 100;
   let googleRouteMap = null;
@@ -384,6 +435,7 @@
     const icons = {
       "cancel-job": "x",
       "call-lead": "GV",
+      "archive-budget": "A",
       "clear-demo-data": "x",
       "complete-operation": "OK",
       "complete-reminder": "OK",
@@ -402,6 +454,8 @@
       "delete-outreach-prospect": "x",
       "delete-route-stop": "x",
       "delete-submission": "x",
+      "duplicate-budget": "Copy",
+      "edit-budget": "/",
       "edit-job": "/",
       "edit-outreach-prospect": "/",
       "edit-route-stop": "/",
@@ -409,6 +463,7 @@
       "export-backend-backup": "DB",
       "find-stop-map": "M",
       "go-calendar": "+",
+      "go-budgets": "$",
       "go-contacts": "-&gt;",
       "go-documents": "$",
       "go-route-planner": "M",
@@ -418,7 +473,9 @@
       "mark-outreach-contacted": "OK",
       "move-route-down": "v",
       "move-route-up": "^",
+      "new-budget": "+",
       "new-outreach-prospect": "+",
+      "open-budget": "Open",
       "open-route-map": "M",
       "open-contact": "-&gt;",
       "open-document": "-&gt;",
@@ -2485,6 +2542,230 @@
     };
   }
 
+  function budgetNumber(value) {
+    const calculator = window.UrbanYardsBudgetCalculations;
+    return calculator ? calculator.roundMoney(value) : Number(value || 0);
+  }
+
+  function normalizeBudgetStatus(status) {
+    return BUDGET_STATUSES.includes(status) ? status : "Draft";
+  }
+
+  function normalizeBudgetJobStatus(status) {
+    return BUDGET_JOB_STATUSES.includes(status) ? status : "Not Scheduled";
+  }
+
+  function normalizeBudgetCostCategory(category) {
+    const value = String(category || "").trim();
+    if (BUDGET_COST_CATEGORIES.includes(value)) return value;
+    const normalized = value.toLowerCase();
+    const aliases = {
+      disposal: "Disposal and dump fees",
+      dump: "Disposal and dump fees",
+      "dump fees": "Disposal and dump fees",
+      delivery: "Delivery fees",
+      "travel time": "Travel time",
+      travel: "Travel time",
+      "equipment rental": "Equipment rentals",
+      "equipment rentals": "Equipment rentals",
+      processing: "Payment processing fees",
+      "payment processing": "Payment processing fees",
+      administrative: "Administrative costs",
+      admin: "Administrative costs",
+      miscellaneous: "Miscellaneous expenses",
+      misc: "Miscellaneous expenses"
+    };
+    return aliases[normalized] || "Miscellaneous expenses";
+  }
+
+  function normalizeBudget(row = {}) {
+    return {
+      id: row.id,
+      budgetName: row.budget_name || row.name || "Untitled budget",
+      jobId: row.job_id || "",
+      quoteId: row.quote_id || "",
+      invoiceId: row.invoice_id || "",
+      clientId: row.client_id || "",
+      propertyId: row.property_id || "",
+      clientName: row.client_name || "",
+      propertyName: row.property_name || "",
+      jobName: row.job_name || row.budget_name || "",
+      serviceType: row.service_type || "",
+      jobDescription: row.job_description || "",
+      proposedStartDateRaw: dateKey(row.proposed_start_date),
+      proposedStartDate: formatDate(row.proposed_start_date),
+      proposedCompletionDateRaw: dateKey(row.proposed_completion_date),
+      proposedCompletionDate: formatDate(row.proposed_completion_date),
+      scheduledVisits: row.scheduled_visits || [],
+      assignedEmployees: row.assigned_employees || [],
+      budgetOwner: row.budget_owner || "",
+      status: normalizeBudgetStatus(row.status),
+      jobStatus: normalizeBudgetJobStatus(row.job_status),
+      targetMarginPercent: budgetNumber(row.target_margin_percent || BUDGET_DEFAULT_SETTINGS.default_target_margin),
+      baseQuotedPrice: budgetNumber(row.base_quoted_price),
+      approvedAddons: budgetNumber(row.approved_addons),
+      discounts: budgetNumber(row.discounts),
+      taxes: budgetNumber(row.taxes),
+      otherRevenue: budgetNumber(row.other_revenue),
+      expectedRevenue: budgetNumber(row.expected_revenue),
+      finalInvoicedRevenue: budgetNumber(row.final_invoiced_revenue),
+      amountPaid: budgetNumber(row.amount_paid),
+      outstandingBalance: budgetNumber(row.outstanding_balance),
+      notes: row.notes || "",
+      createdAtRaw: row.created_at || "",
+      updatedAtRaw: row.updated_at || "",
+      createdAt: formatDate(row.created_at),
+      updatedAt: formatDate(row.updated_at),
+      archivedAtRaw: row.archived_at || ""
+    };
+  }
+
+  function normalizeBudgetLabor(row = {}) {
+    return {
+      id: row.id,
+      budgetId: row.budget_id || "",
+      employeeId: row.employee_id || "",
+      employeeName: row.employee_name || "",
+      role: row.role || "",
+      crew: row.crew || "",
+      task: row.task || row.description || "Labor",
+      description: row.description || "",
+      scheduledVisitId: row.scheduled_visit_id || "",
+      estimatedHours: budgetNumber(row.estimated_hours),
+      hourlyWage: budgetNumber(row.hourly_wage),
+      payrollBurdenPercent: budgetNumber(row.payroll_burden_percent),
+      workersCompPercent: budgetNumber(row.workers_comp_percent),
+      otherLaborBurden: budgetNumber(row.other_labor_burden ?? row.other_burden_amount),
+      trueHourlyCost: budgetNumber(row.true_hourly_labor_cost ?? row.true_hourly_cost),
+      estimatedCost: budgetNumber(row.estimated_labor_cost || row.estimated_cost),
+      actualHours: budgetNumber(row.actual_hours),
+      actualCost: budgetNumber(row.actual_labor_cost || row.actual_cost),
+      notes: row.notes || ""
+    };
+  }
+
+  function normalizeBudgetMaterial(row = {}) {
+    return {
+      id: row.id,
+      budgetId: row.budget_id || "",
+      materialName: row.material_name || "Material",
+      category: row.category || "Other",
+      vendor: row.vendor || "",
+      quantity: budgetNumber(row.quantity),
+      unit: row.unit || "",
+      unitCost: budgetNumber(row.unit_cost),
+      estimatedCost: budgetNumber(row.estimated_cost),
+      actualQuantity: budgetNumber(row.actual_quantity),
+      actualUnitCost: budgetNumber(row.actual_unit_cost),
+      actualCost: budgetNumber(row.actual_cost),
+      tax: budgetNumber(row.tax),
+      deliveryFee: budgetNumber(row.delivery_fee),
+      receiptDocumentId: row.receipt_document_id || "",
+      notes: row.notes || ""
+    };
+  }
+
+  function normalizeBudgetEquipment(row = {}) {
+    return {
+      id: row.id,
+      budgetId: row.budget_id || "",
+      equipmentId: row.equipment_id || "",
+      equipmentName: row.equipment_name || "Equipment",
+      usageType: row.usage_type || "Owned",
+      estimatedQuantity: budgetNumber(row.estimated_hours || row.estimated_days),
+      internalRate: budgetNumber(row.internal_rate ?? row.internal_hourly_rate ?? row.internal_daily_rate ?? row.mileage_rate),
+      rentalRate: budgetNumber(row.rental_rate),
+      fuelEstimate: budgetNumber(row.fuel_estimate),
+      estimatedCost: budgetNumber(row.estimated_cost),
+      actualUsage: budgetNumber(row.actual_usage),
+      actualCost: budgetNumber(row.actual_cost),
+      notes: row.notes || ""
+    };
+  }
+
+  function normalizeBudgetCost(row = {}) {
+    return {
+      id: row.id,
+      budgetId: row.budget_id || "",
+      category: normalizeBudgetCostCategory(row.category),
+      description: row.description || row.category || "Other cost",
+      estimatedCost: budgetNumber(row.estimated_cost),
+      actualCost: budgetNumber(row.actual_cost),
+      notes: row.notes || "",
+      receiptDocumentId: row.receipt_document_id || ""
+    };
+  }
+
+  function normalizeBudgetChangeOrder(row = {}) {
+    return {
+      id: row.id,
+      budgetId: row.budget_id || "",
+      title: row.title || "Change order",
+      description: row.description || "",
+      requestedDateRaw: dateKey(row.requested_date),
+      requestedDate: formatDate(row.requested_date),
+      requestedBy: row.requested_by || "",
+      additionalRevenue: budgetNumber(row.additional_revenue),
+      additionalLabor: budgetNumber(row.additional_labor ?? row.additional_labor_cost),
+      additionalMaterials: budgetNumber(row.additional_materials ?? row.additional_material_cost),
+      additionalCosts: budgetNumber(row.additional_costs ?? row.additional_other_cost),
+      approvalStatus: row.approval_status || "Draft",
+      approvedDateRaw: dateKey(row.approved_date),
+      approvedDate: formatDate(row.approved_date),
+      clientApprovalNotes: row.client_approval_notes || "",
+      internalNotes: row.internal_notes || "",
+      invoicedAtRaw: row.invoiced_at || ""
+    };
+  }
+
+  function normalizeBudgetSettings(row = {}) {
+    return {
+      ...BUDGET_DEFAULT_SETTINGS,
+      ...row,
+      default_target_margin: budgetNumber(row.default_target_margin ?? row.default_target_margin_percent ?? BUDGET_DEFAULT_SETTINGS.default_target_margin),
+      minimum_margin: budgetNumber(row.minimum_margin ?? row.minimum_margin_percent ?? BUDGET_DEFAULT_SETTINGS.minimum_margin),
+      warning_margin: budgetNumber(row.warning_margin ?? row.warning_margin_percent ?? BUDGET_DEFAULT_SETTINGS.warning_margin),
+      default_contingency_percent: budgetNumber(row.default_contingency_percent ?? BUDGET_DEFAULT_SETTINGS.default_contingency_percent),
+      default_labor_burden_percent: budgetNumber(row.default_labor_burden_percent ?? BUDGET_DEFAULT_SETTINGS.default_labor_burden_percent),
+      payment_processing_percent: budgetNumber(row.payment_processing_percent ?? row.default_payment_processing_percent ?? BUDGET_DEFAULT_SETTINGS.payment_processing_percent),
+      owner_hourly_rate: budgetNumber(row.owner_hourly_rate ?? row.default_owner_hourly_rate ?? BUDGET_DEFAULT_SETTINGS.owner_hourly_rate)
+    };
+  }
+
+  function emptyBudgetBundle() {
+    return {
+      settings: normalizeBudgetSettings(),
+      budgets: [],
+      labor: [],
+      materials: [],
+      materialCatalog: [],
+      equipment: [],
+      costs: [],
+      changeOrders: [],
+      documents: [],
+      templates: [],
+      templateItems: [],
+      history: []
+    };
+  }
+
+  function normalizeBudgetBundle(raw = {}) {
+    return {
+      settings: normalizeBudgetSettings(raw.settings || {}),
+      budgets: (raw.budgets || []).map(normalizeBudget),
+      labor: (raw.labor || []).map(normalizeBudgetLabor),
+      materials: (raw.materials || []).map(normalizeBudgetMaterial),
+      materialCatalog: raw.materialCatalog || raw.material_catalog || [],
+      equipment: (raw.equipment || []).map(normalizeBudgetEquipment),
+      costs: (raw.costs || []).map(normalizeBudgetCost),
+      changeOrders: (raw.changeOrders || raw.change_orders || []).map(normalizeBudgetChangeOrder),
+      documents: raw.documents || [],
+      templates: raw.templates || [],
+      templateItems: raw.templateItems || raw.template_items || [],
+      history: raw.history || []
+    };
+  }
+
   function normalizeOutreachProspect(row) {
     const status = OUTREACH_STATUSES.includes(row.status) ? row.status : "Prospect";
     const priority = OUTREACH_PRIORITIES.includes(row.priority) ? row.priority : "Normal";
@@ -2782,6 +3063,88 @@
       templates: Array.isArray(raw.templates) ? raw.templates.map(normalizeDocumentationTemplate) : [],
       attachments: Array.isArray(raw.attachments) ? raw.attachments.map(normalizeDocumentationAttachment) : [],
       audit: Array.isArray(raw.audit) ? raw.audit.map(normalizeDocumentationAudit) : []
+    };
+  }
+
+  function demoBudgetBundle() {
+    const today = todayKey();
+    const now = new Date().toISOString();
+    return {
+      settings: BUDGET_DEFAULT_SETTINGS,
+      budgets: [
+        {
+          id: "demo-budget-1",
+          budget_name: "Kennedy Apartments mulch refresh",
+          client_name: "Edge Asset Management",
+          property_name: "The Kennedy Apartments",
+          job_name: "Mulch & Entry Bed Refresh",
+          service_type: "Mulch Refresh",
+          proposed_start_date: today,
+          proposed_completion_date: daysFromToday(2),
+          status: "Active",
+          job_status: "Scheduled",
+          target_margin_percent: 35,
+          base_quoted_price: 2400,
+          approved_addons: 175,
+          discounts: 0,
+          taxes: 0,
+          other_revenue: 0,
+          final_invoiced_revenue: 0,
+          amount_paid: 0,
+          job_description: "Entry bed cleanup, mulch refresh, and first-impression polish.",
+          notes: "Use before/after photos for project proof.",
+          created_at: daysFromToday(-2),
+          updated_at: now
+        },
+        {
+          id: "demo-budget-2",
+          budget_name: "Cedar Court trash area reset",
+          client_name: "Northbank Property Group",
+          property_name: "Cedar Court Apartments",
+          job_name: "Trash Area Care",
+          service_type: "Trash Area Care",
+          proposed_start_date: daysFromToday(5),
+          status: "Ready for Review",
+          job_status: "Not Scheduled",
+          target_margin_percent: 35,
+          base_quoted_price: 950,
+          approved_addons: 0,
+          discounts: 0,
+          taxes: 0,
+          other_revenue: 0,
+          final_invoiced_revenue: 0,
+          amount_paid: 0,
+          job_description: "Initial cleanup and pressure wash prep for trash enclosure.",
+          notes: "Check access before scheduling.",
+          created_at: daysFromToday(-1),
+          updated_at: now
+        }
+      ],
+      labor: [
+        { id: "demo-budget-labor-1", budget_id: "demo-budget-1", role: "Owner", task: "Bed prep and mulch install", estimated_hours: 10, hourly_wage: 40, payroll_burden_percent: 12, workers_comp_percent: 4, other_labor_burden: 4, actual_hours: 3 },
+        { id: "demo-budget-labor-2", budget_id: "demo-budget-2", role: "Owner", task: "Cleanup and staging", estimated_hours: 5, hourly_wage: 40, payroll_burden_percent: 12, workers_comp_percent: 4, other_labor_burden: 4 }
+      ],
+      materials: [
+        { id: "demo-budget-material-1", budget_id: "demo-budget-1", material_name: "Fine mulch", category: "Mulch", vendor: "Local supplier", quantity: 7, unit: "yard", unit_cost: 42, tax: 0, delivery_fee: 95, actual_quantity: 2, actual_unit_cost: 42 },
+        { id: "demo-budget-material-2", budget_id: "demo-budget-2", material_name: "Cleaning supplies", category: "Cleaning supplies", quantity: 1, unit: "lot", unit_cost: 55 }
+      ],
+      materialCatalog: [],
+      equipment: [
+        { id: "demo-budget-equipment-1", budget_id: "demo-budget-1", equipment_name: "Truck and trailer", usage_type: "Vehicle", estimated_hours: 1, internal_rate: 75, estimated_cost: 75, actual_usage: 0.5, actual_cost: 37.5 }
+      ],
+      costs: [
+        { id: "demo-budget-cost-1", budget_id: "demo-budget-1", category: "Delivery", description: "Mulch delivery", estimated_cost: 95, actual_cost: 95 },
+        { id: "demo-budget-cost-2", budget_id: "demo-budget-2", category: "Disposal", description: "Bagged debris dump fee", estimated_cost: 65 }
+      ],
+      changeOrders: [
+        { id: "demo-budget-change-1", budget_id: "demo-budget-1", title: "Add courtyard weed pull", approval_status: "Approved", additional_revenue: 175, additional_labor: 80, additional_materials: 0, additional_costs: 0, requested_date: today, approved_date: today }
+      ],
+      documents: [],
+      templates: [],
+      templateItems: [],
+      history: [
+        { id: "demo-budget-history-1", budget_id: "demo-budget-1", action: "budget_created", actor_name: "Demo User", new_value: "Budget created from walkthrough estimate", created_at: daysFromToday(-2) }
+      ]
     };
   }
 
@@ -3257,6 +3620,7 @@
         feedback: [],
         fallback: {}
       },
+      budgets: normalizeBudgetBundle(demoBudgetBundle()),
       importExport: demoImportExportSnapshot(),
       leadActivity: [],
       userProfiles: [
@@ -3380,6 +3744,7 @@
       state.hardwareGuideReady = true;
       state.groundskeeperAiReady = true;
       state.documentationReady = true;
+      state.budgetsReady = true;
       state.importExportReady = true;
       state.leadActivityReady = true;
       state.userProfilesReady = true;
@@ -3387,7 +3752,7 @@
       return demoDashboardData();
     }
 
-    const [submissions, contacts, jobs, notes, reminders, documents, operations, outreachProspects, outreachCompanies, outreachProperties, routeStops, equipmentItems, equipmentMaintenance, hardwareGuide, groundskeeperAi, documentation, importExport, leadActivity, userProfiles, auditLogs] = await Promise.all([
+    const [submissions, contacts, jobs, notes, reminders, documents, operations, outreachProspects, outreachCompanies, outreachProperties, routeStops, equipmentItems, equipmentMaintenance, hardwareGuide, groundskeeperAi, documentation, budgets, importExport, leadActivity, userProfiles, auditLogs] = await Promise.all([
       supabaseRestRequest("quote_submissions?select=*&order=created_at.desc", { method: "GET" }),
       supabaseRestRequest("contacts?select=*&order=created_at.desc", { method: "GET" }),
       supabaseRestRequest("scheduled_jobs?select=*&order=visit_date.asc", { method: "GET" }),
@@ -3404,6 +3769,7 @@
       loadHardwareGuide(),
       loadGroundskeeperAi(),
       loadDocumentation(),
+      loadBudgets(),
       loadImportExportCenter(),
       loadLeadActivity(),
       loadUserProfiles(),
@@ -3427,6 +3793,7 @@
       hardwareGuide,
       groundskeeperAi,
       documentation,
+      budgets,
       importExport,
       leadActivity,
       userProfiles,
@@ -3497,6 +3864,48 @@
     } catch (error) {
       state.documentationReady = false;
       return normalizeDocumentationBundle();
+    }
+  }
+
+  async function loadBudgets() {
+    if (isDemoMode()) {
+      state.budgetsReady = true;
+      return normalizeBudgetBundle(demoBudgetBundle());
+    }
+
+    try {
+      const [settingsRows, budgets, labor, materials, materialCatalog, equipment, costs, changeOrders, documents, templates, templateItems, history] = await Promise.all([
+        supabaseRestRequest("budget_settings?select=*&limit=1", { method: "GET" }),
+        supabaseRestRequest("job_budgets?select=*&order=updated_at.desc", { method: "GET" }),
+        supabaseRestRequest("job_budget_labor?select=*&order=created_at.asc", { method: "GET" }),
+        supabaseRestRequest("job_budget_materials?select=*&order=created_at.asc", { method: "GET" }),
+        supabaseRestRequest("budget_material_catalog?select=*&order=category.asc,material_name.asc", { method: "GET" }),
+        supabaseRestRequest("job_budget_equipment?select=*&order=created_at.asc", { method: "GET" }),
+        supabaseRestRequest("job_budget_costs?select=*&order=created_at.asc", { method: "GET" }),
+        supabaseRestRequest("job_budget_change_orders?select=*&order=requested_date.desc.nullslast,created_at.desc", { method: "GET" }),
+        supabaseRestRequest("job_budget_documents?select=*&order=created_at.desc", { method: "GET" }),
+        supabaseRestRequest("job_budget_templates?select=*&order=name.asc", { method: "GET" }),
+        supabaseRestRequest("job_budget_template_items?select=*&order=created_at.asc", { method: "GET" }),
+        supabaseRestRequest("job_budget_history?select=*&order=created_at.desc&limit=300", { method: "GET" })
+      ]);
+      state.budgetsReady = true;
+      return normalizeBudgetBundle({
+        settings: settingsRows?.[0] || {},
+        budgets,
+        labor,
+        materials,
+        materialCatalog,
+        equipment,
+        costs,
+        changeOrders,
+        documents,
+        templates,
+        templateItems,
+        history
+      });
+    } catch (error) {
+      state.budgetsReady = false;
+      return emptyBudgetBundle();
     }
   }
 
@@ -3671,6 +4080,319 @@
       method: "DELETE",
       headers: { Prefer: "return=minimal" }
     });
+  }
+
+  function activeBudgetBundle() {
+    return state.data.budgets || emptyBudgetBundle();
+  }
+
+  function selectedBudget() {
+    const bundle = activeBudgetBundle();
+    return bundle.budgets.find((budget) => budget.id === state.selectedBudgetId) || bundle.budgets[0] || null;
+  }
+
+  function budgetLineBundle(budgetId) {
+    const bundle = activeBudgetBundle();
+    const belongsToBudget = (item) => (item.budgetId || item.budget_id || item.jobBudgetId || item.job_budget_id || "") === budgetId;
+    return {
+      labor: bundle.labor.filter((item) => item.budgetId === budgetId),
+      materials: bundle.materials.filter((item) => item.budgetId === budgetId),
+      equipment: bundle.equipment.filter((item) => item.budgetId === budgetId),
+      costs: bundle.costs.filter((item) => item.budgetId === budgetId),
+      changeOrders: bundle.changeOrders.filter((item) => item.budgetId === budgetId),
+      documents: (bundle.documents || []).filter(belongsToBudget),
+      history: (bundle.history || []).filter(belongsToBudget)
+    };
+  }
+
+  function budgetSummary(budget) {
+    const calculator = window.UrbanYardsBudgetCalculations;
+    const bundle = budgetLineBundle(budget?.id || "");
+    if (!calculator || !budget) return {};
+    return calculator.summarizeBudget({
+      budget,
+      labor: bundle.labor,
+      materials: bundle.materials,
+      equipment: bundle.equipment,
+      costs: bundle.costs,
+      changeOrders: bundle.changeOrders,
+      settings: activeBudgetBundle().settings
+    });
+  }
+
+  function budgetPayloadFromForm(form) {
+    const data = new FormData(form);
+    const payload = {
+      budget_name: String(data.get("budget_name") || "").trim(),
+      job_id: String(data.get("job_id") || "") || null,
+      quote_id: String(data.get("quote_id") || "") || null,
+      invoice_id: String(data.get("invoice_id") || "") || null,
+      client_id: String(data.get("client_id") || "") || null,
+      property_name: String(data.get("property_name") || "").trim(),
+      job_name: String(data.get("budget_name") || "").trim(),
+      service_type: String(data.get("service_type") || "").trim(),
+      job_description: String(data.get("job_description") || "").trim(),
+      proposed_start_date: String(data.get("proposed_start_date") || "") || null,
+      proposed_completion_date: String(data.get("proposed_completion_date") || "") || null,
+      status: normalizeBudgetStatus(String(data.get("status") || "Draft")),
+      job_status: normalizeBudgetJobStatus(String(data.get("job_status") || "Not Scheduled")),
+      target_margin_percent: Number(data.get("target_margin_percent") || BUDGET_DEFAULT_SETTINGS.default_target_margin),
+      base_quoted_price: Number(data.get("base_quoted_price") || 0),
+      approved_addons: Number(data.get("approved_addons") || 0),
+      discounts: Number(data.get("discounts") || 0),
+      taxes: Number(data.get("taxes") || 0),
+      other_revenue: Number(data.get("other_revenue") || 0),
+      final_invoiced_revenue: Number(data.get("final_invoiced_revenue") || 0),
+      amount_paid: Number(data.get("amount_paid") || 0),
+      notes: String(data.get("notes") || "").trim()
+    };
+    const job = state.data.jobs.find((item) => item.id === payload.job_id);
+    const quote = state.data.submissions.find((item) => item.id === payload.quote_id);
+    const invoice = state.data.documents.find((item) => item.id === payload.invoice_id);
+    const client = state.data.contacts.find((item) => item.id === payload.client_id);
+    payload.client_name = client?.name || quote?.name || invoice?.clientName || "";
+    payload.property_id = null;
+    payload.property_name = payload.property_name || job?.site || client?.property || quote?.propertyType || "";
+    payload.job_name = job?.site || payload.job_name || payload.budget_name;
+    payload.service_type = payload.service_type || job?.service || quote?.service || invoice?.lineItems?.[0]?.description || "";
+    if (!payload.budget_name) throw new Error("Budget name is required.");
+    return payload;
+  }
+
+  async function insertBudget(payload) {
+    if (!state.budgetsReady) throw new Error("Create the Job Budgeter tables first. Use supabase/migrations/20260713_job_budgeter.sql.");
+    if (isDemoMode()) {
+      const budget = normalizeBudget({ id: nextDemoId("budget"), ...payload, created_at: new Date().toISOString(), updated_at: new Date().toISOString() });
+      state.data.budgets.budgets.unshift(budget);
+      return budget;
+    }
+    const rows = await supabaseRestRequest("job_budgets", {
+      method: "POST",
+      headers: { Prefer: "return=representation" },
+      body: JSON.stringify(payload)
+    });
+    return normalizeBudget(rows[0]);
+  }
+
+  async function updateBudget(id, payload) {
+    if (isDemoMode()) {
+      const index = state.data.budgets.budgets.findIndex((item) => item.id === id);
+      if (index >= 0) {
+        state.data.budgets.budgets[index] = normalizeBudget({
+          ...state.data.budgets.budgets[index],
+          ...payload,
+          id,
+          updated_at: new Date().toISOString()
+        });
+      }
+      return state.data.budgets.budgets[index] || null;
+    }
+    const rows = await supabaseRestRequest(`job_budgets?id=eq.${encodeURIComponent(id)}`, {
+      method: "PATCH",
+      headers: { Prefer: "return=representation" },
+      body: JSON.stringify({ ...payload, updated_at: new Date().toISOString() })
+    });
+    return rows?.[0] ? normalizeBudget(rows[0]) : null;
+  }
+
+  async function saveBudgetFromForm(form) {
+    const payload = budgetPayloadFromForm(form);
+    const id = String(new FormData(form).get("id") || "").trim();
+    const saved = id ? await updateBudget(id, payload) : await insertBudget(payload);
+    state.selectedBudgetId = saved?.id || id || state.selectedBudgetId;
+    return saved;
+  }
+
+  function budgetLinePayloadFromForm(form) {
+    const data = new FormData(form);
+    const budgetId = String(data.get("budget_id") || "").trim();
+    const lineType = String(data.get("line_type") || "labor");
+    const title = String(data.get("title") || "").trim();
+    const category = String(data.get("category") || "").trim();
+    const estimatedQuantity = Number(data.get("estimated_quantity") || 0);
+    const unitCost = Number(data.get("unit_cost") || 0);
+    const explicitEstimated = Number(data.get("estimated_cost") || 0);
+    const actualQuantity = Number(data.get("actual_quantity") || 0);
+    const actualCost = Number(data.get("actual_cost") || 0);
+    const notes = String(data.get("notes") || "").trim();
+    if (!budgetId) throw new Error("Choose a budget first.");
+    if (!title) throw new Error("Add a line item title.");
+    const estimatedUnits = estimatedQuantity || (explicitEstimated ? 1 : 0);
+    const estimatedRate = unitCost || (explicitEstimated && estimatedUnits ? explicitEstimated / estimatedUnits : 0);
+    if (lineType === "labor") {
+      const useDefaultBurden = Boolean(unitCost);
+      return {
+        table: "job_budget_labor",
+        normalize: normalizeBudgetLabor,
+        group: "labor",
+        record: {
+          budget_id: budgetId,
+          role: category || "General labor",
+          task: title,
+          estimated_hours: estimatedUnits,
+          hourly_wage: estimatedRate,
+          payroll_burden_percent: useDefaultBurden ? activeBudgetBundle().settings.default_labor_burden_percent || 0 : 0,
+          actual_hours: actualQuantity,
+          actual_cost: actualCost,
+          notes
+        }
+      };
+    }
+    if (lineType === "materials") {
+      return {
+        table: "job_budget_materials",
+        normalize: normalizeBudgetMaterial,
+        group: "materials",
+        record: {
+          budget_id: budgetId,
+          material_name: title,
+          category: category || "Other",
+          quantity: estimatedUnits,
+          unit_cost: estimatedRate,
+          actual_quantity: actualQuantity,
+          actual_cost: actualCost,
+          notes
+        }
+      };
+    }
+    if (lineType === "equipment") {
+      return {
+        table: "job_budget_equipment",
+        normalize: normalizeBudgetEquipment,
+        group: "equipment",
+        record: {
+          budget_id: budgetId,
+          equipment_name: title,
+          usage_type: category || "Owned",
+          estimated_hours: estimatedQuantity,
+          internal_hourly_rate: unitCost,
+          estimated_cost: explicitEstimated || estimatedQuantity * unitCost,
+          actual_usage: actualQuantity,
+          actual_cost: actualCost,
+          notes
+        }
+      };
+    }
+    if (lineType === "change_order") {
+      return {
+        table: "job_budget_change_orders",
+        normalize: normalizeBudgetChangeOrder,
+        group: "changeOrders",
+        record: {
+          budget_id: budgetId,
+          title,
+          description: notes,
+          requested_date: todayKey(),
+          additional_revenue: explicitEstimated,
+          additional_labor_cost: 0,
+          additional_material_cost: 0,
+          additional_other_cost: actualCost,
+          approval_status: category || "Draft",
+          internal_notes: notes
+        }
+      };
+    }
+    return {
+      table: "job_budget_costs",
+      normalize: normalizeBudgetCost,
+      group: "costs",
+      record: {
+        budget_id: budgetId,
+        category: normalizeBudgetCostCategory(category),
+        description: title,
+        estimated_cost: explicitEstimated || estimatedQuantity * unitCost,
+        actual_cost: actualCost,
+        notes
+      }
+    };
+  }
+
+  async function insertBudgetLineFromForm(form) {
+    const payload = budgetLinePayloadFromForm(form);
+    if (isDemoMode()) {
+      const item = payload.normalize({ id: nextDemoId(payload.group), ...payload.record, created_at: new Date().toISOString() });
+      state.data.budgets[payload.group].push(item);
+      return item;
+    }
+    const rows = await supabaseRestRequest(payload.table, {
+      method: "POST",
+      headers: { Prefer: "return=representation" },
+      body: JSON.stringify(payload.record)
+    });
+    return rows?.[0] ? payload.normalize(rows[0]) : null;
+  }
+
+  async function archiveBudget(id) {
+    const budget = activeBudgetBundle().budgets.find((item) => item.id === id);
+    if (!budget) return null;
+    return updateBudget(id, { status: "Archived", archived_at: new Date().toISOString() });
+  }
+
+  async function duplicateBudget(id) {
+    const budget = activeBudgetBundle().budgets.find((item) => item.id === id);
+    if (!budget) throw new Error("Budget not found.");
+    const payload = {
+      budget_name: `${budget.budgetName} Copy`,
+      job_id: budget.jobId || null,
+      quote_id: budget.quoteId || null,
+      invoice_id: budget.invoiceId || null,
+      client_id: budget.clientId || null,
+      property_id: budget.propertyId || null,
+      client_name: budget.clientName,
+      property_name: budget.propertyName,
+      job_name: budget.jobName,
+      service_type: budget.serviceType,
+      job_description: budget.jobDescription,
+      proposed_start_date: budget.proposedStartDateRaw || null,
+      proposed_completion_date: budget.proposedCompletionDateRaw || null,
+      status: "Draft",
+      job_status: budget.jobStatus,
+      target_margin_percent: budget.targetMarginPercent,
+      base_quoted_price: budget.baseQuotedPrice,
+      approved_addons: budget.approvedAddons,
+      discounts: budget.discounts,
+      taxes: budget.taxes,
+      other_revenue: budget.otherRevenue,
+      final_invoiced_revenue: budget.finalInvoicedRevenue,
+      amount_paid: 0,
+      notes: budget.notes
+    };
+    return insertBudget(payload);
+  }
+
+  async function saveBudgetSettingsFromForm(form) {
+    const data = new FormData(form);
+    const uiPayload = {
+      default_target_margin: Number(data.get("default_target_margin") || BUDGET_DEFAULT_SETTINGS.default_target_margin),
+      warning_margin: Number(data.get("warning_margin") || BUDGET_DEFAULT_SETTINGS.warning_margin),
+      minimum_margin: Number(data.get("minimum_margin") || BUDGET_DEFAULT_SETTINGS.minimum_margin),
+      default_contingency_percent: Number(data.get("default_contingency_percent") || BUDGET_DEFAULT_SETTINGS.default_contingency_percent),
+      default_labor_burden_percent: Number(data.get("default_labor_burden_percent") || BUDGET_DEFAULT_SETTINGS.default_labor_burden_percent),
+      payment_processing_percent: Number(data.get("payment_processing_percent") || BUDGET_DEFAULT_SETTINGS.payment_processing_percent),
+      owner_hourly_rate: Number(data.get("owner_hourly_rate") || BUDGET_DEFAULT_SETTINGS.owner_hourly_rate)
+    };
+    if (isDemoMode()) {
+      state.data.budgets.settings = normalizeBudgetSettings(uiPayload);
+      return state.data.budgets.settings;
+    }
+    const payload = {
+      default_target_margin_percent: uiPayload.default_target_margin,
+      warning_margin_percent: uiPayload.warning_margin,
+      minimum_margin_percent: uiPayload.minimum_margin,
+      default_contingency_percent: uiPayload.default_contingency_percent,
+      default_labor_burden_percent: uiPayload.default_labor_burden_percent,
+      default_payment_processing_percent: uiPayload.payment_processing_percent,
+      default_owner_hourly_rate: uiPayload.owner_hourly_rate
+    };
+    const existingId = state.data.budgets.settings?.id;
+    const path = existingId ? `budget_settings?id=eq.${encodeURIComponent(existingId)}` : "budget_settings";
+    const method = existingId ? "PATCH" : "POST";
+    const rows = await supabaseRestRequest(path, {
+      method,
+      headers: { Prefer: "return=representation" },
+      body: JSON.stringify(payload)
+    });
+    return normalizeBudgetSettings(rows?.[0] || payload);
   }
 
   async function insertEquipmentItem(payload) {
@@ -5666,6 +6388,12 @@
       });
     }, 100);
     syncDashboardSubviewVisibility();
+  }
+
+  function dashboardSectionFromPath(pathname = window.location.pathname) {
+    const path = String(pathname || "").replace(/\/+$/, "");
+    if (path === "/budgets" || path.startsWith("/budgets/") || /^\/jobs\/[^/]+\/budget$/.test(path)) return "budgets";
+    return "";
   }
 
   function matchesSearch(item) {
@@ -8642,6 +9370,464 @@
     els.documentationMain.innerHTML = `${metrics}<section class="documentation-card"><div class="panel-heading"><h3>Audit History</h3><p>Template uploads, assignments, draft saves, submissions, review decisions, corrections, and file replacement history.</p></div><div class="documentation-audit-list">${audit.length ? audit.map(renderDocumentationAuditRow).join("") : emptyState("No documentation audit records yet.")}</div></section>`;
   }
 
+  function budgetCurrency(value) {
+    return new Intl.NumberFormat("en-US", {
+      style: "currency",
+      currency: "USD",
+      maximumFractionDigits: Math.abs(Number(value || 0)) >= 1000 ? 0 : 2
+    }).format(Number(value || 0));
+  }
+
+  function budgetPercent(value) {
+    const number = Number(value || 0);
+    return `${Number.isFinite(number) ? number.toFixed(1) : "0.0"}%`;
+  }
+
+  function budgetBadge(value, type = "status") {
+    const label = value || "Draft";
+    return `<span class="budget-badge budget-badge-${escapeHtml(slug(type))} budget-badge-${escapeHtml(slug(label))}">${escapeHtml(label)}</span>`;
+  }
+
+  function budgetOption(value, label, selectedValue) {
+    return `<option value="${escapeHtml(value)}"${String(value) === String(selectedValue || "") ? " selected" : ""}>${escapeHtml(label || value)}</option>`;
+  }
+
+  function budgetSelectOptions(values, selectedValue = "", firstLabel = "") {
+    const first = firstLabel ? `<option value="All">${escapeHtml(firstLabel)}</option>` : "";
+    return `${first}${values.map((value) => budgetOption(value, value, selectedValue)).join("")}`;
+  }
+
+  function budgetLinkedOptions(items, selectedValue = "", emptyLabel = "None") {
+    return `<option value="">${escapeHtml(emptyLabel)}</option>${items.map((item) => budgetOption(item.id, item.label, selectedValue)).join("")}`;
+  }
+
+  function budgetClientLabel(client) {
+    return [client.name, client.company, client.property].filter(Boolean).join(" / ") || client.email || "Unnamed client";
+  }
+
+  function budgetMetricCard(label, value, detail, tone = "") {
+    return `<article class="budget-metric ${tone ? `budget-metric-${escapeHtml(slug(tone))}` : ""}">
+      <span>${escapeHtml(label)}</span>
+      <strong>${escapeHtml(value)}</strong>
+      <small>${escapeHtml(detail || "")}</small>
+    </article>`;
+  }
+
+  function filteredBudgets() {
+    const budgets = activeBudgetBundle().budgets;
+    return budgets.filter((budget) => {
+      const summary = budgetSummary(budget);
+      const date = budget.proposedStartDateRaw || budget.proposedCompletionDateRaw || "";
+      const matchesStatus = state.budgetStatusFilter === "All" || budget.status === state.budgetStatusFilter;
+      const matchesJobStatus = state.budgetJobStatusFilter === "All" || budget.jobStatus === state.budgetJobStatusFilter;
+      const matchesClient = state.budgetClientFilter === "All" || budget.clientId === state.budgetClientFilter || budget.clientName === state.budgetClientFilter;
+      const matchesService = state.budgetServiceFilter === "All" || budget.serviceType === state.budgetServiceFilter;
+      const matchesStart = !state.budgetDateStart || !date || date >= state.budgetDateStart;
+      const matchesEnd = !state.budgetDateEnd || !date || date <= state.budgetDateEnd;
+      const matchesQuery = matchesSearchValues([
+        budget.budgetName,
+        budget.jobName,
+        budget.clientName,
+        budget.propertyName,
+        budget.serviceType,
+        budget.status,
+        budget.jobStatus,
+        budget.notes,
+        summary.health
+      ], state.budgetSearch);
+      return matchesStatus && matchesJobStatus && matchesClient && matchesService && matchesStart && matchesEnd && matchesQuery;
+    }).sort((a, b) => String(b.updatedAtRaw || "").localeCompare(String(a.updatedAtRaw || "")));
+  }
+
+  function populateBudgetControls(data = state.data) {
+    const bundle = activeBudgetBundle();
+    const clientItems = data.contacts.map((client) => ({ id: client.id, label: budgetClientLabel(client) }));
+    const quoteItems = data.submissions.map((quote) => ({ id: quote.id, label: `${quote.name} / ${quote.service}` }));
+    const jobItems = data.jobs.map((job) => ({ id: job.id, label: `${job.site} / ${job.service} / ${job.date}` }));
+    const invoiceItems = data.documents.map((doc) => ({ id: doc.id, label: `${doc.number} / ${doc.clientName} / ${budgetCurrency(doc.total)}` }));
+    const clientFilterValues = [...new Set(bundle.budgets.map((budget) => budget.clientId || budget.clientName).filter(Boolean))];
+    const serviceValues = [...new Set(bundle.budgets.map((budget) => budget.serviceType).filter(Boolean))].sort();
+
+    if (els.budgetStatusFilter) els.budgetStatusFilter.innerHTML = budgetSelectOptions(BUDGET_STATUSES, state.budgetStatusFilter, "All Budget Statuses");
+    if (els.budgetJobStatusFilter) els.budgetJobStatusFilter.innerHTML = budgetSelectOptions(BUDGET_JOB_STATUSES, state.budgetJobStatusFilter, "All Job Statuses");
+    if (els.budgetClientFilter) els.budgetClientFilter.innerHTML = budgetSelectOptions(clientFilterValues, state.budgetClientFilter, "All Clients");
+    if (els.budgetServiceFilter) els.budgetServiceFilter.innerHTML = budgetSelectOptions(serviceValues, state.budgetServiceFilter, "All Services");
+    if (els.budgetJobOptions) els.budgetJobOptions.innerHTML = budgetLinkedOptions(jobItems, "", "No job linked yet");
+    if (els.budgetQuoteOptions) els.budgetQuoteOptions.innerHTML = budgetLinkedOptions(quoteItems, "", "No quote linked");
+    if (els.budgetInvoiceOptions) els.budgetInvoiceOptions.innerHTML = budgetLinkedOptions(invoiceItems, "", "No invoice linked");
+    if (els.budgetClientOptions) els.budgetClientOptions.innerHTML = budgetLinkedOptions(clientItems, "", "No client linked");
+    if (els.budgetStatusOptions) els.budgetStatusOptions.innerHTML = BUDGET_STATUSES.map((status) => budgetOption(status, status, "Draft")).join("");
+    if (els.budgetLineBudgetOptions) {
+      els.budgetLineBudgetOptions.innerHTML = bundle.budgets.map((budget) => budgetOption(budget.id, budget.budgetName, state.selectedBudgetId || selectedBudget()?.id || "")).join("");
+    }
+  }
+
+  function fillBudgetForm(budget = null) {
+    if (!els.budgetForm) return;
+    const form = els.budgetForm;
+    form.elements.id.value = budget?.id || "";
+    form.elements.budget_name.value = budget?.budgetName || "";
+    form.elements.job_id.value = budget?.jobId || "";
+    form.elements.quote_id.value = budget?.quoteId || "";
+    form.elements.invoice_id.value = budget?.invoiceId || "";
+    form.elements.client_id.value = budget?.clientId || "";
+    form.elements.property_name.value = budget?.propertyName || "";
+    form.elements.service_type.value = budget?.serviceType || "";
+    form.elements.status.value = budget?.status || "Draft";
+    form.elements.job_status.value = budget?.jobStatus || "Not Scheduled";
+    form.elements.target_margin_percent.value = budget?.targetMarginPercent ?? activeBudgetBundle().settings.default_target_margin;
+    form.elements.proposed_start_date.value = budget?.proposedStartDateRaw || "";
+    form.elements.proposed_completion_date.value = budget?.proposedCompletionDateRaw || "";
+    form.elements.job_description.value = budget?.jobDescription || "";
+    form.elements.base_quoted_price.value = budget?.baseQuotedPrice || "";
+    form.elements.approved_addons.value = budget?.approvedAddons || "";
+    form.elements.discounts.value = budget?.discounts || "";
+    form.elements.taxes.value = budget?.taxes || "";
+    form.elements.other_revenue.value = budget?.otherRevenue || "";
+    form.elements.final_invoiced_revenue.value = budget?.finalInvoicedRevenue || "";
+    form.elements.amount_paid.value = budget?.amountPaid || "";
+    form.elements.notes.value = budget?.notes || "";
+  }
+
+  function resetBudgetForm() {
+    if (!els.budgetForm) return;
+    els.budgetForm.reset();
+    fillBudgetForm(null);
+    if (els.budgetLineForm) {
+      els.budgetLineForm.reset();
+      if (els.budgetLineForm.elements.budget_id) {
+        els.budgetLineForm.elements.budget_id.value = selectedBudget()?.id || "";
+      }
+    }
+  }
+
+  function fillBudgetSettingsForm() {
+    if (!els.budgetSettingsForm) return;
+    const settings = activeBudgetBundle().settings || normalizeBudgetSettings();
+    Object.keys(BUDGET_DEFAULT_SETTINGS).forEach((key) => {
+      if (els.budgetSettingsForm.elements[key]) {
+        els.budgetSettingsForm.elements[key].value = settings[key] ?? BUDGET_DEFAULT_SETTINGS[key];
+      }
+    });
+  }
+
+  function renderBudgetMetrics() {
+    if (!els.budgetMetrics) return;
+    const budgets = activeBudgetBundle().budgets.filter((budget) => budget.status !== "Archived");
+    const summaries = budgets.map((budget) => ({ budget, summary: budgetSummary(budget) }));
+    const totalRevenue = summaries.reduce((total, item) => total + Number(item.summary.expectedRevenue || 0), 0);
+    const totalProfit = summaries.reduce((total, item) => total + Number(item.summary.estimatedProfit || 0), 0);
+    const activeMargins = summaries.filter((item) => item.summary.expectedRevenue).map((item) => Number(item.summary.estimatedMargin || 0));
+    const averageMargin = activeMargins.length ? activeMargins.reduce((total, value) => total + value, 0) / activeMargins.length : 0;
+    const atRisk = summaries.filter((item) => ["At Risk", "Watch"].includes(item.summary.health) || item.budget.status === "At Risk").length;
+    const overBudget = summaries.filter((item) => item.summary.health === "Over Budget" || item.budget.status === "Over Budget").length;
+    const missingActuals = summaries.filter((item) => item.budget.status === "Completed" && Number(item.summary.totalActualCost || 0) === 0).length;
+    els.budgetMetrics.innerHTML = [
+      budgetMetricCard("Estimated Revenue", budgetCurrency(totalRevenue), "Across active budgets"),
+      budgetMetricCard("Estimated Profit", budgetCurrency(totalProfit), "Revenue minus estimated costs"),
+      budgetMetricCard("Average Margin", budgetPercent(averageMargin), "Estimated margin"),
+      budgetMetricCard("Jobs At Risk", String(atRisk), "Below target or warning", atRisk ? "warning" : ""),
+      budgetMetricCard("Over Budget", String(overBudget), "Actuals exceed budget", overBudget ? "danger" : ""),
+      budgetMetricCard("Missing Actuals", String(missingActuals), "Completed jobs needing costs", missingActuals ? "warning" : "")
+    ].join("");
+  }
+
+  function renderBudgetRow(budget) {
+    const summary = budgetSummary(budget);
+    return `<article class="budget-record${budget.id === state.selectedBudgetId ? " is-selected" : ""}">
+      <div class="budget-record-main">
+        <div>
+          <p class="eyebrow">${escapeHtml(budget.serviceType || "Job budget")}</p>
+          <h3>${escapeHtml(budget.budgetName)}</h3>
+          <p>${escapeHtml([budget.clientName, budget.propertyName, budget.jobName].filter(Boolean).join(" / ") || "No linked job yet")}</p>
+        </div>
+        <div class="budget-record-badges">
+          ${budgetBadge(budget.status)}
+          ${budgetBadge(summary.health || "Healthy", "health")}
+        </div>
+      </div>
+      <dl class="budget-record-stats">
+        <div><dt>Revenue</dt><dd>${budgetCurrency(summary.expectedRevenue)}</dd></div>
+        <div><dt>Estimated Cost</dt><dd>${budgetCurrency(summary.totalEstimatedCost)}</dd></div>
+        <div><dt>Estimated Profit</dt><dd>${budgetCurrency(summary.estimatedProfit)}</dd></div>
+        <div><dt>Estimated Margin</dt><dd>${budgetPercent(summary.estimatedMargin)}</dd></div>
+        <div><dt>Actual Cost</dt><dd>${budgetCurrency(summary.totalActualCost)}</dd></div>
+        <div><dt>Actual Margin</dt><dd>${budgetPercent(summary.actualMargin)}</dd></div>
+      </dl>
+      <div class="budget-record-footer">
+        <span>Scheduled: ${escapeHtml(budget.proposedStartDate || "Not scheduled")}</span>
+        <span>Updated: ${escapeHtml(budget.updatedAt || "Not saved")}</span>
+        <div class="budget-record-actions">
+          <button type="button" class="inline-action" data-action="open-budget" data-id="${escapeHtml(budget.id)}">${buttonContent("Open", "open-budget")}</button>
+          <button type="button" class="inline-action" data-action="edit-budget" data-id="${escapeHtml(budget.id)}">${buttonContent("Edit", "edit-budget")}</button>
+          <button type="button" class="inline-action" data-action="duplicate-budget" data-id="${escapeHtml(budget.id)}">${buttonContent("Duplicate", "duplicate-budget")}</button>
+          ${budget.jobId ? `<button type="button" class="inline-action" data-action="view-budget-job" data-id="${escapeHtml(budget.jobId)}">View Job</button>` : ""}
+          ${budget.quoteId ? `<button type="button" class="inline-action" data-action="view-budget-quote" data-id="${escapeHtml(budget.quoteId)}">View Quote</button>` : ""}
+          ${budget.invoiceId ? `<button type="button" class="inline-action" data-action="view-budget-invoice" data-id="${escapeHtml(budget.invoiceId)}">View Invoice</button>` : ""}
+          <button type="button" class="inline-action" data-action="archive-budget" data-id="${escapeHtml(budget.id)}">${buttonContent("Archive", "archive-budget")}</button>
+        </div>
+      </div>
+    </article>`;
+  }
+
+  function renderBudgetLineList(title, items, fields) {
+    return `<section class="budget-detail-block">
+      <h4>${escapeHtml(title)}</h4>
+      ${items.length ? `<div class="budget-line-list">${items.map((item) => `<div class="budget-line-row">
+        <strong>${escapeHtml(fields.title(item))}</strong>
+        <span>${escapeHtml(fields.meta(item))}</span>
+        <b>${budgetCurrency(fields.estimated(item))}</b>
+        <small>Actual ${budgetCurrency(fields.actual(item))}</small>
+      </div>`).join("")}</div>` : emptyState(`No ${title.toLowerCase()} items yet.`)}
+    </section>`;
+  }
+
+  function renderBudgetWarnings(budget, summary) {
+    const warnings = [];
+    if (summary.health === "At Risk" || summary.health === "Watch") warnings.push(`${summary.health}: margin is ${budgetPercent(summary.actualMargin || summary.estimatedMargin)} against the target.`);
+    if (summary.health === "Over Budget") warnings.push("Actual costs are over the approved estimated cost budget.");
+    if (summary.remainingLaborAllowance <= 4 && summary.expectedRevenue) warnings.push(`Only ${summary.remainingLaborAllowance.toFixed(1)} labor hours remain before reaching the target margin.`);
+    if (budget.status === "Completed" && !summary.totalActualCost) warnings.push("Completed job is missing actual costs.");
+    const unbilled = budgetLineBundle(budget.id).changeOrders.filter((item) => item.approvalStatus === "Approved" && !item.invoicedAtRaw);
+    if (unbilled.length) warnings.push(`${unbilled.length} approved change order${unbilled.length === 1 ? "" : "s"} not invoiced.`);
+    return warnings.length ? `<div class="budget-warning-list">${warnings.map((warning) => `<p>${escapeHtml(warning)}</p>`).join("")}</div>` : "";
+  }
+
+  function renderBudgetVariance(summary) {
+    const calculator = window.UrbanYardsBudgetCalculations;
+    if (!calculator) return "";
+    const rows = calculator.varianceRows(summary);
+    return `<section class="budget-detail-block">
+      <h4>Estimated vs Actual</h4>
+      <div class="budget-variance-table" role="table" aria-label="Budget variance">
+        <div role="row" class="budget-variance-head"><span>Category</span><span>Estimated</span><span>Actual</span><span>Difference</span><span>Status</span></div>
+        ${rows.map((row) => `<div role="row" class="budget-variance-row ${row.favorable ? "is-favorable" : "is-unfavorable"}">
+          <span>${escapeHtml(row.label)}</span>
+          <span>${budgetCurrency(row.estimated)}</span>
+          <span>${budgetCurrency(row.actual)}</span>
+          <span>${budgetCurrency(row.difference)} / ${budgetPercent(row.percent)}</span>
+          <span>${row.favorable ? "Favorable" : "Needs review"}</span>
+        </div>`).join("")}
+      </div>
+    </section>`;
+  }
+
+  function budgetReportCard(label, value, detail = "") {
+    return `<article class="budget-report-card">
+      <span>${escapeHtml(label)}</span>
+      <strong>${escapeHtml(value)}</strong>
+      ${detail ? `<small>${escapeHtml(detail)}</small>` : ""}
+    </article>`;
+  }
+
+  function renderBudgetDetailTabs(activeTab) {
+    return `<div class="budget-detail-tabs" role="tablist" aria-label="Budget detail sections">
+      ${BUDGET_DETAIL_TABS.map((tab) => `<button type="button" role="tab" class="budget-detail-tab${activeTab === tab.key ? " is-active" : ""}" aria-selected="${activeTab === tab.key ? "true" : "false"}" data-action="budget-detail-tab" data-tab="${escapeHtml(tab.key)}">${escapeHtml(tab.label)}</button>`).join("")}
+    </div>`;
+  }
+
+  function renderBudgetOverviewTab(budget, summary) {
+    const remainingBudget = Number(summary.expectedRevenue || 0) - Number(summary.totalActualCost || 0);
+    return `${renderBudgetWarnings(budget, summary)}
+      <section class="budget-detail-block">
+        <h4>Budget Allowances</h4>
+        <div class="budget-report-grid">
+          ${budgetReportCard("Remaining Budget", budgetCurrency(remainingBudget), "Expected revenue minus actual cost")}
+          ${budgetReportCard("Labor Hours Remaining", `${Number(summary.remainingLaborAllowance || 0).toFixed(1)} hr`, "Before target margin is reached")}
+          ${budgetReportCard("Break-Even Price", budgetCurrency(summary.breakEvenPrice), "Estimated cost floor")}
+          ${budgetReportCard("Recommended Price", budgetCurrency(summary.recommendedPrice), `${budgetPercent(budget.targetMarginPercent)} target margin`)}
+        </div>
+      </section>
+      ${renderBudgetVariance(summary)}`;
+  }
+
+  function renderBudgetReportsTab(budget, summary, lines) {
+    const approvedUnbilled = lines.changeOrders
+      .filter((item) => item.approvalStatus === "Approved" && !item.invoicedAtRaw)
+      .reduce((total, item) => total + Number(item.additionalRevenue || 0), 0);
+    return `<section class="budget-detail-block">
+      <h4>Reporting Snapshot</h4>
+      <div class="budget-report-grid">
+        ${budgetReportCard("Budget Health", summary.health || "Healthy", `${budget.status} / ${budget.jobStatus}`)}
+        ${budgetReportCard("Cost Variance", budgetCurrency(summary.costVariance), "Actual cost minus estimated cost")}
+        ${budgetReportCard("Profit Variance", budgetCurrency(summary.profitVariance), "Actual profit minus estimated profit")}
+        ${budgetReportCard("Unbilled Add-Ons", budgetCurrency(approvedUnbilled), "Approved change orders not invoiced")}
+      </div>
+    </section>
+    ${renderBudgetVariance(summary)}`;
+  }
+
+  function renderBudgetDocumentsTab(documents) {
+    return `<section class="budget-detail-block">
+      <h4>Documents & Receipts</h4>
+      ${documents.length ? `<div class="budget-document-list">${documents.map((item) => {
+        const title = item.title || item.name || item.file_name || item.fileName || "Budget document";
+        const meta = item.document_type || item.documentType || item.category || item.storage_path || item.storagePath || "Attachment";
+        const created = item.created_at || item.createdAt || item.uploaded_at || item.uploadedAt || "";
+        const url = item.public_url || item.publicUrl || item.signed_url || item.signedUrl || item.file_url || item.fileUrl || "";
+        return `<div class="budget-document-row">
+          <div>
+            <strong>${escapeHtml(title)}</strong>
+            <span>${escapeHtml([meta, created].filter(Boolean).join(" / "))}</span>
+          </div>
+          ${url ? `<a class="inline-action" href="${escapeHtml(url)}" target="_blank" rel="noopener">Open</a>` : `<small>Stored securely</small>`}
+        </div>`;
+      }).join("")}</div>` : emptyState("No budget documents or receipts attached yet.")}
+    </section>`;
+  }
+
+  function renderBudgetHistoryTab(history) {
+    return `<section class="budget-detail-block">
+      <h4>Audit History</h4>
+      ${history.length ? `<div class="budget-history-list">${history.map((item) => {
+        const action = item.action || item.event_type || item.eventType || "Budget update";
+        const actor = item.actor_email || item.actorEmail || item.created_by || item.createdBy || "Dashboard user";
+        const created = item.created_at || item.createdAt || "";
+        const previousValue = item.previous_value || item.previousValue || "";
+        const newValue = item.new_value || item.newValue || "";
+        return `<div class="budget-history-row">
+          <strong>${escapeHtml(action)}</strong>
+          <span>${escapeHtml([actor, created].filter(Boolean).join(" / "))}</span>
+          ${(previousValue || newValue) ? `<small>${escapeHtml([previousValue, newValue].filter(Boolean).join(" to "))}</small>` : ""}
+        </div>`;
+      }).join("")}</div>` : emptyState("No budget audit entries yet.")}
+    </section>`;
+  }
+
+  function renderBudgetTabContent(activeTab, budget, summary, lines) {
+    if (activeTab === "labor") {
+      return renderBudgetLineList("Labor", lines.labor, {
+        title: (item) => item.task,
+        meta: (item) => `${item.role || "Labor"} / ${item.estimatedHours} hr`,
+        estimated: (item) => item.estimatedCost,
+        actual: (item) => item.actualCost
+      });
+    }
+    if (activeTab === "materials") {
+      return renderBudgetLineList("Materials", lines.materials, {
+        title: (item) => item.materialName,
+        meta: (item) => `${item.category} / ${item.quantity || 0} ${item.unit || ""}`.trim(),
+        estimated: (item) => item.estimatedCost,
+        actual: (item) => item.actualCost
+      });
+    }
+    if (activeTab === "equipment") {
+      return renderBudgetLineList("Equipment", lines.equipment, {
+        title: (item) => item.equipmentName,
+        meta: (item) => `${item.usageType} / ${item.estimatedQuantity || 0}`,
+        estimated: (item) => item.estimatedCost,
+        actual: (item) => item.actualCost
+      });
+    }
+    if (activeTab === "costs") {
+      return renderBudgetLineList("Other Costs", lines.costs, {
+        title: (item) => item.description,
+        meta: (item) => item.category,
+        estimated: (item) => item.estimatedCost,
+        actual: (item) => item.actualCost
+      });
+    }
+    if (activeTab === "change_orders") {
+      return renderBudgetLineList("Change Orders", lines.changeOrders, {
+        title: (item) => item.title,
+        meta: (item) => `${item.approvalStatus} / ${item.requestedDate || "No date"}`,
+        estimated: (item) => item.additionalRevenue,
+        actual: (item) => item.additionalCosts
+      });
+    }
+    if (activeTab === "documents") return renderBudgetDocumentsTab(lines.documents);
+    if (activeTab === "history") return renderBudgetHistoryTab(lines.history);
+    if (activeTab === "reports") return renderBudgetReportsTab(budget, summary, lines);
+    return renderBudgetOverviewTab(budget, summary);
+  }
+
+  function renderBudgetDetail() {
+    if (!els.budgetDetail) return;
+    const budget = selectedBudget();
+    if (!budget) {
+      els.budgetDetail.innerHTML = `<div class="panel-heading"><h3>Budget Summary</h3><p>Create a job budget to review revenue, cost, margin, and actuals.</p></div>${emptyState("No budget selected.")}`;
+      return;
+    }
+    if (!state.selectedBudgetId) state.selectedBudgetId = budget.id;
+    const summary = budgetSummary(budget);
+    const lines = budgetLineBundle(budget.id);
+    const activeTab = BUDGET_DETAIL_TABS.some((tab) => tab.key === state.budgetDetailTab) ? state.budgetDetailTab : "overview";
+    els.budgetDetail.innerHTML = `<div class="budget-summary-sticky">
+      <div class="panel-heading">
+        <p class="eyebrow">${escapeHtml(budget.serviceType || "Budget detail")}</p>
+        <h3>${escapeHtml(budget.budgetName)}</h3>
+        <p>${escapeHtml([budget.clientName, budget.propertyName, budget.jobName].filter(Boolean).join(" / ") || "No linked record")}</p>
+      </div>
+      <div class="budget-summary-pills">${budgetBadge(budget.status)}${budgetBadge(summary.health || "Healthy", "health")}</div>
+      <dl class="budget-summary-totals">
+        <div><dt>Revenue</dt><dd>${budgetCurrency(summary.expectedRevenue)}</dd></div>
+        <div><dt>Estimated Cost</dt><dd>${budgetCurrency(summary.totalEstimatedCost)}</dd></div>
+        <div><dt>Estimated Profit</dt><dd>${budgetCurrency(summary.estimatedProfit)}</dd></div>
+        <div><dt>Estimated Margin</dt><dd>${budgetPercent(summary.estimatedMargin)}</dd></div>
+        <div><dt>Actual Profit</dt><dd>${budgetCurrency(summary.actualProfit)}</dd></div>
+        <div><dt>Actual Margin</dt><dd>${budgetPercent(summary.actualMargin)}</dd></div>
+      </dl>
+      <div class="budget-summary-actions">
+        <button type="button" data-action="edit-budget" data-id="${escapeHtml(budget.id)}">${buttonContent("Edit Budget", "edit-budget")}</button>
+        <button type="button" class="secondary-action" data-action="duplicate-budget" data-id="${escapeHtml(budget.id)}">${buttonContent("Duplicate", "duplicate-budget")}</button>
+      </div>
+      ${renderBudgetDetailTabs(activeTab)}
+      <div class="budget-detail-tab-panel">${renderBudgetTabContent(activeTab, budget, summary, lines)}</div>
+    </div>`;
+  }
+
+  function renderBudgetList() {
+    if (!els.budgetList) return;
+    const budgets = filteredBudgets();
+    if (!state.budgetsReady && !isDemoMode()) {
+      els.budgetList.innerHTML = emptyState("Job Budgeter tables are not installed yet. Run supabase/migrations/20260713_job_budgeter.sql, then refresh.");
+      return;
+    }
+    els.budgetList.innerHTML = budgets.length ? budgets.map(renderBudgetRow).join("") : emptyState("No job budgets match this view.");
+  }
+
+  function renderHomeBudgets(data = state.data) {
+    if (!els.homeBudgets) return;
+    const budgets = (data.budgets?.budgets || []).filter((budget) => budget.status !== "Archived");
+    const summaries = budgets.map((budget) => ({ budget, summary: budgetSummary(budget) }));
+    const active = budgets.filter((budget) => !["Completed", "Archived"].includes(budget.status)).length;
+    const atRisk = summaries.filter((item) => ["Watch", "At Risk"].includes(item.summary.health) || item.budget.status === "At Risk").length;
+    const over = summaries.filter((item) => item.summary.health === "Over Budget" || item.budget.status === "Over Budget").length;
+    const upcomingProfit = summaries
+      .filter((item) => !["Completed", "Archived"].includes(item.budget.status))
+      .reduce((total, item) => total + Number(item.summary.estimatedProfit || 0), 0);
+    const missingActuals = summaries.filter((item) => item.budget.status === "Completed" && !Number(item.summary.totalActualCost || 0)).length;
+    els.homeBudgets.innerHTML = `<div class="home-budget-stats">
+      ${budgetMetricCard("Active Budgets", String(active), "Jobs being estimated or tracked")}
+      ${budgetMetricCard("At Risk", String(atRisk), "Below target margin", atRisk ? "warning" : "")}
+      ${budgetMetricCard("Over Budget", String(over), "Needs review", over ? "danger" : "")}
+      ${budgetMetricCard("Upcoming Profit", budgetCurrency(upcomingProfit), "Estimated")}
+      ${budgetMetricCard("Missing Actuals", String(missingActuals), "Completed jobs")}
+    </div>`;
+  }
+
+  function renderBudgets(data = state.data) {
+    if (!els.budgetList && !els.budgetMetrics && !els.budgetDetail) return;
+    populateBudgetControls(data);
+    fillBudgetSettingsForm();
+    if (els.budgetSearch && els.budgetSearch.value !== state.budgetSearch) els.budgetSearch.value = state.budgetSearch;
+    if (els.budgetDateStart && els.budgetDateStart.value !== state.budgetDateStart) els.budgetDateStart.value = state.budgetDateStart;
+    if (els.budgetDateEnd && els.budgetDateEnd.value !== state.budgetDateEnd) els.budgetDateEnd.value = state.budgetDateEnd;
+    if (els.budgetStatus) {
+      els.budgetStatus.textContent = state.budgetsReady || isDemoMode()
+        ? "Budgets use the shared dashboard records, RLS policies, and the Job Budgeter SQL tables."
+        : "Job Budgeter tables are not installed yet. Run supabase/migrations/20260713_job_budgeter.sql.";
+    }
+    const selected = selectedBudget();
+    if (selected && !state.selectedBudgetId) state.selectedBudgetId = selected.id;
+    renderBudgetMetrics();
+    renderBudgetList();
+    renderBudgetDetail();
+    if (els.budgetLineForm?.elements.budget_id && !els.budgetLineForm.elements.budget_id.value) {
+      els.budgetLineForm.elements.budget_id.value = state.selectedBudgetId || "";
+    }
+  }
+
   function renderNotes() {
     if (!els.notes) return;
     const notes = filteredNotes();
@@ -9246,6 +10432,12 @@
     restored.documentation = imported.documentation && typeof imported.documentation === "object"
       ? normalizeDocumentationBundle(imported.documentation)
       : fallback.documentation;
+    restored.importExport = imported.importExport && typeof imported.importExport === "object"
+      ? imported.importExport
+      : fallback.importExport;
+    restored.budgets = imported.budgets && typeof imported.budgets === "object"
+      ? normalizeBudgetBundle(imported.budgets)
+      : fallback.budgets;
     state.data = restored;
     await render();
     setDashboardState("Backup imported into demo mode.");
@@ -10605,11 +11797,13 @@
     renderUpcoming(data);
     renderHomeReminders(data);
     renderHomeNotes(data);
+    renderHomeBudgets(data);
     renderTodayRouteSnapshot(data);
     renderQuoteTable(data);
     renderPipeline(data);
     renderDocuments(data);
     renderDocumentation(data);
+    renderBudgets(data);
     renderContacts(data);
     renderOutreach(data);
     renderEquipment(data);
@@ -11025,6 +12219,28 @@
       if (!element) return;
       element.addEventListener("change", async () => {
         state[key] = element.value;
+        await render();
+      });
+    });
+
+    if (els.budgetSearch) {
+      els.budgetSearch.addEventListener("input", async () => {
+        state.budgetSearch = els.budgetSearch.value;
+        await render();
+      });
+    }
+
+    [
+      [els.budgetStatusFilter, "budgetStatusFilter"],
+      [els.budgetJobStatusFilter, "budgetJobStatusFilter"],
+      [els.budgetClientFilter, "budgetClientFilter"],
+      [els.budgetServiceFilter, "budgetServiceFilter"],
+      [els.budgetDateStart, "budgetDateStart"],
+      [els.budgetDateEnd, "budgetDateEnd"]
+    ].forEach(([element, key]) => {
+      if (!element) return;
+      element.addEventListener("change", async () => {
+        state[key] = element.value || (key.includes("Filter") ? "All" : "");
         await render();
       });
     });
@@ -11540,6 +12756,137 @@
         } catch (error) {
           setDashboardState(error.message || "Unable to delete form template.", "error");
         }
+        return;
+      }
+
+      if (action === "go-budgets") {
+        setActiveSection("budgets");
+        history.replaceState(null, "", "#budgets");
+        await render();
+        return;
+      }
+
+      if (action === "budget-detail-tab") {
+        const tab = target.dataset.tab || "overview";
+        if (BUDGET_DETAIL_TABS.some((item) => item.key === tab)) {
+          state.budgetDetailTab = tab;
+          await render();
+        }
+        return;
+      }
+
+      if (action === "refresh-budgets") {
+        try {
+          setDashboardState("Refreshing job budgets...");
+          state.data.budgets = await loadBudgets();
+          await render();
+          setDashboardState(state.budgetsReady || isDemoMode() ? "Job budgets refreshed." : "Job Budgeter tables are not installed yet.");
+        } catch (error) {
+          setDashboardState(error.message || "Unable to refresh job budgets.", "error");
+        }
+        return;
+      }
+
+      if (action === "new-budget") {
+        resetBudgetForm();
+        state.budgetDetailTab = "overview";
+        qs("[data-budget-form]")?.scrollIntoView({ behavior: "smooth", block: "start" });
+        setActiveSection("budgets");
+        history.replaceState(null, "", "#budgets");
+        return;
+      }
+
+      if (action === "export-budgets-csv") {
+        const rows = filteredBudgets().map((budget) => {
+          const summary = budgetSummary(budget);
+          return [
+            budget.budgetName,
+            budget.clientName,
+            budget.propertyName,
+            budget.proposedStartDate,
+            budget.serviceType,
+            summary.expectedRevenue,
+            summary.totalEstimatedCost,
+            summary.estimatedProfit,
+            summary.estimatedMargin,
+            summary.totalActualCost,
+            summary.actualProfit,
+            summary.actualMargin,
+            budget.status,
+            budget.jobStatus,
+            budget.updatedAt
+          ];
+        });
+        downloadCsv(`urban-yards-job-budgets-${todayKey()}.csv`, [
+          ["Job", "Client", "Property", "Scheduled Date", "Service Type", "Quoted Revenue", "Estimated Cost", "Estimated Profit", "Estimated Margin", "Actual Cost", "Actual Profit", "Actual Margin", "Budget Status", "Job Status", "Last Updated"],
+          ...rows
+        ]);
+        return;
+      }
+
+      if (action === "open-budget" || action === "edit-budget") {
+        const budget = activeBudgetBundle().budgets.find((item) => item.id === id);
+        if (!budget) return;
+        state.selectedBudgetId = budget.id;
+        state.budgetDetailTab = action === "edit-budget" ? state.budgetDetailTab : "overview";
+        await render();
+        fillBudgetForm(budget);
+        if (action === "edit-budget") qs("[data-budget-form]")?.scrollIntoView({ behavior: "smooth", block: "start" });
+        return;
+      }
+
+      if (action === "duplicate-budget") {
+        try {
+          setDashboardState("Duplicating budget...");
+          const duplicate = await duplicateBudget(id);
+          state.selectedBudgetId = duplicate?.id || state.selectedBudgetId;
+          state.data.budgets = await loadBudgets();
+          await render();
+          setDashboardState("Budget duplicated.");
+        } catch (error) {
+          setDashboardState(error.message || "Unable to duplicate budget.", "error");
+        }
+        return;
+      }
+
+      if (action === "archive-budget") {
+        if (!window.confirm("Archive this job budget? It can stay in reporting, but it will be removed from active views.")) return;
+        try {
+          setDashboardState("Archiving budget...");
+          await archiveBudget(id);
+          state.selectedBudgetId = "";
+          state.data.budgets = await loadBudgets();
+          await render();
+          setDashboardState("Budget archived.");
+        } catch (error) {
+          setDashboardState(error.message || "Unable to archive budget.", "error");
+        }
+        return;
+      }
+
+      if (action === "reset-budget-form") {
+        resetBudgetForm();
+        return;
+      }
+
+      if (action === "view-budget-job") {
+        setActiveSection("calendar");
+        history.replaceState(null, "", "#calendar");
+        openJobDrawer(id);
+        return;
+      }
+
+      if (action === "view-budget-quote") {
+        setActiveSection("overview");
+        history.replaceState(null, "", "#overview");
+        openSubmissionDrawer(id);
+        return;
+      }
+
+      if (action === "view-budget-invoice") {
+        setActiveSection("money");
+        history.replaceState(null, "", "#money");
+        openDocumentDrawer(id);
         return;
       }
 
@@ -12951,7 +14298,45 @@
     });
 
   els.appView.addEventListener("submit", async (event) => {
-      if (event.target.matches("[data-users-invite-form]")) {
+      if (event.target.matches("[data-budget-form]")) {
+        event.preventDefault();
+        try {
+          setDashboardState("Saving job budget...");
+          const saved = await saveBudgetFromForm(event.target);
+          state.data.budgets = await loadBudgets();
+          const fresh = state.data.budgets.budgets.find((budget) => budget.id === saved?.id) || saved;
+          await render();
+          fillBudgetForm(fresh);
+          setDashboardState("Job budget saved.");
+        } catch (error) {
+          setDashboardState(error.message || "Unable to save job budget.", "error");
+        }
+      } else if (event.target.matches("[data-budget-line-form]")) {
+        event.preventDefault();
+        try {
+          setDashboardState("Adding budget line item...");
+          const item = await insertBudgetLineFromForm(event.target);
+          state.selectedBudgetId = item?.budgetId || state.selectedBudgetId;
+          state.data.budgets = await loadBudgets();
+          event.target.reset();
+          if (event.target.elements.budget_id) event.target.elements.budget_id.value = state.selectedBudgetId || "";
+          await render();
+          setDashboardState("Budget line item added.");
+        } catch (error) {
+          setDashboardState(error.message || "Unable to add budget line item.", "error");
+        }
+      } else if (event.target.matches("[data-budget-settings-form]")) {
+        event.preventDefault();
+        try {
+          setDashboardState("Saving budget settings...");
+          const settings = await saveBudgetSettingsFromForm(event.target);
+          state.data.budgets.settings = settings;
+          await render();
+          setDashboardState("Budget settings saved.");
+        } catch (error) {
+          setDashboardState(error.message || "Unable to save budget settings.", "error");
+        }
+      } else if (event.target.matches("[data-users-invite-form]")) {
         event.preventDefault();
         const formData = new FormData(event.target);
         try {
@@ -13666,6 +15051,27 @@
     els.documentationTypeFilter = qs("[data-documentation-type-filter]");
     els.documentationStatusFilter = qs("[data-documentation-status-filter]");
     els.documentationCategoryFilter = qs("[data-documentation-category-filter]");
+    els.homeBudgets = qs("[data-home-budgets]");
+    els.budgetStatus = qs("[data-budget-status]");
+    els.budgetMetrics = qs("[data-budget-metrics]");
+    els.budgetSearch = qs("[data-budget-search]");
+    els.budgetStatusFilter = qs("[data-budget-status-filter]");
+    els.budgetJobStatusFilter = qs("[data-budget-job-status-filter]");
+    els.budgetClientFilter = qs("[data-budget-client-filter]");
+    els.budgetServiceFilter = qs("[data-budget-service-filter]");
+    els.budgetDateStart = qs("[data-budget-date-start]");
+    els.budgetDateEnd = qs("[data-budget-date-end]");
+    els.budgetList = qs("[data-budget-list]");
+    els.budgetDetail = qs("[data-budget-detail]");
+    els.budgetForm = qs("[data-budget-form]");
+    els.budgetJobOptions = qs("[data-budget-job-options]");
+    els.budgetQuoteOptions = qs("[data-budget-quote-options]");
+    els.budgetInvoiceOptions = qs("[data-budget-invoice-options]");
+    els.budgetClientOptions = qs("[data-budget-client-options]");
+    els.budgetStatusOptions = qs("[data-budget-status-options]");
+    els.budgetLineForm = qs("[data-budget-line-form]");
+    els.budgetLineBudgetOptions = qs("[data-budget-line-budget-options]");
+    els.budgetSettingsForm = qs("[data-budget-settings-form]");
     els.calendarFilter = qs("[data-calendar-filter]");
     els.calendarRangeControls = qs("[data-calendar-range-controls]");
     els.calendarRangeLabel = qs("[data-calendar-range-label]");
@@ -13753,7 +15159,9 @@
     cacheElements();
     bindEvents();
     const hashSection = window.location.hash.replace("#", "");
+    const pathSection = dashboardSectionFromPath();
     if (hashSection) state.activeSection = sectionAliases[hashSection] || hashSection;
+    else if (pathSection) state.activeSection = pathSection;
 
     if (isDemoMode()) {
       clearSession();

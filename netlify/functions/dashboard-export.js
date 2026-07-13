@@ -29,6 +29,18 @@ const EXPORT_TABLES = new Set([
   "call_logs",
   "sales_documents",
   "invoices",
+  "budget_settings",
+  "job_budgets",
+  "job_budget_labor",
+  "job_budget_materials",
+  "budget_material_catalog",
+  "job_budget_equipment",
+  "job_budget_costs",
+  "job_budget_change_orders",
+  "job_budget_documents",
+  "job_budget_templates",
+  "job_budget_template_items",
+  "job_budget_history",
   "settings",
   "feature_flags"
 ]);

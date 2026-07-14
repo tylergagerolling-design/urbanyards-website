@@ -292,7 +292,9 @@
     budgetsReady: false,
     budgetsError: "",
     connectedOpsReady: false,
+    connectedOpsError: "",
     importExportReady: false,
+    importExportError: "",
     leadActivityReady: true,
     userProfilesReady: true,
     auditLogsReady: true,
@@ -376,6 +378,8 @@
         fallback: ""
       }
     },
+    moduleErrors: [],
+    lastRefreshAt: "",
     loading: false,
     error: ""
   };
@@ -391,7 +395,7 @@
     quotes: "documents",
     pipeline: "documents",
     schedule: "calendar",
-    operations: "overview",
+    operations: "connected-operations",
     "connected-ops": "connected-operations",
     "connected-operations": "connected-operations",
     recurring: "connected-operations",
@@ -558,6 +562,49 @@
 
   function loadingState(message) {
     return `<div class="loading-state">${escapeHtml(message)}</div>`;
+  }
+
+  function authErrorMessage(error) {
+    return /sign in|jwt|token|auth|unauthorized|permission|401|403/i.test(String(error?.message || ""));
+  }
+
+  function safeModuleMessage(error) {
+    if (authErrorMessage(error)) return "Authentication or permissions need attention.";
+    if (/does not exist|schema cache|relation|table/i.test(String(error?.message || ""))) return "Required table may be unavailable.";
+    if (/network|failed to fetch|timeout|abort/i.test(String(error?.message || ""))) return "Network or backend request failed.";
+    return "Module could not load.";
+  }
+
+  function recordModuleError(name, error) {
+    const message = safeModuleMessage(error);
+    state.moduleErrors.push({
+      name,
+      message,
+      detail: error?.message || String(error || ""),
+      occurredAt: new Date().toISOString()
+    });
+    if (config.appEnv !== "production") {
+      console.warn(`[dashboard:${name}]`, error);
+    }
+  }
+
+  async function loadModule(name, loader, fallback) {
+    try {
+      const value = await loader();
+      return value;
+    } catch (error) {
+      recordModuleError(name, error);
+      return typeof fallback === "function" ? fallback() : fallback;
+    }
+  }
+
+  function safeRender(name, renderer) {
+    try {
+      renderer();
+    } catch (error) {
+      recordModuleError(`render:${name}`, error);
+      setDashboardState(`${name} could not render. Other dashboard sections are still available.`, "error");
+    }
   }
 
   function dashboardCanCreate() {
@@ -1118,6 +1165,78 @@
     const shouldShow = env && !["production", "prod", "main"].includes(env);
     els.environmentIndicator.hidden = !shouldShow;
     els.environmentIndicator.textContent = shouldShow ? env : "";
+  }
+
+  function dashboardHealthRows() {
+    const session = getSession();
+    const warnings = dashboardHealthWarnings();
+    return [
+      ["Environment", config.appEnv || "unknown"],
+      ["Build", config.buildVersion || "not set"],
+      ["Supabase config", isSupabaseConfigured() ? "present" : "missing"],
+      ["Auth session", session?.accessToken ? "present" : "not signed in"],
+      ["Current role", currentSessionRole()],
+      ["Last refresh", state.lastRefreshAt ? formatDateTime(state.lastRefreshAt) : "not refreshed"],
+      ["Module warnings", String(warnings.length)]
+    ];
+  }
+
+  function dashboardHealthWarnings() {
+    const warnings = [...state.moduleErrors];
+    if (!state.groundskeeperAiReady && state.groundskeeperAiError) {
+      warnings.push({ name: "Groundskeeper AI", message: state.groundskeeperAiError, detail: state.groundskeeperAiError });
+    }
+    if (!state.documentationReady && state.documentationError) {
+      warnings.push({ name: "Documentation", message: state.documentationError, detail: state.documentationError });
+    }
+    if (!state.budgetsReady && state.budgetsError) {
+      warnings.push({ name: "Job Budgeter", message: state.budgetsError, detail: state.budgetsError });
+    }
+    if (!state.connectedOpsReady && state.connectedOpsError) {
+      warnings.push({ name: "Connected Operations", message: state.connectedOpsError, detail: state.connectedOpsError });
+    }
+    if (!state.importExportReady) {
+      warnings.push({ name: "Import & Export", message: state.importExportError || "Import/export center is not ready.", detail: state.importExportError || "" });
+    }
+    return warnings;
+  }
+
+  function diagnosticSummaryText() {
+    const rows = dashboardHealthRows().map(([label, value]) => `${label}: ${value}`);
+    const warnings = dashboardHealthWarnings().map((item) => (
+      `- ${item.name}: ${item.message}${item.detail ? ` (${item.detail})` : ""}`
+    ));
+    return [
+      "Urban Yards Dashboard Diagnostics",
+      `Generated: ${new Date().toISOString()}`,
+      "",
+      ...rows,
+      "",
+      "Module warnings:",
+      warnings.length ? warnings.join("\n") : "None"
+    ].join("\n");
+  }
+
+  function renderDashboardHealth() {
+    if (!els.dashboardHealth) return;
+    const rows = dashboardHealthRows();
+    const warnings = dashboardHealthWarnings().slice(0, 8);
+    els.dashboardHealth.innerHTML = `
+      <div class="dashboard-health-grid">
+        ${rows.map(([label, value]) => `
+          <div class="dashboard-health-item">
+            <span>${escapeHtml(label)}</span>
+            <strong>${escapeHtml(value || "not set")}</strong>
+          </div>
+        `).join("")}
+      </div>
+      ${warnings.length ? `
+        <div class="dashboard-health-warning">
+          <strong>${escapeHtml(warnings.length === 1 ? "1 module warning" : `${warnings.length} module warnings`)}</strong>
+          ${warnings.map((item) => `<small>${escapeHtml(item.name)}: ${escapeHtml(item.message)}</small>`).join("")}
+        </div>
+      ` : `<div class="empty-state">No module warnings from the latest refresh.</div>`}
+    `;
   }
 
   function profileText(value) {
@@ -1745,6 +1864,7 @@
         importExportRequest("google-status").catch((error) => ({ configured: false, connections: [], error: error.message }))
       ]);
       state.importExportReady = true;
+      state.importExportError = "";
       state.importExportHistoryLoadedAt = new Date().toISOString();
       const modules = Array.isArray(registry.modules) ? registry.modules : [];
       if (!modules.some((module) => module.key === state.importExportModule) && modules[0]) {
@@ -1768,12 +1888,13 @@
       };
     } catch (error) {
       state.importExportReady = false;
+      state.importExportError = error.message || "Import & Export Center could not be loaded.";
       return {
         modules: [],
         limits: {},
         history: { imports: [], exports: [], syncs: [], backups: [] },
         google: { configured: false, connections: [] },
-        fallback: error.message || "Import & Export Center could not be loaded."
+        fallback: state.importExportError
       };
     }
   }
@@ -1839,6 +1960,19 @@
       : new Date(value);
     if (Number.isNaN(date.getTime())) return value;
     return date.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
+  }
+
+  function formatDateTime(value) {
+    if (!value) return "";
+    const date = new Date(value);
+    if (Number.isNaN(date.getTime())) return String(value);
+    return date.toLocaleString("en-US", {
+      month: "short",
+      day: "numeric",
+      year: "numeric",
+      hour: "numeric",
+      minute: "2-digit"
+    });
   }
 
   function dateKey(value) {
@@ -2883,6 +3017,21 @@
       automationRules: [],
       automationRuns: [],
       commandHistory: []
+    };
+  }
+
+  function emptyGroundskeeperAiBundle() {
+    return {
+      settings: [],
+      knowledge: [],
+      faqs: [],
+      rules: [],
+      savedAnswers: [],
+      trainingRules: [],
+      versions: [],
+      logs: [],
+      feedback: [],
+      fallback: {}
     };
   }
 
@@ -4081,7 +4230,11 @@
     }
 
     if (Date.now() > Number(session.expiresAt || 0) - 60000) {
-      return refreshSession(session);
+      const refreshed = await refreshSession(session);
+      if (!refreshed || !refreshed.accessToken) {
+        throw new Error("Please sign in again.");
+      }
+      return refreshed;
     }
 
     const payload = await supabaseAuthRequest("/auth/v1/user", {
@@ -4140,29 +4293,54 @@
       return demoDashboardData();
     }
 
-    const [submissions, contacts, jobs, notes, reminders, documents, operations, outreachProspects, outreachCompanies, outreachProperties, routeStops, equipmentItems, equipmentMaintenance, hardwareGuide, groundskeeperAi, documentation, budgets, connectedOps, importExport, leadActivity, userProfiles, auditLogs] = await Promise.all([
-      supabaseRestRequest("quote_submissions?select=*&order=created_at.desc", { method: "GET" }),
-      supabaseRestRequest("contacts?select=*&order=created_at.desc", { method: "GET" }),
-      supabaseRestRequest("scheduled_jobs?select=*&order=visit_date.asc", { method: "GET" }),
-      supabaseRestRequest("job_notes?select=*&order=created_at.desc", { method: "GET" }),
-      supabaseRestRequest("follow_up_reminders?select=*&order=due_date.asc", { method: "GET" }),
-      loadSalesDocuments(),
-      loadOperationsRecords(),
-      loadOutreachProspects(),
-      loadOutreachCompanies(),
-      loadOutreachProperties(),
-      loadRouteStops(),
-      loadEquipmentItems(),
-      loadEquipmentMaintenance(),
-      loadHardwareGuide(),
-      loadGroundskeeperAi(),
-      loadDocumentation(),
-      loadBudgets(),
-      loadConnectedOperations(),
-      loadImportExportCenter(),
-      loadLeadActivity(),
-      loadUserProfiles(),
-      loadAuditLogs()
+    state.moduleErrors = [];
+
+    const [
+      submissions,
+      contacts,
+      jobs,
+      notes,
+      reminders,
+      documents,
+      operations,
+      outreachProspects,
+      outreachCompanies,
+      outreachProperties,
+      routeStops,
+      equipmentItems,
+      equipmentMaintenance,
+      hardwareGuide,
+      groundskeeperAi,
+      documentation,
+      budgets,
+      connectedOps,
+      importExport,
+      leadActivity,
+      userProfiles,
+      auditLogs
+    ] = await Promise.all([
+      loadModule("quote submissions", () => supabaseRestRequest("quote_submissions?select=*&order=created_at.desc", { method: "GET" }), []),
+      loadModule("contacts", () => supabaseRestRequest("contacts?select=*&order=created_at.desc", { method: "GET" }), []),
+      loadModule("scheduled jobs", () => supabaseRestRequest("scheduled_jobs?select=*&order=visit_date.asc", { method: "GET" }), []),
+      loadModule("job notes", () => supabaseRestRequest("job_notes?select=*&order=created_at.desc", { method: "GET" }), []),
+      loadModule("follow-up reminders", () => supabaseRestRequest("follow_up_reminders?select=*&order=due_date.asc", { method: "GET" }), []),
+      loadModule("documents", loadSalesDocuments, []),
+      loadModule("operations", loadOperationsRecords, []),
+      loadModule("outreach prospects", loadOutreachProspects, []),
+      loadModule("outreach companies", loadOutreachCompanies, []),
+      loadModule("outreach properties", loadOutreachProperties, []),
+      loadModule("route planner", loadRouteStops, []),
+      loadModule("equipment", loadEquipmentItems, []),
+      loadModule("equipment maintenance", loadEquipmentMaintenance, []),
+      loadModule("hardware guide", loadHardwareGuide, []),
+      loadModule("Groundskeeper AI", loadGroundskeeperAi, emptyGroundskeeperAiBundle),
+      loadModule("documentation", loadDocumentation, () => normalizeDocumentationBundle()),
+      loadModule("budgets", loadBudgets, emptyBudgetBundle),
+      loadModule("connected operations", loadConnectedOperations, emptyConnectedOpsBundle),
+      loadModule("import/export", loadImportExportCenter, () => ({ modules: [], limits: {}, history: { imports: [], exports: [], syncs: [], backups: [] }, google: { configured: false, connections: [] }, fallback: "Import & Export Center could not be loaded." })),
+      loadModule("call history", loadLeadActivity, []),
+      loadModule("user profiles", loadUserProfiles, []),
+      loadModule("audit logs", loadAuditLogs, [])
     ]);
 
     return {
@@ -4350,6 +4528,7 @@
         supabaseRestRequest("command_usage_history?select=*&order=created_at.desc&limit=200", { method: "GET" })
       ]);
       state.connectedOpsReady = true;
+      state.connectedOpsError = "";
       return normalizeConnectedOpsBundle({
         recurringServices,
         recurringVisits,
@@ -4371,6 +4550,7 @@
       });
     } catch (error) {
       state.connectedOpsReady = false;
+      state.connectedOpsError = error.message || "Connected Operations could not load.";
       return emptyConnectedOpsBundle();
     }
   }
@@ -6748,6 +6928,10 @@
   }
 
   function setSession(session) {
+    if (!session || !session.accessToken) {
+      clearSession();
+      return;
+    }
     sessionStorage.setItem(SESSION_KEY, JSON.stringify(session));
   }
 
@@ -6806,6 +6990,9 @@
     document.body.classList.add("is-login-screen");
     els.loginView.hidden = false;
     els.appView.hidden = true;
+    if (!isSupabaseConfigured()) {
+      setLoginStatus("Dashboard configuration is missing. Verify Netlify VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY, then redeploy.", "error");
+    }
   }
 
   async function showApp() {
@@ -12746,42 +12933,43 @@
 
   async function render() {
     const data = state.data;
-    renderNotifications(data);
-    populatePropertyFilter(data);
-    renderMetrics(data);
-    renderDashboardAlerts(data);
-    renderOverdueJobAlerts(data);
-    renderTodayActions(data);
-    renderSubmissions(data);
-    renderUpcoming(data);
-    renderHomeReminders(data);
-    renderHomeNotes(data);
-    renderHomeBudgets(data);
-    renderTodayRouteSnapshot(data);
-    renderQuoteTable(data);
-    renderPipeline(data);
-    renderDocuments(data);
-    renderDocumentation(data);
-    renderBudgets(data);
-    renderConnectedOperations(data);
-    renderContacts(data);
-    renderOutreach(data);
-    renderEquipment(data);
-    renderJobs(data);
-    renderNotes();
-    renderReminders(data);
-    renderCalendar(data);
-    renderOperations(data);
-    renderRoutePlanner(data);
-    renderGroundskeeperAi(data);
-    renderImportExport(data);
-    renderUsersAccess(data);
-    renderActivityLog(data);
-    renderCurrentProfileAvatar(data);
-    renderEnvironmentIndicator();
-    renderGlobalAddMenu();
-    renderGlobalSearchPanel();
-    bindAvatarFallbacks();
+    safeRender("notifications", () => renderNotifications(data));
+    safeRender("property filters", () => populatePropertyFilter(data));
+    safeRender("metrics", () => renderMetrics(data));
+    safeRender("dashboard alerts", () => renderDashboardAlerts(data));
+    safeRender("overdue jobs", () => renderOverdueJobAlerts(data));
+    safeRender("today actions", () => renderTodayActions(data));
+    safeRender("submissions", () => renderSubmissions(data));
+    safeRender("upcoming", () => renderUpcoming(data));
+    safeRender("home reminders", () => renderHomeReminders(data));
+    safeRender("home notes", () => renderHomeNotes(data));
+    safeRender("home budgets", () => renderHomeBudgets(data));
+    safeRender("route snapshot", () => renderTodayRouteSnapshot(data));
+    safeRender("quote table", () => renderQuoteTable(data));
+    safeRender("pipeline", () => renderPipeline(data));
+    safeRender("documents", () => renderDocuments(data));
+    safeRender("documentation", () => renderDocumentation(data));
+    safeRender("budgets", () => renderBudgets(data));
+    safeRender("connected operations", () => renderConnectedOperations(data));
+    safeRender("contacts", () => renderContacts(data));
+    safeRender("outreach", () => renderOutreach(data));
+    safeRender("equipment", () => renderEquipment(data));
+    safeRender("jobs", () => renderJobs(data));
+    safeRender("notes", () => renderNotes());
+    safeRender("reminders", () => renderReminders(data));
+    safeRender("calendar", () => renderCalendar(data));
+    safeRender("operations", () => renderOperations(data));
+    safeRender("route planner", () => renderRoutePlanner(data));
+    safeRender("Groundskeeper AI", () => renderGroundskeeperAi(data));
+    safeRender("import/export", () => renderImportExport(data));
+    safeRender("users access", () => renderUsersAccess(data));
+    safeRender("activity log", () => renderActivityLog(data));
+    safeRender("profile avatar", () => renderCurrentProfileAvatar(data));
+    safeRender("environment indicator", () => renderEnvironmentIndicator());
+    safeRender("dashboard health", () => renderDashboardHealth());
+    safeRender("global add menu", () => renderGlobalAddMenu());
+    safeRender("global search", () => renderGlobalSearchPanel());
+    safeRender("avatar fallbacks", () => bindAvatarFallbacks());
     if (els.todayChip) els.todayChip.textContent = new Date().toLocaleDateString("en-US", { weekday: "long", month: "short", day: "numeric" });
     setActiveSection(state.activeSection);
   }
@@ -12790,25 +12978,33 @@
     state.loading = true;
     state.error = "";
     setDashboardState("Loading dashboard records...");
-    els.metrics.innerHTML = [
+    if (els.metrics) els.metrics.innerHTML = [
       ["Today's Jobs", "..."],
       ["Active Properties", "..."],
       ["Upcoming", "..."]
     ].map(([label, value]) => `<article class="metric-card"><strong>${value}</strong><span>${label}</span></article>`).join("");
-    els.submissions.innerHTML = loadingState("Loading submissions...");
-    els.upcoming.innerHTML = loadingState("Loading visits...");
+    if (els.submissions) els.submissions.innerHTML = loadingState("Loading submissions...");
+    if (els.upcoming) els.upcoming.innerHTML = loadingState("Loading visits...");
 
     try {
       state.data = await loadDashboardData();
       state.loading = false;
+      state.lastRefreshAt = new Date().toISOString();
       await render();
-      setDashboardState(isDemoMode() ? "Demo mode: sample records only. Changes stay in this browser session and do not touch Supabase, Square, or real client data." : "");
+      const warnings = dashboardHealthWarnings();
+      if (isDemoMode()) {
+        setDashboardState("Demo mode: sample records only. Changes stay in this browser session and do not touch Supabase, Square, or real client data.");
+      } else if (warnings.length) {
+        setDashboardState(`${warnings.length} dashboard module${warnings.length === 1 ? "" : "s"} loaded with warnings. Open Tools for diagnostics.`, "warning");
+      } else {
+        setDashboardState("");
+      }
     } catch (error) {
       state.loading = false;
       state.error = error.message || "Unable to load dashboard records.";
       setDashboardState(state.error, "error");
-      els.submissions.innerHTML = emptyState("Dashboard records could not be loaded.");
-      els.upcoming.innerHTML = emptyState("Scheduled visits could not be loaded.");
+      if (els.submissions) els.submissions.innerHTML = emptyState("Dashboard records could not be loaded.");
+      if (els.upcoming) els.upcoming.innerHTML = emptyState("Scheduled visits could not be loaded.");
     }
   }
 
@@ -13507,6 +13703,16 @@
 
       if (target.dataset.export) {
         exportData(target.dataset.export);
+        return;
+      }
+
+      if (action === "copy-dashboard-diagnostics") {
+        try {
+          await navigator.clipboard.writeText(diagnosticSummaryText());
+          setDashboardState("Dashboard diagnostic summary copied.");
+        } catch (error) {
+          setDashboardState("Unable to copy diagnostics automatically. Browser clipboard permission may be blocked.", "error");
+        }
         return;
       }
 
@@ -16115,6 +16321,7 @@
     els.usersAccessStatus = qs("[data-users-access-status]");
     els.usersAccessList = qs("[data-users-access-list]");
     els.activityLogList = qs("[data-activity-log-list]");
+    els.dashboardHealth = qs("[data-dashboard-health]");
     els.groundskeeperAiStatus = qs("[data-groundskeeper-ai-status]");
     els.aiNav = qs("[data-ai-nav]");
     els.aiMain = qs("[data-ai-main]");

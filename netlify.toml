@@ -1,5 +1,5 @@
 [build]
-  command = "node scripts/build-dashboard-config.js"
+  command = "node scripts/build-dashboard-config.js && npm run check && npm test"
   publish = "."
   functions = "netlify/functions"
 
@@ -52,14 +52,64 @@
   status = 200
 
 [[redirects]]
+  from = "/api/retention-cleanup"
+  to = "/.netlify/functions/retention-cleanup"
+  status = 404
+
+[[redirects]]
   from = "/api/*"
   to = "/.netlify/functions/:splat"
   status = 200
 
 [[redirects]]
-  from = "/api/retention-cleanup"
-  to = "/.netlify/functions/retention-cleanup"
-  status = 404
+  from = "/operations"
+  to = "/dashboard.html"
+  status = 200
+
+[[redirects]]
+  from = "/operations/*"
+  to = "/dashboard.html"
+  status = 200
+
+[[redirects]]
+  from = "/recurring-services"
+  to = "/dashboard.html"
+  status = 200
+
+[[redirects]]
+  from = "/recurring-services/*"
+  to = "/dashboard.html"
+  status = 200
+
+[[redirects]]
+  from = "/approvals"
+  to = "/dashboard.html"
+  status = 200
+
+[[redirects]]
+  from = "/reports"
+  to = "/dashboard.html"
+  status = 200
+
+[[redirects]]
+  from = "/field"
+  to = "/dashboard.html"
+  status = 200
+
+[[redirects]]
+  from = "/budgets"
+  to = "/dashboard.html"
+  status = 200
+
+[[redirects]]
+  from = "/budgets/*"
+  to = "/dashboard.html"
+  status = 200
+
+[[redirects]]
+  from = "/jobs/*/budget"
+  to = "/dashboard.html"
+  status = 200
 
 [[headers]]
   for = "/*"
@@ -94,3 +144,18 @@
   for = "/*.js"
   [headers.values]
     Cache-Control = "public, max-age=604800"
+
+[[headers]]
+  for = "/dashboard.html"
+  [headers.values]
+    Cache-Control = "no-cache"
+
+[[headers]]
+  for = "/dashboard"
+  [headers.values]
+    Cache-Control = "no-cache"
+
+[[headers]]
+  for = "/dashboard-config.js"
+  [headers.values]
+    Cache-Control = "no-store, max-age=0"

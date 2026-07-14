@@ -145,12 +145,67 @@ html[data-reduced-motion="true"] *::after {
 }
 
 .users-access-panel,
-.activity-log-panel {
+.activity-log-panel,
+.dashboard-health-panel {
   display: grid;
   gap: 14px;
   margin-top: 18px;
   padding-top: 18px;
   border-top: 1px solid rgba(18, 63, 49, 0.1);
+}
+
+.dashboard-health-list {
+  display: grid;
+  gap: 10px;
+}
+
+.dashboard-health-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 10px;
+}
+
+.dashboard-health-item {
+  display: grid;
+  gap: 4px;
+  min-height: 72px;
+  padding: 12px;
+  border: 1px solid rgba(18, 63, 49, 0.1);
+  border-radius: 16px;
+  background: rgba(255, 255, 250, 0.78);
+}
+
+.dashboard-health-item span {
+  color: var(--uy-muted);
+  font-size: 0.75rem;
+  font-weight: 850;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+}
+
+.dashboard-health-item strong {
+  color: var(--uy-green);
+  font-size: 0.94rem;
+  overflow-wrap: anywhere;
+}
+
+.dashboard-health-warning {
+  display: grid;
+  gap: 6px;
+  padding: 12px;
+  border: 1px solid rgba(196, 128, 32, 0.24);
+  border-radius: 16px;
+  background: rgba(255, 246, 226, 0.72);
+  color: #5d4219;
+}
+
+.dashboard-health-warning strong {
+  color: #5d4219;
+}
+
+.dashboard-health-warning small {
+  color: rgba(93, 66, 25, 0.72);
+  overflow-wrap: anywhere;
 }
 
 .users-access-status {
@@ -12202,7 +12257,8 @@ body:not(.is-login-screen) .uy-standard-page :is(
   .documentation-card,
   .import-export-card,
   .users-access-panel,
-  .activity-log-panel
+  .activity-log-panel,
+  .dashboard-health-panel
 ) {
   min-width: 0 !important;
   max-width: 100% !important;
@@ -12229,7 +12285,8 @@ body:not(.is-login-screen) .uy-standard-page :is(
   .documentation-card,
   .import-export-card,
   .users-access-panel,
-  .activity-log-panel
+  .activity-log-panel,
+  .dashboard-health-panel
 ) {
   padding: var(--uy-card-pad) !important;
 }

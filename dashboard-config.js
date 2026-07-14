@@ -4,5 +4,7 @@ window.URBAN_YARDS_DASHBOARD_CONFIG = {
   "supabaseUrl": "",
   "supabaseAnonKey": "",
   "siteUrl": "",
-  "ownerEmail": "team@urbanyards.us"
+  "ownerEmail": "team@urbanyards.us",
+  "appEnv": "local",
+  "buildVersion": "local"
 };

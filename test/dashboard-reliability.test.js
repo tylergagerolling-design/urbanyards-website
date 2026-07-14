@@ -93,6 +93,7 @@ test("dashboard route aliases and new reliability diagnostics are wired", () => 
 
 test("optional dashboard module migrations include tables queried by the UI", () => {
   const docsSql = read("supabase/migrations/20260710_documentation_forms.sql");
+  const ticketSql = read("supabase/migrations/20260714_job_ticket_foundation.sql");
 
   [
     "documentation_templates",
@@ -102,4 +103,15 @@ test("optional dashboard module migrations include tables queried by the UI", ()
     "documentation_attachments",
     "documentation_audit_logs"
   ].forEach((table) => assert.match(docsSql, new RegExp(`public\\.${table}\\b`)));
+
+  [
+    "job_tickets",
+    "job_ticket_events",
+    "job_ticket_links"
+  ].forEach((table) => assert.match(ticketSql, new RegExp(`public\\.${table}\\b`)));
+
+  assert.match(ticketSql, /alter table public\.job_tickets enable row level security/);
+  assert.match(ticketSql, /needs_budget/);
+  assert.match(ticketSql, /budget_in_progress/);
+  assert.doesNotMatch(ticketSql, /\b(drop table|truncate table|delete from)\b/i);
 });

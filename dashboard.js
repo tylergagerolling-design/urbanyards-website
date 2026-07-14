@@ -8543,7 +8543,7 @@
       </div>
       <div class="ticket-card-actions">
         <span>${escapeHtml(ticket.nextAction)}</span>
-        <button type="button" data-action="${escapeHtml(ticket.action)}" data-id="${escapeHtml(ticket.id)}">Open Ticket</button>
+        <button type="button" data-action="open-ticket" data-ticket-source="${escapeHtml(ticket.source)}" data-id="${escapeHtml(ticket.id)}">Open Ticket</button>
       </div>
     </article>`;
   }
@@ -8561,6 +8561,113 @@
         ${tickets.length ? tickets.slice(0, 6).map((ticket) => renderTicketCard(ticket)).join("") : emptyState(emptyMessage)}
       </div>
     </section>`;
+  }
+
+  const ticketWorkflowSteps = [
+    { key: "sales", label: "Sales", detail: "Intake and scope", stages: ["draft", "sales_intake", "scope_in_progress", "quote_pending"] },
+    { key: "approval", label: "Approval", detail: "Customer yes", stages: ["customer_approval_pending"] },
+    { key: "budget", label: "Budget", detail: "Costs and owner", stages: ["needs_budget", "budget_in_progress", "needs_owner_approval"] },
+    { key: "invoice-prep", label: "Invoice Prep", detail: "Draft ready", stages: ["invoice_preparation"] },
+    { key: "field", label: "Field", detail: "Schedule and work", stages: ["ready_to_schedule", "scheduled", "in_progress", "paused", "scope_change_requested"] },
+    { key: "review", label: "Review", detail: "Photos and actuals", stages: ["field_work_complete", "completion_review", "invoice_review"] },
+    { key: "close", label: "Close", detail: "Invoice and payment", stages: ["invoice_sent", "partially_paid", "paid", "closed"] }
+  ];
+
+  function ticketWorkflowIndex(stage) {
+    return Math.max(0, ticketWorkflowSteps.findIndex((step) => step.stages.includes(stage)));
+  }
+
+  function renderTicketWorkflowTracker(stage) {
+    const activeIndex = ticketWorkflowIndex(stage);
+    return `<section class="ticket-drawer-tracker" aria-label="Job ticket workflow">
+      ${ticketWorkflowSteps.map((step, index) => `<div class="ticket-drawer-step ${index < activeIndex ? "is-complete" : ""} ${index === activeIndex ? "is-active" : ""}">
+        <span>${escapeHtml(index + 1)}</span>
+        <strong>${escapeHtml(step.label)}</strong>
+        <small>${escapeHtml(step.detail)}</small>
+      </div>`).join("")}
+    </section>`;
+  }
+
+  function renderTicketRequirements(ticket) {
+    const blockers = ticket.blockers?.length ? ticket.blockers : [];
+    return `<section class="ticket-drawer-card">
+      <div class="ticket-drawer-card-heading">
+        <h4>Next requirements</h4>
+        <span>${escapeHtml(ticket.nextAction || "Open ticket")}</span>
+      </div>
+      ${blockers.length ? `<ul class="ticket-requirement-list">
+        ${blockers.map((item) => `<li><span aria-hidden="true"></span>${escapeHtml(item)}</li>`).join("")}
+      </ul>` : `<p class="ticket-drawer-note">No blockers are known for this stage. This ticket can move to the next owner when the working details are saved.</p>`}
+    </section>`;
+  }
+
+  function renderTicketSourceActions(ticket) {
+    if (ticket.source === "quote") {
+      return `<div class="drawer-actions ticket-source-actions">
+        <button type="button" data-action="open-submission" data-id="${escapeHtml(ticket.id)}">${buttonContent("Open Quote Details", "open-submission")}</button>
+        <button type="button" data-action="sync-contact" data-id="${escapeHtml(ticket.id)}">${buttonContent("Sync Contact", "sync-contact")}</button>
+        <button type="button" data-action="create-estimate" data-id="${escapeHtml(ticket.id)}">${buttonContent("Create Estimate", "create-estimate")}</button>
+        <button type="button" data-action="create-invoice" data-id="${escapeHtml(ticket.id)}">${buttonContent("Draft Invoice", "create-invoice")}</button>
+      </div>`;
+    }
+    if (ticket.source === "job") {
+      return `<div class="drawer-actions ticket-source-actions">
+        <button type="button" data-action="edit-job" data-id="${escapeHtml(ticket.id)}">${buttonContent("Open Visit Details", "edit-job")}</button>
+        <button type="button" data-action="go-route-planner">${buttonContent("Open Route", "go-route-planner")}</button>
+        <button type="button" data-action="go-documents">${buttonContent("Open Forms", "documentation")}</button>
+        ${ticket.stage !== "field_work_complete" && ticket.stage !== "completion_review" && ticket.stage !== "closed" ? `<button type="button" data-action="complete-job" data-id="${escapeHtml(ticket.id)}">${buttonContent("Mark Field Complete", "complete-reminder")}</button>` : ""}
+      </div>`;
+    }
+    return `<div class="drawer-actions ticket-source-actions">
+      <button type="button" data-action="${escapeHtml(ticket.action || "open-document")}" data-id="${escapeHtml(ticket.id)}">${buttonContent("Open Source Record", "open-document")}</button>
+    </div>`;
+  }
+
+  function openTicketDrawer(source, id) {
+    if (!els.detailDrawer || !els.detailContent) return;
+    const ticket = dashboardTickets().find((item) => item.id === id && item.source === source);
+    if (!ticket) return;
+    const sourceItem = source === "quote"
+      ? findSubmission(id)
+      : source === "job"
+        ? state.data.jobs.find((item) => item.id === id)
+        : null;
+    openDetailDrawer();
+    els.detailContent.innerHTML = `
+      <div class="drawer-content ticket-detail-drawer">
+        <p class="eyebrow">Unified Job Ticket</p>
+        <div class="ticket-drawer-heading">
+          <div>
+            <h3>${escapeHtml(ticket.title)}</h3>
+            <p>${escapeHtml(ticket.customer)}${ticket.property ? ` / ${escapeHtml(ticket.property)}` : ""}</p>
+          </div>
+          <div class="ticket-drawer-status">
+            <span class="ticket-number">${escapeHtml(ticket.number)}</span>
+            <span class="ticket-stage">${escapeHtml(ticket.stageLabel)}</span>
+          </div>
+        </div>
+        ${renderTicketWorkflowTracker(ticket.stage)}
+        <div class="drawer-grid ticket-drawer-grid">
+          <div class="drawer-field"><span>Current owner</span>${escapeHtml(ticket.ownerLabel || "Unassigned")}</div>
+          <div class="drawer-field"><span>Next action</span>${escapeHtml(ticket.nextAction || "Open ticket")}</div>
+          <div class="drawer-field"><span>Source</span>${escapeHtml(ticket.source === "quote" ? "Quote request" : ticket.source === "job" ? "Scheduled visit" : ticket.source)}</div>
+          <div class="drawer-field"><span>Date</span>${escapeHtml(ticket.dateLabel || "No date")}</div>
+          <div class="drawer-field span-full"><span>Details</span>${escapeHtml(ticket.detail || "No details yet.")}</div>
+        </div>
+        ${renderTicketRequirements(ticket)}
+        ${renderTicketSourceActions(ticket)}
+        ${source === "quote" && sourceItem ? renderCallPanel(callPanelContext("quote_submission", sourceItem.id)) : ""}
+        ${source === "job" && sourceItem ? `<div class="job-support-sections">${renderJobDocumentationSection(sourceItem)}${renderJobPhotosSection(sourceItem)}</div>` : ""}
+        ${source === "quote" && sourceItem ? `<div data-call-outcome-slot></div>${renderActivityTimeline({
+          leadId: sourceItem.id,
+          leadType: "quote_submission",
+          name: sourceItem.name,
+          companyProperty: [sourceItem.propertyType, sourceItem.city, sourceItem.service].filter(Boolean).join(" / "),
+          phone: sourceItem.phone,
+          email: sourceItem.email
+        })}` : ""}
+      </div>
+    `;
   }
 
   const ticketWorkspaceLinks = [
@@ -15096,7 +15203,9 @@
         return;
       }
 
-      if (action === "open-submission") {
+      if (action === "open-ticket") {
+        openTicketDrawer(target.dataset.ticketSource, id);
+      } else if (action === "open-submission") {
         openSubmissionDrawer(id);
       } else if (action === "open-contact") {
         openContactDrawer(id);

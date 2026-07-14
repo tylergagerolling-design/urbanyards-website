@@ -10,6 +10,7 @@ const {
   writeAuditLog,
   writeSystemError
 } = require("./lib/dashboard-auth");
+const { transitionTicketStage } = require("../../src/features/tickets/services/ticket-workflow-service");
 
 const ALLOWED_STAGES = new Set([
   "draft",
@@ -199,6 +200,59 @@ function cleanEventPayload(input = {}, ticketId, actor = null) {
   };
 }
 
+function workflowRole(role) {
+  const normalized = String(role || "").trim().toLowerCase();
+  if (["owner", "admin", "manager", "staff"].includes(normalized)) return "owner";
+  if (["sales", "sales_outreach"].includes(normalized)) return "sales_outreach";
+  if (["field", "crew", "employee", "worker", "field_worker"].includes(normalized)) return "field_worker";
+  if (["accounting", "accountant"].includes(normalized)) return "accountant";
+  return normalized;
+}
+
+function actorForWorkflow(actor = {}) {
+  return {
+    role: workflowRole(actor.role),
+    userId: actor.userId || actor.id || "",
+    permissionOverrides: [],
+    deniedPermissions: []
+  };
+}
+
+function ticketForWorkflow(row = {}) {
+  return {
+    id: row.id,
+    stage: row.stage,
+    customerId: row.customer_id,
+    propertyId: row.property_id,
+    primaryContact: row.contact_name || row.customer_name || row.client_name || row.company_name,
+    requestedService: row.requested_service || row.service,
+    scopeOfWork: row.scope_of_work || row.description,
+    proposedPrice: row.proposed_price,
+    expectedRevenue: row.expected_revenue,
+    estimatedTotalCost: row.estimated_total_cost,
+    estimatedProfit: row.estimated_profit,
+    targetMargin: row.target_margin,
+    costReviewComplete: row.cost_review_complete,
+    budgetComplete: row.budget_complete,
+    scopeComplete: row.scope_complete,
+    customerApprovalRecorded: row.customer_approval_recorded,
+    ownerApprovalRecorded: row.owner_approval_recorded,
+    draftInvoiceExists: row.draft_invoice_exists,
+    depositRequired: row.deposit_required,
+    depositPaid: row.deposit_paid,
+    requiredDocumentsPresent: row.required_documents_present,
+    scheduledDate: row.scheduled_date || row.visit_date,
+    assignedUserId: row.assigned_user_id,
+    beforePhotosUploaded: row.before_photos_uploaded || row.arrival_photos_uploaded,
+    afterPhotosUploaded: row.after_photos_uploaded || row.completion_photos_uploaded,
+    fieldCompletionNotes: row.field_completion_notes,
+    invoiceFinalized: row.invoice_finalized,
+    paymentStatus: row.payment_status,
+    createdBy: row.created_by,
+    updatedBy: row.updated_by
+  };
+}
+
 function canWriteTicket(actor) {
   return Boolean(actor && (
     hasPermission(actor.role, "admin:manage") ||
@@ -254,6 +308,102 @@ async function updateTicket(id, payload) {
   return Array.isArray(rows) ? rows[0] || null : null;
 }
 
+async function getTicket(id) {
+  const rows = await supabaseAdminRequest(`job_tickets?id=eq.${encodeURIComponent(id)}&select=*&limit=1`, {
+    method: "GET"
+  });
+  return Array.isArray(rows) ? rows[0] || null : null;
+}
+
+async function transitionTicket(id, toStage, options, actor, event, requestId) {
+  const current = await getTicket(id);
+  if (!current?.id) {
+    const error = new Error("Ticket was not found.");
+    error.statusCode = 404;
+    throw error;
+  }
+
+  const normalizedTo = normalizeStage(toStage, current.stage);
+  const nextAction = cleanText(options.next_action || options.nextAction, 180);
+  const notes = cleanText(options.notes, 2000) || "";
+
+  if (current.stage === normalizedTo) {
+    const noopPayload = {};
+    if (nextAction) noopPayload.next_action = nextAction;
+    if (actor?.userId) noopPayload.updated_by = actor.userId;
+    const ticket = Object.keys(noopPayload).length ? await updateTicket(id, noopPayload) : current;
+    return { ticket: ticket || current, event: null, changed: false, fromStage: current.stage, toStage: normalizedTo };
+  }
+
+  const result = transitionTicketStage({
+    user: actorForWorkflow(actor),
+    ticket: ticketForWorkflow(current),
+    toStage: normalizedTo,
+    notes,
+    correlationId: requestId
+  });
+
+  if (!result.success) {
+    const error = new Error(result.error || "Ticket stage transition failed.");
+    error.statusCode = result.errorCode === "TICKET_STAGE_TRANSITION_DENIED" ? 403 : 400;
+    error.context = result.context || {};
+    throw error;
+  }
+
+  const updatePayload = {
+    stage: result.data.stage,
+    status: statusForStage(result.data.stage),
+    responsible_role: result.data.responsibleRole,
+    next_action: nextAction || current.next_action || null
+  };
+  if (actor?.userId) updatePayload.updated_by = actor.userId;
+  const ticket = await updateTicket(id, updatePayload);
+
+  const eventPayload = cleanEventPayload({
+    event_type: result.context.auditEvent || "ticket_stage_changed",
+    from_stage: result.context.fromStage,
+    to_stage: result.context.toStage,
+    notes,
+    old_value: {
+      stage: current.stage,
+      status: current.status,
+      nextAction: current.next_action
+    },
+    new_value: {
+      stage: result.data.stage,
+      status: updatePayload.status,
+      nextAction: updatePayload.next_action,
+      sourceStatus: options.source_status || options.sourceStatus || null
+    }
+  }, id, actor);
+  const rows = await supabaseAdminRequest("job_ticket_events", {
+    method: "POST",
+    headers: { Prefer: "return=representation" },
+    body: JSON.stringify(eventPayload)
+  });
+  const ticketEvent = Array.isArray(rows) ? rows[0] || null : null;
+
+  await writeAuditLog({
+    actor,
+    action: eventPayload.event_type,
+    entityType: "job_tickets",
+    entityId: id,
+    oldValue: eventPayload.old_value,
+    newValue: eventPayload.new_value,
+    metadata: { from_stage: eventPayload.from_stage, to_stage: eventPayload.to_stage },
+    event,
+    module: "tickets"
+  });
+
+  return {
+    ticket,
+    event: ticketEvent,
+    changed: true,
+    fromStage: result.context.fromStage,
+    toStage: result.context.toStage
+  };
+}
+
 async function listTickets(limit = 1000) {
   const safeLimit = Math.min(Math.max(Number(limit) || 1000, 1), 2000);
   const rows = await supabaseAdminRequest(`job_tickets?select=*&order=updated_at.desc.nullslast,created_at.desc&limit=${safeLimit}`, {
@@ -286,7 +436,7 @@ exports.handler = async (event) => {
   try {
     body = parseBody(event);
     const action = String(body.action || "").trim().toLowerCase();
-    if (!["list", "events", "create", "update", "event"].includes(action)) {
+    if (!["list", "events", "create", "update", "transition", "event"].includes(action)) {
       return json(400, { error: "Unsupported ticket action.", requestId });
     }
 
@@ -354,6 +504,13 @@ exports.handler = async (event) => {
       return json(200, { ok: true, ticket, requestId });
     }
 
+    if (action === "transition") {
+      const id = uuidOrNull(body.id || body.ticketId);
+      if (!id) return json(400, { error: "A valid ticket id is required.", requestId });
+      const result = await transitionTicket(id, body.toStage || body.stage, body, actor, event, requestId);
+      return json(200, { ok: true, ...result, requestId });
+    }
+
     const ticketId = uuidOrNull(body.ticketId || body.id);
     if (!ticketId) return json(400, { error: "A valid ticket id is required.", requestId });
     const eventPayload = cleanEventPayload(body.event || body.payload || {}, ticketId, actor);
@@ -387,6 +544,9 @@ module.exports._internals = {
   cleanEventPayload,
   normalizeStage,
   normalizeStatus,
+  actorForWorkflow,
   statusForStage,
+  ticketForWorkflow,
+  transitionTicket,
   uuidOrNull
 };

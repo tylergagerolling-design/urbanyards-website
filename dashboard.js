@@ -4838,6 +4838,28 @@
     return normalizeCanonicalTicket(result.ticket);
   }
 
+  async function transitionJobTicketStage(id, toStage, input = {}) {
+    if (!id || !toStage) return null;
+    const nextStage = normalizeTicketStageForDashboard(toStage);
+    const nextAction = blankToNull(input.next_action || input.nextAction || ticketNextAction(nextStage));
+    if (isDemoMode()) {
+      return updateJobTicket(id, {
+        stage: nextStage,
+        status: ticketRecordStatusForStage(nextStage),
+        next_action: nextAction
+      });
+    }
+
+    const result = await dashboardTicketRequest("transition", {
+      id,
+      toStage: nextStage,
+      notes: blankToNull(input.notes),
+      nextAction,
+      sourceStatus: blankToNull(input.sourceStatus || input.source_status)
+    });
+    return normalizeCanonicalTicket(result.ticket);
+  }
+
   async function insertJobTicketEvent(ticketId, input = {}) {
     if (!ticketId) return null;
     if (isDemoMode()) return null;
@@ -16101,24 +16123,15 @@
         if (!table || !status) return;
         try {
           setDashboardState("Moving ticket forward...");
-          const currentTicket = ticketId ? dashboardTickets().find((item) => item.source === "ticket" && item.id === ticketId) : null;
-          await updateStatus(table, id, status);
           if (ticketId) {
             const nextStage = source === "quote" ? quoteStage({ status }) : jobStage({ status });
-            await updateJobTicket(ticketId, {
-              stage: nextStage,
-              status: ticketRecordStatusForStage(nextStage),
-              next_action: ticketNextAction(nextStage)
-            });
-            await insertJobTicketEvent(ticketId, {
-              event_type: "ticket_stage_changed",
-              from_stage: currentTicket?.stage || "",
-              to_stage: nextStage,
+            await transitionJobTicketStage(ticketId, nextStage, {
               notes: `${source === "quote" ? "Quote" : "Job"} source status set to ${status}.`,
-              old_value: currentTicket ? { stage: currentTicket.stage, nextAction: currentTicket.nextAction } : null,
-              new_value: { stage: nextStage, nextAction: ticketNextAction(nextStage), sourceStatus: status }
+              nextAction: ticketNextAction(nextStage),
+              sourceStatus: status
             });
           }
+          await updateStatus(table, id, status);
           await refreshDashboard();
           openTicketDrawer(ticketId ? "ticket" : source, ticketId || id);
           setDashboardState("Ticket updated.");

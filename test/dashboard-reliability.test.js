@@ -108,7 +108,10 @@ test("dashboard creates canonical job tickets without removing source fallbacks"
   assert.match(js, /dashboardTicketRequest\("events"/);
   assert.match(js, /dashboardTicketRequest\("create"/);
   assert.match(js, /dashboardTicketRequest\("update"/);
+  assert.match(js, /dashboardTicketRequest\("transition"/);
   assert.match(js, /dashboardTicketRequest\("event"/);
+  assert.match(js, /async function transitionJobTicketStage/);
+  assert.match(js, /await transitionJobTicketStage\(ticketId, nextStage/);
   assert.doesNotMatch(js, /job_tickets\?select=\*/);
   assert.doesNotMatch(js, /job_ticket_events\?select=\*/);
   assert.match(js, /source_type: "quote"/);
@@ -116,6 +119,12 @@ test("dashboard creates canonical job tickets without removing source fallbacks"
   assert.match(js, /ticket_stage_changed/);
   assert.match(js, /openTicketDrawer\("ticket", canonicalTicket\.id\)/);
   assert.match(js, /isMissingOptionalTableError\(error\)\) return null/);
+
+  const ticketFunction = read("netlify/functions/dashboard-tickets.js");
+  assert.match(ticketFunction, /"transition"/);
+  assert.match(ticketFunction, /transitionTicketStage/);
+  assert.match(ticketFunction, /async function transitionTicket/);
+  assert.match(ticketFunction, /ticket_stage_changed/);
 });
 
 test("optional dashboard module migrations include tables queried by the UI", () => {

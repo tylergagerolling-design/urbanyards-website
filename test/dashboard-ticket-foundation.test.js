@@ -287,9 +287,43 @@ test("dashboard ticket backend exposes read actions through the protected ticket
   const source = require("node:fs").readFileSync(require("node:path").join(__dirname, "..", "netlify/functions/dashboard-tickets.js"), "utf8");
   assert.match(source, /"list"/);
   assert.match(source, /"events"/);
+  assert.match(source, /"transition"/);
   assert.match(source, /async function listTickets/);
   assert.match(source, /async function listTicketEvents/);
+  assert.match(source, /async function transitionTicket/);
   assert.match(source, /requirePermission\(event, "dashboard:read"/);
+});
+
+test("dashboard ticket backend adapts legacy dashboard actors to rebuilt workflow roles", () => {
+  assert.deepEqual(ticketFunctionInternals.actorForWorkflow({ role: "admin", userId: "admin-1" }), {
+    role: ROLES.OWNER,
+    userId: "admin-1",
+    permissionOverrides: [],
+    deniedPermissions: []
+  });
+  assert.equal(ticketFunctionInternals.actorForWorkflow({ role: "field", userId: "field-1" }).role, ROLES.FIELD_WORKER);
+  assert.equal(ticketFunctionInternals.actorForWorkflow({ role: "sales", userId: "sales-1" }).role, ROLES.SALES_OUTREACH);
+  assert.equal(ticketFunctionInternals.actorForWorkflow({ role: "accounting", userId: "acct-1" }).role, ROLES.ACCOUNTANT);
+});
+
+test("dashboard ticket backend maps stored rows into workflow validation fields", () => {
+  const ticket = ticketFunctionInternals.ticketForWorkflow({
+    id: "ticket-1",
+    stage: TICKET_STAGES.IN_PROGRESS,
+    contact_name: "Taylor",
+    requested_service: "Mulch refresh",
+    scope_of_work: "Refresh entry beds.",
+    arrival_photos_uploaded: true,
+    completion_photos_uploaded: true,
+    field_completion_notes: "Beds refreshed and cleaned.",
+    assigned_user_id: "worker-1"
+  });
+
+  assert.equal(ticket.primaryContact, "Taylor");
+  assert.equal(ticket.requestedService, "Mulch refresh");
+  assert.equal(ticket.beforePhotosUploaded, true);
+  assert.equal(ticket.afterPhotosUploaded, true);
+  assert.equal(ticket.assignedUserId, "worker-1");
 });
 
 test("protected dashboard auth recognizes rebuilt job-ticket roles", () => {

@@ -14578,6 +14578,16 @@ body:not(.is-login-screen) .ticket-create-form select {
   color: var(--uy-ink);
 }
 
+body:not(.is-login-screen) .drawer-ticket-create-form .ticket-create-schedule {
+  display: none;
+}
+
+body:not(.is-login-screen) .drawer-ticket-create-form.is-field-ticket .ticket-create-schedule {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
 body:not(.is-login-screen) .ticket-create-form .recurring-toggle {
   display: inline-flex;
   align-items: center;

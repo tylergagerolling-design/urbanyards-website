@@ -6532,6 +6532,36 @@
     return normalizeSubmission(rows[0]);
   }
 
+  async function insertQuoteSubmission(payload) {
+    const safePayload = {
+      name: payload.name,
+      email: payload.email || null,
+      phone: payload.phone || null,
+      property_type: payload.property_type || null,
+      city: payload.city || null,
+      service: payload.service || null,
+      source: payload.source || "Dashboard Ticket",
+      status: STATUSES.includes(payload.status) ? payload.status : "New",
+      notes: payload.notes || ""
+    };
+    if (isDemoMode()) {
+      const quote = normalizeSubmission({
+        id: nextDemoId("quote"),
+        ...safePayload,
+        created_at: new Date().toISOString()
+      });
+      state.data.submissions.unshift(quote);
+      return quote;
+    }
+    const rows = await supabaseRestRequest("quote_submissions", {
+      method: "POST",
+      headers: { Prefer: "return=representation" },
+      body: JSON.stringify(safePayload)
+    });
+    return normalizeSubmission(rows[0]);
+  }
+
+
   async function addOutreachToRoute(id) {
     const prospect = findOutreachProspect(id);
     if (!prospect) return null;
@@ -8680,6 +8710,64 @@
     </section>`;
   }
 
+  function openTicketCreateDrawer(ticketType = "quote") {
+    if (!els.detailDrawer || !els.detailContent) return;
+    const safeType = ticketType === "field" ? "field" : "quote";
+    openDetailDrawer();
+    els.detailContent.innerHTML = `
+      <div class="drawer-content ticket-detail-drawer">
+        <p class="eyebrow">New Job Ticket</p>
+        <div class="ticket-drawer-heading">
+          <div>
+            <h3>Create ticket</h3>
+            <p>Start with a sales intake ticket, or create a scheduled field visit when the work is already ready.</p>
+          </div>
+        </div>
+        <form class="drawer-form drawer-ticket-create-form ${safeType === "field" ? "is-field-ticket" : ""}" data-ticket-create-form>
+          <label>Ticket type
+            <select name="ticket_type" data-ticket-type-select>
+              <option value="quote"${safeType === "quote" ? " selected" : ""}>Sales intake / quote request</option>
+              <option value="field"${safeType === "field" ? " selected" : ""}>Scheduled field visit</option>
+            </select>
+          </label>
+          <label>Customer or site
+            <input name="customer_name" placeholder="Client, property, or site name" required>
+          </label>
+          <label>Email
+            <input name="email" type="email" placeholder="team@example.com">
+          </label>
+          <label>Phone
+            <input name="phone" inputmode="tel" placeholder="(971) 258-1109">
+          </label>
+          <label>Property / area
+            <input name="city" placeholder="Property, city, or neighborhood" autocomplete="street-address" data-address-autocomplete>
+          </label>
+          <label>Property type
+            <input name="property_type" placeholder="Home, apartment, HOA, property management...">
+          </label>
+          <label class="span-full">Service / request
+            <input name="service" placeholder="Mowing, cleanup, mulch refresh, walkthrough..." required>
+          </label>
+          <div class="ticket-create-schedule span-full">
+            <label>Visit date
+              <input name="visit_date" type="date" value="${escapeHtml(todayKey())}"${safeType === "field" ? " required" : ""}>
+            </label>
+            <label>Visit window
+              <input name="visit_window" placeholder="9 AM - 11 AM">
+            </label>
+          </div>
+          <label class="span-full">Notes
+            <textarea name="notes" rows="5" placeholder="Scope notes, access details, customer request, or internal context..."></textarea>
+          </label>
+          <div class="drawer-actions span-full">
+            <button type="submit">${buttonContent("Create Ticket", "quick-add-job")}</button>
+            <button type="button" data-action="close-drawer">${buttonContent("Cancel", "close")}</button>
+          </div>
+        </form>
+      </div>
+    `;
+  }
+
   function renderTicketSourceActions(ticket) {
     if (ticket.source === "quote") {
       return `<div class="drawer-actions ticket-source-actions">
@@ -8781,8 +8869,8 @@
             <p>Every request, quote, scheduled visit, field update, invoice step, and closeout flows through one job ticket workflow.</p>
           </div>
           <div class="ticket-hero-actions">
-            <button type="button" data-action="quick-add-job">New Job Ticket</button>
-            <button type="button" data-action="quick-add-quote">Create Quote</button>
+            <button type="button" data-action="open-ticket-create" data-ticket-type="quote">New Job Ticket</button>
+            <button type="button" data-action="open-ticket-create" data-ticket-type="field">Schedule Visit</button>
           </div>
         </header>
         <section class="ticket-metrics" aria-label="Job ticket summary">
@@ -8836,7 +8924,7 @@
             <p>Simple job-ticket queue for on-site work, with route, photos, documents, and completion review close by.</p>
           </div>
           <div class="ticket-hero-actions">
-            <button type="button" data-action="quick-add-job">Add Visit</button>
+            <button type="button" data-action="open-ticket-create" data-ticket-type="field">Add Visit</button>
             <button type="button" data-action="go-route-planner">Open Route</button>
           </div>
         </header>
@@ -14138,6 +14226,15 @@
         return;
       }
 
+      if (target.matches("[data-ticket-type-select]")) {
+        const form = target.closest("[data-ticket-create-form]");
+        const isFieldTicket = target.value === "field";
+        form?.classList.toggle("is-field-ticket", isFieldTicket);
+        const visitDate = form?.querySelector("input[name='visit_date']");
+        if (visitDate) visitDate.required = isFieldTicket;
+        return;
+      }
+
       if (target.matches("input[name='visit_date']")) {
         const form = target.closest("form");
         const toggle = form?.querySelector("[data-recurring-toggle]");
@@ -14280,6 +14377,11 @@
         } catch (error) {
           setDashboardState("Unable to copy diagnostics automatically. Browser clipboard permission may be blocked.", "error");
         }
+        return;
+      }
+
+      if (action === "close-drawer") {
+        closeSubmissionDrawer();
         return;
       }
 
@@ -15297,6 +15399,8 @@
         } catch (error) {
           setDashboardState(error.message || "Unable to move ticket forward.", "error");
         }
+      } else if (action === "open-ticket-create") {
+        openTicketCreateDrawer(target.dataset.ticketType || "quote");
       } else if (action === "open-ticket") {
         openTicketDrawer(target.dataset.ticketSource, id);
       } else if (action === "open-submission") {
@@ -15306,15 +15410,9 @@
       } else if (action === "reschedule-job") {
         openJobDrawer(id, { reschedule: true });
       } else if (action === "quick-add-job") {
-        setActiveSection("calendar");
-        history.replaceState(null, "", "#calendar");
-        const input = qs("[data-job-create-form] input[name='site_name']");
-        if (input) input.focus();
+        openTicketCreateDrawer("field");
       } else if (action === "quick-add-quote") {
-        setActiveSection("documents");
-        history.replaceState(null, "", "#documents");
-        const input = qs("[data-document-form] input[name='client_name']");
-        if (input) input.focus();
+        openTicketCreateDrawer("quote");
       } else if (action === "quick-add-follow-up" || action === "quick-add-invoice-reminder") {
         setActiveSection("overview");
         history.replaceState(null, "", "#overview");
@@ -16042,6 +16140,55 @@
           setDashboardState("Call outcome saved.");
         } catch (error) {
           setDashboardState(error.message || "Unable to save call outcome.", "error");
+        }
+      } else if (event.target.matches("[data-ticket-create-form]")) {
+        event.preventDefault();
+        const formData = new FormData(event.target);
+        const ticketType = String(formData.get("ticket_type") || "quote");
+        const customerName = String(formData.get("customer_name") || "").trim();
+        const service = String(formData.get("service") || "").trim();
+        const city = String(formData.get("city") || "").trim();
+        if (!customerName || !service) {
+          setDashboardState("Add a customer/site and service before creating the ticket.", "error");
+          return;
+        }
+        try {
+          setDashboardState("Creating ticket...");
+          if (ticketType === "field") {
+            const visitDate = String(formData.get("visit_date") || "").trim();
+            if (!visitDate) {
+              setDashboardState("Choose a visit date before creating a field ticket.", "error");
+              return;
+            }
+            const jobs = await insertScheduledJobs([{
+              visit_date: visitDate,
+              visit_window: String(formData.get("visit_window") || "").trim(),
+              site_name: customerName,
+              city,
+              service,
+              status: "Scheduled"
+            }]);
+            await refreshDashboard();
+            if (jobs[0]?.id) openTicketDrawer("job", jobs[0].id);
+            setDashboardState("Field ticket created.");
+          } else {
+            const quote = await insertQuoteSubmission({
+              name: customerName,
+              email: String(formData.get("email") || "").trim(),
+              phone: String(formData.get("phone") || "").trim(),
+              property_type: String(formData.get("property_type") || "").trim(),
+              city,
+              service,
+              source: "Dashboard Ticket",
+              status: "New",
+              notes: String(formData.get("notes") || "").trim()
+            });
+            await refreshDashboard();
+            if (quote?.id) openTicketDrawer("quote", quote.id);
+            setDashboardState("Intake ticket created.");
+          }
+        } catch (error) {
+          setDashboardState(error.message || "Unable to create ticket.", "error");
         }
       } else if (event.target.matches("[data-submission-edit]")) {
         event.preventDefault();

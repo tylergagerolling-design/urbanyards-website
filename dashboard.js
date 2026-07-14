@@ -1,4 +1,4 @@
-﻿(function () {
+(function () {
   "use strict";
 
   const STATUSES = ["New", "Contacted", "Scheduled", "Completed", "Invoiced"];
@@ -339,17 +339,37 @@
   const sectionAliases = {
     home: "overview",
     work: "calendar",
-    properties: "contacts",
+    properties: "outreach",
+    contacts: "outreach",
+    clients: "outreach",
+    leads: "outreach",
+    sales: "outreach",
     more: "settings",
-    docs: "documentation",
-    forms: "documentation",
+    docs: "settings",
+    forms: "settings",
+    documentation: "settings",
+    "import-export": "settings",
+    data: "settings",
+    equipment: "settings",
+    "groundskeeper-ai": "settings",
+    ai: "settings",
+    tools: "settings",
+    "route-planner": "calendar",
+    route: "calendar",
     quotes: "documents",
+    money: "documents",
     pipeline: "documents",
     schedule: "calendar",
+    operations: "overview",
+    "connected-operations": "overview",
+    budgets: "documents",
+    budget: "documents",
+    "job-budgeter": "documents",
     "command-center": "overview",
     notes: "settings",
     reminders: "settings"
   };
+  const rebuildPrimarySections = new Set(["overview", "calendar", "outreach", "documents", "settings"]);
   let demoIdCount = 100;
   let googleRouteMap = null;
   let googleRouteLine = null;
@@ -6928,15 +6948,25 @@
     await refreshDashboard();
   }
 
+  function normalizeDashboardSection(section) {
+    const key = String(section || "overview").replace(/^#/, "").trim() || "overview";
+    const mapped = sectionAliases[key] || key;
+    return rebuildPrimarySections.has(mapped) ? mapped : "overview";
+  }
+
+  function replaceDashboardHash(section) {
+    history.replaceState(null, "", `#${normalizeDashboardSection(section)}`);
+  }
+
   function setActiveSection(section) {
-    const requestedSection = sectionAliases[section] || section || "overview";
+    const requestedSection = normalizeDashboardSection(section);
     const hasSection = Boolean(qs(`[data-section="${cssEscape(requestedSection)}"]`));
     state.activeSection = hasSection ? requestedSection : "overview";
     qsa("[data-section]").forEach((node) => {
       node.classList.toggle("is-active", node.dataset.section === state.activeSection);
     });
     qsa("[data-dashboard-link]").forEach((node) => {
-      const isActive = node.dataset.dashboardLink === state.activeSection;
+      const isActive = normalizeDashboardSection(node.dataset.dashboardLink) === state.activeSection;
       node.classList.toggle("is-active", isActive);
       if (isActive) {
         node.setAttribute("aria-current", "page");
@@ -7556,7 +7586,7 @@
             return;
           }
           setActiveSection("route-planner");
-          history.replaceState(null, "", "#route-planner");
+          replaceDashboardHash("route-planner");
         });
         view.markers.push(marker);
       });
@@ -12317,7 +12347,7 @@
   }
 
   function equipmentItemMeta(item) {
-    return [item.brand, item.model, item.storageLocation, item.supplier].filter(Boolean).join(" Â· ");
+    return [item.brand, item.model, item.storageLocation, item.supplier].filter(Boolean).join(" · ");
   }
 
   function renderEquipmentActions(item) {
@@ -12391,7 +12421,7 @@
     const historyHtml = records.length ? records.map((record) => {
       const item = state.data.equipmentItems.find((equipment) => equipment.id === record.equipmentId);
       return `<article class="equipment-card">
-        <div class="equipment-card-head"><div><strong>${escapeHtml(item?.name || record.equipmentName)}</strong><small>${escapeHtml(record.maintenanceType)} Â· ${escapeHtml(record.maintenanceDate)}</small></div><span>${escapeHtml(formatDollars(record.cost))}</span></div>
+        <div class="equipment-card-head"><div><strong>${escapeHtml(item?.name || record.equipmentName)}</strong><small>${escapeHtml(record.maintenanceType)} · ${escapeHtml(record.maintenanceDate)}</small></div><span>${escapeHtml(formatDollars(record.cost))}</span></div>
         <p>${escapeHtml(record.notes || "No notes saved.")}</p>
         <div class="equipment-card-meta"><span>${escapeHtml(record.performedBy || "Performed by not set")}</span><span>Next: ${escapeHtml(record.nextMaintenanceRaw ? record.nextMaintenance : "Not set")}</span></div>
       </article>`;
@@ -12407,7 +12437,7 @@
     }
     const items = state.data.hardwareGuide.filter((item) => matchesSearchValues([item.name, item.category, item.brand, item.model, item.recommendedUse, item.goodFor, item.notes], state.equipmentSearch));
     els.hardwareGuideList.innerHTML = items.length ? items.map((item) => `<article class="equipment-card">
-      <div class="equipment-card-head"><div><strong>${escapeHtml(item.name)}</strong><small>${escapeHtml([item.brand, item.model, item.supplier].filter(Boolean).join(" Â· ") || item.category)}</small></div>${equipmentStatusBadge(item.priority)}</div>
+      <div class="equipment-card-head"><div><strong>${escapeHtml(item.name)}</strong><small>${escapeHtml([item.brand, item.model, item.supplier].filter(Boolean).join(" · ") || item.category)}</small></div>${equipmentStatusBadge(item.priority)}</div>
       <p>${escapeHtml(item.recommendedUse || item.notes || "No recommendation notes saved.")}</p>
       <div class="equipment-card-meta"><span>${escapeHtml(item.status)}</span><span>${escapeHtml(item.goodFor || "Use not set")}</span><span>${escapeHtml(formatDollars(item.estimatedPrice))}</span></div>
       <div class="equipment-actions">
@@ -12510,7 +12540,7 @@
 
   function renderAiRecord(item, type) {
     const body = item.content || item.value || item.answer || "";
-    const meta = [item.category, item.source_url].filter(Boolean).join(" Â· ");
+    const meta = [item.category, item.source_url].filter(Boolean).join(" · ");
     return `<article class="groundskeeper-ai-record">
       <div class="groundskeeper-ai-record-head">
         <strong>${escapeHtml(itemTitle(item, type))}</strong>
@@ -12567,7 +12597,7 @@
           <strong>${escapeHtml(log.question || "Question")}</strong>
           <span>${aiBadge(log.mode || "public", "public")}</span>
         </div>
-        <small>${escapeHtml([log.page, log.created_at ? formatDate(log.created_at) : ""].filter(Boolean).join(" Â· "))}</small>
+        <small>${escapeHtml([log.page, log.created_at ? formatDate(log.created_at) : ""].filter(Boolean).join(" · "))}</small>
         <p>${escapeHtml(log.answer || "No answer saved.")}</p>
         <div class="groundskeeper-ai-record-actions">
           <button class="inline-action" type="button" data-action="save-ai-log-knowledge" data-id="${escapeHtml(log.id)}">Save as Knowledge</button>
@@ -13486,7 +13516,7 @@
     state.importExportPendingFile = null;
     await refreshDashboard();
     setActiveSection("import-export");
-    history.replaceState(null, "", "#import-export");
+    replaceDashboardHash("import-export");
     const summary = result.summary || {};
     setDashboardState(`Import complete: ${summary.created || 0} created, ${summary.updated || 0} updated, ${summary.skipped || 0} skipped.`);
   }
@@ -13888,8 +13918,9 @@
     qsa("[data-dashboard-link]").forEach((link) => {
       link.addEventListener("click", (event) => {
         event.preventDefault();
-        setActiveSection(link.dataset.dashboardLink);
-        history.replaceState(null, "", `#${link.dataset.dashboardLink}`);
+        const nextSection = normalizeDashboardSection(link.dataset.dashboardLink);
+        setActiveSection(nextSection);
+        replaceDashboardHash(nextSection);
       });
     });
 
@@ -14515,7 +14546,7 @@
         state.documentationView = target.dataset.documentationView || DOCUMENTATION_DEFAULT_VIEW;
         if (!target.closest(".documentation-center")) {
           setActiveSection("documentation");
-          history.replaceState(null, "", "#documentation");
+          replaceDashboardHash("documentation");
         }
         await render();
         return;
@@ -14536,7 +14567,7 @@
       if (action === "manage-documentation-templates") {
         state.documentationView = "upload";
         setActiveSection("documentation");
-        history.replaceState(null, "", "#documentation");
+        replaceDashboardHash("documentation");
         await render();
         qs("[data-documentation-template-manager]")?.scrollIntoView({ behavior: "smooth", block: "start" });
         return;
@@ -14649,7 +14680,7 @@
         const template = state.data.documentation.templates.find((item) => item.id === id);
         state.documentationView = "assign";
         setActiveSection("documentation");
-        history.replaceState(null, "", "#documentation");
+        replaceDashboardHash("documentation");
         await render();
         const select = qs("[data-documentation-assignment-form] select[name='template_id']");
         if (select && template) select.value = template.id;
@@ -14707,7 +14738,7 @@
 
       if (action === "go-budgets") {
         setActiveSection("overview");
-        history.replaceState(null, "", "#overview");
+        replaceDashboardHash("overview");
         await render();
         setDashboardState("Job budgets are not active in this dashboard version.");
         return;
@@ -14723,7 +14754,7 @@
         case "view-budget-job":
         case "view-budget-quote":
           setActiveSection("overview");
-          history.replaceState(null, "", "#overview");
+          replaceDashboardHash("overview");
           await render();
           setDashboardState("Job budgets are not active in this dashboard version.");
           return;
@@ -14740,7 +14771,7 @@
       if (action === "review-import-history") {
         state.importExportView = "history";
         setActiveSection("import-export");
-        history.replaceState(null, "", "#import-export");
+        replaceDashboardHash("import-export");
         await render();
         return;
       }
@@ -14862,7 +14893,7 @@
           const result = await importExportRequest("undo-import", { batchId: id });
           await refreshDashboard();
           setActiveSection("import-export");
-          history.replaceState(null, "", "#import-export");
+          replaceDashboardHash("import-export");
           const summary = result.summary || {};
           setDashboardState(`Import rollback complete: ${summary.deleted || 0} deleted, ${summary.restored || 0} restored, ${summary.conflicts || 0} conflicts.`);
         } catch (error) {
@@ -14948,7 +14979,7 @@
 
       if (action === "quick-add-note-from-detail") {
         setActiveSection("overview");
-        history.replaceState(null, "", "#overview");
+        replaceDashboardHash("overview");
         const tools = qs(".home-secondary-tools");
         if (tools) tools.open = true;
         const form = qs("[data-operations-form]");
@@ -14964,7 +14995,7 @@
 
       if (action === "schedule-follow-up-from-detail") {
         setActiveSection("overview");
-        history.replaceState(null, "", "#overview");
+        replaceDashboardHash("overview");
         const tools = qs(".home-secondary-tools");
         if (tools) tools.open = true;
         const form = qs("[data-operations-form]");
@@ -15317,14 +15348,14 @@
 
       if (action === "set-connected-ops-view") {
         setActiveSection("overview");
-        history.replaceState(null, "", "#overview");
+        replaceDashboardHash("overview");
         await render();
         return;
       }
 
       if (action === "refresh-connected-operations") {
         setActiveSection("overview");
-        history.replaceState(null, "", "#overview");
+        replaceDashboardHash("overview");
         await render();
         setDashboardState("Operations has been removed from this dashboard version.");
         return;
@@ -15526,7 +15557,7 @@
         openTicketCreateDrawer("quote");
       } else if (action === "quick-add-follow-up" || action === "quick-add-invoice-reminder") {
         setActiveSection("overview");
-        history.replaceState(null, "", "#overview");
+        replaceDashboardHash("overview");
         const tools = qs(".home-secondary-tools");
         if (tools) tools.open = true;
         const form = qs("[data-operations-form]");
@@ -15541,13 +15572,13 @@
       } else if (action === "quick-add-equipment") {
         state.equipmentView = "inventory";
         setActiveSection("equipment");
-        history.replaceState(null, "", "#equipment");
+        replaceDashboardHash("equipment");
         await render();
         const input = qs("[data-equipment-form] input[name='name']");
         if (input) input.focus();
       } else if (action === "quick-add-client") {
         setActiveSection("contacts");
-        history.replaceState(null, "", "#contacts");
+        replaceDashboardHash("contacts");
         const input = qs("[data-client-form] input[name='name']");
         if (input) input.focus();
       } else if (action === "new-outreach-prospect") {
@@ -15638,7 +15669,7 @@
           }
           await refreshDashboard();
           setActiveSection("route-planner");
-          history.replaceState(null, "", "#route-planner");
+          replaceDashboardHash("route-planner");
           setDashboardState("");
         } catch (error) {
           setDashboardState(error.message || "Unable to add property to route.", "error");
@@ -15659,7 +15690,7 @@
         const contact = state.data.contacts.find((item) => item.id === id);
         if (!contact) return;
         setActiveSection("calendar");
-        history.replaceState(null, "", "#calendar");
+        replaceDashboardHash("calendar");
         closeSubmissionDrawer();
         const form = qs("[data-job-create-form]");
         if (form) {
@@ -15674,7 +15705,7 @@
         const contact = state.data.contacts.find((item) => item.id === id);
         if (!contact) return;
         setActiveSection("route-planner");
-        history.replaceState(null, "", "#route-planner");
+        replaceDashboardHash("route-planner");
         closeSubmissionDrawer();
         if (els.routeForm) {
           els.routeForm.client_name.value = contact.name;
@@ -15689,7 +15720,7 @@
         const contact = state.data.contacts.find((item) => item.id === id);
         if (!contact) return;
         setActiveSection("overview");
-        history.replaceState(null, "", "#overview");
+        replaceDashboardHash("overview");
         const tools = qs(".home-secondary-tools");
         if (tools) tools.open = true;
         closeSubmissionDrawer();
@@ -15706,7 +15737,7 @@
         const contact = state.data.contacts.find((item) => item.id === id);
         if (!contact) return;
         setActiveSection("documents");
-        history.replaceState(null, "", "#documents");
+        replaceDashboardHash("documents");
         closeSubmissionDrawer();
         const form = qs("[data-document-form]");
         if (form) {
@@ -15720,39 +15751,39 @@
         }
       } else if (action === "quick-add-operation") {
         setActiveSection("overview");
-        history.replaceState(null, "", "#overview");
+        replaceDashboardHash("overview");
         const tools = qs(".home-secondary-tools");
         if (tools) tools.open = true;
         const input = qs("[data-operations-form] input[name='title']");
         if (input) input.focus();
       } else if (action === "go-route-planner") {
         setActiveSection("route-planner");
-        history.replaceState(null, "", "#route-planner");
+        replaceDashboardHash("route-planner");
       } else if (action === "go-connected-operations") {
         setActiveSection("overview");
-        history.replaceState(null, "", "#overview");
+        replaceDashboardHash("overview");
         await render();
       } else if (action === "go-calendar") {
         setActiveSection("calendar");
-        history.replaceState(null, "", "#calendar");
+        replaceDashboardHash("calendar");
         const input = qs("[data-job-create-form] input[name='site_name']");
         if (input) input.focus();
       } else if (action === "go-documents") {
         setActiveSection("documents");
-        history.replaceState(null, "", "#documents");
+        replaceDashboardHash("documents");
       } else if (action === "go-settings") {
         setActiveSection("settings");
-        history.replaceState(null, "", "#settings");
+        replaceDashboardHash("settings");
       } else if (action === "go-contacts") {
         setActiveSection("contacts");
-        history.replaceState(null, "", "#contacts");
+        replaceDashboardHash("contacts");
       } else if (action === "set-operation-filter") {
         state.operationsFilter = target.dataset.filter || "All";
         if (els.operationsFilter) els.operationsFilter.value = state.operationsFilter;
         await render();
       } else if (action === "prefill-operation") {
         setActiveSection("overview");
-        history.replaceState(null, "", "#overview");
+        replaceDashboardHash("overview");
         const tools = qs(".home-secondary-tools");
         if (tools) tools.open = true;
         const form = qs("[data-operations-form]");
@@ -15850,7 +15881,7 @@
           await refreshDashboard();
           if (quote) {
             setActiveSection("documents");
-            history.replaceState(null, "", "#documents");
+            replaceDashboardHash("documents");
             openSubmissionDrawer(quote.id);
           }
           setDashboardState("");
@@ -15870,7 +15901,7 @@
           }
           await refreshDashboard();
           setActiveSection("route-planner");
-          history.replaceState(null, "", "#route-planner");
+          replaceDashboardHash("route-planner");
           setDashboardState("");
         } catch (error) {
           setDashboardState(error.message || "Unable to add route stop.", "error");
@@ -16852,7 +16883,7 @@
     if (els.newNote) {
       els.newNote.addEventListener("click", () => {
         setActiveSection("overview");
-        history.replaceState(null, "", "#overview");
+        replaceDashboardHash("overview");
         const titleInput = qs("[data-operations-form] input[name='title']");
         if (titleInput) titleInput.focus();
       });
@@ -17034,8 +17065,8 @@
     bindEvents();
     const hashSection = window.location.hash.replace("#", "");
     const pathSection = dashboardSectionFromPath();
-    if (hashSection) state.activeSection = sectionAliases[hashSection] || hashSection;
-    else if (pathSection) state.activeSection = pathSection;
+    if (hashSection) state.activeSection = normalizeDashboardSection(hashSection);
+    else if (pathSection) state.activeSection = normalizeDashboardSection(pathSection);
 
     if (isDemoMode()) {
       clearSession();

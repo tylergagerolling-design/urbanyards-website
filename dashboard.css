@@ -14230,6 +14230,66 @@ body:not(.is-login-screen) .dashboard-nav a.legacy-nav-route {
   display: none !important;
 }
 
+body:not(.is-login-screen) .rebuild-tool-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 14px;
+  margin: 16px 0 18px;
+}
+
+body:not(.is-login-screen) .rebuild-tool-card {
+  display: grid;
+  grid-template-columns: 44px minmax(0, 1fr);
+  gap: 12px;
+  align-items: start;
+  padding: 16px;
+  border: 1px solid rgba(30, 68, 48, 0.12);
+  border-radius: 20px;
+  background: rgba(255, 253, 246, 0.86);
+  box-shadow: 0 12px 28px rgba(27, 56, 39, 0.08);
+}
+
+body:not(.is-login-screen) .rebuild-tool-card > .button-icon {
+  width: 38px;
+  height: 38px;
+  border-radius: 14px;
+  background: rgba(218, 233, 204, 0.9);
+  color: var(--uy-ink);
+  font-size: 0.72rem;
+  letter-spacing: 0;
+}
+
+body:not(.is-login-screen) .rebuild-tool-card strong,
+body:not(.is-login-screen) .rebuild-tool-card small {
+  display: block;
+}
+
+body:not(.is-login-screen) .rebuild-tool-card strong {
+  color: var(--uy-ink);
+  font-size: 1rem;
+  line-height: 1.2;
+}
+
+body:not(.is-login-screen) .rebuild-tool-card small {
+  margin-top: 4px;
+  color: var(--uy-muted);
+  line-height: 1.45;
+}
+
+body:not(.is-login-screen) .rebuild-tool-card button {
+  grid-column: 2;
+  justify-self: start;
+  min-height: 36px;
+  margin-top: 4px;
+  padding: 0 14px;
+  border-radius: 999px;
+  border: 1px solid rgba(30, 68, 48, 0.18);
+  background: #fffef8;
+  color: var(--uy-ink);
+  font-weight: 800;
+  box-shadow: 0 8px 18px rgba(27, 56, 39, 0.08);
+}
+
 body:not(.is-login-screen) .ticket-workspace-switcher {
   display: flex;
   align-items: center;

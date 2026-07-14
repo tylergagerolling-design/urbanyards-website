@@ -54,16 +54,25 @@ function featureFlagResponse(enabled = true) {
 
 function withEnv(patch, callback) {
   const original = {};
+  const restore = () => {
+    Object.keys(patch).forEach((key) => {
+      original[key] === undefined ? delete process.env[key] : process.env[key] = original[key];
+    });
+  };
   Object.keys(patch).forEach((key) => {
     original[key] = process.env[key];
     patch[key] === undefined ? delete process.env[key] : process.env[key] = patch[key];
   });
   try {
-    return callback();
-  } finally {
-    Object.keys(patch).forEach((key) => {
-      original[key] === undefined ? delete process.env[key] : process.env[key] = original[key];
-    });
+    const result = callback();
+    if (result && typeof result.then === "function") {
+      return result.finally(restore);
+    }
+    restore();
+    return result;
+  } catch (error) {
+    restore();
+    throw error;
   }
 }
 

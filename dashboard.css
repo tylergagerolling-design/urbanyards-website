@@ -14210,7 +14210,7 @@ body:not(.is-login-screen) .app-view .dashboard-main #calendar .calendar-tabs bu
   }
 }
 
-/* Rebuild v2: ticket-first Field Mode workspace. Legacy tab bodies stay in the
+/* Rebuild v2: ticket-first workspaces. Legacy tab bodies stay in the
    markup for rollback, but the rebuilt workspace is the visible source of truth. */
 body:not(.is-login-screen) #overview.job-ticket-page > :not([data-job-ticket-workspace]),
 body:not(.is-login-screen) #calendar.field-mode-page > :not([data-field-mode-workspace]),
@@ -14362,7 +14362,7 @@ body:not(.is-login-screen) .ticket-metric small {
 
 body:not(.is-login-screen) .ticket-flow-panel {
   display: grid;
-  grid-template-columns: repeat(5, minmax(0, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
   gap: 10px;
   padding: 12px;
   border: 1px solid rgba(73, 102, 77, .16);
@@ -14517,6 +14517,11 @@ body:not(.is-login-screen) .ticket-card small {
   margin: 5px 0 0;
   color: var(--uy-muted);
   line-height: 1.4;
+}
+
+body:not(.is-login-screen) .ticket-card .ticket-owner {
+  color: var(--uy-green);
+  font-weight: 750;
 }
 
 body:not(.is-login-screen) .ticket-card .ticket-detail {

@@ -8319,20 +8319,28 @@
   }
 
   const ticketStageMeta = {
-    sales_intake: { label: "Sales Intake", lane: "sales", tone: "new" },
-    scope_in_progress: { label: "Scope", lane: "sales", tone: "watch" },
-    customer_approval_pending: { label: "Customer Approval", lane: "office", tone: "watch" },
-    needs_budget: { label: "Needs Budget", lane: "office", tone: "risk" },
-    invoice_preparation: { label: "Draft Invoice", lane: "office", tone: "watch" },
-    ready_to_schedule: { label: "Ready to Schedule", lane: "ready", tone: "good" },
-    scheduled: { label: "Scheduled", lane: "field", tone: "good" },
-    in_progress: { label: "In Progress", lane: "field", tone: "active" },
-    field_work_complete: { label: "Field Complete", lane: "review", tone: "good" },
-    completion_review: { label: "Completion Review", lane: "review", tone: "watch" },
-    invoice_sent: { label: "Invoice Sent", lane: "money", tone: "watch" },
-    paid: { label: "Paid", lane: "closed", tone: "good" },
-    closed: { label: "Closed", lane: "closed", tone: "muted" },
-    cancelled: { label: "Cancelled", lane: "closed", tone: "muted" }
+    draft: { label: "Draft", lane: "sales", tone: "muted", owner: "Sales" },
+    sales_intake: { label: "Sales Intake", lane: "sales", tone: "new", owner: "Sales" },
+    scope_in_progress: { label: "Scope", lane: "sales", tone: "watch", owner: "Sales" },
+    quote_pending: { label: "Quote Pending", lane: "sales", tone: "watch", owner: "Sales" },
+    customer_approval_pending: { label: "Customer Approval", lane: "sales", tone: "watch", owner: "Sales" },
+    needs_budget: { label: "Needs Budget", lane: "accounting", tone: "risk", owner: "Accounting" },
+    budget_in_progress: { label: "Budget In Progress", lane: "accounting", tone: "watch", owner: "Accounting" },
+    needs_owner_approval: { label: "Owner Approval", lane: "accounting", tone: "risk", owner: "Owner" },
+    invoice_preparation: { label: "Draft Invoice", lane: "accounting", tone: "watch", owner: "Accounting" },
+    ready_to_schedule: { label: "Ready to Schedule", lane: "ready", tone: "good", owner: "Field" },
+    scheduled: { label: "Scheduled", lane: "field", tone: "good", owner: "Field" },
+    in_progress: { label: "In Progress", lane: "field", tone: "active", owner: "Field" },
+    paused: { label: "Paused", lane: "field", tone: "watch", owner: "Field" },
+    scope_change_requested: { label: "Scope Change", lane: "sales", tone: "watch", owner: "Sales" },
+    field_work_complete: { label: "Field Complete", lane: "review", tone: "good", owner: "Owner Review" },
+    completion_review: { label: "Completion Review", lane: "review", tone: "watch", owner: "Owner Review" },
+    invoice_review: { label: "Invoice Review", lane: "money", tone: "watch", owner: "Accounting" },
+    invoice_sent: { label: "Invoice Sent", lane: "money", tone: "watch", owner: "Accounting" },
+    partially_paid: { label: "Partially Paid", lane: "money", tone: "watch", owner: "Accounting" },
+    paid: { label: "Paid", lane: "closed", tone: "good", owner: "Accounting" },
+    closed: { label: "Closed", lane: "closed", tone: "muted", owner: "Closed" },
+    cancelled: { label: "Cancelled", lane: "closed", tone: "muted", owner: "Closed" }
   };
 
   function statusText(value) {
@@ -8341,19 +8349,112 @@
 
   function quoteStage(item) {
     const status = statusText(item.status);
-    if (/won|approved|accepted/.test(status)) return "ready_to_schedule";
+    if (/lost|cancel|no fit|declined|rejected/.test(status)) return "cancelled";
+    if (/paid|closed/.test(status)) return "closed";
+    if (/partial/.test(status)) return "partially_paid";
     if (/invoice|invoiced/.test(status)) return "invoice_sent";
-    if (/quote|estimate|sent/.test(status)) return "customer_approval_pending";
-    if (/contact|follow/.test(status)) return "scope_in_progress";
+    if (/ready.*schedule|schedule/.test(status)) return "ready_to_schedule";
+    if (/owner.*approval|review/.test(status)) return "needs_owner_approval";
+    if (/budget/.test(status)) return "budget_in_progress";
+    if (/won|approved|accepted/.test(status)) return "needs_budget";
+    if (/quote needed|estimate needed|quote requested/.test(status)) return "quote_pending";
+    if (/quoted|quote sent|estimate sent|sent/.test(status)) return "customer_approval_pending";
+    if (/interested|contact|follow/.test(status)) return "scope_in_progress";
     return "sales_intake";
   }
 
   function jobStage(item) {
     const status = statusText(item.status);
     if (/cancel/.test(status)) return "cancelled";
-    if (/complete|done/.test(status)) return "completion_review";
+    if (/paid|closed/.test(status)) return "closed";
+    if (/invoice sent/.test(status)) return "invoice_sent";
+    if (/invoice|billing/.test(status)) return "invoice_review";
+    if (/review/.test(status)) return "completion_review";
+    if (/complete|done/.test(status)) return "field_work_complete";
+    if (/pause|hold|blocked/.test(status)) return "paused";
     if (/progress|started|active/.test(status)) return "in_progress";
     return "scheduled";
+  }
+
+  function ticketNextAction(stage) {
+    switch (stage) {
+      case "draft":
+      case "sales_intake":
+        return "Review intake";
+      case "scope_in_progress":
+        return "Confirm scope";
+      case "quote_pending":
+        return "Prepare quote";
+      case "customer_approval_pending":
+        return "Follow up on approval";
+      case "needs_budget":
+        return "Build internal budget";
+      case "budget_in_progress":
+        return "Finish cost review";
+      case "needs_owner_approval":
+        return "Owner approval";
+      case "invoice_preparation":
+        return "Prepare draft invoice";
+      case "ready_to_schedule":
+        return "Schedule field work";
+      case "scheduled":
+        return "Work the visit";
+      case "in_progress":
+        return "Add field update";
+      case "paused":
+        return "Resolve blocker";
+      case "scope_change_requested":
+        return "Review scope change";
+      case "field_work_complete":
+        return "Review completion";
+      case "completion_review":
+        return "Check actuals/photos";
+      case "invoice_review":
+        return "Finalize invoice";
+      case "invoice_sent":
+      case "partially_paid":
+        return "Collect payment";
+      case "paid":
+        return "Close ticket";
+      default:
+        return "Open ticket";
+    }
+  }
+
+  function ticketBlockers(stage) {
+    switch (stage) {
+      case "sales_intake":
+        return ["Scope", "Contact", "Property"];
+      case "scope_in_progress":
+        return ["Scope", "Photos", "Quote"];
+      case "quote_pending":
+        return ["Quote"];
+      case "customer_approval_pending":
+        return ["Customer approval"];
+      case "needs_budget":
+        return ["Budget", "Owner approval", "Draft invoice"];
+      case "budget_in_progress":
+        return ["Owner approval", "Draft invoice"];
+      case "needs_owner_approval":
+        return ["Owner approval"];
+      case "invoice_preparation":
+        return ["Draft invoice"];
+      case "ready_to_schedule":
+        return [];
+      case "scheduled":
+      case "in_progress":
+        return ["Arrival photos", "Completion photos", "Forms"];
+      case "field_work_complete":
+      case "completion_review":
+        return ["Actuals", "Photos", "Invoice review"];
+      case "invoice_review":
+        return ["Invoice approval"];
+      case "invoice_sent":
+      case "partially_paid":
+        return ["Payment"];
+      default:
+        return [];
+    }
   }
 
   function ticketNumber(prefix, id, index) {
@@ -8363,6 +8464,7 @@
 
   function buildTicketFromQuote(item, index) {
     const stage = quoteStage(item);
+    const meta = ticketStageMeta[stage] || ticketStageMeta.sales_intake;
     return {
       id: item.id,
       source: "quote",
@@ -8372,19 +8474,21 @@
       property: item.city || item.propertyType || "Property not set",
       detail: item.notes || item.email || item.phone || "Needs intake review.",
       stage,
-      stageLabel: ticketStageMeta[stage]?.label || "Ticket",
-      tone: ticketStageMeta[stage]?.tone || "new",
-      lane: ticketStageMeta[stage]?.lane || "sales",
+      stageLabel: meta.label,
+      tone: meta.tone,
+      lane: meta.lane,
+      ownerLabel: meta.owner,
       action: "open-submission",
       dateRaw: item.createdAtRaw,
       dateLabel: item.receivedAt || "No date",
-      nextAction: stage === "sales_intake" ? "Review request" : stage === "scope_in_progress" ? "Confirm scope" : stage === "customer_approval_pending" ? "Follow up on approval" : "Prepare scheduling",
-      blockers: stage === "ready_to_schedule" ? [] : ["Scope", "Approval", "Draft invoice"].slice(stage === "customer_approval_pending" ? 1 : 0)
+      nextAction: ticketNextAction(stage),
+      blockers: ticketBlockers(stage)
     };
   }
 
   function buildTicketFromJob(item, index) {
     const stage = jobStage(item);
+    const meta = ticketStageMeta[stage] || ticketStageMeta.scheduled;
     return {
       id: item.id,
       source: "job",
@@ -8394,14 +8498,15 @@
       property: item.city || "Property not set",
       detail: [item.date, item.window].filter(Boolean).join(" / ") || "Schedule details needed.",
       stage,
-      stageLabel: ticketStageMeta[stage]?.label || "Scheduled",
-      tone: ticketStageMeta[stage]?.tone || "good",
-      lane: ticketStageMeta[stage]?.lane || "field",
+      stageLabel: meta.label,
+      tone: meta.tone,
+      lane: meta.lane,
+      ownerLabel: meta.owner,
       action: "edit-job",
       dateRaw: item.dateRaw,
       dateLabel: [item.date, item.window].filter(Boolean).join(" / "),
-      nextAction: stage === "scheduled" ? "Complete field work" : stage === "in_progress" ? "Upload job notes/photos" : "Review completion",
-      blockers: stage === "completion_review" ? ["Actuals", "Photos", "Invoice review"] : []
+      nextAction: ticketNextAction(stage),
+      blockers: ticketBlockers(stage)
     };
   }
 
@@ -8432,6 +8537,7 @@
         <h4>${escapeHtml(ticket.title)}</h4>
         <p>${escapeHtml(ticket.customer)}</p>
         <small>${escapeHtml([ticket.property, ticket.dateLabel].filter(Boolean).join(" / "))}</small>
+        <small class="ticket-owner">Current owner: ${escapeHtml(ticket.ownerLabel || "Unassigned")}</small>
         ${compact ? "" : `<p class="ticket-detail">${escapeHtml(ticket.detail)}</p>`}
         ${blockers}
       </div>
@@ -8474,17 +8580,17 @@
     const target = qs("[data-job-ticket-workspace]");
     if (!target) return;
     const tickets = dashboardTickets(data);
-    const fieldTickets = tickets.filter((ticket) => ["scheduled", "in_progress"].includes(ticket.stage));
-    const officeTickets = tickets.filter((ticket) => ["sales_intake", "scope_in_progress", "customer_approval_pending", "needs_budget", "invoice_preparation", "completion_review"].includes(ticket.stage));
+    const fieldTickets = tickets.filter((ticket) => ["scheduled", "in_progress", "paused"].includes(ticket.stage));
+    const officeTickets = tickets.filter((ticket) => ["draft", "sales_intake", "scope_in_progress", "quote_pending", "customer_approval_pending", "needs_budget", "budget_in_progress", "needs_owner_approval", "invoice_preparation", "completion_review", "invoice_review"].includes(ticket.stage));
     const readyTickets = tickets.filter((ticket) => ticket.stage === "ready_to_schedule");
-    const reviewTickets = tickets.filter((ticket) => ["completion_review", "invoice_sent"].includes(ticket.stage));
+    const reviewTickets = tickets.filter((ticket) => ["field_work_complete", "completion_review", "invoice_review", "invoice_sent", "partially_paid"].includes(ticket.stage));
     target.innerHTML = `
       <div class="ticket-workspace">
         ${renderWorkspaceSwitcher("overview")}
         <header class="ticket-hero">
           <div>
             <p class="eyebrow">Job Ticket System</p>
-            <h3>Field Mode Command Center</h3>
+            <h3>Job Ticket Command Center</h3>
             <p>Every request, quote, scheduled visit, field update, invoice step, and closeout flows through one job ticket workflow.</p>
           </div>
           <div class="ticket-hero-actions">
@@ -8495,15 +8601,17 @@
         <section class="ticket-metrics" aria-label="Job ticket summary">
           ${renderTicketMetric(tickets.length, "Open Tickets", "Quotes and field work")}
           ${renderTicketMetric(ticketCountBy(tickets, (ticket) => ticket.lane === "field"), "In Field", "Scheduled or active")}
-          ${renderTicketMetric(ticketCountBy(tickets, (ticket) => ticket.lane === "office" || ticket.lane === "sales"), "Needs Office", "Scope, quote, budget, approval")}
+          ${renderTicketMetric(ticketCountBy(tickets, (ticket) => ticket.lane === "sales" || ticket.lane === "accounting"), "Needs Office", "Scope, quote, budget, approval")}
           ${renderTicketMetric(ticketCountBy(tickets, (ticket) => ticket.lane === "review" || ticket.lane === "money"), "Closeout", "Review, invoice, payment")}
         </section>
         <section class="ticket-flow-panel">
           <div class="ticket-flow-step is-active"><span>1</span><strong>Sales Intake</strong><small>Lead and scope</small></div>
           <div class="ticket-flow-step"><span>2</span><strong>Quote Approval</strong><small>Customer yes</small></div>
           <div class="ticket-flow-step"><span>3</span><strong>Budget Check</strong><small>Owner approval</small></div>
-          <div class="ticket-flow-step"><span>4</span><strong>Schedule</strong><small>Field assignment</small></div>
-          <div class="ticket-flow-step"><span>5</span><strong>Complete</strong><small>Photos and invoice</small></div>
+          <div class="ticket-flow-step"><span>4</span><strong>Draft Invoice</strong><small>Ready before field</small></div>
+          <div class="ticket-flow-step"><span>5</span><strong>Schedule</strong><small>Field assignment</small></div>
+          <div class="ticket-flow-step"><span>6</span><strong>Complete</strong><small>Photos and forms</small></div>
+          <div class="ticket-flow-step"><span>7</span><strong>Invoice and Close</strong><small>Payment collected</small></div>
         </section>
         <div class="ticket-lane-grid">
           ${renderTicketColumn("Today and Field Work", "Scheduled, active, and field-owned tickets.", fieldTickets, "No field tickets are scheduled yet.")}
@@ -8624,8 +8732,8 @@
     if (!target) return;
     const tickets = dashboardTickets(data).filter((ticket) => ticket.source === "quote");
     const intakeTickets = tickets.filter((ticket) => ["sales_intake", "scope_in_progress"].includes(ticket.stage));
-    const approvalTickets = tickets.filter((ticket) => ticket.stage === "customer_approval_pending");
-    const readyTickets = tickets.filter((ticket) => ticket.stage === "ready_to_schedule");
+    const approvalTickets = tickets.filter((ticket) => ["quote_pending", "customer_approval_pending"].includes(ticket.stage));
+    const accountingTickets = tickets.filter((ticket) => ticket.stage === "needs_budget");
     const due = typeof outreachDueProspects === "function" ? outreachDueProspects() : [];
     const hot = typeof outreachHotProspects === "function" ? outreachHotProspects() : [];
     target.innerHTML = `
@@ -8646,12 +8754,12 @@
           ${renderTicketMetric(intakeTickets.length, "Sales Intake", "New scope and lead review")}
           ${renderTicketMetric(due.length, "Follow-Ups Due", "Calls or emails waiting")}
           ${renderTicketMetric(approvalTickets.length + hot.length, "Quote Action", "Interested or quote pending")}
-          ${renderTicketMetric(readyTickets.length, "Won to Schedule", "Ready for the next role")}
+          ${renderTicketMetric(accountingTickets.length, "Accounting Handoff", "Approved work needs budget")}
         </section>
         <div class="ticket-lane-grid">
           ${renderTicketColumn("New Intake", "Requests and prospects that need Sales review.", intakeTickets, "No new sales intake tickets.")}
           ${renderTicketColumn("Customer Response Needed", "Quotes, follow-ups, and warm leads that need contact.", approvalTickets.concat(hot.map((item, index) => buildTicketFromQuote(item, index))), "No quote follow-ups are waiting.")}
-          ${renderTicketColumn("Ready for Accounting", "Won work ready for budget, owner approval, and invoice preparation.", readyTickets, "No approved tickets are ready for Accounting.")}
+          ${renderTicketColumn("Ready for Accounting", "Approved work ready for budget, owner approval, and invoice preparation.", accountingTickets, "No approved tickets are ready for Accounting.")}
         </div>
         <section class="ticket-review-strip">
           <div>
@@ -8670,8 +8778,9 @@
     const target = qs("[data-accountant-workspace]");
     if (!target) return;
     const tickets = dashboardTickets(data);
-    const needsBudget = tickets.filter((ticket) => ["ready_to_schedule", "completion_review"].includes(ticket.stage));
-    const fieldComplete = tickets.filter((ticket) => ticket.stage === "completion_review");
+    const needsBudget = tickets.filter((ticket) => ["needs_budget", "budget_in_progress"].includes(ticket.stage));
+    const ownerApproval = tickets.filter((ticket) => ["needs_owner_approval", "invoice_preparation"].includes(ticket.stage));
+    const fieldComplete = tickets.filter((ticket) => ["field_work_complete", "completion_review", "invoice_review"].includes(ticket.stage));
     const documents = data.documents || [];
     const unpaidInvoices = documents.filter((doc) => doc.type === "invoice" && doc.status !== "paid");
     const overdueInvoices = unpaidInvoices.filter((doc) => doc.dueDateRaw && doc.dueDateRaw < todayKey());
@@ -8691,6 +8800,7 @@
       dateRaw: doc.dueDateRaw || doc.createdAtRaw,
       dateLabel: doc.dueDate || doc.createdAt || "",
       nextAction: doc.squareInvoiceNumber ? "Sync or collect" : "Connect Square invoice",
+      ownerLabel: "Accounting",
       blockers: doc.squareInvoiceNumber ? [] : ["Square invoice #"]
     }));
     target.innerHTML = `
@@ -8709,13 +8819,13 @@
         </header>
         <section class="ticket-metrics" aria-label="Accounting ticket summary">
           ${renderTicketMetric(needsBudget.length, "Needs Budget", "Tickets needing cost review")}
-          ${renderTicketMetric(fieldComplete.length, "Completion Review", "Actuals and invoice check")}
+          ${renderTicketMetric(ownerApproval.length, "Owner Approval", "Budget and invoice prep")}
           ${renderTicketMetric(unpaidInvoices.length, "Open Invoices", "Awaiting payment")}
           ${renderTicketMetric(overdueInvoices.length, "Overdue", "Payment action needed")}
         </section>
         <div class="ticket-lane-grid">
           ${renderTicketColumn("Budgeting Queue", "Approved work that needs internal cost review before scheduling.", needsBudget, "No tickets are waiting for budget review.")}
-          ${renderTicketColumn("Invoice and Payment Queue", "Square-linked invoices and payment follow-ups.", invoiceTickets, "No invoices need review.")}
+          ${renderTicketColumn("Owner and Invoice Prep", "Budget approvals and draft invoices required before scheduling.", ownerApproval, "No tickets are waiting on owner approval.")}
           ${renderTicketColumn("Completion Closeout", "Finished field work that needs actuals, documents, invoice, and payment review.", fieldComplete, "No completed field work is waiting for closeout.")}
         </div>
         <section class="ticket-review-strip">

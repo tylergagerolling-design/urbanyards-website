@@ -14209,3 +14209,395 @@ body:not(.is-login-screen) .app-view .dashboard-main #calendar .calendar-tabs bu
     transition: none !important;
   }
 }
+
+/* Rebuild v2: ticket-first Field Mode workspace. Legacy tab bodies stay in the
+   markup for rollback, but the rebuilt workspace is the visible source of truth. */
+body:not(.is-login-screen) #overview.job-ticket-page > :not([data-job-ticket-workspace]),
+body:not(.is-login-screen) #calendar.field-mode-page > :not([data-field-mode-workspace]) {
+  display: none !important;
+}
+
+body:not(.is-login-screen) .ticket-workspace,
+body:not(.is-login-screen) .field-workspace {
+  display: grid;
+  gap: clamp(18px, 2vw, 28px);
+  color: var(--uy-ink);
+}
+
+body:not(.is-login-screen) .ticket-hero {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 18px;
+  padding: clamp(22px, 3vw, 34px);
+  border: 1px solid rgba(73, 102, 77, .18);
+  border-radius: 26px;
+  background:
+    radial-gradient(circle at 92% 18%, rgba(153, 180, 119, .18), transparent 30%),
+    linear-gradient(135deg, rgba(255, 255, 255, .92), rgba(247, 245, 236, .82));
+  box-shadow: var(--uy-soft-shadow);
+}
+
+body:not(.is-login-screen) .ticket-hero h3 {
+  margin: 0;
+  color: var(--uy-green);
+  font-size: clamp(2rem, 4vw, 4.2rem);
+  line-height: .94;
+  letter-spacing: 0;
+}
+
+body:not(.is-login-screen) .ticket-hero p:not(.eyebrow) {
+  max-width: 760px;
+  margin: 10px 0 0;
+  color: var(--uy-muted);
+  font-size: clamp(.98rem, 1.2vw, 1.12rem);
+  line-height: 1.55;
+}
+
+body:not(.is-login-screen) .ticket-hero-actions,
+body:not(.is-login-screen) .field-proof-actions,
+body:not(.is-login-screen) .ticket-card-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+body:not(.is-login-screen) .ticket-hero-actions button,
+body:not(.is-login-screen) .field-proof-actions button,
+body:not(.is-login-screen) .ticket-card-actions button,
+body:not(.is-login-screen) .ticket-create-form button {
+  min-height: var(--dashboard-button-height, 40px);
+  border: 1px solid rgba(18, 63, 49, .16);
+  border-radius: var(--dashboard-button-radius, 8px);
+  background: linear-gradient(180deg, #2d714d, #145238);
+  color: #fff;
+  box-shadow: var(--dashboard-button-shadow, 0 12px 24px rgba(18, 63, 49, .18));
+  font-weight: 750;
+}
+
+body:not(.is-login-screen) .ticket-hero-actions button + button,
+body:not(.is-login-screen) .field-proof-actions button,
+body:not(.is-login-screen) .ticket-card-actions button {
+  background: rgba(255, 255, 255, .78);
+  color: var(--uy-green);
+  box-shadow: none;
+}
+
+body:not(.is-login-screen) .ticket-metrics {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 14px;
+}
+
+body:not(.is-login-screen) .ticket-metric {
+  min-height: 128px;
+  padding: 20px;
+  border: 1px solid rgba(73, 102, 77, .16);
+  border-radius: 22px;
+  background: rgba(255, 255, 255, .76);
+  box-shadow: 0 14px 34px rgba(19, 36, 28, .06);
+}
+
+body:not(.is-login-screen) .ticket-metric strong {
+  display: block;
+  color: var(--uy-green);
+  font-size: clamp(2rem, 3vw, 3rem);
+  line-height: 1;
+}
+
+body:not(.is-login-screen) .ticket-metric span {
+  display: block;
+  margin-top: 8px;
+  color: var(--uy-green);
+  font-weight: 800;
+}
+
+body:not(.is-login-screen) .ticket-metric small {
+  display: block;
+  margin-top: 5px;
+  color: var(--uy-muted);
+  line-height: 1.35;
+}
+
+body:not(.is-login-screen) .ticket-flow-panel {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 10px;
+  padding: 12px;
+  border: 1px solid rgba(73, 102, 77, .16);
+  border-radius: 24px;
+  background: rgba(255, 255, 255, .62);
+}
+
+body:not(.is-login-screen) .ticket-flow-step {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  align-items: center;
+  gap: 8px 10px;
+  min-width: 0;
+  padding: 12px;
+  border-radius: 16px;
+  color: var(--uy-muted);
+}
+
+body:not(.is-login-screen) .ticket-flow-step span {
+  display: inline-grid;
+  place-items: center;
+  width: 30px;
+  height: 30px;
+  border-radius: 999px;
+  background: #e7efdf;
+  color: var(--uy-green);
+  font-weight: 900;
+}
+
+body:not(.is-login-screen) .ticket-flow-step strong {
+  color: var(--uy-green);
+}
+
+body:not(.is-login-screen) .ticket-flow-step small {
+  grid-column: 2;
+  color: var(--uy-muted);
+}
+
+body:not(.is-login-screen) .ticket-flow-step.is-active {
+  background: #eef5e8;
+}
+
+body:not(.is-login-screen) .ticket-lane-grid,
+body:not(.is-login-screen) .field-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 16px;
+}
+
+body:not(.is-login-screen) .field-grid {
+  grid-template-columns: minmax(0, 1.55fr) minmax(320px, .8fr);
+}
+
+body:not(.is-login-screen) .field-side-stack {
+  display: grid;
+  gap: 16px;
+  align-content: start;
+}
+
+body:not(.is-login-screen) .ticket-lane,
+body:not(.is-login-screen) .ticket-review-strip {
+  min-width: 0;
+  padding: clamp(18px, 2vw, 24px);
+  border: 1px solid rgba(73, 102, 77, .16);
+  border-radius: 24px;
+  background: rgba(255, 255, 255, .78);
+  box-shadow: 0 14px 36px rgba(19, 36, 28, .06);
+}
+
+body:not(.is-login-screen) .ticket-lane-heading {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  padding-bottom: 14px;
+  border-bottom: 1px solid rgba(73, 102, 77, .12);
+}
+
+body:not(.is-login-screen) .ticket-lane-heading h3,
+body:not(.is-login-screen) .ticket-review-strip h3 {
+  margin: 0;
+  color: var(--uy-green);
+  font-size: 1.25rem;
+}
+
+body:not(.is-login-screen) .ticket-lane-heading p,
+body:not(.is-login-screen) .ticket-review-strip p {
+  margin: 4px 0 0;
+  color: var(--uy-muted);
+  line-height: 1.45;
+}
+
+body:not(.is-login-screen) .ticket-lane-heading > span {
+  display: inline-grid;
+  place-items: center;
+  min-width: 34px;
+  height: 34px;
+  border-radius: 999px;
+  background: #e7efdf;
+  color: var(--uy-green);
+  font-weight: 900;
+}
+
+body:not(.is-login-screen) .ticket-lane-list,
+body:not(.is-login-screen) .ticket-review-list {
+  display: grid;
+  gap: 12px;
+  margin-top: 14px;
+}
+
+body:not(.is-login-screen) .ticket-card {
+  display: grid;
+  gap: 14px;
+  padding: 16px;
+  border: 1px solid rgba(73, 102, 77, .14);
+  border-radius: 18px;
+  background: rgba(251, 250, 245, .92);
+}
+
+body:not(.is-login-screen) .ticket-card-main {
+  min-width: 0;
+}
+
+body:not(.is-login-screen) .ticket-number,
+body:not(.is-login-screen) .ticket-stage {
+  display: inline-flex;
+  align-items: center;
+  min-height: 24px;
+  margin: 0 6px 8px 0;
+  padding: 0 8px;
+  border-radius: 999px;
+  background: #e7efdf;
+  color: var(--uy-green);
+  font-size: .72rem;
+  font-weight: 850;
+  letter-spacing: .04em;
+  text-transform: uppercase;
+}
+
+body:not(.is-login-screen) .ticket-stage {
+  background: rgba(217, 182, 111, .18);
+}
+
+body:not(.is-login-screen) .ticket-card h4 {
+  margin: 0;
+  color: var(--uy-green);
+  font-size: 1.05rem;
+}
+
+body:not(.is-login-screen) .ticket-card p,
+body:not(.is-login-screen) .ticket-card small {
+  display: block;
+  margin: 5px 0 0;
+  color: var(--uy-muted);
+  line-height: 1.4;
+}
+
+body:not(.is-login-screen) .ticket-card .ticket-detail {
+  color: var(--uy-ink);
+}
+
+body:not(.is-login-screen) .ticket-blockers {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 10px;
+}
+
+body:not(.is-login-screen) .ticket-blockers span {
+  padding: 4px 8px;
+  border-radius: 999px;
+  background: rgba(217, 182, 111, .18);
+  color: #6d5a2f;
+  font-size: .78rem;
+  font-weight: 750;
+}
+
+body:not(.is-login-screen) .ticket-card-actions {
+  justify-content: space-between;
+  padding-top: 12px;
+  border-top: 1px solid rgba(73, 102, 77, .10);
+}
+
+body:not(.is-login-screen) .ticket-card-actions span {
+  color: var(--uy-green);
+  font-weight: 750;
+}
+
+body:not(.is-login-screen) .ticket-review-strip {
+  display: grid;
+  grid-template-columns: minmax(0, .8fr) minmax(0, 1.2fr);
+  gap: 18px;
+  align-items: start;
+}
+
+body:not(.is-login-screen) .ticket-create-form {
+  display: grid;
+  gap: 10px;
+  margin-top: 14px;
+}
+
+body:not(.is-login-screen) .ticket-create-form input,
+body:not(.is-login-screen) .ticket-create-form select {
+  width: 100%;
+  min-height: 42px;
+  border: 1px solid rgba(73, 102, 77, .18);
+  border-radius: 10px;
+  background: rgba(255, 255, 255, .82);
+  color: var(--uy-ink);
+}
+
+body:not(.is-login-screen) .ticket-create-form .recurring-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  width: fit-content;
+  min-height: 38px;
+  padding: 0 12px;
+  border: 1px solid rgba(73, 102, 77, .16);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, .74);
+  color: var(--uy-green);
+  font-weight: 750;
+}
+
+body:not(.is-login-screen) .ticket-create-form .recurring-controls {
+  display: grid;
+  gap: 10px;
+  padding: 12px;
+  border: 1px dashed rgba(73, 102, 77, .22);
+  border-radius: 14px;
+}
+
+body:not(.is-login-screen) .ticket-create-form .recurring-controls[hidden] {
+  display: none;
+}
+
+body:not(.is-login-screen) .field-proof-actions {
+  align-items: stretch;
+  margin-top: 14px;
+}
+
+body:not(.is-login-screen) .field-proof-actions button {
+  flex: 1 1 160px;
+}
+
+@media (max-width: 1180px) {
+  body:not(.is-login-screen) .ticket-metrics,
+  body:not(.is-login-screen) .ticket-flow-panel {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  body:not(.is-login-screen) .ticket-lane-grid,
+  body:not(.is-login-screen) .field-grid,
+  body:not(.is-login-screen) .ticket-review-strip {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 760px) {
+  body:not(.is-login-screen) .ticket-hero {
+    align-items: flex-start;
+    flex-direction: column;
+    border-radius: 20px;
+  }
+
+  body:not(.is-login-screen) .ticket-hero-actions {
+    width: 100%;
+  }
+
+  body:not(.is-login-screen) .ticket-hero-actions button {
+    flex: 1 1 150px;
+  }
+
+  body:not(.is-login-screen) .ticket-metrics,
+  body:not(.is-login-screen) .ticket-flow-panel {
+    grid-template-columns: 1fr;
+  }
+}

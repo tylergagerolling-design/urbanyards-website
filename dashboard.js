@@ -8318,6 +8318,292 @@
     `;
   }
 
+  const ticketStageMeta = {
+    sales_intake: { label: "Sales Intake", lane: "sales", tone: "new" },
+    scope_in_progress: { label: "Scope", lane: "sales", tone: "watch" },
+    customer_approval_pending: { label: "Customer Approval", lane: "office", tone: "watch" },
+    needs_budget: { label: "Needs Budget", lane: "office", tone: "risk" },
+    invoice_preparation: { label: "Draft Invoice", lane: "office", tone: "watch" },
+    ready_to_schedule: { label: "Ready to Schedule", lane: "ready", tone: "good" },
+    scheduled: { label: "Scheduled", lane: "field", tone: "good" },
+    in_progress: { label: "In Progress", lane: "field", tone: "active" },
+    field_work_complete: { label: "Field Complete", lane: "review", tone: "good" },
+    completion_review: { label: "Completion Review", lane: "review", tone: "watch" },
+    invoice_sent: { label: "Invoice Sent", lane: "money", tone: "watch" },
+    paid: { label: "Paid", lane: "closed", tone: "good" },
+    closed: { label: "Closed", lane: "closed", tone: "muted" },
+    cancelled: { label: "Cancelled", lane: "closed", tone: "muted" }
+  };
+
+  function statusText(value) {
+    return String(value || "").trim().toLowerCase();
+  }
+
+  function quoteStage(item) {
+    const status = statusText(item.status);
+    if (/won|approved|accepted/.test(status)) return "ready_to_schedule";
+    if (/invoice|invoiced/.test(status)) return "invoice_sent";
+    if (/quote|estimate|sent/.test(status)) return "customer_approval_pending";
+    if (/contact|follow/.test(status)) return "scope_in_progress";
+    return "sales_intake";
+  }
+
+  function jobStage(item) {
+    const status = statusText(item.status);
+    if (/cancel/.test(status)) return "cancelled";
+    if (/complete|done/.test(status)) return "completion_review";
+    if (/progress|started|active/.test(status)) return "in_progress";
+    return "scheduled";
+  }
+
+  function ticketNumber(prefix, id, index) {
+    const safe = String(id || "").replace(/[^a-z0-9]/gi, "").slice(0, 5).toUpperCase();
+    return `${prefix}-${safe || String(index + 1).padStart(3, "0")}`;
+  }
+
+  function buildTicketFromQuote(item, index) {
+    const stage = quoteStage(item);
+    return {
+      id: item.id,
+      source: "quote",
+      number: ticketNumber("QT", item.id, index),
+      title: item.service || "Quote request",
+      customer: item.name || "Unnamed lead",
+      property: item.city || item.propertyType || "Property not set",
+      detail: item.notes || item.email || item.phone || "Needs intake review.",
+      stage,
+      stageLabel: ticketStageMeta[stage]?.label || "Ticket",
+      tone: ticketStageMeta[stage]?.tone || "new",
+      lane: ticketStageMeta[stage]?.lane || "sales",
+      action: "open-submission",
+      dateRaw: item.createdAtRaw,
+      dateLabel: item.receivedAt || "No date",
+      nextAction: stage === "sales_intake" ? "Review request" : stage === "scope_in_progress" ? "Confirm scope" : stage === "customer_approval_pending" ? "Follow up on approval" : "Prepare scheduling",
+      blockers: stage === "ready_to_schedule" ? [] : ["Scope", "Approval", "Draft invoice"].slice(stage === "customer_approval_pending" ? 1 : 0)
+    };
+  }
+
+  function buildTicketFromJob(item, index) {
+    const stage = jobStage(item);
+    return {
+      id: item.id,
+      source: "job",
+      number: ticketNumber("JOB", item.id, index),
+      title: item.service || "Scheduled visit",
+      customer: item.site || "Unnamed site",
+      property: item.city || "Property not set",
+      detail: [item.date, item.window].filter(Boolean).join(" / ") || "Schedule details needed.",
+      stage,
+      stageLabel: ticketStageMeta[stage]?.label || "Scheduled",
+      tone: ticketStageMeta[stage]?.tone || "good",
+      lane: ticketStageMeta[stage]?.lane || "field",
+      action: "edit-job",
+      dateRaw: item.dateRaw,
+      dateLabel: [item.date, item.window].filter(Boolean).join(" / "),
+      nextAction: stage === "scheduled" ? "Complete field work" : stage === "in_progress" ? "Upload job notes/photos" : "Review completion",
+      blockers: stage === "completion_review" ? ["Actuals", "Photos", "Invoice review"] : []
+    };
+  }
+
+  function dashboardTickets(data = state.data) {
+    const jobs = (data.jobs || []).map(buildTicketFromJob);
+    const quotes = (data.submissions || []).map(buildTicketFromQuote);
+    return [...jobs, ...quotes].sort((a, b) => String(a.dateRaw || "").localeCompare(String(b.dateRaw || "")));
+  }
+
+  function ticketCountBy(tickets, predicate) {
+    return tickets.filter(predicate).length;
+  }
+
+  function renderTicketMetric(value, label, detail) {
+    return `<article class="ticket-metric">
+      <strong>${escapeHtml(value)}</strong>
+      <span>${escapeHtml(label)}</span>
+      <small>${escapeHtml(detail)}</small>
+    </article>`;
+  }
+
+  function renderTicketCard(ticket, compact = false) {
+    const blockers = ticket.blockers?.length ? `<div class="ticket-blockers">${ticket.blockers.map((item) => `<span>${escapeHtml(item)}</span>`).join("")}</div>` : "";
+    return `<article class="ticket-card ticket-card--${escapeHtml(ticket.tone || "new")}">
+      <div class="ticket-card-main">
+        <span class="ticket-number">${escapeHtml(ticket.number)}</span>
+        <span class="ticket-stage">${escapeHtml(ticket.stageLabel)}</span>
+        <h4>${escapeHtml(ticket.title)}</h4>
+        <p>${escapeHtml(ticket.customer)}</p>
+        <small>${escapeHtml([ticket.property, ticket.dateLabel].filter(Boolean).join(" / "))}</small>
+        ${compact ? "" : `<p class="ticket-detail">${escapeHtml(ticket.detail)}</p>`}
+        ${blockers}
+      </div>
+      <div class="ticket-card-actions">
+        <span>${escapeHtml(ticket.nextAction)}</span>
+        <button type="button" data-action="${escapeHtml(ticket.action)}" data-id="${escapeHtml(ticket.id)}">Open Ticket</button>
+      </div>
+    </article>`;
+  }
+
+  function renderTicketColumn(title, detail, tickets, emptyMessage) {
+    return `<section class="ticket-lane">
+      <div class="ticket-lane-heading">
+        <div>
+          <h3>${escapeHtml(title)}</h3>
+          <p>${escapeHtml(detail)}</p>
+        </div>
+        <span>${escapeHtml(tickets.length)}</span>
+      </div>
+      <div class="ticket-lane-list">
+        ${tickets.length ? tickets.slice(0, 6).map((ticket) => renderTicketCard(ticket)).join("") : emptyState(emptyMessage)}
+      </div>
+    </section>`;
+  }
+
+  function renderJobTicketWorkspace(data = state.data) {
+    const target = qs("[data-job-ticket-workspace]");
+    if (!target) return;
+    const tickets = dashboardTickets(data);
+    const fieldTickets = tickets.filter((ticket) => ["scheduled", "in_progress"].includes(ticket.stage));
+    const officeTickets = tickets.filter((ticket) => ["sales_intake", "scope_in_progress", "customer_approval_pending", "needs_budget", "invoice_preparation", "completion_review"].includes(ticket.stage));
+    const readyTickets = tickets.filter((ticket) => ticket.stage === "ready_to_schedule");
+    const reviewTickets = tickets.filter((ticket) => ["completion_review", "invoice_sent"].includes(ticket.stage));
+    target.innerHTML = `
+      <div class="ticket-workspace">
+        <header class="ticket-hero">
+          <div>
+            <p class="eyebrow">Job Ticket System</p>
+            <h3>Field Mode Command Center</h3>
+            <p>Every request, quote, scheduled visit, field update, invoice step, and closeout flows through one job ticket workflow.</p>
+          </div>
+          <div class="ticket-hero-actions">
+            <button type="button" data-action="quick-add-job">New Job Ticket</button>
+            <button type="button" data-action="quick-add-quote">Create Quote</button>
+          </div>
+        </header>
+        <section class="ticket-metrics" aria-label="Job ticket summary">
+          ${renderTicketMetric(tickets.length, "Open Tickets", "Quotes and field work")}
+          ${renderTicketMetric(ticketCountBy(tickets, (ticket) => ticket.lane === "field"), "In Field", "Scheduled or active")}
+          ${renderTicketMetric(ticketCountBy(tickets, (ticket) => ticket.lane === "office" || ticket.lane === "sales"), "Needs Office", "Scope, quote, budget, approval")}
+          ${renderTicketMetric(ticketCountBy(tickets, (ticket) => ticket.lane === "review" || ticket.lane === "money"), "Closeout", "Review, invoice, payment")}
+        </section>
+        <section class="ticket-flow-panel">
+          <div class="ticket-flow-step is-active"><span>1</span><strong>Sales Intake</strong><small>Lead and scope</small></div>
+          <div class="ticket-flow-step"><span>2</span><strong>Quote Approval</strong><small>Customer yes</small></div>
+          <div class="ticket-flow-step"><span>3</span><strong>Budget Check</strong><small>Owner approval</small></div>
+          <div class="ticket-flow-step"><span>4</span><strong>Schedule</strong><small>Field assignment</small></div>
+          <div class="ticket-flow-step"><span>5</span><strong>Complete</strong><small>Photos and invoice</small></div>
+        </section>
+        <div class="ticket-lane-grid">
+          ${renderTicketColumn("Today and Field Work", "Scheduled, active, and field-owned tickets.", fieldTickets, "No field tickets are scheduled yet.")}
+          ${renderTicketColumn("Office Review", "Scope, quote, budget, approval, and closeout blockers.", officeTickets, "No office tickets need review.")}
+          ${renderTicketColumn("Ready to Schedule", "Approved work that can move into the field calendar.", readyTickets, "No approved tickets are waiting to schedule.")}
+        </div>
+        <section class="ticket-review-strip">
+          <div>
+            <p class="eyebrow">Closeout</p>
+            <h3>Completion and invoice review</h3>
+            <p>Finished jobs should collect actuals, arrival/completion photos, supporting forms, invoice review, and payment status before closing.</p>
+          </div>
+          <div class="ticket-review-list">
+            ${reviewTickets.length ? reviewTickets.slice(0, 3).map((ticket) => renderTicketCard(ticket, true)).join("") : emptyState("No tickets are waiting for closeout.")}
+          </div>
+        </section>
+      </div>`;
+  }
+
+  function renderFieldModeWorkspace(data = state.data) {
+    const target = qs("[data-field-mode-workspace]");
+    if (!target) return;
+    const tickets = dashboardTickets(data);
+    const fieldTickets = tickets.filter((ticket) => ticket.source === "job" && ticket.stage !== "cancelled");
+    const today = todayKey();
+    const todayTickets = fieldTickets.filter((ticket) => dateKey(ticket.dateRaw) === today);
+    const upcomingTickets = fieldTickets.filter((ticket) => dateKey(ticket.dateRaw) >= today);
+    target.innerHTML = `
+      <div class="field-workspace">
+        <header class="ticket-hero field-hero">
+          <div>
+            <p class="eyebrow">Field Worker</p>
+            <h3>Today in the Field</h3>
+            <p>Simple job-ticket queue for on-site work, with route, photos, documents, and completion review close by.</p>
+          </div>
+          <div class="ticket-hero-actions">
+            <button type="button" data-action="quick-add-job">Add Visit</button>
+            <button type="button" data-action="go-route-planner">Open Route</button>
+          </div>
+        </header>
+        <section class="ticket-metrics" aria-label="Field summary">
+          ${renderTicketMetric(todayTickets.length, "Visits Today", "Scheduled for today")}
+          ${renderTicketMetric(ticketCountBy(fieldTickets, (ticket) => ticket.stage === "in_progress"), "In Progress", "Started work")}
+          ${renderTicketMetric(ticketCountBy(fieldTickets, (ticket) => ticket.stage === "completion_review"), "Needs Review", "Photos, actuals, invoice")}
+          ${renderTicketMetric(upcomingTickets.length, "Upcoming", "Scheduled tickets")}
+        </section>
+        <div class="field-grid">
+          <section class="ticket-lane field-primary-lane">
+            <div class="ticket-lane-heading">
+              <div>
+                <h3>Field Queue</h3>
+                <p>Open the ticket before heading to the site.</p>
+              </div>
+              <span>${escapeHtml(fieldTickets.length)}</span>
+            </div>
+            <div class="ticket-lane-list">
+              ${fieldTickets.length ? fieldTickets.slice(0, 8).map((ticket) => renderTicketCard(ticket)).join("") : emptyState("No field visits are scheduled yet.")}
+            </div>
+          </section>
+          <aside class="field-side-stack">
+            <section class="ticket-lane">
+              <div class="ticket-lane-heading">
+                <div>
+                  <h3>Quick Schedule</h3>
+                  <p>Create a visit without leaving Field Mode.</p>
+                </div>
+              </div>
+              <form class="schedule-create-form ticket-create-form" data-job-create-form>
+                <input name="visit_date" type="date" required>
+                <input name="visit_window" placeholder="Time window">
+                <input name="site_name" placeholder="Client or site" required>
+                <input name="city" placeholder="Property or area" autocomplete="street-address" data-address-autocomplete>
+                <input name="service" placeholder="Job, task, or reminder" required>
+                <label class="recurring-toggle">
+                  <input name="is_recurring" type="checkbox" data-recurring-toggle>
+                  <span>Recurring visit</span>
+                </label>
+                <button type="submit"><span class="button-icon" aria-hidden="true">+</span><span>Add Visit</span></button>
+                <div class="recurring-controls" data-recurring-controls hidden>
+                  <label>Repeat every
+                    <input name="recurrence_interval" type="number" min="1" max="365" value="1" inputmode="numeric">
+                  </label>
+                  <label>Frequency
+                    <select name="recurrence_unit">
+                      <option value="days">Days</option>
+                      <option value="weeks" selected>Weeks</option>
+                      <option value="months">Months</option>
+                    </select>
+                  </label>
+                  <label>Repeat until
+                    <input name="recurrence_end_date" type="date">
+                  </label>
+                  <p>Each occurrence is saved as its own visit.</p>
+                </div>
+              </form>
+            </section>
+            <section class="ticket-lane">
+              <div class="ticket-lane-heading">
+                <div>
+                  <h3>Route and Proof</h3>
+                  <p>Maps, arrival photos, completion photos, and forms stay tied to the ticket.</p>
+                </div>
+              </div>
+              <div class="field-proof-actions">
+                <button type="button" data-action="go-route-planner">Open Route Planner</button>
+                <button type="button" data-action="go-documents">Open Forms</button>
+                <button type="button" data-action="go-settings">Dashboard Health</button>
+              </div>
+            </section>
+          </aside>
+        </div>
+      </div>`;
+  }
+
   function renderRoutePlanner() {
     if (!els.routeDate || !els.routeStops || !els.routeSummary) return;
     els.routeDate.value = state.routeDate;
@@ -12790,6 +13076,8 @@
   async function render() {
     const data = state.data;
     safeRender("notifications", () => renderNotifications(data));
+    safeRender("job ticket workspace", () => renderJobTicketWorkspace(data));
+    safeRender("field mode workspace", () => renderFieldModeWorkspace(data));
     safeRender("property filters", () => populatePropertyFilter(data));
     safeRender("metrics", () => renderMetrics(data));
     safeRender("dashboard alerts", () => renderDashboardAlerts(data));

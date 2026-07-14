@@ -21,6 +21,16 @@ const {
   getVisibleWorkspaces,
   getVisibleWorkspaceNav
 } = require("../src/app/routing/workspace-registry");
+const {
+  TICKET_OWNER_GROUPS,
+  normalizeTicketStage,
+  getTicketStageMeta,
+  getTicketNextAction,
+  getTicketBlockers,
+  normalizeTicketSourceType,
+  ticketSourceKey,
+  mergeCanonicalTickets
+} = require("../src/features/tickets/view-model/ticket-dashboard-view-model");
 
 test("ticket permissions keep one canonical role-aware workflow", () => {
   const owner = { role: ROLES.OWNER, userId: "owner-1" };
@@ -218,4 +228,31 @@ test("workspace registry matches the rebuilt five-area dashboard shell", () => {
   ]);
   assert.equal(getVisibleWorkspaces(fieldWorker, permissionService).some((workspace) => workspace.key === "calendar"), true);
   assert.equal(getVisibleWorkspaceNav("route-planner", fieldWorker, permissionService).some((item) => item.key === "route"), true);
+});
+
+test("ticket dashboard view model normalizes workflow language for the rebuilt shell", () => {
+  assert.equal(normalizeTicketStage("Cost review in progress"), TICKET_STAGES.BUDGET_IN_PROGRESS);
+  assert.equal(normalizeTicketStage("Ready to schedule"), TICKET_STAGES.READY_TO_SCHEDULE);
+  assert.equal(normalizeTicketStage("lost / no fit"), TICKET_STAGES.CANCELLED);
+
+  assert.deepEqual(getTicketBlockers(TICKET_STAGES.SCHEDULED), ["Arrival photos", "Completion photos", "Forms"]);
+  assert.equal(getTicketNextAction(TICKET_STAGES.INVOICE_SENT), "Collect payment");
+  assert.equal(getTicketStageMeta(TICKET_STAGES.NEEDS_OWNER_APPROVAL).owner, "Owner");
+  assert.equal(normalizeTicketSourceType("quote_submission"), "quote");
+  assert.equal(normalizeTicketSourceType("scheduled_visit"), "job");
+  assert.equal(TICKET_OWNER_GROUPS.some((group) => group.id === "field" && group.stages.includes(TICKET_STAGES.IN_PROGRESS)), true);
+});
+
+test("ticket dashboard view model merges canonical tickets over legacy fallbacks", () => {
+  const canonical = [
+    { id: "ticket-1", source: "ticket", sourceType: "quote", sourceId: "quote-1", dateRaw: "2026-07-15" }
+  ];
+  const fallback = [
+    { id: "quote-1", source: "quote", sourceType: "quote", sourceId: "quote-1", dateRaw: "2026-07-14" },
+    { id: "job-1", source: "job", sourceType: "job", sourceId: "job-1", dateRaw: "2026-07-16" }
+  ];
+
+  assert.equal(ticketSourceKey(canonical[0]), "quote:quote-1");
+  assert.deepEqual(mergeCanonicalTickets(canonical, fallback).map((ticket) => ticket.id), ["ticket-1", "job-1"]);
+  assert.deepEqual(mergeCanonicalTickets([], fallback).map((ticket) => ticket.id), ["quote-1", "job-1"]);
 });

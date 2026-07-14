@@ -48,6 +48,7 @@ Created foundation modules:
 - `src/features/tickets/services/ticket-workflow-service.js`
 - `src/features/tickets/services/ticket-number.js`
 - `src/features/tickets/repositories/ticket-repository.js`
+- `src/features/tickets/view-model/ticket-dashboard-view-model.js`
 
 Canonical dashboard workspaces:
 

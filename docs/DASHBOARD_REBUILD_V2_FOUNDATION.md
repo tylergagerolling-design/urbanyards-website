@@ -49,6 +49,16 @@ Created foundation modules:
 - `src/features/tickets/services/ticket-number.js`
 - `src/features/tickets/repositories/ticket-repository.js`
 
+Canonical dashboard workspaces:
+
+- `overview`
+- `calendar`
+- `outreach`
+- `documents`
+- `settings`
+
+Legacy dashboard routes such as `route-planner`, `groundskeeper-ai`, `sales-outreach`, and `job-budgeter` are treated as aliases into those five workspaces instead of new primary tabs.
+
 ## Initial Role Model
 
 Roles:

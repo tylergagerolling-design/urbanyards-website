@@ -14,6 +14,13 @@ const { formatTicketNumber } = require("../src/features/tickets/services/ticket-
 const { validateTicketIntakeInput } = require("../src/shared/validation/ticket-validation");
 const { readDashboardConfig, validateDashboardConfig } = require("../src/shared/config/dashboard-config");
 const { redact } = require("../src/shared/logging/logger");
+const {
+  WORKSPACES,
+  normalizeWorkspaceKey,
+  getWorkspace,
+  getVisibleWorkspaces,
+  getVisibleWorkspaceNav
+} = require("../src/app/routing/workspace-registry");
 
 test("ticket permissions keep one canonical role-aware workflow", () => {
   const owner = { role: ROLES.OWNER, userId: "owner-1" };
@@ -181,4 +188,34 @@ test("responsible role makes the next owner visible", () => {
   assert.equal(getResponsibleRole(TICKET_STAGES.NEEDS_BUDGET), ROLES.ACCOUNTANT);
   assert.equal(getResponsibleRole(TICKET_STAGES.READY_TO_SCHEDULE), ROLES.OWNER);
   assert.equal(getResponsibleRole(TICKET_STAGES.IN_PROGRESS), ROLES.FIELD_WORKER);
+});
+
+test("workspace registry matches the rebuilt five-area dashboard shell", () => {
+  assert.deepEqual(WORKSPACES.map((workspace) => workspace.key), [
+    "overview",
+    "calendar",
+    "outreach",
+    "documents",
+    "settings"
+  ]);
+
+  assert.equal(normalizeWorkspaceKey("route-planner"), "calendar");
+  assert.equal(normalizeWorkspaceKey("groundskeeper-ai"), "settings");
+  assert.equal(normalizeWorkspaceKey("sales-outreach"), "outreach");
+  assert.equal(normalizeWorkspaceKey("job-budgeter"), "documents");
+  assert.equal(getWorkspace("field-worker").key, "calendar");
+
+  const permissionService = { hasPermission };
+  const owner = { role: ROLES.OWNER, userId: "owner-1" };
+  const fieldWorker = { role: ROLES.FIELD_WORKER, userId: "worker-1" };
+
+  assert.deepEqual(getVisibleWorkspaces(owner, permissionService).map((workspace) => workspace.key), [
+    "overview",
+    "calendar",
+    "outreach",
+    "documents",
+    "settings"
+  ]);
+  assert.equal(getVisibleWorkspaces(fieldWorker, permissionService).some((workspace) => workspace.key === "calendar"), true);
+  assert.equal(getVisibleWorkspaceNav("route-planner", fieldWorker, permissionService).some((item) => item.key === "route"), true);
 });

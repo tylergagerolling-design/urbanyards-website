@@ -370,6 +370,28 @@
     reminders: "settings"
   };
   const rebuildPrimarySections = new Set(["overview", "calendar", "outreach", "documents", "settings"]);
+  const supportModuleWarningNames = new Set([
+    "operations",
+    "route planner",
+    "equipment",
+    "equipment maintenance",
+    "hardware guide",
+    "Groundskeeper AI",
+    "Documentation",
+    "Import & Export",
+    "import/export",
+    "call history",
+    "user profiles",
+    "users access",
+    "audit logs",
+    "activity log",
+    "profile avatar",
+    "environment indicator",
+    "dashboard health",
+    "global add menu",
+    "global search",
+    "avatar fallbacks"
+  ]);
   let demoIdCount = 100;
   let googleRouteMap = null;
   let googleRouteLine = null;
@@ -527,12 +549,18 @@
     return "Module could not load.";
   }
 
+  function moduleWarningScope(name) {
+    const key = String(name || "").replace(/^render:/, "");
+    return supportModuleWarningNames.has(key) ? "support" : "critical";
+  }
+
   function recordModuleError(name, error) {
     const message = safeModuleMessage(error);
     state.moduleErrors.push({
       name,
       message,
       detail: error?.message || String(error || ""),
+      scope: moduleWarningScope(name),
       occurredAt: new Date().toISOString()
     });
     if (config.appEnv !== "production") {
@@ -1122,6 +1150,8 @@
   function dashboardHealthRows() {
     const session = getSession();
     const warnings = dashboardHealthWarnings();
+    const criticalWarnings = dashboardHealthWarnings({ scope: "critical" });
+    const supportWarnings = dashboardHealthWarnings({ scope: "support" });
     return [
       ["Environment", config.appEnv || "unknown"],
       ["Build", config.buildVersion || "not set"],
@@ -1129,28 +1159,35 @@
       ["Auth session", session?.accessToken ? "present" : "not signed in"],
       ["Current role", currentSessionRole()],
       ["Last refresh", state.lastRefreshAt ? formatDateTime(state.lastRefreshAt) : "not refreshed"],
-      ["Module warnings", String(warnings.length)]
+      ["Active workflow warnings", String(criticalWarnings.length)],
+      ["Support module warnings", String(supportWarnings.length)],
+      ["Total module warnings", String(warnings.length)]
     ];
   }
 
-  function dashboardHealthWarnings() {
-    const warnings = [...state.moduleErrors];
+  function dashboardHealthWarnings(options = {}) {
+    const warnings = state.moduleErrors.map((item) => ({
+      ...item,
+      scope: item.scope || moduleWarningScope(item.name)
+    }));
     if (!state.groundskeeperAiReady && state.groundskeeperAiError) {
-      warnings.push({ name: "Groundskeeper AI", message: state.groundskeeperAiError, detail: state.groundskeeperAiError });
+      warnings.push({ name: "Groundskeeper AI", message: state.groundskeeperAiError, detail: state.groundskeeperAiError, scope: "support" });
     }
     if (!state.documentationReady && state.documentationError) {
-      warnings.push({ name: "Documentation", message: state.documentationError, detail: state.documentationError });
+      warnings.push({ name: "Documentation", message: state.documentationError, detail: state.documentationError, scope: "support" });
     }
     if (!state.importExportReady) {
-      warnings.push({ name: "Import & Export", message: state.importExportError || "Import/export center is not ready.", detail: state.importExportError || "" });
+      warnings.push({ name: "Import & Export", message: state.importExportError || "Import/export center is not ready.", detail: state.importExportError || "", scope: "support" });
     }
+    if (options.scope === "critical") return warnings.filter((item) => item.scope !== "support");
+    if (options.scope === "support") return warnings.filter((item) => item.scope === "support");
     return warnings;
   }
 
   function diagnosticSummaryText() {
     const rows = dashboardHealthRows().map(([label, value]) => `${label}: ${value}`);
     const warnings = dashboardHealthWarnings().map((item) => (
-      `- ${item.name}: ${item.message}${item.detail ? ` (${item.detail})` : ""}`
+      `- ${item.scope === "support" ? "[support] " : ""}${item.name}: ${item.message}${item.detail ? ` (${item.detail})` : ""}`
     ));
     return [
       "Urban Yards Dashboard Diagnostics",
@@ -1179,7 +1216,7 @@
       ${warnings.length ? `
         <div class="dashboard-health-warning">
           <strong>${escapeHtml(warnings.length === 1 ? "1 module warning" : `${warnings.length} module warnings`)}</strong>
-          ${warnings.map((item) => `<small>${escapeHtml(item.name)}: ${escapeHtml(item.message)}</small>`).join("")}
+          ${warnings.map((item) => `<small>${item.scope === "support" ? "Support: " : ""}${escapeHtml(item.name)}: ${escapeHtml(item.message)}</small>`).join("")}
         </div>
       ` : `<div class="empty-state">No module warnings from the latest refresh.</div>`}
     `;
@@ -13787,11 +13824,11 @@
       state.loading = false;
       state.lastRefreshAt = new Date().toISOString();
       await render();
-      const warnings = dashboardHealthWarnings();
+      const warnings = dashboardHealthWarnings({ scope: "critical" });
       if (isDemoMode()) {
         setDashboardState("Demo mode: sample records only. Changes stay in this browser session and do not touch Supabase, Square, or real client data.");
       } else if (warnings.length) {
-        setDashboardState(`${warnings.length} dashboard module${warnings.length === 1 ? "" : "s"} loaded with warnings. Open Tools for diagnostics.`, "warning");
+        setDashboardState(`${warnings.length} active workflow module${warnings.length === 1 ? "" : "s"} loaded with warnings. Open Tools for diagnostics.`, "warning");
       } else {
         setDashboardState("");
       }

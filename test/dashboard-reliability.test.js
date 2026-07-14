@@ -97,8 +97,11 @@ test("dashboard creates canonical job tickets without removing source fallbacks"
   assert.match(js, /async function insertJobTicket/);
   assert.match(js, /async function updateJobTicket/);
   assert.match(js, /async function insertJobTicketEvent/);
+  assert.match(js, /async function loadCanonicalTicketEvents/);
+  assert.match(js, /function renderTicketHistory/);
   assert.match(js, /supabaseRestRequest\("job_tickets"/);
   assert.match(js, /supabaseRestRequest\("job_ticket_events"/);
+  assert.match(js, /job_ticket_events\?select=\*/);
   assert.match(js, /source_type: "quote"/);
   assert.match(js, /source_type: "job"/);
   assert.match(js, /ticket_stage_changed/);

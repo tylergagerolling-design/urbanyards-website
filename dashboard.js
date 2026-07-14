@@ -275,6 +275,7 @@
     equipmentMaintenanceReady: true,
     hardwareGuideReady: true,
     ticketsReady: false,
+    ticketEventsReady: false,
     ticketsError: "",
     groundskeeperAiReady: false,
     groundskeeperAiError: "",
@@ -293,6 +294,7 @@
       contacts: [],
       jobs: [],
       tickets: [],
+      ticketEvents: [],
       notes: [],
       reminders: [],
       documents: [],
@@ -4265,6 +4267,7 @@
       contacts,
       jobs,
       tickets,
+      ticketEvents,
       notes,
       reminders,
       documents,
@@ -4287,6 +4290,7 @@
       loadModule("contacts", () => supabaseRestRequest("contacts?select=*&order=created_at.desc", { method: "GET" }), []),
       loadModule("scheduled jobs", () => supabaseRestRequest("scheduled_jobs?select=*&order=visit_date.asc", { method: "GET" }), []),
       loadCanonicalTickets(),
+      loadCanonicalTicketEvents(),
       loadModule("job notes", () => supabaseRestRequest("job_notes?select=*&order=created_at.desc", { method: "GET" }), []),
       loadModule("follow-up reminders", () => supabaseRestRequest("follow_up_reminders?select=*&order=due_date.asc", { method: "GET" }), []),
       loadModule("documents", loadSalesDocuments, []),
@@ -4311,6 +4315,7 @@
       contacts: contacts.map(normalizeContact),
       jobs: jobs.map(normalizeJob),
       tickets,
+      ticketEvents,
       notes: notes.map(normalizeNote),
       reminders: reminders.map(normalizeReminder),
       documents,
@@ -4340,6 +4345,20 @@
     } catch (error) {
       state.ticketsReady = false;
       state.ticketsError = error.message || "Canonical job tickets could not load.";
+      if (!isMissingOptionalTableError(error)) {
+        recordModuleError("canonical tickets", error);
+      }
+      return [];
+    }
+  }
+
+  async function loadCanonicalTicketEvents() {
+    try {
+      const rows = await supabaseRestRequest("job_ticket_events?select=*&order=created_at.desc&limit=500", { method: "GET" });
+      state.ticketEventsReady = true;
+      return rows.map(normalizeJobTicketEvent);
+    } catch (error) {
+      state.ticketEventsReady = false;
       if (!isMissingOptionalTableError(error)) {
         recordModuleError("canonical tickets", error);
       }
@@ -8838,6 +8857,40 @@
     };
   }
 
+  function ticketEventTitle(value) {
+    const type = String(value || "").trim();
+    if (type === "ticket_created") return "Ticket created";
+    if (type === "ticket_stage_changed") return "Stage changed";
+    if (type === "ticket_updated") return "Ticket updated";
+    return type
+      ? type.replace(/_/g, " ").replace(/\b\w/g, (letter) => letter.toUpperCase())
+      : "Ticket update";
+  }
+
+  function normalizeJobTicketEvent(row = {}) {
+    const rawFromStage = String(row.from_stage || row.fromStage || "").trim();
+    const rawToStage = String(row.to_stage || row.toStage || "").trim();
+    const fromStage = rawFromStage ? normalizeTicketStageForDashboard(rawFromStage) : "";
+    const toStage = rawToStage ? normalizeTicketStageForDashboard(rawToStage) : "";
+    return {
+      id: row.id || "",
+      ticketId: row.ticket_id || row.ticketId || "",
+      eventType: row.event_type || row.eventType || "ticket_updated",
+      title: ticketEventTitle(row.event_type || row.eventType),
+      actorEmail: row.actor_email || row.actorEmail || "",
+      actorUserId: row.actor_user_id || row.actorUserId || "",
+      fromStage,
+      fromStageLabel: fromStage ? ticketStageLabel(fromStage) : "",
+      toStage,
+      toStageLabel: toStage ? ticketStageLabel(toStage) : "",
+      notes: row.notes || "",
+      oldValue: row.old_value || row.oldValue || null,
+      newValue: row.new_value || row.newValue || null,
+      createdAtRaw: row.created_at || row.createdAt || "",
+      createdAt: formatDateTime(row.created_at || row.createdAt)
+    };
+  }
+
   function buildTicketFromQuote(item, index) {
     const stage = quoteStage(item);
     const meta = ticketStageMeta[stage] || ticketStageMeta.sales_intake;
@@ -9267,6 +9320,39 @@
     </section>`;
   }
 
+  function ticketHistoryFor(ticket) {
+    if (!ticket || ticket.source !== "ticket") return [];
+    return (state.data.ticketEvents || [])
+      .filter((event) => event.ticketId === ticket.id)
+      .sort((a, b) => String(b.createdAtRaw || "").localeCompare(String(a.createdAtRaw || "")));
+  }
+
+  function renderTicketHistory(ticket) {
+    if (!ticket || ticket.source !== "ticket") return "";
+    const history = ticketHistoryFor(ticket).slice(0, 8);
+    return `<section class="ticket-drawer-card ticket-history-card">
+      <div class="ticket-drawer-card-heading">
+        <h4>Ticket history</h4>
+        <span>${history.length ? `${history.length} recent` : "No events yet"}</span>
+      </div>
+      ${history.length ? `<div class="ticket-history-list">
+        ${history.map((event) => {
+          const stageDetail = event.fromStageLabel || event.toStageLabel
+            ? [event.fromStageLabel, event.toStageLabel].filter(Boolean).join(" to ")
+            : "";
+          return `<article class="ticket-history-row">
+            <span aria-hidden="true"></span>
+            <div>
+              <strong>${escapeHtml(event.title)}</strong>
+              <p>${escapeHtml(event.notes || stageDetail || "Ticket record updated.")}</p>
+              <small>${escapeHtml([event.actorEmail || "Dashboard", event.createdAt].filter(Boolean).join(" / "))}</small>
+            </div>
+          </article>`;
+        }).join("")}
+      </div>` : `<p class="ticket-drawer-note">History will appear here after this ticket is created or moved through the workflow.</p>`}
+    </section>`;
+  }
+
   function openTicketDrawer(source, id) {
     if (!els.detailDrawer || !els.detailContent) return;
     const ticket = dashboardTickets().find((item) => item.id === id && item.source === source);
@@ -9302,6 +9388,7 @@
         </div>
         ${renderTicketHandoffActions(ticket)}
         ${renderTicketRequirements(ticket)}
+        ${renderTicketHistory(ticket)}
         ${renderTicketSourceActions(ticket)}
         ${sourceType === "quote" && sourceItem ? renderCallPanel(callPanelContext("quote_submission", sourceItem.id)) : ""}
         ${sourceType === "job" && sourceItem ? `<div class="job-support-sections">${renderJobDocumentationSection(sourceItem)}${renderJobPhotosSection(sourceItem)}</div>` : ""}

@@ -15058,6 +15058,40 @@ body:not(.is-login-screen) .ticket-requirement-list li span {
   background: #d9b66f;
 }
 
+body:not(.is-login-screen) .ticket-history-list {
+  display: grid;
+  gap: 10px;
+}
+
+body:not(.is-login-screen) .ticket-history-row {
+  display: grid;
+  grid-template-columns: 12px minmax(0, 1fr);
+  gap: 10px;
+  align-items: start;
+}
+
+body:not(.is-login-screen) .ticket-history-row > span {
+  width: 9px;
+  height: 9px;
+  margin-top: 5px;
+  border-radius: 999px;
+  background: #9fb679;
+  box-shadow: 0 0 0 4px rgba(159, 182, 121, .16);
+}
+
+body:not(.is-login-screen) .ticket-history-row strong {
+  display: block;
+  color: var(--uy-green);
+  font-size: .95rem;
+}
+
+body:not(.is-login-screen) .ticket-history-row p,
+body:not(.is-login-screen) .ticket-history-row small {
+  margin: 2px 0 0;
+  color: var(--uy-muted);
+  line-height: 1.35;
+}
+
 body:not(.is-login-screen) .ticket-source-actions {
   padding-top: 0;
   border-top: 0;

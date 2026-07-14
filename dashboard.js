@@ -286,8 +286,11 @@
     equipmentMaintenanceReady: true,
     hardwareGuideReady: true,
     groundskeeperAiReady: false,
+    groundskeeperAiError: "",
     documentationReady: false,
+    documentationError: "",
     budgetsReady: false,
+    budgetsError: "",
     connectedOpsReady: false,
     importExportReady: false,
     leadActivityReady: true,
@@ -1208,19 +1211,39 @@
   function setAvatarElement(img, initialsNode, record = {}, fallbackName = "") {
     const avatarUrl = profileAvatarUrl(record);
     const initials = initialsForName(firstProfileText(profileFullName(record), fallbackName), profileEmail(record));
+    const showFallback = () => {
+      if (img) img.hidden = true;
+      if (initialsNode) initialsNode.hidden = false;
+    };
+    const showAvatar = () => {
+      if (img) img.hidden = false;
+      if (initialsNode) initialsNode.hidden = true;
+    };
     if (initialsNode) {
       initialsNode.textContent = initials;
-      initialsNode.hidden = Boolean(avatarUrl);
+      initialsNode.hidden = false;
     }
     if (!img) return;
-    img.hidden = !avatarUrl;
-    img.removeAttribute("src");
-    if (avatarUrl) {
+    img.loading = "eager";
+    img.decoding = "async";
+    img.onerror = showFallback;
+
+    if (!avatarUrl) {
+      img.removeAttribute("src");
+      showFallback();
+      return;
+    }
+
+    const currentSrc = img.getAttribute("src") || "";
+    img.onload = showAvatar;
+    if (currentSrc !== avatarUrl) {
+      showFallback();
       img.src = avatarUrl;
-      img.onerror = () => {
-        img.hidden = true;
-        if (initialsNode) initialsNode.hidden = false;
-      };
+      return;
+    }
+
+    if (img.complete && img.naturalWidth > 0) {
+      showAvatar();
     }
   }
 
@@ -1439,6 +1462,24 @@
       invitedAt: firstProfileText(row.invited_at, row.invitedAt),
       lastSeenAt: firstProfileText(row.last_seen_at, row.lastSeenAt)
     };
+  }
+
+  function upsertUserProfileRecord(record = {}) {
+    const profile = normalizeUserProfile(record);
+    if (!profile.userId && !profile.email) return null;
+    const profiles = Array.isArray(state.data.userProfiles) ? state.data.userProfiles : [];
+    const index = profiles.findIndex((item) => (
+      (profile.userId && item.userId === profile.userId)
+      || (profile.email && item.email && item.email.toLowerCase() === profile.email.toLowerCase())
+    ));
+    if (index >= 0) profiles[index] = { ...profiles[index], ...profile };
+    else profiles.unshift(profile);
+    state.data.userProfiles = profiles;
+    syncSessionRoleFromProfile(profile);
+    renderCurrentProfileAvatar(state.data);
+    renderUsersAccess(state.data);
+    bindAvatarFallbacks();
+    return profile;
   }
 
   async function loadUserProfiles() {
@@ -2042,7 +2083,7 @@
   function renderCallHistory(leadId) {
     const history = callHistoryFor(leadId);
     if (!history.length) {
-      return `<section class="call-history"><h4>Call History</h4>${emptyState(state.leadActivityReady ? "No call attempts logged yet." : "Run DASHBOARD_CALL_ACTIVITY_SQL.md to enable call history.")}</section>`;
+      return `<section class="call-history"><h4>Call History</h4>${emptyState(state.leadActivityReady ? "No call attempts logged yet." : "Call history is unavailable right now. Refresh the dashboard or check Supabase access.")}</section>`;
     }
     return `
       <section class="call-history">
@@ -4165,6 +4206,7 @@
     try {
       const snapshot = await groundskeeperRequest("admin-list");
       state.groundskeeperAiReady = true;
+      state.groundskeeperAiError = "";
       return {
         settings: snapshot.settings || [],
         knowledge: snapshot.knowledge || [],
@@ -4179,6 +4221,7 @@
       };
     } catch (error) {
       state.groundskeeperAiReady = false;
+      state.groundskeeperAiError = error.message || "Groundskeeper AI could not load.";
       return {
         settings: [],
         knowledge: [],
@@ -4209,9 +4252,11 @@
         attachments = [];
       }
       state.documentationReady = true;
+      state.documentationError = "";
       return normalizeDocumentationBundle({ templates, assignments, submissions, attachments, audit });
     } catch (error) {
       state.documentationReady = false;
+      state.documentationError = error.message || "Documentation records could not load.";
       return normalizeDocumentationBundle();
     }
   }
@@ -4238,6 +4283,7 @@
         supabaseRestRequest("job_budget_history?select=*&order=created_at.desc&limit=300", { method: "GET" })
       ]);
       state.budgetsReady = true;
+      state.budgetsError = "";
       return normalizeBudgetBundle({
         settings: settingsRows?.[0] || {},
         budgets,
@@ -4254,6 +4300,7 @@
       });
     } catch (error) {
       state.budgetsReady = false;
+      state.budgetsError = error.message || "Job budgets could not load.";
       return emptyBudgetBundle();
     }
   }
@@ -4579,7 +4626,7 @@
   }
 
   async function insertBudget(payload) {
-    if (!state.budgetsReady) throw new Error("Create the Job Budgeter tables first. Use supabase/migrations/20260713_job_budgeter.sql.");
+    if (!state.budgetsReady) throw new Error("Job budgets are not available right now. Refresh the dashboard, then check Supabase/RLS if it stays down.");
     if (isDemoMode()) {
       const budget = normalizeBudget({ id: nextDemoId("budget"), ...payload, created_at: new Date().toISOString(), updated_at: new Date().toISOString() });
       state.data.budgets.budgets.unshift(budget);
@@ -5156,7 +5203,7 @@
   async function insertDocumentationTemplate(payload) {
     if (!canManageDocumentationTemplates()) throw new Error("Only Owner and Admin users can manage master templates.");
     if (!payload.name) throw new Error("Template name is required.");
-    if (!state.documentationReady) throw new Error("Create the documentation tables first. See DASHBOARD_DOCUMENTATION_SQL.md.");
+    if (!state.documentationReady) throw new Error("Documentation is not available right now. Refresh the dashboard, then check Supabase/RLS if it stays down.");
     if (isDemoMode()) {
       const template = normalizeDocumentationTemplate({ id: nextDemoId("documentation-template"), ...payload });
       state.data.documentation.templates.unshift(template);
@@ -5194,7 +5241,7 @@
 
   async function insertDocumentationAssignment(payload) {
     if (!payload.template_name && !payload.template_id) throw new Error("Choose a template or enter a form name.");
-    if (!state.documentationReady) throw new Error("Create the documentation tables first. See DASHBOARD_DOCUMENTATION_SQL.md.");
+    if (!state.documentationReady) throw new Error("Documentation is not available right now. Refresh the dashboard, then check Supabase/RLS if it stays down.");
     if (isDemoMode()) {
       const assignment = normalizeDocumentationAssignment({ id: nextDemoId("documentation-assignment"), ...payload });
       state.data.documentation.assignments.unshift(assignment);
@@ -5217,7 +5264,7 @@
   }
 
   async function updateDocumentationSubmission(id, payload) {
-    if (!state.documentationReady) throw new Error("Create the documentation tables first. See DASHBOARD_DOCUMENTATION_SQL.md.");
+    if (!state.documentationReady) throw new Error("Documentation is not available right now. Refresh the dashboard, then check Supabase/RLS if it stays down.");
     if (isDemoMode()) {
       const index = state.data.documentation.submissions.findIndex((item) => item.id === id);
       if (index >= 0) {
@@ -5238,7 +5285,7 @@
   }
 
   async function uploadDocumentationSubmission(assignmentId) {
-    if (!state.documentationReady) throw new Error("Create the documentation tables first. See DASHBOARD_DOCUMENTATION_SQL.md.");
+    if (!state.documentationReady) throw new Error("Documentation is not available right now. Refresh the dashboard, then check Supabase/RLS if it stays down.");
     const assignment = state.data.documentation.assignments.find((item) => item.id === assignmentId);
     if (!assignment) throw new Error("Assigned form was not found.");
     const file = await chooseDocumentationFile();
@@ -5354,7 +5401,7 @@
   }
 
   async function insertDocumentationAttachment(payload) {
-    if (!state.documentationReady) throw new Error("Create the documentation tables first. See DASHBOARD_DOCUMENTATION_SQL.md.");
+    if (!state.documentationReady) throw new Error("Documentation is not available right now. Refresh the dashboard, then check Supabase/RLS if it stays down.");
     if (isDemoMode()) {
       const attachment = normalizeDocumentationAttachment({
         id: nextDemoId("documentation-attachment"),
@@ -5578,7 +5625,7 @@
       state.data.leadActivity.unshift(activity);
       return activity;
     }
-    if (!state.leadActivityReady) throw new Error("Run DASHBOARD_CALL_ACTIVITY_SQL.md to enable call logging.");
+    if (!state.leadActivityReady) throw new Error("Call logging is unavailable right now. Refresh the dashboard or check Supabase access.");
     const rows = await supabaseRestRequest("lead_activity", {
       method: "POST",
       headers: { Prefer: "return=representation" },
@@ -5612,7 +5659,7 @@
       }
       return state.data.leadActivity[index] || null;
     }
-    if (!state.leadActivityReady) throw new Error("Run DASHBOARD_CALL_ACTIVITY_SQL.md to enable call logging.");
+    if (!state.leadActivityReady) throw new Error("Call logging is unavailable right now. Refresh the dashboard or check Supabase access.");
     const rows = await supabaseRestRequest(`lead_activity?id=eq.${encodeURIComponent(id)}`, {
       method: "PATCH",
       headers: { Prefer: "return=representation" },
@@ -8933,7 +8980,7 @@
   function renderOutreachCompanies() {
     if (!els.outreachCompanyTable) return;
     if (!state.outreachCompaniesReady) {
-      const message = "Companies need the outreach_companies table. Run DASHBOARD_OUTREACH_SQL.md, then refresh.";
+      const message = "Companies could not load right now. Refresh the dashboard or check Supabase access.";
       els.outreachCompanyTable.innerHTML = `<tr><td colspan="8">${emptyState(message)}</td></tr>`;
       if (els.outreachCompanyCards) els.outreachCompanyCards.innerHTML = emptyState(message);
       return;
@@ -8972,7 +9019,7 @@
   function renderOutreachProperties() {
     if (!els.outreachPropertyTable) return;
     if (!state.outreachPropertiesReady) {
-      const message = "Managed properties need the outreach_properties table. Run DASHBOARD_OUTREACH_SQL.md, then refresh.";
+      const message = "Managed properties could not load right now. Refresh the dashboard or check Supabase access.";
       els.outreachPropertyTable.innerHTML = `<tr><td colspan="12">${emptyState(message)}</td></tr>`;
       if (els.outreachPropertyCards) els.outreachPropertyCards.innerHTML = emptyState(message);
       return;
@@ -9041,7 +9088,7 @@
     if (els.outreachPropertyVerifiedFilter) els.outreachPropertyVerifiedFilter.value = state.outreachVerifiedFilter;
 
     if (!state.outreachReady) {
-      const message = "Outreach needs the outreach_prospects table. Run DASHBOARD_OUTREACH_SQL.md, then refresh.";
+      const message = "Outreach could not load right now. Refresh the dashboard or check Supabase access.";
       els.outreachMetrics.innerHTML = "";
       if (els.outreachFollowups) els.outreachFollowups.innerHTML = emptyState(message);
       if (els.outreachHot) els.outreachHot.innerHTML = emptyState("No quote-ready leads.");
@@ -9397,7 +9444,7 @@
   function renderDocuments(data) {
     if (!els.documents) return;
     if (!state.documentsReady) {
-      els.documents.innerHTML = emptyState("Document storage is not set up yet. Run the sales_documents SQL in DASHBOARD_SETUP.md.");
+      els.documents.innerHTML = emptyState("Documents could not load right now. Refresh the dashboard or check Supabase access.");
       return;
     }
     const docs = filteredDocuments();
@@ -9772,7 +9819,7 @@
     if (els.documentationStatus) {
       els.documentationStatus.innerHTML = state.documentationReady
         ? `<span>Private documentation tables connected. Use Supabase Storage buckets for templates and submissions.</span><span>${escapeHtml(documentation.assignments.length)} assigned / ${escapeHtml(documentation.submissions.length)} submitted / ${escapeHtml(documentation.templates.length)} templates</span>`
-        : `<span>Documentation tables are not installed yet. Run <code>DASHBOARD_DOCUMENTATION_SQL.md</code>, then refresh.</span><span>Demo mode still shows the intended workflow.</span>`;
+        : `<span>Documentation could not load right now. Refresh the dashboard, then check Supabase/RLS if it stays down.</span><span>${escapeHtml(state.documentationError || "Demo mode still shows the intended workflow.")}</span>`;
     }
     if (els.documentationSearch && els.documentationSearch.value !== state.documentationSearch) els.documentationSearch.value = state.documentationSearch;
     if (els.documentationTypeFilter && els.documentationTypeFilter.value !== state.documentationTypeFilter) els.documentationTypeFilter.value = state.documentationTypeFilter;
@@ -10227,7 +10274,7 @@
     if (!els.budgetList) return;
     const budgets = filteredBudgets();
     if (!state.budgetsReady && !isDemoMode()) {
-      els.budgetList.innerHTML = emptyState("Job Budgeter tables are not installed yet. Run supabase/migrations/20260713_job_budgeter.sql, then refresh.");
+      els.budgetList.innerHTML = emptyState(state.budgetsError || "Job budgets could not load right now. Refresh the dashboard, then check Supabase/RLS if it stays down.");
       return;
     }
     els.budgetList.innerHTML = budgets.length ? budgets.map(renderBudgetRow).join("") : emptyState("No job budgets match this view.");
@@ -10263,7 +10310,7 @@
     if (els.budgetStatus) {
       els.budgetStatus.textContent = state.budgetsReady || isDemoMode()
         ? "Budgets use the shared dashboard records, RLS policies, and the Job Budgeter SQL tables."
-        : "Job Budgeter tables are not installed yet. Run supabase/migrations/20260713_job_budgeter.sql.";
+        : (state.budgetsError || "Job budgets could not load right now. Refresh the dashboard, then check Supabase/RLS if it stays down.");
     }
     const selected = selectedBudget();
     if (selected && !state.selectedBudgetId) state.selectedBudgetId = selected.id;
@@ -11557,7 +11604,7 @@
   function renderAiLogs(logs) {
     if (!els.aiLogsList) return;
     if (!logs.length) {
-      els.aiLogsList.innerHTML = emptyState(state.groundskeeperAiReady ? "No AI questions logged yet." : "Create the Groundskeeper AI tables, then refresh this panel.");
+      els.aiLogsList.innerHTML = emptyState(state.groundskeeperAiReady ? "No AI questions logged yet." : (state.groundskeeperAiError || "Groundskeeper AI logs could not load."));
       return;
     }
     const visibleLogs = logs.slice(0, 6);
@@ -12070,7 +12117,7 @@
     if (els.groundskeeperAiStatus) {
       els.groundskeeperAiStatus.innerHTML = state.groundskeeperAiReady
         ? `<span>${aiBadge("Secure Backend", "Secure Backend")} Website helper uses live training through <code>/.netlify/functions/groundskeeper-ai</code>.</span><span>${escapeHtml(liveTrainingVersion(ai).label)} / ${escapeHtml(liveRules)} live / ${escapeHtml(approvedRules)} approved</span>`
-        : `<span>${aiBadge("Setup Needed", "Setup Needed")} Run <code>DASHBOARD_GROUNDSKEEPER_AI_SQL.md</code> in Supabase, then refresh. The public helper still uses bundled website knowledge until tables exist.</span>`;
+        : `<span>${aiBadge("Needs Attention", "Needs Attention")} Groundskeeper AI could not load from the secure backend.</span><span>${escapeHtml(state.groundskeeperAiError || "Refresh the dashboard, then check Netlify function logs or Supabase/RLS if it stays down.")}</span>`;
     }
     if (els.aiSearch && els.aiSearch.value !== state.groundskeeperAiSearch) els.aiSearch.value = state.groundskeeperAiSearch;
     renderAiWorkspace(ai);
@@ -13272,10 +13319,10 @@
         const targetUserId = state.avatarUploadTargetId;
         try {
           setDashboardState("Uploading avatar...");
-          await uploadUserAvatar(targetUserId, file);
+          const result = await uploadUserAvatar(targetUserId, file);
+          if (result?.profile) upsertUserProfileRecord(result.profile);
           state.avatarUploadTargetId = "";
           target.value = "";
-          await refreshDashboard();
           setActiveSection("settings");
           setDashboardState("Avatar updated.");
         } catch (error) {
@@ -13493,7 +13540,7 @@
           setDashboardState("Refreshing documentation...");
           state.data.documentation = await loadDocumentation();
           await render();
-          setDashboardState(state.documentationReady ? "Documentation refreshed." : "Documentation tables are not installed yet.");
+          setDashboardState(state.documentationReady ? "Documentation refreshed." : "Documentation could not load right now.");
         } catch (error) {
           setDashboardState(error.message || "Unable to refresh documentation.", "error");
         }
@@ -13693,7 +13740,7 @@
           setDashboardState("Refreshing job budgets...");
           state.data.budgets = await loadBudgets();
           await render();
-          setDashboardState(state.budgetsReady || isDemoMode() ? "Job budgets refreshed." : "Job Budgeter tables are not installed yet.");
+          setDashboardState(state.budgetsReady || isDemoMode() ? "Job budgets refreshed." : (state.budgetsError || "Job budgets could not load."));
         } catch (error) {
           setDashboardState(error.message || "Unable to refresh job budgets.", "error");
         }
@@ -14065,8 +14112,8 @@
         if (!targetUserId || !window.confirm("Remove this user's avatar?")) return;
         try {
           setDashboardState("Removing avatar...");
-          await removeUserAvatar(targetUserId);
-          await refreshDashboard();
+          const result = await removeUserAvatar(targetUserId);
+          if (result?.profile) upsertUserProfileRecord(result.profile);
           setActiveSection("settings");
           setDashboardState("Avatar removed.");
         } catch (error) {

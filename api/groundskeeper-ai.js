@@ -512,11 +512,12 @@ async function handler(req, res) {
   const { action = "chat", mode: rawMode = "public", message = "", history = [], page = "", lead = {}, context = {}, payload = {} } = req.body || {};
   const mode = sanitizeMode(rawMode);
 
-  if (!(await getFeatureFlag("ai_helper_enabled", true))) {
+  const adminRequested = isAdminAction(action);
+  if (!adminRequested && !(await getFeatureFlag("ai_helper_enabled", true))) {
     return res.status(503).json({ error: UNAVAILABLE_REPLY, requestId: id });
   }
 
-  if (isAdminAction(action)) {
+  if (adminRequested) {
     try {
       return await adminAction(req, res, id, action, payload);
     } catch (error) {

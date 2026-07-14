@@ -14226,6 +14226,10 @@ body:not(.is-login-screen) .field-workspace {
   color: var(--uy-ink);
 }
 
+body:not(.is-login-screen) .dashboard-nav a.legacy-nav-route {
+  display: none !important;
+}
+
 body:not(.is-login-screen) .ticket-workspace-switcher {
   display: flex;
   align-items: center;

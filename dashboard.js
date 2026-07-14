@@ -8457,6 +8457,19 @@
     </section>`;
   }
 
+  const ticketWorkspaceLinks = [
+    { id: "overview", label: "Overview", href: "#overview" },
+    { id: "calendar", label: "Field Worker", href: "#calendar" },
+    { id: "outreach", label: "Sales Outreach", href: "#outreach" },
+    { id: "documents", label: "The Accountant", href: "#documents" }
+  ];
+
+  function renderWorkspaceSwitcher(activeId) {
+    return `<nav class="ticket-workspace-switcher" aria-label="Job ticket workspaces">
+      ${ticketWorkspaceLinks.map((item) => `<a href="${escapeHtml(item.href)}" class="${item.id === activeId ? "is-active" : ""}" data-dashboard-link="${escapeHtml(item.id)}">${escapeHtml(item.label)}</a>`).join("")}
+    </nav>`;
+  }
+
   function renderJobTicketWorkspace(data = state.data) {
     const target = qs("[data-job-ticket-workspace]");
     if (!target) return;
@@ -8467,6 +8480,7 @@
     const reviewTickets = tickets.filter((ticket) => ["completion_review", "invoice_sent"].includes(ticket.stage));
     target.innerHTML = `
       <div class="ticket-workspace">
+        ${renderWorkspaceSwitcher("overview")}
         <header class="ticket-hero">
           <div>
             <p class="eyebrow">Job Ticket System</p>
@@ -8519,6 +8533,7 @@
     const upcomingTickets = fieldTickets.filter((ticket) => dateKey(ticket.dateRaw) >= today);
     target.innerHTML = `
       <div class="field-workspace">
+        ${renderWorkspaceSwitcher("calendar")}
         <header class="ticket-hero field-hero">
           <div>
             <p class="eyebrow">Field Worker</p>
@@ -8601,6 +8616,118 @@
             </section>
           </aside>
         </div>
+      </div>`;
+  }
+
+  function renderSalesWorkspace(data = state.data) {
+    const target = qs("[data-sales-workspace]");
+    if (!target) return;
+    const tickets = dashboardTickets(data).filter((ticket) => ticket.source === "quote");
+    const intakeTickets = tickets.filter((ticket) => ["sales_intake", "scope_in_progress"].includes(ticket.stage));
+    const approvalTickets = tickets.filter((ticket) => ticket.stage === "customer_approval_pending");
+    const readyTickets = tickets.filter((ticket) => ticket.stage === "ready_to_schedule");
+    const due = typeof outreachDueProspects === "function" ? outreachDueProspects() : [];
+    const hot = typeof outreachHotProspects === "function" ? outreachHotProspects() : [];
+    target.innerHTML = `
+      <div class="ticket-workspace sales-workspace">
+        ${renderWorkspaceSwitcher("outreach")}
+        <header class="ticket-hero">
+          <div>
+            <p class="eyebrow">Sales Outreach</p>
+            <h3>Who needs the next touch?</h3>
+            <p>Move prospects from intake to quote approval, then hand approved work to Accounting for budget review.</p>
+          </div>
+          <div class="ticket-hero-actions">
+            <button type="button" data-action="new-outreach-prospect">Add Lead</button>
+            <button type="button" data-action="import-outreach-csv">Import CSV</button>
+          </div>
+        </header>
+        <section class="ticket-metrics" aria-label="Sales ticket summary">
+          ${renderTicketMetric(intakeTickets.length, "Sales Intake", "New scope and lead review")}
+          ${renderTicketMetric(due.length, "Follow-Ups Due", "Calls or emails waiting")}
+          ${renderTicketMetric(approvalTickets.length + hot.length, "Quote Action", "Interested or quote pending")}
+          ${renderTicketMetric(readyTickets.length, "Won to Schedule", "Ready for the next role")}
+        </section>
+        <div class="ticket-lane-grid">
+          ${renderTicketColumn("New Intake", "Requests and prospects that need Sales review.", intakeTickets, "No new sales intake tickets.")}
+          ${renderTicketColumn("Customer Response Needed", "Quotes, follow-ups, and warm leads that need contact.", approvalTickets.concat(hot.map((item, index) => buildTicketFromQuote(item, index))), "No quote follow-ups are waiting.")}
+          ${renderTicketColumn("Ready for Accounting", "Won work ready for budget, owner approval, and invoice preparation.", readyTickets, "No approved tickets are ready for Accounting.")}
+        </div>
+        <section class="ticket-review-strip">
+          <div>
+            <p class="eyebrow">Sales handoff rule</p>
+            <h3>Sales does not own the whole job.</h3>
+            <p>Sales creates the ticket, confirms scope and quote approval, then hands the same ticket to Accounting. Budgeting, field assignment, invoice, and payment stay connected to that ticket history.</p>
+          </div>
+          <div class="ticket-review-list">
+            ${due.length ? due.slice(0, 3).map((item, index) => renderTicketCard(buildTicketFromQuote(item, index), true)).join("") : emptyState("No urgent Sales follow-ups.")}
+          </div>
+        </section>
+      </div>`;
+  }
+
+  function renderAccountantWorkspace(data = state.data) {
+    const target = qs("[data-accountant-workspace]");
+    if (!target) return;
+    const tickets = dashboardTickets(data);
+    const needsBudget = tickets.filter((ticket) => ["ready_to_schedule", "completion_review"].includes(ticket.stage));
+    const fieldComplete = tickets.filter((ticket) => ticket.stage === "completion_review");
+    const documents = data.documents || [];
+    const unpaidInvoices = documents.filter((doc) => doc.type === "invoice" && doc.status !== "paid");
+    const overdueInvoices = unpaidInvoices.filter((doc) => doc.dueDateRaw && doc.dueDateRaw < todayKey());
+    const invoiceTickets = unpaidInvoices.slice(0, 6).map((doc, index) => ({
+      id: doc.id,
+      source: "document",
+      number: doc.number || ticketNumber("INV", doc.id, index),
+      title: doc.type === "invoice" ? "Invoice review" : "Estimate review",
+      customer: doc.clientName || "Client not set",
+      property: doc.status || "Document status needed",
+      detail: doc.squareAmountDueCents !== null ? `${formatCurrency(doc.squareAmountDueCents, doc.squareCurrency)} due` : `$${Number(doc.total || 0).toFixed(2)}`,
+      stage: "invoice_review",
+      stageLabel: doc.status || "Invoice",
+      tone: overdueInvoices.some((item) => item.id === doc.id) ? "watch" : "active",
+      lane: "money",
+      action: "open-document",
+      dateRaw: doc.dueDateRaw || doc.createdAtRaw,
+      dateLabel: doc.dueDate || doc.createdAt || "",
+      nextAction: doc.squareInvoiceNumber ? "Sync or collect" : "Connect Square invoice",
+      blockers: doc.squareInvoiceNumber ? [] : ["Square invoice #"]
+    }));
+    target.innerHTML = `
+      <div class="ticket-workspace accountant-workspace">
+        ${renderWorkspaceSwitcher("documents")}
+        <header class="ticket-hero">
+          <div>
+            <p class="eyebrow">The Accountant</p>
+            <h3>Budget, invoice, collect, close.</h3>
+            <p>Review ticket cost readiness, prepare draft invoices, track Square payment state, and close the financial record without splitting the job into a second system.</p>
+          </div>
+          <div class="ticket-hero-actions">
+            <button type="button" data-action="quick-add-quote">Create Estimate</button>
+            <button type="button" data-action="quick-add-invoice-reminder">Payment Follow-Up</button>
+          </div>
+        </header>
+        <section class="ticket-metrics" aria-label="Accounting ticket summary">
+          ${renderTicketMetric(needsBudget.length, "Needs Budget", "Tickets needing cost review")}
+          ${renderTicketMetric(fieldComplete.length, "Completion Review", "Actuals and invoice check")}
+          ${renderTicketMetric(unpaidInvoices.length, "Open Invoices", "Awaiting payment")}
+          ${renderTicketMetric(overdueInvoices.length, "Overdue", "Payment action needed")}
+        </section>
+        <div class="ticket-lane-grid">
+          ${renderTicketColumn("Budgeting Queue", "Approved work that needs internal cost review before scheduling.", needsBudget, "No tickets are waiting for budget review.")}
+          ${renderTicketColumn("Invoice and Payment Queue", "Square-linked invoices and payment follow-ups.", invoiceTickets, "No invoices need review.")}
+          ${renderTicketColumn("Completion Closeout", "Finished field work that needs actuals, documents, invoice, and payment review.", fieldComplete, "No completed field work is waiting for closeout.")}
+        </div>
+        <section class="ticket-review-strip">
+          <div>
+            <p class="eyebrow">Accounting rule</p>
+            <h3>One ticket, one financial story.</h3>
+            <p>Budgets, actual costs, draft invoices, Square invoice links, payment status, and closeout notes should remain attached to the same Job Ticket audit trail.</p>
+          </div>
+          <div class="ticket-review-list">
+            ${invoiceTickets.length ? invoiceTickets.slice(0, 3).map((ticket) => renderTicketCard(ticket, true)).join("") : emptyState("No payment items require attention.")}
+          </div>
+        </section>
       </div>`;
   }
 
@@ -13078,6 +13205,8 @@
     safeRender("notifications", () => renderNotifications(data));
     safeRender("job ticket workspace", () => renderJobTicketWorkspace(data));
     safeRender("field mode workspace", () => renderFieldModeWorkspace(data));
+    safeRender("sales workspace", () => renderSalesWorkspace(data));
+    safeRender("accountant workspace", () => renderAccountantWorkspace(data));
     safeRender("property filters", () => populatePropertyFilter(data));
     safeRender("metrics", () => renderMetrics(data));
     safeRender("dashboard alerts", () => renderDashboardAlerts(data));

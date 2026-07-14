@@ -14213,7 +14213,9 @@ body:not(.is-login-screen) .app-view .dashboard-main #calendar .calendar-tabs bu
 /* Rebuild v2: ticket-first Field Mode workspace. Legacy tab bodies stay in the
    markup for rollback, but the rebuilt workspace is the visible source of truth. */
 body:not(.is-login-screen) #overview.job-ticket-page > :not([data-job-ticket-workspace]),
-body:not(.is-login-screen) #calendar.field-mode-page > :not([data-field-mode-workspace]) {
+body:not(.is-login-screen) #calendar.field-mode-page > :not([data-field-mode-workspace]),
+body:not(.is-login-screen) #outreach.sales-ticket-page > :not([data-sales-workspace]),
+body:not(.is-login-screen) #documents.accountant-page > :not([data-accountant-workspace]) {
   display: none !important;
 }
 
@@ -14222,6 +14224,40 @@ body:not(.is-login-screen) .field-workspace {
   display: grid;
   gap: clamp(18px, 2vw, 28px);
   color: var(--uy-ink);
+}
+
+body:not(.is-login-screen) .ticket-workspace-switcher {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  width: fit-content;
+  max-width: 100%;
+  padding: 5px;
+  border: 1px solid rgba(73, 102, 77, .14);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, .72);
+  box-shadow: 0 12px 26px rgba(19, 36, 28, .05);
+  overflow-x: auto;
+}
+
+body:not(.is-login-screen) .ticket-workspace-switcher a {
+  flex: 0 0 auto;
+  min-height: 34px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 14px;
+  border-radius: 999px;
+  color: var(--uy-green);
+  text-decoration: none;
+  font-size: .86rem;
+  font-weight: 800;
+}
+
+body:not(.is-login-screen) .ticket-workspace-switcher a:hover,
+body:not(.is-login-screen) .ticket-workspace-switcher a.is-active {
+  background: #dbeacc;
+  color: var(--uy-green);
 }
 
 body:not(.is-login-screen) .ticket-hero {

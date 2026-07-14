@@ -8877,6 +8877,22 @@
     </div>`;
   }
 
+  function renderSourceTicketContext(ticket) {
+    if (!ticket) return "";
+    return `<section class="ticket-source-context">
+      <div>
+        <p class="eyebrow">Unified Ticket Context</p>
+        <h4>${escapeHtml(ticket.number)} / ${escapeHtml(ticket.stageLabel)}</h4>
+        <p>${escapeHtml(ticket.title)} for ${escapeHtml(ticket.customer)}${ticket.property ? ` / ${escapeHtml(ticket.property)}` : ""}</p>
+      </div>
+      <div class="ticket-source-context-meta">
+        <span><strong>Owner</strong>${escapeHtml(ticket.ownerLabel || "Unassigned")}</span>
+        <span><strong>Next</strong>${escapeHtml(ticket.nextAction || "Open ticket")}</span>
+        <button type="button" data-action="open-ticket" data-ticket-source="${escapeHtml(ticket.source)}" data-id="${escapeHtml(ticket.id)}">Open Unified Ticket</button>
+      </div>
+    </section>`;
+  }
+
   function openTicketDrawer(source, id) {
     if (!els.detailDrawer || !els.detailContent) return;
     const ticket = dashboardTickets().find((item) => item.id === id && item.source === source);
@@ -11665,12 +11681,14 @@
     const item = findSubmission(id);
     if (!item || !els.detailDrawer || !els.detailContent) return;
     state.selectedSubmissionId = id;
+    const ticket = buildTicketFromQuote(item, state.data.submissions.findIndex((submission) => submission.id === id));
     openDetailDrawer();
     els.detailContent.innerHTML = `
       <div class="drawer-content">
         <p class="eyebrow">Quote Detail</p>
         <h3>${escapeHtml(item.name)}</h3>
         ${statusBadge(item.status)}
+        ${renderSourceTicketContext(ticket)}
         ${renderContactQuickActions({
           leadId: item.id,
           leadType: "quote_submission",
@@ -11899,12 +11917,14 @@
     state.selectedJobId = id;
     const isReschedule = Boolean(options.reschedule);
     const visitDateValue = isReschedule && isOverdueJob(job) ? todayKey() : toDateInputValue(job.dateRaw);
+    const ticket = buildTicketFromJob(job, state.data.jobs.findIndex((item) => item.id === id));
     openDetailDrawer();
     els.detailContent.innerHTML = `
       <div class="drawer-content">
         <p class="eyebrow">${isReschedule ? "Overdue Visit" : "Schedule Detail"}</p>
         <h3>${escapeHtml(isReschedule ? `Reschedule ${job.site}` : job.site)}</h3>
         ${isOverdueJob(job) ? `<p class="job-overdue-note">This visit was scheduled for ${escapeHtml(job.date)} and is not marked complete.</p>` : ""}
+        ${renderSourceTicketContext(ticket)}
         <form class="drawer-form" data-job-edit-form>
           <label>Visit date
             <input name="visit_date" type="date" value="${escapeHtml(visitDateValue)}" required>

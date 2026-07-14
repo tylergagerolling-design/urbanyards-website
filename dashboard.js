@@ -8631,7 +8631,7 @@
         <strong>${escapeHtml(owned.length)}</strong>
         <span>Ticket${owned.length === 1 ? "" : "s"} in this lane</span>
         <div class="ticket-role-mini-list">
-          ${nextTickets.length ? nextTickets.map((ticket) => `<button type="button" data-action="open-ticket" data-source="${escapeHtml(ticket.source)}" data-id="${escapeHtml(ticket.id)}">
+          ${nextTickets.length ? nextTickets.map((ticket) => `<button type="button" data-action="open-ticket" data-ticket-source="${escapeHtml(ticket.source)}" data-id="${escapeHtml(ticket.id)}">
             <span>${escapeHtml(ticket.number)}</span>
             <strong>${escapeHtml(ticket.customer)}</strong>
             <small>${escapeHtml(ticket.nextAction)}</small>
@@ -8643,6 +8643,10 @@
 
   function renderTicketCard(ticket, compact = false) {
     const blockers = ticket.blockers?.length ? `<div class="ticket-blockers">${ticket.blockers.map((item) => `<span>${escapeHtml(item)}</span>`).join("")}</div>` : "";
+    const opensDocument = ticket.source === "document";
+    const actionAttrs = opensDocument
+      ? `data-action="open-document" data-id="${escapeHtml(ticket.id)}"`
+      : `data-action="open-ticket" data-ticket-source="${escapeHtml(ticket.source)}" data-id="${escapeHtml(ticket.id)}"`;
     return `<article class="ticket-card ticket-card--${escapeHtml(ticket.tone || "new")}">
       <div class="ticket-card-main">
         <span class="ticket-number">${escapeHtml(ticket.number)}</span>
@@ -8656,7 +8660,7 @@
       </div>
       <div class="ticket-card-actions">
         <span>${escapeHtml(ticket.nextAction)}</span>
-        <button type="button" data-action="open-ticket" data-ticket-source="${escapeHtml(ticket.source)}" data-id="${escapeHtml(ticket.id)}">Open Ticket</button>
+        <button type="button" ${actionAttrs}>${opensDocument ? "Open Document" : "Open Ticket"}</button>
       </div>
     </article>`;
   }

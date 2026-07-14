@@ -1767,6 +1767,25 @@
     return result;
   }
 
+  async function dashboardTicketRequest(action, payload = {}) {
+    const session = getSession();
+    if (!session || !session.accessToken) throw new Error("Please sign in again.");
+    const response = await fetch("/.netlify/functions/dashboard-tickets", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${session.accessToken}`
+      },
+      body: JSON.stringify({
+        action,
+        ...payload
+      })
+    });
+    const result = await response.json().catch(() => ({}));
+    if (!response.ok) throw new Error(result.error || "Job Ticket request failed.");
+    return result;
+  }
+
   function demoImportExportSnapshot() {
     return {
       modules: [
@@ -4775,19 +4794,10 @@
     }
 
     try {
-      const rows = await supabaseRestRequest("job_tickets", {
-        method: "POST",
-        headers: { Prefer: "return=representation" },
-        body: JSON.stringify(payload)
-      });
+      const result = await dashboardTicketRequest("create", { ticket: payload });
       state.ticketsReady = true;
       state.ticketsError = "";
-      const ticket = normalizeCanonicalTicket(rows[0]);
-      await insertJobTicketEvent(ticket.id, {
-        event_type: "ticket_created",
-        to_stage: ticket.stage,
-        new_value: { sourceType: ticket.sourceType, sourceId: ticket.sourceId, title: ticket.title }
-      });
+      const ticket = normalizeCanonicalTicket(result.ticket);
       return ticket;
     } catch (error) {
       state.ticketsReady = false;
@@ -4813,12 +4823,8 @@
       return updated;
     }
 
-    const rows = await supabaseRestRequest(`job_tickets?id=eq.${encodeURIComponent(id)}`, {
-      method: "PATCH",
-      headers: { Prefer: "return=representation" },
-      body: JSON.stringify(payload)
-    });
-    return normalizeCanonicalTicket(rows[0]);
+    const result = await dashboardTicketRequest("update", { id, ticket: payload });
+    return normalizeCanonicalTicket(result.ticket);
   }
 
   async function insertJobTicketEvent(ticketId, input = {}) {
@@ -4839,12 +4845,8 @@
       new_value: input.new_value || input.newValue || null
     };
     try {
-      const rows = await supabaseRestRequest("job_ticket_events", {
-        method: "POST",
-        headers: { Prefer: "return=representation" },
-        body: JSON.stringify(payload)
-      });
-      return rows && rows[0] ? rows[0] : null;
+      const result = await dashboardTicketRequest("event", { ticketId: ticketUuid, event: payload });
+      return result.event || null;
     } catch (error) {
       if (isMissingOptionalTableError(error)) return null;
       recordModuleError("canonical tickets", error);

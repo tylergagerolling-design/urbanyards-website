@@ -31,6 +31,9 @@ const {
   ticketSourceKey,
   mergeCanonicalTickets
 } = require("../src/features/tickets/view-model/ticket-dashboard-view-model");
+const {
+  _internals: ticketFunctionInternals
+} = require("../netlify/functions/dashboard-tickets");
 
 test("ticket permissions keep one canonical role-aware workflow", () => {
   const owner = { role: ROLES.OWNER, userId: "owner-1" };
@@ -255,4 +258,26 @@ test("ticket dashboard view model merges canonical tickets over legacy fallbacks
   assert.equal(ticketSourceKey(canonical[0]), "quote:quote-1");
   assert.deepEqual(mergeCanonicalTickets(canonical, fallback).map((ticket) => ticket.id), ["ticket-1", "job-1"]);
   assert.deepEqual(mergeCanonicalTickets([], fallback).map((ticket) => ticket.id), ["quote-1", "job-1"]);
+});
+
+test("dashboard ticket backend sanitizes mutation payloads before Supabase writes", () => {
+  const actor = { userId: "bb2f637a-61c8-4ca4-8e29-f4b7286f10a2", email: "team@urbanyards.us" };
+  const payload = ticketFunctionInternals.cleanTicketPayload({
+    title: "  Mulch refresh  ",
+    stage: "not-a-stage",
+    status: "also-bad",
+    source_type: "Quote",
+    source_id: "not-a-uuid",
+    proposed_price: "1200.129",
+    blockers: ["Photos", "", "Forms"]
+  }, actor);
+
+  assert.equal(payload.title, "Mulch refresh");
+  assert.equal(payload.stage, TICKET_STAGES.SALES_INTAKE);
+  assert.equal(payload.status, "open");
+  assert.equal(payload.source_type, "quote");
+  assert.equal(payload.source_id, null);
+  assert.equal(payload.proposed_price, 1200.13);
+  assert.deepEqual(payload.blockers, ["Photos", "Forms"]);
+  assert.equal(payload.created_by, actor.userId);
 });

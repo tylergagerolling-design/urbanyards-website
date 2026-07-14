@@ -14215,7 +14215,8 @@ body:not(.is-login-screen) .app-view .dashboard-main #calendar .calendar-tabs bu
 body:not(.is-login-screen) #overview.job-ticket-page > :not([data-job-ticket-workspace]),
 body:not(.is-login-screen) #calendar.field-mode-page > :not([data-field-mode-workspace]),
 body:not(.is-login-screen) #outreach.sales-ticket-page > :not([data-sales-workspace]),
-body:not(.is-login-screen) #documents.accountant-page > :not([data-accountant-workspace]) {
+body:not(.is-login-screen) #documents.accountant-page > :not([data-accountant-workspace]),
+body:not(.is-login-screen) #settings.tools-page > :not([data-tools-workspace]) {
   display: none !important;
 }
 
@@ -14288,6 +14289,77 @@ body:not(.is-login-screen) .rebuild-tool-card button {
   color: var(--uy-ink);
   font-weight: 800;
   box-shadow: 0 8px 18px rgba(27, 56, 39, 0.08);
+}
+
+body:not(.is-login-screen) .tools-control-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: 14px;
+}
+
+body:not(.is-login-screen) .tools-control-card {
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  gap: 18px;
+  min-height: 220px;
+  padding: clamp(18px, 2vw, 24px);
+  border: 1px solid rgba(73, 102, 77, .16);
+  border-radius: 24px;
+  background:
+    radial-gradient(circle at 88% 16%, rgba(153, 180, 119, .14), transparent 30%),
+    rgba(255, 255, 255, .78);
+  box-shadow: 0 14px 34px rgba(19, 36, 28, .06);
+}
+
+body:not(.is-login-screen) .tools-control-card h3 {
+  margin: 0;
+  color: var(--uy-green);
+  font-size: clamp(1.2rem, 1.8vw, 1.55rem);
+  line-height: 1.1;
+}
+
+body:not(.is-login-screen) .tools-control-card p:not(.eyebrow) {
+  margin: 8px 0 0;
+  color: var(--uy-muted);
+  line-height: 1.5;
+}
+
+body:not(.is-login-screen) .tools-health-strip {
+  align-items: start;
+}
+
+body:not(.is-login-screen) .tools-health-list {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 10px;
+}
+
+body:not(.is-login-screen) .tools-health-row,
+body:not(.is-login-screen) .tools-warning-item {
+  padding: 12px 14px;
+  border: 1px solid rgba(73, 102, 77, .14);
+  border-radius: 16px;
+  background: rgba(255, 255, 255, .74);
+}
+
+body:not(.is-login-screen) .tools-health-row span,
+body:not(.is-login-screen) .tools-warning-item small {
+  display: block;
+  color: var(--uy-muted);
+  line-height: 1.4;
+}
+
+body:not(.is-login-screen) .tools-health-row strong,
+body:not(.is-login-screen) .tools-warning-item strong {
+  display: block;
+  margin-top: 4px;
+  color: var(--uy-green);
+}
+
+body:not(.is-login-screen) .tools-warning-list {
+  display: grid;
+  gap: 10px;
 }
 
 body:not(.is-login-screen) .ticket-workspace-switcher {

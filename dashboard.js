@@ -9012,7 +9012,8 @@
     { id: "overview", label: "Overview", href: "#overview" },
     { id: "calendar", label: "Field Worker", href: "#calendar" },
     { id: "outreach", label: "Sales Outreach", href: "#outreach" },
-    { id: "documents", label: "The Accountant", href: "#documents" }
+    { id: "documents", label: "The Accountant", href: "#documents" },
+    { id: "settings", label: "Tools", href: "#settings" }
   ];
 
   function renderWorkspaceSwitcher(activeId) {
@@ -9288,6 +9289,123 @@
           </div>
         </section>
       </div>`;
+  }
+
+  function renderToolsWorkspace(data = state.data) {
+    const target = qs("[data-tools-workspace]");
+    if (!target) return;
+    const rows = dashboardHealthRows();
+    const criticalWarnings = dashboardHealthWarnings({ scope: "critical" });
+    const supportWarnings = dashboardHealthWarnings({ scope: "support" });
+    const documents = data.documents || [];
+    const documentation = data.documentation || {};
+    const ai = data.groundskeeperAi || {};
+    const aiLiveVersion = ai.liveVersion?.publishedAt
+      ? formatDateTime(ai.liveVersion.publishedAt)
+      : "Not published";
+    const documentationCount = Number(documentation.templates?.length || 0) + Number(documentation.submissions?.length || 0);
+    target.innerHTML = `
+      <div class="ticket-workspace tools-workspace">
+        ${renderWorkspaceSwitcher("settings")}
+        <header class="ticket-hero">
+          <div>
+            <p class="eyebrow">Tools</p>
+            <h3>Support systems stay behind the ticket workflow.</h3>
+            <p>Use this room for route support, documents, AI, imports, backups, user access, and diagnostics while the main dashboard stays centered on Job Tickets.</p>
+          </div>
+          <div class="ticket-hero-actions">
+            <button type="button" data-action="refresh-dashboard">Refresh Dashboard</button>
+            <button type="button" data-action="copy-dashboard-diagnostics">Copy Diagnostics</button>
+          </div>
+        </header>
+        <section class="ticket-metrics" aria-label="Tools summary">
+          ${renderTicketMetric(criticalWarnings.length, "Active Workflow Warnings", "Issues affecting rebuilt workspaces")}
+          ${renderTicketMetric(supportWarnings.length, "Support Warnings", "Setup items for hidden support modules")}
+          ${renderTicketMetric(documents.length, "Financial Documents", "Quotes, invoices, and records")}
+          ${renderTicketMetric(documentationCount, "Forms and Files", "Templates and submissions")}
+        </section>
+        <section class="tools-control-grid" aria-label="Dashboard support tools">
+          ${renderToolsCard({
+            label: "Route & Field Map",
+            detail: "Open route planning from Field Worker so stops remain tied to scheduled visits.",
+            meta: "Field support",
+            primary: "Open Field Route",
+            primaryAction: "go-route-planner"
+          })}
+          ${renderToolsCard({
+            label: "Forms & Job Documents",
+            detail: "Manage templates, submitted forms, and job documentation through The Accountant workspace.",
+            meta: `${documentationCount} files or forms`,
+            primary: "Open Accountant",
+            primaryAction: "go-documents"
+          })}
+          ${renderToolsCard({
+            label: "Groundskeeper AI",
+            detail: "Refresh the secure backend-backed AI knowledge, rules, logs, and published helper version.",
+            meta: `Live version: ${aiLiveVersion}`,
+            primary: "Refresh AI",
+            primaryAction: "refresh-groundskeeper-ai"
+          })}
+          ${renderToolsCard({
+            label: "Import, Export & Backups",
+            detail: "Refresh data tools, export full backups, or import a safe backup file when needed.",
+            meta: state.importExportReady ? "Data tools ready" : "Setup may be needed",
+            primary: "Refresh Data Tools",
+            primaryAction: "refresh-import-export",
+            secondary: "Full Backup",
+            secondaryAction: "export-full-backup"
+          })}
+        </section>
+        <section class="ticket-review-strip tools-health-strip">
+          <div>
+            <p class="eyebrow">Diagnostics</p>
+            <h3>Dashboard health</h3>
+            <p>Support warnings are separated from active workflow warnings, so optional modules do not make the whole dashboard look broken.</p>
+          </div>
+          <div class="tools-health-list">
+            ${rows.map(([label, value]) => `
+              <div class="tools-health-row">
+                <span>${escapeHtml(label)}</span>
+                <strong>${escapeHtml(value || "not set")}</strong>
+              </div>
+            `).join("")}
+          </div>
+        </section>
+        ${supportWarnings.length ? `
+          <section class="ticket-lane">
+            <div class="ticket-lane-heading">
+              <div>
+                <h3>Support setup queue</h3>
+                <p>These items are retained for admin repair without blocking the rebuilt ticket workflow.</p>
+              </div>
+              <span>${escapeHtml(String(supportWarnings.length))}</span>
+            </div>
+            <div class="tools-warning-list">
+              ${supportWarnings.slice(0, 8).map((item) => `
+                <div class="tools-warning-item">
+                  <strong>${escapeHtml(item.name)}</strong>
+                  <small>${escapeHtml(item.message || item.detail || "Needs review.")}</small>
+                </div>
+              `).join("")}
+            </div>
+          </section>
+        ` : ""}
+      </div>`;
+  }
+
+  function renderToolsCard({ label, detail, meta, primary, primaryAction, secondary, secondaryAction }) {
+    return `
+      <article class="tools-control-card">
+        <div>
+          <p class="eyebrow">${escapeHtml(meta || "Support")}</p>
+          <h3>${escapeHtml(label)}</h3>
+          <p>${escapeHtml(detail)}</p>
+        </div>
+        <div class="ticket-card-actions">
+          <button type="button" data-action="${escapeHtml(primaryAction)}">${escapeHtml(primary)}</button>
+          ${secondary && secondaryAction ? `<button type="button" data-action="${escapeHtml(secondaryAction)}">${escapeHtml(secondary)}</button>` : ""}
+        </div>
+      </article>`;
   }
 
   function renderRoutePlanner() {
@@ -13770,6 +13888,7 @@
     safeRender("field mode workspace", () => renderFieldModeWorkspace(data));
     safeRender("sales workspace", () => renderSalesWorkspace(data));
     safeRender("accountant workspace", () => renderAccountantWorkspace(data));
+    safeRender("tools workspace", () => renderToolsWorkspace(data));
     safeRender("property filters", () => populatePropertyFilter(data));
     safeRender("metrics", () => renderMetrics(data));
     safeRender("dashboard alerts", () => renderDashboardAlerts(data));

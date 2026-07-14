@@ -14706,6 +14706,47 @@ body:not(.is-login-screen) .ticket-drawer-note {
   color: var(--uy-muted);
 }
 
+body:not(.is-login-screen) .ticket-handoff-card {
+  background:
+    radial-gradient(circle at 96% 8%, rgba(153, 180, 119, .16), transparent 36%),
+    rgba(255, 255, 255, .82);
+}
+
+body:not(.is-login-screen) .ticket-handoff-actions {
+  display: grid;
+  gap: 8px;
+}
+
+body:not(.is-login-screen) .ticket-handoff-actions button {
+  display: grid;
+  gap: 3px;
+  width: 100%;
+  min-height: 58px;
+  padding: 10px 12px;
+  border: 1px solid rgba(18, 63, 49, .14);
+  border-radius: 12px;
+  background: rgba(255, 255, 255, .78);
+  color: var(--uy-green);
+  text-align: left;
+  box-shadow: 0 10px 22px rgba(19, 36, 28, .05);
+}
+
+body:not(.is-login-screen) .ticket-handoff-actions button:hover {
+  border-color: rgba(18, 63, 49, .28);
+  background: #f8fbf2;
+  transform: translateY(-1px);
+}
+
+body:not(.is-login-screen) .ticket-handoff-actions button strong {
+  font-size: .95rem;
+}
+
+body:not(.is-login-screen) .ticket-handoff-actions button small {
+  color: var(--uy-muted);
+  font-weight: 650;
+  line-height: 1.35;
+}
+
 body:not(.is-login-screen) .ticket-requirement-list {
   display: grid;
   gap: 8px;

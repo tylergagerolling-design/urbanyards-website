@@ -8352,7 +8352,7 @@
     if (/lost|cancel|no fit|declined|rejected/.test(status)) return "cancelled";
     if (/paid|closed/.test(status)) return "closed";
     if (/partial/.test(status)) return "partially_paid";
-    if (/invoice|invoiced/.test(status)) return "invoice_sent";
+    if (/invoice|invoiced/.test(status)) return "invoice_preparation";
     if (/ready.*schedule|schedule/.test(status)) return "ready_to_schedule";
     if (/owner.*approval|review/.test(status)) return "needs_owner_approval";
     if (/budget/.test(status)) return "budget_in_progress";
@@ -8601,6 +8601,85 @@
     </section>`;
   }
 
+  function ticketHandoffActions(ticket) {
+    if (!ticket) return [];
+    if (ticket.source === "quote") {
+      if (ticket.stage === "sales_intake") {
+        return [
+          { label: "Mark Intake Reviewed", status: "Contacted", detail: "Moves this request into scope/quote work." },
+          { label: "Open Quote Details", action: "open-submission", detail: "Review notes, contact info, and schedule form." }
+        ];
+      }
+      if (ticket.stage === "scope_in_progress" || ticket.stage === "quote_pending") {
+        return [
+          { label: "Create Estimate", action: "create-estimate", detail: "Starts the customer-facing estimate record." },
+          { label: "Draft Invoice", action: "create-invoice", detail: "Prepares the accounting handoff." }
+        ];
+      }
+      if (ticket.stage === "customer_approval_pending" || ticket.stage === "needs_budget" || ticket.stage === "budget_in_progress" || ticket.stage === "needs_owner_approval") {
+        return [
+          { label: "Draft Invoice", action: "create-invoice", detail: "Moves approved work into accounting prep." },
+          { label: "Open Quote Details", action: "open-submission", detail: "Use the schedule form once the work is ready." }
+        ];
+      }
+      if (ticket.stage === "invoice_preparation" || ticket.stage === "ready_to_schedule") {
+        return [
+          { label: "Open Schedule Form", action: "open-submission", detail: "Create the field visit from this ticket." },
+          { label: "Open Accountant", action: "go-documents", detail: "Review estimates, invoices, and payment records." }
+        ];
+      }
+      return [
+        { label: "Open Quote Details", action: "open-submission", detail: "Review the source request." }
+      ];
+    }
+    if (ticket.source === "job") {
+      if (ticket.stage === "scheduled" || ticket.stage === "in_progress" || ticket.stage === "paused") {
+        return [
+          { label: "Open Field Visit", action: "edit-job", detail: "Update visit timing, service, status, forms, and photos." },
+          { label: "Mark Field Complete", status: "Completed", detail: "Sends the ticket to completion review." }
+        ];
+      }
+      if (ticket.stage === "field_work_complete" || ticket.stage === "completion_review") {
+        return [
+          { label: "Send To Invoice Review", status: "Invoiced", detail: "Moves the completed visit to accounting review." },
+          { label: "Open Field Visit", action: "edit-job", detail: "Check photos, forms, and visit details." }
+        ];
+      }
+      if (ticket.stage === "invoice_review" || ticket.stage === "invoice_sent" || ticket.stage === "partially_paid") {
+        return [
+          { label: "Open Accountant", action: "go-documents", detail: "Review invoice and payment status." },
+          { label: "Open Field Visit", action: "edit-job", detail: "Review the source visit." }
+        ];
+      }
+      return [
+        { label: "Open Field Visit", action: "edit-job", detail: "Review the source visit." }
+      ];
+    }
+    return [];
+  }
+
+  function renderTicketHandoffActions(ticket) {
+    const actions = ticketHandoffActions(ticket);
+    if (!actions.length) return "";
+    return `<section class="ticket-drawer-card ticket-handoff-card">
+      <div class="ticket-drawer-card-heading">
+        <h4>Workflow handoff</h4>
+        <span>${escapeHtml(ticket.ownerLabel || "Unassigned")}</span>
+      </div>
+      <div class="ticket-handoff-actions">
+        ${actions.map((item) => {
+          const attributes = item.status
+            ? `data-action="advance-ticket-status" data-ticket-source="${escapeHtml(ticket.source)}" data-id="${escapeHtml(ticket.id)}" data-status="${escapeHtml(item.status)}"`
+            : `data-action="${escapeHtml(item.action || ticket.action || "open-ticket")}" data-id="${escapeHtml(ticket.id)}"`;
+          return `<button type="button" ${attributes}>
+            <strong>${escapeHtml(item.label)}</strong>
+            <small>${escapeHtml(item.detail || "")}</small>
+          </button>`;
+        }).join("")}
+      </div>
+    </section>`;
+  }
+
   function renderTicketSourceActions(ticket) {
     if (ticket.source === "quote") {
       return `<div class="drawer-actions ticket-source-actions">
@@ -8654,6 +8733,7 @@
           <div class="drawer-field"><span>Date</span>${escapeHtml(ticket.dateLabel || "No date")}</div>
           <div class="drawer-field span-full"><span>Details</span>${escapeHtml(ticket.detail || "No details yet.")}</div>
         </div>
+        ${renderTicketHandoffActions(ticket)}
         ${renderTicketRequirements(ticket)}
         ${renderTicketSourceActions(ticket)}
         ${source === "quote" && sourceItem ? renderCallPanel(callPanelContext("quote_submission", sourceItem.id)) : ""}
@@ -15203,7 +15283,21 @@
         return;
       }
 
-      if (action === "open-ticket") {
+      if (action === "advance-ticket-status") {
+        const source = target.dataset.ticketSource;
+        const status = target.dataset.status;
+        const table = source === "quote" ? "quote_submissions" : source === "job" ? "scheduled_jobs" : "";
+        if (!table || !status) return;
+        try {
+          setDashboardState("Moving ticket forward...");
+          await updateStatus(table, id, status);
+          await refreshDashboard();
+          openTicketDrawer(source, id);
+          setDashboardState("Ticket updated.");
+        } catch (error) {
+          setDashboardState(error.message || "Unable to move ticket forward.", "error");
+        }
+      } else if (action === "open-ticket") {
         openTicketDrawer(target.dataset.ticketSource, id);
       } else if (action === "open-submission") {
         openSubmissionDrawer(id);

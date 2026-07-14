@@ -61,56 +61,6 @@
   to = "/.netlify/functions/:splat"
   status = 200
 
-[[redirects]]
-  from = "/operations"
-  to = "/dashboard.html"
-  status = 200
-
-[[redirects]]
-  from = "/operations/*"
-  to = "/dashboard.html"
-  status = 200
-
-[[redirects]]
-  from = "/recurring-services"
-  to = "/dashboard.html"
-  status = 200
-
-[[redirects]]
-  from = "/recurring-services/*"
-  to = "/dashboard.html"
-  status = 200
-
-[[redirects]]
-  from = "/approvals"
-  to = "/dashboard.html"
-  status = 200
-
-[[redirects]]
-  from = "/reports"
-  to = "/dashboard.html"
-  status = 200
-
-[[redirects]]
-  from = "/field"
-  to = "/dashboard.html"
-  status = 200
-
-[[redirects]]
-  from = "/budgets"
-  to = "/dashboard.html"
-  status = 200
-
-[[redirects]]
-  from = "/budgets/*"
-  to = "/dashboard.html"
-  status = 200
-
-[[redirects]]
-  from = "/jobs/*/budget"
-  to = "/dashboard.html"
-  status = 200
-
 [[headers]]
   for = "/*"
   [headers.values]

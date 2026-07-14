@@ -551,7 +551,7 @@ const MODULES = {
 };
 
 function listModules() {
-  return Object.values(MODULES).map((module) => ({
+  return Object.values(MODULES).filter((module) => module.permissionArea !== "budgets").map((module) => ({
     key: module.key,
     label: module.label,
     pluralLabel: module.pluralLabel,
@@ -567,7 +567,8 @@ function listModules() {
 
 function getModule(moduleKey) {
   const normalized = normalizeColumnName(moduleKey);
-  return MODULES[moduleKey] || Object.values(MODULES).find((item) => normalizeColumnName(item.key) === normalized || normalizeColumnName(item.label) === normalized || normalizeColumnName(item.table) === normalized) || null;
+  const module = MODULES[moduleKey] || Object.values(MODULES).find((item) => normalizeColumnName(item.key) === normalized || normalizeColumnName(item.label) === normalized || normalizeColumnName(item.table) === normalized) || null;
+  return module?.permissionArea === "budgets" ? null : module;
 }
 
 function normalizeColumnName(value) {

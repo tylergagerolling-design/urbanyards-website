@@ -165,8 +165,6 @@
     "hardwareGuide",
     "documentation",
     "importExport",
-    "budgets",
-    "connectedOps",
     "leadActivity",
     "userProfiles",
     "auditLogs"
@@ -242,16 +240,6 @@
     documentationTypeFilter: "All",
     documentationStatusFilter: "All",
     documentationCategoryFilter: "All",
-    budgetSearch: "",
-    budgetStatusFilter: "All",
-    budgetJobStatusFilter: "All",
-    budgetClientFilter: "All",
-    budgetServiceFilter: "All",
-    budgetDateStart: "",
-    budgetDateEnd: "",
-    selectedBudgetId: "",
-    budgetDetailTab: "overview",
-    connectedOpsView: "recurring",
     importExportView: "import",
     importExportModule: IMPORT_EXPORT_DEFAULT_MODULE,
     importExportFormat: "xlsx",
@@ -289,10 +277,6 @@
     groundskeeperAiError: "",
     documentationReady: false,
     documentationError: "",
-    budgetsReady: false,
-    budgetsError: "",
-    connectedOpsReady: false,
-    connectedOpsError: "",
     importExportReady: false,
     importExportError: "",
     leadActivityReady: true,
@@ -337,39 +321,6 @@
         templates: [],
         audit: []
       },
-      budgets: {
-        settings: { ...BUDGET_DEFAULT_SETTINGS },
-        budgets: [],
-        labor: [],
-        materials: [],
-        materialCatalog: [],
-        equipment: [],
-        costs: [],
-        changeOrders: [],
-        documents: [],
-        templates: [],
-        templateItems: [],
-        history: []
-      },
-      connectedOps: {
-        recurringServices: [],
-        recurringVisits: [],
-        checklistTemplates: [],
-        checklists: [],
-        checklistItems: [],
-        timeEntries: [],
-        sitePhotos: [],
-        approvals: [],
-        communications: [],
-        communicationTemplates: [],
-        shareLinks: [],
-        shareEvents: [],
-        maintenanceSchedules: [],
-        maintenanceRecords: [],
-        automationRules: [],
-        automationRuns: [],
-        commandHistory: []
-      },
       importExport: {
         modules: [],
         limits: {},
@@ -395,21 +346,9 @@
     quotes: "documents",
     pipeline: "documents",
     schedule: "calendar",
-    operations: "connected-operations",
-    "connected-ops": "connected-operations",
-    "connected-operations": "connected-operations",
-    recurring: "connected-operations",
-    approvals: "connected-operations",
-    communications: "connected-operations",
-    automation: "connected-operations",
-    reports: "connected-operations",
-    field: "connected-operations",
     "command-center": "overview",
     notes: "settings",
-    reminders: "settings",
-    budget: "budgets",
-    "job-budget": "budgets",
-    "job-budgets": "budgets"
+    reminders: "settings"
   };
   let demoIdCount = 100;
   let googleRouteMap = null;
@@ -472,7 +411,6 @@
     const icons = {
       "cancel-job": "x",
       "call-lead": "GV",
-      "archive-budget": "A",
       "clear-demo-data": "x",
       "complete-operation": "OK",
       "complete-reminder": "OK",
@@ -491,8 +429,6 @@
       "delete-outreach-prospect": "x",
       "delete-route-stop": "x",
       "delete-submission": "x",
-      "duplicate-budget": "Copy",
-      "edit-budget": "/",
       "edit-job": "/",
       "edit-outreach-prospect": "/",
       "edit-route-stop": "/",
@@ -500,8 +436,6 @@
       "export-backend-backup": "DB",
       "find-stop-map": "M",
       "go-calendar": "+",
-      "go-budgets": "$",
-      "go-connected-operations": "OP",
       "go-contacts": "-&gt;",
       "go-documents": "$",
       "go-route-planner": "M",
@@ -511,9 +445,7 @@
       "mark-outreach-contacted": "OK",
       "move-route-down": "v",
       "move-route-up": "^",
-      "new-budget": "+",
       "new-outreach-prospect": "+",
-      "open-budget": "Open",
       "open-route-map": "M",
       "open-contact": "-&gt;",
       "open-document": "-&gt;",
@@ -1188,12 +1120,6 @@
     }
     if (!state.documentationReady && state.documentationError) {
       warnings.push({ name: "Documentation", message: state.documentationError, detail: state.documentationError });
-    }
-    if (!state.budgetsReady && state.budgetsError) {
-      warnings.push({ name: "Job Budgeter", message: state.budgetsError, detail: state.budgetsError });
-    }
-    if (!state.connectedOpsReady && state.connectedOpsError) {
-      warnings.push({ name: "Connected Operations", message: state.connectedOpsError, detail: state.connectedOpsError });
     }
     if (!state.importExportReady) {
       warnings.push({ name: "Import & Export", message: state.importExportError || "Import/export center is not ready.", detail: state.importExportError || "" });
@@ -2469,32 +2395,7 @@
         sort: activity.createdAtRaw || ""
       }));
 
-    const ops = normalizeConnectedOpsBundle(data.connectedOps || {});
-    const openApprovals = ops.approvals
-      .filter((approval) => ["Pending", "Needs More Info"].includes(approval.status))
-      .map((approval) => ({
-        id: approval.id,
-        type: "approval",
-        label: "Approval needed",
-        title: approval.title || "Approval needs review",
-        detail: [approval.requestType, approval.priority, approval.dueAt ? `Due ${approval.dueAt}` : ""].filter(Boolean).join(" / "),
-        action: "go-connected-operations",
-        sort: approval.dueAtRaw || approval.createdAtRaw || ""
-      }));
-
-    const missedRecurringVisits = ops.recurringVisits
-      .filter((visit) => visit.visitDateRaw && visit.visitDateRaw < todayKey() && !["Completed", "Skipped", "Canceled"].includes(visit.status))
-      .map((visit) => ({
-        id: visit.id,
-        type: "schedule",
-        label: "Recurring visit missed",
-        title: "Recurring service needs reschedule",
-        detail: [visit.visitDate, visit.visitWindow, visit.status].filter(Boolean).join(" / "),
-        action: "go-connected-operations",
-        sort: visit.visitDateRaw || ""
-      }));
-
-    return [...websiteRequests, ...overduePayments, ...rescheduleNeeded, ...voicemails, ...openApprovals, ...missedRecurringVisits]
+    return [...websiteRequests, ...overduePayments, ...rescheduleNeeded, ...voicemails]
       .sort((a, b) => String(b.sort || "").localeCompare(String(a.sort || "")));
   }
 
@@ -4155,8 +4056,6 @@
         feedback: [],
         fallback: {}
       },
-      budgets: normalizeBudgetBundle(demoBudgetBundle()),
-      connectedOps: normalizeConnectedOpsBundle(demoConnectedOpsBundle()),
       importExport: demoImportExportSnapshot(),
       leadActivity: [],
       userProfiles: [
@@ -4284,8 +4183,6 @@
       state.hardwareGuideReady = true;
       state.groundskeeperAiReady = true;
       state.documentationReady = true;
-      state.budgetsReady = true;
-      state.connectedOpsReady = true;
       state.importExportReady = true;
       state.leadActivityReady = true;
       state.userProfilesReady = true;
@@ -4312,8 +4209,6 @@
       hardwareGuide,
       groundskeeperAi,
       documentation,
-      budgets,
-      connectedOps,
       importExport,
       leadActivity,
       userProfiles,
@@ -4335,8 +4230,6 @@
       loadModule("hardware guide", loadHardwareGuide, []),
       loadModule("Groundskeeper AI", loadGroundskeeperAi, emptyGroundskeeperAiBundle),
       loadModule("documentation", loadDocumentation, () => normalizeDocumentationBundle()),
-      loadModule("budgets", loadBudgets, emptyBudgetBundle),
-      loadModule("connected operations", loadConnectedOperations, emptyConnectedOpsBundle),
       loadModule("import/export", loadImportExportCenter, () => ({ modules: [], limits: {}, history: { imports: [], exports: [], syncs: [], backups: [] }, google: { configured: false, connections: [] }, fallback: "Import & Export Center could not be loaded." })),
       loadModule("call history", loadLeadActivity, []),
       loadModule("user profiles", loadUserProfiles, []),
@@ -4360,8 +4253,6 @@
       hardwareGuide,
       groundskeeperAi,
       documentation,
-      budgets,
-      connectedOps,
       importExport,
       leadActivity,
       userProfiles,
@@ -7045,8 +6936,6 @@
 
   function dashboardSectionFromPath(pathname = window.location.pathname) {
     const path = String(pathname || "").replace(/\/+$/, "");
-    if (path === "/budgets" || path.startsWith("/budgets/") || /^\/jobs\/[^/]+\/budget$/.test(path)) return "budgets";
-    if (path === "/operations" || path.startsWith("/operations/") || path === "/recurring-services" || path.startsWith("/recurring-services/") || path === "/approvals" || path === "/reports" || path === "/field") return "connected-operations";
     return "";
   }
 
@@ -8270,33 +8159,6 @@
         actionLabel: "Add Task",
         type: "daily_check",
         priority: "Normal"
-      });
-    }
-
-    const connectedOps = normalizeConnectedOpsBundle(data.connectedOps || {});
-    const pendingApprovals = connectedOps.approvals.filter((item) => ["Pending", "Needs More Info"].includes(item.status));
-    if (pendingApprovals.length) {
-      pushCommand({
-        label: "Approval queue",
-        title: `${pendingApprovals.length} approval${pendingApprovals.length === 1 ? "" : "s"} need review`,
-        detail: pendingApprovals[0].title,
-        action: "go-connected-operations",
-        actionLabel: "Open Ops",
-        type: "admin_task",
-        priority: "High"
-      });
-    }
-
-    const missedRecurring = connectedOps.recurringVisits.filter((visit) => visit.visitDateRaw && visit.visitDateRaw < today && !["Completed", "Skipped", "Canceled"].includes(visit.status));
-    if (missedRecurring.length) {
-      pushCommand({
-        label: "Recurring service",
-        title: `${missedRecurring.length} recurring visit${missedRecurring.length === 1 ? "" : "s"} need reschedule`,
-        detail: missedRecurring[0].visitDate || missedRecurring[0].status,
-        action: "go-connected-operations",
-        actionLabel: "Open Ops",
-        type: "daily_check",
-        priority: "High"
       });
     }
 
@@ -11459,12 +11321,6 @@
     restored.importExport = imported.importExport && typeof imported.importExport === "object"
       ? imported.importExport
       : fallback.importExport;
-    restored.budgets = imported.budgets && typeof imported.budgets === "object"
-      ? normalizeBudgetBundle(imported.budgets)
-      : fallback.budgets;
-    restored.connectedOps = imported.connectedOps && typeof imported.connectedOps === "object"
-      ? normalizeConnectedOpsBundle(imported.connectedOps)
-      : fallback.connectedOps;
     state.data = restored;
     await render();
     setDashboardState("Backup imported into demo mode.");
@@ -12943,14 +12799,11 @@
     safeRender("upcoming", () => renderUpcoming(data));
     safeRender("home reminders", () => renderHomeReminders(data));
     safeRender("home notes", () => renderHomeNotes(data));
-    safeRender("home budgets", () => renderHomeBudgets(data));
     safeRender("route snapshot", () => renderTodayRouteSnapshot(data));
     safeRender("quote table", () => renderQuoteTable(data));
     safeRender("pipeline", () => renderPipeline(data));
     safeRender("documents", () => renderDocuments(data));
     safeRender("documentation", () => renderDocumentation(data));
-    safeRender("budgets", () => renderBudgets(data));
-    safeRender("connected operations", () => renderConnectedOperations(data));
     safeRender("contacts", () => renderContacts(data));
     safeRender("outreach", () => renderOutreach(data));
     safeRender("equipment", () => renderEquipment(data));
@@ -13926,134 +13779,29 @@
       }
 
       if (action === "go-budgets") {
-        setActiveSection("budgets");
-        history.replaceState(null, "", "#budgets");
-        await render();
-        return;
-      }
-
-      if (action === "budget-detail-tab") {
-        const tab = target.dataset.tab || "overview";
-        if (BUDGET_DETAIL_TABS.some((item) => item.key === tab)) {
-          state.budgetDetailTab = tab;
-          await render();
-        }
-        return;
-      }
-
-      if (action === "refresh-budgets") {
-        try {
-          setDashboardState("Refreshing job budgets...");
-          state.data.budgets = await loadBudgets();
-          await render();
-          setDashboardState(state.budgetsReady || isDemoMode() ? "Job budgets refreshed." : (state.budgetsError || "Job budgets could not load."));
-        } catch (error) {
-          setDashboardState(error.message || "Unable to refresh job budgets.", "error");
-        }
-        return;
-      }
-
-      if (action === "new-budget") {
-        resetBudgetForm();
-        state.budgetDetailTab = "overview";
-        qs("[data-budget-form]")?.scrollIntoView({ behavior: "smooth", block: "start" });
-        setActiveSection("budgets");
-        history.replaceState(null, "", "#budgets");
-        return;
-      }
-
-      if (action === "export-budgets-csv") {
-        const rows = filteredBudgets().map((budget) => {
-          const summary = budgetSummary(budget);
-          return [
-            budget.budgetName,
-            budget.clientName,
-            budget.propertyName,
-            budget.proposedStartDate,
-            budget.serviceType,
-            summary.expectedRevenue,
-            summary.totalEstimatedCost,
-            summary.estimatedProfit,
-            summary.estimatedMargin,
-            summary.totalActualCost,
-            summary.actualProfit,
-            summary.actualMargin,
-            budget.status,
-            budget.jobStatus,
-            budget.updatedAt
-          ];
-        });
-        downloadCsv(`urban-yards-job-budgets-${todayKey()}.csv`, [
-          ["Job", "Client", "Property", "Scheduled Date", "Service Type", "Quoted Revenue", "Estimated Cost", "Estimated Profit", "Estimated Margin", "Actual Cost", "Actual Profit", "Actual Margin", "Budget Status", "Job Status", "Last Updated"],
-          ...rows
-        ]);
-        return;
-      }
-
-      if (action === "open-budget" || action === "edit-budget") {
-        const budget = activeBudgetBundle().budgets.find((item) => item.id === id);
-        if (!budget) return;
-        state.selectedBudgetId = budget.id;
-        state.budgetDetailTab = action === "edit-budget" ? state.budgetDetailTab : "overview";
-        await render();
-        fillBudgetForm(budget);
-        if (action === "edit-budget") qs("[data-budget-form]")?.scrollIntoView({ behavior: "smooth", block: "start" });
-        return;
-      }
-
-      if (action === "duplicate-budget") {
-        try {
-          setDashboardState("Duplicating budget...");
-          const duplicate = await duplicateBudget(id);
-          state.selectedBudgetId = duplicate?.id || state.selectedBudgetId;
-          state.data.budgets = await loadBudgets();
-          await render();
-          setDashboardState("Budget duplicated.");
-        } catch (error) {
-          setDashboardState(error.message || "Unable to duplicate budget.", "error");
-        }
-        return;
-      }
-
-      if (action === "archive-budget") {
-        if (!window.confirm("Archive this job budget? It can stay in reporting, but it will be removed from active views.")) return;
-        try {
-          setDashboardState("Archiving budget...");
-          await archiveBudget(id);
-          state.selectedBudgetId = "";
-          state.data.budgets = await loadBudgets();
-          await render();
-          setDashboardState("Budget archived.");
-        } catch (error) {
-          setDashboardState(error.message || "Unable to archive budget.", "error");
-        }
-        return;
-      }
-
-      if (action === "reset-budget-form") {
-        resetBudgetForm();
-        return;
-      }
-
-      if (action === "view-budget-job") {
-        setActiveSection("calendar");
-        history.replaceState(null, "", "#calendar");
-        openJobDrawer(id);
-        return;
-      }
-
-      if (action === "view-budget-quote") {
         setActiveSection("overview");
         history.replaceState(null, "", "#overview");
-        openSubmissionDrawer(id);
+        await render();
+        setDashboardState("Job budgets are not active in this dashboard version.");
         return;
       }
 
-      if (action === "view-budget-invoice") {
-        setActiveSection("money");
-        history.replaceState(null, "", "#money");
-        openDocumentDrawer(id);
-        return;
+      switch (action) {
+        case "archive-budget":
+        case "budget-detail-tab":
+        case "duplicate-budget":
+        case "edit-budget":
+        case "open-budget":
+        case "view-budget-invoice":
+        case "view-budget-job":
+        case "view-budget-quote":
+          setActiveSection("overview");
+          history.replaceState(null, "", "#overview");
+          await render();
+          setDashboardState("Job budgets are not active in this dashboard version.");
+          return;
+        default:
+          break;
       }
 
       if (action === "set-import-export-view") {
@@ -14641,20 +14389,17 @@
       }
 
       if (action === "set-connected-ops-view") {
-        state.connectedOpsView = target.dataset.connectedOpsView || "recurring";
-        setActiveSection("connected-operations");
-        history.replaceState(null, "", "#connected-operations");
+        setActiveSection("overview");
+        history.replaceState(null, "", "#overview");
         await render();
         return;
       }
 
       if (action === "refresh-connected-operations") {
-        try {
-          setDashboardState("Refreshing connected operations...");
-          await refreshConnectedOperationsData("Connected operations refreshed.");
-        } catch (error) {
-          setDashboardState(error.message || "Unable to refresh connected operations.", "error");
-        }
+        setActiveSection("overview");
+        history.replaceState(null, "", "#overview");
+        await render();
+        setDashboardState("Operations has been removed from this dashboard version.");
         return;
       }
 
@@ -15045,9 +14790,8 @@
         setActiveSection("route-planner");
         history.replaceState(null, "", "#route-planner");
       } else if (action === "go-connected-operations") {
-        state.connectedOpsView = "approvals";
-        setActiveSection("connected-operations");
-        history.replaceState(null, "", "#connected-operations");
+        setActiveSection("overview");
+        history.replaceState(null, "", "#overview");
         await render();
       } else if (action === "go-calendar") {
         setActiveSection("calendar");
@@ -15498,55 +15242,7 @@
     });
 
   els.appView.addEventListener("submit", async (event) => {
-      if (event.target.matches("[data-budget-form]")) {
-        event.preventDefault();
-        try {
-          setDashboardState("Saving job budget...");
-          const saved = await saveBudgetFromForm(event.target);
-          state.data.budgets = await loadBudgets();
-          const fresh = state.data.budgets.budgets.find((budget) => budget.id === saved?.id) || saved;
-          await render();
-          fillBudgetForm(fresh);
-          setDashboardState("Job budget saved.");
-        } catch (error) {
-          setDashboardState(error.message || "Unable to save job budget.", "error");
-        }
-      } else if (event.target.matches("[data-budget-line-form]")) {
-        event.preventDefault();
-        try {
-          setDashboardState("Adding budget line item...");
-          const item = await insertBudgetLineFromForm(event.target);
-          state.selectedBudgetId = item?.budgetId || state.selectedBudgetId;
-          state.data.budgets = await loadBudgets();
-          event.target.reset();
-          if (event.target.elements.budget_id) event.target.elements.budget_id.value = state.selectedBudgetId || "";
-          await render();
-          setDashboardState("Budget line item added.");
-        } catch (error) {
-          setDashboardState(error.message || "Unable to add budget line item.", "error");
-        }
-      } else if (event.target.matches("[data-budget-settings-form]")) {
-        event.preventDefault();
-        try {
-          setDashboardState("Saving budget settings...");
-          const settings = await saveBudgetSettingsFromForm(event.target);
-          state.data.budgets.settings = settings;
-          await render();
-          setDashboardState("Budget settings saved.");
-        } catch (error) {
-          setDashboardState(error.message || "Unable to save budget settings.", "error");
-        }
-      } else if (event.target.matches("[data-connected-ops-form]")) {
-        event.preventDefault();
-        try {
-          setDashboardState("Saving connected operations record...");
-          await saveConnectedOperationsForm(event.target);
-          setActiveSection("connected-operations");
-          setDashboardState("Connected operations record saved.");
-        } catch (error) {
-          setDashboardState(error.message || "Unable to save connected operations record.", "error");
-        }
-      } else if (event.target.matches("[data-users-invite-form]")) {
+      if (event.target.matches("[data-users-invite-form]")) {
         event.preventDefault();
         const formData = new FormData(event.target);
         try {
@@ -16261,30 +15957,6 @@
     els.documentationTypeFilter = qs("[data-documentation-type-filter]");
     els.documentationStatusFilter = qs("[data-documentation-status-filter]");
     els.documentationCategoryFilter = qs("[data-documentation-category-filter]");
-    els.homeBudgets = qs("[data-home-budgets]");
-    els.budgetStatus = qs("[data-budget-status]");
-    els.budgetMetrics = qs("[data-budget-metrics]");
-    els.budgetSearch = qs("[data-budget-search]");
-    els.budgetStatusFilter = qs("[data-budget-status-filter]");
-    els.budgetJobStatusFilter = qs("[data-budget-job-status-filter]");
-    els.budgetClientFilter = qs("[data-budget-client-filter]");
-    els.budgetServiceFilter = qs("[data-budget-service-filter]");
-    els.budgetDateStart = qs("[data-budget-date-start]");
-    els.budgetDateEnd = qs("[data-budget-date-end]");
-    els.budgetList = qs("[data-budget-list]");
-    els.budgetDetail = qs("[data-budget-detail]");
-    els.budgetForm = qs("[data-budget-form]");
-    els.budgetJobOptions = qs("[data-budget-job-options]");
-    els.budgetQuoteOptions = qs("[data-budget-quote-options]");
-    els.budgetInvoiceOptions = qs("[data-budget-invoice-options]");
-    els.budgetClientOptions = qs("[data-budget-client-options]");
-    els.budgetStatusOptions = qs("[data-budget-status-options]");
-    els.budgetLineForm = qs("[data-budget-line-form]");
-    els.budgetLineBudgetOptions = qs("[data-budget-line-budget-options]");
-    els.budgetSettingsForm = qs("[data-budget-settings-form]");
-    els.connectedOpsStatus = qs("[data-connected-ops-status]");
-    els.connectedOpsMetrics = qs("[data-connected-ops-metrics]");
-    els.connectedOpsMain = qs("[data-connected-ops-main]");
     els.calendarFilter = qs("[data-calendar-filter]");
     els.calendarRangeControls = qs("[data-calendar-range-controls]");
     els.calendarRangeLabel = qs("[data-calendar-range-label]");

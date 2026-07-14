@@ -14405,6 +14405,151 @@ body:not(.is-login-screen) .ticket-flow-step.is-active {
   background: #eef5e8;
 }
 
+body:not(.is-login-screen) .ticket-owner-strip {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 12px;
+  padding: 12px;
+  border: 1px solid rgba(73, 102, 77, .16);
+  border-radius: 24px;
+  background: rgba(255, 255, 255, .62);
+}
+
+body:not(.is-login-screen) .ticket-owner-strip article {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 10px;
+  align-items: start;
+  min-width: 0;
+  padding: 14px;
+  border-radius: 18px;
+}
+
+body:not(.is-login-screen) .ticket-owner-strip article.is-active,
+body:not(.is-login-screen) .ticket-owner-strip article:hover {
+  background: #eef5e8;
+}
+
+body:not(.is-login-screen) .ticket-owner-strip span {
+  display: inline-grid;
+  place-items: center;
+  width: 36px;
+  height: 36px;
+  border-radius: 999px;
+  background: #dbeacc;
+  color: var(--uy-green);
+  font-weight: 900;
+}
+
+body:not(.is-login-screen) .ticket-owner-strip strong {
+  display: block;
+  color: var(--uy-green);
+  font-size: .96rem;
+}
+
+body:not(.is-login-screen) .ticket-owner-strip small {
+  display: block;
+  margin-top: 4px;
+  color: var(--uy-muted);
+  line-height: 1.35;
+}
+
+body:not(.is-login-screen) .ticket-role-brief {
+  display: grid;
+  grid-template-columns: minmax(0, 1.25fr) minmax(260px, .75fr);
+  gap: 18px;
+  align-items: stretch;
+  padding: clamp(18px, 2vw, 24px);
+  border: 1px solid rgba(73, 102, 77, .16);
+  border-radius: 24px;
+  background:
+    radial-gradient(circle at 94% 10%, rgba(153, 180, 119, .14), transparent 34%),
+    rgba(255, 255, 255, .72);
+  box-shadow: 0 14px 36px rgba(19, 36, 28, .05);
+}
+
+body:not(.is-login-screen) .ticket-role-brief h3 {
+  margin: 0;
+  color: var(--uy-green);
+  font-size: clamp(1.35rem, 2.1vw, 2rem);
+}
+
+body:not(.is-login-screen) .ticket-role-brief p {
+  margin: 8px 0 0;
+  color: var(--uy-muted);
+  line-height: 1.5;
+}
+
+body:not(.is-login-screen) .ticket-stage-pill-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 7px;
+  margin-top: 14px;
+}
+
+body:not(.is-login-screen) .ticket-stage-pill-list span {
+  display: inline-flex;
+  align-items: center;
+  min-height: 28px;
+  padding: 0 10px;
+  border-radius: 999px;
+  background: #eef5e8;
+  color: var(--uy-green);
+  font-size: .78rem;
+  font-weight: 800;
+}
+
+body:not(.is-login-screen) .ticket-role-brief aside {
+  display: grid;
+  align-content: start;
+  gap: 8px;
+  padding: 16px;
+  border: 1px solid rgba(73, 102, 77, .12);
+  border-radius: 18px;
+  background: rgba(251, 250, 245, .86);
+}
+
+body:not(.is-login-screen) .ticket-role-brief aside > strong {
+  color: var(--uy-green);
+  font-size: 2.2rem;
+  line-height: 1;
+}
+
+body:not(.is-login-screen) .ticket-role-brief aside > span,
+body:not(.is-login-screen) .ticket-role-mini-list p {
+  color: var(--uy-muted);
+}
+
+body:not(.is-login-screen) .ticket-role-mini-list {
+  display: grid;
+  gap: 8px;
+  margin-top: 8px;
+}
+
+body:not(.is-login-screen) .ticket-role-mini-list button {
+  display: grid;
+  gap: 2px;
+  width: 100%;
+  padding: 10px;
+  border: 1px solid rgba(73, 102, 77, .14);
+  border-radius: 12px;
+  background: rgba(255, 255, 255, .78);
+  color: var(--uy-green);
+  text-align: left;
+}
+
+body:not(.is-login-screen) .ticket-role-mini-list button:hover {
+  background: #f8fbf2;
+  border-color: rgba(18, 63, 49, .28);
+}
+
+body:not(.is-login-screen) .ticket-role-mini-list button span,
+body:not(.is-login-screen) .ticket-role-mini-list button small {
+  color: var(--uy-muted);
+  font-size: .78rem;
+  font-weight: 750;
+}
+
 body:not(.is-login-screen) .ticket-lane-grid,
 body:not(.is-login-screen) .field-grid {
   display: grid;
@@ -14797,13 +14942,15 @@ body:not(.is-login-screen) .field-proof-actions button {
 
 @media (max-width: 1180px) {
   body:not(.is-login-screen) .ticket-metrics,
-  body:not(.is-login-screen) .ticket-flow-panel {
+  body:not(.is-login-screen) .ticket-flow-panel,
+  body:not(.is-login-screen) .ticket-owner-strip {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
   body:not(.is-login-screen) .ticket-lane-grid,
   body:not(.is-login-screen) .field-grid,
-  body:not(.is-login-screen) .ticket-review-strip {
+  body:not(.is-login-screen) .ticket-review-strip,
+  body:not(.is-login-screen) .ticket-role-brief {
     grid-template-columns: 1fr;
   }
 }
@@ -14824,7 +14971,8 @@ body:not(.is-login-screen) .field-proof-actions button {
   }
 
   body:not(.is-login-screen) .ticket-metrics,
-  body:not(.is-login-screen) .ticket-flow-panel {
+  body:not(.is-login-screen) .ticket-flow-panel,
+  body:not(.is-login-screen) .ticket-owner-strip {
     grid-template-columns: 1fr;
   }
 

@@ -8558,6 +8558,89 @@
     </article>`;
   }
 
+  const ticketOwnerGroups = [
+    {
+      id: "sales",
+      label: "Sales",
+      title: "Sales owns intake, scope, and customer approval.",
+      detail: "Confirm the request, collect the missing details, prepare the quote, and hand approved work to Accounting.",
+      stages: ["draft", "sales_intake", "scope_in_progress", "quote_pending", "customer_approval_pending", "scope_change_requested"]
+    },
+    {
+      id: "accounting",
+      label: "Accounting",
+      title: "Accounting owns budget, approval, invoice prep, and payment.",
+      detail: "Check costs, get owner approval, prepare draft invoices, reconcile actuals, and track Square payment status.",
+      stages: ["needs_budget", "budget_in_progress", "needs_owner_approval", "invoice_preparation", "invoice_review", "invoice_sent", "partially_paid", "paid"]
+    },
+    {
+      id: "field",
+      label: "Field",
+      title: "Field owns schedule, work, photos, and completion notes.",
+      detail: "Run the visit, add arrival and completion proof, attach forms, and send completed work into review.",
+      stages: ["ready_to_schedule", "scheduled", "in_progress", "paused"]
+    },
+    {
+      id: "review",
+      label: "Review",
+      title: "Owner review closes the loop before billing.",
+      detail: "Check completion proof, actual costs, documents, and whether any scope changes or add-ons need invoice attention.",
+      stages: ["field_work_complete", "completion_review"]
+    }
+  ];
+
+  function ticketStageLabel(stage) {
+    return (ticketStageMeta[stage] && ticketStageMeta[stage].label) || titleCase(String(stage || "").replace(/_/g, " "));
+  }
+
+  function ticketsInStages(tickets, stages) {
+    const stageSet = new Set(stages || []);
+    return tickets.filter((ticket) => stageSet.has(ticket.stage));
+  }
+
+  function renderTicketOwnerStrip(tickets, activeId = "") {
+    return `<section class="ticket-owner-strip" aria-label="Ticket ownership map">
+      ${ticketOwnerGroups.map((group) => {
+        const owned = ticketsInStages(tickets, group.stages);
+        return `<article class="${group.id === activeId ? "is-active" : ""}">
+          <span>${escapeHtml(owned.length)}</span>
+          <div>
+            <strong>${escapeHtml(group.label)}</strong>
+            <small>${escapeHtml(group.detail)}</small>
+          </div>
+        </article>`;
+      }).join("")}
+    </section>`;
+  }
+
+  function renderTicketRoleBrief(roleId, tickets) {
+    const group = ticketOwnerGroups.find((item) => item.id === roleId);
+    if (!group) return "";
+    const owned = ticketsInStages(tickets, group.stages);
+    const nextTickets = owned.slice(0, 3);
+    return `<section class="ticket-role-brief">
+      <div>
+        <p class="eyebrow">${escapeHtml(group.label)} workspace</p>
+        <h3>${escapeHtml(group.title)}</h3>
+        <p>${escapeHtml(group.detail)}</p>
+        <div class="ticket-stage-pill-list">
+          ${group.stages.map((stage) => `<span>${escapeHtml(ticketStageLabel(stage))}</span>`).join("")}
+        </div>
+      </div>
+      <aside>
+        <strong>${escapeHtml(owned.length)}</strong>
+        <span>Ticket${owned.length === 1 ? "" : "s"} in this lane</span>
+        <div class="ticket-role-mini-list">
+          ${nextTickets.length ? nextTickets.map((ticket) => `<button type="button" data-action="open-ticket" data-source="${escapeHtml(ticket.source)}" data-id="${escapeHtml(ticket.id)}">
+            <span>${escapeHtml(ticket.number)}</span>
+            <strong>${escapeHtml(ticket.customer)}</strong>
+            <small>${escapeHtml(ticket.nextAction)}</small>
+          </button>`).join("") : `<p>No tickets are waiting in this workspace.</p>`}
+        </div>
+      </aside>
+    </section>`;
+  }
+
   function renderTicketCard(ticket, compact = false) {
     const blockers = ticket.blockers?.length ? `<div class="ticket-blockers">${ticket.blockers.map((item) => `<span>${escapeHtml(item)}</span>`).join("")}</div>` : "";
     return `<article class="ticket-card ticket-card--${escapeHtml(ticket.tone || "new")}">
@@ -8888,6 +8971,7 @@
           <div class="ticket-flow-step"><span>6</span><strong>Complete</strong><small>Photos and forms</small></div>
           <div class="ticket-flow-step"><span>7</span><strong>Invoice and Close</strong><small>Payment collected</small></div>
         </section>
+        ${renderTicketOwnerStrip(tickets)}
         <div class="ticket-lane-grid">
           ${renderTicketColumn("Today and Field Work", "Scheduled, active, and field-owned tickets.", fieldTickets, "No field tickets are scheduled yet.")}
           ${renderTicketColumn("Office Review", "Scope, quote, budget, approval, and closeout blockers.", officeTickets, "No office tickets need review.")}
@@ -8934,6 +9018,7 @@
           ${renderTicketMetric(ticketCountBy(fieldTickets, (ticket) => ticket.stage === "completion_review"), "Needs Review", "Photos, actuals, invoice")}
           ${renderTicketMetric(upcomingTickets.length, "Upcoming", "Scheduled tickets")}
         </section>
+        ${renderTicketRoleBrief("field", tickets)}
         <div class="field-grid">
           <section class="ticket-lane field-primary-lane">
             <div class="ticket-lane-heading">
@@ -9031,6 +9116,7 @@
           ${renderTicketMetric(approvalTickets.length + hot.length, "Quote Action", "Interested or quote pending")}
           ${renderTicketMetric(accountingTickets.length, "Accounting Handoff", "Approved work needs budget")}
         </section>
+        ${renderTicketRoleBrief("sales", dashboardTickets(data))}
         <div class="ticket-lane-grid">
           ${renderTicketColumn("New Intake", "Requests and prospects that need Sales review.", intakeTickets, "No new sales intake tickets.")}
           ${renderTicketColumn("Customer Response Needed", "Quotes, follow-ups, and warm leads that need contact.", approvalTickets.concat(hot.map((item, index) => buildTicketFromQuote(item, index))), "No quote follow-ups are waiting.")}
@@ -9098,6 +9184,7 @@
           ${renderTicketMetric(unpaidInvoices.length, "Open Invoices", "Awaiting payment")}
           ${renderTicketMetric(overdueInvoices.length, "Overdue", "Payment action needed")}
         </section>
+        ${renderTicketRoleBrief("accounting", tickets)}
         <div class="ticket-lane-grid">
           ${renderTicketColumn("Budgeting Queue", "Approved work that needs internal cost review before scheduling.", needsBudget, "No tickets are waiting for budget review.")}
           ${renderTicketColumn("Owner and Invoice Prep", "Budget approvals and draft invoices required before scheduling.", ownerApproval, "No tickets are waiting on owner approval.")}

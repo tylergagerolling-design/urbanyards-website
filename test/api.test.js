@@ -101,21 +101,33 @@ test("honeypot submissions are quietly discarded", async () => {
 });
 
 test("valid quote fails honestly when no delivery integration is configured", async () => {
-  const original = {
-    RESEND_API_KEY: process.env.RESEND_API_KEY,
-    QUOTE_TO_EMAIL: process.env.QUOTE_TO_EMAIL,
-    AIRTABLE_TOKEN: process.env.AIRTABLE_TOKEN,
-    QUOTE_WEBHOOK_URL: process.env.QUOTE_WEBHOOK_URL
-  };
-  delete process.env.RESEND_API_KEY;
-  delete process.env.QUOTE_TO_EMAIL;
-  delete process.env.AIRTABLE_TOKEN;
-  delete process.env.QUOTE_WEBHOOK_URL;
-  const res = mockResponse();
-  await quoteHandler(request("POST", { name: "Tyler Gage", email: "tyler@example.com", service: "Groundskeeping" }), res);
-  assert.equal(res.statusCode, 503);
-  assert.match(res.payload.error, /temporarily unavailable/i);
-  Object.entries(original).forEach(([key, value]) => value === undefined ? delete process.env[key] : process.env[key] = value);
+  await withEnv({
+    AIRTABLE_BASE_ID: undefined,
+    AIRTABLE_TABLE_NAME: undefined,
+    AIRTABLE_TOKEN: undefined,
+    CLOUDINARY_API_KEY: undefined,
+    CLOUDINARY_API_SECRET: undefined,
+    CLOUDINARY_CLOUD_NAME: undefined,
+    MALWARE_SCAN_TOKEN: undefined,
+    MALWARE_SCAN_URL: undefined,
+    QUOTE_FROM_EMAIL: undefined,
+    QUOTE_TO_EMAIL: undefined,
+    QUOTE_WEBHOOK_SECRET: undefined,
+    QUOTE_WEBHOOK_URL: undefined,
+    RESEND_API_KEY: undefined,
+    SECURITY_ALERT_WEBHOOK_SECRET: undefined,
+    SECURITY_ALERT_WEBHOOK_URL: undefined,
+    SUPABASE_SERVICE_KEY: undefined,
+    SUPABASE_SERVICE_ROLE_KEY: undefined,
+    SUPABASE_URL: undefined,
+    TURNSTILE_SECRET_KEY: undefined,
+    VITE_SUPABASE_URL: undefined
+  }, async () => {
+    const res = mockResponse();
+    await quoteHandler(request("POST", { name: "Tyler Gage", email: "tyler@example.com", service: "Groundskeeping" }), res);
+    assert.equal(res.statusCode, 503);
+    assert.match(res.payload.error, /temporarily unavailable/i);
+  });
 });
 
 test("assistant requires a server-side OpenAI key", async () => {

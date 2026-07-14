@@ -6,6 +6,8 @@ const TICKET_STAGES = Object.freeze({
   SCOPE_IN_PROGRESS: "scope_in_progress",
   QUOTE_PENDING: "quote_pending",
   CUSTOMER_APPROVAL_PENDING: "customer_approval_pending",
+  NEEDS_COST_REVIEW: "needs_budget",
+  COST_REVIEW_IN_PROGRESS: "budget_in_progress",
   NEEDS_BUDGET: "needs_budget",
   BUDGET_IN_PROGRESS: "budget_in_progress",
   NEEDS_OWNER_APPROVAL: "needs_owner_approval",
@@ -31,8 +33,8 @@ const TICKET_STAGE_LABELS = Object.freeze({
   [TICKET_STAGES.SCOPE_IN_PROGRESS]: "Scope and Quote",
   [TICKET_STAGES.QUOTE_PENDING]: "Quote Pending",
   [TICKET_STAGES.CUSTOMER_APPROVAL_PENDING]: "Customer Approval",
-  [TICKET_STAGES.NEEDS_BUDGET]: "Needs Budget",
-  [TICKET_STAGES.BUDGET_IN_PROGRESS]: "Budget in Progress",
+  [TICKET_STAGES.NEEDS_BUDGET]: "Needs Cost Review",
+  [TICKET_STAGES.BUDGET_IN_PROGRESS]: "Cost Review in Progress",
   [TICKET_STAGES.NEEDS_OWNER_APPROVAL]: "Owner Approval",
   [TICKET_STAGES.INVOICE_PREPARATION]: "Draft Invoice",
   [TICKET_STAGES.READY_TO_SCHEDULE]: "Ready to Schedule",
@@ -52,7 +54,7 @@ const TICKET_STAGE_LABELS = Object.freeze({
 
 const TICKET_WORKFLOW_TRACKER = Object.freeze([
   "Sales",
-  "Budget",
+  "Cost Review",
   "Approval",
   "Invoice",
   "Schedule",

@@ -24,8 +24,8 @@ test("ticket permissions keep one canonical role-aware workflow", () => {
   assert.equal(hasPermission(owner, PERMISSIONS.TICKETS_CREATE), true);
   assert.equal(hasPermission(sales, PERMISSIONS.TICKETS_CREATE), true);
   assert.equal(hasPermission(worker, PERMISSIONS.TICKETS_CREATE), false);
-  assert.equal(hasPermission(accountant, PERMISSIONS.BUDGETS_CREATE), true);
-  assert.equal(hasPermission(sales, PERMISSIONS.BUDGETS_CREATE), false);
+  assert.equal(hasPermission(accountant, PERMISSIONS.COST_REVIEW_CREATE), true);
+  assert.equal(hasPermission(sales, PERMISSIONS.COST_REVIEW_CREATE), false);
 });
 
 test("field workers can only view assigned tickets", () => {
@@ -59,7 +59,7 @@ test("ticket workflow blocks scheduling without owner approval and draft invoice
     stage: TICKET_STAGES.INVOICE_PREPARATION,
     scopeComplete: true,
     customerApprovalRecorded: true,
-    budgetComplete: true,
+    costReviewComplete: true,
     ownerApprovalRecorded: false,
     draftInvoiceExists: false
   };
@@ -77,13 +77,25 @@ test("required deposit blocks ready-to-schedule until paid", () => {
     stage: TICKET_STAGES.INVOICE_PREPARATION,
     scopeComplete: true,
     customerApprovalRecorded: true,
-    budgetComplete: true,
+    costReviewComplete: true,
     ownerApprovalRecorded: true,
     draftInvoiceExists: true,
     depositRequired: true,
     depositPaid: false
   };
   assert.deepEqual(getMissingRequirements(ticket, TICKET_STAGES.READY_TO_SCHEDULE), ["depositPaid"]);
+});
+
+test("legacy budgetComplete still satisfies cost review requirements", () => {
+  const ticket = {
+    stage: TICKET_STAGES.INVOICE_PREPARATION,
+    scopeComplete: true,
+    customerApprovalRecorded: true,
+    budgetComplete: true,
+    ownerApprovalRecorded: true,
+    draftInvoiceExists: true
+  };
+  assert.deepEqual(getMissingRequirements(ticket, TICKET_STAGES.READY_TO_SCHEDULE), []);
 });
 
 test("ticket workflow allows complete lifecycle handoffs with the right roles", () => {
@@ -106,7 +118,7 @@ test("transition service records audit and notification metadata for handoffs", 
     id: "ticket-1",
     ticketNumber: "UY-2026-00001",
     stage: TICKET_STAGES.BUDGET_IN_PROGRESS,
-    budgetComplete: true,
+    costReviewComplete: true,
     expectedRevenue: 1200,
     estimatedTotalCost: 700,
     estimatedProfit: 500,
@@ -123,13 +135,14 @@ test("transition service records audit and notification metadata for handoffs", 
   assert.equal(result.success, true);
   assert.equal(result.data.stage, TICKET_STAGES.NEEDS_OWNER_APPROVAL);
   assert.equal(result.data.responsibleRole, ROLES.OWNER);
-  assert.equal(result.context.auditEvent, "budget_submitted_to_owner");
-  assert.equal(result.context.notificationEvent, "budget_submitted_to_owner");
+  assert.equal(result.context.auditEvent, "cost_review_submitted_to_owner");
+  assert.equal(result.context.notificationEvent, "cost_review_submitted_to_owner");
   assert.equal(result.context.correlationId, "corr-1");
 });
 
 test("role-specific ticket section access prevents protected edits", () => {
-  assert.equal(getTicketSectionAccess(ROLES.SALES_OUTREACH, "budget").canEdit, false);
+  assert.equal(getTicketSectionAccess(ROLES.SALES_OUTREACH, "costReview").canEdit, false);
+  assert.equal(getTicketSectionAccess(ROLES.ACCOUNTANT, "budget").canEdit, true);
   assert.equal(getTicketSectionAccess(ROLES.ACCOUNTANT, "scope").canEdit, false);
   assert.equal(getTicketSectionAccess(ROLES.FIELD_WORKER, "payments").canView, false);
   assert.equal(getTicketSectionAccess(ROLES.FIELD_WORKER, "fieldWork").canEdit, true);

@@ -3,6 +3,11 @@
 const { PERMISSIONS, ROLES, hasPermission } = require("../../../shared/permissions/permissions");
 const { TICKET_STAGES } = require("../types/ticket-stage");
 
+const COST_REVIEW_ACCESS = Object.freeze({
+  edit: [ROLES.OWNER, ROLES.ACCOUNTANT],
+  view: [ROLES.OWNER, ROLES.ACCOUNTANT]
+});
+
 const RESPONSIBLE_ROLE_BY_STAGE = Object.freeze({
   [TICKET_STAGES.DRAFT]: ROLES.SALES_OUTREACH,
   [TICKET_STAGES.SALES_INTAKE]: ROLES.SALES_OUTREACH,
@@ -37,10 +42,8 @@ const SECTION_ACCESS = Object.freeze({
     edit: [ROLES.OWNER, ROLES.SALES_OUTREACH],
     view: [ROLES.OWNER, ROLES.SALES_OUTREACH, ROLES.ACCOUNTANT, ROLES.FIELD_WORKER]
   },
-  budget: {
-    edit: [ROLES.OWNER, ROLES.ACCOUNTANT],
-    view: [ROLES.OWNER, ROLES.ACCOUNTANT]
-  },
+  costReview: COST_REVIEW_ACCESS,
+  budget: COST_REVIEW_ACCESS,
   ownerApproval: {
     edit: [ROLES.OWNER],
     view: [ROLES.OWNER, ROLES.ACCOUNTANT]
@@ -88,12 +91,12 @@ const TRANSITIONS = Object.freeze({
     transition(TICKET_STAGES.SCOPE_IN_PROGRESS, PERMISSIONS.TICKETS_EDIT_SCOPE, "ticket_returned_to_scope")
   ],
   [TICKET_STAGES.NEEDS_BUDGET]: [
-    transition(TICKET_STAGES.BUDGET_IN_PROGRESS, PERMISSIONS.BUDGETS_CREATE, "budget_started"),
-    transition(TICKET_STAGES.SCOPE_IN_PROGRESS, PERMISSIONS.BUDGETS_EDIT, "ticket_returned_to_sales")
+    transition(TICKET_STAGES.BUDGET_IN_PROGRESS, PERMISSIONS.COST_REVIEW_CREATE, "cost_review_started"),
+    transition(TICKET_STAGES.SCOPE_IN_PROGRESS, PERMISSIONS.COST_REVIEW_EDIT, "ticket_returned_to_sales")
   ],
   [TICKET_STAGES.BUDGET_IN_PROGRESS]: [
-    transition(TICKET_STAGES.NEEDS_OWNER_APPROVAL, PERMISSIONS.BUDGETS_EDIT, "budget_submitted_to_owner"),
-    transition(TICKET_STAGES.SCOPE_IN_PROGRESS, PERMISSIONS.BUDGETS_EDIT, "ticket_returned_to_sales")
+    transition(TICKET_STAGES.NEEDS_OWNER_APPROVAL, PERMISSIONS.COST_REVIEW_EDIT, "cost_review_submitted_to_owner"),
+    transition(TICKET_STAGES.SCOPE_IN_PROGRESS, PERMISSIONS.COST_REVIEW_EDIT, "ticket_returned_to_sales")
   ],
   [TICKET_STAGES.NEEDS_OWNER_APPROVAL]: [
     transition(TICKET_STAGES.INVOICE_PREPARATION, PERMISSIONS.TICKETS_APPROVE_OWNER, "owner_approved"),
@@ -124,7 +127,7 @@ const TRANSITIONS = Object.freeze({
   ],
   [TICKET_STAGES.SCOPE_CHANGE_REQUESTED]: [
     transition(TICKET_STAGES.IN_PROGRESS, PERMISSIONS.TICKETS_APPROVE_OWNER, "scope_change_approved"),
-    transition(TICKET_STAGES.BUDGET_IN_PROGRESS, PERMISSIONS.TICKETS_APPROVE_OWNER, "scope_change_requires_budget"),
+    transition(TICKET_STAGES.BUDGET_IN_PROGRESS, PERMISSIONS.TICKETS_APPROVE_OWNER, "scope_change_requires_cost_review"),
     transition(TICKET_STAGES.SCOPE_IN_PROGRESS, PERMISSIONS.TICKETS_APPROVE_OWNER, "scope_change_returned_to_sales")
   ],
   [TICKET_STAGES.FIELD_WORK_COMPLETE]: [
@@ -169,9 +172,9 @@ function getRequiredFieldsForStage(stage) {
     case TICKET_STAGES.NEEDS_BUDGET:
       return ["customerId", "propertyId", "primaryContact", "requestedService", "scopeOfWork", "proposedPrice", "customerApprovalRecorded"];
     case TICKET_STAGES.NEEDS_OWNER_APPROVAL:
-      return ["budgetComplete", "expectedRevenue", "estimatedTotalCost", "estimatedProfit", "targetMargin"];
+      return ["costReviewComplete", "expectedRevenue", "estimatedTotalCost", "estimatedProfit", "targetMargin"];
     case TICKET_STAGES.READY_TO_SCHEDULE:
-      return ["scopeComplete", "customerApprovalRecorded", "budgetComplete", "ownerApprovalRecorded", "draftInvoiceExists"];
+      return ["scopeComplete", "customerApprovalRecorded", "costReviewComplete", "ownerApprovalRecorded", "draftInvoiceExists"];
     case TICKET_STAGES.SCHEDULED:
       return ["scheduledDate", "assignedUserId"];
     case TICKET_STAGES.FIELD_WORK_COMPLETE:
@@ -187,6 +190,7 @@ function getMissingRequirements(ticket = {}, toStage) {
   const required = getRequiredFieldsForStage(toStage);
   const missing = required.filter((field) => {
     if (field === "paymentStatus") return ticket.paymentStatus !== "paid";
+    if (field === "costReviewComplete") return !ticket.costReviewComplete && !ticket.budgetComplete;
     return ticket[field] === undefined || ticket[field] === null || ticket[field] === "" || ticket[field] === false;
   });
 

@@ -43,8 +43,8 @@ const WORKSPACES = Object.freeze([
     defaultRoute: "financial-overview",
     nav: [
       { key: "financial-overview", label: "Financial Overview", permission: PERMISSIONS.FINANCIALS_VIEW },
-      { key: "budgeting-queue", label: "Budgeting Queue", permission: PERMISSIONS.BUDGETS_VIEW },
-      { key: "job-budgets", label: "Job Budgets", permission: PERMISSIONS.BUDGETS_VIEW },
+      { key: "cost-review-queue", label: "Cost Review Queue", permission: PERMISSIONS.COST_REVIEW_VIEW },
+      { key: "ticket-costs", label: "Ticket Costs", permission: PERMISSIONS.COST_REVIEW_VIEW },
       { key: "invoices", label: "Invoices", permission: PERMISSIONS.INVOICES_CREATE },
       { key: "payments", label: "Payments", permission: PERMISSIONS.PAYMENTS_RECORD },
       { key: "reports", label: "Reports & Exports", permission: PERMISSIONS.PROFITABILITY_VIEW }

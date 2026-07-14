@@ -4762,7 +4762,13 @@
       });
       state.ticketsReady = true;
       state.ticketsError = "";
-      return normalizeCanonicalTicket(rows[0]);
+      const ticket = normalizeCanonicalTicket(rows[0]);
+      await insertJobTicketEvent(ticket.id, {
+        event_type: "ticket_created",
+        to_stage: ticket.stage,
+        new_value: { sourceType: ticket.sourceType, sourceId: ticket.sourceId, title: ticket.title }
+      });
+      return ticket;
     } catch (error) {
       state.ticketsReady = false;
       state.ticketsError = error.message || "Canonical job tickets could not save.";
@@ -4793,6 +4799,37 @@
       body: JSON.stringify(payload)
     });
     return normalizeCanonicalTicket(rows[0]);
+  }
+
+  async function insertJobTicketEvent(ticketId, input = {}) {
+    if (!ticketId) return null;
+    if (isDemoMode()) return null;
+    const session = getSession() || {};
+    const ticketUuid = uuidOrNull(ticketId);
+    if (!ticketUuid) return null;
+    const payload = {
+      ticket_id: ticketUuid,
+      event_type: blankToNull(input.event_type || input.eventType) || "ticket_updated",
+      actor_user_id: uuidOrNull(session.userId),
+      actor_email: blankToNull(session.email),
+      from_stage: blankToNull(input.from_stage || input.fromStage),
+      to_stage: blankToNull(input.to_stage || input.toStage),
+      notes: blankToNull(input.notes),
+      old_value: input.old_value || input.oldValue || null,
+      new_value: input.new_value || input.newValue || null
+    };
+    try {
+      const rows = await supabaseRestRequest("job_ticket_events", {
+        method: "POST",
+        headers: { Prefer: "return=representation" },
+        body: JSON.stringify(payload)
+      });
+      return rows && rows[0] ? rows[0] : null;
+    } catch (error) {
+      if (isMissingOptionalTableError(error)) return null;
+      recordModuleError("canonical tickets", error);
+      return null;
+    }
   }
 
   async function deleteRow(table, id) {
@@ -15963,6 +16000,7 @@
         if (!table || !status) return;
         try {
           setDashboardState("Moving ticket forward...");
+          const currentTicket = ticketId ? dashboardTickets().find((item) => item.source === "ticket" && item.id === ticketId) : null;
           await updateStatus(table, id, status);
           if (ticketId) {
             const nextStage = source === "quote" ? quoteStage({ status }) : jobStage({ status });
@@ -15970,6 +16008,14 @@
               stage: nextStage,
               status: ticketRecordStatusForStage(nextStage),
               next_action: ticketNextAction(nextStage)
+            });
+            await insertJobTicketEvent(ticketId, {
+              event_type: "ticket_stage_changed",
+              from_stage: currentTicket?.stage || "",
+              to_stage: nextStage,
+              notes: `${source === "quote" ? "Quote" : "Job"} source status set to ${status}.`,
+              old_value: currentTicket ? { stage: currentTicket.stage, nextAction: currentTicket.nextAction } : null,
+              new_value: { stage: nextStage, nextAction: ticketNextAction(nextStage), sourceStatus: status }
             });
           }
           await refreshDashboard();

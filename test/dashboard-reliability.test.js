@@ -96,9 +96,12 @@ test("dashboard creates canonical job tickets without removing source fallbacks"
 
   assert.match(js, /async function insertJobTicket/);
   assert.match(js, /async function updateJobTicket/);
+  assert.match(js, /async function insertJobTicketEvent/);
   assert.match(js, /supabaseRestRequest\("job_tickets"/);
+  assert.match(js, /supabaseRestRequest\("job_ticket_events"/);
   assert.match(js, /source_type: "quote"/);
   assert.match(js, /source_type: "job"/);
+  assert.match(js, /ticket_stage_changed/);
   assert.match(js, /openTicketDrawer\("ticket", canonicalTicket\.id\)/);
   assert.match(js, /isMissingOptionalTableError\(error\)\) return null/);
 });

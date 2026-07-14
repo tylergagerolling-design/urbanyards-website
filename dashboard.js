@@ -211,7 +211,7 @@
   }
 
   const state = {
-    activeSection: "overview",
+    activeSection: "calendar",
     statusFilter: "All",
     calendarFilter: "All",
     calendarView: "agenda",
@@ -376,6 +376,7 @@
     reminders: "settings"
   };
   const rebuildPrimarySections = new Set(["overview", "calendar", "outreach", "documents", "settings"]);
+  const DEFAULT_DASHBOARD_SECTION = "calendar";
   const supportModuleWarningNames = new Set([
     "operations",
     "route planner",
@@ -7202,9 +7203,9 @@
   }
 
   function normalizeDashboardSection(section) {
-    const key = String(section || "overview").replace(/^#/, "").trim() || "overview";
+    const key = String(section || DEFAULT_DASHBOARD_SECTION).replace(/^#/, "").trim() || DEFAULT_DASHBOARD_SECTION;
     const mapped = sectionAliases[key] || key;
-    return rebuildPrimarySections.has(mapped) ? mapped : "overview";
+    return rebuildPrimarySections.has(mapped) ? mapped : DEFAULT_DASHBOARD_SECTION;
   }
 
   function replaceDashboardHash(section) {
@@ -7214,7 +7215,7 @@
   function setActiveSection(section) {
     const requestedSection = normalizeDashboardSection(section);
     const hasSection = Boolean(qs(`[data-section="${cssEscape(requestedSection)}"]`));
-    state.activeSection = hasSection ? requestedSection : "overview";
+    state.activeSection = hasSection ? requestedSection : DEFAULT_DASHBOARD_SECTION;
     qsa("[data-section]").forEach((node) => {
       node.classList.toggle("is-active", node.dataset.section === state.activeSection);
     });

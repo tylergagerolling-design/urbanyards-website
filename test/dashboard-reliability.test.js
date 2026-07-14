@@ -87,8 +87,11 @@ test("dashboard route aliases and new reliability diagnostics are wired", () => 
   assert.match(js, /function loadModule/);
   assert.match(js, /function safeRender/);
   assert.match(js, /function renderDashboardHealth/);
+  assert.match(js, /activeSection: "calendar"/);
+  assert.match(js, /const DEFAULT_DASHBOARD_SECTION = "calendar"/);
   assert.match(html, /data-dashboard-health/);
   assert.match(html, /copy-dashboard-diagnostics/);
+  assert.match(js, /"route-planner": "calendar"/);
 });
 
 test("dashboard creates canonical job tickets without removing source fallbacks", () => {

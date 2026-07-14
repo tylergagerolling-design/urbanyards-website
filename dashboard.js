@@ -8421,8 +8421,8 @@
     scope_in_progress: { label: "Scope", lane: "sales", tone: "watch", owner: "Sales" },
     quote_pending: { label: "Quote Pending", lane: "sales", tone: "watch", owner: "Sales" },
     customer_approval_pending: { label: "Customer Approval", lane: "sales", tone: "watch", owner: "Sales" },
-    needs_budget: { label: "Needs Budget", lane: "accounting", tone: "risk", owner: "Accounting" },
-    budget_in_progress: { label: "Budget In Progress", lane: "accounting", tone: "watch", owner: "Accounting" },
+    needs_budget: { label: "Needs Cost Review", lane: "accounting", tone: "risk", owner: "Accounting" },
+    budget_in_progress: { label: "Cost Review In Progress", lane: "accounting", tone: "watch", owner: "Accounting" },
     needs_owner_approval: { label: "Owner Approval", lane: "accounting", tone: "risk", owner: "Owner" },
     invoice_preparation: { label: "Draft Invoice", lane: "accounting", tone: "watch", owner: "Accounting" },
     ready_to_schedule: { label: "Ready to Schedule", lane: "ready", tone: "good", owner: "Field" },
@@ -8485,7 +8485,7 @@
       case "customer_approval_pending":
         return "Follow up on approval";
       case "needs_budget":
-        return "Build internal budget";
+        return "Review internal costs";
       case "budget_in_progress":
         return "Finish cost review";
       case "needs_owner_approval":
@@ -8529,7 +8529,7 @@
       case "customer_approval_pending":
         return ["Customer approval"];
       case "needs_budget":
-        return ["Budget", "Owner approval", "Draft invoice"];
+        return ["Cost review", "Owner approval", "Draft invoice"];
       case "budget_in_progress":
         return ["Owner approval", "Draft invoice"];
       case "needs_owner_approval":
@@ -8636,7 +8636,7 @@
     {
       id: "accounting",
       label: "Accounting",
-      title: "Accounting owns budget, approval, invoice prep, and payment.",
+      title: "Accounting owns cost review, approval, invoice prep, and payment.",
       detail: "Check costs, get owner approval, prepare draft invoices, reconcile actuals, and track Square payment status.",
       stages: ["needs_budget", "budget_in_progress", "needs_owner_approval", "invoice_preparation", "invoice_review", "invoice_sent", "partially_paid", "paid"]
     },
@@ -8750,7 +8750,7 @@
   const ticketWorkflowSteps = [
     { key: "sales", label: "Sales", detail: "Intake and scope", stages: ["draft", "sales_intake", "scope_in_progress", "quote_pending"] },
     { key: "approval", label: "Approval", detail: "Customer yes", stages: ["customer_approval_pending"] },
-    { key: "budget", label: "Budget", detail: "Costs and owner", stages: ["needs_budget", "budget_in_progress", "needs_owner_approval"] },
+    { key: "cost-review", label: "Cost Review", detail: "Costs and owner", stages: ["needs_budget", "budget_in_progress", "needs_owner_approval"] },
     { key: "invoice-prep", label: "Invoice Prep", detail: "Draft ready", stages: ["invoice_preparation"] },
     { key: "field", label: "Field", detail: "Schedule and work", stages: ["ready_to_schedule", "scheduled", "in_progress", "paused", "scope_change_requested"] },
     { key: "review", label: "Review", detail: "Photos and actuals", stages: ["field_work_complete", "completion_review", "invoice_review"] },
@@ -9046,13 +9046,13 @@
         <section class="ticket-metrics" aria-label="Job ticket summary">
           ${renderTicketMetric(tickets.length, "Open Tickets", "Quotes and field work")}
           ${renderTicketMetric(ticketCountBy(tickets, (ticket) => ticket.lane === "field"), "In Field", "Scheduled or active")}
-          ${renderTicketMetric(ticketCountBy(tickets, (ticket) => ticket.lane === "sales" || ticket.lane === "accounting"), "Needs Office", "Scope, quote, budget, approval")}
+          ${renderTicketMetric(ticketCountBy(tickets, (ticket) => ticket.lane === "sales" || ticket.lane === "accounting"), "Needs Office", "Scope, quote, cost review")}
           ${renderTicketMetric(ticketCountBy(tickets, (ticket) => ticket.lane === "review" || ticket.lane === "money"), "Closeout", "Review, invoice, payment")}
         </section>
         <section class="ticket-flow-panel">
           <div class="ticket-flow-step is-active"><span>1</span><strong>Sales Intake</strong><small>Lead and scope</small></div>
           <div class="ticket-flow-step"><span>2</span><strong>Quote Approval</strong><small>Customer yes</small></div>
-          <div class="ticket-flow-step"><span>3</span><strong>Budget Check</strong><small>Owner approval</small></div>
+          <div class="ticket-flow-step"><span>3</span><strong>Cost Review</strong><small>Owner approval</small></div>
           <div class="ticket-flow-step"><span>4</span><strong>Draft Invoice</strong><small>Ready before field</small></div>
           <div class="ticket-flow-step"><span>5</span><strong>Schedule</strong><small>Field assignment</small></div>
           <div class="ticket-flow-step"><span>6</span><strong>Complete</strong><small>Photos and forms</small></div>
@@ -9061,7 +9061,7 @@
         ${renderTicketOwnerStrip(tickets)}
         <div class="ticket-lane-grid">
           ${renderTicketColumn("Today and Field Work", "Scheduled, active, and field-owned tickets.", fieldTickets, "No field tickets are scheduled yet.")}
-          ${renderTicketColumn("Office Review", "Scope, quote, budget, approval, and closeout blockers.", officeTickets, "No office tickets need review.")}
+          ${renderTicketColumn("Office Review", "Scope, quote, cost review, approval, and closeout blockers.", officeTickets, "No office tickets need review.")}
           ${renderTicketColumn("Ready to Schedule", "Approved work that can move into the field calendar.", readyTickets, "No approved tickets are waiting to schedule.")}
         </div>
         <section class="ticket-review-strip">
@@ -9190,7 +9190,7 @@
           <div>
             <p class="eyebrow">Sales Outreach</p>
             <h3>Who needs the next touch?</h3>
-            <p>Move prospects from intake to quote approval, then hand approved work to Accounting for budget review.</p>
+            <p>Move prospects from intake to quote approval, then hand approved work to Accounting for cost review.</p>
           </div>
           <div class="ticket-hero-actions">
             <button type="button" data-action="new-outreach-prospect">Add Lead</button>
@@ -9201,19 +9201,19 @@
           ${renderTicketMetric(intakeTickets.length, "Sales Intake", "New scope and lead review")}
           ${renderTicketMetric(due.length, "Follow-Ups Due", "Calls or emails waiting")}
           ${renderTicketMetric(approvalTickets.length + hot.length, "Quote Action", "Interested or quote pending")}
-          ${renderTicketMetric(accountingTickets.length, "Accounting Handoff", "Approved work needs budget")}
+          ${renderTicketMetric(accountingTickets.length, "Accounting Handoff", "Approved work needs cost review")}
         </section>
         ${renderTicketRoleBrief("sales", dashboardTickets(data))}
         <div class="ticket-lane-grid">
           ${renderTicketColumn("New Intake", "Requests and prospects that need Sales review.", intakeTickets, "No new sales intake tickets.")}
           ${renderTicketColumn("Customer Response Needed", "Quotes, follow-ups, and warm leads that need contact.", approvalTickets.concat(hot.map((item, index) => buildTicketFromQuote(item, index))), "No quote follow-ups are waiting.")}
-          ${renderTicketColumn("Ready for Accounting", "Approved work ready for budget, owner approval, and invoice preparation.", accountingTickets, "No approved tickets are ready for Accounting.")}
+          ${renderTicketColumn("Ready for Accounting", "Approved work ready for cost review, owner approval, and invoice preparation.", accountingTickets, "No approved tickets are ready for Accounting.")}
         </div>
         <section class="ticket-review-strip">
           <div>
             <p class="eyebrow">Sales handoff rule</p>
             <h3>Sales does not own the whole job.</h3>
-            <p>Sales creates the ticket, confirms scope and quote approval, then hands the same ticket to Accounting. Budgeting, field assignment, invoice, and payment stay connected to that ticket history.</p>
+            <p>Sales creates the ticket, confirms scope and quote approval, then hands the same ticket to Accounting. Cost review, field assignment, invoice, and payment stay connected to that ticket history.</p>
           </div>
           <div class="ticket-review-list">
             ${due.length ? due.slice(0, 3).map((item, index) => renderTicketCard(buildTicketFromQuote(item, index), true)).join("") : emptyState("No urgent Sales follow-ups.")}
@@ -9257,7 +9257,7 @@
         <header class="ticket-hero">
           <div>
             <p class="eyebrow">The Accountant</p>
-            <h3>Budget, invoice, collect, close.</h3>
+            <h3>Cost review, invoice, collect, close.</h3>
             <p>Review ticket cost readiness, prepare draft invoices, track Square payment state, and close the financial record without splitting the job into a second system.</p>
           </div>
           <div class="ticket-hero-actions">
@@ -9266,22 +9266,22 @@
           </div>
         </header>
         <section class="ticket-metrics" aria-label="Accounting ticket summary">
-          ${renderTicketMetric(needsBudget.length, "Needs Budget", "Tickets needing cost review")}
-          ${renderTicketMetric(ownerApproval.length, "Owner Approval", "Budget and invoice prep")}
+          ${renderTicketMetric(needsBudget.length, "Cost Review", "Tickets needing cost review")}
+          ${renderTicketMetric(ownerApproval.length, "Owner Approval", "Cost and invoice prep")}
           ${renderTicketMetric(unpaidInvoices.length, "Open Invoices", "Awaiting payment")}
           ${renderTicketMetric(overdueInvoices.length, "Overdue", "Payment action needed")}
         </section>
         ${renderTicketRoleBrief("accounting", tickets)}
         <div class="ticket-lane-grid">
-          ${renderTicketColumn("Budgeting Queue", "Approved work that needs internal cost review before scheduling.", needsBudget, "No tickets are waiting for budget review.")}
-          ${renderTicketColumn("Owner and Invoice Prep", "Budget approvals and draft invoices required before scheduling.", ownerApproval, "No tickets are waiting on owner approval.")}
+          ${renderTicketColumn("Cost Review Queue", "Approved work that needs internal cost review before scheduling.", needsBudget, "No tickets are waiting for cost review.")}
+          ${renderTicketColumn("Owner and Invoice Prep", "Cost approvals and draft invoices required before scheduling.", ownerApproval, "No tickets are waiting on owner approval.")}
           ${renderTicketColumn("Completion Closeout", "Finished field work that needs actuals, documents, invoice, and payment review.", fieldComplete, "No completed field work is waiting for closeout.")}
         </div>
         <section class="ticket-review-strip">
           <div>
             <p class="eyebrow">Accounting rule</p>
             <h3>One ticket, one financial story.</h3>
-            <p>Budgets, actual costs, draft invoices, Square invoice links, payment status, and closeout notes should remain attached to the same Job Ticket audit trail.</p>
+            <p>Cost notes, actual costs, draft invoices, Square invoice links, payment status, and closeout notes should remain attached to the same Job Ticket audit trail.</p>
           </div>
           <div class="ticket-review-list">
             ${invoiceTickets.length ? invoiceTickets.slice(0, 3).map((ticket) => renderTicketCard(ticket, true)).join("") : emptyState("No payment items require attention.")}

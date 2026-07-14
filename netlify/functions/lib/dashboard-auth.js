@@ -6,7 +6,7 @@ const crypto = require("node:crypto");
 // VITE_SUPABASE_ANON_KEY or SUPABASE_ANON_KEY
 // Optional: VITE_DASHBOARD_OWNER_EMAIL, DASHBOARD_ADMIN_EMAILS
 
-const ROLE_ORDER = ["client", "viewer", "worker", "staff", "manager", "admin", "owner"];
+const ROLE_ORDER = ["client", "viewer", "field_worker", "worker", "sales_outreach", "staff", "accountant", "manager", "admin", "owner"];
 const PROTECTED_ROLES = new Set(ROLE_ORDER);
 const RATE_LIMIT_BUCKETS = new Map();
 
@@ -15,6 +15,7 @@ const ROLE_PERMISSIONS = {
   admin: ["*"],
   manager: [
     "dashboard:read",
+    "tickets:read", "tickets:write", "tickets:assign",
     "leads:read", "leads:write", "leads:delete",
     "clients:read", "clients:write",
     "appointments:read", "appointments:write", "appointments:delete",
@@ -33,6 +34,7 @@ const ROLE_PERMISSIONS = {
   ],
   staff: [
     "dashboard:read",
+    "tickets:read", "tickets:write",
     "leads:read", "leads:write",
     "clients:read", "clients:write",
     "appointments:read", "appointments:write",
@@ -49,6 +51,7 @@ const ROLE_PERMISSIONS = {
   ],
   worker: [
     "dashboard:read",
+    "tickets:read", "tickets:write",
     "clients:read",
     "appointments:read", "appointments:write",
     "equipment:read",
@@ -58,8 +61,44 @@ const ROLE_PERMISSIONS = {
     "call_logs:read", "call_logs:write",
     "route:read", "route:write"
   ],
+  field_worker: [
+    "dashboard:read",
+    "tickets:read", "tickets:write",
+    "clients:read",
+    "appointments:read", "appointments:write",
+    "equipment:read",
+    "documentation:read", "documentation:write",
+    "operations:read", "operations:write",
+    "notes:read", "notes:write",
+    "call_logs:read", "call_logs:write",
+    "route:read", "route:write"
+  ],
+  sales_outreach: [
+    "dashboard:read",
+    "tickets:read", "tickets:write",
+    "leads:read", "leads:write",
+    "clients:read", "clients:write",
+    "documentation:read",
+    "notes:read", "notes:write",
+    "call_logs:read", "call_logs:write",
+    "exports:read"
+  ],
+  accountant: [
+    "dashboard:read",
+    "tickets:read", "tickets:write",
+    "clients:read",
+    "appointments:read",
+    "documentation:read", "documentation:write", "documentation:review",
+    "operations:read",
+    "notes:read", "notes:write",
+    "invoices:read",
+    "settings:read",
+    "exports:read",
+    "backups:download"
+  ],
   viewer: [
     "dashboard:read",
+    "tickets:read",
     "leads:read",
     "clients:read",
     "appointments:read",
@@ -115,9 +154,9 @@ const TABLE_PERMISSIONS = {
   automation_rules: { GET: "operations:read", POST: "operations:automate", PATCH: "operations:automate", DELETE: "admin:manage" },
   automation_runs: { GET: "operations:read", POST: "operations:automate", PATCH: "operations:automate", DELETE: "admin:manage" },
   command_usage_history: { GET: "operations:read", POST: "operations:write", PATCH: "admin:manage", DELETE: "admin:manage" },
-  job_tickets: { GET: "dashboard:read", POST: "appointments:write", PATCH: "appointments:write", DELETE: "admin:manage" },
-  job_ticket_events: { GET: "dashboard:read", POST: "appointments:write", PATCH: "admin:manage", DELETE: "admin:manage" },
-  job_ticket_links: { GET: "dashboard:read", POST: "appointments:write", PATCH: "appointments:write", DELETE: "admin:manage" },
+  job_tickets: { GET: "dashboard:read", POST: "tickets:write", PATCH: "tickets:write", DELETE: "admin:manage" },
+  job_ticket_events: { GET: "dashboard:read", POST: "tickets:write", PATCH: "admin:manage", DELETE: "admin:manage" },
+  job_ticket_links: { GET: "dashboard:read", POST: "tickets:write", PATCH: "tickets:write", DELETE: "admin:manage" },
   documentation_templates: { GET: "documentation:read", POST: "admin:manage", PATCH: "admin:manage", DELETE: "admin:manage" },
   documentation_template_versions: { GET: "documentation:read", POST: "admin:manage", PATCH: "admin:manage", DELETE: "admin:manage" },
   documentation_assignments: { GET: "documentation:read", POST: "documentation:write", PATCH: "documentation:write", DELETE: "admin:manage" },
@@ -244,6 +283,9 @@ function ownerEmails() {
 
 function normalizeRole(role) {
   const value = String(role || "").trim().toLowerCase();
+  if (value === "sales") return "sales_outreach";
+  if (["field", "crew", "employee"].includes(value)) return "field_worker";
+  if (value === "accounting") return "accountant";
   return PROTECTED_ROLES.has(value) ? value : "";
 }
 

@@ -202,6 +202,7 @@ function cleanEventPayload(input = {}, ticketId, actor = null) {
 function canWriteTicket(actor) {
   return Boolean(actor && (
     hasPermission(actor.role, "admin:manage") ||
+    hasPermission(actor.role, "tickets:write") ||
     hasPermission(actor.role, "leads:write") ||
     hasPermission(actor.role, "appointments:write")
   ));

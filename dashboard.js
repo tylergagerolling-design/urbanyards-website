@@ -40,11 +40,14 @@
   const USER_AVATAR_ALLOWED_TYPES = new Set(["image/jpeg", "image/png", "image/webp"]);
   const USER_AVATAR_ALLOWED_EXTENSIONS = new Set(["jpg", "jpeg", "png", "webp"]);
   const PROTECTED_USER_EMAIL = "team@urbanyards.us";
-  const DASHBOARD_ROLES = ["owner", "admin", "manager", "worker", "viewer"];
+  const DASHBOARD_ROLES = ["owner", "admin", "manager", "sales_outreach", "accountant", "field_worker", "worker", "viewer"];
   const DASHBOARD_ROLE_LABELS = {
     owner: "Owner",
     admin: "Admin",
     manager: "Manager",
+    sales_outreach: "Sales Outreach",
+    accountant: "Accountant",
+    field_worker: "Field Worker",
     worker: "Worker",
     viewer: "Viewer"
   };
@@ -52,6 +55,9 @@
     owner: ["*"],
     admin: ["*"],
     manager: ["view", "create", "edit", "archive", "import", "export"],
+    sales_outreach: ["view", "create", "edit", "import", "export"],
+    accountant: ["view", "create", "edit", "export"],
+    field_worker: ["view", "create", "edit"],
     worker: ["view", "create", "edit"],
     viewer: ["view"]
   };
@@ -1126,6 +1132,9 @@
   function normalizeDashboardRole(role) {
     const normalized = String(role || "").trim().toLowerCase();
     if (normalized === "staff") return "manager";
+    if (normalized === "sales") return "sales_outreach";
+    if (["field", "crew", "employee"].includes(normalized)) return "field_worker";
+    if (normalized === "accounting") return "accountant";
     return DASHBOARD_ROLES.includes(normalized) ? normalized : "viewer";
   }
 

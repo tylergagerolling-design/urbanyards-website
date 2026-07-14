@@ -34,6 +34,7 @@ const {
 const {
   _internals: ticketFunctionInternals
 } = require("../netlify/functions/dashboard-tickets");
+const dashboardAuth = require("../netlify/functions/lib/dashboard-auth");
 
 test("ticket permissions keep one canonical role-aware workflow", () => {
   const owner = { role: ROLES.OWNER, userId: "owner-1" };
@@ -289,4 +290,16 @@ test("dashboard ticket backend exposes read actions through the protected ticket
   assert.match(source, /async function listTickets/);
   assert.match(source, /async function listTicketEvents/);
   assert.match(source, /requirePermission\(event, "dashboard:read"/);
+});
+
+test("protected dashboard auth recognizes rebuilt job-ticket roles", () => {
+  assert.equal(dashboardAuth.normalizeRole("sales"), "sales_outreach");
+  assert.equal(dashboardAuth.normalizeRole("field"), "field_worker");
+  assert.equal(dashboardAuth.normalizeRole("accounting"), "accountant");
+  assert.equal(dashboardAuth.hasPermission("sales_outreach", "leads:write"), true);
+  assert.equal(dashboardAuth.hasPermission("sales_outreach", "tickets:write"), true);
+  assert.equal(dashboardAuth.hasPermission("field_worker", "appointments:write"), true);
+  assert.equal(dashboardAuth.hasPermission("field_worker", "admin:manage"), false);
+  assert.equal(dashboardAuth.hasPermission("accountant", "invoices:read"), true);
+  assert.equal(dashboardAuth.hasPermission("accountant", "leads:write"), false);
 });

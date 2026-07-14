@@ -34,6 +34,24 @@ function request(method, body = {}, ip = `test-${Math.random()}`) {
   return { method, body, headers: { "x-forwarded-for": ip, origin: "https://urbanyards.us" }, socket: {} };
 }
 
+function isFeatureFlagRequest(url) {
+  return String(url).includes("/feature_flags");
+}
+
+function featureFlagResponse(enabled = true) {
+  const body = JSON.stringify([{ enabled }]);
+  return {
+    ok: true,
+    status: 200,
+    async json() {
+      return JSON.parse(body);
+    },
+    async text() {
+      return body;
+    }
+  };
+}
+
 function withEnv(patch, callback) {
   const original = {};
   Object.keys(patch).forEach((key) => {
@@ -101,14 +119,25 @@ test("valid quote fails honestly when no delivery integration is configured", as
 });
 
 test("assistant requires a server-side OpenAI key", async () => {
-  const key = process.env.OPENAI_API_KEY;
+  const original = {
+    OPENAI_API_KEY: process.env.OPENAI_API_KEY,
+    SUPABASE_SERVICE_KEY: process.env.SUPABASE_SERVICE_KEY,
+    SUPABASE_SERVICE_ROLE_KEY: process.env.SUPABASE_SERVICE_ROLE_KEY
+  };
   delete process.env.OPENAI_API_KEY;
-  const res = mockResponse();
-  await assistantHandler(request("POST", { message: "Do you mow lawns?" }), res);
-  assert.equal(res.statusCode, 503);
-  assert.match(res.payload.error, /AI helper is not available/i);
-  assert.equal("OPENAI_API_KEY" in res.payload, false);
-  key === undefined ? delete process.env.OPENAI_API_KEY : process.env.OPENAI_API_KEY = key;
+  delete process.env.SUPABASE_SERVICE_KEY;
+  delete process.env.SUPABASE_SERVICE_ROLE_KEY;
+  try {
+    const res = mockResponse();
+    await assistantHandler(request("POST", { message: "Do you mow lawns?" }), res);
+    assert.equal(res.statusCode, 503);
+    assert.match(res.payload.error, /AI helper is not available/i);
+    assert.equal("OPENAI_API_KEY" in res.payload, false);
+  } finally {
+    Object.entries(original).forEach(([key, value]) => {
+      value === undefined ? delete process.env[key] : process.env[key] = value;
+    });
+  }
 });
 
 test("site knowledge retrieves relevant website sections", () => {
@@ -175,7 +204,19 @@ test("assistant returns a graceful error if the model request fails", async () =
   const originalKey = process.env.OPENAI_API_KEY;
   const originalFetch = global.fetch;
   process.env.OPENAI_API_KEY = "test-key";
-  global.fetch = async () => ({ ok: false, status: 500 });
+  global.fetch = async (url) => {
+    if (isFeatureFlagRequest(url)) return featureFlagResponse(true);
+    return {
+      ok: false,
+      status: 500,
+      async json() {
+        return { error: { message: "Model unavailable" } };
+      },
+      async text() {
+        return "Model unavailable";
+      }
+    };
+  };
   try {
     const res = mockResponse();
     await assistantHandler(request("POST", { message: "How do I get a quote?" }), res);
@@ -193,6 +234,7 @@ test("assistant sends relevant site knowledge to the model", async () => {
   let capturedBody;
   process.env.OPENAI_API_KEY = "test-key";
   global.fetch = async (url, options) => {
+    if (isFeatureFlagRequest(url)) return featureFlagResponse(true);
     assert.equal(url, "https://api.openai.com/v1/chat/completions");
     capturedBody = JSON.parse(options.body);
     return {

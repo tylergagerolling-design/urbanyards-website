@@ -91,6 +91,18 @@ test("dashboard route aliases and new reliability diagnostics are wired", () => 
   assert.match(html, /copy-dashboard-diagnostics/);
 });
 
+test("dashboard creates canonical job tickets without removing source fallbacks", () => {
+  const js = read("dashboard.js");
+
+  assert.match(js, /async function insertJobTicket/);
+  assert.match(js, /async function updateJobTicket/);
+  assert.match(js, /supabaseRestRequest\("job_tickets"/);
+  assert.match(js, /source_type: "quote"/);
+  assert.match(js, /source_type: "job"/);
+  assert.match(js, /openTicketDrawer\("ticket", canonicalTicket\.id\)/);
+  assert.match(js, /isMissingOptionalTableError\(error\)\) return null/);
+});
+
 test("optional dashboard module migrations include tables queried by the UI", () => {
   const docsSql = read("supabase/migrations/20260710_documentation_forms.sql");
   const ticketSql = read("supabase/migrations/20260714_job_ticket_foundation.sql");

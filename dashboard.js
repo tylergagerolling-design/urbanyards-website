@@ -554,6 +554,10 @@
     return "Module could not load.";
   }
 
+  function isMissingOptionalTableError(error) {
+    return /does not exist|schema cache|relation|table|could not find the table/i.test(String(error?.message || ""));
+  }
+
   function moduleWarningScope(name) {
     const key = String(name || "").replace(/^render:/, "");
     return supportModuleWarningNames.has(key) ? "support" : "critical";
@@ -4336,7 +4340,7 @@
     } catch (error) {
       state.ticketsReady = false;
       state.ticketsError = error.message || "Canonical job tickets could not load.";
-      if (!/does not exist|schema cache|relation|table/i.test(String(error?.message || ""))) {
+      if (!isMissingOptionalTableError(error)) {
         recordModuleError("canonical tickets", error);
       }
       return [];
@@ -4659,6 +4663,136 @@
       body: JSON.stringify(payloads)
     });
     return rows.map(normalizeJob);
+  }
+
+  function blankToNull(value) {
+    const text = String(value ?? "").trim();
+    return text ? text : null;
+  }
+
+  function uuidOrNull(value) {
+    const text = String(value ?? "").trim();
+    return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(text) ? text : null;
+  }
+
+  function ticketRecordStatusForStage(stage) {
+    const normalized = normalizeTicketStageForDashboard(stage);
+    if (normalized === "cancelled") return "cancelled";
+    if (["closed", "paid"].includes(normalized)) return "completed";
+    if (["paused", "scope_change_requested"].includes(normalized)) return "on_hold";
+    if (["scheduled", "in_progress", "field_work_complete", "completion_review", "invoice_review", "invoice_sent", "partially_paid"].includes(normalized)) return "active";
+    return "open";
+  }
+
+  function canonicalTicketPayload(input = {}) {
+    const stage = normalizeTicketStageForDashboard(input.stage || "sales_intake");
+    const service = blankToNull(input.service || input.requested_service);
+    const title = blankToNull(input.title) || service || "Job ticket";
+    return {
+      title,
+      stage,
+      status: input.status || ticketRecordStatusForStage(stage),
+      source_type: blankToNull(input.source_type || input.sourceType),
+      source_id: uuidOrNull(input.source_id || input.sourceId),
+      quote_id: uuidOrNull(input.quote_id || input.quoteId),
+      job_id: uuidOrNull(input.job_id || input.jobId),
+      invoice_id: uuidOrNull(input.invoice_id || input.invoiceId),
+      customer_id: uuidOrNull(input.customer_id || input.customerId),
+      property_id: uuidOrNull(input.property_id || input.propertyId),
+      customer_name: blankToNull(input.customer_name || input.customerName),
+      client_name: blankToNull(input.client_name || input.clientName),
+      contact_name: blankToNull(input.contact_name || input.contactName),
+      company_name: blankToNull(input.company_name || input.companyName),
+      property_name: blankToNull(input.property_name || input.propertyName),
+      property_address: blankToNull(input.property_address || input.propertyAddress),
+      city: blankToNull(input.city),
+      requested_service: service,
+      service,
+      scope_of_work: blankToNull(input.scope_of_work || input.scopeOfWork),
+      description: blankToNull(input.description),
+      notes: blankToNull(input.notes),
+      internal_notes: blankToNull(input.internal_notes || input.internalNotes),
+      scheduled_date: blankToNull(input.scheduled_date || input.scheduledDate),
+      visit_date: blankToNull(input.visit_date || input.visitDate),
+      due_date: blankToNull(input.due_date || input.dueDate),
+      owner_label: blankToNull(input.owner_label || input.ownerLabel),
+      next_action: blankToNull(input.next_action || input.nextAction),
+      blockers: Array.isArray(input.blockers) ? input.blockers.filter(Boolean) : undefined
+    };
+  }
+
+  function canonicalTicketUpdatePayload(input = {}) {
+    const payload = {};
+    if (Object.prototype.hasOwnProperty.call(input, "stage")) {
+      payload.stage = normalizeTicketStageForDashboard(input.stage);
+    }
+    if (Object.prototype.hasOwnProperty.call(input, "status")) {
+      payload.status = input.status || ticketRecordStatusForStage(payload.stage);
+    }
+    if (Object.prototype.hasOwnProperty.call(input, "next_action") || Object.prototype.hasOwnProperty.call(input, "nextAction")) {
+      payload.next_action = blankToNull(input.next_action || input.nextAction);
+    }
+    if (Object.prototype.hasOwnProperty.call(input, "notes")) {
+      payload.notes = blankToNull(input.notes);
+    }
+    if (Object.prototype.hasOwnProperty.call(input, "internal_notes") || Object.prototype.hasOwnProperty.call(input, "internalNotes")) {
+      payload.internal_notes = blankToNull(input.internal_notes || input.internalNotes);
+    }
+    return payload;
+  }
+
+  async function insertJobTicket(input) {
+    const payload = canonicalTicketPayload(input);
+    if (isDemoMode()) {
+      const ticket = normalizeCanonicalTicket({
+        id: nextDemoId("ticket"),
+        ...payload,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString()
+      });
+      state.data.tickets.unshift(ticket);
+      return ticket;
+    }
+
+    try {
+      const rows = await supabaseRestRequest("job_tickets", {
+        method: "POST",
+        headers: { Prefer: "return=representation" },
+        body: JSON.stringify(payload)
+      });
+      state.ticketsReady = true;
+      state.ticketsError = "";
+      return normalizeCanonicalTicket(rows[0]);
+    } catch (error) {
+      state.ticketsReady = false;
+      state.ticketsError = error.message || "Canonical job tickets could not save.";
+      if (isMissingOptionalTableError(error)) return null;
+      throw error;
+    }
+  }
+
+  async function updateJobTicket(id, input) {
+    if (!id) return null;
+    const payload = canonicalTicketUpdatePayload(input);
+    if (!Object.keys(payload).length) return null;
+    if (isDemoMode()) {
+      const index = state.data.tickets.findIndex((ticket) => ticket.id === id);
+      if (index < 0) return null;
+      const updated = normalizeCanonicalTicket({
+        ...state.data.tickets[index],
+        ...payload,
+        updated_at: new Date().toISOString()
+      });
+      state.data.tickets[index] = updated;
+      return updated;
+    }
+
+    const rows = await supabaseRestRequest(`job_tickets?id=eq.${encodeURIComponent(id)}`, {
+      method: "PATCH",
+      headers: { Prefer: "return=representation" },
+      body: JSON.stringify(payload)
+    });
+    return normalizeCanonicalTicket(rows[0]);
   }
 
   async function deleteRow(table, id) {
@@ -8978,9 +9112,10 @@
           const actionId = ticketActionTargetId(ticket, action);
           const statusSource = ticket.sourceType || ticket.source;
           const statusId = ticket.sourceId || ticket.id;
+          const canonicalTicketAttr = ticket.source === "ticket" ? ` data-ticket-id="${escapeHtml(ticket.id)}"` : "";
           const attributes = item.status
             ? ["quote", "job"].includes(statusSource)
-              ? `data-action="advance-ticket-status" data-ticket-source="${escapeHtml(statusSource)}" data-id="${escapeHtml(statusId)}" data-status="${escapeHtml(item.status)}"`
+              ? `data-action="advance-ticket-status" data-ticket-source="${escapeHtml(statusSource)}"${canonicalTicketAttr} data-id="${escapeHtml(statusId)}" data-status="${escapeHtml(item.status)}"`
               : "disabled"
             : `data-action="${escapeHtml(action)}" data-id="${escapeHtml(actionId)}"`;
           return `<button type="button" ${attributes}>
@@ -15823,13 +15958,22 @@
       if (action === "advance-ticket-status") {
         const source = target.dataset.ticketSource;
         const status = target.dataset.status;
+        const ticketId = target.dataset.ticketId || "";
         const table = source === "quote" ? "quote_submissions" : source === "job" ? "scheduled_jobs" : "";
         if (!table || !status) return;
         try {
           setDashboardState("Moving ticket forward...");
           await updateStatus(table, id, status);
+          if (ticketId) {
+            const nextStage = source === "quote" ? quoteStage({ status }) : jobStage({ status });
+            await updateJobTicket(ticketId, {
+              stage: nextStage,
+              status: ticketRecordStatusForStage(nextStage),
+              next_action: ticketNextAction(nextStage)
+            });
+          }
           await refreshDashboard();
-          openTicketDrawer(source, id);
+          openTicketDrawer(ticketId ? "ticket" : source, ticketId || id);
           setDashboardState("Ticket updated.");
         } catch (error) {
           setDashboardState(error.message || "Unable to move ticket forward.", "error");
@@ -16603,8 +16747,27 @@
               service,
               status: "Scheduled"
             }]);
+            const canonicalTicket = jobs[0]?.id ? await insertJobTicket({
+              title: service,
+              stage: "scheduled",
+              status: "active",
+              source_type: "job",
+              source_id: jobs[0].id,
+              job_id: jobs[0].id,
+              customer_name: customerName,
+              property_name: customerName,
+              city,
+              service,
+              requested_service: service,
+              notes: String(formData.get("notes") || "").trim(),
+              visit_date: visitDate,
+              scheduled_date: visitDate,
+              owner_label: "Field",
+              next_action: "Work the visit"
+            }) : null;
             await refreshDashboard();
-            if (jobs[0]?.id) openTicketDrawer("job", jobs[0].id);
+            if (canonicalTicket?.id) openTicketDrawer("ticket", canonicalTicket.id);
+            else if (jobs[0]?.id) openTicketDrawer("job", jobs[0].id);
             setDashboardState("Field ticket created.");
           } else {
             const quote = await insertQuoteSubmission({
@@ -16618,8 +16781,26 @@
               status: "New",
               notes: String(formData.get("notes") || "").trim()
             });
+            const canonicalTicket = quote?.id ? await insertJobTicket({
+              title: service,
+              stage: "sales_intake",
+              status: "open",
+              source_type: "quote",
+              source_id: quote.id,
+              quote_id: quote.id,
+              customer_name: customerName,
+              contact_name: customerName,
+              property_name: String(formData.get("property_type") || "").trim() || city,
+              city,
+              service,
+              requested_service: service,
+              notes: String(formData.get("notes") || "").trim(),
+              owner_label: "Sales",
+              next_action: "Review intake"
+            }) : null;
             await refreshDashboard();
-            if (quote?.id) openTicketDrawer("quote", quote.id);
+            if (canonicalTicket?.id) openTicketDrawer("ticket", canonicalTicket.id);
+            else if (quote?.id) openTicketDrawer("quote", quote.id);
             setDashboardState("Intake ticket created.");
           }
         } catch (error) {

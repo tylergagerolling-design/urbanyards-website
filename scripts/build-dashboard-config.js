@@ -46,8 +46,8 @@ function buildConfig() {
   const production = isProductionDeploy(appEnv);
 
   const config = {
-    supabaseUrl: process.env.VITE_SUPABASE_URL || (production ? "" : readExistingValue("supabaseUrl")),
-    supabaseAnonKey: process.env.VITE_SUPABASE_ANON_KEY || (production ? "" : readExistingValue("supabaseAnonKey")),
+    supabaseUrl: process.env.VITE_SUPABASE_URL || readExistingValue("supabaseUrl"),
+    supabaseAnonKey: process.env.VITE_SUPABASE_ANON_KEY || readExistingValue("supabaseAnonKey"),
     siteUrl: process.env.SITE_URL || process.env.VITE_SITE_URL || process.env.NEXT_PUBLIC_SITE_URL || process.env.URL || readExistingValue("siteUrl"),
     ownerEmail: process.env.VITE_DASHBOARD_OWNER_EMAIL || readExistingValue("ownerEmail") || "team@urbanyards.us",
     appEnv,

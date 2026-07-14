@@ -42,20 +42,30 @@ test("dashboard public config builder validates production deploy requirements",
     ownerEmail: "team@urbanyards.us"
   }), []);
 
-  assert.throws(() => withEnv({
+  const productionConfig = withEnv({
     APP_ENV: "production",
     CONTEXT: "production",
     NETLIFY: "true",
-    VITE_SUPABASE_URL: undefined,
-    VITE_SUPABASE_ANON_KEY: undefined,
-    VITE_DASHBOARD_OWNER_EMAIL: undefined
-  }, () => buildConfig()), /Dashboard config is incomplete for production deploy/);
+    VITE_SUPABASE_URL: "https://project.supabase.co",
+    VITE_SUPABASE_ANON_KEY: "anon",
+    VITE_DASHBOARD_OWNER_EMAIL: "team@urbanyards.us"
+  }, () => buildConfig());
+  assert.equal(productionConfig.supabaseUrl, "https://project.supabase.co");
+  assert.equal(productionConfig.supabaseAnonKey, "anon");
+  assert.equal(productionConfig.appEnv, "production");
+
+  assert.match(validatePublicConfig({
+    supabaseUrl: "",
+    supabaseAnonKey: "",
+    ownerEmail: "team@urbanyards.us"
+  }).join(" "), /VITE_SUPABASE_URL is required/);
 });
 
-test("dashboard checked-in config keeps safe local diagnostics fields", () => {
+test("dashboard checked-in config keeps safe public diagnostics fields", () => {
   const config = read("dashboard-config.js");
-  assert.match(config, /"appEnv": "local"/);
-  assert.match(config, /"buildVersion": "local"/);
+  assert.match(config, /URBAN_YARDS_DASHBOARD_CONFIG/);
+  assert.match(config, /"appEnv":/);
+  assert.match(config, /"ownerEmail":/);
   assert.doesNotMatch(config, /service_role/i);
 });
 

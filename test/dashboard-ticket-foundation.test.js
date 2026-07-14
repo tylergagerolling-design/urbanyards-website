@@ -281,3 +281,12 @@ test("dashboard ticket backend sanitizes mutation payloads before Supabase write
   assert.deepEqual(payload.blockers, ["Photos", "Forms"]);
   assert.equal(payload.created_by, actor.userId);
 });
+
+test("dashboard ticket backend exposes read actions through the protected ticket endpoint", () => {
+  const source = require("node:fs").readFileSync(require("node:path").join(__dirname, "..", "netlify/functions/dashboard-tickets.js"), "utf8");
+  assert.match(source, /"list"/);
+  assert.match(source, /"events"/);
+  assert.match(source, /async function listTickets/);
+  assert.match(source, /async function listTicketEvents/);
+  assert.match(source, /requirePermission\(event, "dashboard:read"/);
+});

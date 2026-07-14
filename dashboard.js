@@ -4358,7 +4358,8 @@
 
   async function loadCanonicalTickets() {
     try {
-      const rows = await supabaseRestRequest("job_tickets?select=*&order=updated_at.desc.nullslast,created_at.desc", { method: "GET" });
+      const result = await dashboardTicketRequest("list", { limit: 1000 });
+      const rows = Array.isArray(result.tickets) ? result.tickets : [];
       state.ticketsReady = true;
       state.ticketsError = "";
       return rows.map(normalizeCanonicalTicket);
@@ -4374,7 +4375,8 @@
 
   async function loadCanonicalTicketEvents() {
     try {
-      const rows = await supabaseRestRequest("job_ticket_events?select=*&order=created_at.desc&limit=500", { method: "GET" });
+      const result = await dashboardTicketRequest("events", { limit: 500 });
+      const rows = Array.isArray(result.events) ? result.events : [];
       state.ticketEventsReady = true;
       return rows.map(normalizeJobTicketEvent);
     } catch (error) {

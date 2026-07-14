@@ -253,6 +253,22 @@ async function updateTicket(id, payload) {
   return Array.isArray(rows) ? rows[0] || null : null;
 }
 
+async function listTickets(limit = 1000) {
+  const safeLimit = Math.min(Math.max(Number(limit) || 1000, 1), 2000);
+  const rows = await supabaseAdminRequest(`job_tickets?select=*&order=updated_at.desc.nullslast,created_at.desc&limit=${safeLimit}`, {
+    method: "GET"
+  });
+  return Array.isArray(rows) ? rows : [];
+}
+
+async function listTicketEvents(limit = 500) {
+  const safeLimit = Math.min(Math.max(Number(limit) || 500, 1), 2000);
+  const rows = await supabaseAdminRequest(`job_ticket_events?select=*&order=created_at.desc&limit=${safeLimit}`, {
+    method: "GET"
+  });
+  return Array.isArray(rows) ? rows : [];
+}
+
 exports.handler = async (event) => {
   const requestId = requestIdFromEvent(event);
   if (event.httpMethod !== "POST") {
@@ -269,7 +285,7 @@ exports.handler = async (event) => {
   try {
     body = parseBody(event);
     const action = String(body.action || "").trim().toLowerCase();
-    if (!["create", "update", "event"].includes(action)) {
+    if (!["list", "events", "create", "update", "event"].includes(action)) {
       return json(400, { error: "Unsupported ticket action.", requestId });
     }
 
@@ -280,6 +296,17 @@ exports.handler = async (event) => {
     const auth = await requirePermission(event, "dashboard:read", { route: "dashboard-tickets", action });
     actor = auth.actor;
     if (!auth.ok) return json(auth.statusCode, { error: auth.error, requestId });
+
+    if (action === "list") {
+      const tickets = await listTickets(body.limit);
+      return json(200, { ok: true, tickets, requestId });
+    }
+
+    if (action === "events") {
+      const events = await listTicketEvents(body.limit);
+      return json(200, { ok: true, events, requestId });
+    }
+
     if (!canWriteTicket(actor)) {
       await writeAuditLog({
         actor,

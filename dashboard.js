@@ -152,6 +152,7 @@
     "submissions",
     "contacts",
     "jobs",
+    "tickets",
     "notes",
     "reminders",
     "documents",
@@ -273,6 +274,8 @@
     equipmentReady: true,
     equipmentMaintenanceReady: true,
     hardwareGuideReady: true,
+    ticketsReady: false,
+    ticketsError: "",
     groundskeeperAiReady: false,
     groundskeeperAiError: "",
     documentationReady: false,
@@ -289,6 +292,7 @@
       submissions: [],
       contacts: [],
       jobs: [],
+      tickets: [],
       notes: [],
       reminders: [],
       documents: [],
@@ -390,7 +394,8 @@
     "dashboard health",
     "global add menu",
     "global search",
-    "avatar fallbacks"
+    "avatar fallbacks",
+    "canonical tickets"
   ]);
   let demoIdCount = 100;
   let googleRouteMap = null;
@@ -3699,6 +3704,7 @@
         normalizeJob({ id: "demo-job-2", visit_date: daysFromToday(2), visit_window: "1:00 PM - 3:00 PM", site_name: "River Court HOA", city: "Vancouver", service: "Site walk and seasonal cleanup plan", status: "Scheduled" }),
         normalizeJob({ id: "demo-job-3", visit_date: daysFromToday(5), visit_window: "Morning", site_name: "Mason Lee", city: "Beaverton", service: "Backyard cleanup", status: "New" })
       ],
+      tickets: [],
       notes: [
         normalizeNote({ id: "demo-note-1", title: "Order mulch samples", body: "Bring dark hemlock and fine bark options for River Court.", created_at: now }),
         normalizeNote({ id: "demo-note-2", title: "Check route fuel", body: "Plan Portland to Beaverton to Vancouver route before Friday.", created_at: daysFromToday(-1) })
@@ -4238,6 +4244,7 @@
       state.equipmentReady = true;
       state.equipmentMaintenanceReady = true;
       state.hardwareGuideReady = true;
+      state.ticketsReady = true;
       state.groundskeeperAiReady = true;
       state.documentationReady = true;
       state.importExportReady = true;
@@ -4253,6 +4260,7 @@
       submissions,
       contacts,
       jobs,
+      tickets,
       notes,
       reminders,
       documents,
@@ -4274,6 +4282,7 @@
       loadModule("quote submissions", () => supabaseRestRequest("quote_submissions?select=*&order=created_at.desc", { method: "GET" }), []),
       loadModule("contacts", () => supabaseRestRequest("contacts?select=*&order=created_at.desc", { method: "GET" }), []),
       loadModule("scheduled jobs", () => supabaseRestRequest("scheduled_jobs?select=*&order=visit_date.asc", { method: "GET" }), []),
+      loadCanonicalTickets(),
       loadModule("job notes", () => supabaseRestRequest("job_notes?select=*&order=created_at.desc", { method: "GET" }), []),
       loadModule("follow-up reminders", () => supabaseRestRequest("follow_up_reminders?select=*&order=due_date.asc", { method: "GET" }), []),
       loadModule("documents", loadSalesDocuments, []),
@@ -4297,6 +4306,7 @@
       submissions: submissions.map(normalizeSubmission),
       contacts: contacts.map(normalizeContact),
       jobs: jobs.map(normalizeJob),
+      tickets,
       notes: notes.map(normalizeNote),
       reminders: reminders.map(normalizeReminder),
       documents,
@@ -4315,6 +4325,22 @@
       userProfiles,
       auditLogs
     };
+  }
+
+  async function loadCanonicalTickets() {
+    try {
+      const rows = await supabaseRestRequest("job_tickets?select=*&order=updated_at.desc.nullslast,created_at.desc", { method: "GET" });
+      state.ticketsReady = true;
+      state.ticketsError = "";
+      return rows.map(normalizeCanonicalTicket);
+    } catch (error) {
+      state.ticketsReady = false;
+      state.ticketsError = error.message || "Canonical job tickets could not load.";
+      if (!/does not exist|schema cache|relation|table/i.test(String(error?.message || ""))) {
+        recordModuleError("canonical tickets", error);
+      }
+      return [];
+    }
   }
 
   async function loadLeadActivity() {
@@ -8559,12 +8585,96 @@
     return `${prefix}-${safe || String(index + 1).padStart(3, "0")}`;
   }
 
+  function normalizeTicketStageForDashboard(value, fallback = "sales_intake") {
+    const compact = statusText(value).replace(/[\s-]+/g, "_");
+    if (ticketStageMeta[compact]) return compact;
+    if (/cost.*progress|review.*progress|budget.*progress/.test(compact)) return "budget_in_progress";
+    if (/cost|budget/.test(compact)) return "needs_budget";
+    if (/owner.*approval/.test(compact)) return "needs_owner_approval";
+    if (/invoice.*sent/.test(compact)) return "invoice_sent";
+    if (/invoice|billing/.test(compact)) return "invoice_review";
+    if (/ready.*schedule/.test(compact)) return "ready_to_schedule";
+    if (/complete|done/.test(compact)) return "field_work_complete";
+    if (/progress|started|active/.test(compact)) return "in_progress";
+    if (/cancel|declined|lost/.test(compact)) return "cancelled";
+    return ticketStageMeta[fallback] ? fallback : "sales_intake";
+  }
+
+  function normalizeTicketSourceType(row = {}) {
+    const value = statusText(row.source_type || row.source || row.related_record_type || row.related_type || "");
+    if (/quote|submission|lead/.test(value)) return "quote";
+    if (/job|visit|schedule/.test(value)) return "job";
+    if (/invoice|estimate|document/.test(value)) return "document";
+    return "ticket";
+  }
+
+  function normalizeTicketBlockers(value, stage) {
+    if (Array.isArray(value)) return value.map((item) => String(item || "").trim()).filter(Boolean);
+    const text = String(value || "").trim();
+    if (text) return text.split(/[,\n]/).map((item) => item.trim()).filter(Boolean);
+    return ticketBlockers(stage);
+  }
+
+  function ticketSourceKey(ticket = {}) {
+    const source = ticket.sourceType || ticket.source || "ticket";
+    const id = ticket.sourceId || ticket.id || "";
+    return `${source}:${id}`;
+  }
+
+  function ticketActionTargetId(ticket = {}, action = "") {
+    const sourceAction = ["open-submission", "edit-job", "open-document"].includes(action);
+    return sourceAction ? ticket.sourceId || ticket.id : ticket.id;
+  }
+
+  function ticketSourceLabel(ticket = {}) {
+    const source = ticket.sourceType || ticket.source;
+    if (source === "quote") return "Quote request";
+    if (source === "job") return "Scheduled visit";
+    if (source === "document") return "Document";
+    return "Job ticket";
+  }
+
+  function normalizeCanonicalTicket(row = {}, index = 0) {
+    const stage = normalizeTicketStageForDashboard(row.stage || row.ticket_stage || row.workflow_stage || row.status);
+    const meta = ticketStageMeta[stage] || ticketStageMeta.sales_intake;
+    const sourceType = normalizeTicketSourceType(row);
+    const sourceId = row.source_id || row.related_record_id || row.quote_id || row.submission_id || row.job_id || row.document_id || "";
+    const title = row.title || row.ticket_title || row.service || row.requested_service || row.job_description || "Job ticket";
+    const customer = row.customer_name || row.client_name || row.contact_name || row.site_name || row.company_name || "Customer not set";
+    const property = row.property_name || row.property_address || row.address || row.city || "Property not set";
+    const dateRaw = row.scheduled_date || row.visit_date || row.due_date || row.updated_at || row.created_at || "";
+    return {
+      id: row.id,
+      source: "ticket",
+      sourceType,
+      sourceId,
+      number: row.ticket_number || row.number || ticketNumber("TKT", row.id, index),
+      title,
+      customer,
+      property,
+      detail: row.description || row.scope_of_work || row.notes || row.internal_notes || "Open the ticket to review details.",
+      stage,
+      stageLabel: row.stage_label || meta.label,
+      tone: row.tone || meta.tone,
+      lane: row.lane || meta.lane,
+      ownerLabel: row.owner_label || row.responsible_role || meta.owner,
+      action: sourceType === "quote" ? "open-submission" : sourceType === "job" ? "edit-job" : sourceType === "document" ? "open-document" : "open-ticket",
+      dateRaw,
+      dateLabel: row.date_label || formatDate(dateRaw) || "No date",
+      nextAction: row.next_action || ticketNextAction(stage),
+      blockers: normalizeTicketBlockers(row.blockers || row.missing_requirements, stage),
+      sourceLabel: ticketSourceLabel({ sourceType })
+    };
+  }
+
   function buildTicketFromQuote(item, index) {
     const stage = quoteStage(item);
     const meta = ticketStageMeta[stage] || ticketStageMeta.sales_intake;
     return {
       id: item.id,
       source: "quote",
+      sourceType: "quote",
+      sourceId: item.id,
       number: ticketNumber("QT", item.id, index),
       title: item.service || "Quote request",
       customer: item.name || "Unnamed lead",
@@ -8579,7 +8689,8 @@
       dateRaw: item.createdAtRaw,
       dateLabel: item.receivedAt || "No date",
       nextAction: ticketNextAction(stage),
-      blockers: ticketBlockers(stage)
+      blockers: ticketBlockers(stage),
+      sourceLabel: "Quote request"
     };
   }
 
@@ -8589,6 +8700,8 @@
     return {
       id: item.id,
       source: "job",
+      sourceType: "job",
+      sourceId: item.id,
       number: ticketNumber("JOB", item.id, index),
       title: item.service || "Scheduled visit",
       customer: item.site || "Unnamed site",
@@ -8603,14 +8716,22 @@
       dateRaw: item.dateRaw,
       dateLabel: [item.date, item.window].filter(Boolean).join(" / "),
       nextAction: ticketNextAction(stage),
-      blockers: ticketBlockers(stage)
+      blockers: ticketBlockers(stage),
+      sourceLabel: "Scheduled visit"
     };
   }
 
   function dashboardTickets(data = state.data) {
     const jobs = (data.jobs || []).map(buildTicketFromJob);
     const quotes = (data.submissions || []).map(buildTicketFromQuote);
-    return [...jobs, ...quotes].sort((a, b) => String(a.dateRaw || "").localeCompare(String(b.dateRaw || "")));
+    const derived = [...jobs, ...quotes];
+    const canonical = (data.tickets || []).filter((ticket) => ticket && ticket.id);
+    if (!canonical.length) {
+      return derived.sort((a, b) => String(a.dateRaw || "").localeCompare(String(b.dateRaw || "")));
+    }
+    const canonicalSourceKeys = new Set(canonical.map(ticketSourceKey).filter((key) => !key.endsWith(":")));
+    const fallbackTickets = derived.filter((ticket) => !canonicalSourceKeys.has(ticketSourceKey(ticket)));
+    return [...canonical, ...fallbackTickets].sort((a, b) => String(a.dateRaw || "").localeCompare(String(b.dateRaw || "")));
   }
 
   function ticketCountBy(tickets, predicate) {
@@ -8787,7 +8908,8 @@
 
   function ticketHandoffActions(ticket) {
     if (!ticket) return [];
-    if (ticket.source === "quote") {
+    const sourceType = ticket.sourceType || ticket.source;
+    if (sourceType === "quote") {
       if (ticket.stage === "sales_intake") {
         return [
           { label: "Mark Intake Reviewed", status: "Contacted", detail: "Moves this request into scope/quote work." },
@@ -8816,7 +8938,7 @@
         { label: "Open Quote Details", action: "open-submission", detail: "Review the source request." }
       ];
     }
-    if (ticket.source === "job") {
+    if (sourceType === "job") {
       if (ticket.stage === "scheduled" || ticket.stage === "in_progress" || ticket.stage === "paused") {
         return [
           { label: "Open Field Visit", action: "edit-job", detail: "Update visit timing, service, status, forms, and photos." },
@@ -8852,9 +8974,15 @@
       </div>
       <div class="ticket-handoff-actions">
         ${actions.map((item) => {
+          const action = item.action || ticket.action || "open-ticket";
+          const actionId = ticketActionTargetId(ticket, action);
+          const statusSource = ticket.sourceType || ticket.source;
+          const statusId = ticket.sourceId || ticket.id;
           const attributes = item.status
-            ? `data-action="advance-ticket-status" data-ticket-source="${escapeHtml(ticket.source)}" data-id="${escapeHtml(ticket.id)}" data-status="${escapeHtml(item.status)}"`
-            : `data-action="${escapeHtml(item.action || ticket.action || "open-ticket")}" data-id="${escapeHtml(ticket.id)}"`;
+            ? ["quote", "job"].includes(statusSource)
+              ? `data-action="advance-ticket-status" data-ticket-source="${escapeHtml(statusSource)}" data-id="${escapeHtml(statusId)}" data-status="${escapeHtml(item.status)}"`
+              : "disabled"
+            : `data-action="${escapeHtml(action)}" data-id="${escapeHtml(actionId)}"`;
           return `<button type="button" ${attributes}>
             <strong>${escapeHtml(item.label)}</strong>
             <small>${escapeHtml(item.detail || "")}</small>
@@ -8923,24 +9051,31 @@
   }
 
   function renderTicketSourceActions(ticket) {
-    if (ticket.source === "quote") {
+    const sourceType = ticket.sourceType || ticket.source;
+    const sourceId = ticket.sourceId || ticket.id;
+    if (sourceType === "quote") {
       return `<div class="drawer-actions ticket-source-actions">
-        <button type="button" data-action="open-submission" data-id="${escapeHtml(ticket.id)}">${buttonContent("Open Quote Details", "open-submission")}</button>
-        <button type="button" data-action="sync-contact" data-id="${escapeHtml(ticket.id)}">${buttonContent("Sync Contact", "sync-contact")}</button>
-        <button type="button" data-action="create-estimate" data-id="${escapeHtml(ticket.id)}">${buttonContent("Create Estimate", "create-estimate")}</button>
-        <button type="button" data-action="create-invoice" data-id="${escapeHtml(ticket.id)}">${buttonContent("Draft Invoice", "create-invoice")}</button>
+        <button type="button" data-action="open-submission" data-id="${escapeHtml(sourceId)}">${buttonContent("Open Quote Details", "open-submission")}</button>
+        <button type="button" data-action="sync-contact" data-id="${escapeHtml(sourceId)}">${buttonContent("Sync Contact", "sync-contact")}</button>
+        <button type="button" data-action="create-estimate" data-id="${escapeHtml(sourceId)}">${buttonContent("Create Estimate", "create-estimate")}</button>
+        <button type="button" data-action="create-invoice" data-id="${escapeHtml(sourceId)}">${buttonContent("Draft Invoice", "create-invoice")}</button>
       </div>`;
     }
-    if (ticket.source === "job") {
+    if (sourceType === "job") {
       return `<div class="drawer-actions ticket-source-actions">
-        <button type="button" data-action="edit-job" data-id="${escapeHtml(ticket.id)}">${buttonContent("Open Visit Details", "edit-job")}</button>
+        <button type="button" data-action="edit-job" data-id="${escapeHtml(sourceId)}">${buttonContent("Open Visit Details", "edit-job")}</button>
         <button type="button" data-action="go-route-planner">${buttonContent("Open Route", "go-route-planner")}</button>
         <button type="button" data-action="go-documents">${buttonContent("Open Forms", "documentation")}</button>
-        ${ticket.stage !== "field_work_complete" && ticket.stage !== "completion_review" && ticket.stage !== "closed" ? `<button type="button" data-action="complete-job" data-id="${escapeHtml(ticket.id)}">${buttonContent("Mark Field Complete", "complete-reminder")}</button>` : ""}
+        ${ticket.stage !== "field_work_complete" && ticket.stage !== "completion_review" && ticket.stage !== "closed" ? `<button type="button" data-action="complete-job" data-id="${escapeHtml(sourceId)}">${buttonContent("Mark Field Complete", "complete-reminder")}</button>` : ""}
+      </div>`;
+    }
+    if (sourceType === "document") {
+      return `<div class="drawer-actions ticket-source-actions">
+        <button type="button" data-action="open-document" data-id="${escapeHtml(sourceId)}">${buttonContent("Open Document", "open-document")}</button>
       </div>`;
     }
     return `<div class="drawer-actions ticket-source-actions">
-      <button type="button" data-action="${escapeHtml(ticket.action || "open-document")}" data-id="${escapeHtml(ticket.id)}">${buttonContent("Open Source Record", "open-document")}</button>
+      <button type="button" disabled>${buttonContent("Source Record Pending", "open-document")}</button>
     </div>`;
   }
 
@@ -8964,10 +9099,12 @@
     if (!els.detailDrawer || !els.detailContent) return;
     const ticket = dashboardTickets().find((item) => item.id === id && item.source === source);
     if (!ticket) return;
-    const sourceItem = source === "quote"
-      ? findSubmission(id)
-      : source === "job"
-        ? state.data.jobs.find((item) => item.id === id)
+    const sourceType = ticket.sourceType || ticket.source;
+    const sourceId = ticket.sourceId || ticket.id;
+    const sourceItem = sourceType === "quote"
+      ? findSubmission(sourceId)
+      : sourceType === "job"
+        ? state.data.jobs.find((item) => item.id === sourceId)
         : null;
     openDetailDrawer();
     els.detailContent.innerHTML = `
@@ -8987,16 +9124,16 @@
         <div class="drawer-grid ticket-drawer-grid">
           <div class="drawer-field"><span>Current owner</span>${escapeHtml(ticket.ownerLabel || "Unassigned")}</div>
           <div class="drawer-field"><span>Next action</span>${escapeHtml(ticket.nextAction || "Open ticket")}</div>
-          <div class="drawer-field"><span>Source</span>${escapeHtml(ticket.source === "quote" ? "Quote request" : ticket.source === "job" ? "Scheduled visit" : ticket.source)}</div>
+          <div class="drawer-field"><span>Source</span>${escapeHtml(ticket.sourceLabel || ticketSourceLabel(ticket))}</div>
           <div class="drawer-field"><span>Date</span>${escapeHtml(ticket.dateLabel || "No date")}</div>
           <div class="drawer-field span-full"><span>Details</span>${escapeHtml(ticket.detail || "No details yet.")}</div>
         </div>
         ${renderTicketHandoffActions(ticket)}
         ${renderTicketRequirements(ticket)}
         ${renderTicketSourceActions(ticket)}
-        ${source === "quote" && sourceItem ? renderCallPanel(callPanelContext("quote_submission", sourceItem.id)) : ""}
-        ${source === "job" && sourceItem ? `<div class="job-support-sections">${renderJobDocumentationSection(sourceItem)}${renderJobPhotosSection(sourceItem)}</div>` : ""}
-        ${source === "quote" && sourceItem ? `<div data-call-outcome-slot></div>${renderActivityTimeline({
+        ${sourceType === "quote" && sourceItem ? renderCallPanel(callPanelContext("quote_submission", sourceItem.id)) : ""}
+        ${sourceType === "job" && sourceItem ? `<div class="job-support-sections">${renderJobDocumentationSection(sourceItem)}${renderJobPhotosSection(sourceItem)}</div>` : ""}
+        ${sourceType === "quote" && sourceItem ? `<div data-call-outcome-slot></div>${renderActivityTimeline({
           leadId: sourceItem.id,
           leadType: "quote_submission",
           name: sourceItem.name,

@@ -217,6 +217,14 @@ test("dashboard route aliases and new reliability diagnostics are wired", () => 
   assert.match(js, /data-money-budget-panel/);
   assert.match(js, /Budget and Profitability/);
   assert.match(js, /Budget records stay inside Money/);
+  ["go-leads", "go-work", "go-money", "go-tools", "go-tickets"].forEach((action) => {
+    assert.match(js, new RegExp(`"${action}"`));
+    assert.match(js, new RegExp(`action === "${action}"`));
+  });
+  assert.match(js, /action: "go-leads"[\s\S]*actionLabel: "Open Leads"/);
+  assert.match(js, /action: "go-work"[\s\S]*actionLabel: "Open Work"/);
+  assert.match(js, /action: "go-money"[\s\S]*actionLabel: "Open Money"/);
+  assert.match(js, /action: "go-tools"[\s\S]*actionLabel: "Open Tools"/);
   assert.doesNotMatch(js, /label: "Budgets"/);
   ["Lead", "Job Ticket", "Quote", "Budget", "Work Assignment", "Completion", "Invoice", "Closed"].forEach((label) => {
     assert.match(js, new RegExp(`label: "${label}"`));

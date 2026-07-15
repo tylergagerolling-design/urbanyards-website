@@ -515,8 +515,13 @@
       "go-calendar": "+",
       "go-contacts": "Open",
       "go-documents": "$",
+      "go-leads": "Open",
+      "go-money": "$",
       "go-route-planner": "M",
       "go-settings": "Open",
+      "go-tickets": "Open",
+      "go-tools": "Open",
+      "go-work": "+",
       "refresh-documentation": "R",
       "import-outreach-csv": "CSV",
       "mark-route-complete": "OK",
@@ -8563,7 +8568,7 @@
         value: todayJobs.length,
         detail: todayJobs[0] ? `${todayJobs[0].site} / ${todayJobs[0].window}` : "No visits scheduled",
         icon: "jobs-calendar.svg",
-        action: "go-calendar",
+        action: "go-work",
         link: "View all jobs"
       },
       {
@@ -8571,15 +8576,15 @@
         value: activeProperties,
         detail: "Clients and managed properties",
         icon: "properties-building.svg",
-        action: "go-contacts",
-        link: "View all properties"
+        action: "go-leads",
+        link: "Review leads"
       },
       {
         label: "Waiting on Payment",
         value: unpaidInvoices.length,
         detail: unpaidInvoices[0] ? `${unpaidInvoices[0].clientName || "Client"} / ${unpaidInvoices[0].number || "Invoice"}` : "No open unpaid invoices",
         icon: "waiting-payment.svg",
-        action: "go-documents",
+        action: "go-money",
         link: "Open invoices"
       },
       {
@@ -8587,8 +8592,8 @@
         value: equipmentAlerts,
         detail: equipmentAlerts ? "Review mower, tools, or supply checks" : "No equipment reminders",
         icon: "equipment-alert.svg",
-        action: "quick-add-operation",
-        link: "Add reminder"
+        action: "go-tools",
+        link: "Open Tools"
       }
     ];
 
@@ -8856,7 +8861,7 @@
         label: "New lead review",
         title: `${newQuotes.length} quote request${newQuotes.length === 1 ? "" : "s"} need first contact`,
         detail: newQuotes.slice(0, 2).map((item) => item.name).join(", "),
-        action: "quick-add-quote",
+        action: "go-leads",
         actionLabel: "Open Leads",
         type: "client_follow_up",
         priority: "High"
@@ -8869,8 +8874,8 @@
         label: "Overdue follow-up",
         title: `${overdueReminders.length} reminder${overdueReminders.length === 1 ? "" : "s"} overdue`,
         detail: overdueReminders[0].task,
-        action: "go-settings",
-        actionLabel: "Open Reminders",
+        action: "go-tools",
+        actionLabel: "Open Tools",
         type: "client_follow_up",
         priority: "High"
       });
@@ -8883,7 +8888,7 @@
         label: "Schedule check",
         title: todaysJobs.length ? `${todaysJobs.length} job${todaysJobs.length === 1 ? "" : "s"} today` : `${tomorrowJobs.length} job${tomorrowJobs.length === 1 ? "" : "s"} tomorrow`,
         detail: (todaysJobs[0] || tomorrowJobs[0]).site,
-        action: "go-calendar",
+        action: "go-work",
         actionLabel: "Open Work",
         type: "daily_check",
         priority: "Normal"
@@ -8912,7 +8917,7 @@
         label: overdueInvoices.length ? "Invoice issue" : "Payment follow-up",
         title: `${invoices.length} invoice${invoices.length === 1 ? "" : "s"} need attention`,
         detail: invoices[0].clientName,
-        action: "go-documents",
+        action: "go-money",
         actionLabel: "Open Money",
         type: "admin_task",
         priority: overdueInvoices.length ? "High" : "Normal"
@@ -8925,8 +8930,8 @@
         label: "Client data",
         title: `${incompleteContacts.length} contact${incompleteContacts.length === 1 ? "" : "s"} missing details`,
         detail: incompleteContacts[0].name,
-        action: "go-contacts",
-        actionLabel: "Open Clients",
+        action: "go-leads",
+        actionLabel: "Open Leads",
         type: "admin_task",
         priority: "Low"
       });
@@ -10007,7 +10012,7 @@
       if (ticket.stage === "invoice_preparation" || ticket.stage === "ready_to_schedule") {
         return [
           { label: "Open Schedule Form", action: "open-submission", detail: "Create the work visit from this ticket." },
-          { label: "Open Money", action: "go-documents", detail: "Review estimates, invoices, and payment records." }
+          { label: "Open Money", action: "go-money", detail: "Review estimates, invoices, and payment records." }
         ];
       }
       return [
@@ -10029,7 +10034,7 @@
       }
       if (ticket.stage === "invoice_review" || ticket.stage === "invoice_sent" || ticket.stage === "partially_paid") {
         return [
-          { label: "Open Money", action: "go-documents", detail: "Review invoice and payment status." },
+          { label: "Open Money", action: "go-money", detail: "Review invoice and payment status." },
           { label: "Open Work Visit", action: "edit-job", detail: "Review the source visit." }
         ];
       }
@@ -10142,7 +10147,7 @@
       return `<div class="drawer-actions ticket-source-actions">
         <button type="button" data-action="edit-job" data-id="${escapeHtml(sourceId)}">${buttonContent("Open Visit Details", "edit-job")}</button>
         <button type="button" data-action="go-route-planner">${buttonContent("Open Route", "go-route-planner")}</button>
-        <button type="button" data-action="go-settings">${buttonContent("Open Tools", "go-settings")}</button>
+        <button type="button" data-action="go-tools">${buttonContent("Open Tools", "go-tools")}</button>
         ${ticket.stage !== "field_work_complete" && ticket.stage !== "completion_review" && ticket.stage !== "closed" ? `<button type="button" data-action="complete-job" data-id="${escapeHtml(sourceId)}">${buttonContent("Mark Work Complete", "complete-reminder")}</button>` : ""}
       </div>`;
     }
@@ -10383,7 +10388,7 @@
           </div>
           <div class="ticket-hero-actions">
             <button type="button" data-action="open-ticket-create" data-ticket-type="quote">New Job Ticket</button>
-            <button type="button" data-action="go-calendar">Open Work</button>
+            <button type="button" data-action="go-work">Open Work</button>
           </div>
         </header>
         <section class="ticket-metrics" aria-label="Home ticket summary">
@@ -10554,8 +10559,8 @@
               </div>
               <div class="field-proof-actions">
                 <button type="button" data-action="go-route-planner">Open Route Planner</button>
-                <button type="button" data-action="go-settings">Open Tools</button>
-                <button type="button" data-action="go-settings">Dashboard Health</button>
+                <button type="button" data-action="go-tools">Open Tools</button>
+                <button type="button" data-action="go-tools">Dashboard Health</button>
               </div>
             </section>
           </aside>
@@ -17445,6 +17450,21 @@
         if (tools) tools.open = true;
         const input = qs("[data-operations-form] input[name='title']");
         if (input) input.focus();
+      } else if (action === "go-tickets") {
+        setActiveSection("tickets");
+        replaceDashboardHash("tickets");
+      } else if (action === "go-leads") {
+        setActiveSection("outreach");
+        replaceDashboardHash("outreach");
+      } else if (action === "go-work") {
+        setActiveSection("calendar");
+        replaceDashboardHash("calendar");
+      } else if (action === "go-money") {
+        setActiveSection("documents");
+        replaceDashboardHash("documents");
+      } else if (action === "go-tools") {
+        setActiveSection("settings");
+        replaceDashboardHash("settings");
       } else if (action === "go-route-planner") {
         setActiveSection("route-planner");
         replaceDashboardHash("route-planner");

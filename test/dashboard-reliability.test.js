@@ -148,6 +148,7 @@ test("dashboard route aliases and new reliability diagnostics are wired", () => 
 
   assert.doesNotMatch(html, /id="budgets"/);
   assert.doesNotMatch(html, /id="connected-operations"/);
+  assert.match(html, /scripts\/budget-calculations\.js/);
   assert.match(html, /<section class="dashboard-section home-ticket-page" id="overview"/);
   assert.match(html, /data-home-workspace/);
   const primaryDrawerLabels = [...html.matchAll(/<a href="#[^"]+"(?![^>]*legacy-nav-route)[^>]*data-dashboard-link="[^"]+"[\s\S]*?<span class="nav-label">([^<]+)<\/span><\/a>/g)].map((match) => match[1]);
@@ -211,6 +212,12 @@ test("dashboard route aliases and new reliability diagnostics are wired", () => 
   assert.match(js, /data-ticket-lifecycle-map/);
   assert.match(js, /renderTicketEndToEndFlow\(openTickets\)/);
   assert.match(js, /renderTicketEndToEndFlow\(dashboardTickets\(\), ticket\.stage/);
+  assert.match(js, /function renderMoneyBudgetPanel/);
+  assert.match(js, /function findTicketForBudget/);
+  assert.match(js, /data-money-budget-panel/);
+  assert.match(js, /Budget and Profitability/);
+  assert.match(js, /Budget records stay inside Money/);
+  assert.doesNotMatch(js, /label: "Budgets"/);
   ["Lead", "Job Ticket", "Quote", "Budget", "Work Assignment", "Completion", "Invoice", "Closed"].forEach((label) => {
     assert.match(js, new RegExp(`label: "${label}"`));
   });
@@ -222,6 +229,9 @@ test("dashboard route aliases and new reliability diagnostics are wired", () => 
   assert.match(css, /\.ticket-end-to-end-flow/);
   assert.match(css, /\.ticket-flow-step\.is-populated/);
   assert.match(css, /\.ticket-flow-step em/);
+  assert.match(css, /\.money-budget-panel/);
+  assert.match(css, /\.money-budget-item/);
+  assert.match(css, /\.money-budget-stats/);
   assert.match(js, /function ticketStage\(ticket = \{\}\)/);
   assert.match(js, /function ticketLane\(ticket = \{\}\)/);
   assert.match(js, /function ticketIsOpen\(ticket = \{\}\)/);

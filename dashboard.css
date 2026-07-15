@@ -14769,6 +14769,96 @@ body:not(.is-login-screen) .ticket-review-strip {
   box-shadow: 0 14px 36px rgba(19, 36, 28, .06);
 }
 
+body:not(.is-login-screen) .money-budget-panel {
+  display: grid;
+  gap: 14px;
+  min-width: 0;
+  padding: clamp(18px, 2vw, 24px);
+  border: 1px solid rgba(73, 102, 77, .16);
+  border-radius: 24px;
+  background: rgba(255, 255, 255, .78);
+  box-shadow: 0 14px 36px rgba(19, 36, 28, .06);
+}
+
+body:not(.is-login-screen) .money-budget-note {
+  margin: 0;
+  padding: 10px 12px;
+  border: 1px dashed rgba(217, 182, 111, .36);
+  border-radius: 14px;
+  background: rgba(217, 182, 111, .10);
+  color: #6d5a2f;
+  line-height: 1.4;
+}
+
+body:not(.is-login-screen) .money-budget-stats {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 10px;
+}
+
+body:not(.is-login-screen) .money-budget-list {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 12px;
+}
+
+body:not(.is-login-screen) .money-budget-item {
+  display: grid;
+  gap: 12px;
+  padding: 14px;
+  border: 1px solid rgba(73, 102, 77, .14);
+  border-radius: 18px;
+  background: rgba(251, 250, 245, .92);
+}
+
+body:not(.is-login-screen) .money-budget-item h4 {
+  margin: 0;
+  color: var(--uy-green);
+  font-size: 1rem;
+}
+
+body:not(.is-login-screen) .money-budget-item p {
+  margin: 4px 0 0;
+  color: var(--uy-muted);
+  line-height: 1.4;
+}
+
+body:not(.is-login-screen) .money-budget-item dl {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+  margin: 0;
+}
+
+body:not(.is-login-screen) .money-budget-item dt {
+  color: var(--uy-muted);
+  font-size: .7rem;
+  font-weight: 800;
+  letter-spacing: .05em;
+  text-transform: uppercase;
+}
+
+body:not(.is-login-screen) .money-budget-item dd {
+  margin: 2px 0 0;
+  color: var(--uy-green);
+  font-weight: 900;
+}
+
+body:not(.is-login-screen) .money-budget-actions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding-top: 10px;
+  border-top: 1px solid rgba(73, 102, 77, .10);
+}
+
+body:not(.is-login-screen) .money-budget-actions > span:not(.budget-badge) {
+  color: var(--uy-muted);
+  font-size: .82rem;
+  font-weight: 800;
+}
+
 body:not(.is-login-screen) .ticket-lane-heading {
   display: flex;
   justify-content: space-between;
@@ -15445,6 +15535,7 @@ body:not(.is-login-screen) .field-proof-actions button {
 @media (max-width: 1180px) {
   body:not(.is-login-screen) .ticket-metrics,
   body:not(.is-login-screen) .ticket-flow-panel,
+  body:not(.is-login-screen) .money-budget-stats,
   body:not(.is-login-screen) .workspace-focus-strip,
   body:not(.is-login-screen) .ticket-owner-strip {
     grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -15475,8 +15566,13 @@ body:not(.is-login-screen) .field-proof-actions button {
 
   body:not(.is-login-screen) .ticket-metrics,
   body:not(.is-login-screen) .ticket-flow-panel,
+  body:not(.is-login-screen) .money-budget-stats,
   body:not(.is-login-screen) .workspace-focus-strip,
   body:not(.is-login-screen) .ticket-owner-strip {
+    grid-template-columns: 1fr;
+  }
+
+  body:not(.is-login-screen) .money-budget-item dl {
     grid-template-columns: 1fr;
   }
 

@@ -10616,6 +10616,83 @@
       </div>`;
   }
 
+  function findTicketForBudget(budget = {}, tickets = dashboardTickets()) {
+    const pairs = [
+      ["job", budget.jobId],
+      ["quote", budget.quoteId],
+      ["document", budget.invoiceId]
+    ].filter(([, id]) => id);
+    return tickets.find((ticket) => pairs.some(([type, id]) => {
+      return ticket.sourceType === type && String(ticket.sourceId || ticket.id) === String(id);
+    })) || null;
+  }
+
+  function budgetPanelSortValue(item) {
+    const status = item.budget.status;
+    const health = item.summary.health || "";
+    if (health === "Over Budget" || status === "Over Budget") return 0;
+    if (health === "At Risk" || status === "At Risk") return 1;
+    if (health === "Watch") return 2;
+    if (status === "Ready for Review") return 3;
+    return 4;
+  }
+
+  function renderMoneyBudgetPanel(data = state.data, tickets = dashboardTickets(data)) {
+    const bundle = data.budgets || emptyBudgetBundle();
+    const budgets = (bundle.budgets || []).filter((budget) => budget.status !== "Archived");
+    const summaries = budgets.map((budget) => ({ budget, summary: budgetSummary(budget) }));
+    const active = budgets.filter((budget) => !["Completed", "Archived"].includes(budget.status)).length;
+    const atRisk = summaries.filter((item) => ["Watch", "At Risk"].includes(item.summary.health) || item.budget.status === "At Risk").length;
+    const overBudget = summaries.filter((item) => item.summary.health === "Over Budget" || item.budget.status === "Over Budget").length;
+    const upcomingProfit = summaries
+      .filter((item) => !["Completed", "Archived"].includes(item.budget.status))
+      .reduce((sum, item) => sum + Number(item.summary.estimatedProfit || 0), 0);
+    const reviewItems = summaries
+      .sort((a, b) => budgetPanelSortValue(a) - budgetPanelSortValue(b) || String(b.budget.updatedAtRaw || "").localeCompare(String(a.budget.updatedAtRaw || "")))
+      .slice(0, 4);
+    const setupMessage = !state.budgetsReady && !isDemoMode()
+      ? `<p class="money-budget-note">${escapeHtml(state.budgetsError || "Budget records are optional during this rebuild. Money still tracks cost-review tickets even when budget tables are not connected.")}</p>`
+      : "";
+
+    return `<section class="money-budget-panel" data-money-budget-panel>
+      <div class="ticket-lane-heading">
+        <div>
+          <h3>Budget and Profitability</h3>
+          <p>Budget records stay inside Money and support the same Job Ticket flow, rather than becoming a separate primary tab.</p>
+        </div>
+        <span>${escapeHtml(String(budgets.length))}</span>
+      </div>
+      ${setupMessage}
+      <div class="money-budget-stats">
+        ${budgetMetricCard("Active Budgets", String(active), "Jobs being estimated or tracked")}
+        ${budgetMetricCard("At Risk", String(atRisk), "Below target margin", atRisk ? "warning" : "")}
+        ${budgetMetricCard("Over Budget", String(overBudget), "Needs review", overBudget ? "danger" : "")}
+        ${budgetMetricCard("Upcoming Profit", budgetCurrency(upcomingProfit), "Estimated")}
+      </div>
+      <div class="money-budget-list">
+        ${reviewItems.length ? reviewItems.map(({ budget, summary }) => {
+          const ticket = findTicketForBudget(budget, tickets);
+          return `<article class="money-budget-item">
+            <div>
+              <p class="eyebrow">${escapeHtml(budget.serviceType || "Budget")}</p>
+              <h4>${escapeHtml(budget.budgetName)}</h4>
+              <p>${escapeHtml([budget.clientName, budget.propertyName, budget.jobName].filter(Boolean).join(" / ") || "No linked record")}</p>
+            </div>
+            <dl>
+              <div><dt>Revenue</dt><dd>${budgetCurrency(summary.expectedRevenue)}</dd></div>
+              <div><dt>Profit</dt><dd>${budgetCurrency(summary.estimatedProfit)}</dd></div>
+              <div><dt>Margin</dt><dd>${budgetPercent(summary.estimatedMargin)}</dd></div>
+            </dl>
+            <div class="money-budget-actions">
+              ${budgetBadge(summary.health || "Healthy", "health")}
+              ${ticket ? `<button type="button" class="inline-action" data-action="open-ticket" data-ticket-source="${escapeHtml(ticket.source)}" data-id="${escapeHtml(ticket.id)}">Open Ticket</button>` : `<span>No linked ticket</span>`}
+            </div>
+          </article>`;
+        }).join("") : emptyState("No budget records are connected yet. Approved tickets can still move through Money for cost review.")}
+      </div>
+    </section>`;
+  }
+
   function renderMoneyWorkspace(data = state.data) {
     const target = qs("[data-money-workspace]");
     if (!target) return;
@@ -10671,6 +10748,7 @@
           { kicker: "Close", title: "Profit story", detail: "Actual costs and final revenue decide whether a ticket is ready to close." }
         ], "Money page focus")}
         ${renderTicketRoleBrief("accounting", tickets)}
+        ${renderMoneyBudgetPanel(data, tickets)}
         <div class="ticket-lane-grid">
           ${renderTicketColumn("Cost Review Queue", "Approved work that needs internal cost review before scheduling.", needsBudget, "No tickets are waiting for cost review.")}
           ${renderTicketColumn("Owner and Invoice Prep", "Cost approvals and draft invoices required before scheduling.", ownerApproval, "No tickets are waiting on owner approval.")}

@@ -329,7 +329,13 @@ test("dashboard creates canonical job tickets without removing source fallbacks"
   assert.match(js, /function renderTicketHistory/);
   assert.match(js, /function renderTicketDocumentSource/);
   assert.match(js, /function renderTicketWorkbench/);
+  assert.match(js, /function renderTicketInvoiceBridge/);
+  assert.match(js, /function findInvoiceForTicket/);
+  assert.match(js, /async function ensureInvoiceForTicket/);
+  assert.match(js, /async function saveTicketInvoiceStatus/);
   assert.match(js, /data-ticket-workbench/);
+  assert.match(js, /data-ticket-invoice-form/);
+  assert.match(js, /data-action="create-ticket-invoice"/);
   assert.match(js, /Sales & Scope/);
   assert.match(js, /Cost Review/);
   assert.match(js, /Owner Approval/);
@@ -360,6 +366,8 @@ test("dashboard creates canonical job tickets without removing source fallbacks"
   assert.match(js, /await ensureJobTicketForQuoteSubmission\(updatedQuote \|\| item/);
   assert.match(js, /await ensureJobTicketForQuoteSubmission\(updatedSubmission \|\| item, \{/);
   assert.match(js, /await ensureJobTicketForSalesDocument\(document\)/);
+  assert.match(js, /await ensureInvoiceForTicket\(ticket\)/);
+  assert.match(js, /await saveTicketInvoiceStatus\(event\.target\)/);
   assert.match(js, /const ticket = findJobTicketForSalesDocument\(id\)/);
   assert.match(js, /state\.data\.documents\.find\(\(item\) => item\.id === sourceId\)/);
   assert.match(js, /renderTicketDocumentSource\(sourceItem\)/);
@@ -368,6 +376,8 @@ test("dashboard creates canonical job tickets without removing source fallbacks"
   assert.match(js, /arrival_photos_uploaded/);
   assert.match(js, /completion_photos_uploaded/);
   assert.match(js, /invoice_id: document\?\.id/);
+  assert.match(js, /invoice_finalized/);
+  assert.match(js, /payment_status/);
   assert.doesNotMatch(js, /job_tickets\?select=\*/);
   assert.doesNotMatch(js, /job_ticket_events\?select=\*/);
   assert.match(js, /source_type: "quote"/);

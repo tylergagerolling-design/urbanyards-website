@@ -5779,6 +5779,131 @@
     return ticket;
   }
 
+  function findInvoiceForTicket(ticket = {}) {
+    if (!ticket) return null;
+    const explicitId = ticket.invoiceId || (ticket.sourceType === "document" ? ticket.sourceId : "");
+    if (explicitId) {
+      const invoice = state.data.documents.find((item) => item.id === explicitId && item.type === "invoice");
+      if (invoice) return invoice;
+    }
+    const budget = findBudgetForTicket(ticket);
+    if (budget?.invoiceId) {
+      return state.data.documents.find((item) => item.id === budget.invoiceId && item.type === "invoice") || null;
+    }
+    return null;
+  }
+
+  function ticketInvoiceAmount(ticket = {}) {
+    const budget = findBudgetForTicket(ticket);
+    if (budget) {
+      const summary = budgetSummary(budget);
+      const budgetAmount = budget.finalInvoicedRevenue || summary.expectedRevenue || budget.expectedRevenue || budget.baseQuotedPrice;
+      if (Number(budgetAmount || 0) > 0) return Number(budgetAmount);
+    }
+    return Number(ticket.expectedRevenue || ticket.proposedPrice || 0);
+  }
+
+  function ticketInvoiceDescription(ticket = {}) {
+    return ticket.scopeOfWork || ticket.requestedService || ticket.title || "Urban Yards property care";
+  }
+
+  async function ensureInvoiceForTicket(ticket = {}) {
+    if (!canManageMoneyWorkflow()) throw new Error("Your dashboard role cannot prepare invoices.");
+    const existing = findInvoiceForTicket(ticket);
+    if (existing) return { document: existing, created: false };
+    if (!state.documentsReady && !isDemoMode()) {
+      throw new Error("Sales documents are not connected yet. Run the dashboard SQL before creating invoices.");
+    }
+    const document = await insertSalesDocument({
+      document_type: "invoice",
+      client_name: ticket.customer || ticket.primaryContact || "Urban Yards client",
+      client_email: "",
+      description: ticketInvoiceDescription(ticket),
+      amount: ticketInvoiceAmount(ticket),
+      due_date: addDaysKey(todayKey(), 14),
+      notes: `Prepared from ${ticket.number || "Job Ticket"}.\n\n${ticket.detail || ""}`
+    });
+    if (ticket.source === "ticket" && ticket.id) {
+      await updateJobTicket(ticket.id, {
+        invoice_id: document.id,
+        draft_invoice_exists: true,
+        owner_label: "Money",
+        next_action: ticketNextAction(ticketStage(ticket) === "invoice_preparation" ? "invoice_preparation" : "invoice_review")
+      });
+      await insertJobTicketEvent(ticket.id, {
+        event_type: "invoice_prepared",
+        title: "Invoice prepared",
+        notes: `Money created invoice ${document.number || document.id} from this ticket.`
+      });
+    }
+    return { document, created: true };
+  }
+
+  function ticketInvoicePaymentStatus(ticket = {}, invoice = null) {
+    const raw = statusText(ticket.paymentStatus || invoice?.status || invoice?.squareStatus || "");
+    if (/paid/.test(raw) && !/partial/.test(raw)) return "paid";
+    if (/partial/.test(raw)) return "partially_paid";
+    if (/sent|open|unpaid|outstanding/.test(raw)) return "sent";
+    return "";
+  }
+
+  function ticketInvoicePaymentOptions(selected = "") {
+    return [
+      ["", "Not recorded"],
+      ["sent", "Invoice sent"],
+      ["partially_paid", "Partially paid"],
+      ["paid", "Paid"]
+    ].map(([value, label]) => `<option value="${escapeHtml(value)}"${value === selected ? " selected" : ""}>${escapeHtml(label)}</option>`).join("");
+  }
+
+  function ticketInvoiceNextAction(paymentStatus, invoiceFinalized) {
+    if (paymentStatus === "paid" && invoiceFinalized) return "Close ticket";
+    if (paymentStatus === "paid") return "Finalize invoice";
+    if (paymentStatus === "partially_paid") return "Collect remaining payment";
+    if (paymentStatus === "sent") return "Collect payment";
+    return "Finalize invoice";
+  }
+
+  async function saveTicketInvoiceStatus(form) {
+    if (!canManageMoneyWorkflow()) throw new Error("Your dashboard role cannot update invoice status.");
+    const ticketId = form.dataset.ticketId || "";
+    const ticket = dashboardTickets().find((item) => item.source === "ticket" && item.id === ticketId);
+    if (!ticket) throw new Error("Open a unified Job Ticket before saving invoice status.");
+    const formData = new FormData(form);
+    const invoiceId = String(formData.get("invoice_id") || ticket.invoiceId || "").trim();
+    const paymentStatus = String(formData.get("payment_status") || "").trim();
+    const invoiceFinalized = formData.get("invoice_finalized") === "on";
+    const invoice = invoiceId ? state.data.documents.find((item) => item.id === invoiceId && item.type === "invoice") : null;
+    if (invoice) {
+      const documentStatus = paymentStatus === "paid" ? "paid" : paymentStatus ? "sent" : invoice.status || "draft";
+      await updateSalesDocument(invoice.id, {
+        document_type: "invoice",
+        client_name: invoice.clientName,
+        client_email: invoice.clientEmail,
+        square_invoice_number: invoice.squareInvoiceNumber,
+        description: invoice.lineItems?.[0]?.description || ticketInvoiceDescription(ticket),
+        amount: invoice.total || ticketInvoiceAmount(ticket),
+        due_date: invoice.dueDateRaw,
+        status: documentStatus,
+        notes: invoice.notes || ""
+      });
+    }
+    await updateJobTicket(ticket.id, {
+      invoice_id: invoiceId || null,
+      draft_invoice_exists: Boolean(invoiceId),
+      invoice_finalized: invoiceFinalized,
+      payment_status: paymentStatus,
+      owner_label: "Money",
+      next_action: ticketInvoiceNextAction(paymentStatus, invoiceFinalized)
+    });
+    await insertJobTicketEvent(ticket.id, {
+      event_type: "invoice_status_saved",
+      title: "Invoice status saved",
+      notes: `Invoice ${invoiceId ? "linked" : "not linked"} / ${paymentStatus || "payment not recorded"} / ${invoiceFinalized ? "finalized" : "not finalized"}.`
+    });
+    return { ticketId: ticket.id, invoiceId };
+  }
+
   async function saveBudgetSettingsFromForm(form) {
     const data = new FormData(form);
     const uiPayload = {
@@ -9563,6 +9688,9 @@
       sourceLabel: ticketSourceLabel({ sourceType }),
       customerId: row.customer_id || row.customerId || "",
       propertyId: row.property_id || row.propertyId || "",
+      quoteId: row.quote_id || row.quoteId || "",
+      jobId: row.job_id || row.jobId || "",
+      invoiceId: row.invoice_id || row.invoiceId || "",
       assignedUserId: row.assigned_user_id || row.assignedUserId || "",
       primaryContact: row.contact_name || row.primary_contact || row.primaryContact || row.customer_name || "",
       requestedService: row.requested_service || row.service || row.requestedService || "",
@@ -10252,6 +10380,47 @@
     </section>`;
   }
 
+  function renderTicketInvoiceBridge(ticket = {}) {
+    const stage = ticketStage(ticket);
+    if (!["invoice_preparation", "field_work_complete", "completion_review", "invoice_review", "invoice_sent", "partially_paid", "paid", "closed"].includes(stage)) return "";
+    if (!canManageMoneyWorkflow()) return "";
+    const invoice = findInvoiceForTicket(ticket);
+    const paymentStatus = ticketInvoicePaymentStatus(ticket, invoice);
+    const amount = invoice ? `$${Number(invoice.total || 0).toFixed(2)}` : budgetCurrency(ticketInvoiceAmount(ticket));
+    const helper = invoice
+      ? `${invoice.number || "Invoice"} / ${invoice.status || "draft"} / ${amount}`
+      : "Prepare or link the final invoice before closing this ticket.";
+    return `<section class="ticket-drawer-card ticket-invoice-bridge">
+      <div class="ticket-drawer-card-heading">
+        <div>
+          <h4>Invoice and payment</h4>
+          <span>${escapeHtml(helper)}</span>
+        </div>
+        ${invoice ? documentStatusBadge(invoice) : ""}
+      </div>
+      ${invoice ? `<form class="ticket-invoice-form" data-ticket-invoice-form data-ticket-id="${escapeHtml(ticket.id || "")}">
+        <input type="hidden" name="invoice_id" value="${escapeHtml(invoice.id)}">
+        <label>Payment status
+          <select name="payment_status">${ticketInvoicePaymentOptions(paymentStatus)}</select>
+        </label>
+        <label class="ticket-invoice-check">
+          <input type="checkbox" name="invoice_finalized"${ticket.invoiceFinalized ? " checked" : ""}>
+          <span>Final invoice reviewed</span>
+        </label>
+        <div class="drawer-actions span-full">
+          <button type="submit">${buttonContent("Save Invoice Status", "save")}</button>
+          <button type="button" data-action="open-document" data-id="${escapeHtml(invoice.id)}">${buttonContent("Open Invoice", "open-document")}</button>
+          <button type="button" data-action="sync-square-document" data-id="${escapeHtml(invoice.id)}">${buttonContent("Sync Square", "sync-square-document")}</button>
+        </div>
+      </form>` : `<div class="ticket-invoice-empty">
+        <p>${escapeHtml(state.documentsReady || isDemoMode() ? "No final invoice is linked yet." : "Sales documents are not connected yet.")}</p>
+        <button type="button" data-action="create-ticket-invoice" data-id="${escapeHtml(ticket.id || "")}"${state.documentsReady || isDemoMode() ? "" : " disabled aria-disabled=\"true\""}>
+          ${buttonContent("Prepare Final Invoice", "create-invoice")}
+        </button>
+      </div>`}
+    </section>`;
+  }
+
   function renderTicketCommandCenter(ticket) {
     const isCanonical = ticket?.source === "ticket";
     const transitions = ticketTransitionOptions(ticket || {});
@@ -10576,6 +10745,7 @@
         ${renderTicketWorkbench(ticket)}
         ${renderTicketCommandCenter(ticket)}
         ${renderTicketWorkAssignmentBridge(ticket, sourceItem)}
+        ${renderTicketInvoiceBridge(ticket)}
         ${renderTicketHandoffActions(ticket)}
         ${renderTicketRequirements(ticket)}
         ${renderTicketHistory(ticket)}
@@ -16857,6 +17027,25 @@
         return;
       }
 
+      if (action === "create-ticket-invoice") {
+        const ticket = dashboardTickets().find((item) => item.source === "ticket" && item.id === id);
+        if (!ticket) {
+          setDashboardState("Open a unified Job Ticket before preparing an invoice.", "error");
+          return;
+        }
+        try {
+          setDashboardState("Preparing final invoice...");
+          const result = await ensureInvoiceForTicket(ticket);
+          await refreshDashboard();
+          const refreshedTicket = dashboardTickets().find((item) => item.source === "ticket" && item.id === ticket.id) || ticket;
+          openTicketDrawer("ticket", refreshedTicket.id);
+          setDashboardState(result.created ? "Final invoice prepared." : "Existing invoice opened.");
+        } catch (error) {
+          setDashboardState(error.message || "Unable to prepare invoice.", "error");
+        }
+        return;
+      }
+
       if (action === "budget-detail-tab") {
         state.budgetDetailTab = target.dataset.tab || "overview";
         renderBudgetDetail();
@@ -18566,6 +18755,17 @@
           setDashboardState("Work assignment saved.");
         } catch (error) {
           setDashboardState(error.message || "Unable to save work assignment.", "error");
+        }
+      } else if (event.target.matches("[data-ticket-invoice-form]")) {
+        event.preventDefault();
+        try {
+          setDashboardState("Saving invoice status...");
+          const result = await saveTicketInvoiceStatus(event.target);
+          await refreshDashboard();
+          if (result?.ticketId) openTicketDrawer("ticket", result.ticketId);
+          setDashboardState("Invoice status saved.");
+        } catch (error) {
+          setDashboardState(error.message || "Unable to save invoice status.", "error");
         }
       } else if (event.target.matches("[data-ticket-create-form]")) {
         event.preventDefault();

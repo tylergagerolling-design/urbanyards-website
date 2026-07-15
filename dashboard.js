@@ -11199,6 +11199,74 @@
       </div>`;
   }
 
+  function renderTicketNextStepCard({ kicker, value, title, detail, action, actionLabel }) {
+    return `<article class="ticket-next-step-card">
+      <span class="home-next-step-kicker">${escapeHtml(kicker)}</span>
+      <div class="home-next-step-main">
+        <strong>${escapeHtml(String(value))}</strong>
+        <div>
+          <h4>${escapeHtml(title)}</h4>
+          <p>${escapeHtml(detail)}</p>
+        </div>
+      </div>
+      <button type="button" data-action="${escapeHtml(action)}">${escapeHtml(actionLabel)}</button>
+    </article>`;
+  }
+
+  function renderTicketCommandCenter({ filteredTickets, workTickets, officeTickets, readyTickets, reviewTickets }) {
+    const priorityTickets = [
+      ...officeTickets,
+      ...readyTickets,
+      ...workTickets,
+      ...reviewTickets
+    ].slice(0, 5);
+    return `<section class="ticket-command-center" aria-label="Ticket triage center">
+      <section class="ticket-lane ticket-priority-queue">
+        <div class="ticket-lane-heading">
+          <div>
+            <p class="eyebrow">Triage</p>
+            <h3>Tickets to move next</h3>
+            <p>Start here when you need to move work from scope, approval, scheduling, or closeout into the next owner lane.</p>
+          </div>
+          <span>${escapeHtml(String(priorityTickets.length))}</span>
+        </div>
+        <div class="ticket-lane-list">
+          ${priorityTickets.length ? priorityTickets.map((ticket) => renderTicketCard(ticket, true)).join("") : emptyState("No open tickets match the current filters.")}
+        </div>
+      </section>
+      <aside class="ticket-next-step-stack">
+        <div class="home-next-step-heading">
+          <span>Owner Lanes</span>
+          <strong>${escapeHtml(String(filteredTickets.length))} shown</strong>
+        </div>
+        ${renderTicketNextStepCard({
+          kicker: "Leads",
+          value: officeTickets.filter((ticket) => ticketInLane(ticket, ["sales"])).length,
+          title: "Scope and quote work",
+          detail: "Use Leads for intake, follow-up, customer approvals, and quote-ready work.",
+          action: "go-leads",
+          actionLabel: "Open Leads"
+        })}
+        ${renderTicketNextStepCard({
+          kicker: "Work",
+          value: workTickets.length + readyTickets.length,
+          title: "Schedule and complete",
+          detail: "Use Work for assigned jobs, route access, photos, forms, and completion notes.",
+          action: "go-work",
+          actionLabel: "Open Work"
+        })}
+        ${renderTicketNextStepCard({
+          kicker: "Money",
+          value: officeTickets.filter((ticket) => ticketInLane(ticket, ["accounting", "money"])).length + reviewTickets.length,
+          title: "Cost, invoice, collect",
+          detail: "Use Money for cost review, estimates, invoices, payment status, and closeout.",
+          action: "go-money",
+          actionLabel: "Open Money"
+        })}
+      </aside>
+    </section>`;
+  }
+
   function renderJobTicketWorkspace(data = state.data) {
     const target = qs("[data-job-ticket-workspace]");
     if (!target) return;
@@ -11235,6 +11303,7 @@
           { kicker: "Ready", value: readyTickets.length, title: "Schedule handoff", detail: "Approved work ready to become scheduled visits." },
           { kicker: "Closeout", value: reviewTickets.length, title: "Review queue", detail: "Completed, invoiced, or paid tickets still needing review." }
         ], "Tickets workspace signals")}
+        ${renderTicketCommandCenter({ filteredTickets, workTickets, officeTickets, readyTickets, reviewTickets })}
         ${renderTicketEndToEndFlow(openTickets)}
         ${renderTicketOwnerStrip(openTickets)}
         ${renderTicketWorkflowBoard(openTickets, filteredTickets)}

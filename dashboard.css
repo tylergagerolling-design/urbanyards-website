@@ -15272,6 +15272,61 @@ body:not(.is-login-screen) .home-next-step-card button {
   font-weight: 850;
 }
 
+body:not(.is-login-screen) .ticket-command-center {
+  display: grid;
+  grid-template-columns: minmax(0, 1.35fr) minmax(300px, .65fr);
+  gap: 16px;
+  align-items: start;
+}
+
+body:not(.is-login-screen) .ticket-priority-queue {
+  display: grid;
+  align-content: start;
+}
+
+body:not(.is-login-screen) .ticket-next-step-stack {
+  display: grid;
+  gap: 12px;
+  align-content: start;
+}
+
+body:not(.is-login-screen) .ticket-next-step-card {
+  display: grid;
+  gap: 12px;
+  min-width: 0;
+  padding: 16px;
+  border: 1px solid rgba(73, 102, 77, .14);
+  border-radius: 20px;
+  background:
+    radial-gradient(circle at 95% 8%, rgba(153, 180, 119, .14), transparent 34%),
+    rgba(255, 255, 255, .82);
+  box-shadow: 0 12px 30px rgba(19, 36, 28, .045);
+}
+
+body:not(.is-login-screen) .ticket-next-step-card h4 {
+  margin: 0;
+  color: var(--uy-green);
+  font-size: 1rem;
+}
+
+body:not(.is-login-screen) .ticket-next-step-card p {
+  margin: 4px 0 0;
+  color: var(--uy-muted);
+  font-size: .9rem;
+  line-height: 1.42;
+}
+
+body:not(.is-login-screen) .ticket-next-step-card button {
+  width: fit-content;
+  min-height: 38px;
+  border: 1px solid rgba(18, 63, 49, .16);
+  border-radius: var(--dashboard-button-radius, 8px);
+  background: rgba(255, 255, 255, .82);
+  color: var(--uy-green);
+  box-shadow: none;
+  font-weight: 850;
+}
+
 body:not(.is-login-screen) .leads-workspace .ticket-metrics {
   grid-template-columns: repeat(5, minmax(0, 1fr));
 }
@@ -16352,6 +16407,7 @@ body:not(.is-login-screen) .field-proof-actions button {
   }
 
   body:not(.is-login-screen) .ticket-lane-grid,
+  body:not(.is-login-screen) .ticket-command-center,
   body:not(.is-login-screen) .home-command-center,
   body:not(.is-login-screen) .leads-command-center,
   body:not(.is-login-screen) .money-command-center,
@@ -16362,6 +16418,7 @@ body:not(.is-login-screen) .field-proof-actions button {
     grid-template-columns: 1fr;
   }
 
+  body:not(.is-login-screen) .ticket-next-step-stack,
   body:not(.is-login-screen) .home-next-step-stack,
   body:not(.is-login-screen) .lead-next-step-stack,
   body:not(.is-login-screen) .money-next-step-stack {
@@ -16405,6 +16462,7 @@ body:not(.is-login-screen) .field-proof-actions button {
   body:not(.is-login-screen) .ticket-flow-panel,
   body:not(.is-login-screen) .money-budget-stats,
   body:not(.is-login-screen) .workspace-focus-strip,
+  body:not(.is-login-screen) .ticket-next-step-stack,
   body:not(.is-login-screen) .home-next-step-stack,
   body:not(.is-login-screen) .lead-next-step-stack,
   body:not(.is-login-screen) .money-next-step-stack,

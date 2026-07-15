@@ -3,25 +3,25 @@
 const { TICKET_STAGES, TICKET_STAGE_LABELS } = require("../types/ticket-stage");
 
 const TICKET_STAGE_META = Object.freeze({
-  [TICKET_STAGES.DRAFT]: { tone: "new", lane: "sales", owner: "Sales" },
-  [TICKET_STAGES.SALES_INTAKE]: { tone: "new", lane: "sales", owner: "Sales" },
-  [TICKET_STAGES.SCOPE_IN_PROGRESS]: { tone: "new", lane: "sales", owner: "Sales" },
-  [TICKET_STAGES.QUOTE_PENDING]: { tone: "new", lane: "sales", owner: "Sales" },
-  [TICKET_STAGES.CUSTOMER_APPROVAL_PENDING]: { tone: "watch", lane: "sales", owner: "Sales" },
-  [TICKET_STAGES.NEEDS_BUDGET]: { tone: "watch", lane: "accounting", owner: "The Accountant" },
-  [TICKET_STAGES.BUDGET_IN_PROGRESS]: { tone: "watch", lane: "accounting", owner: "The Accountant" },
+  [TICKET_STAGES.DRAFT]: { tone: "new", lane: "sales", owner: "Leads" },
+  [TICKET_STAGES.SALES_INTAKE]: { tone: "new", lane: "sales", owner: "Leads" },
+  [TICKET_STAGES.SCOPE_IN_PROGRESS]: { tone: "new", lane: "sales", owner: "Leads" },
+  [TICKET_STAGES.QUOTE_PENDING]: { tone: "new", lane: "sales", owner: "Leads" },
+  [TICKET_STAGES.CUSTOMER_APPROVAL_PENDING]: { tone: "watch", lane: "sales", owner: "Leads" },
+  [TICKET_STAGES.NEEDS_BUDGET]: { tone: "watch", lane: "accounting", owner: "Money" },
+  [TICKET_STAGES.BUDGET_IN_PROGRESS]: { tone: "watch", lane: "accounting", owner: "Money" },
   [TICKET_STAGES.NEEDS_OWNER_APPROVAL]: { tone: "risk", lane: "accounting", owner: "Owner" },
-  [TICKET_STAGES.INVOICE_PREPARATION]: { tone: "watch", lane: "accounting", owner: "The Accountant" },
+  [TICKET_STAGES.INVOICE_PREPARATION]: { tone: "watch", lane: "accounting", owner: "Money" },
   [TICKET_STAGES.READY_TO_SCHEDULE]: { tone: "ready", lane: "field", owner: "Owner" },
-  [TICKET_STAGES.SCHEDULED]: { tone: "field", lane: "field", owner: "Field Worker" },
-  [TICKET_STAGES.IN_PROGRESS]: { tone: "field", lane: "field", owner: "Field Worker" },
-  [TICKET_STAGES.PAUSED]: { tone: "risk", lane: "field", owner: "Field Worker" },
-  [TICKET_STAGES.SCOPE_CHANGE_REQUESTED]: { tone: "risk", lane: "sales", owner: "Sales" },
+  [TICKET_STAGES.SCHEDULED]: { tone: "field", lane: "field", owner: "Work" },
+  [TICKET_STAGES.IN_PROGRESS]: { tone: "field", lane: "field", owner: "Work" },
+  [TICKET_STAGES.PAUSED]: { tone: "risk", lane: "field", owner: "Work" },
+  [TICKET_STAGES.SCOPE_CHANGE_REQUESTED]: { tone: "risk", lane: "sales", owner: "Leads" },
   [TICKET_STAGES.FIELD_WORK_COMPLETE]: { tone: "review", lane: "review", owner: "Owner" },
   [TICKET_STAGES.COMPLETION_REVIEW]: { tone: "review", lane: "review", owner: "Owner" },
-  [TICKET_STAGES.INVOICE_REVIEW]: { tone: "review", lane: "accounting", owner: "The Accountant" },
-  [TICKET_STAGES.INVOICE_SENT]: { tone: "money", lane: "money", owner: "The Accountant" },
-  [TICKET_STAGES.PARTIALLY_PAID]: { tone: "money", lane: "money", owner: "The Accountant" },
+  [TICKET_STAGES.INVOICE_REVIEW]: { tone: "review", lane: "accounting", owner: "Money" },
+  [TICKET_STAGES.INVOICE_SENT]: { tone: "money", lane: "money", owner: "Money" },
+  [TICKET_STAGES.PARTIALLY_PAID]: { tone: "money", lane: "money", owner: "Money" },
   [TICKET_STAGES.PAID]: { tone: "done", lane: "money", owner: "Owner" },
   [TICKET_STAGES.CLOSED]: { tone: "done", lane: "closed", owner: "Owner" },
   [TICKET_STAGES.CANCELLED]: { tone: "muted", lane: "closed", owner: "Owner" }
@@ -30,7 +30,7 @@ const TICKET_STAGE_META = Object.freeze({
 const TICKET_OWNER_GROUPS = Object.freeze([
   {
     id: "sales",
-    label: "Sales",
+    label: "Leads",
     detail: "Intake, scope, quote, and customer approval.",
     stages: Object.freeze([
       TICKET_STAGES.DRAFT,
@@ -43,7 +43,7 @@ const TICKET_OWNER_GROUPS = Object.freeze([
   },
   {
     id: "accounting",
-    label: "The Accountant",
+    label: "Money",
     detail: "Cost review, owner approval, invoice prep, payment, and closeout.",
     stages: Object.freeze([
       TICKET_STAGES.NEEDS_BUDGET,
@@ -58,7 +58,7 @@ const TICKET_OWNER_GROUPS = Object.freeze([
   },
   {
     id: "field",
-    label: "Field Worker",
+    label: "Work",
     detail: "Scheduling, route, arrival proof, field work, photos, and completion notes.",
     stages: Object.freeze([
       TICKET_STAGES.READY_TO_SCHEDULE,

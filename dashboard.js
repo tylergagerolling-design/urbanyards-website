@@ -45,9 +45,9 @@
     owner: "Owner",
     admin: "Admin",
     manager: "Manager",
-    sales_outreach: "Sales Outreach",
-    accountant: "Accountant",
-    field_worker: "Field Worker",
+    sales_outreach: "Leads",
+    accountant: "Money",
+    field_worker: "Work",
     worker: "Worker",
     viewer: "Viewer"
   };
@@ -9482,19 +9482,19 @@
       if (ticket.stage === "scope_in_progress" || ticket.stage === "quote_pending") {
         return [
           { label: "Create Estimate", action: "create-estimate", detail: "Starts the customer-facing estimate record." },
-          { label: "Draft Invoice", action: "create-invoice", detail: "Prepares the accounting handoff." }
+          { label: "Draft Invoice", action: "create-invoice", detail: "Prepares the Money handoff." }
         ];
       }
       if (ticket.stage === "customer_approval_pending" || ticket.stage === "needs_budget" || ticket.stage === "budget_in_progress" || ticket.stage === "needs_owner_approval") {
         return [
-          { label: "Draft Invoice", action: "create-invoice", detail: "Moves approved work into accounting prep." },
+          { label: "Draft Invoice", action: "create-invoice", detail: "Moves approved work into Money prep." },
           { label: "Open Quote Details", action: "open-submission", detail: "Use the schedule form once the work is ready." }
         ];
       }
       if (ticket.stage === "invoice_preparation" || ticket.stage === "ready_to_schedule") {
         return [
           { label: "Open Schedule Form", action: "open-submission", detail: "Create the field visit from this ticket." },
-          { label: "Open Accountant", action: "go-documents", detail: "Review estimates, invoices, and payment records." }
+          { label: "Open Money", action: "go-documents", detail: "Review estimates, invoices, and payment records." }
         ];
       }
       return [
@@ -9510,13 +9510,13 @@
       }
       if (ticket.stage === "field_work_complete" || ticket.stage === "completion_review") {
         return [
-          { label: "Send To Invoice Review", status: "Invoiced", detail: "Moves the completed visit to accounting review." },
+          { label: "Send To Invoice Review", status: "Invoiced", detail: "Moves the completed visit to Money review." },
           { label: "Open Field Visit", action: "edit-job", detail: "Check photos, forms, and visit details." }
         ];
       }
       if (ticket.stage === "invoice_review" || ticket.stage === "invoice_sent" || ticket.stage === "partially_paid") {
         return [
-          { label: "Open Accountant", action: "go-documents", detail: "Review invoice and payment status." },
+          { label: "Open Money", action: "go-documents", detail: "Review invoice and payment status." },
           { label: "Open Field Visit", action: "edit-job", detail: "Review the source visit." }
         ];
       }
@@ -9955,7 +9955,7 @@
           <div>
             <p class="eyebrow">Leads</p>
             <h3>Who needs the next touch?</h3>
-            <p>Move prospects from intake to quote approval, then hand approved work to Accounting for cost review.</p>
+            <p>Move prospects from intake to quote approval, then hand approved work to Money for cost review.</p>
           </div>
           <div class="ticket-hero-actions">
             <button type="button" data-action="new-outreach-prospect">Add Lead</button>
@@ -9966,19 +9966,19 @@
           ${renderTicketMetric(intakeTickets.length, "Sales Intake", "New scope and lead review")}
           ${renderTicketMetric(due.length, "Follow-Ups Due", "Calls or emails waiting")}
           ${renderTicketMetric(approvalTickets.length + hot.length, "Quote Action", "Interested or quote pending")}
-          ${renderTicketMetric(accountingTickets.length, "Accounting Handoff", "Approved work needs cost review")}
+          ${renderTicketMetric(accountingTickets.length, "Money Handoff", "Approved work needs cost review")}
         </section>
         ${renderTicketRoleBrief("sales", dashboardTickets(data))}
         <div class="ticket-lane-grid">
           ${renderTicketColumn("New Intake", "Requests and prospects that need Sales review.", intakeTickets, "No new sales intake tickets.")}
           ${renderTicketColumn("Customer Response Needed", "Quotes, follow-ups, and warm leads that need contact.", approvalTickets.concat(hot.map((item, index) => buildTicketFromQuote(item, index))), "No quote follow-ups are waiting.")}
-          ${renderTicketColumn("Ready for Accounting", "Approved work ready for cost review, owner approval, and invoice preparation.", accountingTickets, "No approved tickets are ready for Accounting.")}
+          ${renderTicketColumn("Ready for Money", "Approved work ready for cost review, owner approval, and invoice preparation.", accountingTickets, "No approved tickets are ready for Money.")}
         </div>
         <section class="ticket-review-strip">
           <div>
             <p class="eyebrow">Sales handoff rule</p>
-            <h3>Sales does not own the whole job.</h3>
-            <p>Sales creates the ticket, confirms scope and quote approval, then hands the same ticket to Accounting. Cost review, field assignment, invoice, and payment stay connected to that ticket history.</p>
+            <h3>Leads does not own the whole job.</h3>
+            <p>Leads creates the ticket, confirms scope and quote approval, then hands the same ticket to Money. Cost review, field assignment, invoice, and payment stay connected to that ticket history.</p>
           </div>
           <div class="ticket-review-list">
             ${due.length ? due.slice(0, 3).map((item, index) => renderTicketCard(buildTicketFromQuote(item, index), true)).join("") : emptyState("No urgent Sales follow-ups.")}
@@ -10013,7 +10013,7 @@
       dateRaw: doc.dueDateRaw || doc.createdAtRaw,
       dateLabel: doc.dueDate || doc.createdAt || "",
       nextAction: doc.squareInvoiceNumber ? "Sync or collect" : "Connect Square invoice",
-      ownerLabel: "Accounting",
+      ownerLabel: "Money",
       blockers: doc.squareInvoiceNumber ? [] : ["Square invoice #"]
     }));
     target.innerHTML = `
@@ -10030,7 +10030,7 @@
             <button type="button" data-action="quick-add-invoice-reminder">Payment Follow-Up</button>
           </div>
         </header>
-        <section class="ticket-metrics" aria-label="Accounting ticket summary">
+        <section class="ticket-metrics" aria-label="Money ticket summary">
           ${renderTicketMetric(needsBudget.length, "Cost Review", "Tickets needing cost review")}
           ${renderTicketMetric(ownerApproval.length, "Owner Approval", "Cost and invoice prep")}
           ${renderTicketMetric(unpaidInvoices.length, "Open Invoices", "Awaiting payment")}
@@ -10044,7 +10044,7 @@
         </div>
         <section class="ticket-review-strip">
           <div>
-            <p class="eyebrow">Accounting rule</p>
+            <p class="eyebrow">Money rule</p>
             <h3>One ticket, one financial story.</h3>
             <p>Cost notes, actual costs, draft invoices, Square invoice links, payment status, and closeout notes should remain attached to the same Job Ticket audit trail.</p>
           </div>
@@ -10100,7 +10100,7 @@
             label: "Forms & Job Documents",
             detail: "Manage templates, submitted forms, and job documentation through Money.",
             meta: `${documentationCount} files or forms`,
-            primary: "Open Accountant",
+            primary: "Open Money",
             primaryAction: "go-documents"
           })}
           ${renderToolsCard({

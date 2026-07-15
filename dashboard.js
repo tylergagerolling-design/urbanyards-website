@@ -275,6 +275,9 @@
     importExportPendingFile: null,
     importExportPreview: null,
     importExportHistoryLoadedAt: "",
+    ticketBoardSearch: "",
+    ticketBoardStageFilter: "All",
+    ticketBoardOwnerFilter: "All",
     addMenuOpen: false,
     globalSearchOpen: false,
     globalSearchActiveIndex: -1,
@@ -10933,6 +10936,69 @@
     </section>`;
   }
 
+  function ticketMatchesBoardFilters(ticket = {}) {
+    const query = String(state.ticketBoardSearch || "").trim().toLowerCase();
+    const stageFilter = state.ticketBoardStageFilter || "All";
+    const ownerFilter = state.ticketBoardOwnerFilter || "All";
+    const stage = ticketStage(ticket);
+    const owner = ticketStageMeta[stage]?.lane || ticket.lane || "";
+    const stageMatches = stageFilter === "All" || stage === stageFilter;
+    const ownerMatches = ownerFilter === "All" || owner === ownerFilter;
+    if (!stageMatches || !ownerMatches) return false;
+    if (!query) return true;
+    return [
+      ticket.number,
+      ticket.title,
+      ticket.customer,
+      ticket.property,
+      ticket.detail,
+      ticket.stageLabel,
+      ticket.nextAction,
+      ticket.ownerLabel
+    ].some((value) => String(value || "").toLowerCase().includes(query));
+  }
+
+  function uniqueTicketStages(tickets = []) {
+    return [...new Set(tickets.map((ticket) => ticketStage(ticket)).filter(Boolean))]
+      .sort((a, b) => ticketStageLabel(a).localeCompare(ticketStageLabel(b)));
+  }
+
+  function renderTicketBoardControls(tickets = [], filteredTickets = []) {
+    const stages = uniqueTicketStages(tickets);
+    const owners = [
+      ["sales", "Leads"],
+      ["accounting", "Money"],
+      ["ready", "Ready"],
+      ["field", "Work"],
+      ["review", "Review"]
+    ].filter(([lane]) => tickets.some((ticket) => ticketInLane(ticket, [lane])));
+    const stageValue = stages.includes(state.ticketBoardStageFilter) ? state.ticketBoardStageFilter : "All";
+    const ownerValue = owners.some(([lane]) => lane === state.ticketBoardOwnerFilter) ? state.ticketBoardOwnerFilter : "All";
+
+    return `<section class="ticket-board-controls" aria-label="Ticket board controls">
+      <div class="ticket-board-search">
+        <label for="ticket-board-search">Search tickets</label>
+        <input id="ticket-board-search" type="search" placeholder="Search ticket, client, property, next action..." value="${escapeHtml(state.ticketBoardSearch || "")}" data-ticket-board-search>
+      </div>
+      <div class="ticket-board-filter-row">
+        <label>Stage
+          <select data-ticket-board-stage-filter>
+            <option value="All">All stages</option>
+            ${stages.map((stage) => `<option value="${escapeHtml(stage)}"${stage === stageValue ? " selected" : ""}>${escapeHtml(ticketStageLabel(stage))}</option>`).join("")}
+          </select>
+        </label>
+        <label>Owner
+          <select data-ticket-board-owner-filter>
+            <option value="All">All owners</option>
+            ${owners.map(([lane, label]) => `<option value="${escapeHtml(lane)}"${lane === ownerValue ? " selected" : ""}>${escapeHtml(label)}</option>`).join("")}
+          </select>
+        </label>
+        <button type="button" data-action="reset-ticket-board-filters">Reset Filters</button>
+      </div>
+      <p>${escapeHtml(filteredTickets.length)} of ${escapeHtml(tickets.length)} open tickets shown</p>
+    </section>`;
+  }
+
   function renderHomeActionQueue(items) {
     return `<section class="ticket-lane home-ticket-action-lane">
       <div class="ticket-lane-heading">
@@ -11024,9 +11090,10 @@
     if (!target) return;
     const tickets = dashboardTickets(data);
     const openTickets = tickets.filter(ticketIsOpen);
-    const workTickets = openTickets.filter((ticket) => ticketInLane(ticket, ["field"]));
-    const officeTickets = openTickets.filter((ticket) => ticketInLane(ticket, ["sales", "accounting", "review", "money"]));
-    const readyTickets = openTickets.filter((ticket) => ticketInLane(ticket, ["ready"]));
+    const filteredTickets = openTickets.filter(ticketMatchesBoardFilters);
+    const workTickets = filteredTickets.filter((ticket) => ticketInLane(ticket, ["field"]));
+    const officeTickets = filteredTickets.filter((ticket) => ticketInLane(ticket, ["sales", "accounting", "review", "money"]));
+    const readyTickets = filteredTickets.filter((ticket) => ticketInLane(ticket, ["ready"]));
     const reviewTickets = openTickets.filter((ticket) => ticketInLane(ticket, ["review", "money"]));
     target.innerHTML = `
       <div class="ticket-workspace uy-page-prototype job-ticket-workspace" data-uy-page-contract="tickets" data-data-source="job_tickets,quotes,jobs,invoices">
@@ -11042,6 +11109,7 @@
             ${canCreateTicketType("field") ? `<button type="button" data-action="open-ticket-create" data-ticket-type="field">Schedule Visit</button>` : ""}
           </div>
         </header>
+        ${renderTicketBoardControls(openTickets, filteredTickets)}
         <section class="ticket-metrics" aria-label="Job ticket summary">
           ${renderTicketMetric(openTickets.length, "Open Tickets", "Quotes and work")}
           ${renderTicketMetric(ticketCountBy(openTickets, (ticket) => ticketInLane(ticket, ["field"])), "In Work", "Scheduled or active")}
@@ -16634,6 +16702,18 @@
         return;
       }
 
+      if (target.matches("[data-ticket-board-stage-filter]")) {
+        state.ticketBoardStageFilter = target.value || "All";
+        renderJobTicketWorkspace(state.data);
+        return;
+      }
+
+      if (target.matches("[data-ticket-board-owner-filter]")) {
+        state.ticketBoardOwnerFilter = target.value || "All";
+        renderJobTicketWorkspace(state.data);
+        return;
+      }
+
       if (target.matches("input[name='visit_date']")) {
         const form = target.closest("form");
         const toggle = form?.querySelector("[data-recurring-toggle]");
@@ -16749,6 +16829,13 @@
     });
 
     els.appView.addEventListener("input", (event) => {
+      if (event.target?.matches?.("[data-ticket-board-search]")) {
+        state.ticketBoardSearch = event.target.value || "";
+        window.clearTimeout(state._ticketBoardSearchTimer);
+        state._ticketBoardSearchTimer = window.setTimeout(() => renderJobTicketWorkspace(state.data), 120);
+        return;
+      }
+
       const form = event.target?.closest?.("form");
       if (!form || !form.querySelector("[data-duplicate-warning]")) return;
       window.clearTimeout(form._duplicateTimer);
@@ -16776,6 +16863,15 @@
         } catch (error) {
           setDashboardState("Unable to copy diagnostics automatically. Browser clipboard permission may be blocked.", "error");
         }
+        return;
+      }
+
+      if (action === "reset-ticket-board-filters") {
+        state.ticketBoardSearch = "";
+        state.ticketBoardStageFilter = "All";
+        state.ticketBoardOwnerFilter = "All";
+        renderJobTicketWorkspace(state.data);
+        setDashboardState("Ticket board filters reset.");
         return;
       }
 

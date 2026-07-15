@@ -307,6 +307,13 @@ test("dashboard route aliases and new reliability diagnostics are wired", () => 
   assert.match(css, /\.ticket-workbench \{/);
   assert.match(css, /\.ticket-workbench-grid \{/);
   assert.match(css, /\.ticket-workbench-section\.is-active/);
+  assert.match(js, /function renderTicketBoardControls/);
+  assert.match(js, /function ticketMatchesBoardFilters/);
+  assert.match(js, /data-ticket-board-search/);
+  assert.match(js, /data-ticket-board-stage-filter/);
+  assert.match(js, /data-ticket-board-owner-filter/);
+  assert.match(js, /reset-ticket-board-filters/);
+  assert.match(css, /\.ticket-board-controls/);
   assert.doesNotMatch(css, /#overview\.job-ticket-page > :not\(\[data-job-ticket-workspace\]\)/);
 });
 

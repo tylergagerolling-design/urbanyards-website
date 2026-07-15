@@ -10324,7 +10324,7 @@
       "invoice_sent",
       "partially_paid"
     ]));
-    const fieldTickets = activeTickets.filter((ticket) => ticketInLane(ticket, ["ready", "field"]));
+    const workTickets = activeTickets.filter((ticket) => ticketInLane(ticket, ["ready", "field"]));
     const moneyTickets = activeTickets.filter((ticket) => ticketInLane(ticket, ["accounting", "money"]));
     const actions = todayActionItems(data);
     const notifications = buildNotifications(data);
@@ -10353,7 +10353,7 @@
         ${renderTicketOwnerStrip(activeTickets)}
         <div class="ticket-lane-grid">
           ${renderTicketColumn("Next Ticket Work", "The closest handoffs and blockers across the workflow.", attentionTickets, "No ticket blockers need review.")}
-          ${renderTicketColumn("Work", "Ready-to-schedule, scheduled, active, and paused visits.", fieldTickets, "No work tickets are active right now.")}
+          ${renderTicketColumn("Work", "Ready-to-schedule, scheduled, active, and paused visits.", workTickets, "No work tickets are active right now.")}
           ${renderTicketColumn("Money and Closeout", "Cost review, invoice review, payment, and closeout tickets.", moneyTickets, "No Money or closeout tickets need attention.")}
         </div>
         ${renderHomeActionQueue(actions)}
@@ -10365,7 +10365,7 @@
     if (!target) return;
     const tickets = dashboardTickets(data);
     const openTickets = tickets.filter(ticketIsOpen);
-    const fieldTickets = openTickets.filter((ticket) => ticketInLane(ticket, ["field"]));
+    const workTickets = openTickets.filter((ticket) => ticketInLane(ticket, ["field"]));
     const officeTickets = openTickets.filter((ticket) => ticketInLane(ticket, ["sales", "accounting", "review", "money"]));
     const readyTickets = openTickets.filter((ticket) => ticketInLane(ticket, ["ready"]));
     const reviewTickets = openTickets.filter((ticket) => ticketInLane(ticket, ["review", "money"]));
@@ -10400,7 +10400,7 @@
         </section>
         ${renderTicketOwnerStrip(openTickets)}
         <div class="ticket-lane-grid">
-          ${renderTicketColumn("Today and Work", "Scheduled, active, and work-owned tickets.", fieldTickets, "No work tickets are scheduled yet.")}
+          ${renderTicketColumn("Today and Work", "Scheduled, active, and work-owned tickets.", workTickets, "No work tickets are scheduled yet.")}
           ${renderTicketColumn("Office Review", "Scope, quote, cost review, approval, and closeout blockers.", officeTickets, "No office tickets need review.")}
           ${renderTicketColumn("Ready to Schedule", "Approved work that can move into the schedule.", readyTickets, "No approved tickets are waiting to schedule.")}
         </div>
@@ -10421,10 +10421,10 @@
     const target = qs("[data-work-workspace]");
     if (!target) return;
     const tickets = dashboardTickets(data);
-    const fieldTickets = tickets.filter((ticket) => ticketIsOpen(ticket) && ticketInLane(ticket, ["ready", "field", "review"]));
+    const workTickets = tickets.filter((ticket) => ticketIsOpen(ticket) && ticketInLane(ticket, ["ready", "field", "review"]));
     const today = todayKey();
-    const todayTickets = fieldTickets.filter((ticket) => dateKey(ticket.dateRaw) === today);
-    const upcomingTickets = fieldTickets.filter((ticket) => dateKey(ticket.dateRaw) >= today);
+    const todayTickets = workTickets.filter((ticket) => dateKey(ticket.dateRaw) === today);
+    const upcomingTickets = workTickets.filter((ticket) => dateKey(ticket.dateRaw) >= today);
     target.innerHTML = `
       <div class="work-workspace">
         ${renderWorkspaceSwitcher("calendar")}
@@ -10441,8 +10441,8 @@
         </header>
         <section class="ticket-metrics" aria-label="Work summary">
           ${renderTicketMetric(todayTickets.length, "Visits Today", "Scheduled for today")}
-          ${renderTicketMetric(ticketCountBy(fieldTickets, (ticket) => ticketInStage(ticket, ["in_progress"])), "In Progress", "Started work")}
-          ${renderTicketMetric(ticketCountBy(fieldTickets, (ticket) => ticketInLane(ticket, ["review"])), "Needs Review", "Photos, actuals, invoice")}
+          ${renderTicketMetric(ticketCountBy(workTickets, (ticket) => ticketInStage(ticket, ["in_progress"])), "In Progress", "Started work")}
+          ${renderTicketMetric(ticketCountBy(workTickets, (ticket) => ticketInLane(ticket, ["review"])), "Needs Review", "Photos, actuals, invoice")}
           ${renderTicketMetric(upcomingTickets.length, "Upcoming", "Scheduled tickets")}
         </section>
         ${renderTicketRoleBrief("field", tickets)}
@@ -10453,10 +10453,10 @@
                 <h3>Work Queue</h3>
                 <p>Open the ticket before heading to the site.</p>
               </div>
-              <span>${escapeHtml(fieldTickets.length)}</span>
+              <span>${escapeHtml(workTickets.length)}</span>
             </div>
             <div class="ticket-lane-list">
-                  ${fieldTickets.length ? fieldTickets.slice(0, 8).map((ticket) => renderTicketCard(ticket)).join("") : emptyState("No work visits are scheduled yet.")}
+                  ${workTickets.length ? workTickets.slice(0, 8).map((ticket) => renderTicketCard(ticket)).join("") : emptyState("No work visits are scheduled yet.")}
             </div>
           </section>
           <aside class="field-side-stack">

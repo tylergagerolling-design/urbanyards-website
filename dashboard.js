@@ -10417,8 +10417,8 @@
       </div>`;
   }
 
-  function renderFieldModeWorkspace(data = state.data) {
-    const target = qs("[data-field-mode-workspace]");
+  function renderWorkWorkspace(data = state.data) {
+    const target = qs("[data-work-workspace]");
     if (!target) return;
     const tickets = dashboardTickets(data);
     const fieldTickets = tickets.filter((ticket) => ticketIsOpen(ticket) && ticketInLane(ticket, ["ready", "field", "review"]));
@@ -10426,9 +10426,9 @@
     const todayTickets = fieldTickets.filter((ticket) => dateKey(ticket.dateRaw) === today);
     const upcomingTickets = fieldTickets.filter((ticket) => dateKey(ticket.dateRaw) >= today);
     target.innerHTML = `
-      <div class="field-workspace">
+      <div class="work-workspace">
         ${renderWorkspaceSwitcher("calendar")}
-        <header class="ticket-hero field-hero">
+        <header class="ticket-hero work-hero">
           <div>
             <p class="eyebrow">Work</p>
             <h3>Today&apos;s Work</h3>
@@ -10514,8 +10514,8 @@
       </div>`;
   }
 
-  function renderSalesWorkspace(data = state.data) {
-    const target = qs("[data-sales-workspace]");
+  function renderLeadsWorkspace(data = state.data) {
+    const target = qs("[data-leads-workspace]");
     if (!target) return;
     const tickets = dashboardTickets(data).filter((ticket) => ticketIsOpen(ticket) && ticketInLane(ticket, ["sales"]));
     const intakeTickets = tickets.filter((ticket) => ticketInStage(ticket, ["draft", "sales_intake", "scope_in_progress"]));
@@ -10524,7 +10524,7 @@
     const due = typeof outreachDueProspects === "function" ? outreachDueProspects() : [];
     const hot = typeof outreachHotProspects === "function" ? outreachHotProspects() : [];
     target.innerHTML = `
-      <div class="ticket-workspace sales-workspace">
+      <div class="ticket-workspace leads-workspace">
         ${renderWorkspaceSwitcher("outreach")}
         <header class="ticket-hero">
           <div>
@@ -10562,8 +10562,8 @@
       </div>`;
   }
 
-  function renderAccountantWorkspace(data = state.data) {
-    const target = qs("[data-accountant-workspace]");
+  function renderMoneyWorkspace(data = state.data) {
+    const target = qs("[data-money-workspace]");
     if (!target) return;
     const tickets = dashboardTickets(data).filter(ticketIsOpen);
     const needsBudget = tickets.filter((ticket) => ticketInStage(ticket, ["needs_budget", "budget_in_progress"]));
@@ -10592,7 +10592,7 @@
       blockers: doc.squareInvoiceNumber ? [] : ["Square invoice #"]
     }));
     target.innerHTML = `
-      <div class="ticket-workspace accountant-workspace">
+      <div class="ticket-workspace money-workspace">
         ${renderWorkspaceSwitcher("documents")}
         <header class="ticket-hero">
           <div>
@@ -15229,9 +15229,9 @@
     safeRender("notifications", () => renderNotifications(data));
     safeRender("home ticket workspace", () => renderHomeWorkspace(data));
     safeRender("job ticket workspace", () => renderJobTicketWorkspace(data));
-    safeRender("work workspace", () => renderFieldModeWorkspace(data));
-    safeRender("sales workspace", () => renderSalesWorkspace(data));
-    safeRender("accountant workspace", () => renderAccountantWorkspace(data));
+    safeRender("work workspace", () => renderWorkWorkspace(data));
+    safeRender("leads workspace", () => renderLeadsWorkspace(data));
+    safeRender("money workspace", () => renderMoneyWorkspace(data));
     safeRender("tools workspace", () => renderToolsWorkspace(data));
     safeRender("property filters", () => populatePropertyFilter(data));
     safeRender("metrics", () => renderMetrics(data));

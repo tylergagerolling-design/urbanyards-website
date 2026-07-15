@@ -14214,15 +14214,15 @@ body:not(.is-login-screen) .app-view .dashboard-main #calendar .calendar-tabs bu
    markup for rollback, but the rebuilt workspace is the visible source of truth. */
 body:not(.is-login-screen) #overview.home-ticket-page > :not([data-home-workspace]),
 body:not(.is-login-screen) #tickets.job-ticket-page > :not([data-job-ticket-workspace]),
-body:not(.is-login-screen) #calendar.field-mode-page > :not([data-field-mode-workspace]),
-body:not(.is-login-screen) #outreach.sales-ticket-page > :not([data-sales-workspace]),
-body:not(.is-login-screen) #documents.accountant-page > :not([data-accountant-workspace]),
+body:not(.is-login-screen) #calendar.work-hub-page > :not([data-work-workspace]),
+body:not(.is-login-screen) #outreach.leads-page > :not([data-leads-workspace]),
+body:not(.is-login-screen) #documents.money-page > :not([data-money-workspace]),
 body:not(.is-login-screen) #settings.tools-page > :not([data-tools-workspace]) {
   display: none !important;
 }
 
 body:not(.is-login-screen) .ticket-workspace,
-body:not(.is-login-screen) .field-workspace {
+body:not(.is-login-screen) .work-workspace {
   display: grid;
   gap: clamp(18px, 2vw, 28px);
   color: var(--uy-ink);

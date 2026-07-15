@@ -167,10 +167,13 @@ test("dashboard route aliases and new reliability diagnostics are wired", () => 
   assert.doesNotMatch(html, /data-action="go-documents">Open Money<\/button>\s*<\/article>/);
   assert.match(css, /#overview\.home-ticket-page > :not\(\[data-home-workspace\]\)/);
   assert.match(css, /#tickets\.job-ticket-page > :not\(\[data-job-ticket-workspace\]\)/);
-  assert.match(css, /#calendar\.field-mode-page > :not\(\[data-field-mode-workspace\]\)/);
-  assert.match(css, /#outreach\.sales-ticket-page > :not\(\[data-sales-workspace\]\)/);
-  assert.match(css, /#documents\.accountant-page > :not\(\[data-accountant-workspace\]\)/);
+  assert.match(css, /#calendar\.work-hub-page > :not\(\[data-work-workspace\]\)/);
+  assert.match(css, /#outreach\.leads-page > :not\(\[data-leads-workspace\]\)/);
+  assert.match(css, /#documents\.money-page > :not\(\[data-money-workspace\]\)/);
   assert.match(css, /#settings\.tools-page > :not\(\[data-tools-workspace\]\)/);
+  assert.doesNotMatch(html, /sales-ticket-page|field-mode-page|accountant-page/);
+  assert.doesNotMatch(js, /renderFieldModeWorkspace|renderSalesWorkspace|renderAccountantWorkspace/);
+  assert.doesNotMatch(css, /field-mode-page|sales-ticket-page|accountant-page/);
   assert.match(css, /\.ticket-workbench \{/);
   assert.match(css, /\.ticket-workbench-grid \{/);
   assert.match(css, /\.ticket-workbench-section\.is-active/);

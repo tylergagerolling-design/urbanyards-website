@@ -233,6 +233,14 @@ test("dashboard route aliases and new reliability diagnostics are wired", () => 
   assert.match(js, /data-money-budget-form/);
   assert.match(js, /await ensureBudgetForTicket\(ticket\)/);
   assert.match(js, /await syncBudgetToTicket\(budget\)/);
+  assert.match(js, /function canManageWorkWorkflow/);
+  assert.match(js, /function renderTicketWorkAssignmentBridge/);
+  assert.match(js, /async function saveTicketWorkAssignment/);
+  assert.match(js, /data-ticket-assignment-form/);
+  assert.match(js, /assigned_user_id/);
+  assert.match(js, /await saveTicketWorkAssignment\(event\.target\)/);
+  assert.match(css, /\.ticket-work-assignment-bridge/);
+  assert.match(css, /\.ticket-work-assignment-form/);
   assert.match(js, /Budget and Profitability/);
   assert.match(js, /Budget records stay inside Money/);
   assert.match(js, /budgetsReady: false/);

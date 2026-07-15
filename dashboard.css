@@ -14900,6 +14900,32 @@ body:not(.is-login-screen) .drawer-money-budget-form {
   margin-top: 4px;
 }
 
+body:not(.is-login-screen) .ticket-work-assignment-bridge {
+  border-color: rgba(73, 102, 77, .16);
+  background: rgba(255, 253, 246, .86);
+}
+
+body:not(.is-login-screen) .ticket-work-assignment-form {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+}
+
+body:not(.is-login-screen) .ticket-work-assignment-form .span-full {
+  grid-column: 1 / -1;
+}
+
+body:not(.is-login-screen) .ticket-work-assignment-form .drawer-actions {
+  justify-content: flex-start;
+  margin-top: 0;
+}
+
+@media (max-width: 860px) {
+  body:not(.is-login-screen) .ticket-work-assignment-form {
+    grid-template-columns: 1fr;
+  }
+}
+
 body:not(.is-login-screen) .ticket-lane-heading {
   display: flex;
   justify-content: space-between;

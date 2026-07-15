@@ -1242,6 +1242,10 @@
     return ["owner", "admin", "manager", "accountant"].includes(normalizeDashboardRole(role));
   }
 
+  function canManageWorkWorkflow(role = currentSessionRole()) {
+    return ["owner", "admin", "manager", "field_worker", "staff"].includes(normalizeDashboardRole(role));
+  }
+
   function canManageUsers() {
     return ["owner", "admin"].includes(currentSessionRole());
   }
@@ -4905,6 +4909,7 @@
       ["scheduled_date", "scheduledDate"],
       ["visit_date", "visitDate"],
       ["due_date", "dueDate"],
+      ["assigned_user_id", "assignedUserId"],
       ["owner_label", "ownerLabel"],
       ["field_completion_notes", "fieldCompletionNotes"],
       ["payment_status", "paymentStatus"]
@@ -5296,6 +5301,63 @@
       });
     }
     await updateStatus("scheduled_jobs", job.id, "Completed");
+  }
+
+  async function saveTicketWorkAssignment(form) {
+    if (!canManageWorkWorkflow()) throw new Error("Your dashboard role cannot assign work visits.");
+    const ticketId = form.dataset.ticketId || "";
+    const jobId = form.dataset.jobId || "";
+    const ticket = dashboardTickets().find((item) => item.source === "ticket" && item.id === ticketId);
+    if (!ticket) throw new Error("Open a unified Job Ticket before assigning work.");
+    const formData = new FormData(form);
+    const visitDate = String(formData.get("visit_date") || "").trim();
+    const visitWindow = String(formData.get("visit_window") || "").trim();
+    const assignedUserId = String(formData.get("assigned_user_id") || "").trim();
+    if (!visitDate) throw new Error("Choose a visit date before assigning work.");
+    if (!assignedUserId) throw new Error("Choose a field owner before assigning work.");
+
+    const assignedProfile = assignmentProfileForId(assignedUserId);
+    const assignedUser = assignmentProfileLabel(assignedProfile || { email: assignedUserId });
+    const jobPayload = {
+      visit_date: visitDate,
+      visit_window: visitWindow,
+      site_name: ticket.customer || ticket.title || "Scheduled visit",
+      city: ticket.property && ticket.property !== "Property not set" ? ticket.property : "",
+      service: ticket.requestedService || ticket.title || "Scheduled visit",
+      status: "Scheduled",
+      assigned_user: assignedUser
+    };
+    const job = jobId
+      ? await updateScheduledJob(jobId, jobPayload)
+      : (await insertScheduledJobs([jobPayload]))[0];
+    if (!job?.id) throw new Error("Unable to create the scheduled visit.");
+
+    const updatePayload = {
+      source_type: "job",
+      source_id: job.id,
+      job_id: job.id,
+      scheduled_date: visitDate,
+      visit_date: visitDate,
+      assigned_user_id: assignedUserId,
+      owner_label: "Work",
+      next_action: ticketNextAction("scheduled")
+    };
+    await updateJobTicket(ticket.id, updatePayload);
+    const refreshed = dashboardTickets().find((item) => item.source === "ticket" && item.id === ticket.id) || ticket;
+    if (ticketStage(refreshed) === "ready_to_schedule") {
+      await transitionJobTicketStage(ticket.id, "scheduled", {
+        notes: `Work assigned to ${assignedUser} for ${formatDate(visitDate)}.`,
+        nextAction: ticketNextAction("scheduled"),
+        sourceStatus: "Scheduled"
+      });
+    } else {
+      await insertJobTicketEvent(ticket.id, {
+        event_type: "ticket_work_assigned",
+        notes: `Work assigned to ${assignedUser} for ${formatDate(visitDate)}.`,
+        new_value: { jobId: job.id, assignedUser, visitDate, visitWindow }
+      });
+    }
+    return { ticketId: ticket.id, job };
   }
 
   async function deleteRow(table, id) {
@@ -10120,6 +10182,76 @@
     </div>`;
   }
 
+  function assignmentProfileLabel(profile = {}) {
+    return profile.name || profile.email || "Dashboard user";
+  }
+
+  function assignableWorkProfiles() {
+    const profiles = (state.data.userProfiles || [])
+      .filter((profile) => profile && !profile.disabledAt)
+      .filter((profile) => profile.userId || profile.email);
+    const current = currentUserProfile();
+    const merged = [...profiles];
+    if (current?.userId || current?.email) merged.unshift(current);
+    const seen = new Set();
+    return merged.filter((profile) => {
+      const key = profile.userId || profile.email;
+      if (!key || seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    });
+  }
+
+  function assignmentProfileForId(id) {
+    const value = String(id || "").trim();
+    if (!value) return null;
+    return assignableWorkProfiles().find((profile) => profile.userId === value || profile.email === value) || null;
+  }
+
+  function workAssignmentOptions(selectedId = "") {
+    const profiles = assignableWorkProfiles();
+    const selected = String(selectedId || "").trim();
+    const options = profiles.map((profile) => {
+      const value = profile.userId || profile.email;
+      return `<option value="${escapeHtml(value)}"${value === selected ? " selected" : ""}>${escapeHtml(assignmentProfileLabel(profile))}</option>`;
+    }).join("");
+    return `<option value="">Choose team member...</option>${options}`;
+  }
+
+  function renderTicketWorkAssignmentBridge(ticket = {}, sourceItem = null) {
+    const stage = ticketStage(ticket);
+    if (!["ready_to_schedule", "scheduled", "in_progress", "paused"].includes(stage)) return "";
+    if (!canManageWorkWorkflow()) return "";
+    const linkedJob = ticket.sourceType === "job" ? sourceItem : null;
+    const visitDate = toDateInputValue(linkedJob?.dateRaw || ticket.dateRaw || "");
+    const visitWindow = linkedJob?.window && linkedJob.window !== "Window not set" ? linkedJob.window : "";
+    const assignedUserId = ticket.assignedUserId || "";
+    const buttonLabel = linkedJob?.id ? "Update Work Assignment" : "Create Work Assignment";
+    return `<section class="ticket-drawer-card ticket-work-assignment-bridge">
+      <div class="ticket-drawer-card-heading">
+        <div>
+          <h4>Work assignment</h4>
+          <span>${escapeHtml(linkedJob?.id ? "Linked to a scheduled visit." : "Create the scheduled visit and assign the field owner.")}</span>
+        </div>
+      </div>
+      <form class="ticket-work-assignment-form" data-ticket-assignment-form data-ticket-id="${escapeHtml(ticket.id || "")}" data-job-id="${escapeHtml(linkedJob?.id || "")}">
+        <label>Visit date
+          <input name="visit_date" type="date" value="${escapeHtml(visitDate)}" required>
+        </label>
+        <label>Visit window
+          <input name="visit_window" value="${escapeHtml(visitWindow)}" placeholder="9 AM - 11 AM">
+        </label>
+        <label>Assigned team member
+          <select name="assigned_user_id" required>${workAssignmentOptions(assignedUserId)}</select>
+        </label>
+        <div class="drawer-actions span-full">
+          <button type="submit">${buttonContent(buttonLabel, "quick-add-job")}</button>
+          ${linkedJob?.id ? `<button type="button" data-action="edit-job" data-id="${escapeHtml(linkedJob.id)}">${buttonContent("Open Work Visit", "edit-job")}</button>` : ""}
+        </div>
+      </form>
+    </section>`;
+  }
+
   function renderTicketCommandCenter(ticket) {
     const isCanonical = ticket?.source === "ticket";
     const transitions = ticketTransitionOptions(ticket || {});
@@ -10443,6 +10575,7 @@
         </div>
         ${renderTicketWorkbench(ticket)}
         ${renderTicketCommandCenter(ticket)}
+        ${renderTicketWorkAssignmentBridge(ticket, sourceItem)}
         ${renderTicketHandoffActions(ticket)}
         ${renderTicketRequirements(ticket)}
         ${renderTicketHistory(ticket)}
@@ -18422,6 +18555,17 @@
           setDashboardState("Money budget saved.");
         } catch (error) {
           setDashboardState(error.message || "Unable to save budget.", "error");
+        }
+      } else if (event.target.matches("[data-ticket-assignment-form]")) {
+        event.preventDefault();
+        try {
+          setDashboardState("Saving work assignment...");
+          const result = await saveTicketWorkAssignment(event.target);
+          await refreshDashboard();
+          if (result?.ticketId) openTicketDrawer("ticket", result.ticketId);
+          setDashboardState("Work assignment saved.");
+        } catch (error) {
+          setDashboardState(error.message || "Unable to save work assignment.", "error");
         }
       } else if (event.target.matches("[data-ticket-create-form]")) {
         event.preventDefault();

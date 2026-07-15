@@ -15173,6 +15173,105 @@ body:not(.is-login-screen) .ticket-review-strip {
   box-shadow: 0 14px 36px rgba(19, 36, 28, .06);
 }
 
+body:not(.is-login-screen) .home-command-center {
+  display: grid;
+  grid-template-columns: minmax(0, 1.35fr) minmax(300px, .65fr);
+  gap: 16px;
+  align-items: stretch;
+}
+
+body:not(.is-login-screen) .home-ticket-action-lane {
+  display: grid;
+  align-content: start;
+}
+
+body:not(.is-login-screen) .home-next-step-stack {
+  display: grid;
+  gap: 12px;
+  align-content: start;
+}
+
+body:not(.is-login-screen) .home-next-step-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 4px 2px;
+}
+
+body:not(.is-login-screen) .home-next-step-heading span {
+  color: var(--uy-muted);
+  font-size: .74rem;
+  font-weight: 900;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+}
+
+body:not(.is-login-screen) .home-next-step-heading strong {
+  color: var(--uy-green);
+  font-size: .82rem;
+  font-weight: 900;
+}
+
+body:not(.is-login-screen) .home-next-step-card {
+  display: grid;
+  gap: 12px;
+  min-width: 0;
+  padding: 16px;
+  border: 1px solid rgba(73, 102, 77, .14);
+  border-radius: 20px;
+  background:
+    radial-gradient(circle at 95% 8%, rgba(153, 180, 119, .14), transparent 34%),
+    rgba(255, 255, 255, .82);
+  box-shadow: 0 12px 30px rgba(19, 36, 28, .045);
+}
+
+body:not(.is-login-screen) .home-next-step-kicker {
+  color: var(--uy-muted);
+  font-size: .72rem;
+  font-weight: 900;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+}
+
+body:not(.is-login-screen) .home-next-step-main {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 12px;
+  align-items: start;
+}
+
+body:not(.is-login-screen) .home-next-step-main > strong {
+  min-width: 52px;
+  color: var(--uy-green);
+  font-size: 2.25rem;
+  line-height: .95;
+}
+
+body:not(.is-login-screen) .home-next-step-card h4 {
+  margin: 0;
+  color: var(--uy-green);
+  font-size: 1rem;
+}
+
+body:not(.is-login-screen) .home-next-step-card p {
+  margin: 4px 0 0;
+  color: var(--uy-muted);
+  font-size: .9rem;
+  line-height: 1.42;
+}
+
+body:not(.is-login-screen) .home-next-step-card button {
+  width: fit-content;
+  min-height: 38px;
+  border: 1px solid rgba(18, 63, 49, .16);
+  border-radius: var(--dashboard-button-radius, 8px);
+  background: rgba(255, 255, 255, .82);
+  color: var(--uy-green);
+  box-shadow: none;
+  font-weight: 850;
+}
+
 body:not(.is-login-screen) .money-budget-panel {
   display: grid;
   gap: 14px;
@@ -16071,11 +16170,16 @@ body:not(.is-login-screen) .field-proof-actions button {
   }
 
   body:not(.is-login-screen) .ticket-lane-grid,
+  body:not(.is-login-screen) .home-command-center,
   body:not(.is-login-screen) .field-grid,
   body:not(.is-login-screen) .work-day-plan-panel,
   body:not(.is-login-screen) .ticket-review-strip,
   body:not(.is-login-screen) .ticket-role-brief {
     grid-template-columns: 1fr;
+  }
+
+  body:not(.is-login-screen) .home-next-step-stack {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }
 
@@ -16111,10 +16215,20 @@ body:not(.is-login-screen) .field-proof-actions button {
   body:not(.is-login-screen) .ticket-flow-panel,
   body:not(.is-login-screen) .money-budget-stats,
   body:not(.is-login-screen) .workspace-focus-strip,
+  body:not(.is-login-screen) .home-next-step-stack,
   body:not(.is-login-screen) .ticket-workflow-board-grid,
   body:not(.is-login-screen) .work-plan-tile-grid,
   body:not(.is-login-screen) .ticket-owner-strip {
     grid-template-columns: 1fr;
+  }
+
+  body:not(.is-login-screen) .today-action-item {
+    grid-template-columns: 1fr;
+    align-items: stretch;
+  }
+
+  body:not(.is-login-screen) .today-action-status {
+    width: fit-content;
   }
 
   body:not(.is-login-screen) .work-day-route-footer {

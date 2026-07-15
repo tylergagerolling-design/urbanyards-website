@@ -11078,6 +11078,74 @@
     </section>`;
   }
 
+  function renderHomeNextStepCard(item = {}) {
+    return `<article class="home-next-step-card">
+      <span class="home-next-step-kicker">${escapeHtml(item.kicker || "Next")}</span>
+      <div class="home-next-step-main">
+        <strong>${escapeHtml(item.value ?? 0)}</strong>
+        <div>
+          <h4>${escapeHtml(item.title || "")}</h4>
+          <p>${escapeHtml(item.detail || "")}</p>
+        </div>
+      </div>
+      ${item.action ? `<button type="button" data-action="${escapeHtml(item.action)}">${escapeHtml(item.actionLabel || "Open")}</button>` : ""}
+    </article>`;
+  }
+
+  function renderHomeCommandCenter(details = {}) {
+    const actions = details.actions || [];
+    const todayTickets = details.todayTickets || [];
+    const attentionTickets = details.attentionTickets || [];
+    const workTickets = details.workTickets || [];
+    const moneyTickets = details.moneyTickets || [];
+    const alertCount = (details.workflowWarnings || []).length + (details.notifications || []).length;
+    const nextSteps = [
+      {
+        kicker: "Today",
+        value: todayTickets.length,
+        title: "Scheduled work",
+        detail: "Open Work for routes, visits, completion notes, photos, and Work updates.",
+        action: "go-work",
+        actionLabel: "Open Work"
+      },
+      {
+        kicker: "Handoffs",
+        value: attentionTickets.length,
+        title: "Needs next action",
+        detail: "Review requests, quotes, approvals, budget prep, closeout, and blockers.",
+        action: "go-tickets",
+        actionLabel: "Open Tickets"
+      },
+      {
+        kicker: "Money",
+        value: moneyTickets.length,
+        title: "Financial review",
+        detail: "Check budget status, quote follow-up, invoices, payments, and closeout items.",
+        action: "go-money",
+        actionLabel: "Open Money"
+      },
+      {
+        kicker: "Signals",
+        value: alertCount,
+        title: "Warnings and setup",
+        detail: "Review dashboard health, tools, documentation, equipment, imports, and AI support.",
+        action: "go-tools",
+        actionLabel: "Open Tools"
+      }
+    ];
+
+    return `<section class="home-command-center" aria-label="Home workspace signals">
+      ${renderHomeActionQueue(actions)}
+      <aside class="home-next-step-stack" aria-label="Where to go next">
+        <div class="home-next-step-heading">
+          <span>Where to go next</span>
+          <strong>${escapeHtml(workTickets.length)} work tickets active</strong>
+        </div>
+        ${nextSteps.map(renderHomeNextStepCard).join("")}
+      </aside>
+    </section>`;
+  }
+
   function renderHomeWorkspace(data = state.data) {
     const target = qs("[data-home-workspace]");
     if (!target) return;
@@ -11125,19 +11193,9 @@
           ${renderTicketMetric(actions.length, "Action Items", "Needs attention now")}
           ${renderTicketMetric(workflowWarnings.length + notifications.length, "Alerts", "Workflow and notification signals")}
         </section>
+        ${renderHomeCommandCenter({ actions, attentionTickets, todayTickets, workTickets, moneyTickets, workflowWarnings, notifications })}
         ${renderTicketEndToEndFlow(activeTickets, "", "Urban Yards job flow")}
-        ${renderWorkspaceFocusStrip([
-          { kicker: "Open", value: activeTickets.length, title: "Ticket load", detail: "All active work across Leads, Work, Money, and Tools." },
-          { kicker: "Today", value: actions.length, title: "Action queue", detail: "Requests, follow-ups, missed work, and blockers needing attention." },
-          { kicker: "Signals", value: workflowWarnings.length + notifications.length, title: "Dashboard alerts", detail: "Workflow warnings and live notification count." }
-        ], "Home workspace signals")}
         ${renderTicketOwnerStrip(activeTickets)}
-        <div class="ticket-lane-grid">
-          ${renderTicketColumn("Next Ticket Work", "The closest handoffs and blockers across the workflow.", attentionTickets, "No ticket blockers need review.")}
-          ${renderTicketColumn("Work", "Ready-to-schedule, scheduled, active, and paused visits.", workTickets, "No work tickets are active right now.")}
-          ${renderTicketColumn("Money and Closeout", "Cost review, invoice review, payment, and closeout tickets.", moneyTickets, "No Money or closeout tickets need attention.")}
-        </div>
-        ${renderHomeActionQueue(actions)}
       </div>`;
   }
 

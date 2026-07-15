@@ -232,7 +232,12 @@ test("workspace registry matches the rebuilt ticket-centered dashboard shell", (
 
   const permissionService = { hasPermission };
   const owner = { role: ROLES.OWNER, userId: "owner-1" };
+  const admin = { role: ROLES.ADMIN, userId: "admin-1" };
+  const manager = { role: ROLES.MANAGER, userId: "manager-1" };
+  const sales = { role: ROLES.SALES_OUTREACH, userId: "sales-1" };
+  const accountant = { role: ROLES.ACCOUNTANT, userId: "acct-1" };
   const fieldWorker = { role: ROLES.FIELD_WORKER, userId: "worker-1" };
+  const worker = { role: ROLES.WORKER, userId: "worker-2" };
 
   assert.deepEqual(getVisibleWorkspaces(owner, permissionService).map((workspace) => workspace.key), [
     "overview",
@@ -242,7 +247,30 @@ test("workspace registry matches the rebuilt ticket-centered dashboard shell", (
     "documents",
     "settings"
   ]);
+  assert.deepEqual(getVisibleWorkspaces(admin, permissionService).map((workspace) => workspace.key), getVisibleWorkspaces(owner, permissionService).map((workspace) => workspace.key));
+  assert.deepEqual(getVisibleWorkspaces(manager, permissionService).map((workspace) => workspace.key), [
+    "overview",
+    "tickets",
+    "calendar",
+    "outreach",
+    "documents"
+  ]);
+  assert.deepEqual(getVisibleWorkspaces(sales, permissionService).map((workspace) => workspace.key), [
+    "overview",
+    "tickets",
+    "outreach"
+  ]);
+  assert.deepEqual(getVisibleWorkspaces(accountant, permissionService).map((workspace) => workspace.key), [
+    "overview",
+    "tickets",
+    "documents"
+  ]);
   assert.equal(getVisibleWorkspaces(fieldWorker, permissionService).some((workspace) => workspace.key === "calendar"), true);
+  assert.deepEqual(getVisibleWorkspaces(worker, permissionService).map((workspace) => workspace.key), [
+    "overview",
+    "tickets",
+    "calendar"
+  ]);
   assert.equal(getVisibleWorkspaceNav("route-planner", fieldWorker, permissionService).some((item) => item.key === "route"), true);
 });
 

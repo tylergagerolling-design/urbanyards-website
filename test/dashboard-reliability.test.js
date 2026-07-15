@@ -223,6 +223,12 @@ test("dashboard route aliases and new reliability diagnostics are wired", () => 
   assert.match(js, /data-money-budget-panel/);
   assert.match(js, /Budget and Profitability/);
   assert.match(js, /Budget records stay inside Money/);
+  assert.match(js, /budgetsReady: false/);
+  assert.match(js, /budgets: emptyBudgetBundle\(\)/);
+  assert.match(js, /state\.budgetsReady = true/);
+  assert.match(js, /loadModule\("job budgets", loadBudgets, emptyBudgetBundle\)/);
+  assert.match(js, /budgets: normalizeBudgetBundle\(demoBudgetBundle\(\)\)/);
+  assert.match(js, /restored\.budgets = imported\.budgets && typeof imported\.budgets === "object"/);
   ["go-leads", "go-work", "go-money", "go-tools", "go-tickets"].forEach((action) => {
     assert.match(js, new RegExp(`"${action}"`));
     assert.match(js, new RegExp(`action === "${action}"`));

@@ -310,6 +310,8 @@
     documentationError: "",
     importExportReady: false,
     importExportError: "",
+    budgetsReady: false,
+    budgetsError: "",
     leadActivityReady: true,
     userProfilesReady: true,
     auditLogsReady: true,
@@ -360,7 +362,8 @@
         history: { imports: [], exports: [], syncs: [], backups: [] },
         google: { configured: false, connections: [] },
         fallback: ""
-      }
+      },
+      budgets: emptyBudgetBundle()
     },
     moduleErrors: [],
     lastRefreshAt: "",
@@ -4244,6 +4247,7 @@
         fallback: {}
       },
       importExport: demoImportExportSnapshot(),
+      budgets: normalizeBudgetBundle(demoBudgetBundle()),
       leadActivity: [],
       userProfiles: [
         normalizeUserProfile({
@@ -4372,6 +4376,7 @@
       state.groundskeeperAiReady = true;
       state.documentationReady = true;
       state.importExportReady = true;
+      state.budgetsReady = true;
       state.leadActivityReady = true;
       state.userProfilesReady = true;
       state.auditLogsReady = true;
@@ -4400,6 +4405,7 @@
       groundskeeperAi,
       documentation,
       importExport,
+      budgets,
       leadActivity,
       userProfiles,
       auditLogs
@@ -4423,6 +4429,7 @@
       loadModule("Groundskeeper AI", loadGroundskeeperAi, emptyGroundskeeperAiBundle),
       loadModule("documentation", loadDocumentation, () => normalizeDocumentationBundle()),
       loadModule("import/export", loadImportExportCenter, () => ({ modules: [], limits: {}, history: { imports: [], exports: [], syncs: [], backups: [] }, google: { configured: false, connections: [] }, fallback: "Import & Export Center could not be loaded." })),
+      loadModule("job budgets", loadBudgets, emptyBudgetBundle),
       loadModule("call history", loadLeadActivity, []),
       loadModule("user profiles", loadUserProfiles, []),
       loadModule("audit logs", loadAuditLogs, [])
@@ -4448,6 +4455,7 @@
       groundskeeperAi,
       documentation,
       importExport,
+      budgets,
       leadActivity,
       userProfiles,
       auditLogs
@@ -13927,6 +13935,9 @@
     restored.importExport = imported.importExport && typeof imported.importExport === "object"
       ? imported.importExport
       : fallback.importExport;
+    restored.budgets = imported.budgets && typeof imported.budgets === "object"
+      ? normalizeBudgetBundle(imported.budgets)
+      : fallback.budgets;
     state.data = restored;
     await render();
     setDashboardState("Backup imported into demo mode.");

@@ -6399,7 +6399,33 @@
 
   async function insertOperation(payload) {
     if (!state.operationsReady) {
-      throw new Error("Create the operations_records table first. See DASHBOARD_OPERATIONS_SQL.md.");
+      if (!isDemoMode()) {
+        const ticket = await insertJobTicket({
+          title: payload.title || "Task",
+          description: payload.description,
+          notes: payload.notes,
+          due_date: payload.due_date,
+          requested_service: payload.record_type || "task",
+          stage: String(payload.status || "") === "Done" ? "closed" : "sales_intake",
+          owner_label: payload.record_type === "equipment" ? "Tools" : "Tickets",
+          next_action: payload.title || "Review task",
+          source_type: "ticket"
+        });
+        if (!ticket) {
+          throw new Error("Job Tickets are not installed yet. Run supabase/migrations/20260714_job_ticket_foundation.sql.");
+        }
+        return normalizeOperation({
+          id: ticket.id,
+          record_type: payload.record_type || "task",
+          title: ticket.title || payload.title || "Task",
+          description: ticket.description || payload.description || null,
+          due_date: payload.due_date || null,
+          status: payload.status || "Open",
+          priority: payload.priority || "Normal",
+          notes: payload.notes || "",
+          created_at: new Date().toISOString()
+        });
+      }
     }
     if (isDemoMode()) {
       const operation = normalizeOperation({
@@ -9312,15 +9338,15 @@
   const ticketOwnerGroups = [
     {
       id: "sales",
-      label: "Sales",
-      title: "Sales owns intake, scope, and customer approval.",
-      detail: "Confirm the request, collect the missing details, prepare the quote, and hand approved work to Accounting.",
+      label: "Leads",
+      title: "Leads owns intake, scope, and customer approval.",
+      detail: "Confirm the request, collect the missing details, prepare the quote, and hand approved work to Money.",
       stages: ["draft", "sales_intake", "scope_in_progress", "quote_pending", "customer_approval_pending", "scope_change_requested"]
     },
     {
       id: "accounting",
-      label: "Accounting",
-      title: "Accounting owns cost review, approval, invoice prep, and payment.",
+      label: "Money",
+      title: "Money owns cost review, approval, invoice prep, and payment.",
       detail: "Check costs, get owner approval, prepare draft invoices, reconcile actuals, and track Square payment status.",
       stages: ["needs_budget", "budget_in_progress", "needs_owner_approval", "invoice_preparation", "invoice_review", "invoice_sent", "partially_paid", "paid"]
     },

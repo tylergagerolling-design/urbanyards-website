@@ -92,6 +92,8 @@ test("dashboard route aliases and new reliability diagnostics are wired", () => 
   assert.match(html, /data-dashboard-health/);
   assert.match(html, /copy-dashboard-diagnostics/);
   assert.match(js, /"route-planner": "calendar"/);
+  assert.doesNotMatch(js, /DASHBOARD_OPERATIONS_SQL/);
+  assert.match(js, /Job Tickets are not installed yet\. Run supabase\/migrations\/20260714_job_ticket_foundation\.sql/);
 });
 
 test("dashboard creates canonical job tickets without removing source fallbacks", () => {

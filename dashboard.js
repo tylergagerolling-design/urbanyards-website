@@ -1225,6 +1225,21 @@
     return permissions.includes("*") || permissions.includes(permission);
   }
 
+  function canCreateTicketType(type = "quote", role = currentSessionRole()) {
+    const normalizedRole = normalizeDashboardRole(role);
+    if (["owner", "admin", "manager"].includes(normalizedRole)) return true;
+    if (type === "field") return normalizedRole === "staff";
+    return ["sales_outreach", "staff"].includes(normalizedRole);
+  }
+
+  function canManageLeadWorkflow(role = currentSessionRole()) {
+    return ["owner", "admin", "manager", "sales_outreach", "staff"].includes(normalizeDashboardRole(role));
+  }
+
+  function canManageMoneyWorkflow(role = currentSessionRole()) {
+    return ["owner", "admin", "manager", "accountant"].includes(normalizeDashboardRole(role));
+  }
+
   function canManageUsers() {
     return ["owner", "admin"].includes(currentSessionRole());
   }
@@ -10080,6 +10095,10 @@
   function openTicketCreateDrawer(ticketType = "quote") {
     if (!els.detailDrawer || !els.detailContent) return;
     const safeType = ticketType === "field" ? "field" : "quote";
+    if (!canCreateTicketType(safeType)) {
+      setDashboardState("Your dashboard role cannot create that type of ticket.", "error");
+      return;
+    }
     openDetailDrawer();
     els.detailContent.innerHTML = `
       <div class="drawer-content ticket-detail-drawer">
@@ -10390,7 +10409,7 @@
             <p>Start here to see what needs attention, which tickets are moving through the workflow, and where Leads, Work, Money, and Tools need a handoff.</p>
           </div>
           <div class="ticket-hero-actions">
-            <button type="button" data-action="open-ticket-create" data-ticket-type="quote">New Job Ticket</button>
+            ${canCreateTicketType("quote") ? `<button type="button" data-action="open-ticket-create" data-ticket-type="quote">New Job Ticket</button>` : ""}
             <button type="button" data-action="go-work">Open Work</button>
           </div>
         </header>
@@ -10434,8 +10453,8 @@
             <p>Every request, quote, scheduled visit, work update, invoice step, and closeout flows through one job ticket workflow.</p>
           </div>
           <div class="ticket-hero-actions">
-            <button type="button" data-action="open-ticket-create" data-ticket-type="quote">New Job Ticket</button>
-            <button type="button" data-action="open-ticket-create" data-ticket-type="field">Schedule Visit</button>
+            ${canCreateTicketType("quote") ? `<button type="button" data-action="open-ticket-create" data-ticket-type="quote">New Job Ticket</button>` : ""}
+            ${canCreateTicketType("field") ? `<button type="button" data-action="open-ticket-create" data-ticket-type="field">Schedule Visit</button>` : ""}
           </div>
         </header>
         <section class="ticket-metrics" aria-label="Job ticket summary">
@@ -10487,7 +10506,7 @@
             <p>Simple job-ticket queue for on-site work, with route, photos, documents, and completion review close by.</p>
           </div>
           <div class="ticket-hero-actions">
-            <button type="button" data-action="open-ticket-create" data-ticket-type="field">Add Visit</button>
+            ${canCreateTicketType("field") ? `<button type="button" data-action="open-ticket-create" data-ticket-type="field">Add Visit</button>` : ""}
             <button type="button" data-action="go-route-planner">Open Route</button>
           </div>
         </header>
@@ -10590,8 +10609,8 @@
             <p>Move prospects from intake to quote approval, then hand approved work to Money for cost review.</p>
           </div>
           <div class="ticket-hero-actions">
-            <button type="button" data-action="new-outreach-prospect">Add Lead</button>
-            <button type="button" data-action="import-outreach-csv">Import CSV</button>
+            ${canManageLeadWorkflow() ? `<button type="button" data-action="new-outreach-prospect">Add Lead</button>` : ""}
+            ${hasDashboardPermission("import") ? `<button type="button" data-action="import-outreach-csv">Import CSV</button>` : ""}
           </div>
         </header>
         <section class="ticket-metrics" aria-label="Leads ticket summary">
@@ -10740,8 +10759,8 @@
             <p>Review ticket cost readiness, prepare draft invoices, track Square payment state, and close the financial record without splitting the job into a second system.</p>
           </div>
           <div class="ticket-hero-actions">
-            <button type="button" data-action="quick-add-quote">Create Estimate</button>
-            <button type="button" data-action="quick-add-invoice-reminder">Payment Follow-Up</button>
+            ${canManageMoneyWorkflow() ? `<button type="button" data-action="quick-add-quote">Create Estimate</button>` : ""}
+            ${canManageMoneyWorkflow() ? `<button type="button" data-action="quick-add-invoice-reminder">Payment Follow-Up</button>` : ""}
           </div>
         </header>
         <section class="ticket-metrics" aria-label="Money ticket summary">
@@ -17239,7 +17258,12 @@
         }
         return;
       } else if (action === "open-ticket-create") {
-        openTicketCreateDrawer(target.dataset.ticketType || "quote");
+        const ticketType = target.dataset.ticketType || "quote";
+        if (!canCreateTicketType(ticketType)) {
+          setDashboardState("Your dashboard role cannot create that type of ticket.", "error");
+          return;
+        }
+        openTicketCreateDrawer(ticketType);
       } else if (action === "open-ticket") {
         openTicketDrawer(target.dataset.ticketSource, id);
       } else if (action === "open-submission") {
@@ -17249,8 +17273,16 @@
       } else if (action === "reschedule-job") {
         openJobDrawer(id, { reschedule: true });
       } else if (action === "quick-add-job") {
+        if (!canCreateTicketType("field")) {
+          setDashboardState("Your dashboard role cannot create work visits.", "error");
+          return;
+        }
         openTicketCreateDrawer("field");
       } else if (action === "quick-add-quote") {
+        if (!canCreateTicketType("quote")) {
+          setDashboardState("Your dashboard role cannot create job tickets.", "error");
+          return;
+        }
         openTicketCreateDrawer("quote");
       } else if (action === "quick-add-follow-up" || action === "quick-add-invoice-reminder") {
         setActiveSection("overview");
@@ -17279,8 +17311,16 @@
         const input = qs("[data-client-form] input[name='name']");
         if (input) input.focus();
       } else if (action === "new-outreach-prospect") {
+        if (!canManageLeadWorkflow()) {
+          setDashboardState("Your dashboard role cannot manage leads.", "error");
+          return;
+        }
         openOutreachDrawer();
       } else if (action === "import-outreach-csv") {
+        if (!hasDashboardPermission("import")) {
+          setDashboardState("Your dashboard role cannot import leads.", "error");
+          return;
+        }
         if (els.outreachImport) els.outreachImport.click();
       } else if (action === "confirm-outreach-import") {
         try {
@@ -18015,6 +18055,10 @@
         event.preventDefault();
         const formData = new FormData(event.target);
         const ticketType = String(formData.get("ticket_type") || "quote");
+        if (!canCreateTicketType(ticketType)) {
+          setDashboardState("Your dashboard role cannot create that type of ticket.", "error");
+          return;
+        }
         const customerName = String(formData.get("customer_name") || "").trim();
         const service = String(formData.get("service") || "").trim();
         const city = String(formData.get("city") || "").trim();

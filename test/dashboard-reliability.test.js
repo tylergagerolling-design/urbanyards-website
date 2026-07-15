@@ -207,6 +207,12 @@ test("dashboard route aliases and new reliability diagnostics are wired", () => 
   assert.match(js, /function visibleDashboardWorkspaceLinks/);
   assert.match(js, /dashboardWorkspaceLinks\.filter\(\(item\) => canAccessDashboardSection\(item\.id, role\)\)/);
   assert.match(js, /const links = visibleDashboardWorkspaceLinks\(\)/);
+  assert.match(js, /function canCreateTicketType/);
+  assert.match(js, /function canManageLeadWorkflow/);
+  assert.match(js, /function canManageMoneyWorkflow/);
+  assert.match(js, /Your dashboard role cannot create that type of ticket/);
+  assert.match(js, /Your dashboard role cannot manage leads/);
+  assert.match(js, /Your dashboard role cannot import leads/);
   assert.match(js, /function renderWorkspaceFocusStrip/);
   assert.match(js, /function renderTicketEndToEndFlow/);
   assert.match(js, /data-ticket-lifecycle-map/);

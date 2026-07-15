@@ -827,11 +827,53 @@
     return 2;
   }
 
+  function ticketActionUrgency(ticket, today = todayKey()) {
+    const stage = ticketStage(ticket);
+    if (["paused", "needs_owner_approval", "field_work_complete", "completion_review", "invoice_review", "invoice_sent", "partially_paid"].includes(stage)) return 0;
+    if (["needs_budget", "budget_in_progress", "quote_pending", "customer_approval_pending", "scope_change_requested"].includes(stage)) return 1;
+    if (["sales_intake", "scope_in_progress", "ready_to_schedule"].includes(stage)) return 2;
+    const dateRaw = dateKey(ticket.dateRaw);
+    if (dateRaw && dateRaw <= today) return 2;
+    return 3;
+  }
+
+  function ticketActionItems(data = state.data) {
+    const today = todayKey();
+    return dashboardTickets(data)
+      .filter(ticketIsOpen)
+      .map((ticket) => {
+        const stage = ticketStage(ticket);
+        const transitionMissing = ticketTransitionOptions(ticket).flatMap((item) => item.missing || []);
+        const currentMissing = ticket.source === "ticket" ? ticketMissingRequirementsForStage(ticket, stage) : [];
+        const blockers = Array.from(new Set([...(ticket.blockers || []), ...currentMissing, ...transitionMissing].filter(Boolean))).slice(0, 4);
+        const urgency = ticketActionUrgency(ticket, today);
+        return {
+          type: "ticket",
+          status: ticketStageLabel(stage),
+          urgency,
+          title: `${ticket.number || "Ticket"} / ${ticket.customer || ticket.title}`,
+          detail: blockers.length
+            ? `Missing: ${blockers.join(", ")}`
+            : `${ticket.ownerLabel || "Unassigned"} / ${ticket.nextAction || "Open ticket"}`,
+          action: "open-ticket",
+          actionLabel: "Open Ticket",
+          id: ticket.id,
+          ticketSource: ticket.source,
+          blockerCount: blockers.length
+        };
+      })
+      .filter((item) => item.blockerCount || item.urgency < 3)
+      .sort((a, b) => (a.urgency - b.urgency) || (b.blockerCount - a.blockerCount) || String(a.title).localeCompare(String(b.title)))
+      .slice(0, 6);
+  }
+
   function todayActionItems(data = state.data) {
     const today = todayKey();
     const soon = daysFromToday(3);
     const items = [];
     const push = (item) => items.push({ id: `${item.type || "item"}-${item.id || items.length}`, ...item });
+
+    ticketActionItems(data).forEach(push);
 
     overdueJobs(data).slice(0, 4).forEach((job) => push({
       type: "job",
@@ -947,6 +989,7 @@
   function renderTodayActionButton(item) {
     const attrs = [`type="button"`, `data-action="${escapeHtml(item.action)}"`];
     if (item.id) attrs.push(`data-id="${escapeHtml(item.id)}"`);
+    if (item.ticketSource) attrs.push(`data-ticket-source="${escapeHtml(item.ticketSource)}"`);
     if (item.leadType) attrs.push(`data-lead-type="${escapeHtml(item.leadType)}"`);
     if (item.phone) attrs.push(`data-phone="${escapeHtml(item.phone)}"`);
     if (item.importView) attrs.push(`data-import-export-view="${escapeHtml(item.importView)}"`);

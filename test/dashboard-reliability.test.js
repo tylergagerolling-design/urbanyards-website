@@ -124,6 +124,9 @@ test("dashboard route aliases and new reliability diagnostics are wired", () => 
   assert.match(js, /function ticketLane\(ticket = \{\}\)/);
   assert.match(js, /function ticketIsOpen\(ticket = \{\}\)/);
   assert.match(js, /function ticketInLane\(ticket = \{\}, lanes = \[\]\)/);
+  assert.match(js, /function ticketActionItems\(data = state\.data\)/);
+  assert.match(js, /ticketActionItems\(data\)\.forEach\(push\)/);
+  assert.match(js, /data-ticket-source="\$\{escapeHtml\(item\.ticketSource\)\}"/);
   assert.match(js, /function ticketsInStages\(tickets, stages\) \{\s*return tickets\.filter\(\(ticket\) => ticketInStage\(ticket, stages \|\| \[\]\)\);/);
   assert.match(js, /ticketInLane\(ticket, \["ready", "field", "review"\]\)/);
   assert.match(js, /ticketInLane\(ticket, \["sales"\]\)/);

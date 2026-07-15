@@ -448,6 +448,7 @@ test("dashboard ticket backend adapts legacy dashboard actors to rebuilt workflo
     permissionOverrides: [],
     deniedPermissions: []
   });
+  assert.equal(ticketFunctionInternals.actorForWorkflow({ role: "staff", userId: "staff-1" }).role, ROLES.STAFF);
   assert.equal(ticketFunctionInternals.actorForWorkflow({ role: "field", userId: "field-1" }).role, ROLES.FIELD_WORKER);
   assert.equal(ticketFunctionInternals.actorForWorkflow({ role: "sales", userId: "sales-1" }).role, ROLES.SALES_OUTREACH);
   assert.equal(ticketFunctionInternals.actorForWorkflow({ role: "accounting", userId: "acct-1" }).role, ROLES.ACCOUNTANT);

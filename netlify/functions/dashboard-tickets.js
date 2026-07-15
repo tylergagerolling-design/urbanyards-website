@@ -202,7 +202,8 @@ function cleanEventPayload(input = {}, ticketId, actor = null) {
 
 function workflowRole(role) {
   const normalized = String(role || "").trim().toLowerCase();
-  if (["owner", "admin", "manager", "staff"].includes(normalized)) return "owner";
+  if (["owner", "admin", "manager"].includes(normalized)) return "owner";
+  if (normalized === "staff") return "staff";
   if (["sales", "sales_outreach"].includes(normalized)) return "sales_outreach";
   if (["field", "crew", "employee", "worker", "field_worker"].includes(normalized)) return "field_worker";
   if (["accounting", "accountant"].includes(normalized)) return "accountant";

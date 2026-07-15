@@ -161,6 +161,12 @@ test("dashboard creates canonical job tickets without removing source fallbacks"
   assert.match(js, /async function loadCanonicalTicketEvents/);
   assert.match(js, /function renderTicketHistory/);
   assert.match(js, /function renderTicketDocumentSource/);
+  assert.match(js, /const ticketLifecycleTransitions = \{/);
+  assert.match(js, /function renderTicketCommandCenter/);
+  assert.match(js, /data-action="transition-ticket-stage"/);
+  assert.match(js, /data-action="save-ticket-command"/);
+  assert.match(js, /ticketMissingRequirementsForStage/);
+  assert.match(js, /ticketRequirementLabel/);
   assert.match(js, /fetch\("\/\.netlify\/functions\/dashboard-tickets"/);
   assert.match(js, /dashboardTicketRequest\("list"/);
   assert.match(js, /dashboardTicketRequest\("events"/);

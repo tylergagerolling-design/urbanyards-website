@@ -9301,7 +9301,32 @@
       dateLabel: row.date_label || formatDate(dateRaw) || "No date",
       nextAction: row.next_action || ticketNextAction(stage),
       blockers: normalizeTicketBlockers(row.blockers || row.missing_requirements, stage),
-      sourceLabel: ticketSourceLabel({ sourceType })
+      sourceLabel: ticketSourceLabel({ sourceType }),
+      customerId: row.customer_id || row.customerId || "",
+      propertyId: row.property_id || row.propertyId || "",
+      assignedUserId: row.assigned_user_id || row.assignedUserId || "",
+      primaryContact: row.contact_name || row.primary_contact || row.primaryContact || row.customer_name || "",
+      requestedService: row.requested_service || row.service || row.requestedService || "",
+      scopeOfWork: row.scope_of_work || row.scopeOfWork || row.description || "",
+      proposedPrice: row.proposed_price ?? row.proposedPrice ?? "",
+      expectedRevenue: row.expected_revenue ?? row.expectedRevenue ?? "",
+      estimatedTotalCost: row.estimated_total_cost ?? row.estimatedTotalCost ?? "",
+      estimatedProfit: row.estimated_profit ?? row.estimatedProfit ?? "",
+      targetMargin: row.target_margin ?? row.targetMargin ?? "",
+      paymentStatus: row.payment_status || row.paymentStatus || "",
+      internalNotes: row.internal_notes || row.internalNotes || "",
+      customerApprovalRecorded: Boolean(row.customer_approval_recorded || row.customerApprovalRecorded),
+      costReviewComplete: Boolean(row.cost_review_complete || row.costReviewComplete),
+      budgetComplete: Boolean(row.budget_complete || row.budgetComplete),
+      scopeComplete: Boolean(row.scope_complete || row.scopeComplete),
+      ownerApprovalRecorded: Boolean(row.owner_approval_recorded || row.ownerApprovalRecorded),
+      draftInvoiceExists: Boolean(row.draft_invoice_exists || row.draftInvoiceExists),
+      depositRequired: Boolean(row.deposit_required || row.depositRequired),
+      depositPaid: Boolean(row.deposit_paid || row.depositPaid),
+      beforePhotosUploaded: Boolean(row.before_photos_uploaded || row.beforePhotosUploaded || row.arrival_photos_uploaded || row.arrivalPhotosUploaded),
+      afterPhotosUploaded: Boolean(row.after_photos_uploaded || row.afterPhotosUploaded || row.completion_photos_uploaded || row.completionPhotosUploaded),
+      fieldCompletionNotes: row.field_completion_notes || row.fieldCompletionNotes || "",
+      invoiceFinalized: Boolean(row.invoice_finalized || row.invoiceFinalized)
     };
   }
 
@@ -9574,6 +9599,173 @@
       ${blockers.length ? `<ul class="ticket-requirement-list">
         ${blockers.map((item) => `<li><span aria-hidden="true"></span>${escapeHtml(item)}</li>`).join("")}
       </ul>` : `<p class="ticket-drawer-note">No blockers are known for this stage. This ticket can move to the next owner when the working details are saved.</p>`}
+    </section>`;
+  }
+
+  const ticketLifecycleTransitions = {
+    draft: [{ to: "sales_intake", label: "Start intake", detail: "Move this ticket into lead intake." }],
+    sales_intake: [
+      { to: "scope_in_progress", label: "Start scope", detail: "Begin confirming the service, site, and quote details." },
+      { to: "cancelled", label: "Cancel ticket", detail: "Close this ticket as cancelled." }
+    ],
+    scope_in_progress: [
+      { to: "quote_pending", label: "Quote pending", detail: "Scope is ready for quote preparation." },
+      { to: "cancelled", label: "Cancel ticket", detail: "Close this ticket as cancelled." }
+    ],
+    quote_pending: [
+      { to: "customer_approval_pending", label: "Send for approval", detail: "Quote has been prepared and needs customer approval." },
+      { to: "scope_in_progress", label: "Return to scope", detail: "Send back to scope if details are missing." }
+    ],
+    customer_approval_pending: [
+      { to: "needs_budget", label: "Customer approved", detail: "Send approved work into internal cost review." },
+      { to: "scope_in_progress", label: "Return to scope", detail: "Revise the scope before approving." }
+    ],
+    needs_budget: [
+      { to: "budget_in_progress", label: "Start cost review", detail: "Begin internal labor/material/equipment review." },
+      { to: "scope_in_progress", label: "Return to Leads", detail: "Send back for scope clarification." }
+    ],
+    budget_in_progress: [
+      { to: "needs_owner_approval", label: "Submit to owner", detail: "Cost review is ready for owner approval." },
+      { to: "scope_in_progress", label: "Return to Leads", detail: "Send back for scope clarification." }
+    ],
+    needs_owner_approval: [
+      { to: "invoice_preparation", label: "Approve", detail: "Owner approved. Prepare the invoice/draft money handoff." },
+      { to: "budget_in_progress", label: "Return to cost review", detail: "Send back to Money for changes." },
+      { to: "scope_in_progress", label: "Return to Leads", detail: "Send back to scope work." },
+      { to: "cancelled", label: "Cancel ticket", detail: "Close this ticket as cancelled." }
+    ],
+    invoice_preparation: [
+      { to: "ready_to_schedule", label: "Ready to schedule", detail: "Invoice prep is done. Hand off to Work." },
+      { to: "needs_owner_approval", label: "Return to owner", detail: "Needs another owner review before scheduling." }
+    ],
+    ready_to_schedule: [{ to: "scheduled", label: "Mark scheduled", detail: "A field visit is on the calendar." }],
+    scheduled: [
+      { to: "in_progress", label: "Start work", detail: "Field work has started." },
+      { to: "scope_change_requested", label: "Request scope change", detail: "Work needs a scope or approval change." },
+      { to: "cancelled", label: "Cancel ticket", detail: "Close this ticket as cancelled." }
+    ],
+    in_progress: [
+      { to: "paused", label: "Pause work", detail: "Work is blocked or waiting." },
+      { to: "scope_change_requested", label: "Request scope change", detail: "Work needs a scope or approval change." },
+      { to: "field_work_complete", label: "Field complete", detail: "Send completed field work to review." }
+    ],
+    paused: [
+      { to: "in_progress", label: "Resume work", detail: "Blocker resolved and work can continue." },
+      { to: "scope_change_requested", label: "Request scope change", detail: "Escalate the blocker into owner review." }
+    ],
+    scope_change_requested: [
+      { to: "in_progress", label: "Approve change", detail: "Approve and return to field work." },
+      { to: "budget_in_progress", label: "Needs cost review", detail: "Send change to Money before field work continues." },
+      { to: "scope_in_progress", label: "Return to Leads", detail: "Send change back for scope clarification." }
+    ],
+    field_work_complete: [{ to: "completion_review", label: "Start completion review", detail: "Review photos, forms, and actuals." }],
+    completion_review: [{ to: "invoice_review", label: "Send to invoice review", detail: "Completion review is ready for Money." }],
+    invoice_review: [{ to: "invoice_sent", label: "Invoice sent", detail: "Final invoice has been sent." }],
+    invoice_sent: [
+      { to: "partially_paid", label: "Record partial payment", detail: "Payment has started but is not complete." },
+      { to: "paid", label: "Record paid", detail: "Invoice is fully paid." }
+    ],
+    partially_paid: [{ to: "paid", label: "Record paid", detail: "Invoice is fully paid." }],
+    paid: [{ to: "closed", label: "Close ticket", detail: "The job ticket is complete and paid." }],
+    closed: [],
+    cancelled: []
+  };
+
+  const ticketRequiredFieldsByStage = {
+    needs_budget: ["customerId", "propertyId", "primaryContact", "requestedService", "scopeOfWork", "proposedPrice", "customerApprovalRecorded"],
+    needs_owner_approval: ["costReviewComplete", "expectedRevenue", "estimatedTotalCost", "estimatedProfit", "targetMargin"],
+    ready_to_schedule: ["scopeComplete", "customerApprovalRecorded", "costReviewComplete", "ownerApprovalRecorded", "draftInvoiceExists"],
+    scheduled: ["dateRaw", "assignedUserId"],
+    field_work_complete: ["beforePhotosUploaded", "afterPhotosUploaded", "fieldCompletionNotes"],
+    closed: ["invoiceFinalized", "paymentStatus"]
+  };
+
+  function ticketRequirementLabel(field) {
+    return ({
+      customerId: "Client linked",
+      propertyId: "Property linked",
+      primaryContact: "Contact set",
+      requestedService: "Service set",
+      scopeOfWork: "Scope of work",
+      proposedPrice: "Proposed price",
+      customerApprovalRecorded: "Customer approval",
+      costReviewComplete: "Cost review complete",
+      expectedRevenue: "Expected revenue",
+      estimatedTotalCost: "Estimated cost",
+      estimatedProfit: "Estimated profit",
+      targetMargin: "Target margin",
+      scopeComplete: "Scope complete",
+      ownerApprovalRecorded: "Owner approval",
+      draftInvoiceExists: "Draft invoice",
+      depositPaid: "Deposit paid",
+      requiredDocumentsPresent: "Required documents",
+      dateRaw: "Scheduled date",
+      assignedUserId: "Assigned team member",
+      beforePhotosUploaded: "Arrival photos",
+      afterPhotosUploaded: "Completion photos",
+      fieldCompletionNotes: "Field completion notes",
+      invoiceFinalized: "Final invoice",
+      paymentStatus: "Paid status"
+    })[field] || titleCase(String(field || "").replace(/_/g, " "));
+  }
+
+  function ticketHasRequirementValue(ticket, field) {
+    if (field === "paymentStatus") return statusText(ticket.paymentStatus) === "paid";
+    if (field === "costReviewComplete") return Boolean(ticket.costReviewComplete || ticket.budgetComplete);
+    if (field === "dateRaw") return Boolean(ticket.dateRaw && ticket.dateLabel !== "No date");
+    const value = ticket[field];
+    return value !== undefined && value !== null && value !== "" && value !== false;
+  }
+
+  function ticketMissingRequirementsForStage(ticket, stage) {
+    const normalized = normalizeTicketStageForDashboard(stage);
+    const missing = (ticketRequiredFieldsByStage[normalized] || [])
+      .filter((field) => !ticketHasRequirementValue(ticket, field));
+    if (normalized === "ready_to_schedule") {
+      if (ticket.depositRequired && !ticket.depositPaid) missing.push("depositPaid");
+      if (ticket.requiredDocumentsPresent === false) missing.push("requiredDocumentsPresent");
+    }
+    return missing.map(ticketRequirementLabel);
+  }
+
+  function ticketTransitionOptions(ticket) {
+    const stage = ticketStage(ticket);
+    return (ticketLifecycleTransitions[stage] || []).map((item) => ({
+      ...item,
+      missing: ticketMissingRequirementsForStage(ticket, item.to),
+      nextAction: ticketNextAction(item.to)
+    }));
+  }
+
+  function renderTicketCommandCenter(ticket) {
+    const isCanonical = ticket?.source === "ticket";
+    const transitions = ticketTransitionOptions(ticket || {});
+    return `<section class="ticket-drawer-card ticket-command-card" data-ticket-command-panel data-ticket-id="${escapeHtml(ticket?.id || "")}">
+      <div class="ticket-drawer-card-heading">
+        <div>
+          <h4>Ticket command center</h4>
+          <span>${escapeHtml(isCanonical ? "Move this ticket through the workflow." : "Create or open the unified ticket before moving stages.")}</span>
+        </div>
+      </div>
+      <label class="ticket-command-field">Next action
+        <input data-ticket-next-action-input value="${escapeHtml(ticket?.nextAction || "")}" placeholder="What needs to happen next?">
+      </label>
+      <label class="ticket-command-field">Internal note
+        <textarea data-ticket-transition-notes rows="3" placeholder="Optional note for the ticket history...">${escapeHtml(ticket?.internalNotes || "")}</textarea>
+      </label>
+      ${isCanonical ? `<div class="ticket-transition-grid">
+        ${transitions.length ? transitions.map((item) => {
+          const missing = item.missing || [];
+          const disabled = missing.length ? " disabled aria-disabled=\"true\"" : "";
+          return `<button type="button" data-action="transition-ticket-stage" data-id="${escapeHtml(ticket.id)}" data-stage="${escapeHtml(item.to)}" data-next-action="${escapeHtml(item.nextAction)}"${disabled}>
+            <strong>${escapeHtml(item.label)}</strong>
+            <small>${escapeHtml(missing.length ? `Missing: ${missing.join(", ")}` : item.detail)}</small>
+          </button>`;
+        }).join("") : `<p class="ticket-drawer-note">No more workflow moves are available from ${escapeHtml(ticket.stageLabel || "this stage")}.</p>`}
+      </div>
+      <div class="drawer-actions ticket-command-actions">
+        <button type="button" data-action="save-ticket-command" data-id="${escapeHtml(ticket.id)}">${buttonContent("Save Ticket Note", "save")}</button>
+      </div>` : `<p class="ticket-drawer-note">This is still a source record preview. Open or create the unified ticket to use lifecycle controls.</p>`}
     </section>`;
   }
 
@@ -9860,6 +10052,7 @@
           <div class="drawer-field"><span>Date</span>${escapeHtml(ticket.dateLabel || "No date")}</div>
           <div class="drawer-field span-full"><span>Details</span>${escapeHtml(ticket.detail || "No details yet.")}</div>
         </div>
+        ${renderTicketCommandCenter(ticket)}
         ${renderTicketHandoffActions(ticket)}
         ${renderTicketRequirements(ticket)}
         ${renderTicketHistory(ticket)}
@@ -16669,6 +16862,46 @@
         } catch (error) {
           setDashboardState(error.message || "Unable to move ticket forward.", "error");
         }
+        return;
+      } else if (action === "transition-ticket-stage") {
+        const nextStage = target.dataset.stage;
+        const panel = target.closest("[data-ticket-command-panel]");
+        const noteInput = panel?.querySelector("[data-ticket-transition-notes]");
+        const nextActionInput = panel?.querySelector("[data-ticket-next-action-input]");
+        try {
+          setDashboardState("Moving ticket...");
+          const ticket = await transitionJobTicketStage(id, nextStage, {
+            notes: noteInput?.value || "",
+            nextAction: nextActionInput?.value || target.dataset.nextAction || ticketNextAction(nextStage)
+          });
+          await refreshDashboard();
+          openTicketDrawer("ticket", ticket?.id || id);
+          setDashboardState(`Ticket moved to ${ticketStageLabel(normalizeTicketStageForDashboard(nextStage))}.`);
+        } catch (error) {
+          setDashboardState(error.message || "Unable to move ticket.", "error");
+        }
+        return;
+      } else if (action === "save-ticket-command") {
+        const panel = target.closest("[data-ticket-command-panel]");
+        const noteInput = panel?.querySelector("[data-ticket-transition-notes]");
+        const nextActionInput = panel?.querySelector("[data-ticket-next-action-input]");
+        try {
+          setDashboardState("Saving ticket note...");
+          const ticket = await updateJobTicket(id, {
+            internal_notes: noteInput?.value || "",
+            next_action: nextActionInput?.value || ""
+          });
+          await insertJobTicketEvent(id, {
+            event_type: "ticket_note_saved",
+            notes: noteInput?.value || "Ticket note updated."
+          });
+          await refreshDashboard();
+          openTicketDrawer("ticket", ticket?.id || id);
+          setDashboardState("Ticket note saved.");
+        } catch (error) {
+          setDashboardState(error.message || "Unable to save ticket note.", "error");
+        }
+        return;
       } else if (action === "open-ticket-create") {
         openTicketCreateDrawer(target.dataset.ticketType || "quote");
       } else if (action === "open-ticket") {

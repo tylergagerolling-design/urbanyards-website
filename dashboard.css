@@ -15000,6 +15000,97 @@ body:not(.is-login-screen) .ticket-handoff-card {
     rgba(255, 255, 255, .82);
 }
 
+body:not(.is-login-screen) .ticket-command-card {
+  display: grid;
+  gap: 12px;
+  background:
+    radial-gradient(circle at 100% 0%, rgba(90, 128, 75, .13), transparent 34%),
+    rgba(255, 255, 255, .86);
+}
+
+body:not(.is-login-screen) .ticket-command-card .ticket-drawer-card-heading {
+  margin-bottom: 0;
+}
+
+body:not(.is-login-screen) .ticket-command-field {
+  display: grid;
+  gap: 7px;
+  color: var(--uy-green);
+  font-weight: 850;
+}
+
+body:not(.is-login-screen) .ticket-command-field input,
+body:not(.is-login-screen) .ticket-command-field textarea {
+  width: 100%;
+  border: 1px solid rgba(73, 102, 77, .18);
+  border-radius: 14px;
+  background: rgba(255, 255, 255, .86);
+  color: var(--uy-ink);
+  font: inherit;
+}
+
+body:not(.is-login-screen) .ticket-command-field input {
+  min-height: 42px;
+  padding: 0 12px;
+}
+
+body:not(.is-login-screen) .ticket-command-field textarea {
+  min-height: 82px;
+  padding: 12px;
+  resize: vertical;
+}
+
+body:not(.is-login-screen) .ticket-command-field input:focus,
+body:not(.is-login-screen) .ticket-command-field textarea:focus {
+  outline: 3px solid rgba(217, 182, 111, .28);
+  border-color: rgba(18, 63, 49, .42);
+}
+
+body:not(.is-login-screen) .ticket-transition-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+  gap: 8px;
+}
+
+body:not(.is-login-screen) .ticket-transition-grid button {
+  display: grid;
+  gap: 4px;
+  min-height: 70px;
+  padding: 11px 12px;
+  border: 1px solid rgba(18, 63, 49, .16);
+  border-radius: 14px;
+  background: rgba(255, 255, 255, .82);
+  color: var(--uy-green);
+  text-align: left;
+  box-shadow: 0 10px 22px rgba(19, 36, 28, .05);
+}
+
+body:not(.is-login-screen) .ticket-transition-grid button:not(:disabled):hover {
+  border-color: rgba(18, 63, 49, .34);
+  background: #f8fbf2;
+  transform: translateY(-1px);
+}
+
+body:not(.is-login-screen) .ticket-transition-grid button:disabled {
+  opacity: .62;
+  cursor: not-allowed;
+}
+
+body:not(.is-login-screen) .ticket-transition-grid button strong {
+  font-size: .94rem;
+}
+
+body:not(.is-login-screen) .ticket-transition-grid button small {
+  color: var(--uy-muted);
+  font-weight: 650;
+  line-height: 1.35;
+}
+
+body:not(.is-login-screen) .ticket-command-actions {
+  padding-top: 0;
+  border-top: 0;
+}
+
 body:not(.is-login-screen) .ticket-handoff-actions {
   display: grid;
   gap: 8px;

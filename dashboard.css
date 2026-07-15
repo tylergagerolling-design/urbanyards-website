@@ -14859,6 +14859,47 @@ body:not(.is-login-screen) .money-budget-actions > span:not(.budget-badge) {
   font-weight: 800;
 }
 
+body:not(.is-login-screen) .ticket-budget-bridge {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-top: 12px;
+  padding: 12px;
+  border: 1px solid rgba(73, 102, 77, .14);
+  border-radius: 16px;
+  background: rgba(238, 246, 231, .68);
+}
+
+body:not(.is-login-screen) .ticket-budget-bridge div {
+  display: grid;
+  gap: 3px;
+  min-width: 0;
+}
+
+body:not(.is-login-screen) .ticket-budget-bridge strong {
+  color: var(--uy-green);
+  font-size: .92rem;
+}
+
+body:not(.is-login-screen) .ticket-budget-bridge span {
+  color: var(--uy-muted);
+  font-size: .82rem;
+  line-height: 1.35;
+}
+
+body:not(.is-login-screen) .ticket-budget-bridge button {
+  flex: 0 0 auto;
+}
+
+body:not(.is-login-screen) .money-budget-drawer .budget-summary-totals {
+  margin: 0;
+}
+
+body:not(.is-login-screen) .drawer-money-budget-form {
+  margin-top: 4px;
+}
+
 body:not(.is-login-screen) .ticket-lane-heading {
   display: flex;
   justify-content: space-between;

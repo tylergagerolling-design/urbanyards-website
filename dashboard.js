@@ -2868,6 +2868,12 @@
     return calculator ? calculator.roundMoney(value) : Number(value || 0);
   }
 
+  function budgetNumberOrNull(value) {
+    if (value === undefined || value === null || value === "") return null;
+    const parsed = Number(value);
+    return Number.isFinite(parsed) ? budgetNumber(parsed) : null;
+  }
+
   function normalizeBudgetStatus(status) {
     return BUDGET_STATUSES.includes(status) ? status : "Draft";
   }
@@ -4863,6 +4869,13 @@
       due_date: blankToNull(input.due_date || input.dueDate),
       owner_label: blankToNull(input.owner_label || input.ownerLabel),
       next_action: blankToNull(input.next_action || input.nextAction),
+      proposed_price: budgetNumberOrNull(input.proposed_price ?? input.proposedPrice),
+      expected_revenue: budgetNumberOrNull(input.expected_revenue ?? input.expectedRevenue),
+      estimated_total_cost: budgetNumberOrNull(input.estimated_total_cost ?? input.estimatedTotalCost),
+      estimated_profit: budgetNumberOrNull(input.estimated_profit ?? input.estimatedProfit),
+      target_margin: budgetNumberOrNull(input.target_margin ?? input.targetMargin),
+      cost_review_complete: Boolean(input.cost_review_complete ?? input.costReviewComplete),
+      budget_complete: Boolean(input.budget_complete ?? input.budgetComplete),
       blockers: Array.isArray(input.blockers) ? input.blockers.filter(Boolean) : undefined
     };
   }
@@ -4926,6 +4939,17 @@
     if (Object.prototype.hasOwnProperty.call(input, "internal_notes") || Object.prototype.hasOwnProperty.call(input, "internalNotes")) {
       payload.internal_notes = blankToNull(input.internal_notes || input.internalNotes);
     }
+    [
+      ["proposed_price", "proposedPrice"],
+      ["expected_revenue", "expectedRevenue"],
+      ["estimated_total_cost", "estimatedTotalCost"],
+      ["estimated_profit", "estimatedProfit"],
+      ["target_margin", "targetMargin"]
+    ].forEach(([snake, camel]) => {
+      if (Object.prototype.hasOwnProperty.call(input, snake) || Object.prototype.hasOwnProperty.call(input, camel)) {
+        payload[snake] = budgetNumberOrNull(input[snake] ?? input[camel]);
+      }
+    });
     textFields.forEach(([snake, camel]) => {
       if (Object.prototype.hasOwnProperty.call(input, snake) || Object.prototype.hasOwnProperty.call(input, camel)) {
         payload[snake] = blankToNull(input[snake] ?? input[camel]);
@@ -5591,6 +5615,106 @@
       notes: budget.notes
     };
     return insertBudget(payload);
+  }
+
+  function budgetJobStatusFromTicket(ticket = {}) {
+    const stage = ticketStage(ticket);
+    if (["scheduled"].includes(stage)) return "Scheduled";
+    if (["in_progress", "paused", "scope_change_requested"].includes(stage)) return "In Progress";
+    if (["field_work_complete", "completion_review", "invoice_review", "invoice_sent", "partially_paid", "paid", "closed"].includes(stage)) return "Completed";
+    return "Not Scheduled";
+  }
+
+  function findBudgetForTicket(ticket = {}, bundle = activeBudgetBundle()) {
+    if (!ticket) return null;
+    const sourceType = ticket.sourceType || ticket.source;
+    const sourceId = String(ticket.sourceId || (sourceType !== "ticket" ? ticket.id : "") || "");
+    const sourcePairs = [
+      ["jobId", sourceType === "job" ? sourceId : ""],
+      ["quoteId", sourceType === "quote" ? sourceId : ""],
+      ["invoiceId", sourceType === "document" ? sourceId : ""]
+    ].filter(([, value]) => value);
+    return (bundle.budgets || []).find((budget) => {
+      return sourcePairs.some(([key, value]) => String(budget[key] || "") === String(value));
+    }) || null;
+  }
+
+  function budgetPayloadFromTicket(ticket = {}) {
+    const sourceType = ticket.sourceType || ticket.source;
+    const sourceId = ticket.sourceId || (sourceType !== "ticket" ? ticket.id : "");
+    const title = ticket.title || ticket.requestedService || ticket.serviceType || "Job Budget";
+    const proposedPrice = budgetNumberOrNull(ticket.proposedPrice || ticket.expectedRevenue);
+    return {
+      budget_name: `${title} Budget`.trim(),
+      job_id: sourceType === "job" ? sourceId : null,
+      quote_id: sourceType === "quote" ? sourceId : null,
+      invoice_id: sourceType === "document" ? sourceId : null,
+      client_id: uuidOrNull(ticket.customerId),
+      property_id: uuidOrNull(ticket.propertyId),
+      client_name: ticket.customer || ticket.primaryContact || "",
+      property_name: ticket.property || ticket.city || "",
+      job_name: title,
+      service_type: ticket.requestedService || title,
+      job_description: ticket.scopeOfWork || ticket.detail || "",
+      proposed_start_date: ticket.dateRaw && ticket.dateLabel !== "No date" ? ticket.dateRaw : null,
+      status: "Draft",
+      job_status: budgetJobStatusFromTicket(ticket),
+      target_margin_percent: activeBudgetBundle().settings.default_target_margin || BUDGET_DEFAULT_SETTINGS.default_target_margin,
+      base_quoted_price: proposedPrice || 0,
+      notes: [
+        `Created from ${ticket.number || "Job Ticket"}.`,
+        ticket.internalNotes || ticket.detail || ""
+      ].filter(Boolean).join("\n\n")
+    };
+  }
+
+  async function ensureBudgetForTicket(ticket = {}) {
+    if (!canManageMoneyWorkflow()) throw new Error("Your dashboard role cannot prepare job budgets.");
+    const existing = findBudgetForTicket(ticket);
+    if (existing) return { budget: existing, created: false };
+    if (!state.budgetsReady && !isDemoMode()) {
+      throw new Error(state.budgetsError || "Budget records are not connected yet. Money can still hold this ticket in cost review.");
+    }
+    const budget = await insertBudget(budgetPayloadFromTicket(ticket));
+    if (ticket.source === "ticket" && ticket.id) {
+      await insertJobTicketEvent(ticket.id, {
+        event_type: "budget_prepared",
+        title: "Budget prepared",
+        notes: "Money created a draft budget for this ticket."
+      });
+    }
+    return { budget, created: true };
+  }
+
+  async function syncBudgetToTicket(budget = {}) {
+    if (!canManageMoneyWorkflow()) throw new Error("Your dashboard role cannot complete cost review.");
+    const ticket = findTicketForBudget(budget);
+    if (!ticket || ticket.source !== "ticket") throw new Error("Create or open the unified ticket before syncing budget review.");
+    const summary = budgetSummary(budget);
+    const expectedRevenue = Number(summary.expectedRevenue || budget.expectedRevenue || budget.baseQuotedPrice || 0);
+    const estimatedCost = Number(summary.totalEstimatedCost || 0);
+    const estimatedProfit = Number(summary.estimatedProfit || (expectedRevenue - estimatedCost));
+    await updateJobTicket(ticket.id, {
+      expected_revenue: expectedRevenue,
+      estimated_total_cost: estimatedCost,
+      estimated_profit: estimatedProfit,
+      target_margin: budget.targetMarginPercent || activeBudgetBundle().settings.default_target_margin,
+      cost_review_complete: true,
+      budget_complete: true,
+      next_action: "Owner approval"
+    });
+    await insertJobTicketEvent(ticket.id, {
+      event_type: "budget_synced",
+      title: "Budget synced to ticket",
+      notes: `Expected revenue ${budgetCurrency(expectedRevenue)}, estimated cost ${budgetCurrency(estimatedCost)}, estimated profit ${budgetCurrency(estimatedProfit)}.`
+    });
+    if (["needs_budget", "budget_in_progress"].includes(ticketStage(ticket))) {
+      return transitionJobTicketStage(ticket.id, "needs_owner_approval", {
+        notes: "Cost review completed from the Money budget.",
+        nextAction: ticketNextAction("needs_owner_approval")
+      });
+    }
+    return ticket;
   }
 
   async function saveBudgetSettingsFromForm(form) {
@@ -9980,6 +10104,22 @@
     }));
   }
 
+  function renderTicketBudgetBridge(ticket = {}) {
+    if (!["needs_budget", "budget_in_progress", "needs_owner_approval"].includes(ticketStage(ticket))) return "";
+    if (!canManageMoneyWorkflow()) return "";
+    const budget = findBudgetForTicket(ticket);
+    const setupBlocked = !state.budgetsReady && !isDemoMode();
+    return `<div class="ticket-budget-bridge">
+      <div>
+        <strong>${escapeHtml(budget ? "Money budget is linked" : "Money budget needed")}</strong>
+        <span>${escapeHtml(budget ? `${budget.budgetName} / ${budget.status}` : "Create the internal cost review record for this ticket.")}</span>
+      </div>
+      <button type="button" data-action="${budget ? "open-budget" : "prepare-ticket-budget"}" data-id="${escapeHtml(budget ? budget.id : ticket.id)}"${setupBlocked ? " disabled aria-disabled=\"true\"" : ""}>
+        ${buttonContent(budget ? "Open Budget" : "Prepare Budget", budget ? "open-budget" : "quick-add-quote")}
+      </button>
+    </div>`;
+  }
+
   function renderTicketCommandCenter(ticket) {
     const isCanonical = ticket?.source === "ticket";
     const transitions = ticketTransitionOptions(ticket || {});
@@ -10006,6 +10146,7 @@
           </button>`;
         }).join("") : `<p class="ticket-drawer-note">No more workflow moves are available from ${escapeHtml(ticket.stageLabel || "this stage")}.</p>`}
       </div>
+      ${renderTicketBudgetBridge(ticket)}
       <div class="drawer-actions ticket-command-actions">
         <button type="button" data-action="save-ticket-command" data-id="${escapeHtml(ticket.id)}">${buttonContent("Save Ticket Note", "save")}</button>
       </div>` : `<p class="ticket-drawer-note">This is still a source record preview. Open or create the unified ticket to use lifecycle controls.</p>`}
@@ -10317,6 +10458,140 @@
           phone: sourceItem.phone,
           email: sourceItem.email
         })}` : ""}
+      </div>
+    `;
+  }
+
+  function openMoneyBudgetDrawer(id) {
+    if (!els.detailDrawer || !els.detailContent) return;
+    const budget = activeBudgetBundle().budgets.find((item) => item.id === id);
+    if (!budget) {
+      setDashboardState("Budget record not found.", "error");
+      return;
+    }
+    const summary = budgetSummary(budget);
+    const lines = budgetLineBundle(budget.id);
+    const ticket = findTicketForBudget(budget);
+    const canSyncToTicket = canManageMoneyWorkflow() && ticket?.source === "ticket";
+    openDetailDrawer();
+    els.detailContent.innerHTML = `
+      <div class="drawer-content ticket-detail-drawer money-budget-drawer">
+        <p class="eyebrow">Money / Budget</p>
+        <div class="ticket-drawer-heading">
+          <div>
+            <h3>${escapeHtml(budget.budgetName)}</h3>
+            <p>${escapeHtml([budget.clientName, budget.propertyName, budget.jobName].filter(Boolean).join(" / ") || "No linked record")}</p>
+          </div>
+          <div class="ticket-drawer-status">
+            ${budgetBadge(budget.status)}
+            ${budgetBadge(summary.health || "Healthy", "health")}
+          </div>
+        </div>
+        <dl class="budget-summary-totals">
+          <div><dt>Revenue</dt><dd>${budgetCurrency(summary.expectedRevenue)}</dd></div>
+          <div><dt>Estimated Cost</dt><dd>${budgetCurrency(summary.totalEstimatedCost)}</dd></div>
+          <div><dt>Estimated Profit</dt><dd>${budgetCurrency(summary.estimatedProfit)}</dd></div>
+          <div><dt>Margin</dt><dd>${budgetPercent(summary.estimatedMargin)}</dd></div>
+        </dl>
+        ${ticket ? `<section class="ticket-source-context">
+          <div>
+            <p class="eyebrow">Linked Job Ticket</p>
+            <h4>${escapeHtml(ticket.number)} / ${escapeHtml(ticket.stageLabel)}</h4>
+            <p>${escapeHtml(ticket.title)} for ${escapeHtml(ticket.customer)}</p>
+          </div>
+          <div class="ticket-source-context-meta">
+            <span><strong>Owner</strong>${escapeHtml(ticket.ownerLabel || "Unassigned")}</span>
+            <button type="button" data-action="open-ticket" data-ticket-source="${escapeHtml(ticket.source)}" data-id="${escapeHtml(ticket.id)}">Open Ticket</button>
+          </div>
+        </section>` : `<p class="ticket-drawer-note">This budget is not linked to a unified Job Ticket yet.</p>`}
+        <form class="drawer-form drawer-money-budget-form" data-money-budget-form>
+          <input type="hidden" name="id" value="${escapeHtml(budget.id)}">
+          <input type="hidden" name="job_id" value="${escapeHtml(budget.jobId || "")}">
+          <input type="hidden" name="quote_id" value="${escapeHtml(budget.quoteId || "")}">
+          <input type="hidden" name="invoice_id" value="${escapeHtml(budget.invoiceId || "")}">
+          <input type="hidden" name="client_id" value="${escapeHtml(budget.clientId || "")}">
+          <label class="span-full">Budget name
+            <input name="budget_name" value="${escapeHtml(budget.budgetName)}" required>
+          </label>
+          <label>Service type
+            <input name="service_type" value="${escapeHtml(budget.serviceType)}">
+          </label>
+          <label>Status
+            <select name="status">${BUDGET_STATUSES.map((status) => `<option value="${escapeHtml(status)}"${budget.status === status ? " selected" : ""}>${escapeHtml(status)}</option>`).join("")}</select>
+          </label>
+          <label>Job status
+            <select name="job_status">${BUDGET_JOB_STATUSES.map((status) => `<option value="${escapeHtml(status)}"${budget.jobStatus === status ? " selected" : ""}>${escapeHtml(status)}</option>`).join("")}</select>
+          </label>
+          <label>Target margin %
+            <input name="target_margin_percent" type="number" min="0" max="100" step="0.1" value="${escapeHtml(String(budget.targetMarginPercent || ""))}">
+          </label>
+          <label>Base quoted price
+            <input name="base_quoted_price" type="number" min="0" step="0.01" value="${escapeHtml(String(budget.baseQuotedPrice || ""))}">
+          </label>
+          <label>Approved add-ons
+            <input name="approved_addons" type="number" min="0" step="0.01" value="${escapeHtml(String(budget.approvedAddons || ""))}">
+          </label>
+          <label>Discounts
+            <input name="discounts" type="number" min="0" step="0.01" value="${escapeHtml(String(budget.discounts || ""))}">
+          </label>
+          <label>Taxes
+            <input name="taxes" type="number" min="0" step="0.01" value="${escapeHtml(String(budget.taxes || ""))}">
+          </label>
+          <label>Other revenue
+            <input name="other_revenue" type="number" min="0" step="0.01" value="${escapeHtml(String(budget.otherRevenue || ""))}">
+          </label>
+          <label>Final invoiced revenue
+            <input name="final_invoiced_revenue" type="number" min="0" step="0.01" value="${escapeHtml(String(budget.finalInvoicedRevenue || ""))}">
+          </label>
+          <label>Amount paid
+            <input name="amount_paid" type="number" min="0" step="0.01" value="${escapeHtml(String(budget.amountPaid || ""))}">
+          </label>
+          <label>Property / site
+            <input name="property_name" value="${escapeHtml(budget.propertyName)}">
+          </label>
+          <label>Start date
+            <input name="proposed_start_date" type="date" value="${escapeHtml(budget.proposedStartDateRaw || "")}">
+          </label>
+          <label>Completion date
+            <input name="proposed_completion_date" type="date" value="${escapeHtml(budget.proposedCompletionDateRaw || "")}">
+          </label>
+          <label class="span-full">Description
+            <textarea name="job_description" rows="3">${escapeHtml(budget.jobDescription || "")}</textarea>
+          </label>
+          <label class="span-full">Notes
+            <textarea name="notes" rows="4">${escapeHtml(budget.notes || "")}</textarea>
+          </label>
+          <div class="drawer-actions span-full">
+            <button type="submit">${buttonContent("Save Budget", "save")}</button>
+            ${canSyncToTicket ? `<button type="button" class="secondary-action" data-action="sync-budget-to-ticket" data-id="${escapeHtml(budget.id)}">${buttonContent("Mark Cost Review Complete", "complete-reminder")}</button>` : ""}
+          </div>
+        </form>
+        <div class="budget-detail-tab-panel">
+          ${renderBudgetLineList("Labor", lines.labor, {
+            title: (item) => item.task,
+            meta: (item) => `${item.role || "Labor"} / ${item.estimatedHours} hr`,
+            estimated: (item) => item.estimatedCost,
+            actual: (item) => item.actualCost
+          })}
+          ${renderBudgetLineList("Materials", lines.materials, {
+            title: (item) => item.materialName,
+            meta: (item) => `${item.category} / ${item.quantity || 0} ${item.unit || ""}`.trim(),
+            estimated: (item) => item.estimatedCost,
+            actual: (item) => item.actualCost
+          })}
+          ${renderBudgetLineList("Equipment", lines.equipment, {
+            title: (item) => item.equipmentName,
+            meta: (item) => `${item.usageType} / ${item.estimatedQuantity || 0}`,
+            estimated: (item) => item.estimatedCost,
+            actual: (item) => item.actualCost
+          })}
+          ${renderBudgetLineList("Other Costs", lines.costs, {
+            title: (item) => item.description,
+            meta: (item) => item.category,
+            estimated: (item) => item.estimatedCost,
+            actual: (item) => item.actualCost
+          })}
+        </div>
       </div>
     `;
   }
@@ -16416,29 +16691,105 @@
       }
 
       if (action === "go-budgets") {
-        setActiveSection("overview");
-        replaceDashboardHash("overview");
+        setActiveSection("documents");
+        replaceDashboardHash("documents");
         await render();
-        setDashboardState("Job budgets are not active in this dashboard version.");
+        setDashboardState("Budgets now live inside Money.");
         return;
       }
 
-      switch (action) {
-        case "archive-budget":
-        case "budget-detail-tab":
-        case "duplicate-budget":
-        case "edit-budget":
-        case "open-budget":
-        case "view-budget-invoice":
-        case "view-budget-job":
-        case "view-budget-quote":
-          setActiveSection("overview");
-          replaceDashboardHash("overview");
-          await render();
-          setDashboardState("Job budgets are not active in this dashboard version.");
+      if (action === "prepare-ticket-budget") {
+        const ticket = dashboardTickets().find((item) => item.source === "ticket" && item.id === id);
+        if (!ticket) {
+          setDashboardState("Open a unified Job Ticket before preparing a budget.", "error");
           return;
-        default:
-          break;
+        }
+        try {
+          setDashboardState("Preparing Money budget...");
+          const result = await ensureBudgetForTicket(ticket);
+          if (ticketStage(ticket) === "needs_budget") {
+            await transitionJobTicketStage(ticket.id, "budget_in_progress", {
+              notes: result.created ? "Draft Money budget prepared." : "Existing Money budget opened.",
+              nextAction: "Complete cost review"
+            });
+          }
+          await refreshDashboard();
+          const refreshedTicket = dashboardTickets().find((item) => item.source === "ticket" && item.id === ticket.id) || ticket;
+          const budget = findBudgetForTicket(refreshedTicket) || result.budget;
+          if (budget?.id) openMoneyBudgetDrawer(budget.id);
+          setDashboardState(result.created ? "Draft Money budget prepared." : "Existing Money budget opened.");
+        } catch (error) {
+          setDashboardState(error.message || "Unable to prepare budget.", "error");
+        }
+        return;
+      }
+
+      if (action === "budget-detail-tab") {
+        state.budgetDetailTab = target.dataset.tab || "overview";
+        renderBudgetDetail();
+        return;
+      }
+
+      if (action === "open-budget" || action === "edit-budget") {
+        openMoneyBudgetDrawer(id);
+        return;
+      }
+
+      if (action === "duplicate-budget") {
+        try {
+          setDashboardState("Duplicating budget...");
+          const copy = await duplicateBudget(id);
+          await refreshDashboard();
+          if (copy?.id) openMoneyBudgetDrawer(copy.id);
+          setDashboardState("Budget duplicated.");
+        } catch (error) {
+          setDashboardState(error.message || "Unable to duplicate budget.", "error");
+        }
+        return;
+      }
+
+      if (action === "archive-budget") {
+        if (!window.confirm("Archive this budget? It will stay out of active Money review lists.")) return;
+        try {
+          setDashboardState("Archiving budget...");
+          await archiveBudget(id);
+          await refreshDashboard();
+          setDashboardState("Budget archived.");
+        } catch (error) {
+          setDashboardState(error.message || "Unable to archive budget.", "error");
+        }
+        return;
+      }
+
+      if (action === "sync-budget-to-ticket") {
+        const budget = activeBudgetBundle().budgets.find((item) => item.id === id);
+        if (!budget) {
+          setDashboardState("Budget record not found.", "error");
+          return;
+        }
+        try {
+          setDashboardState("Syncing budget to ticket...");
+          const ticket = await syncBudgetToTicket(budget);
+          await refreshDashboard();
+          if (ticket?.id) openTicketDrawer("ticket", ticket.id);
+          setDashboardState("Cost review synced to the Job Ticket.");
+        } catch (error) {
+          setDashboardState(error.message || "Unable to sync budget to ticket.", "error");
+        }
+        return;
+      }
+
+      if (action === "view-budget-job") {
+        openJobDrawer(id);
+        return;
+      }
+      if (action === "view-budget-quote") {
+        openSubmissionDrawer(id);
+        return;
+      }
+      if (action === "view-budget-invoice") {
+        openDocumentDrawer(id);
+        return;
       }
 
       if (action === "set-import-export-view") {
@@ -18060,6 +18411,17 @@
           setDashboardState("Call outcome saved.");
         } catch (error) {
           setDashboardState(error.message || "Unable to save call outcome.", "error");
+        }
+      } else if (event.target.matches("[data-money-budget-form]")) {
+        event.preventDefault();
+        try {
+          setDashboardState("Saving Money budget...");
+          const budget = await saveBudgetFromForm(event.target);
+          await refreshDashboard();
+          if (budget?.id) openMoneyBudgetDrawer(budget.id);
+          setDashboardState("Money budget saved.");
+        } catch (error) {
+          setDashboardState(error.message || "Unable to save budget.", "error");
         }
       } else if (event.target.matches("[data-ticket-create-form]")) {
         event.preventDefault();

@@ -222,7 +222,17 @@ test("dashboard route aliases and new reliability diagnostics are wired", () => 
   assert.match(js, /renderTicketEndToEndFlow\(dashboardTickets\(\), ticket\.stage/);
   assert.match(js, /function renderMoneyBudgetPanel/);
   assert.match(js, /function findTicketForBudget/);
+  assert.match(js, /function findBudgetForTicket/);
+  assert.match(js, /function budgetPayloadFromTicket/);
+  assert.match(js, /async function ensureBudgetForTicket/);
+  assert.match(js, /async function syncBudgetToTicket/);
+  assert.match(js, /function openMoneyBudgetDrawer/);
   assert.match(js, /data-money-budget-panel/);
+  assert.match(js, /data-action="\$\{budget \? "open-budget" : "prepare-ticket-budget"\}"/);
+  assert.match(js, /data-action="sync-budget-to-ticket"/);
+  assert.match(js, /data-money-budget-form/);
+  assert.match(js, /await ensureBudgetForTicket\(ticket\)/);
+  assert.match(js, /await syncBudgetToTicket\(budget\)/);
   assert.match(js, /Budget and Profitability/);
   assert.match(js, /Budget records stay inside Money/);
   assert.match(js, /budgetsReady: false/);
@@ -254,6 +264,8 @@ test("dashboard route aliases and new reliability diagnostics are wired", () => 
   assert.match(css, /\.money-budget-panel/);
   assert.match(css, /\.money-budget-item/);
   assert.match(css, /\.money-budget-stats/);
+  assert.match(css, /\.ticket-budget-bridge/);
+  assert.match(css, /\.money-budget-drawer/);
   assert.match(js, /function ticketStage\(ticket = \{\}\)/);
   assert.match(js, /function ticketLane\(ticket = \{\}\)/);
   assert.match(js, /function ticketIsOpen\(ticket = \{\}\)/);

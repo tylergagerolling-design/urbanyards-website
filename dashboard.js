@@ -11654,6 +11654,83 @@
     </section>`;
   }
 
+  function renderMoneyNextStepCard({ kicker, value, title, detail, action, actionLabel }) {
+    return `<article class="money-next-step-card">
+      <span class="home-next-step-kicker">${escapeHtml(kicker)}</span>
+      <div class="home-next-step-main">
+        <strong>${escapeHtml(String(value))}</strong>
+        <div>
+          <h4>${escapeHtml(title)}</h4>
+          <p>${escapeHtml(detail)}</p>
+        </div>
+      </div>
+      <button type="button" data-action="${escapeHtml(action)}">${escapeHtml(actionLabel)}</button>
+    </article>`;
+  }
+
+  function renderMoneyCommandCenter({ needsBudget, ownerApproval, fieldComplete, invoiceTickets, unpaidInvoices, overdueInvoices }) {
+    const actionQueue = [
+      ...invoiceTickets.filter((ticket) => ticket.tone === "watch"),
+      ...needsBudget,
+      ...ownerApproval,
+      ...fieldComplete,
+      ...invoiceTickets.filter((ticket) => ticket.tone !== "watch")
+    ].slice(0, 5);
+    return `<section class="money-command-center" aria-label="Money command center">
+      <section class="ticket-lane money-action-queue">
+        <div class="ticket-lane-heading">
+          <div>
+            <p class="eyebrow">Financial Queue</p>
+            <h3>Budget, invoice, and payment items</h3>
+            <p>Start with overdue invoices, cost-review tickets, owner approvals, and closeout work.</p>
+          </div>
+          <span>${escapeHtml(String(actionQueue.length))}</span>
+        </div>
+        <div class="ticket-lane-list">
+          ${actionQueue.length ? actionQueue.map((ticket) => renderTicketCard(ticket, true)).join("") : emptyState("No financial review items require attention.")}
+        </div>
+      </section>
+      <aside class="money-next-step-stack">
+        <div class="home-next-step-heading">
+          <span>Money Handoffs</span>
+          <strong>Protect margin</strong>
+        </div>
+        ${renderMoneyNextStepCard({
+          kicker: "Cost",
+          value: needsBudget.length,
+          title: "Review costs before scheduling",
+          detail: "Approved work should have cost, budget, or margin review before it moves forward.",
+          action: "go-tickets",
+          actionLabel: "Open Tickets"
+        })}
+        ${renderMoneyNextStepCard({
+          kicker: "Invoice",
+          value: ownerApproval.length,
+          title: "Prepare estimate or invoice",
+          detail: "Owner approvals and invoice preparation stay visible before work is scheduled or closed.",
+          action: "quick-add-quote",
+          actionLabel: "Create Estimate"
+        })}
+        ${renderMoneyNextStepCard({
+          kicker: "Collect",
+          value: overdueInvoices.length,
+          title: "Payment follow-up",
+          detail: "Overdue invoices need a clear reminder, Square sync, or payment note.",
+          action: "quick-add-invoice-reminder",
+          actionLabel: "Payment Follow-Up"
+        })}
+        ${renderMoneyNextStepCard({
+          kicker: "Close",
+          value: fieldComplete.length + unpaidInvoices.length,
+          title: "Close the financial record",
+          detail: "Check actuals, documents, invoice status, and payment state before closing tickets.",
+          action: "go-documents",
+          actionLabel: "Open Records"
+        })}
+      </aside>
+    </section>`;
+  }
+
   function renderMoneyWorkspace(data = state.data) {
     const target = qs("[data-money-workspace]");
     if (!target) return;
@@ -11708,7 +11785,7 @@
           { kicker: "Invoice", value: unpaidInvoices.length, title: "Open invoices", detail: "Quotes, invoices, and Square payment state needing review." },
           { kicker: "Overdue", value: overdueInvoices.length, title: "Payment risk", detail: "Invoices past due and ready for follow-up." }
         ], "Money workspace signals")}
-        ${renderTicketRoleBrief("accounting", tickets)}
+        ${renderMoneyCommandCenter({ needsBudget, ownerApproval, fieldComplete, invoiceTickets, unpaidInvoices, overdueInvoices })}
         ${renderMoneyBudgetPanel(data, tickets)}
         <div class="ticket-lane-grid">
           ${renderTicketColumn("Cost Review Queue", "Approved work that needs internal cost review before scheduling.", needsBudget, "No tickets are waiting for cost review.")}

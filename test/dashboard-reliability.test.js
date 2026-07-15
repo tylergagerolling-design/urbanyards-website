@@ -173,6 +173,8 @@ test("dashboard route aliases and new reliability diagnostics are wired", () => 
   assert.match(html, /copy-dashboard-diagnostics/);
   assert.match(js, /"route-planner": "calendar"/);
   assert.match(js, /DASHBOARD_WORKSPACE_ACCESS/);
+  assert.match(js, /staff: "Staff"/);
+  assert.doesNotMatch(js, /normalized === "staff"\) return "manager"/);
   assert.match(js, /overview: \["owner", "admin", "manager", "sales_outreach", "accountant", "field_worker", "worker", "staff", "viewer"\]/);
   assert.match(js, /outreach: \["owner", "admin", "manager", "sales_outreach", "staff"\]/);
   assert.match(js, /documents: \["owner", "admin", "manager", "accountant"\]/);

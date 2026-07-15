@@ -1207,7 +1207,6 @@
 
   function normalizeDashboardRole(role) {
     const normalized = String(role || "").trim().toLowerCase();
-    if (normalized === "staff") return "manager";
     if (normalized === "sales") return "sales_outreach";
     if (["field", "crew", "employee"].includes(normalized)) return "field_worker";
     if (normalized === "accounting") return "accountant";

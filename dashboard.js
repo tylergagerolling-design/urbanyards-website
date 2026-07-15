@@ -9617,8 +9617,36 @@
     { key: "close", label: "Close", detail: "Invoice and payment", stages: ["invoice_sent", "partially_paid", "paid", "closed"] }
   ];
 
+  const ticketEndToEndFlow = [
+    { key: "lead", label: "Lead", detail: "Request captured", stages: ["draft", "sales_intake"] },
+    { key: "ticket", label: "Job Ticket", detail: "Scope organized", stages: ["scope_in_progress"] },
+    { key: "quote", label: "Quote", detail: "Approval tracked", stages: ["quote_pending", "customer_approval_pending"] },
+    { key: "budget", label: "Budget", detail: "Cost review", stages: ["needs_budget", "budget_in_progress", "needs_owner_approval"] },
+    { key: "assignment", label: "Work Assignment", detail: "Ready and scheduled", stages: ["invoice_preparation", "ready_to_schedule", "scheduled"] },
+    { key: "completion", label: "Completion", detail: "Work proof and review", stages: ["in_progress", "paused", "scope_change_requested", "field_work_complete", "completion_review"] },
+    { key: "invoice", label: "Invoice", detail: "Sent and collected", stages: ["invoice_review", "invoice_sent", "partially_paid", "paid"] },
+    { key: "closed", label: "Closed", detail: "Final record", stages: ["closed"] }
+  ];
+
   function ticketWorkflowIndex(stage) {
     return Math.max(0, ticketWorkflowSteps.findIndex((step) => step.stages.includes(stage)));
+  }
+
+  function renderTicketEndToEndFlow(tickets = [], activeStage = "", label = "End-to-end ticket workflow") {
+    const normalizedActiveStage = activeStage ? ticketStage({ stage: activeStage }) : "";
+    return `<section class="ticket-flow-panel ticket-end-to-end-flow" data-ticket-lifecycle-map aria-label="${escapeHtml(label)}">
+      ${ticketEndToEndFlow.map((step, index) => {
+        const count = tickets.filter((ticket) => ticketInStage(ticket, step.stages)).length;
+        const isActive = normalizedActiveStage && step.stages.includes(normalizedActiveStage);
+        const isPopulated = !normalizedActiveStage && count > 0;
+        return `<article class="ticket-flow-step ${isActive ? "is-active" : ""} ${isPopulated ? "is-populated" : ""}" data-flow-key="${escapeHtml(step.key)}">
+          <span>${escapeHtml(index + 1)}</span>
+          <strong>${escapeHtml(step.label)}</strong>
+          <small>${escapeHtml(step.detail)}</small>
+          <em>${escapeHtml(String(count))}</em>
+        </article>`;
+      }).join("")}
+    </section>`;
   }
 
   function renderTicketWorkflowTracker(stage) {
@@ -10230,6 +10258,7 @@
           </div>
         </div>
         ${renderTicketWorkflowTracker(ticket.stage)}
+        ${renderTicketEndToEndFlow(dashboardTickets(), ticket.stage, "Current ticket lifecycle")}
         <div class="drawer-grid ticket-drawer-grid">
           <div class="drawer-field"><span>Current owner</span>${escapeHtml(ticket.ownerLabel || "Unassigned")}</div>
           <div class="drawer-field"><span>Next action</span>${escapeHtml(ticket.nextAction || "Open ticket")}</div>
@@ -10412,15 +10441,7 @@
           { kicker: "Filters", title: "Stage and owner", detail: "The board must support status, owner, next action, and blocked work." },
           { kicker: "Detail", title: "Open the ticket", detail: "The drawer is the source of truth for quote, budget, work proof, and invoice history." }
         ], "Tickets page focus")}
-        <section class="ticket-flow-panel">
-          <div class="ticket-flow-step is-active"><span>1</span><strong>Lead Intake</strong><small>Lead and scope</small></div>
-          <div class="ticket-flow-step"><span>2</span><strong>Quote Approval</strong><small>Customer yes</small></div>
-          <div class="ticket-flow-step"><span>3</span><strong>Cost Review</strong><small>Owner approval</small></div>
-          <div class="ticket-flow-step"><span>4</span><strong>Draft Invoice</strong><small>Ready before work</small></div>
-          <div class="ticket-flow-step"><span>5</span><strong>Schedule</strong><small>Work assignment</small></div>
-          <div class="ticket-flow-step"><span>6</span><strong>Complete</strong><small>Photos and forms</small></div>
-          <div class="ticket-flow-step"><span>7</span><strong>Invoice and Close</strong><small>Payment collected</small></div>
-        </section>
+        ${renderTicketEndToEndFlow(openTickets)}
         ${renderTicketOwnerStrip(openTickets)}
         <div class="ticket-lane-grid">
           ${renderTicketColumn("Today and Work", "Scheduled, active, and work-owned tickets.", workTickets, "No work tickets are scheduled yet.")}

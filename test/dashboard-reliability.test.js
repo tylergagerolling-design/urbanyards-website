@@ -207,11 +207,21 @@ test("dashboard route aliases and new reliability diagnostics are wired", () => 
   assert.match(js, /dashboardWorkspaceLinks\.filter\(\(item\) => canAccessDashboardSection\(item\.id, role\)\)/);
   assert.match(js, /const links = visibleDashboardWorkspaceLinks\(\)/);
   assert.match(js, /function renderWorkspaceFocusStrip/);
+  assert.match(js, /function renderTicketEndToEndFlow/);
+  assert.match(js, /data-ticket-lifecycle-map/);
+  assert.match(js, /renderTicketEndToEndFlow\(openTickets\)/);
+  assert.match(js, /renderTicketEndToEndFlow\(dashboardTickets\(\), ticket\.stage/);
+  ["Lead", "Job Ticket", "Quote", "Budget", "Work Assignment", "Completion", "Invoice", "Closed"].forEach((label) => {
+    assert.match(js, new RegExp(`label: "${label}"`));
+  });
   ["home", "tickets", "work", "leads", "money", "tools"].forEach((page) => {
     assert.match(js, new RegExp(`data-uy-page-contract="${page}"`));
   });
   assert.match(css, /\.workspace-focus-strip/);
   assert.match(css, /\.workspace-focus-card/);
+  assert.match(css, /\.ticket-end-to-end-flow/);
+  assert.match(css, /\.ticket-flow-step\.is-populated/);
+  assert.match(css, /\.ticket-flow-step em/);
   assert.match(js, /function ticketStage\(ticket = \{\}\)/);
   assert.match(js, /function ticketLane\(ticket = \{\}\)/);
   assert.match(js, /function ticketIsOpen\(ticket = \{\}\)/);

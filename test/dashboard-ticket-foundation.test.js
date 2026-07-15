@@ -133,6 +133,77 @@ test("ticket workflow allows complete lifecycle handoffs with the right roles", 
   assert.equal(canTransitionTicket(worker, { stage: TICKET_STAGES.SCHEDULED }, TICKET_STAGES.IN_PROGRESS), true);
 });
 
+test("transition service advances one complete ticket from lead to closed", () => {
+  const sales = { role: ROLES.SALES_OUTREACH, userId: "sales-1" };
+  const accountant = { role: ROLES.ACCOUNTANT, userId: "acct-1" };
+  const owner = { role: ROLES.OWNER, userId: "owner-1" };
+  const worker = { role: ROLES.FIELD_WORKER, userId: "worker-1" };
+  let ticket = {
+    id: "ticket-full-lifecycle",
+    ticketNumber: "UY-2026-00002",
+    stage: TICKET_STAGES.DRAFT,
+    createdBy: "sales-1",
+    customerId: "client-1",
+    propertyId: "property-1",
+    primaryContact: "Taylor",
+    requestedService: "Mulch refresh",
+    scopeOfWork: "Refresh entry beds and clean the front approach.",
+    proposedPrice: 1200,
+    customerApprovalRecorded: true,
+    costReviewComplete: true,
+    expectedRevenue: 1200,
+    estimatedTotalCost: 700,
+    estimatedProfit: 500,
+    targetMargin: 35,
+    scopeComplete: true,
+    ownerApprovalRecorded: true,
+    draftInvoiceExists: true,
+    scheduledDate: "2026-07-20",
+    assignedUserId: "worker-1",
+    beforePhotosUploaded: true,
+    afterPhotosUploaded: true,
+    fieldCompletionNotes: "Work complete with arrival and completion photos.",
+    invoiceFinalized: true,
+    paymentStatus: "paid"
+  };
+  const handoffs = [
+    [sales, TICKET_STAGES.SALES_INTAKE, "ticket_created"],
+    [sales, TICKET_STAGES.SCOPE_IN_PROGRESS, "ticket_scope_started"],
+    [sales, TICKET_STAGES.QUOTE_PENDING, "quote_created"],
+    [sales, TICKET_STAGES.CUSTOMER_APPROVAL_PENDING, "quote_sent_for_approval"],
+    [sales, TICKET_STAGES.NEEDS_BUDGET, "customer_approval_recorded"],
+    [accountant, TICKET_STAGES.BUDGET_IN_PROGRESS, "cost_review_started"],
+    [accountant, TICKET_STAGES.NEEDS_OWNER_APPROVAL, "cost_review_submitted_to_owner"],
+    [owner, TICKET_STAGES.INVOICE_PREPARATION, "owner_approved"],
+    [accountant, TICKET_STAGES.READY_TO_SCHEDULE, "draft_invoice_created"],
+    [owner, TICKET_STAGES.SCHEDULED, "ticket_scheduled"],
+    [worker, TICKET_STAGES.IN_PROGRESS, "work_started"],
+    [worker, TICKET_STAGES.FIELD_WORK_COMPLETE, "field_work_completed"],
+    [accountant, TICKET_STAGES.COMPLETION_REVIEW, "completion_review_started"],
+    [accountant, TICKET_STAGES.INVOICE_REVIEW, "actuals_reviewed"],
+    [accountant, TICKET_STAGES.INVOICE_SENT, "invoice_finalized"],
+    [accountant, TICKET_STAGES.PAID, "payment_recorded"],
+    [accountant, TICKET_STAGES.CLOSED, "ticket_closed"]
+  ];
+
+  handoffs.forEach(([user, toStage, auditEvent], index) => {
+    const result = transitionTicketStage({
+      user,
+      ticket,
+      toStage,
+      correlationId: `full-flow-${index + 1}`,
+      now: `2026-07-14T00:${String(index).padStart(2, "0")}:00.000Z`
+    });
+    assert.equal(result.success, true, `transition to ${toStage} should succeed`);
+    assert.equal(result.data.stage, toStage);
+    assert.equal(result.context.auditEvent, auditEvent);
+    ticket = result.data;
+  });
+
+  assert.equal(ticket.stage, TICKET_STAGES.CLOSED);
+  assert.equal(ticket.responsibleRole, ROLES.OWNER);
+});
+
 test("transition service records audit and notification metadata for handoffs", () => {
   const accountant = { role: ROLES.ACCOUNTANT, userId: "acct-1" };
   const ticket = {

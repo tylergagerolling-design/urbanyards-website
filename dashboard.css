@@ -14580,6 +14580,23 @@ body:not(.is-login-screen) .ticket-flow-step.is-active {
   background: #eef5e8;
 }
 
+body:not(.is-login-screen) .ticket-end-to-end-flow {
+  grid-template-columns: repeat(auto-fit, minmax(135px, 1fr));
+}
+
+body:not(.is-login-screen) .ticket-flow-step.is-populated {
+  background: rgba(238, 245, 232, .58);
+}
+
+body:not(.is-login-screen) .ticket-flow-step em {
+  grid-column: 2;
+  justify-self: start;
+  color: var(--uy-green);
+  font-size: .72rem;
+  font-style: normal;
+  font-weight: 900;
+}
+
 body:not(.is-login-screen) .ticket-owner-strip {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));

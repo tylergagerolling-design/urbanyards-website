@@ -11333,8 +11333,8 @@
         <header class="ticket-hero work-hero">
           <div>
             <p class="eyebrow">Work</p>
-            <h3>Today&apos;s Work</h3>
-            <p>Simple job-ticket queue for on-site work, with route, photos, documents, and completion review close by.</p>
+            <h3>Assigned Work Board</h3>
+            <p>Open job tickets, route stops, photos, supporting documents, and completion review from one practical work queue.</p>
           </div>
           <div class="ticket-hero-actions">
             ${canCreateTicketType("field") ? `<button type="button" data-action="open-ticket-create" data-ticket-type="field">Add Visit</button>` : ""}
@@ -11342,24 +11342,23 @@
           </div>
         </header>
         <section class="ticket-metrics" aria-label="Work summary">
-          ${renderTicketMetric(todayTickets.length, "Visits Today", "Scheduled for today")}
-          ${renderTicketMetric(ticketCountBy(workTickets, (ticket) => ticketInStage(ticket, ["in_progress"])), "In Progress", "Started work")}
-          ${renderTicketMetric(ticketCountBy(workTickets, (ticket) => ticketInLane(ticket, ["review"])), "Needs Review", "Photos, actuals, invoice")}
+          ${renderTicketMetric(todayTickets.length, "Due Today", "Scheduled for today")}
+          ${renderTicketMetric(ticketCountBy(workTickets, (ticket) => ticketInStage(ticket, ["scheduled", "in_progress", "paused"])), "Active Work", "Scheduled or started")}
+          ${renderTicketMetric(ticketCountBy(workTickets, (ticket) => ticketInLane(ticket, ["review"])), "Needs Proof", "Photos, actuals, forms")}
           ${renderTicketMetric(upcomingTickets.length, "Upcoming", "Scheduled tickets")}
         </section>
         ${renderWorkDayPlanPanel(routeStopsToday, todayTickets, upcomingTickets, reviewTickets)}
         ${renderWorkspaceFocusStrip([
-          { kicker: "Today", value: todayTickets.length, title: "Visits due", detail: "Work tickets scheduled for the current day." },
-          { kicker: "Upcoming", value: upcomingTickets.length, title: "Scheduled work", detail: "Future ready or field-owned tickets." },
-          { kicker: "Review", value: reviewTickets.length, title: "Completion handoff", detail: "Work needing proof, actuals, or closeout review." }
+          { kicker: "Today", value: todayTickets.length, title: "What to do first", detail: "Start with dated tickets and route stops for the current day." },
+          { kicker: "Next", value: upcomingTickets.length, title: "What is coming up", detail: "Future ready and scheduled tickets stay visible here." },
+          { kicker: "Proof", value: reviewTickets.length, title: "What needs closeout", detail: "Capture photos, forms, actuals, and completion notes before review." }
         ], "Work workspace signals")}
-        ${renderTicketRoleBrief("field", tickets)}
-        <div class="field-grid">
+        <div class="field-grid work-execution-grid">
           <section class="ticket-lane field-primary-lane">
             <div class="ticket-lane-heading">
               <div>
-                <h3>Work Queue</h3>
-                <p>Open the ticket before heading to the site.</p>
+                <h3>Assigned Work Queue</h3>
+                <p>Open each ticket for instructions, site notes, proof, forms, and completion steps.</p>
               </div>
               <span>${escapeHtml(workTickets.length)}</span>
             </div>
@@ -11371,8 +11370,8 @@
             <section class="ticket-lane">
               <div class="ticket-lane-heading">
                 <div>
-                  <h3>Quick Schedule</h3>
-                  <p>Create a visit without leaving Work.</p>
+                  <h3>Quick Add Visit</h3>
+                  <p>Create a scheduled visit without leaving Work.</p>
                 </div>
               </div>
               <form class="schedule-create-form ticket-create-form" data-job-create-form>
@@ -11407,8 +11406,8 @@
             <section class="ticket-lane">
               <div class="ticket-lane-heading">
                 <div>
-                  <h3>Route and Proof</h3>
-                  <p>Maps, arrival photos, completion photos, and forms stay tied to the ticket.</p>
+                  <h3>Support Tools</h3>
+                  <p>Routes, arrival photos, completion photos, forms, and diagnostics stay close to the work queue.</p>
                 </div>
               </div>
               <div class="field-proof-actions">

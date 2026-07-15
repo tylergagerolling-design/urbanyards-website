@@ -133,6 +133,9 @@ test("dashboard route aliases and new reliability diagnostics are wired", () => 
   assert.doesNotMatch(js, /Today in the Field/);
   assert.doesNotMatch(js, /field work/);
   assert.doesNotMatch(js, /field assignment/);
+  assert.doesNotMatch(js, /field update/);
+  assert.doesNotMatch(js, /field visit/);
+  assert.doesNotMatch(js, /field ticket/);
   assert.doesNotMatch(js, /Mobile Field Mode/);
   assert.doesNotMatch(js, /Upcoming Field Jobs/);
   assert.match(js, /owner_label: "Work"/);

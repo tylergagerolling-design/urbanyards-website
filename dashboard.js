@@ -9204,7 +9204,7 @@
       case "scheduled":
         return "Work the visit";
       case "in_progress":
-        return "Add field update";
+        return "Add work update";
       case "paused":
         return "Resolve blocker";
       case "scope_change_requested":
@@ -9823,7 +9823,7 @@
       { to: "ready_to_schedule", label: "Ready to schedule", detail: "Invoice prep is done. Hand off to Work." },
       { to: "needs_owner_approval", label: "Return to owner", detail: "Needs another owner review before scheduling." }
     ],
-    ready_to_schedule: [{ to: "scheduled", label: "Mark scheduled", detail: "A field visit is on the calendar." }],
+    ready_to_schedule: [{ to: "scheduled", label: "Mark scheduled", detail: "A work visit is on the calendar." }],
     scheduled: [
       { to: "in_progress", label: "Start work", detail: "Work has started." },
       { to: "scope_change_requested", label: "Request scope change", detail: "Work needs a scope or approval change." },
@@ -9978,7 +9978,7 @@
       }
       if (ticket.stage === "invoice_preparation" || ticket.stage === "ready_to_schedule") {
         return [
-          { label: "Open Schedule Form", action: "open-submission", detail: "Create the field visit from this ticket." },
+          { label: "Open Schedule Form", action: "open-submission", detail: "Create the work visit from this ticket." },
           { label: "Open Money", action: "go-documents", detail: "Review estimates, invoices, and payment records." }
         ];
       }
@@ -10376,7 +10376,7 @@
           <div>
             <p class="eyebrow">Job Ticket System</p>
             <h3>Job Ticket Command Center</h3>
-            <p>Every request, quote, scheduled visit, field update, invoice step, and closeout flows through one job ticket workflow.</p>
+            <p>Every request, quote, scheduled visit, work update, invoice step, and closeout flows through one job ticket workflow.</p>
           </div>
           <div class="ticket-hero-actions">
             <button type="button" data-action="open-ticket-create" data-ticket-type="quote">New Job Ticket</button>
@@ -10393,7 +10393,7 @@
           <div class="ticket-flow-step is-active"><span>1</span><strong>Lead Intake</strong><small>Lead and scope</small></div>
           <div class="ticket-flow-step"><span>2</span><strong>Quote Approval</strong><small>Customer yes</small></div>
           <div class="ticket-flow-step"><span>3</span><strong>Cost Review</strong><small>Owner approval</small></div>
-          <div class="ticket-flow-step"><span>4</span><strong>Draft Invoice</strong><small>Ready before field</small></div>
+          <div class="ticket-flow-step"><span>4</span><strong>Draft Invoice</strong><small>Ready before work</small></div>
           <div class="ticket-flow-step"><span>5</span><strong>Schedule</strong><small>Work assignment</small></div>
           <div class="ticket-flow-step"><span>6</span><strong>Complete</strong><small>Photos and forms</small></div>
           <div class="ticket-flow-step"><span>7</span><strong>Invoice and Close</strong><small>Payment collected</small></div>
@@ -17862,7 +17862,7 @@
           if (ticketType === "field") {
             const visitDate = String(formData.get("visit_date") || "").trim();
             if (!visitDate) {
-              setDashboardState("Choose a visit date before creating a field ticket.", "error");
+              setDashboardState("Choose a visit date before creating a work ticket.", "error");
               return;
             }
             const jobs = await insertScheduledJobs([{

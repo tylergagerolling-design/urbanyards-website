@@ -283,12 +283,14 @@ test("ticket dashboard view model normalizes workflow language for the rebuilt s
 
   assert.deepEqual(getTicketBlockers(TICKET_STAGES.SCHEDULED), ["Arrival photos", "Completion photos", "Forms"]);
   assert.equal(getTicketNextAction(TICKET_STAGES.READY_TO_SCHEDULE), "Schedule work");
+  assert.equal(getTicketNextAction(TICKET_STAGES.IN_PROGRESS), "Add work update");
   assert.equal(getTicketNextAction(TICKET_STAGES.INVOICE_SENT), "Collect payment");
   assert.equal(getTicketStageMeta(TICKET_STAGES.NEEDS_OWNER_APPROVAL).owner, "Owner");
   assert.equal(getTicketStageMeta(TICKET_STAGES.READY_TO_SCHEDULE).lane, "ready");
   assert.equal(getTicketStageMeta(TICKET_STAGES.READY_TO_SCHEDULE).owner, "Work");
   assert.doesNotMatch(viewModelSource, /field work/);
   assert.doesNotMatch(viewModelSource, /field assignment/);
+  assert.doesNotMatch(viewModelSource, /field update/);
   assert.doesNotMatch(viewModelSource, /Schedule field work/);
   assert.equal(normalizeTicketSourceType("quote_submission"), "quote");
   assert.equal(normalizeTicketSourceType("scheduled_visit"), "job");

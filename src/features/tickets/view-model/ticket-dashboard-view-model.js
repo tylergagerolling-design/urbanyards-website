@@ -137,7 +137,7 @@ function getTicketNextAction(stage) {
     case TICKET_STAGES.SCHEDULED:
       return "Work the visit";
     case TICKET_STAGES.IN_PROGRESS:
-      return "Add field update";
+      return "Add work update";
     case TICKET_STAGES.PAUSED:
       return "Resolve blocker";
     case TICKET_STAGES.SCOPE_CHANGE_REQUESTED:

@@ -11305,11 +11305,15 @@
         <section class="ticket-review-strip">
           <div>
             <p class="eyebrow">Leads handoff rule</p>
-            <h3>Leads does not own the whole job.</h3>
-            <p>Leads creates the ticket, confirms scope and quote approval, then hands the same ticket to Money. Cost review, work assignment, invoice, and payment stay connected to that ticket history.</p>
+            <h3>Lead work ready for the next step</h3>
+            <p>Follow-ups, quote approvals, and approved work that should move into Money for cost review.</p>
           </div>
           <div class="ticket-review-list">
-            ${due.length ? due.slice(0, 3).map((item, index) => renderTicketCard(buildTicketFromQuote(item, index), true)).join("") : emptyState("No urgent Leads follow-ups.")}
+            ${[
+              ...approvalTickets,
+              ...accountingTickets,
+              ...due.slice(0, 3).map((item, index) => buildTicketFromQuote(item, index))
+            ].slice(0, 4).map((ticket) => renderTicketCard(ticket, true)).join("") || emptyState("No urgent Leads handoffs.")}
           </div>
         </section>
       </div>`;
@@ -11455,12 +11459,17 @@
         </div>
         <section class="ticket-review-strip">
           <div>
-            <p class="eyebrow">Money rule</p>
-            <h3>One ticket, one financial story.</h3>
-            <p>Cost notes, actual costs, draft invoices, Square invoice links, payment status, and closeout notes should remain attached to the same Job Ticket audit trail.</p>
+            <p class="eyebrow">Financial Closeout</p>
+            <h3>Money items needing review</h3>
+            <p>Cost review, invoice preparation, payment follow-up, and completed work waiting on actuals.</p>
           </div>
           <div class="ticket-review-list">
-            ${invoiceTickets.length ? invoiceTickets.slice(0, 3).map((ticket) => renderTicketCard(ticket, true)).join("") : emptyState("No payment items require attention.")}
+            ${[
+              ...needsBudget,
+              ...ownerApproval,
+              ...fieldComplete,
+              ...invoiceTickets
+            ].slice(0, 4).map((ticket) => renderTicketCard(ticket, true)).join("") || emptyState("No Money review items require attention.")}
           </div>
         </section>
       </div>`;

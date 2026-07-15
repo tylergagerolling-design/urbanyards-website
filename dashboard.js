@@ -4774,6 +4774,13 @@
   function canonicalTicketUpdatePayload(input = {}) {
     const payload = {};
     const textFields = [
+      ["source_type", "sourceType"],
+      ["source_id", "sourceId"],
+      ["quote_id", "quoteId"],
+      ["job_id", "jobId"],
+      ["invoice_id", "invoiceId"],
+      ["customer_id", "customerId"],
+      ["property_id", "propertyId"],
       ["title", "title"],
       ["customer_name", "customerName"],
       ["client_name", "clientName"],
@@ -4990,6 +4997,58 @@
     if (!job?.id) return null;
     const existing = findJobTicketForScheduledJob(job.id);
     const payload = ticketPayloadFromScheduledJob(job, {
+      stage: existing?.stage,
+      ...overrides
+    });
+    if (existing?.id) {
+      return await updateJobTicket(existing.id, payload) || existing;
+    }
+    return insertJobTicket(payload);
+  }
+
+  function findJobTicketForQuoteSubmission(submissionId) {
+    const id = String(submissionId || "");
+    if (!id) return null;
+    return (state.data.tickets || []).find((ticket) => (
+      ticket?.sourceType === "quote" && ticket.sourceId === id
+    )) || null;
+  }
+
+  function ticketPayloadFromQuoteSubmission(item = {}, overrides = {}) {
+    const stage = normalizeTicketStageForDashboard(overrides.stage || quoteStage(item), "sales_intake");
+    const service = blankToNull(overrides.service || overrides.requested_service || overrides.requestedService || item.service) || "Quote request";
+    const customerName = blankToNull(overrides.customer_name || overrides.customerName || item.name) || "Unnamed lead";
+    const followUpDue = item.followUp === "Not set" ? "" : item.followUp;
+    return {
+      title: service,
+      stage,
+      status: overrides.status || ticketRecordStatusForStage(stage),
+      source_type: "quote",
+      source_id: item.id,
+      quote_id: item.id,
+      invoice_id: overrides.invoice_id || overrides.invoiceId || null,
+      customer_name: customerName,
+      contact_name: customerName,
+      property_name: blankToNull(overrides.property_name || overrides.propertyName || item.propertyType),
+      city: blankToNull(overrides.city || item.city),
+      requested_service: service,
+      service,
+      description: blankToNull(overrides.description) || item.notes || item.source || "Quote request from the website or dashboard.",
+      notes: blankToNull(overrides.notes) || item.notes,
+      internal_notes: blankToNull(overrides.internal_notes || overrides.internalNotes),
+      due_date: blankToNull(overrides.due_date || overrides.dueDate || followUpDue),
+      owner_label: blankToNull(overrides.owner_label || overrides.ownerLabel) || "Sales",
+      next_action: blankToNull(overrides.next_action || overrides.nextAction) || ticketNextAction(stage)
+    };
+  }
+
+  async function ensureJobTicketForQuoteSubmission(submissionOrId, overrides = {}) {
+    const item = typeof submissionOrId === "string"
+      ? findSubmission(submissionOrId)
+      : submissionOrId;
+    if (!item?.id) return null;
+    const existing = findJobTicketForQuoteSubmission(item.id);
+    const payload = ticketPayloadFromQuoteSubmission(item, {
       stage: existing?.stage,
       ...overrides
     });
@@ -7283,14 +7342,19 @@
         item.followUp = payload.follow_up || "Not set";
         item.notes = payload.notes || "";
       }
-      return;
+      return item || null;
     }
 
-    await supabaseRestRequest(`quote_submissions?id=eq.${encodeURIComponent(id)}`, {
+    const rows = await supabaseRestRequest(`quote_submissions?id=eq.${encodeURIComponent(id)}`, {
       method: "PATCH",
-      headers: { Prefer: "return=minimal" },
+      headers: { Prefer: "return=representation" },
       body: JSON.stringify(payload)
     });
+    const updated = normalizeSubmission(rows[0]);
+    const index = state.data.submissions.findIndex((submission) => submission.id === id);
+    if (index >= 0) state.data.submissions[index] = updated;
+    else state.data.submissions.unshift(updated);
+    return updated;
   }
 
   async function updateStatus(table, id, status) {
@@ -12465,7 +12529,8 @@
     const item = findSubmission(id);
     if (!item || !els.detailDrawer || !els.detailContent) return;
     state.selectedSubmissionId = id;
-    const ticket = buildTicketFromQuote(item, state.data.submissions.findIndex((submission) => submission.id === id));
+    const ticket = findJobTicketForQuoteSubmission(id)
+      || buildTicketFromQuote(item, state.data.submissions.findIndex((submission) => submission.id === id));
     openDetailDrawer();
     els.detailContent.innerHTML = `
       <div class="drawer-content">
@@ -16830,7 +16895,7 @@
         if (!item) return;
         try {
           setDashboardState("Creating document...");
-          await insertSalesDocument({
+          const document = await insertSalesDocument({
             document_type: action === "create-invoice" ? "invoice" : "estimate",
             client_name: item.name,
             client_email: item.email === "No email" ? "" : item.email,
@@ -16839,7 +16904,19 @@
             amount: 0,
             notes: `Created from quote submission ${item.id}. ${item.notes}`
           });
-          if (action === "create-invoice") await updateStatus("quote_submissions", item.id, "Invoiced");
+          const updatedSubmission = action === "create-invoice"
+            ? await updateSubmission(item.id, {
+              status: "Invoiced",
+              follow_up: item.followUp === "Not set" ? "" : item.followUp,
+              notes: item.notes
+            })
+            : item;
+          await ensureJobTicketForQuoteSubmission(updatedSubmission || item, {
+            stage: action === "create-invoice" ? "invoice_preparation" : quoteStage(updatedSubmission || item),
+            invoice_id: document?.id,
+            next_action: action === "create-invoice" ? ticketNextAction("invoice_preparation") : ticketNextAction(quoteStage(updatedSubmission || item)),
+            internal_notes: `${action === "create-invoice" ? "Invoice" : "Estimate"} document ${document?.number || document?.id || ""} created from quote submission.`
+          });
           await refreshDashboard();
           setActiveSection("documents");
           closeSubmissionDrawer();
@@ -17143,10 +17220,14 @@
         const formData = new FormData(event.target);
         try {
           setDashboardState("Saving quote...");
-          await updateSubmission(item.id, {
+          const updatedSubmission = await updateSubmission(item.id, {
             status: String(formData.get("status") || "New"),
             follow_up: String(formData.get("follow_up") || ""),
             notes: String(formData.get("notes") || "")
+          });
+          await ensureJobTicketForQuoteSubmission(updatedSubmission || item, {
+            stage: quoteStage(updatedSubmission || item),
+            next_action: ticketNextAction(quoteStage(updatedSubmission || item))
           });
           await refreshDashboard();
           openSubmissionDrawer(item.id);
@@ -17178,7 +17259,18 @@
               next_action: ticketNextAction("scheduled")
             });
           }
-          await updateStatus("quote_submissions", item.id, "Scheduled");
+          const updatedQuote = await updateSubmission(item.id, {
+            status: "Scheduled",
+            follow_up: item.followUp === "Not set" ? "" : item.followUp,
+            notes: item.notes
+          });
+          await ensureJobTicketForQuoteSubmission(updatedQuote || item, {
+            stage: "ready_to_schedule",
+            next_action: "Field visit created",
+            internal_notes: jobs.length > 1
+              ? `${jobs.length} recurring visits created from this quote.`
+              : "Scheduled visit created from this quote."
+          });
           await refreshDashboard();
           openSubmissionDrawer(item.id);
           setDashboardState(jobs.length > 1 ? `${jobs.length} recurring visits created and linked to Job Tickets.` : "Visit created and linked to a Job Ticket.");

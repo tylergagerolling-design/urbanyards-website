@@ -101,6 +101,7 @@ test("dashboard creates canonical job tickets without removing source fallbacks"
   assert.match(js, /async function updateJobTicket/);
   assert.match(js, /async function insertJobTicketEvent/);
   assert.match(js, /async function ensureJobTicketForScheduledJob/);
+  assert.match(js, /async function ensureJobTicketForQuoteSubmission/);
   assert.match(js, /async function completeScheduledJobWithTicket/);
   assert.match(js, /async function syncJobTicketPhotoProof/);
   assert.match(js, /async function dashboardTicketRequest/);
@@ -118,10 +119,14 @@ test("dashboard creates canonical job tickets without removing source fallbacks"
   assert.match(js, /await completeScheduledJobWithTicket\(id\)/);
   assert.match(js, /await completeScheduledJobWithTicket\(updatedJob\)/);
   assert.match(js, /await ensureJobTicketForScheduledJob\(job, \{/);
+  assert.match(js, /await ensureJobTicketForQuoteSubmission\(updatedSubmission \|\| item/);
+  assert.match(js, /await ensureJobTicketForQuoteSubmission\(updatedQuote \|\| item/);
+  assert.match(js, /await ensureJobTicketForQuoteSubmission\(updatedSubmission \|\| item, \{/);
   assert.match(js, /await syncJobTicketPhotoProof\(jobId, photoStage\)/);
   assert.match(js, /field_completion_notes/);
   assert.match(js, /arrival_photos_uploaded/);
   assert.match(js, /completion_photos_uploaded/);
+  assert.match(js, /invoice_id: document\?\.id/);
   assert.doesNotMatch(js, /job_tickets\?select=\*/);
   assert.doesNotMatch(js, /job_ticket_events\?select=\*/);
   assert.match(js, /source_type: "quote"/);

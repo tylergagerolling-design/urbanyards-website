@@ -11160,6 +11160,67 @@
       </div>`;
   }
 
+  function renderWorkPlanTile({ label, value, detail, action, actionLabel }) {
+    return `<article class="work-plan-tile">
+      <span>${escapeHtml(label)}</span>
+      <strong>${escapeHtml(String(value))}</strong>
+      <p>${escapeHtml(detail)}</p>
+      ${action ? `<button type="button" data-action="${escapeHtml(action)}">${escapeHtml(actionLabel || "Open")}</button>` : ""}
+    </article>`;
+  }
+
+  function renderWorkDayPlanPanel(stops = [], todayTickets = [], upcomingTickets = [], reviewTickets = []) {
+    const openStops = stops.filter((stop) => stop.status !== "Complete");
+    const nextStop = openStops[0] || stops[0];
+    return `<section class="work-day-plan-panel" aria-label="Work day plan">
+      <article class="work-day-map-card">
+        <div class="ticket-lane-heading">
+          <div>
+            <p class="eyebrow">Route Plan</p>
+            <h3>Today&apos;s route and first stop</h3>
+            <p>${nextStop ? escapeHtml([nextStop.clientName, nextStop.address, nextStop.city].filter(Boolean).join(" / ")) : "No route stops planned for today."}</p>
+          </div>
+          <span>${escapeHtml(String(openStops.length))}</span>
+        </div>
+        ${routePreviewMapShell("work")}
+        <div class="work-day-route-footer">
+          <span>${escapeHtml(stops.length ? `${openStops.length} open / ${stops.length} total stops` : "Build the route when work is scheduled.")}</span>
+          <button type="button" data-action="go-route-planner">Open Route</button>
+        </div>
+      </article>
+      <div class="work-plan-tile-grid">
+        ${renderWorkPlanTile({
+          label: "Today",
+          value: todayTickets.length,
+          detail: "Tickets scheduled for today.",
+          action: "go-calendar",
+          actionLabel: "Add Visit"
+        })}
+        ${renderWorkPlanTile({
+          label: "Proof",
+          value: reviewTickets.length,
+          detail: "Work waiting on photos, forms, actuals, or completion review.",
+          action: "go-tickets",
+          actionLabel: "Review Tickets"
+        })}
+        ${renderWorkPlanTile({
+          label: "Forms",
+          value: "Docs",
+          detail: "Supporting templates and submitted records live in Tools.",
+          action: "go-tools",
+          actionLabel: "Open Tools"
+        })}
+        ${renderWorkPlanTile({
+          label: "Upcoming",
+          value: upcomingTickets.length,
+          detail: "Future scheduled or ready work tickets.",
+          action: "go-work",
+          actionLabel: "Stay in Work"
+        })}
+      </div>
+    </section>`;
+  }
+
   function renderWorkWorkspace(data = state.data) {
     const target = qs("[data-work-workspace]");
     if (!target) return;
@@ -11168,6 +11229,8 @@
     const today = todayKey();
     const todayTickets = workTickets.filter((ticket) => dateKey(ticket.dateRaw) === today);
     const upcomingTickets = workTickets.filter((ticket) => dateKey(ticket.dateRaw) >= today);
+    const reviewTickets = workTickets.filter((ticket) => ticketInLane(ticket, ["review"]));
+    const routeStopsToday = dashboardRouteStopsForDate(data, today);
     target.innerHTML = `
       <div class="ticket-workspace uy-page-prototype work-workspace" data-uy-page-contract="work" data-data-source="jobs,job_tickets,route_stops,documentation">
         ${renderWorkspaceSwitcher("calendar")}
@@ -11188,10 +11251,11 @@
           ${renderTicketMetric(ticketCountBy(workTickets, (ticket) => ticketInLane(ticket, ["review"])), "Needs Review", "Photos, actuals, invoice")}
           ${renderTicketMetric(upcomingTickets.length, "Upcoming", "Scheduled tickets")}
         </section>
+        ${renderWorkDayPlanPanel(routeStopsToday, todayTickets, upcomingTickets, reviewTickets)}
         ${renderWorkspaceFocusStrip([
           { kicker: "Today", value: todayTickets.length, title: "Visits due", detail: "Work tickets scheduled for the current day." },
           { kicker: "Upcoming", value: upcomingTickets.length, title: "Scheduled work", detail: "Future ready or field-owned tickets." },
-          { kicker: "Review", value: ticketCountBy(workTickets, (ticket) => ticketInLane(ticket, ["review"])), title: "Completion handoff", detail: "Work needing proof, actuals, or closeout review." }
+          { kicker: "Review", value: reviewTickets.length, title: "Completion handoff", detail: "Work needing proof, actuals, or closeout review." }
         ], "Work workspace signals")}
         ${renderTicketRoleBrief("field", tickets)}
         <div class="field-grid">
@@ -11260,6 +11324,11 @@
           </aside>
         </div>
       </div>`;
+    setRoutePreviewState("work", {
+      section: "calendar",
+      stops: routeStopsToday,
+      emptyText: "No route stops planned for today."
+    });
   }
 
   function renderLeadsWorkspace(data = state.data) {

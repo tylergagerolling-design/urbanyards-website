@@ -14907,6 +14907,100 @@ body:not(.is-login-screen) .field-grid {
   grid-template-columns: minmax(0, 1.55fr) minmax(320px, .8fr);
 }
 
+body:not(.is-login-screen) .work-day-plan-panel {
+  display: grid;
+  grid-template-columns: minmax(0, 1.05fr) minmax(360px, .95fr);
+  gap: 16px;
+}
+
+body:not(.is-login-screen) .work-day-map-card,
+body:not(.is-login-screen) .work-plan-tile {
+  min-width: 0;
+  padding: clamp(18px, 2vw, 24px);
+  border: 1px solid rgba(73, 102, 77, .16);
+  border-radius: 24px;
+  background:
+    radial-gradient(circle at 94% 8%, rgba(153, 180, 119, .12), transparent 34%),
+    rgba(255, 255, 255, .78);
+  box-shadow: 0 14px 36px rgba(19, 36, 28, .055);
+}
+
+body:not(.is-login-screen) .work-day-map-card {
+  display: grid;
+  gap: 14px;
+}
+
+body:not(.is-login-screen) .work-day-map-card .dashboard-map-preview-shell {
+  min-height: clamp(170px, 18vw, 230px);
+  overflow: hidden;
+  border: 1px solid rgba(73, 102, 77, .12);
+  border-radius: 18px;
+}
+
+body:not(.is-login-screen) .work-day-route-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  color: var(--uy-muted);
+  font-weight: 750;
+}
+
+body:not(.is-login-screen) .work-day-route-footer button,
+body:not(.is-login-screen) .work-plan-tile button {
+  min-height: 38px;
+  padding: 0 14px;
+  border: 1px solid rgba(18, 63, 49, .14);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, .86);
+  color: var(--uy-green);
+  font-weight: 850;
+}
+
+body:not(.is-login-screen) .work-day-route-footer button:hover,
+body:not(.is-login-screen) .work-plan-tile button:hover {
+  border-color: rgba(18, 63, 49, .28);
+  background: #f8fbf2;
+}
+
+body:not(.is-login-screen) .work-plan-tile-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+body:not(.is-login-screen) .work-plan-tile {
+  display: grid;
+  align-content: start;
+  gap: 8px;
+  padding: 18px;
+}
+
+body:not(.is-login-screen) .work-plan-tile span {
+  color: rgba(18, 63, 49, .64);
+  font-size: .72rem;
+  font-weight: 900;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+}
+
+body:not(.is-login-screen) .work-plan-tile strong {
+  color: var(--uy-green);
+  font-size: clamp(1.45rem, 2vw, 2rem);
+  line-height: 1;
+}
+
+body:not(.is-login-screen) .work-plan-tile p {
+  margin: 0;
+  color: var(--uy-muted);
+  line-height: 1.38;
+}
+
+body:not(.is-login-screen) .work-plan-tile button {
+  width: fit-content;
+  margin-top: 4px;
+}
+
 body:not(.is-login-screen) .field-side-stack {
   display: grid;
   gap: 16px;
@@ -15821,6 +15915,7 @@ body:not(.is-login-screen) .field-proof-actions button {
 
   body:not(.is-login-screen) .ticket-lane-grid,
   body:not(.is-login-screen) .field-grid,
+  body:not(.is-login-screen) .work-day-plan-panel,
   body:not(.is-login-screen) .ticket-review-strip,
   body:not(.is-login-screen) .ticket-role-brief {
     grid-template-columns: 1fr;
@@ -15859,8 +15954,19 @@ body:not(.is-login-screen) .field-proof-actions button {
   body:not(.is-login-screen) .ticket-flow-panel,
   body:not(.is-login-screen) .money-budget-stats,
   body:not(.is-login-screen) .workspace-focus-strip,
+  body:not(.is-login-screen) .work-plan-tile-grid,
   body:not(.is-login-screen) .ticket-owner-strip {
     grid-template-columns: 1fr;
+  }
+
+  body:not(.is-login-screen) .work-day-route-footer {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  body:not(.is-login-screen) .work-day-route-footer button,
+  body:not(.is-login-screen) .work-plan-tile button {
+    width: 100%;
   }
 
   body:not(.is-login-screen) .ticket-flow-heading {

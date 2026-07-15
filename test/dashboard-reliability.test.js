@@ -80,11 +80,14 @@ test("netlify deploy runs dashboard checks and has dashboard cache guards", () =
 
 test("dashboard route aliases and new reliability diagnostics are wired", () => {
   const html = read("dashboard.html");
+  const css = read("dashboard.css");
   const js = read("dashboard.js");
   const workspaceRegistry = read("src/app/routing/workspace-registry.js");
 
   assert.doesNotMatch(html, /id="budgets"/);
   assert.doesNotMatch(html, /id="connected-operations"/);
+  assert.match(html, /<section class="dashboard-section home-ticket-page" id="overview"/);
+  assert.match(html, /data-home-workspace/);
   const primaryDrawerLabels = [...html.matchAll(/<a href="#[^"]+"(?![^>]*legacy-nav-route)[^>]*data-dashboard-link="[^"]+"[\s\S]*?<span class="nav-label">([^<]+)<\/span><\/a>/g)].map((match) => match[1]);
   assert.deepEqual(primaryDrawerLabels, ["Home", "Tickets", "Work", "Leads", "Money", "Tools"]);
   const mobileTabLabels = [...html.matchAll(/<nav class="mobile-tabbar"[\s\S]*?<\/nav>/g)][0][0]
@@ -92,6 +95,8 @@ test("dashboard route aliases and new reliability diagnostics are wired", () => 
   assert.deepEqual([...mobileTabLabels].map((match) => match[1]), primaryDrawerLabels);
   assert.match(js, /function loadModule/);
   assert.match(js, /function safeRender/);
+  assert.match(js, /function renderHomeWorkspace/);
+  assert.match(js, /safeRender\("home ticket workspace", \(\) => renderHomeWorkspace\(data\)\)/);
   assert.match(js, /function renderDashboardHealth/);
   assert.match(js, /activeSection: "calendar"/);
   assert.match(js, /const DEFAULT_DASHBOARD_SECTION = "calendar"/);
@@ -109,6 +114,9 @@ test("dashboard route aliases and new reliability diagnostics are wired", () => 
   assert.match(js, /Leads handoff rule/);
   assert.match(html, /data-action="refresh-documentation">Refresh Forms/);
   assert.doesNotMatch(html, /data-action="go-documents">Open Money<\/button>\s*<\/article>/);
+  assert.match(css, /#overview\.home-ticket-page > :not\(\[data-home-workspace\]\)/);
+  assert.match(css, /#tickets\.job-ticket-page > :not\(\[data-job-ticket-workspace\]\)/);
+  assert.doesNotMatch(css, /#overview\.job-ticket-page > :not\(\[data-job-ticket-workspace\]\)/);
 });
 
 test("dashboard creates canonical job tickets without removing source fallbacks", () => {

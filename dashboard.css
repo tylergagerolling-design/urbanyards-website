@@ -14212,7 +14212,8 @@ body:not(.is-login-screen) .app-view .dashboard-main #calendar .calendar-tabs bu
 
 /* Rebuild v2: ticket-first workspaces. Legacy tab bodies stay in the
    markup for rollback, but the rebuilt workspace is the visible source of truth. */
-body:not(.is-login-screen) #overview.job-ticket-page > :not([data-job-ticket-workspace]),
+body:not(.is-login-screen) #overview.home-ticket-page > :not([data-home-workspace]),
+body:not(.is-login-screen) #tickets.job-ticket-page > :not([data-job-ticket-workspace]),
 body:not(.is-login-screen) #calendar.field-mode-page > :not([data-field-mode-workspace]),
 body:not(.is-login-screen) #outreach.sales-ticket-page > :not([data-sales-workspace]),
 body:not(.is-login-screen) #documents.accountant-page > :not([data-accountant-workspace]),

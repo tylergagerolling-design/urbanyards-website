@@ -9813,6 +9813,87 @@
     </nav>`;
   }
 
+  function renderHomeActionQueue(items) {
+    return `<section class="ticket-lane home-ticket-action-lane">
+      <div class="ticket-lane-heading">
+        <div>
+          <h3>Today&apos;s Action Queue</h3>
+          <p>Website requests, missed visits, follow-ups, invoices, imports, and ticket blockers that need attention.</p>
+        </div>
+        <span>${escapeHtml(items.length)}</span>
+      </div>
+      <div class="ticket-lane-list">
+        ${items.length ? items.map((item) => `
+          <article class="today-action-item urgency-${escapeHtml(slug(item.status))}">
+            <span class="today-action-status">${escapeHtml(item.status)}</span>
+            <div>
+              <strong>${escapeHtml(item.title)}</strong>
+              <small>${escapeHtml(item.detail || "Review this item.")}</small>
+            </div>
+            ${renderTodayActionButton(item)}
+          </article>
+        `).join("") : emptyState("Nothing needs immediate attention today.")}
+      </div>
+    </section>`;
+  }
+
+  function renderHomeWorkspace(data = state.data) {
+    const target = qs("[data-home-workspace]");
+    if (!target) return;
+    const tickets = dashboardTickets(data);
+    const today = todayKey();
+    const activeTickets = tickets.filter((ticket) => !["closed", "cancelled"].includes(ticket.stage));
+    const todayTickets = activeTickets.filter((ticket) => dateKey(ticket.dateRaw) === today);
+    const attentionTickets = activeTickets.filter((ticket) => [
+      "sales_intake",
+      "scope_in_progress",
+      "quote_pending",
+      "customer_approval_pending",
+      "needs_budget",
+      "budget_in_progress",
+      "needs_owner_approval",
+      "field_work_complete",
+      "completion_review",
+      "invoice_review",
+      "invoice_sent",
+      "partially_paid"
+    ].includes(ticket.stage));
+    const fieldTickets = activeTickets.filter((ticket) => ["ready_to_schedule", "scheduled", "in_progress", "paused"].includes(ticket.stage));
+    const moneyTickets = activeTickets.filter((ticket) => ["needs_budget", "budget_in_progress", "needs_owner_approval", "invoice_preparation", "invoice_review", "invoice_sent", "partially_paid"].includes(ticket.stage));
+    const actions = todayActionItems(data);
+    const notifications = buildNotifications(data);
+    const workflowWarnings = dashboardHealthWarnings({ scope: "critical" });
+
+    target.innerHTML = `
+      <div class="ticket-workspace home-ticket-workspace">
+        ${renderWorkspaceSwitcher("overview")}
+        <header class="ticket-hero">
+          <div>
+            <p class="eyebrow">Home</p>
+            <h3>Today&apos;s Job Ticket Dashboard</h3>
+            <p>Start here to see what needs attention, which tickets are moving through the workflow, and where Leads, Work, Money, and Tools need a handoff.</p>
+          </div>
+          <div class="ticket-hero-actions">
+            <button type="button" data-action="open-ticket-create" data-ticket-type="quote">New Job Ticket</button>
+            <button type="button" data-action="go-calendar">Open Work</button>
+          </div>
+        </header>
+        <section class="ticket-metrics" aria-label="Home ticket summary">
+          ${renderTicketMetric(activeTickets.length, "Open Tickets", "Across all lanes")}
+          ${renderTicketMetric(todayTickets.length, "Due Today", "Scheduled or dated today")}
+          ${renderTicketMetric(actions.length, "Action Items", "Needs attention now")}
+          ${renderTicketMetric(workflowWarnings.length + notifications.length, "Alerts", "Workflow and notification signals")}
+        </section>
+        ${renderTicketOwnerStrip(activeTickets)}
+        <div class="ticket-lane-grid">
+          ${renderTicketColumn("Next Ticket Work", "The closest handoffs and blockers across the workflow.", attentionTickets, "No ticket blockers need review.")}
+          ${renderTicketColumn("Work and Field", "Ready-to-schedule, scheduled, active, and paused visits.", fieldTickets, "No field tickets are active right now.")}
+          ${renderTicketColumn("Money and Closeout", "Cost review, invoice review, payment, and closeout tickets.", moneyTickets, "No Money or closeout tickets need attention.")}
+        </div>
+        ${renderHomeActionQueue(actions)}
+      </div>`;
+  }
+
   function renderJobTicketWorkspace(data = state.data) {
     const target = qs("[data-job-ticket-workspace]");
     if (!target) return;
@@ -14679,6 +14760,7 @@
   async function render() {
     const data = state.data;
     safeRender("notifications", () => renderNotifications(data));
+    safeRender("home ticket workspace", () => renderHomeWorkspace(data));
     safeRender("job ticket workspace", () => renderJobTicketWorkspace(data));
     safeRender("field mode workspace", () => renderFieldModeWorkspace(data));
     safeRender("sales workspace", () => renderSalesWorkspace(data));

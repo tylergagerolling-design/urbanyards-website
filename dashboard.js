@@ -70,9 +70,9 @@
     settings: ["owner", "admin"]
   };
   const DASHBOARD_ROLE_DEFAULT_SECTIONS = {
-    owner: "calendar",
-    admin: "calendar",
-    manager: "calendar",
+    owner: "overview",
+    admin: "overview",
+    manager: "overview",
     sales_outreach: "outreach",
     accountant: "documents",
     field_worker: "calendar",
@@ -235,7 +235,7 @@
   }
 
   const state = {
-    activeSection: "calendar",
+    activeSection: "overview",
     statusFilter: "All",
     calendarFilter: "All",
     calendarView: "agenda",
@@ -403,7 +403,7 @@
     reminders: "settings"
   };
   const rebuildPrimarySections = new Set(["overview", "tickets", "calendar", "outreach", "documents", "settings"]);
-  const DEFAULT_DASHBOARD_SECTION = "calendar";
+  const DEFAULT_DASHBOARD_SECTION = "overview";
   const supportModuleWarningNames = new Set([
     "operations",
     "route planner",
@@ -3716,8 +3716,8 @@
         { id: "demo-recurring-visit-2", recurring_service_id: "demo-recurring-2", visit_date: daysFromToday(12), visit_window: "Morning", status: "Needs Reschedule" }
       ],
       checklistTemplates: [
-        { id: "demo-check-template-1", title: "Arrival and completion photo checklist", category: "Field Photos", service_type: "Property care", status: "Active", visibility: "Field", description: "Capture arrival condition, completed work, and visible exceptions." },
-        { id: "demo-check-template-2", title: "Trash area inspection", category: "Apartment Support", service_type: "Trash Area Care", status: "Active", visibility: "Field", description: "Document bins, overflow, enclosure, and follow-up notes." }
+        { id: "demo-check-template-1", title: "Arrival and completion photo checklist", category: "Work Photos", service_type: "Property care", status: "Active", visibility: "Work", description: "Capture arrival condition, completed work, and visible exceptions." },
+        { id: "demo-check-template-2", title: "Trash area inspection", category: "Apartment Support", service_type: "Trash Area Care", status: "Active", visibility: "Work", description: "Document bins, overflow, enclosure, and follow-up notes." }
       ],
       checklists: [
         { id: "demo-checklist-1", template_id: "demo-check-template-1", scheduled_job_id: "demo-job-1", title: "Kennedy visit field proof", status: "In Progress", due_date: today },
@@ -5046,7 +5046,7 @@
       internal_notes: blankToNull(overrides.internal_notes || overrides.internalNotes),
       scheduled_date: visitDate,
       visit_date: visitDate,
-      owner_label: blankToNull(overrides.owner_label || overrides.ownerLabel) || "Field",
+      owner_label: blankToNull(overrides.owner_label || overrides.ownerLabel) || "Work",
       next_action: blankToNull(overrides.next_action || overrides.nextAction) || ticketNextAction(stage),
       field_completion_notes: blankToNull(overrides.field_completion_notes || overrides.fieldCompletionNotes),
       arrival_photos_uploaded: overrides.arrival_photos_uploaded ?? overrides.arrivalPhotosUploaded,
@@ -5224,7 +5224,7 @@
       let activeTicket = baseTicket;
       if (currentStage === "scheduled") {
         activeTicket = await transitionJobTicketStage(baseTicket.id, "in_progress", {
-          notes: "Field work started from the schedule detail panel.",
+          notes: "Work started from the schedule detail panel.",
           nextAction: ticketNextAction("in_progress"),
           sourceStatus: "In Progress"
         });
@@ -9200,7 +9200,7 @@
       case "invoice_preparation":
         return "Prepare draft invoice";
       case "ready_to_schedule":
-        return "Schedule field work";
+        return "Schedule work";
       case "scheduled":
         return "Work the visit";
       case "in_progress":
@@ -9504,7 +9504,7 @@
     {
       id: "field",
       label: "Work",
-      title: "Field owns schedule, work, photos, and completion notes.",
+      title: "Work owns schedule, visits, photos, and completion notes.",
       detail: "Run the visit, add arrival and completion proof, attach forms, and send completed work into review.",
       stages: ["ready_to_schedule", "scheduled", "in_progress", "paused"]
     },
@@ -9612,7 +9612,7 @@
     { key: "approval", label: "Approval", detail: "Customer yes", stages: ["customer_approval_pending"] },
     { key: "cost-review", label: "Cost Review", detail: "Costs and owner", stages: ["needs_budget", "budget_in_progress", "needs_owner_approval"] },
     { key: "invoice-prep", label: "Invoice Prep", detail: "Draft ready", stages: ["invoice_preparation"] },
-    { key: "field", label: "Field", detail: "Schedule and work", stages: ["ready_to_schedule", "scheduled", "in_progress", "paused", "scope_change_requested"] },
+    { key: "field", label: "Work", detail: "Schedule and work", stages: ["ready_to_schedule", "scheduled", "in_progress", "paused", "scope_change_requested"] },
     { key: "review", label: "Review", detail: "Photos and actuals", stages: ["field_work_complete", "completion_review", "invoice_review"] },
     { key: "close", label: "Close", detail: "Invoice and payment", stages: ["invoice_sent", "partially_paid", "paid", "closed"] }
   ];
@@ -9683,22 +9683,22 @@
     ],
     ready_to_schedule: [{ to: "scheduled", label: "Mark scheduled", detail: "A field visit is on the calendar." }],
     scheduled: [
-      { to: "in_progress", label: "Start work", detail: "Field work has started." },
+      { to: "in_progress", label: "Start work", detail: "Work has started." },
       { to: "scope_change_requested", label: "Request scope change", detail: "Work needs a scope or approval change." },
       { to: "cancelled", label: "Cancel ticket", detail: "Close this ticket as cancelled." }
     ],
     in_progress: [
       { to: "paused", label: "Pause work", detail: "Work is blocked or waiting." },
       { to: "scope_change_requested", label: "Request scope change", detail: "Work needs a scope or approval change." },
-      { to: "field_work_complete", label: "Field complete", detail: "Send completed field work to review." }
+      { to: "field_work_complete", label: "Work complete", detail: "Send completed work to review." }
     ],
     paused: [
       { to: "in_progress", label: "Resume work", detail: "Blocker resolved and work can continue." },
       { to: "scope_change_requested", label: "Request scope change", detail: "Escalate the blocker into owner review." }
     ],
     scope_change_requested: [
-      { to: "in_progress", label: "Approve change", detail: "Approve and return to field work." },
-      { to: "budget_in_progress", label: "Needs cost review", detail: "Send change to Money before field work continues." },
+      { to: "in_progress", label: "Approve change", detail: "Approve and return to work." },
+      { to: "budget_in_progress", label: "Needs cost review", detail: "Send change to Money before work continues." },
       { to: "scope_in_progress", label: "Return to Leads", detail: "Send change back for scope clarification." }
     ],
     field_work_complete: [{ to: "completion_review", label: "Start completion review", detail: "Review photos, forms, and actuals." }],
@@ -9746,7 +9746,7 @@
       assignedUserId: "Assigned team member",
       beforePhotosUploaded: "Arrival photos",
       afterPhotosUploaded: "Completion photos",
-      fieldCompletionNotes: "Field completion notes",
+      fieldCompletionNotes: "Completion notes",
       invoiceFinalized: "Final invoice",
       paymentStatus: "Paid status"
     })[field] || titleCase(String(field || "").replace(/_/g, " "));
@@ -10210,7 +10210,7 @@
         ${renderTicketOwnerStrip(activeTickets)}
         <div class="ticket-lane-grid">
           ${renderTicketColumn("Next Ticket Work", "The closest handoffs and blockers across the workflow.", attentionTickets, "No ticket blockers need review.")}
-          ${renderTicketColumn("Work and Field", "Ready-to-schedule, scheduled, active, and paused visits.", fieldTickets, "No field tickets are active right now.")}
+          ${renderTicketColumn("Work", "Ready-to-schedule, scheduled, active, and paused visits.", fieldTickets, "No work tickets are active right now.")}
           ${renderTicketColumn("Money and Closeout", "Cost review, invoice review, payment, and closeout tickets.", moneyTickets, "No Money or closeout tickets need attention.")}
         </div>
         ${renderHomeActionQueue(actions)}
@@ -10241,8 +10241,8 @@
           </div>
         </header>
         <section class="ticket-metrics" aria-label="Job ticket summary">
-          ${renderTicketMetric(openTickets.length, "Open Tickets", "Quotes and field work")}
-          ${renderTicketMetric(ticketCountBy(openTickets, (ticket) => ticketInLane(ticket, ["field"])), "In Field", "Scheduled or active")}
+          ${renderTicketMetric(openTickets.length, "Open Tickets", "Quotes and work")}
+          ${renderTicketMetric(ticketCountBy(openTickets, (ticket) => ticketInLane(ticket, ["field"])), "In Work", "Scheduled or active")}
           ${renderTicketMetric(ticketCountBy(openTickets, (ticket) => ticketInLane(ticket, ["sales", "accounting"])), "Needs Office", "Scope, quote, cost review")}
           ${renderTicketMetric(ticketCountBy(openTickets, (ticket) => ticketInLane(ticket, ["review", "money"])), "Closeout", "Review, invoice, payment")}
         </section>
@@ -10251,7 +10251,7 @@
           <div class="ticket-flow-step"><span>2</span><strong>Quote Approval</strong><small>Customer yes</small></div>
           <div class="ticket-flow-step"><span>3</span><strong>Cost Review</strong><small>Owner approval</small></div>
           <div class="ticket-flow-step"><span>4</span><strong>Draft Invoice</strong><small>Ready before field</small></div>
-          <div class="ticket-flow-step"><span>5</span><strong>Schedule</strong><small>Field assignment</small></div>
+          <div class="ticket-flow-step"><span>5</span><strong>Schedule</strong><small>Work assignment</small></div>
           <div class="ticket-flow-step"><span>6</span><strong>Complete</strong><small>Photos and forms</small></div>
           <div class="ticket-flow-step"><span>7</span><strong>Invoice and Close</strong><small>Payment collected</small></div>
         </section>
@@ -10259,7 +10259,7 @@
         <div class="ticket-lane-grid">
           ${renderTicketColumn("Today and Work", "Scheduled, active, and work-owned tickets.", fieldTickets, "No work tickets are scheduled yet.")}
           ${renderTicketColumn("Office Review", "Scope, quote, cost review, approval, and closeout blockers.", officeTickets, "No office tickets need review.")}
-          ${renderTicketColumn("Ready to Schedule", "Approved work that can move into the field calendar.", readyTickets, "No approved tickets are waiting to schedule.")}
+          ${renderTicketColumn("Ready to Schedule", "Approved work that can move into the schedule.", readyTickets, "No approved tickets are waiting to schedule.")}
         </div>
         <section class="ticket-review-strip">
           <div>
@@ -10288,7 +10288,7 @@
         <header class="ticket-hero field-hero">
           <div>
             <p class="eyebrow">Work</p>
-            <h3>Today in the Field</h3>
+            <h3>Today&apos;s Work</h3>
             <p>Simple job-ticket queue for on-site work, with route, photos, documents, and completion review close by.</p>
           </div>
           <div class="ticket-hero-actions">
@@ -10296,7 +10296,7 @@
             <button type="button" data-action="go-route-planner">Open Route</button>
           </div>
         </header>
-        <section class="ticket-metrics" aria-label="Field summary">
+        <section class="ticket-metrics" aria-label="Work summary">
           ${renderTicketMetric(todayTickets.length, "Visits Today", "Scheduled for today")}
           ${renderTicketMetric(ticketCountBy(fieldTickets, (ticket) => ticketInStage(ticket, ["in_progress"])), "In Progress", "Started work")}
           ${renderTicketMetric(ticketCountBy(fieldTickets, (ticket) => ticketInLane(ticket, ["review"])), "Needs Review", "Photos, actuals, invoice")}
@@ -10307,13 +10307,13 @@
           <section class="ticket-lane field-primary-lane">
             <div class="ticket-lane-heading">
               <div>
-                <h3>Field Queue</h3>
+                <h3>Work Queue</h3>
                 <p>Open the ticket before heading to the site.</p>
               </div>
               <span>${escapeHtml(fieldTickets.length)}</span>
             </div>
             <div class="ticket-lane-list">
-              ${fieldTickets.length ? fieldTickets.slice(0, 8).map((ticket) => renderTicketCard(ticket)).join("") : emptyState("No field visits are scheduled yet.")}
+                  ${fieldTickets.length ? fieldTickets.slice(0, 8).map((ticket) => renderTicketCard(ticket)).join("") : emptyState("No work visits are scheduled yet.")}
             </div>
           </section>
           <aside class="field-side-stack">
@@ -10321,7 +10321,7 @@
               <div class="ticket-lane-heading">
                 <div>
                   <h3>Quick Schedule</h3>
-                  <p>Create a visit without leaving Field Mode.</p>
+                  <p>Create a visit without leaving Work.</p>
                 </div>
               </div>
               <form class="schedule-create-form ticket-create-form" data-job-create-form>
@@ -10410,7 +10410,7 @@
           <div>
             <p class="eyebrow">Leads handoff rule</p>
             <h3>Leads does not own the whole job.</h3>
-            <p>Leads creates the ticket, confirms scope and quote approval, then hands the same ticket to Money. Cost review, field assignment, invoice, and payment stay connected to that ticket history.</p>
+            <p>Leads creates the ticket, confirms scope and quote approval, then hands the same ticket to Money. Cost review, work assignment, invoice, and payment stay connected to that ticket history.</p>
           </div>
           <div class="ticket-review-list">
             ${due.length ? due.slice(0, 3).map((item, index) => renderTicketCard(buildTicketFromQuote(item, index), true)).join("") : emptyState("No urgent Leads follow-ups.")}
@@ -10472,7 +10472,7 @@
         <div class="ticket-lane-grid">
           ${renderTicketColumn("Cost Review Queue", "Approved work that needs internal cost review before scheduling.", needsBudget, "No tickets are waiting for cost review.")}
           ${renderTicketColumn("Owner and Invoice Prep", "Cost approvals and draft invoices required before scheduling.", ownerApproval, "No tickets are waiting on owner approval.")}
-          ${renderTicketColumn("Completion Closeout", "Finished field work that needs actuals, documents, invoice, and payment review.", fieldComplete, "No completed field work is waiting for closeout.")}
+          ${renderTicketColumn("Completion Closeout", "Finished work that needs actuals, documents, invoice, and payment review.", fieldComplete, "No completed work is waiting for closeout.")}
         </div>
         <section class="ticket-review-strip">
           <div>
@@ -10982,7 +10982,7 @@
     const rows = [
       ["Walkthrough", walkthrough, "Open quote requests", "pipeline-walkthrough.svg"],
       ["Estimate", estimates, "Quotes and estimates", "pipeline-estimate.svg"],
-      ["Scheduled", scheduled, "Upcoming field work", "pipeline-scheduled.svg"],
+      ["Scheduled", scheduled, "Upcoming work", "pipeline-scheduled.svg"],
       ["In Progress", inProgress, "Active visits", "work-in-progress.svg"],
       ["Completed", completed, "Finished work", "pipeline-completed.svg"]
     ];
@@ -12703,7 +12703,7 @@
         <div class="panel-heading">
           <div>
             <h3>Recurring Service</h3>
-            <p>Create reusable service plans that can feed calendar visits and field checklists.</p>
+            <p>Create reusable service plans that can feed calendar visits and work checklists.</p>
           </div>
         </div>
         <form class="connected-ops-form" data-connected-ops-form="recurring">
@@ -12765,8 +12765,8 @@
       <article class="panel connected-ops-wide-card">
         <div class="panel-heading">
           <div>
-            <h3>Mobile Field Mode</h3>
-            <p>Field-friendly job view with checklists, time capture, and camera/photo proof hooks.</p>
+            <h3>Mobile Work Mode</h3>
+            <p>Work-friendly job view with checklists, time capture, and camera/photo proof hooks.</p>
           </div>
         </div>
         <div class="connected-ops-field-summary">
@@ -12779,13 +12779,13 @@
       <article class="panel connected-ops-list-card">
         <div class="panel-heading"><h3>Checklist Templates</h3></div>
         <div class="connected-ops-list">
-          ${ops.checklistTemplates.length ? ops.checklistTemplates.map((template) => connectedOpsRow(template.title, [template.category, template.visibility].filter(Boolean).join(" / "), template.status)).join("") : emptyState("No field checklist templates yet.")}
+          ${ops.checklistTemplates.length ? ops.checklistTemplates.map((template) => connectedOpsRow(template.title, [template.category, template.visibility].filter(Boolean).join(" / "), template.status)).join("") : emptyState("No work checklist templates yet.")}
         </div>
       </article>
       <article class="panel connected-ops-list-card">
-        <div class="panel-heading"><h3>Upcoming Field Jobs</h3></div>
+        <div class="panel-heading"><h3>Upcoming Work Jobs</h3></div>
         <div class="connected-ops-list">
-          ${activeJobs.length ? activeJobs.map((job) => connectedOpsRow(job.site, [job.date, job.window, job.service].filter(Boolean).join(" / "), job.status, `<button class="inline-action" type="button" data-action="edit-job" data-id="${escapeHtml(job.id)}">Open</button>`)).join("") : emptyState("No upcoming field jobs.")}
+          ${activeJobs.length ? activeJobs.map((job) => connectedOpsRow(job.site, [job.date, job.window, job.service].filter(Boolean).join(" / "), job.status, `<button class="inline-action" type="button" data-action="edit-job" data-id="${escapeHtml(job.id)}">Open</button>`)).join("") : emptyState("No upcoming work jobs.")}
         </div>
       </article>
     </div>`;
@@ -12978,7 +12978,7 @@
     if (els.connectedOpsMetrics) {
       els.connectedOpsMetrics.innerHTML = [
         connectedOpsMetric("Active Recurring", String(activeRecurring), "Recurring service plans"),
-        connectedOpsMetric("Field Checklists", String(dueChecklists), "Open job checklists"),
+        connectedOpsMetric("Work Checklists", String(dueChecklists), "Open job checklists"),
         connectedOpsMetric("Approvals", String(openApprovals), "Need decisions", openApprovals ? "warning" : ""),
         connectedOpsMetric("Maintenance Due", String(dueMaintenance), "Next 7 days", dueMaintenance ? "warning" : ""),
         connectedOpsMetric("Communications", String(ops.communications.length), "Client timeline records")
@@ -15086,7 +15086,7 @@
     safeRender("notifications", () => renderNotifications(data));
     safeRender("home ticket workspace", () => renderHomeWorkspace(data));
     safeRender("job ticket workspace", () => renderJobTicketWorkspace(data));
-    safeRender("field mode workspace", () => renderFieldModeWorkspace(data));
+    safeRender("work workspace", () => renderFieldModeWorkspace(data));
     safeRender("sales workspace", () => renderSalesWorkspace(data));
     safeRender("accountant workspace", () => renderAccountantWorkspace(data));
     safeRender("tools workspace", () => renderToolsWorkspace(data));
@@ -17745,13 +17745,13 @@
               notes: String(formData.get("notes") || "").trim(),
               visit_date: visitDate,
               scheduled_date: visitDate,
-              owner_label: "Field",
+              owner_label: "Work",
               next_action: "Work the visit"
             }) : null;
             await refreshDashboard();
             if (canonicalTicket?.id) openTicketDrawer("ticket", canonicalTicket.id);
             else if (jobs[0]?.id) openTicketDrawer("job", jobs[0].id);
-            setDashboardState("Field ticket created.");
+            setDashboardState("Work ticket created.");
           } else {
             const quote = await insertQuoteSubmission({
               name: customerName,
@@ -17831,7 +17831,7 @@
             await ensureJobTicketForScheduledJob(job, {
               stage: "scheduled",
               notes: `Created from quote submission ${item.id}.`,
-              owner_label: "Field",
+              owner_label: "Work",
               next_action: ticketNextAction("scheduled")
             });
           }
@@ -17842,7 +17842,7 @@
           });
           await ensureJobTicketForQuoteSubmission(updatedQuote || item, {
             stage: "ready_to_schedule",
-            next_action: "Field visit created",
+            next_action: "Work visit created",
             internal_notes: jobs.length > 1
               ? `${jobs.length} recurring visits created from this quote.`
               : "Scheduled visit created from this quote."

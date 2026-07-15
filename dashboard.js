@@ -11557,6 +11557,9 @@
       ? formatDateTime(ai.liveVersion.publishedAt)
       : "Not published";
     const documentationCount = Number(documentation.templates?.length || 0) + Number(documentation.submissions?.length || 0);
+    const equipmentCount = Number(data.equipmentItems?.length || 0);
+    const routeStopsToday = dashboardRouteStopsForDate(data, todayKey()).length;
+    const usersCount = Number(data.userProfiles?.length || 0);
     target.innerHTML = `
       <div class="ticket-workspace uy-page-prototype tools-workspace" data-uy-page-contract="tools" data-data-source="equipment,documentation,route_tools,ai,imports,settings">
         ${renderWorkspaceSwitcher("settings")}
@@ -11584,34 +11587,61 @@
         ], "Tools workspace signals")}
         <section class="tools-control-grid" aria-label="Dashboard support tools">
           ${renderToolsCard({
-            label: "Route & Work Map",
-            detail: "Open route planning from Work so stops remain tied to scheduled visits.",
-            meta: "Work support",
-            primary: "Open Work Route",
+            label: "Route Planner",
+            detail: "Build the day route, pin stops, and keep route support close to scheduled work.",
+            meta: `${routeStopsToday} stops today`,
+            primary: "Open Route Planner",
             primaryAction: "go-route-planner"
           })}
           ${renderToolsCard({
-            label: "Forms & Job Documents",
-            detail: "Refresh template, submitted form, and job documentation records from Tools.",
+            label: "Equipment",
+            detail: "Track owned equipment, maintenance, replacement priorities, and hardware recommendations.",
+            meta: `${equipmentCount} equipment records`,
+            primary: "Open Equipment",
+            primaryAction: "go-equipment"
+          })}
+          ${renderToolsCard({
+            label: "Documentation",
+            detail: "Manage form templates, submitted paperwork, job photos, and reusable records.",
             meta: `${documentationCount} files or forms`,
-            primary: "Refresh Forms",
-            primaryAction: "refresh-documentation"
+            primary: "Open Documentation",
+            primaryAction: "go-documentation",
+            secondary: "Refresh Forms",
+            secondaryAction: "refresh-documentation"
           })}
           ${renderToolsCard({
             label: "Groundskeeper AI",
-            detail: "Refresh the secure backend-backed AI knowledge, rules, logs, and published helper version.",
+            detail: "Train and review the public website helper with backend-protected knowledge and rules.",
             meta: `Live version: ${aiLiveVersion}`,
-            primary: "Refresh AI",
-            primaryAction: "refresh-groundskeeper-ai"
+            primary: "Open AI Studio",
+            primaryAction: "go-groundskeeper-ai",
+            secondary: "Refresh AI",
+            secondaryAction: "refresh-groundskeeper-ai"
           })}
           ${renderToolsCard({
             label: "Import, Export & Backups",
-            detail: "Refresh data tools, export full backups, or import a safe backup file when needed.",
+            detail: "Move records through CSV, Excel, Google Sheets, PDF reports, and full JSON backups.",
             meta: state.importExportReady ? "Data tools ready" : "Setup may be needed",
-            primary: "Refresh Data Tools",
-            primaryAction: "refresh-import-export",
+            primary: "Open Data Tools",
+            primaryAction: "go-import-export",
             secondary: "Full Backup",
             secondaryAction: "export-full-backup"
+          })}
+          ${renderToolsCard({
+            label: "Users & Access",
+            detail: "Invite users, manage roles, disable access, and keep profile avatars clean.",
+            meta: `${usersCount} dashboard users`,
+            primary: "Manage Access",
+            primaryAction: "go-settings"
+          })}
+          ${renderToolsCard({
+            label: "Dashboard Health",
+            detail: "Copy diagnostics, refresh dashboard data, and separate setup warnings from workflow issues.",
+            meta: `${rows.length} diagnostics`,
+            primary: "Copy Diagnostics",
+            primaryAction: "copy-dashboard-diagnostics",
+            secondary: "Refresh Dashboard",
+            secondaryAction: "refresh-dashboard"
           })}
         </section>
         <section class="ticket-review-strip tools-health-strip">
@@ -18387,6 +18417,18 @@
       } else if (action === "go-route-planner") {
         setActiveSection("route-planner");
         replaceDashboardHash("route-planner");
+      } else if (action === "go-equipment") {
+        setActiveSection("equipment");
+        replaceDashboardHash("equipment");
+      } else if (action === "go-documentation") {
+        setActiveSection("documentation");
+        replaceDashboardHash("documentation");
+      } else if (action === "go-import-export") {
+        setActiveSection("import-export");
+        replaceDashboardHash("import-export");
+      } else if (action === "go-groundskeeper-ai") {
+        setActiveSection("groundskeeper-ai");
+        replaceDashboardHash("groundskeeper-ai");
       } else if (action === "go-connected-operations") {
         setActiveSection("tickets");
         replaceDashboardHash("tickets");

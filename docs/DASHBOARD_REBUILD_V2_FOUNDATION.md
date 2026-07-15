@@ -34,6 +34,8 @@ No production database schema changes are included in this slice.
 
 Database rebuild protection is documented in `docs/DATABASE_REBUILD_SAFETY_PLAN.md`, and the read-only inventory script lives at `supabase/DATABASE_INVENTORY_READONLY.sql`.
 
+The repo-level architecture inventory lives at `docs/DASHBOARD_ARCHITECTURE_INVENTORY.md`. It records the active app files, workspaces, Supabase tables referenced by the app, migration files, storage buckets, RLS/role model, and the no-destructive-change compatibility plan.
+
 Created foundation modules:
 
 - `src/shared/result.js`

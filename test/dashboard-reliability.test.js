@@ -109,6 +109,37 @@ test("dashboard design system locks the six-page rebuild contract", () => {
   assert.match(foundation, /Design-first planning is required/);
 });
 
+test("dashboard architecture inventory protects existing Supabase surfaces", () => {
+  const inventory = read("docs/DASHBOARD_ARCHITECTURE_INVENTORY.md");
+  const foundation = read("docs/DASHBOARD_REBUILD_V2_FOUNDATION.md");
+
+  [
+    "Home",
+    "Tickets",
+    "Work",
+    "Leads",
+    "Money",
+    "Tools",
+    "supabase/DATABASE_INVENTORY_READONLY.sql",
+    "job_tickets",
+    "job_ticket_events",
+    "quote_submissions",
+    "scheduled_jobs",
+    "outreach_prospects",
+    "sales_documents",
+    "documentation_templates",
+    "route_stops",
+    "user-avatars",
+    "documentation-submissions",
+    "job-site-photos"
+  ].forEach((phrase) => assert.match(inventory, new RegExp(phrase)));
+
+  assert.match(inventory, /No current checkpoint removes data/);
+  assert.match(inventory, /Do not globally disable RLS/);
+  assert.match(inventory, /Lead or client request -> Job Ticket -> Quote and approval -> Budget preparation -> Work assignment and scheduling -> Field completion and documentation -> Final invoice -> Closed ticket/);
+  assert.match(foundation, /DASHBOARD_ARCHITECTURE_INVENTORY\.md/);
+});
+
 test("dashboard route aliases and new reliability diagnostics are wired", () => {
   const html = read("dashboard.html");
   const css = read("dashboard.css");

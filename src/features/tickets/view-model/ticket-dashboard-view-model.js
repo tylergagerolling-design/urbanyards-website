@@ -101,7 +101,7 @@ function getTicketStageMeta(stage) {
   const normalized = normalizeTicketStage(stage);
   return Object.freeze({
     stage: normalized,
-    label: TICKET_STAGE_LABELS[normalized] || "Sales Intake",
+    label: TICKET_STAGE_LABELS[normalized] || "Lead Intake",
     ...(TICKET_STAGE_META[normalized] || TICKET_STAGE_META[TICKET_STAGES.SALES_INTAKE])
   });
 }

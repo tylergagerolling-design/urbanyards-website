@@ -5109,7 +5109,7 @@
       description: `${typeLabel} ${document.number || "Draft"}${total ? ` for $${total.toFixed(2)}` : ""}`,
       notes: blankToNull(overrides.notes) || document.notes,
       due_date: blankToNull(overrides.due_date || overrides.dueDate || document.dueDateRaw),
-      owner_label: blankToNull(overrides.owner_label || overrides.ownerLabel) || "Accounting",
+      owner_label: blankToNull(overrides.owner_label || overrides.ownerLabel) || "Money",
       next_action: blankToNull(overrides.next_action || overrides.nextAction) || ticketNextAction(stage)
     };
   }
@@ -8997,26 +8997,26 @@
   }
 
   const ticketStageMeta = {
-    draft: { label: "Draft", lane: "sales", tone: "muted", owner: "Sales" },
-    sales_intake: { label: "Sales Intake", lane: "sales", tone: "new", owner: "Sales" },
-    scope_in_progress: { label: "Scope", lane: "sales", tone: "watch", owner: "Sales" },
-    quote_pending: { label: "Quote Pending", lane: "sales", tone: "watch", owner: "Sales" },
-    customer_approval_pending: { label: "Customer Approval", lane: "sales", tone: "watch", owner: "Sales" },
-    needs_budget: { label: "Needs Cost Review", lane: "accounting", tone: "risk", owner: "Accounting" },
-    budget_in_progress: { label: "Cost Review In Progress", lane: "accounting", tone: "watch", owner: "Accounting" },
+    draft: { label: "Draft", lane: "sales", tone: "muted", owner: "Leads" },
+    sales_intake: { label: "Lead Intake", lane: "sales", tone: "new", owner: "Leads" },
+    scope_in_progress: { label: "Scope", lane: "sales", tone: "watch", owner: "Leads" },
+    quote_pending: { label: "Quote Pending", lane: "sales", tone: "watch", owner: "Leads" },
+    customer_approval_pending: { label: "Customer Approval", lane: "sales", tone: "watch", owner: "Leads" },
+    needs_budget: { label: "Needs Cost Review", lane: "accounting", tone: "risk", owner: "Money" },
+    budget_in_progress: { label: "Cost Review In Progress", lane: "accounting", tone: "watch", owner: "Money" },
     needs_owner_approval: { label: "Owner Approval", lane: "accounting", tone: "risk", owner: "Owner" },
-    invoice_preparation: { label: "Draft Invoice", lane: "accounting", tone: "watch", owner: "Accounting" },
-    ready_to_schedule: { label: "Ready to Schedule", lane: "ready", tone: "good", owner: "Field" },
-    scheduled: { label: "Scheduled", lane: "field", tone: "good", owner: "Field" },
-    in_progress: { label: "In Progress", lane: "field", tone: "active", owner: "Field" },
-    paused: { label: "Paused", lane: "field", tone: "watch", owner: "Field" },
-    scope_change_requested: { label: "Scope Change", lane: "sales", tone: "watch", owner: "Sales" },
-    field_work_complete: { label: "Field Complete", lane: "review", tone: "good", owner: "Owner Review" },
+    invoice_preparation: { label: "Draft Invoice", lane: "accounting", tone: "watch", owner: "Money" },
+    ready_to_schedule: { label: "Ready to Schedule", lane: "ready", tone: "good", owner: "Work" },
+    scheduled: { label: "Scheduled", lane: "field", tone: "good", owner: "Work" },
+    in_progress: { label: "In Progress", lane: "field", tone: "active", owner: "Work" },
+    paused: { label: "Paused", lane: "field", tone: "watch", owner: "Work" },
+    scope_change_requested: { label: "Scope Change", lane: "sales", tone: "watch", owner: "Leads" },
+    field_work_complete: { label: "Work Complete", lane: "review", tone: "good", owner: "Owner Review" },
     completion_review: { label: "Completion Review", lane: "review", tone: "watch", owner: "Owner Review" },
-    invoice_review: { label: "Invoice Review", lane: "money", tone: "watch", owner: "Accounting" },
-    invoice_sent: { label: "Invoice Sent", lane: "money", tone: "watch", owner: "Accounting" },
-    partially_paid: { label: "Partially Paid", lane: "money", tone: "watch", owner: "Accounting" },
-    paid: { label: "Paid", lane: "closed", tone: "good", owner: "Accounting" },
+    invoice_review: { label: "Invoice Review", lane: "money", tone: "watch", owner: "Money" },
+    invoice_sent: { label: "Invoice Sent", lane: "money", tone: "watch", owner: "Money" },
+    partially_paid: { label: "Partially Paid", lane: "money", tone: "watch", owner: "Money" },
+    paid: { label: "Paid", lane: "closed", tone: "good", owner: "Money" },
     closed: { label: "Closed", lane: "closed", tone: "muted", owner: "Closed" },
     cancelled: { label: "Cancelled", lane: "closed", tone: "muted", owner: "Closed" }
   };
@@ -9530,24 +9530,24 @@
     if (sourceType === "job") {
       if (ticket.stage === "scheduled" || ticket.stage === "in_progress" || ticket.stage === "paused") {
         return [
-          { label: "Open Field Visit", action: "edit-job", detail: "Update visit timing, service, status, forms, and photos." },
-          { label: "Mark Field Complete", status: "Completed", detail: "Sends the ticket to completion review." }
+          { label: "Open Work Visit", action: "edit-job", detail: "Update visit timing, service, status, forms, and photos." },
+          { label: "Mark Work Complete", status: "Completed", detail: "Sends the ticket to completion review." }
         ];
       }
       if (ticket.stage === "field_work_complete" || ticket.stage === "completion_review") {
         return [
           { label: "Send To Invoice Review", status: "Invoiced", detail: "Moves the completed visit to Money review." },
-          { label: "Open Field Visit", action: "edit-job", detail: "Check photos, forms, and visit details." }
+          { label: "Open Work Visit", action: "edit-job", detail: "Check photos, forms, and visit details." }
         ];
       }
       if (ticket.stage === "invoice_review" || ticket.stage === "invoice_sent" || ticket.stage === "partially_paid") {
         return [
           { label: "Open Money", action: "go-documents", detail: "Review invoice and payment status." },
-          { label: "Open Field Visit", action: "edit-job", detail: "Review the source visit." }
+          { label: "Open Work Visit", action: "edit-job", detail: "Review the source visit." }
         ];
       }
       return [
-        { label: "Open Field Visit", action: "edit-job", detail: "Review the source visit." }
+        { label: "Open Work Visit", action: "edit-job", detail: "Review the source visit." }
       ];
     }
     return [];
@@ -9592,14 +9592,14 @@
         <div class="ticket-drawer-heading">
           <div>
             <h3>Create ticket</h3>
-            <p>Start with a sales intake ticket, or create a scheduled field visit when the work is already ready.</p>
+            <p>Start with a lead intake ticket, or create a scheduled work visit when the job is already ready.</p>
           </div>
         </div>
         <form class="drawer-form drawer-ticket-create-form ${safeType === "field" ? "is-field-ticket" : ""}" data-ticket-create-form>
           <label>Ticket type
             <select name="ticket_type" data-ticket-type-select>
-              <option value="quote"${safeType === "quote" ? " selected" : ""}>Sales intake / quote request</option>
-              <option value="field"${safeType === "field" ? " selected" : ""}>Scheduled field visit</option>
+              <option value="quote"${safeType === "quote" ? " selected" : ""}>Lead intake / quote request</option>
+              <option value="field"${safeType === "field" ? " selected" : ""}>Scheduled work visit</option>
             </select>
           </label>
           <label>Customer or site
@@ -9656,7 +9656,7 @@
         <button type="button" data-action="edit-job" data-id="${escapeHtml(sourceId)}">${buttonContent("Open Visit Details", "edit-job")}</button>
         <button type="button" data-action="go-route-planner">${buttonContent("Open Route", "go-route-planner")}</button>
         <button type="button" data-action="go-documents">${buttonContent("Open Forms", "documentation")}</button>
-        ${ticket.stage !== "field_work_complete" && ticket.stage !== "completion_review" && ticket.stage !== "closed" ? `<button type="button" data-action="complete-job" data-id="${escapeHtml(sourceId)}">${buttonContent("Mark Field Complete", "complete-reminder")}</button>` : ""}
+        ${ticket.stage !== "field_work_complete" && ticket.stage !== "completion_review" && ticket.stage !== "closed" ? `<button type="button" data-action="complete-job" data-id="${escapeHtml(sourceId)}">${buttonContent("Mark Work Complete", "complete-reminder")}</button>` : ""}
       </div>`;
     }
     if (sourceType === "document") {
@@ -9841,7 +9841,7 @@
           ${renderTicketMetric(ticketCountBy(tickets, (ticket) => ticket.lane === "review" || ticket.lane === "money"), "Closeout", "Review, invoice, payment")}
         </section>
         <section class="ticket-flow-panel">
-          <div class="ticket-flow-step is-active"><span>1</span><strong>Sales Intake</strong><small>Lead and scope</small></div>
+          <div class="ticket-flow-step is-active"><span>1</span><strong>Lead Intake</strong><small>Lead and scope</small></div>
           <div class="ticket-flow-step"><span>2</span><strong>Quote Approval</strong><small>Customer yes</small></div>
           <div class="ticket-flow-step"><span>3</span><strong>Cost Review</strong><small>Owner approval</small></div>
           <div class="ticket-flow-step"><span>4</span><strong>Draft Invoice</strong><small>Ready before field</small></div>
@@ -9851,7 +9851,7 @@
         </section>
         ${renderTicketOwnerStrip(tickets)}
         <div class="ticket-lane-grid">
-          ${renderTicketColumn("Today and Field Work", "Scheduled, active, and field-owned tickets.", fieldTickets, "No field tickets are scheduled yet.")}
+          ${renderTicketColumn("Today and Work", "Scheduled, active, and work-owned tickets.", fieldTickets, "No work tickets are scheduled yet.")}
           ${renderTicketColumn("Office Review", "Scope, quote, cost review, approval, and closeout blockers.", officeTickets, "No office tickets need review.")}
           ${renderTicketColumn("Ready to Schedule", "Approved work that can move into the field calendar.", readyTickets, "No approved tickets are waiting to schedule.")}
         </div>
@@ -9988,15 +9988,15 @@
             <button type="button" data-action="import-outreach-csv">Import CSV</button>
           </div>
         </header>
-        <section class="ticket-metrics" aria-label="Sales ticket summary">
-          ${renderTicketMetric(intakeTickets.length, "Sales Intake", "New scope and lead review")}
+        <section class="ticket-metrics" aria-label="Leads ticket summary">
+          ${renderTicketMetric(intakeTickets.length, "Lead Intake", "New scope and lead review")}
           ${renderTicketMetric(due.length, "Follow-Ups Due", "Calls or emails waiting")}
           ${renderTicketMetric(approvalTickets.length + hot.length, "Quote Action", "Interested or quote pending")}
           ${renderTicketMetric(accountingTickets.length, "Money Handoff", "Approved work needs cost review")}
         </section>
         ${renderTicketRoleBrief("sales", dashboardTickets(data))}
         <div class="ticket-lane-grid">
-          ${renderTicketColumn("New Intake", "Requests and prospects that need Sales review.", intakeTickets, "No new sales intake tickets.")}
+          ${renderTicketColumn("New Intake", "Requests and prospects that need lead review.", intakeTickets, "No new lead intake tickets.")}
           ${renderTicketColumn("Customer Response Needed", "Quotes, follow-ups, and warm leads that need contact.", approvalTickets.concat(hot.map((item, index) => buildTicketFromQuote(item, index))), "No quote follow-ups are waiting.")}
           ${renderTicketColumn("Ready for Money", "Approved work ready for cost review, owner approval, and invoice preparation.", accountingTickets, "No approved tickets are ready for Money.")}
         </div>
@@ -10116,10 +10116,10 @@
         </section>
         <section class="tools-control-grid" aria-label="Dashboard support tools">
           ${renderToolsCard({
-            label: "Route & Field Map",
+            label: "Route & Work Map",
             detail: "Open route planning from Work so stops remain tied to scheduled visits.",
-            meta: "Field support",
-            primary: "Open Field Route",
+            meta: "Work support",
+            primary: "Open Work Route",
             primaryAction: "go-route-planner"
           })}
           ${renderToolsCard({

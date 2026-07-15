@@ -44,7 +44,7 @@ const WORKSPACES = Object.freeze([
     aliases: ["leads", "sales", "clients", "contacts", "properties", "sales-outreach"],
     defaultRoute: "sales-dashboard",
     nav: [
-      { key: "sales-dashboard", label: "Sales Dashboard", permission: PERMISSIONS.PROSPECTS_VIEW },
+      { key: "sales-dashboard", label: "Lead Dashboard", permission: PERMISSIONS.PROSPECTS_VIEW },
       { key: "prospects", label: "Prospects", permission: PERMISSIONS.PROSPECTS_VIEW },
       { key: "follow-ups", label: "Follow-Ups", permission: PERMISSIONS.PROSPECTS_EDIT },
       { key: "quotes", label: "Quotes", permission: PERMISSIONS.QUOTES_CREATE },

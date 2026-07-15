@@ -81,6 +81,7 @@ test("netlify deploy runs dashboard checks and has dashboard cache guards", () =
 test("dashboard route aliases and new reliability diagnostics are wired", () => {
   const html = read("dashboard.html");
   const js = read("dashboard.js");
+  const workspaceRegistry = read("src/app/routing/workspace-registry.js");
 
   assert.doesNotMatch(html, /id="budgets"/);
   assert.doesNotMatch(html, /id="connected-operations"/);
@@ -100,6 +101,14 @@ test("dashboard route aliases and new reliability diagnostics are wired", () => 
   assert.doesNotMatch(js, /DASHBOARD_OPERATIONS_SQL/);
   assert.doesNotMatch(js, /20260713_connected_operations\.sql/);
   assert.match(js, /Job Tickets are not installed yet\. Run supabase\/migrations\/20260714_job_ticket_foundation\.sql/);
+  assert.doesNotMatch(js, /label: "Sales"/);
+  assert.doesNotMatch(js, /owner_label: "Sales"/);
+  assert.doesNotMatch(js, />-&gt;</);
+  assert.match(js, /label: "Leads"/);
+  assert.match(workspaceRegistry, /Lead Dashboard/);
+  assert.match(js, /Leads handoff rule/);
+  assert.match(html, /data-action="refresh-documentation">Refresh Forms/);
+  assert.doesNotMatch(html, /data-action="go-documents">Open Money<\/button>\s*<\/article>/);
 });
 
 test("dashboard creates canonical job tickets without removing source fallbacks", () => {

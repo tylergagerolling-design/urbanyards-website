@@ -495,10 +495,11 @@
       "export-backend-backup": "DB",
       "find-stop-map": "M",
       "go-calendar": "+",
-      "go-contacts": "-&gt;",
+      "go-contacts": "Open",
       "go-documents": "$",
       "go-route-planner": "M",
-      "go-settings": "-&gt;",
+      "go-settings": "Open",
+      "refresh-documentation": "R",
       "import-outreach-csv": "CSV",
       "mark-route-complete": "OK",
       "mark-outreach-contacted": "OK",
@@ -506,11 +507,11 @@
       "move-route-up": "^",
       "new-outreach-prospect": "+",
       "open-route-map": "M",
-      "open-contact": "-&gt;",
-      "open-document": "-&gt;",
-      "open-documentation-form": "-&gt;",
-      "open-outreach-prospect": "-&gt;",
-      "open-submission": "-&gt;",
+      "open-contact": "Open",
+      "open-document": "Open",
+      "open-documentation-form": "Open",
+      "open-outreach-prospect": "Open",
+      "open-submission": "Open",
       "print-document": "PDF",
       "request-documentation-corrections": "!",
       "quick-add-equipment": "+",
@@ -5040,7 +5041,7 @@
       notes: blankToNull(overrides.notes) || item.notes,
       internal_notes: blankToNull(overrides.internal_notes || overrides.internalNotes),
       due_date: blankToNull(overrides.due_date || overrides.dueDate || followUpDue),
-      owner_label: blankToNull(overrides.owner_label || overrides.ownerLabel) || "Sales",
+      owner_label: blankToNull(overrides.owner_label || overrides.ownerLabel) || "Leads",
       next_action: blankToNull(overrides.next_action || overrides.nextAction) || ticketNextAction(stage)
     };
   }
@@ -9458,7 +9459,7 @@
   }
 
   const ticketWorkflowSteps = [
-    { key: "sales", label: "Sales", detail: "Intake and scope", stages: ["draft", "sales_intake", "scope_in_progress", "quote_pending"] },
+    { key: "sales", label: "Leads", detail: "Intake and scope", stages: ["draft", "sales_intake", "scope_in_progress", "quote_pending"] },
     { key: "approval", label: "Approval", detail: "Customer yes", stages: ["customer_approval_pending"] },
     { key: "cost-review", label: "Cost Review", detail: "Costs and owner", stages: ["needs_budget", "budget_in_progress", "needs_owner_approval"] },
     { key: "invoice-prep", label: "Invoice Prep", detail: "Draft ready", stages: ["invoice_preparation"] },
@@ -9655,7 +9656,7 @@
       return `<div class="drawer-actions ticket-source-actions">
         <button type="button" data-action="edit-job" data-id="${escapeHtml(sourceId)}">${buttonContent("Open Visit Details", "edit-job")}</button>
         <button type="button" data-action="go-route-planner">${buttonContent("Open Route", "go-route-planner")}</button>
-        <button type="button" data-action="go-documents">${buttonContent("Open Forms", "documentation")}</button>
+        <button type="button" data-action="go-settings">${buttonContent("Open Tools", "go-settings")}</button>
         ${ticket.stage !== "field_work_complete" && ticket.stage !== "completion_review" && ticket.stage !== "closed" ? `<button type="button" data-action="complete-job" data-id="${escapeHtml(sourceId)}">${buttonContent("Mark Work Complete", "complete-reminder")}</button>` : ""}
       </div>`;
     }
@@ -9729,7 +9730,7 @@
       <div class="ticket-drawer-card-heading">
         <div>
           <p class="eyebrow">Source Document</p>
-          <h4>${escapeHtml(document.number || document.title || "Sales document")}</h4>
+          <h4>${escapeHtml(document.number || document.title || "Financial document")}</h4>
         </div>
         ${documentStatusBadge(document)}
       </div>
@@ -9956,7 +9957,7 @@
               </div>
               <div class="field-proof-actions">
                 <button type="button" data-action="go-route-planner">Open Route Planner</button>
-                <button type="button" data-action="go-documents">Open Forms</button>
+                <button type="button" data-action="go-settings">Open Tools</button>
                 <button type="button" data-action="go-settings">Dashboard Health</button>
               </div>
             </section>
@@ -10002,12 +10003,12 @@
         </div>
         <section class="ticket-review-strip">
           <div>
-            <p class="eyebrow">Sales handoff rule</p>
+            <p class="eyebrow">Leads handoff rule</p>
             <h3>Leads does not own the whole job.</h3>
             <p>Leads creates the ticket, confirms scope and quote approval, then hands the same ticket to Money. Cost review, field assignment, invoice, and payment stay connected to that ticket history.</p>
           </div>
           <div class="ticket-review-list">
-            ${due.length ? due.slice(0, 3).map((item, index) => renderTicketCard(buildTicketFromQuote(item, index), true)).join("") : emptyState("No urgent Sales follow-ups.")}
+            ${due.length ? due.slice(0, 3).map((item, index) => renderTicketCard(buildTicketFromQuote(item, index), true)).join("") : emptyState("No urgent Leads follow-ups.")}
           </div>
         </section>
       </div>`;
@@ -10124,10 +10125,10 @@
           })}
           ${renderToolsCard({
             label: "Forms & Job Documents",
-            detail: "Manage templates, submitted forms, and job documentation through Money.",
+            detail: "Refresh template, submitted form, and job documentation records from Tools.",
             meta: `${documentationCount} files or forms`,
-            primary: "Open Money",
-            primaryAction: "go-documents"
+            primary: "Refresh Forms",
+            primaryAction: "refresh-documentation"
           })}
           ${renderToolsCard({
             label: "Groundskeeper AI",
@@ -13734,7 +13735,7 @@
         <div class="groundskeeper-ai-chat" data-groundskeeper-chat></div>
         <form class="groundskeeper-ai-chat-form ai-command-chat-form" data-groundskeeper-chat-form>
           <textarea name="message" rows="5" placeholder="Ask The Groundskeeper to draft a follow-up, summarize a lead, improve website copy, or turn a visitor question into reusable knowledge..."></textarea>
-          <button type="submit"><span class="button-icon" aria-hidden="true">-&gt;</span><span>Ask</span></button>
+          <button type="submit"><span class="button-icon" aria-hidden="true">AI</span><span>Ask</span></button>
         </form>
       </section>`;
     els.groundskeeperChat = qs("[data-groundskeeper-chat]");
@@ -14000,7 +14001,7 @@
           <div class="training-chat-log" data-training-chat-log>${renderTrainingMessages()}</div>
           <form class="training-chat-form" data-training-chat-form>
             <textarea name="message" rows="5" placeholder="Example: Make sure the AI only says we serve Portland, Vancouver, and Beaverton."></textarea>
-            <button type="submit"><span class="button-icon" aria-hidden="true">-&gt;</span><span>Train</span></button>
+            <button type="submit"><span class="button-icon" aria-hidden="true">AI</span><span>Train</span></button>
           </form>
         </section>
         <aside class="panel ai-training-library-panel">
@@ -17331,7 +17332,7 @@
               service,
               requested_service: service,
               notes: String(formData.get("notes") || "").trim(),
-              owner_label: "Sales",
+              owner_label: "Leads",
               next_action: "Review intake"
             }) : null;
             await refreshDashboard();

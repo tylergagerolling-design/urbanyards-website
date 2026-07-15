@@ -111,6 +111,7 @@ test("dashboard creates canonical job tickets without removing source fallbacks"
   assert.match(js, /async function dashboardTicketRequest/);
   assert.match(js, /async function loadCanonicalTicketEvents/);
   assert.match(js, /function renderTicketHistory/);
+  assert.match(js, /function renderTicketDocumentSource/);
   assert.match(js, /fetch\("\/\.netlify\/functions\/dashboard-tickets"/);
   assert.match(js, /dashboardTicketRequest\("list"/);
   assert.match(js, /dashboardTicketRequest\("events"/);
@@ -129,6 +130,8 @@ test("dashboard creates canonical job tickets without removing source fallbacks"
   assert.match(js, /await ensureJobTicketForQuoteSubmission\(updatedSubmission \|\| item, \{/);
   assert.match(js, /await ensureJobTicketForSalesDocument\(document\)/);
   assert.match(js, /const ticket = findJobTicketForSalesDocument\(id\)/);
+  assert.match(js, /state\.data\.documents\.find\(\(item\) => item\.id === sourceId\)/);
+  assert.match(js, /renderTicketDocumentSource\(sourceItem\)/);
   assert.match(js, /await syncJobTicketPhotoProof\(jobId, photoStage\)/);
   assert.match(js, /field_completion_notes/);
   assert.match(js, /arrival_photos_uploaded/);

@@ -9689,6 +9689,31 @@
     </section>`;
   }
 
+  function renderTicketDocumentSource(document) {
+    if (!document) return "";
+    const amountDue = document.squareAmountDueCents !== null
+      ? formatCurrency(document.squareAmountDueCents, document.squareCurrency)
+      : `$${Number(document.total || 0).toFixed(2)}`;
+    const documentType = document.type === "invoice" ? "Invoice" : "Estimate / Quote";
+    const notes = document.notes || document.lineItems?.[0]?.description || "No document notes.";
+    return `<section class="ticket-drawer-card ticket-document-source-card">
+      <div class="ticket-drawer-card-heading">
+        <div>
+          <p class="eyebrow">Source Document</p>
+          <h4>${escapeHtml(document.number || document.title || "Sales document")}</h4>
+        </div>
+        ${documentStatusBadge(document)}
+      </div>
+      <div class="drawer-grid ticket-drawer-grid">
+        <div class="drawer-field"><span>Type</span>${escapeHtml(documentType)}</div>
+        <div class="drawer-field"><span>Client</span>${escapeHtml(document.clientName || "No client")}</div>
+        <div class="drawer-field"><span>Amount</span>${escapeHtml(amountDue)}</div>
+        <div class="drawer-field"><span>Due</span>${escapeHtml(document.dueDate || "No due date")}</div>
+        <div class="drawer-field span-full"><span>Notes</span>${escapeHtml(notes)}</div>
+      </div>
+    </section>`;
+  }
+
   function openTicketDrawer(source, id) {
     if (!els.detailDrawer || !els.detailContent) return;
     const ticket = dashboardTickets().find((item) => item.id === id && item.source === source);
@@ -9699,7 +9724,9 @@
       ? findSubmission(sourceId)
       : sourceType === "job"
         ? state.data.jobs.find((item) => item.id === sourceId)
-        : null;
+        : sourceType === "document"
+          ? state.data.documents.find((item) => item.id === sourceId)
+          : null;
     openDetailDrawer();
     els.detailContent.innerHTML = `
       <div class="drawer-content ticket-detail-drawer">
@@ -9726,6 +9753,7 @@
         ${renderTicketRequirements(ticket)}
         ${renderTicketHistory(ticket)}
         ${renderTicketSourceActions(ticket)}
+        ${sourceType === "document" && sourceItem ? renderTicketDocumentSource(sourceItem) : ""}
         ${sourceType === "quote" && sourceItem ? renderCallPanel(callPanelContext("quote_submission", sourceItem.id)) : ""}
         ${sourceType === "job" && sourceItem ? `<div class="job-support-sections">${renderJobDocumentationSection(sourceItem)}${renderJobPhotosSection(sourceItem)}</div>` : ""}
         ${sourceType === "quote" && sourceItem ? `<div data-call-outcome-slot></div>${renderActivityTimeline({

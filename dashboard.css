@@ -14629,12 +14629,73 @@ body:not(.is-login-screen) .workspace-focus-card small {
 
 body:not(.is-login-screen) .ticket-flow-panel {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
-  gap: 10px;
-  padding: 12px;
+  gap: 14px;
+  padding: clamp(14px, 1.8vw, 18px);
   border: 1px solid rgba(73, 102, 77, .16);
-  border-radius: 24px;
-  background: rgba(255, 255, 255, .62);
+  border-radius: 26px;
+  background:
+    linear-gradient(135deg, rgba(255, 255, 255, .9), rgba(246, 249, 241, .76)),
+    radial-gradient(circle at 92% 6%, rgba(153, 180, 119, .16), transparent 34%);
+  box-shadow: 0 16px 38px rgba(19, 36, 28, .055);
+}
+
+body:not(.is-login-screen) .ticket-flow-heading {
+  display: flex;
+  align-items: end;
+  justify-content: space-between;
+  gap: 18px;
+  padding: 4px 4px 2px;
+}
+
+body:not(.is-login-screen) .ticket-flow-heading h3 {
+  margin: 0;
+  color: var(--uy-green);
+  font-size: clamp(1.25rem, 2vw, 1.65rem);
+  line-height: 1.1;
+}
+
+body:not(.is-login-screen) .ticket-flow-heading p:not(.eyebrow) {
+  max-width: 680px;
+  margin: 6px 0 0;
+  color: var(--uy-muted);
+  line-height: 1.45;
+}
+
+body:not(.is-login-screen) .ticket-flow-heading dl {
+  display: flex;
+  gap: 8px;
+  margin: 0;
+}
+
+body:not(.is-login-screen) .ticket-flow-heading dl div {
+  min-width: 76px;
+  padding: 10px 12px;
+  border: 1px solid rgba(73, 102, 77, .14);
+  border-radius: 16px;
+  background: rgba(255, 253, 246, .78);
+  text-align: center;
+}
+
+body:not(.is-login-screen) .ticket-flow-heading dt {
+  color: var(--uy-muted);
+  font-size: .7rem;
+  font-weight: 900;
+  letter-spacing: .06em;
+  text-transform: uppercase;
+}
+
+body:not(.is-login-screen) .ticket-flow-heading dd {
+  margin: 2px 0 0;
+  color: var(--uy-green);
+  font-size: 1.45rem;
+  font-weight: 950;
+  line-height: 1;
+}
+
+body:not(.is-login-screen) .ticket-flow-steps {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(135px, 1fr));
+  gap: 10px;
 }
 
 body:not(.is-login-screen) .ticket-flow-step {
@@ -14646,6 +14707,7 @@ body:not(.is-login-screen) .ticket-flow-step {
   padding: 12px;
   border-radius: 16px;
   color: var(--uy-muted);
+  background: rgba(255, 253, 246, .54);
 }
 
 body:not(.is-login-screen) .ticket-flow-step span {
@@ -14673,7 +14735,7 @@ body:not(.is-login-screen) .ticket-flow-step.is-active {
 }
 
 body:not(.is-login-screen) .ticket-end-to-end-flow {
-  grid-template-columns: repeat(auto-fit, minmax(135px, 1fr));
+  grid-template-columns: 1fr;
 }
 
 body:not(.is-login-screen) .ticket-flow-step.is-populated {
@@ -15799,6 +15861,19 @@ body:not(.is-login-screen) .field-proof-actions button {
   body:not(.is-login-screen) .workspace-focus-strip,
   body:not(.is-login-screen) .ticket-owner-strip {
     grid-template-columns: 1fr;
+  }
+
+  body:not(.is-login-screen) .ticket-flow-heading {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  body:not(.is-login-screen) .ticket-flow-heading dl {
+    width: 100%;
+  }
+
+  body:not(.is-login-screen) .ticket-flow-heading dl div {
+    flex: 1 1 0;
   }
 
   body:not(.is-login-screen) .money-budget-item dl {

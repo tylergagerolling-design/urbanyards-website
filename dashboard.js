@@ -9981,18 +9981,33 @@
 
   function renderTicketEndToEndFlow(tickets = [], activeStage = "", label = "End-to-end ticket workflow") {
     const normalizedActiveStage = activeStage ? ticketStage({ stage: activeStage }) : "";
+    const openCount = tickets.filter(ticketIsOpen).length;
+    const closedCount = tickets.filter((ticket) => ticketInStage(ticket, ["closed"])).length;
     return `<section class="ticket-flow-panel ticket-end-to-end-flow" data-ticket-lifecycle-map aria-label="${escapeHtml(label)}">
-      ${ticketEndToEndFlow.map((step, index) => {
-        const count = tickets.filter((ticket) => ticketInStage(ticket, step.stages)).length;
-        const isActive = normalizedActiveStage && step.stages.includes(normalizedActiveStage);
-        const isPopulated = !normalizedActiveStage && count > 0;
-        return `<article class="ticket-flow-step ${isActive ? "is-active" : ""} ${isPopulated ? "is-populated" : ""}" data-flow-key="${escapeHtml(step.key)}">
-          <span>${escapeHtml(index + 1)}</span>
-          <strong>${escapeHtml(step.label)}</strong>
-          <small>${escapeHtml(step.detail)}</small>
-          <em>${escapeHtml(String(count))}</em>
-        </article>`;
-      }).join("")}
+      <div class="ticket-flow-heading">
+        <div>
+          <p class="eyebrow">Workflow Map</p>
+          <h3>${escapeHtml(label)}</h3>
+          <p>One job trail from request to closeout, shared by Home, Tickets, Work, Leads, Money, and Tools.</p>
+        </div>
+        <dl>
+          <div><dt>Open</dt><dd>${escapeHtml(String(openCount))}</dd></div>
+          <div><dt>Closed</dt><dd>${escapeHtml(String(closedCount))}</dd></div>
+        </dl>
+      </div>
+      <div class="ticket-flow-steps">
+        ${ticketEndToEndFlow.map((step, index) => {
+          const count = tickets.filter((ticket) => ticketInStage(ticket, step.stages)).length;
+          const isActive = normalizedActiveStage && step.stages.includes(normalizedActiveStage);
+          const isPopulated = !normalizedActiveStage && count > 0;
+          return `<article class="ticket-flow-step ${isActive ? "is-active" : ""} ${isPopulated ? "is-populated" : ""}" data-flow-key="${escapeHtml(step.key)}">
+            <span>${escapeHtml(index + 1)}</span>
+            <strong>${escapeHtml(step.label)}</strong>
+            <small>${escapeHtml(step.detail)}</small>
+            <em>${escapeHtml(String(count))} tickets</em>
+          </article>`;
+        }).join("")}
+      </div>
     </section>`;
   }
 
@@ -11073,6 +11088,7 @@
           ${renderTicketMetric(actions.length, "Action Items", "Needs attention now")}
           ${renderTicketMetric(workflowWarnings.length + notifications.length, "Alerts", "Workflow and notification signals")}
         </section>
+        ${renderTicketEndToEndFlow(activeTickets, "", "Urban Yards job flow")}
         ${renderWorkspaceFocusStrip([
           { kicker: "Open", value: activeTickets.length, title: "Ticket load", detail: "All active work across Leads, Work, Money, and Tools." },
           { kicker: "Today", value: actions.length, title: "Action queue", detail: "Requests, follow-ups, missed work, and blockers needing attention." },

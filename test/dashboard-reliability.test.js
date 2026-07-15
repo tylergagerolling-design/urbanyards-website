@@ -123,6 +123,7 @@ test("dashboard creates canonical job tickets without removing source fallbacks"
   assert.match(js, /await completeScheduledJobWithTicket\(id\)/);
   assert.match(js, /await completeScheduledJobWithTicket\(updatedJob\)/);
   assert.match(js, /await ensureJobTicketForScheduledJob\(job, \{/);
+  assert.match(js, /const ticket = findJobTicketForScheduledJob\(id\)/);
   assert.match(js, /await ensureJobTicketForQuoteSubmission\(updatedSubmission \|\| item/);
   assert.match(js, /await ensureJobTicketForQuoteSubmission\(updatedQuote \|\| item/);
   assert.match(js, /await ensureJobTicketForQuoteSubmission\(updatedSubmission \|\| item, \{/);

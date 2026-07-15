@@ -12835,7 +12835,8 @@
     state.selectedJobId = id;
     const isReschedule = Boolean(options.reschedule);
     const visitDateValue = isReschedule && isOverdueJob(job) ? todayKey() : toDateInputValue(job.dateRaw);
-    const ticket = buildTicketFromJob(job, state.data.jobs.findIndex((item) => item.id === id));
+    const ticket = findJobTicketForScheduledJob(id)
+      || buildTicketFromJob(job, state.data.jobs.findIndex((item) => item.id === id));
     openDetailDrawer();
     els.detailContent.innerHTML = `
       <div class="drawer-content">

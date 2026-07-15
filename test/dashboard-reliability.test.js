@@ -120,6 +120,15 @@ test("dashboard route aliases and new reliability diagnostics are wired", () => 
   assert.match(js, /function visibleDashboardWorkspaceLinks/);
   assert.match(js, /dashboardWorkspaceLinks\.filter\(\(item\) => canAccessDashboardSection\(item\.id, role\)\)/);
   assert.match(js, /const links = visibleDashboardWorkspaceLinks\(\)/);
+  assert.match(js, /function ticketStage\(ticket = \{\}\)/);
+  assert.match(js, /function ticketLane\(ticket = \{\}\)/);
+  assert.match(js, /function ticketIsOpen\(ticket = \{\}\)/);
+  assert.match(js, /function ticketInLane\(ticket = \{\}, lanes = \[\]\)/);
+  assert.match(js, /ticketInLane\(ticket, \["ready", "field", "review"\]\)/);
+  assert.match(js, /ticketInLane\(ticket, \["sales"\]\)/);
+  assert.match(js, /dashboardTickets\(data\)\.filter\(ticketIsOpen\)/);
+  assert.doesNotMatch(js, /ticket\.source === "job" && ticket\.stage !== "cancelled"/);
+  assert.doesNotMatch(js, /dashboardTickets\(data\)\.filter\(\(ticket\) => ticket\.source === "quote"\)/);
   assert.match(js, /document\.addEventListener\("click", \(event\) => \{/);
   assert.match(js, /closest\("\[data-dashboard-link\]"\)/);
   assert.doesNotMatch(js, /qsa\("\[data-dashboard-link\]"\)\.forEach\(\(link\) => \{\s*link\.addEventListener\("click"/);

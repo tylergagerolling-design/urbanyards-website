@@ -9083,6 +9083,27 @@
     cancelled: { label: "Cancelled", lane: "closed", tone: "muted", owner: "Closed" }
   };
 
+  function ticketStage(ticket = {}) {
+    return normalizeTicketStageForDashboard(ticket.stage || ticket.status);
+  }
+
+  function ticketLane(ticket = {}) {
+    const stage = ticketStage(ticket);
+    return ticketStageMeta[stage]?.lane || ticket.lane || "sales";
+  }
+
+  function ticketIsOpen(ticket = {}) {
+    return !["closed", "cancelled"].includes(ticketStage(ticket));
+  }
+
+  function ticketInStage(ticket = {}, stages = []) {
+    return stages.includes(ticketStage(ticket));
+  }
+
+  function ticketInLane(ticket = {}, lanes = []) {
+    return lanes.includes(ticketLane(ticket));
+  }
+
   function statusText(value) {
     return String(value || "").trim().toLowerCase();
   }
@@ -9909,9 +9930,9 @@
     if (!target) return;
     const tickets = dashboardTickets(data);
     const today = todayKey();
-    const activeTickets = tickets.filter((ticket) => !["closed", "cancelled"].includes(ticket.stage));
+    const activeTickets = tickets.filter(ticketIsOpen);
     const todayTickets = activeTickets.filter((ticket) => dateKey(ticket.dateRaw) === today);
-    const attentionTickets = activeTickets.filter((ticket) => [
+    const attentionTickets = activeTickets.filter((ticket) => ticketInStage(ticket, [
       "sales_intake",
       "scope_in_progress",
       "quote_pending",
@@ -9924,9 +9945,9 @@
       "invoice_review",
       "invoice_sent",
       "partially_paid"
-    ].includes(ticket.stage));
-    const fieldTickets = activeTickets.filter((ticket) => ["ready_to_schedule", "scheduled", "in_progress", "paused"].includes(ticket.stage));
-    const moneyTickets = activeTickets.filter((ticket) => ["needs_budget", "budget_in_progress", "needs_owner_approval", "invoice_preparation", "invoice_review", "invoice_sent", "partially_paid"].includes(ticket.stage));
+    ]));
+    const fieldTickets = activeTickets.filter((ticket) => ticketInLane(ticket, ["ready", "field"]));
+    const moneyTickets = activeTickets.filter((ticket) => ticketInLane(ticket, ["accounting", "money"]));
     const actions = todayActionItems(data);
     const notifications = buildNotifications(data);
     const workflowWarnings = dashboardHealthWarnings({ scope: "critical" });
@@ -9965,10 +9986,11 @@
     const target = qs("[data-job-ticket-workspace]");
     if (!target) return;
     const tickets = dashboardTickets(data);
-    const fieldTickets = tickets.filter((ticket) => ["scheduled", "in_progress", "paused"].includes(ticket.stage));
-    const officeTickets = tickets.filter((ticket) => ["draft", "sales_intake", "scope_in_progress", "quote_pending", "customer_approval_pending", "needs_budget", "budget_in_progress", "needs_owner_approval", "invoice_preparation", "completion_review", "invoice_review"].includes(ticket.stage));
-    const readyTickets = tickets.filter((ticket) => ticket.stage === "ready_to_schedule");
-    const reviewTickets = tickets.filter((ticket) => ["field_work_complete", "completion_review", "invoice_review", "invoice_sent", "partially_paid"].includes(ticket.stage));
+    const openTickets = tickets.filter(ticketIsOpen);
+    const fieldTickets = openTickets.filter((ticket) => ticketInLane(ticket, ["field"]));
+    const officeTickets = openTickets.filter((ticket) => ticketInLane(ticket, ["sales", "accounting", "review", "money"]));
+    const readyTickets = openTickets.filter((ticket) => ticketInLane(ticket, ["ready"]));
+    const reviewTickets = openTickets.filter((ticket) => ticketInLane(ticket, ["review", "money"]));
     target.innerHTML = `
       <div class="ticket-workspace">
         ${renderWorkspaceSwitcher("tickets")}
@@ -9984,10 +10006,10 @@
           </div>
         </header>
         <section class="ticket-metrics" aria-label="Job ticket summary">
-          ${renderTicketMetric(tickets.length, "Open Tickets", "Quotes and field work")}
-          ${renderTicketMetric(ticketCountBy(tickets, (ticket) => ticket.lane === "field"), "In Field", "Scheduled or active")}
-          ${renderTicketMetric(ticketCountBy(tickets, (ticket) => ticket.lane === "sales" || ticket.lane === "accounting"), "Needs Office", "Scope, quote, cost review")}
-          ${renderTicketMetric(ticketCountBy(tickets, (ticket) => ticket.lane === "review" || ticket.lane === "money"), "Closeout", "Review, invoice, payment")}
+          ${renderTicketMetric(openTickets.length, "Open Tickets", "Quotes and field work")}
+          ${renderTicketMetric(ticketCountBy(openTickets, (ticket) => ticketInLane(ticket, ["field"])), "In Field", "Scheduled or active")}
+          ${renderTicketMetric(ticketCountBy(openTickets, (ticket) => ticketInLane(ticket, ["sales", "accounting"])), "Needs Office", "Scope, quote, cost review")}
+          ${renderTicketMetric(ticketCountBy(openTickets, (ticket) => ticketInLane(ticket, ["review", "money"])), "Closeout", "Review, invoice, payment")}
         </section>
         <section class="ticket-flow-panel">
           <div class="ticket-flow-step is-active"><span>1</span><strong>Lead Intake</strong><small>Lead and scope</small></div>
@@ -9998,7 +10020,7 @@
           <div class="ticket-flow-step"><span>6</span><strong>Complete</strong><small>Photos and forms</small></div>
           <div class="ticket-flow-step"><span>7</span><strong>Invoice and Close</strong><small>Payment collected</small></div>
         </section>
-        ${renderTicketOwnerStrip(tickets)}
+        ${renderTicketOwnerStrip(openTickets)}
         <div class="ticket-lane-grid">
           ${renderTicketColumn("Today and Work", "Scheduled, active, and work-owned tickets.", fieldTickets, "No work tickets are scheduled yet.")}
           ${renderTicketColumn("Office Review", "Scope, quote, cost review, approval, and closeout blockers.", officeTickets, "No office tickets need review.")}
@@ -10021,7 +10043,7 @@
     const target = qs("[data-field-mode-workspace]");
     if (!target) return;
     const tickets = dashboardTickets(data);
-    const fieldTickets = tickets.filter((ticket) => ticket.source === "job" && ticket.stage !== "cancelled");
+    const fieldTickets = tickets.filter((ticket) => ticketIsOpen(ticket) && ticketInLane(ticket, ["ready", "field", "review"]));
     const today = todayKey();
     const todayTickets = fieldTickets.filter((ticket) => dateKey(ticket.dateRaw) === today);
     const upcomingTickets = fieldTickets.filter((ticket) => dateKey(ticket.dateRaw) >= today);
@@ -10041,8 +10063,8 @@
         </header>
         <section class="ticket-metrics" aria-label="Field summary">
           ${renderTicketMetric(todayTickets.length, "Visits Today", "Scheduled for today")}
-          ${renderTicketMetric(ticketCountBy(fieldTickets, (ticket) => ticket.stage === "in_progress"), "In Progress", "Started work")}
-          ${renderTicketMetric(ticketCountBy(fieldTickets, (ticket) => ticket.stage === "completion_review"), "Needs Review", "Photos, actuals, invoice")}
+          ${renderTicketMetric(ticketCountBy(fieldTickets, (ticket) => ticketInStage(ticket, ["in_progress"])), "In Progress", "Started work")}
+          ${renderTicketMetric(ticketCountBy(fieldTickets, (ticket) => ticketInLane(ticket, ["review"])), "Needs Review", "Photos, actuals, invoice")}
           ${renderTicketMetric(upcomingTickets.length, "Upcoming", "Scheduled tickets")}
         </section>
         ${renderTicketRoleBrief("field", tickets)}
@@ -10117,10 +10139,10 @@
   function renderSalesWorkspace(data = state.data) {
     const target = qs("[data-sales-workspace]");
     if (!target) return;
-    const tickets = dashboardTickets(data).filter((ticket) => ticket.source === "quote");
-    const intakeTickets = tickets.filter((ticket) => ["sales_intake", "scope_in_progress"].includes(ticket.stage));
-    const approvalTickets = tickets.filter((ticket) => ["quote_pending", "customer_approval_pending"].includes(ticket.stage));
-    const accountingTickets = tickets.filter((ticket) => ticket.stage === "needs_budget");
+    const tickets = dashboardTickets(data).filter((ticket) => ticketIsOpen(ticket) && ticketInLane(ticket, ["sales"]));
+    const intakeTickets = tickets.filter((ticket) => ticketInStage(ticket, ["draft", "sales_intake", "scope_in_progress"]));
+    const approvalTickets = tickets.filter((ticket) => ticketInStage(ticket, ["quote_pending", "customer_approval_pending", "scope_change_requested"]));
+    const accountingTickets = dashboardTickets(data).filter((ticket) => ticketIsOpen(ticket) && ticketInStage(ticket, ["needs_budget"]));
     const due = typeof outreachDueProspects === "function" ? outreachDueProspects() : [];
     const hot = typeof outreachHotProspects === "function" ? outreachHotProspects() : [];
     target.innerHTML = `
@@ -10165,10 +10187,10 @@
   function renderAccountantWorkspace(data = state.data) {
     const target = qs("[data-accountant-workspace]");
     if (!target) return;
-    const tickets = dashboardTickets(data);
-    const needsBudget = tickets.filter((ticket) => ["needs_budget", "budget_in_progress"].includes(ticket.stage));
-    const ownerApproval = tickets.filter((ticket) => ["needs_owner_approval", "invoice_preparation"].includes(ticket.stage));
-    const fieldComplete = tickets.filter((ticket) => ["field_work_complete", "completion_review", "invoice_review"].includes(ticket.stage));
+    const tickets = dashboardTickets(data).filter(ticketIsOpen);
+    const needsBudget = tickets.filter((ticket) => ticketInStage(ticket, ["needs_budget", "budget_in_progress"]));
+    const ownerApproval = tickets.filter((ticket) => ticketInStage(ticket, ["needs_owner_approval", "invoice_preparation"]));
+    const fieldComplete = tickets.filter((ticket) => ticketInStage(ticket, ["field_work_complete", "completion_review", "invoice_review"]));
     const documents = data.documents || [];
     const unpaidInvoices = documents.filter((doc) => doc.type === "invoice" && doc.status !== "paid");
     const overdueInvoices = unpaidInvoices.filter((doc) => doc.dueDateRaw && doc.dueDateRaw < todayKey());

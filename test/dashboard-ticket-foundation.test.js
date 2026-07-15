@@ -275,15 +275,21 @@ test("workspace registry matches the rebuilt ticket-centered dashboard shell", (
 });
 
 test("ticket dashboard view model normalizes workflow language for the rebuilt shell", () => {
+  const viewModelSource = require("node:fs").readFileSync(require("node:path").join(__dirname, "..", "src/features/tickets/view-model/ticket-dashboard-view-model.js"), "utf8");
+
   assert.equal(normalizeTicketStage("Cost review in progress"), TICKET_STAGES.BUDGET_IN_PROGRESS);
   assert.equal(normalizeTicketStage("Ready to schedule"), TICKET_STAGES.READY_TO_SCHEDULE);
   assert.equal(normalizeTicketStage("lost / no fit"), TICKET_STAGES.CANCELLED);
 
   assert.deepEqual(getTicketBlockers(TICKET_STAGES.SCHEDULED), ["Arrival photos", "Completion photos", "Forms"]);
+  assert.equal(getTicketNextAction(TICKET_STAGES.READY_TO_SCHEDULE), "Schedule work");
   assert.equal(getTicketNextAction(TICKET_STAGES.INVOICE_SENT), "Collect payment");
   assert.equal(getTicketStageMeta(TICKET_STAGES.NEEDS_OWNER_APPROVAL).owner, "Owner");
   assert.equal(getTicketStageMeta(TICKET_STAGES.READY_TO_SCHEDULE).lane, "ready");
   assert.equal(getTicketStageMeta(TICKET_STAGES.READY_TO_SCHEDULE).owner, "Work");
+  assert.doesNotMatch(viewModelSource, /field work/);
+  assert.doesNotMatch(viewModelSource, /field assignment/);
+  assert.doesNotMatch(viewModelSource, /Schedule field work/);
   assert.equal(normalizeTicketSourceType("quote_submission"), "quote");
   assert.equal(normalizeTicketSourceType("scheduled_visit"), "job");
   assert.equal(TICKET_OWNER_GROUPS.some((group) => group.id === "ready" && group.stages.includes(TICKET_STAGES.READY_TO_SCHEDULE)), true);

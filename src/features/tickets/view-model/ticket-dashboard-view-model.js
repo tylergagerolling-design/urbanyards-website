@@ -59,7 +59,7 @@ const TICKET_OWNER_GROUPS = Object.freeze([
   {
     id: "ready",
     label: "Ready",
-    detail: "Approved tickets that can move into schedule, route planning, and field assignment.",
+    detail: "Approved tickets that can move into schedule, route planning, and work assignment.",
     stages: Object.freeze([
       TICKET_STAGES.READY_TO_SCHEDULE
     ])
@@ -67,7 +67,7 @@ const TICKET_OWNER_GROUPS = Object.freeze([
   {
     id: "field",
     label: "Work",
-    detail: "Scheduling, route, arrival proof, field work, photos, and completion notes.",
+    detail: "Scheduling, route, arrival proof, work updates, photos, and completion notes.",
     stages: Object.freeze([
       TICKET_STAGES.SCHEDULED,
       TICKET_STAGES.IN_PROGRESS,
@@ -133,7 +133,7 @@ function getTicketNextAction(stage) {
     case TICKET_STAGES.INVOICE_PREPARATION:
       return "Prepare draft invoice";
     case TICKET_STAGES.READY_TO_SCHEDULE:
-      return "Schedule field work";
+      return "Schedule work";
     case TICKET_STAGES.SCHEDULED:
       return "Work the visit";
     case TICKET_STAGES.IN_PROGRESS:

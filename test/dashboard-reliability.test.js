@@ -119,6 +119,13 @@ test("dashboard route aliases and new reliability diagnostics are wired", () => 
   assert.doesNotMatch(js, /DASHBOARD_OPERATIONS_SQL/);
   assert.doesNotMatch(js, /20260713_connected_operations\.sql/);
   assert.match(js, /Job Tickets are not installed yet\. Run supabase\/migrations\/20260714_job_ticket_foundation\.sql/);
+  assert.match(css, /\.dashboard-nav a\.legacy-nav-route \{\s*display: none !important;/);
+  assert.match(js, /contacts: "outreach"/);
+  assert.match(js, /clients: "outreach"/);
+  assert.match(js, /documentation: "settings"/);
+  assert.match(js, /"import-export": "settings"/);
+  assert.match(js, /equipment: "settings"/);
+  assert.match(js, /"groundskeeper-ai": "settings"/);
   assert.doesNotMatch(js, /label: "Sales"/);
   assert.doesNotMatch(js, /owner_label: "Sales"/);
   assert.doesNotMatch(js, /owner_label: "Field"/);
@@ -157,6 +164,10 @@ test("dashboard route aliases and new reliability diagnostics are wired", () => 
   assert.doesNotMatch(html, /data-action="go-documents">Open Money<\/button>\s*<\/article>/);
   assert.match(css, /#overview\.home-ticket-page > :not\(\[data-home-workspace\]\)/);
   assert.match(css, /#tickets\.job-ticket-page > :not\(\[data-job-ticket-workspace\]\)/);
+  assert.match(css, /#calendar\.field-mode-page > :not\(\[data-field-mode-workspace\]\)/);
+  assert.match(css, /#outreach\.sales-ticket-page > :not\(\[data-sales-workspace\]\)/);
+  assert.match(css, /#documents\.accountant-page > :not\(\[data-accountant-workspace\]\)/);
+  assert.match(css, /#settings\.tools-page > :not\(\[data-tools-workspace\]\)/);
   assert.doesNotMatch(css, /#overview\.job-ticket-page > :not\(\[data-job-ticket-workspace\]\)/);
 });
 

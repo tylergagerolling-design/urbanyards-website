@@ -86,6 +86,9 @@ test("dashboard route aliases and new reliability diagnostics are wired", () => 
   assert.doesNotMatch(html, /id="connected-operations"/);
   const primaryDrawerLabels = [...html.matchAll(/<a href="#[^"]+"(?![^>]*legacy-nav-route)[^>]*data-dashboard-link="[^"]+"[\s\S]*?<span class="nav-label">([^<]+)<\/span><\/a>/g)].map((match) => match[1]);
   assert.deepEqual(primaryDrawerLabels, ["Home", "Tickets", "Work", "Leads", "Money", "Tools"]);
+  const mobileTabLabels = [...html.matchAll(/<nav class="mobile-tabbar"[\s\S]*?<\/nav>/g)][0][0]
+    .matchAll(/<a href="#[^"]+" data-dashboard-link="[^"]+">([^<]+)<\/a>/g);
+  assert.deepEqual([...mobileTabLabels].map((match) => match[1]), primaryDrawerLabels);
   assert.match(js, /function loadModule/);
   assert.match(js, /function safeRender/);
   assert.match(js, /function renderDashboardHealth/);

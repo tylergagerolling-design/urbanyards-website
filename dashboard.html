@@ -57,10 +57,11 @@
               <span><strong>Urban Yards</strong><small>Owner Dashboard</small></span>
             </a>
             <nav class="dashboard-nav" aria-label="Dashboard navigation">
-              <a href="#overview" data-dashboard-link="overview"><span class="nav-icon" aria-hidden="true"><svg><use href="images/dashboard-icons/option8-sidebar.svg?v=20260714-reliability-1#uy-icon-home"></use></svg></span><span class="nav-label">Overview</span></a>
-              <a href="#calendar" data-dashboard-link="calendar"><span class="nav-icon" aria-hidden="true"><svg><use href="images/dashboard-icons/option8-sidebar.svg?v=20260714-reliability-1#uy-icon-work"></use></svg></span><span class="nav-label">Field Worker</span></a>
-              <a href="#outreach" data-dashboard-link="outreach"><span class="nav-icon" aria-hidden="true"><svg><use href="images/dashboard-icons/option8-sidebar.svg?v=20260714-reliability-1#uy-icon-leads"></use></svg></span><span class="nav-label">Sales Outreach</span></a>
-              <a href="#documents" data-dashboard-link="documents"><span class="nav-icon" aria-hidden="true"><svg><use href="images/dashboard-icons/option8-sidebar.svg?v=20260714-reliability-1#uy-icon-money"></use></svg></span><span class="nav-label">The Accountant</span></a>
+              <a href="#overview" data-dashboard-link="overview"><span class="nav-icon" aria-hidden="true"><svg><use href="images/dashboard-icons/option8-sidebar.svg?v=20260714-reliability-1#uy-icon-home"></use></svg></span><span class="nav-label">Home</span></a>
+              <a href="#tickets" data-dashboard-link="tickets"><span class="nav-icon" aria-hidden="true"><svg><use href="images/dashboard-icons/option8-sidebar.svg?v=20260714-reliability-1#uy-icon-documentation"></use></svg></span><span class="nav-label">Tickets</span></a>
+              <a href="#calendar" data-dashboard-link="calendar"><span class="nav-icon" aria-hidden="true"><svg><use href="images/dashboard-icons/option8-sidebar.svg?v=20260714-reliability-1#uy-icon-work"></use></svg></span><span class="nav-label">Work</span></a>
+              <a href="#outreach" data-dashboard-link="outreach"><span class="nav-icon" aria-hidden="true"><svg><use href="images/dashboard-icons/option8-sidebar.svg?v=20260714-reliability-1#uy-icon-leads"></use></svg></span><span class="nav-label">Leads</span></a>
+              <a href="#documents" data-dashboard-link="documents"><span class="nav-icon" aria-hidden="true"><svg><use href="images/dashboard-icons/option8-sidebar.svg?v=20260714-reliability-1#uy-icon-money"></use></svg></span><span class="nav-label">Money</span></a>
               <a href="#contacts" class="legacy-nav-route" data-dashboard-link="contacts"><span class="nav-icon" aria-hidden="true"><svg><use href="images/dashboard-icons/option8-sidebar.svg?v=20260714-reliability-1#uy-icon-clients"></use></svg></span><span class="nav-label">Clients</span></a>
               <a href="#documentation" class="legacy-nav-route" data-dashboard-link="documentation"><span class="nav-icon" aria-hidden="true"><svg><use href="images/dashboard-icons/option8-sidebar.svg?v=20260714-reliability-1#uy-icon-documentation"></use></svg></span><span class="nav-label">Documentation</span></a>
               <a href="#import-export" class="legacy-nav-route" data-dashboard-link="import-export"><span class="nav-icon" aria-hidden="true"><svg><use href="images/dashboard-icons/option8-sidebar.svg?v=20260714-reliability-1#uy-icon-import-export"></use></svg></span><span class="nav-label">Import &amp; Export</span></a>
@@ -121,8 +122,11 @@
           </header>
           <div class="dashboard-state" data-dashboard-state role="status" hidden></div>
 
-          <section class="dashboard-section job-ticket-page" id="overview" data-section="overview">
+          <section class="dashboard-section job-ticket-page" id="tickets" data-section="tickets">
             <div data-job-ticket-workspace></div>
+          </section>
+
+          <section class="dashboard-section" id="overview" data-section="overview">
             <div class="overview-command-header">
               <div>
                 <h3>Overview</h3>
@@ -1039,7 +1043,7 @@
                   <span class="button-icon" aria-hidden="true">MAP</span>
                   <div>
                     <strong>Route &amp; Field Map</strong>
-                    <small>Routes now live with the Field Worker workspace so map work stays attached to visits.</small>
+                    <small>Routes now live with Work so map work stays attached to visits.</small>
                   </div>
                   <button type="button" data-action="go-route-planner">Open Field Route</button>
                 </article>
@@ -1115,10 +1119,11 @@
         </div>
 
         <nav class="mobile-tabbar" aria-label="Mobile dashboard navigation">
-          <a href="#overview" data-dashboard-link="overview">Overview</a>
-          <a href="#calendar" data-dashboard-link="calendar">Field</a>
-          <a href="#outreach" data-dashboard-link="outreach">Sales</a>
-          <a href="#documents" data-dashboard-link="documents">Accounting</a>
+          <a href="#overview" data-dashboard-link="overview">Home</a>
+          <a href="#tickets" data-dashboard-link="tickets">Tickets</a>
+          <a href="#calendar" data-dashboard-link="calendar">Work</a>
+          <a href="#outreach" data-dashboard-link="outreach">Leads</a>
+          <a href="#documents" data-dashboard-link="documents">Money</a>
           <a href="#settings" data-dashboard-link="settings">Tools</a>
         </nav>
 

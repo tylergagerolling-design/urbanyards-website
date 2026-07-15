@@ -204,19 +204,30 @@ test("responsible role makes the next owner visible", () => {
   assert.equal(getResponsibleRole(TICKET_STAGES.IN_PROGRESS), ROLES.FIELD_WORKER);
 });
 
-test("workspace registry matches the rebuilt five-area dashboard shell", () => {
+test("workspace registry matches the rebuilt ticket-centered dashboard shell", () => {
   assert.deepEqual(WORKSPACES.map((workspace) => workspace.key), [
     "overview",
+    "tickets",
     "calendar",
     "outreach",
     "documents",
     "settings"
+  ]);
+  assert.deepEqual(WORKSPACES.map((workspace) => workspace.label), [
+    "Home",
+    "Tickets",
+    "Work",
+    "Leads",
+    "Money",
+    "Tools"
   ]);
 
   assert.equal(normalizeWorkspaceKey("route-planner"), "calendar");
   assert.equal(normalizeWorkspaceKey("groundskeeper-ai"), "settings");
   assert.equal(normalizeWorkspaceKey("sales-outreach"), "outreach");
   assert.equal(normalizeWorkspaceKey("job-budgeter"), "documents");
+  assert.equal(normalizeWorkspaceKey("command-center"), "tickets");
+  assert.equal(normalizeWorkspaceKey("job-tickets"), "tickets");
   assert.equal(getWorkspace("field-worker").key, "calendar");
 
   const permissionService = { hasPermission };
@@ -225,6 +236,7 @@ test("workspace registry matches the rebuilt five-area dashboard shell", () => {
 
   assert.deepEqual(getVisibleWorkspaces(owner, permissionService).map((workspace) => workspace.key), [
     "overview",
+    "tickets",
     "calendar",
     "outreach",
     "documents",

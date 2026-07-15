@@ -5,8 +5,18 @@ const { PERMISSIONS } = require("../../shared/permissions/permissions");
 const WORKSPACES = Object.freeze([
   {
     key: "overview",
-    label: "Overview",
-    aliases: ["home", "command-center", "operations", "connected-operations"],
+    label: "Home",
+    aliases: ["home", "dashboard"],
+    defaultRoute: "home",
+    nav: [
+      { key: "home", label: "Home", permission: PERMISSIONS.TICKETS_VIEW_ALL },
+      { key: "notifications", label: "Notifications", permission: PERMISSIONS.DOCUMENTATION_VIEW }
+    ]
+  },
+  {
+    key: "tickets",
+    label: "Tickets",
+    aliases: ["ticket", "job-tickets", "command-center", "operations", "connected-operations"],
     defaultRoute: "command-center",
     nav: [
       { key: "command-center", label: "Command Center", permission: PERMISSIONS.TICKETS_VIEW_ALL },
@@ -17,7 +27,7 @@ const WORKSPACES = Object.freeze([
   },
   {
     key: "calendar",
-    label: "Field Worker",
+    label: "Work",
     aliases: ["work", "field-worker", "route-planner", "route", "schedule"],
     defaultRoute: "todays-work",
     nav: [
@@ -30,7 +40,7 @@ const WORKSPACES = Object.freeze([
   },
   {
     key: "outreach",
-    label: "Sales Outreach",
+    label: "Leads",
     aliases: ["leads", "sales", "clients", "contacts", "properties", "sales-outreach"],
     defaultRoute: "sales-dashboard",
     nav: [
@@ -43,7 +53,7 @@ const WORKSPACES = Object.freeze([
   },
   {
     key: "documents",
-    label: "The Accountant",
+    label: "Money",
     aliases: ["money", "quotes", "pipeline", "accountant", "budgets", "budget", "job-budgeter"],
     defaultRoute: "financial-overview",
     nav: [

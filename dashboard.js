@@ -350,6 +350,9 @@
   const els = {};
   const sectionAliases = {
     home: "overview",
+    tickets: "tickets",
+    ticket: "tickets",
+    "job-tickets": "tickets",
     work: "calendar",
     properties: "outreach",
     contacts: "outreach",
@@ -372,16 +375,16 @@
     money: "documents",
     pipeline: "documents",
     schedule: "calendar",
-    operations: "overview",
-    "connected-operations": "overview",
+    operations: "tickets",
+    "connected-operations": "tickets",
     budgets: "documents",
     budget: "documents",
     "job-budgeter": "documents",
-    "command-center": "overview",
+    "command-center": "tickets",
     notes: "settings",
     reminders: "settings"
   };
-  const rebuildPrimarySections = new Set(["overview", "calendar", "outreach", "documents", "settings"]);
+  const rebuildPrimarySections = new Set(["overview", "tickets", "calendar", "outreach", "documents", "settings"]);
   const DEFAULT_DASHBOARD_SECTION = "calendar";
   const supportModuleWarningNames = new Set([
     "operations",
@@ -9769,10 +9772,11 @@
   }
 
   const ticketWorkspaceLinks = [
-    { id: "overview", label: "Overview", href: "#overview" },
-    { id: "calendar", label: "Field Worker", href: "#calendar" },
-    { id: "outreach", label: "Sales Outreach", href: "#outreach" },
-    { id: "documents", label: "The Accountant", href: "#documents" },
+    { id: "overview", label: "Home", href: "#overview" },
+    { id: "tickets", label: "Tickets", href: "#tickets" },
+    { id: "calendar", label: "Work", href: "#calendar" },
+    { id: "outreach", label: "Leads", href: "#outreach" },
+    { id: "documents", label: "Money", href: "#documents" },
     { id: "settings", label: "Tools", href: "#settings" }
   ];
 
@@ -9792,7 +9796,7 @@
     const reviewTickets = tickets.filter((ticket) => ["field_work_complete", "completion_review", "invoice_review", "invoice_sent", "partially_paid"].includes(ticket.stage));
     target.innerHTML = `
       <div class="ticket-workspace">
-        ${renderWorkspaceSwitcher("overview")}
+        ${renderWorkspaceSwitcher("tickets")}
         <header class="ticket-hero">
           <div>
             <p class="eyebrow">Job Ticket System</p>
@@ -9851,7 +9855,7 @@
         ${renderWorkspaceSwitcher("calendar")}
         <header class="ticket-hero field-hero">
           <div>
-            <p class="eyebrow">Field Worker</p>
+            <p class="eyebrow">Work</p>
             <h3>Today in the Field</h3>
             <p>Simple job-ticket queue for on-site work, with route, photos, documents, and completion review close by.</p>
           </div>
@@ -9949,7 +9953,7 @@
         ${renderWorkspaceSwitcher("outreach")}
         <header class="ticket-hero">
           <div>
-            <p class="eyebrow">Sales Outreach</p>
+            <p class="eyebrow">Leads</p>
             <h3>Who needs the next touch?</h3>
             <p>Move prospects from intake to quote approval, then hand approved work to Accounting for cost review.</p>
           </div>
@@ -10017,7 +10021,7 @@
         ${renderWorkspaceSwitcher("documents")}
         <header class="ticket-hero">
           <div>
-            <p class="eyebrow">The Accountant</p>
+            <p class="eyebrow">Money</p>
             <h3>Cost review, invoice, collect, close.</h3>
             <p>Review ticket cost readiness, prepare draft invoices, track Square payment state, and close the financial record without splitting the job into a second system.</p>
           </div>
@@ -10087,14 +10091,14 @@
         <section class="tools-control-grid" aria-label="Dashboard support tools">
           ${renderToolsCard({
             label: "Route & Field Map",
-            detail: "Open route planning from Field Worker so stops remain tied to scheduled visits.",
+            detail: "Open route planning from Work so stops remain tied to scheduled visits.",
             meta: "Field support",
             primary: "Open Field Route",
             primaryAction: "go-route-planner"
           })}
           ${renderToolsCard({
             label: "Forms & Job Documents",
-            detail: "Manage templates, submitted forms, and job documentation through The Accountant workspace.",
+            detail: "Manage templates, submitted forms, and job documentation through Money.",
             meta: `${documentationCount} files or forms`,
             primary: "Open Accountant",
             primaryAction: "go-documents"

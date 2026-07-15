@@ -12,7 +12,7 @@ const TICKET_STAGE_META = Object.freeze({
   [TICKET_STAGES.BUDGET_IN_PROGRESS]: { tone: "watch", lane: "accounting", owner: "Money" },
   [TICKET_STAGES.NEEDS_OWNER_APPROVAL]: { tone: "risk", lane: "accounting", owner: "Owner" },
   [TICKET_STAGES.INVOICE_PREPARATION]: { tone: "watch", lane: "accounting", owner: "Money" },
-  [TICKET_STAGES.READY_TO_SCHEDULE]: { tone: "ready", lane: "field", owner: "Owner" },
+  [TICKET_STAGES.READY_TO_SCHEDULE]: { tone: "ready", lane: "ready", owner: "Work" },
   [TICKET_STAGES.SCHEDULED]: { tone: "field", lane: "field", owner: "Work" },
   [TICKET_STAGES.IN_PROGRESS]: { tone: "field", lane: "field", owner: "Work" },
   [TICKET_STAGES.PAUSED]: { tone: "risk", lane: "field", owner: "Work" },
@@ -57,11 +57,18 @@ const TICKET_OWNER_GROUPS = Object.freeze([
     ])
   },
   {
+    id: "ready",
+    label: "Ready",
+    detail: "Approved tickets that can move into schedule, route planning, and field assignment.",
+    stages: Object.freeze([
+      TICKET_STAGES.READY_TO_SCHEDULE
+    ])
+  },
+  {
     id: "field",
     label: "Work",
     detail: "Scheduling, route, arrival proof, field work, photos, and completion notes.",
     stages: Object.freeze([
-      TICKET_STAGES.READY_TO_SCHEDULE,
       TICKET_STAGES.SCHEDULED,
       TICKET_STAGES.IN_PROGRESS,
       TICKET_STAGES.PAUSED

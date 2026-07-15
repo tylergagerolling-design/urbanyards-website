@@ -282,8 +282,11 @@ test("ticket dashboard view model normalizes workflow language for the rebuilt s
   assert.deepEqual(getTicketBlockers(TICKET_STAGES.SCHEDULED), ["Arrival photos", "Completion photos", "Forms"]);
   assert.equal(getTicketNextAction(TICKET_STAGES.INVOICE_SENT), "Collect payment");
   assert.equal(getTicketStageMeta(TICKET_STAGES.NEEDS_OWNER_APPROVAL).owner, "Owner");
+  assert.equal(getTicketStageMeta(TICKET_STAGES.READY_TO_SCHEDULE).lane, "ready");
+  assert.equal(getTicketStageMeta(TICKET_STAGES.READY_TO_SCHEDULE).owner, "Work");
   assert.equal(normalizeTicketSourceType("quote_submission"), "quote");
   assert.equal(normalizeTicketSourceType("scheduled_visit"), "job");
+  assert.equal(TICKET_OWNER_GROUPS.some((group) => group.id === "ready" && group.stages.includes(TICKET_STAGES.READY_TO_SCHEDULE)), true);
   assert.equal(TICKET_OWNER_GROUPS.some((group) => group.id === "field" && group.stages.includes(TICKET_STAGES.IN_PROGRESS)), true);
 });
 

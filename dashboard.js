@@ -9435,7 +9435,7 @@
     },
     {
       id: "field",
-      label: "Field",
+      label: "Work",
       title: "Field owns schedule, work, photos, and completion notes.",
       detail: "Run the visit, add arrival and completion proof, attach forms, and send completed work into review.",
       stages: ["ready_to_schedule", "scheduled", "in_progress", "paused"]
@@ -9454,8 +9454,7 @@
   }
 
   function ticketsInStages(tickets, stages) {
-    const stageSet = new Set(stages || []);
-    return tickets.filter((ticket) => stageSet.has(ticket.stage));
+    return tickets.filter((ticket) => ticketInStage(ticket, stages || []));
   }
 
   function renderTicketOwnerStrip(tickets, activeId = "") {

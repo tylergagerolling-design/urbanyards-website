@@ -103,6 +103,13 @@ test("dashboard route aliases and new reliability diagnostics are wired", () => 
   assert.match(html, /data-dashboard-health/);
   assert.match(html, /copy-dashboard-diagnostics/);
   assert.match(js, /"route-planner": "calendar"/);
+  assert.match(js, /DASHBOARD_WORKSPACE_ACCESS/);
+  assert.match(js, /overview: \["owner", "admin", "manager", "sales_outreach", "accountant", "field_worker", "worker", "viewer"\]/);
+  assert.match(js, /outreach: \["owner", "admin", "manager", "sales_outreach"\]/);
+  assert.match(js, /documents: \["owner", "admin", "manager", "accountant"\]/);
+  assert.match(js, /settings: \["owner", "admin"\]/);
+  assert.match(js, /function dashboardSectionForRole/);
+  assert.match(js, /syncDashboardNavAccess\(role\)/);
   assert.doesNotMatch(js, /DASHBOARD_OPERATIONS_SQL/);
   assert.doesNotMatch(js, /20260713_connected_operations\.sql/);
   assert.match(js, /Job Tickets are not installed yet\. Run supabase\/migrations\/20260714_job_ticket_foundation\.sql/);

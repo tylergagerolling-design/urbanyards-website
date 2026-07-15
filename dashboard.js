@@ -61,6 +61,24 @@
     worker: ["view", "create", "edit"],
     viewer: ["view"]
   };
+  const DASHBOARD_WORKSPACE_ACCESS = {
+    overview: ["owner", "admin", "manager", "sales_outreach", "accountant", "field_worker", "worker", "viewer"],
+    tickets: ["owner", "admin", "manager", "sales_outreach", "accountant", "field_worker", "worker"],
+    calendar: ["owner", "admin", "manager", "field_worker", "worker"],
+    outreach: ["owner", "admin", "manager", "sales_outreach"],
+    documents: ["owner", "admin", "manager", "accountant"],
+    settings: ["owner", "admin"]
+  };
+  const DASHBOARD_ROLE_DEFAULT_SECTIONS = {
+    owner: "calendar",
+    admin: "calendar",
+    manager: "calendar",
+    sales_outreach: "outreach",
+    accountant: "documents",
+    field_worker: "calendar",
+    worker: "calendar",
+    viewer: "overview"
+  };
   const AI_TRAINING_CATEGORIES = {
     tone: "Tone & Voice",
     services: "Services",
@@ -1414,6 +1432,7 @@
       }
     };
     setSession(nextSession);
+    syncDashboardNavAccess(role);
   }
 
   function renderSidebarUserProfile(profileRecord = null) {
@@ -7563,6 +7582,7 @@
     renderSidebarUserProfile();
     const profile = await loadCurrentUserProfile(getSession()).catch(() => null);
     if (profile) renderSidebarUserProfile(profile);
+    syncDashboardNavAccess();
     syncDashboardSubviewVisibility();
     await refreshDashboard();
   }
@@ -7573,14 +7593,55 @@
     return rebuildPrimarySections.has(mapped) ? mapped : DEFAULT_DASHBOARD_SECTION;
   }
 
+  function canAccessDashboardSection(section, role = currentSessionRole()) {
+    const normalizedSection = normalizeDashboardSection(section);
+    const normalizedRole = normalizeDashboardRole(role);
+    const allowedRoles = DASHBOARD_WORKSPACE_ACCESS[normalizedSection] || [];
+    return allowedRoles.includes(normalizedRole);
+  }
+
+  function dashboardDefaultSectionForRole(role = currentSessionRole()) {
+    const normalizedRole = normalizeDashboardRole(role);
+    const preferredSection = DASHBOARD_ROLE_DEFAULT_SECTIONS[normalizedRole] || DEFAULT_DASHBOARD_SECTION;
+    if (canAccessDashboardSection(preferredSection, normalizedRole)) return preferredSection;
+    return [...rebuildPrimarySections].find((section) => canAccessDashboardSection(section, normalizedRole)) || "overview";
+  }
+
+  function dashboardSectionForRole(section, role = currentSessionRole()) {
+    const requestedSection = normalizeDashboardSection(section);
+    return canAccessDashboardSection(requestedSection, role) ? requestedSection : dashboardDefaultSectionForRole(role);
+  }
+
+  function isPrimaryDashboardNavLink(node) {
+    return Boolean(node && (node.closest(".dashboard-nav") || node.closest(".mobile-tabbar")));
+  }
+
+  function syncDashboardNavAccess(role = currentSessionRole()) {
+    qsa("[data-dashboard-link]").forEach((node) => {
+      if (!isPrimaryDashboardNavLink(node)) return;
+      const section = normalizeDashboardSection(node.dataset.dashboardLink);
+      const allowed = canAccessDashboardSection(section, role);
+      node.hidden = !allowed;
+      node.classList.toggle("is-role-hidden", !allowed);
+      if (allowed) {
+        node.removeAttribute("aria-hidden");
+        node.removeAttribute("tabindex");
+      } else {
+        node.setAttribute("aria-hidden", "true");
+        node.setAttribute("tabindex", "-1");
+      }
+    });
+  }
+
   function replaceDashboardHash(section) {
-    history.replaceState(null, "", `#${normalizeDashboardSection(section)}`);
+    history.replaceState(null, "", `#${dashboardSectionForRole(section)}`);
   }
 
   function setActiveSection(section) {
-    const requestedSection = normalizeDashboardSection(section);
+    const requestedSection = dashboardSectionForRole(section);
     const hasSection = Boolean(qs(`[data-section="${cssEscape(requestedSection)}"]`));
-    state.activeSection = hasSection ? requestedSection : DEFAULT_DASHBOARD_SECTION;
+    state.activeSection = hasSection ? requestedSection : dashboardDefaultSectionForRole();
+    syncDashboardNavAccess();
     qsa("[data-section]").forEach((node) => {
       node.classList.toggle("is-active", node.dataset.section === state.activeSection);
     });

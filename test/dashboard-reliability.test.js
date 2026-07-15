@@ -168,6 +168,9 @@ test("dashboard route aliases and new reliability diagnostics are wired", () => 
   assert.match(css, /#outreach\.sales-ticket-page > :not\(\[data-sales-workspace\]\)/);
   assert.match(css, /#documents\.accountant-page > :not\(\[data-accountant-workspace\]\)/);
   assert.match(css, /#settings\.tools-page > :not\(\[data-tools-workspace\]\)/);
+  assert.match(css, /\.ticket-workbench \{/);
+  assert.match(css, /\.ticket-workbench-grid \{/);
+  assert.match(css, /\.ticket-workbench-section\.is-active/);
   assert.doesNotMatch(css, /#overview\.job-ticket-page > :not\(\[data-job-ticket-workspace\]\)/);
 });
 
@@ -189,6 +192,15 @@ test("dashboard creates canonical job tickets without removing source fallbacks"
   assert.match(js, /async function loadCanonicalTicketEvents/);
   assert.match(js, /function renderTicketHistory/);
   assert.match(js, /function renderTicketDocumentSource/);
+  assert.match(js, /function renderTicketWorkbench/);
+  assert.match(js, /data-ticket-workbench/);
+  assert.match(js, /Sales & Scope/);
+  assert.match(js, /Cost Review/);
+  assert.match(js, /Owner Approval/);
+  assert.match(js, /Draft Invoice/);
+  assert.match(js, /Work & Site Proof/);
+  assert.match(js, /Closeout/);
+  assert.match(js, /renderTicketWorkbench\(ticket\)/);
   assert.match(js, /const ticketLifecycleTransitions = \{/);
   assert.match(js, /function renderTicketCommandCenter/);
   assert.match(js, /data-action="transition-ticket-stage"/);

@@ -9645,6 +9645,148 @@
     </section>`;
   }
 
+  function ticketFieldText(value, fallback = "Not set") {
+    const text = String(value ?? "").trim();
+    return text || fallback;
+  }
+
+  function ticketMoneyText(value) {
+    if (value === undefined || value === null || value === "") return "Not set";
+    const number = Number(value);
+    return Number.isFinite(number) ? `$${number.toLocaleString(undefined, { maximumFractionDigits: 2 })}` : ticketFieldText(value);
+  }
+
+  function ticketPercentText(value) {
+    if (value === undefined || value === null || value === "") return "Not set";
+    const number = Number(value);
+    return Number.isFinite(number) ? `${number.toLocaleString(undefined, { maximumFractionDigits: 1 })}%` : ticketFieldText(value);
+  }
+
+  function ticketWorkbenchItem(label, value, isComplete) {
+    return `<li class="${isComplete ? "is-complete" : ""}">
+      <span aria-hidden="true"></span>
+      <div>
+        <strong>${escapeHtml(label)}</strong>
+        <small>${escapeHtml(value)}</small>
+      </div>
+    </li>`;
+  }
+
+  function ticketWorkbenchSection(section, activeStage) {
+    const completed = section.items.filter((item) => item.complete).length;
+    const stateClass = section.stages.includes(activeStage)
+      ? "is-active"
+      : completed === section.items.length
+        ? "is-complete"
+        : "";
+    const stateLabel = section.stages.includes(activeStage)
+      ? "Current"
+      : completed === section.items.length
+        ? "Complete"
+        : `${completed}/${section.items.length}`;
+    return `<article class="ticket-workbench-section ${stateClass}">
+      <div class="ticket-workbench-section-heading">
+        <div>
+          <p class="eyebrow">${escapeHtml(section.owner)}</p>
+          <h5>${escapeHtml(section.title)}</h5>
+        </div>
+        <span>${escapeHtml(stateLabel)}</span>
+      </div>
+      <p>${escapeHtml(section.detail)}</p>
+      <ul>
+        ${section.items.map((item) => ticketWorkbenchItem(item.label, item.value, item.complete)).join("")}
+      </ul>
+    </article>`;
+  }
+
+  function renderTicketWorkbench(ticket) {
+    const stage = ticketStage(ticket);
+    const sections = [
+      {
+        title: "Sales & Scope",
+        owner: "Leads",
+        detail: "Client, property, service request, and customer approval.",
+        stages: ["draft", "sales_intake", "scope_in_progress", "quote_pending", "customer_approval_pending", "scope_change_requested"],
+        items: [
+          { label: "Client", value: ticketFieldText(ticket.customerId ? ticket.customer : ticket.customer, "Client not set"), complete: Boolean(ticket.customerId || ticket.customer) },
+          { label: "Property", value: ticketFieldText(ticket.propertyId ? ticket.property : ticket.property, "Property not set"), complete: Boolean(ticket.propertyId || ticket.property) },
+          { label: "Scope", value: ticketFieldText(ticket.scopeOfWork || ticket.detail, "Scope needed"), complete: Boolean(ticket.scopeOfWork || ticket.scopeComplete) },
+          { label: "Customer approval", value: ticket.customerApprovalRecorded ? "Recorded" : "Needed before cost review", complete: Boolean(ticket.customerApprovalRecorded) }
+        ]
+      },
+      {
+        title: "Cost Review",
+        owner: "Money",
+        detail: "Internal revenue, cost, margin, and owner-ready notes.",
+        stages: ["needs_budget", "budget_in_progress"],
+        items: [
+          { label: "Expected revenue", value: ticketMoneyText(ticket.expectedRevenue || ticket.proposedPrice), complete: Boolean(ticket.expectedRevenue || ticket.proposedPrice) },
+          { label: "Estimated cost", value: ticketMoneyText(ticket.estimatedTotalCost), complete: Boolean(ticket.estimatedTotalCost) },
+          { label: "Estimated profit", value: ticketMoneyText(ticket.estimatedProfit), complete: Boolean(ticket.estimatedProfit) },
+          { label: "Target margin", value: ticketPercentText(ticket.targetMargin), complete: Boolean(ticket.targetMargin) }
+        ]
+      },
+      {
+        title: "Owner Approval",
+        owner: "Owner",
+        detail: "Final internal approval before invoice prep and scheduling.",
+        stages: ["needs_owner_approval"],
+        items: [
+          { label: "Cost review", value: ticket.costReviewComplete || ticket.budgetComplete ? "Complete" : "Waiting on Money", complete: Boolean(ticket.costReviewComplete || ticket.budgetComplete) },
+          { label: "Owner approval", value: ticket.ownerApprovalRecorded ? "Recorded" : "Needs approval", complete: Boolean(ticket.ownerApprovalRecorded) },
+          { label: "Deposit rule", value: ticket.depositRequired ? (ticket.depositPaid ? "Deposit paid" : "Deposit required") : "No deposit required", complete: !ticket.depositRequired || Boolean(ticket.depositPaid) }
+        ]
+      },
+      {
+        title: "Draft Invoice",
+        owner: "Money",
+        detail: "Prepare the invoice/payment handoff before work is scheduled.",
+        stages: ["invoice_preparation"],
+        items: [
+          { label: "Draft invoice", value: ticket.draftInvoiceExists ? "Ready" : "Not created yet", complete: Boolean(ticket.draftInvoiceExists) },
+          { label: "Payment status", value: ticketFieldText(ticket.paymentStatus, "No payment recorded"), complete: ["paid", "partially_paid"].includes(statusText(ticket.paymentStatus)) }
+        ]
+      },
+      {
+        title: "Work & Site Proof",
+        owner: "Work",
+        detail: "Schedule, assign, capture arrival photos, and complete the visit.",
+        stages: ["ready_to_schedule", "scheduled", "in_progress", "paused"],
+        items: [
+          { label: "Visit date", value: ticketFieldText(ticket.dateLabel, "Not scheduled"), complete: Boolean(ticket.dateRaw && ticket.dateLabel !== "No date") },
+          { label: "Assigned team", value: ticket.assignedUserId ? "Assigned" : "Not assigned", complete: Boolean(ticket.assignedUserId) },
+          { label: "Arrival photos", value: ticket.beforePhotosUploaded ? "Uploaded" : "Needed on arrival", complete: Boolean(ticket.beforePhotosUploaded) },
+          { label: "Completion photos", value: ticket.afterPhotosUploaded ? "Uploaded" : "Needed at completion", complete: Boolean(ticket.afterPhotosUploaded) }
+        ]
+      },
+      {
+        title: "Closeout",
+        owner: "Owner & Money",
+        detail: "Completion review, final invoice, payment, and close.",
+        stages: ["field_work_complete", "completion_review", "invoice_review", "invoice_sent", "partially_paid", "paid", "closed"],
+        items: [
+          { label: "Completion notes", value: ticketFieldText(ticket.fieldCompletionNotes, "Notes needed"), complete: Boolean(ticket.fieldCompletionNotes) },
+          { label: "Final invoice", value: ticket.invoiceFinalized ? "Finalized" : "Needs final review", complete: Boolean(ticket.invoiceFinalized) },
+          { label: "Payment", value: ticketFieldText(ticket.paymentStatus, "Not recorded"), complete: statusText(ticket.paymentStatus) === "paid" },
+          { label: "Ticket close", value: stage === "closed" ? "Closed" : "Open", complete: stage === "closed" }
+        ]
+      }
+    ];
+
+    return `<section class="ticket-workbench" data-ticket-workbench>
+      <div class="ticket-workbench-heading">
+        <div>
+          <p class="eyebrow">Ticket Workbench</p>
+          <h4>Role workflow</h4>
+        </div>
+        <span>${escapeHtml(ticket.ownerLabel || "Unassigned")}</span>
+      </div>
+      <div class="ticket-workbench-grid">
+        ${sections.map((section) => ticketWorkbenchSection(section, stage)).join("")}
+      </div>
+    </section>`;
+  }
+
   const ticketLifecycleTransitions = {
     draft: [{ to: "sales_intake", label: "Start intake", detail: "Move this ticket into lead intake." }],
     sales_intake: [
@@ -10095,6 +10237,7 @@
           <div class="drawer-field"><span>Date</span>${escapeHtml(ticket.dateLabel || "No date")}</div>
           <div class="drawer-field span-full"><span>Details</span>${escapeHtml(ticket.detail || "No details yet.")}</div>
         </div>
+        ${renderTicketWorkbench(ticket)}
         ${renderTicketCommandCenter(ticket)}
         ${renderTicketHandoffActions(ticket)}
         ${renderTicketRequirements(ticket)}

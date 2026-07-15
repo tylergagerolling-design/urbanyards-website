@@ -9859,7 +9859,7 @@
     `;
   }
 
-  const ticketWorkspaceLinks = [
+  const dashboardWorkspaceLinks = [
     { id: "overview", label: "Home", href: "#overview" },
     { id: "tickets", label: "Tickets", href: "#tickets" },
     { id: "calendar", label: "Work", href: "#calendar" },
@@ -9868,9 +9868,15 @@
     { id: "settings", label: "Tools", href: "#settings" }
   ];
 
+  function visibleDashboardWorkspaceLinks(role = currentSessionRole()) {
+    return dashboardWorkspaceLinks.filter((item) => canAccessDashboardSection(item.id, role));
+  }
+
   function renderWorkspaceSwitcher(activeId) {
+    const activeSection = dashboardSectionForRole(activeId);
+    const links = visibleDashboardWorkspaceLinks();
     return `<nav class="ticket-workspace-switcher" aria-label="Job ticket workspaces">
-      ${ticketWorkspaceLinks.map((item) => `<a href="${escapeHtml(item.href)}" class="${item.id === activeId ? "is-active" : ""}" data-dashboard-link="${escapeHtml(item.id)}">${escapeHtml(item.label)}</a>`).join("")}
+      ${links.map((item) => `<a href="${escapeHtml(item.href)}" class="${item.id === activeSection ? "is-active" : ""}" data-dashboard-link="${escapeHtml(item.id)}">${escapeHtml(item.label)}</a>`).join("")}
     </nav>`;
   }
 
@@ -15009,13 +15015,13 @@
       }
     });
 
-    qsa("[data-dashboard-link]").forEach((link) => {
-      link.addEventListener("click", (event) => {
-        event.preventDefault();
-        const nextSection = normalizeDashboardSection(link.dataset.dashboardLink);
-        setActiveSection(nextSection);
-        replaceDashboardHash(nextSection);
-      });
+    document.addEventListener("click", (event) => {
+      const link = event.target instanceof Element ? event.target.closest("[data-dashboard-link]") : null;
+      if (!link) return;
+      event.preventDefault();
+      const nextSection = dashboardSectionForRole(link.dataset.dashboardLink);
+      setActiveSection(nextSection);
+      replaceDashboardHash(nextSection);
     });
 
     if (els.sidebarClose) {

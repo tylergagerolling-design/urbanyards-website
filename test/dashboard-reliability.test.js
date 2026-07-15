@@ -116,6 +116,13 @@ test("dashboard route aliases and new reliability diagnostics are wired", () => 
   assert.doesNotMatch(js, /label: "Sales"/);
   assert.doesNotMatch(js, /owner_label: "Sales"/);
   assert.doesNotMatch(js, />-&gt;</);
+  assert.match(js, /const dashboardWorkspaceLinks = \[/);
+  assert.match(js, /function visibleDashboardWorkspaceLinks/);
+  assert.match(js, /dashboardWorkspaceLinks\.filter\(\(item\) => canAccessDashboardSection\(item\.id, role\)\)/);
+  assert.match(js, /const links = visibleDashboardWorkspaceLinks\(\)/);
+  assert.match(js, /document\.addEventListener\("click", \(event\) => \{/);
+  assert.match(js, /closest\("\[data-dashboard-link\]"\)/);
+  assert.doesNotMatch(js, /qsa\("\[data-dashboard-link\]"\)\.forEach\(\(link\) => \{\s*link\.addEventListener\("click"/);
   assert.match(js, /label: "Leads"/);
   assert.match(workspaceRegistry, /Lead Dashboard/);
   assert.match(js, /Leads handoff rule/);

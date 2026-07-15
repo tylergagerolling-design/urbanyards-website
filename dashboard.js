@@ -11426,6 +11426,96 @@
     });
   }
 
+  function renderLeadQueueItem(item, tone = "") {
+    const status = item.status || "Prospect";
+    const followUp = item.nextFollowUpAt || "No follow-up date";
+    const detail = [item.serviceInterest, item.propertyType].filter(Boolean).join(" / ") || "Service details needed";
+    const contact = [item.managementCompany, item.contactName, item.city].filter(Boolean).join(" / ") || "Contact details needed";
+    return `<article class="lead-queue-item ${tone ? `lead-queue-item--${escapeHtml(tone)}` : ""}">
+      <div class="lead-queue-copy">
+        <span>${escapeHtml(status)}</span>
+        <h4>${escapeHtml(outreachTitle(item))}</h4>
+        <p>${escapeHtml(contact)}</p>
+        <small>${escapeHtml(detail)} · ${escapeHtml(followUp)}</small>
+      </div>
+      <div class="lead-queue-actions">
+        ${renderPhoneActions(item.phone, { leadId: item.id, leadType: "outreach_prospect", compact: true, helper: false })}
+        <button type="button" class="inline-action" data-action="open-outreach-prospect" data-id="${escapeHtml(item.id)}">Open Lead</button>
+      </div>
+    </article>`;
+  }
+
+  function renderLeadNextStepCard({ kicker, value, title, detail, action, actionLabel, extraAttrs = "" }) {
+    return `<article class="lead-next-step-card">
+      <span class="home-next-step-kicker">${escapeHtml(kicker)}</span>
+      <div class="home-next-step-main">
+        <strong>${escapeHtml(String(value))}</strong>
+        <div>
+          <h4>${escapeHtml(title)}</h4>
+          <p>${escapeHtml(detail)}</p>
+        </div>
+      </div>
+      <button type="button" data-action="${escapeHtml(action)}"${extraAttrs}>${escapeHtml(actionLabel)}</button>
+    </article>`;
+  }
+
+  function renderLeadsCommandCenter({ prospectQueue, due, hot, intakeTickets, approvalTickets, accountingTickets, companies, properties }) {
+    return `<section class="leads-command-center" aria-label="Leads command center">
+      <section class="ticket-lane leads-contact-queue">
+        <div class="ticket-lane-heading">
+          <div>
+            <p class="eyebrow">Contact Queue</p>
+            <h3>Prospects needing the next touch</h3>
+            <p>Call, email, or open the lead record before it becomes a quote-ready Job Ticket.</p>
+          </div>
+          <span>${escapeHtml(String(prospectQueue.length))}</span>
+        </div>
+        <div class="lead-queue-list">
+          ${prospectQueue.length ? prospectQueue.map((item) => renderLeadQueueItem(item, hot.some((hotItem) => hotItem.id === item.id) ? "hot" : "due")).join("") : emptyState("No prospect follow-ups are due right now.")}
+        </div>
+      </section>
+      <aside class="lead-next-step-stack">
+        <div class="home-next-step-heading">
+          <span>Lead Handoffs</span>
+          <strong>Keep work moving</strong>
+        </div>
+        ${renderLeadNextStepCard({
+          kicker: "Ticket",
+          value: intakeTickets.length + approvalTickets.length,
+          title: "Create or update Job Tickets",
+          detail: "Use this when a lead has enough scope detail to track as real work.",
+          action: "open-ticket-create",
+          actionLabel: "New Job Ticket",
+          extraAttrs: ' data-ticket-type="quote"'
+        })}
+        ${renderLeadNextStepCard({
+          kicker: "Quote",
+          value: hot.length,
+          title: "Quote-ready conversations",
+          detail: "Interested prospects and approval follow-ups should get a clear quote action.",
+          action: "go-tickets",
+          actionLabel: "Open Tickets"
+        })}
+        ${renderLeadNextStepCard({
+          kicker: "Money",
+          value: accountingTickets.length,
+          title: "Approved work needs cost review",
+          detail: "Once the customer says yes, hand the ticket to Money before scheduling.",
+          action: "go-money",
+          actionLabel: "Open Money"
+        })}
+        ${renderLeadNextStepCard({
+          kicker: "Data",
+          value: `${companies.length}/${properties.length}`,
+          title: "Companies and properties",
+          detail: "Use CSV import for management companies, property locations, and prospect lists.",
+          action: "import-outreach-csv",
+          actionLabel: "Import CSV"
+        })}
+      </aside>
+    </section>`;
+  }
+
   function renderLeadsWorkspace(data = state.data) {
     const target = qs("[data-leads-workspace]");
     if (!target) return;
@@ -11435,14 +11525,17 @@
     const accountingTickets = dashboardTickets(data).filter((ticket) => ticketIsOpen(ticket) && ticketInStage(ticket, ["needs_budget"]));
     const due = typeof outreachDueProspects === "function" ? outreachDueProspects() : [];
     const hot = typeof outreachHotProspects === "function" ? outreachHotProspects() : [];
+    const prospectQueue = Array.from(new Map([...due, ...hot].map((item) => [String(item.id || outreachTitle(item)), item])).values()).slice(0, 5);
+    const companies = data.outreachCompanies || [];
+    const properties = data.outreachProperties || [];
     target.innerHTML = `
       <div class="ticket-workspace uy-page-prototype leads-workspace" data-uy-page-contract="leads" data-data-source="prospects,outreach_companies,outreach_properties,quotes">
         ${renderWorkspaceSwitcher("outreach")}
         <header class="ticket-hero">
           <div>
             <p class="eyebrow">Leads</p>
-            <h3>Who needs the next touch?</h3>
-            <p>Move prospects from intake to quote approval, then hand approved work to Money for cost review.</p>
+            <h3>Lead to Ticket Pipeline</h3>
+            <p>Turn prospects, property contacts, and quote-ready conversations into organized Job Tickets without losing the next follow-up.</p>
           </div>
           <div class="ticket-hero-actions">
             ${canManageLeadWorkflow() ? `<button type="button" data-action="new-outreach-prospect">Add Lead</button>` : ""}
@@ -11450,20 +11543,21 @@
           </div>
         </header>
         <section class="ticket-metrics" aria-label="Leads ticket summary">
-          ${renderTicketMetric(intakeTickets.length, "Lead Intake", "New scope and lead review")}
+          ${renderTicketMetric(companies.length, "Companies", "Owner groups and managers")}
+          ${renderTicketMetric(properties.length, "Properties", "Managed locations")}
           ${renderTicketMetric(due.length, "Follow-Ups Due", "Calls or emails waiting")}
-          ${renderTicketMetric(approvalTickets.length + hot.length, "Quote Action", "Interested or quote pending")}
+          ${renderTicketMetric(approvalTickets.length + hot.length, "Quote-Ready", "Interested or pending approval")}
           ${renderTicketMetric(accountingTickets.length, "Money Handoff", "Approved work needs cost review")}
         </section>
         ${renderWorkspaceFocusStrip([
-          { kicker: "Due", value: due.length, title: "Follow-ups", detail: "Prospects or leads waiting for contact." },
-          { kicker: "Quote", value: approvalTickets.length + hot.length, title: "Customer action", detail: "Warm prospects, quote follow-ups, and approvals." },
+          { kicker: "Contact", value: prospectQueue.length, title: "Call and email queue", detail: "Prospects waiting for a clear next touch." },
+          { kicker: "Ticket", value: intakeTickets.length + approvalTickets.length, title: "Scope into tickets", detail: "Requests that need organized ticket detail." },
           { kicker: "Money", value: accountingTickets.length, title: "Cost-review handoff", detail: "Approved work ready for internal review." }
         ], "Leads workspace signals")}
-        ${renderTicketRoleBrief("sales", dashboardTickets(data))}
+        ${renderLeadsCommandCenter({ prospectQueue, due, hot, intakeTickets, approvalTickets, accountingTickets, companies, properties })}
         <div class="ticket-lane-grid">
-          ${renderTicketColumn("New Intake", "Requests and prospects that need lead review.", intakeTickets, "No new lead intake tickets.")}
-          ${renderTicketColumn("Customer Response Needed", "Quotes, follow-ups, and warm leads that need contact.", approvalTickets.concat(hot.map((item, index) => buildTicketFromQuote(item, index))), "No quote follow-ups are waiting.")}
+          ${renderTicketColumn("New Intake", "New requests that need scope, property details, or a first response.", intakeTickets, "No new lead intake tickets.")}
+          ${renderTicketColumn("Quote Action", "Warm leads, quote follow-ups, and customer approval items.", approvalTickets.concat(hot.map((item, index) => buildTicketFromQuote(item, index))), "No quote follow-ups are waiting.")}
           ${renderTicketColumn("Ready for Money", "Approved work ready for cost review, owner approval, and invoice preparation.", accountingTickets, "No approved tickets are ready for Money.")}
         </div>
         <section class="ticket-review-strip">

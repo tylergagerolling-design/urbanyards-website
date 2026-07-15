@@ -175,6 +175,12 @@ test("dashboard route aliases and new reliability diagnostics are wired", () => 
   assert.match(js, /function visibleDashboardWorkspaceLinks/);
   assert.match(js, /dashboardWorkspaceLinks\.filter\(\(item\) => canAccessDashboardSection\(item\.id, role\)\)/);
   assert.match(js, /const links = visibleDashboardWorkspaceLinks\(\)/);
+  assert.match(js, /function renderWorkspaceFocusStrip/);
+  ["home", "tickets", "work", "leads", "money", "tools"].forEach((page) => {
+    assert.match(js, new RegExp(`data-uy-page-contract="${page}"`));
+  });
+  assert.match(css, /\.workspace-focus-strip/);
+  assert.match(css, /\.workspace-focus-card/);
   assert.match(js, /function ticketStage\(ticket = \{\}\)/);
   assert.match(js, /function ticketLane\(ticket = \{\}\)/);
   assert.match(js, /function ticketIsOpen\(ticket = \{\}\)/);

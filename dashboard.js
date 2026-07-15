@@ -10279,6 +10279,19 @@
     </nav>`;
   }
 
+  function renderWorkspaceFocusStrip(items = [], label = "Workspace focus") {
+    if (!items.length) return "";
+    return `<section class="workspace-focus-strip" aria-label="${escapeHtml(label)}">
+      ${items.map((item) => `
+        <article class="workspace-focus-card">
+          <span>${escapeHtml(item.kicker || "Focus")}</span>
+          <strong>${escapeHtml(item.title || "")}</strong>
+          <small>${escapeHtml(item.detail || "")}</small>
+        </article>
+      `).join("")}
+    </section>`;
+  }
+
   function renderHomeActionQueue(items) {
     return `<section class="ticket-lane home-ticket-action-lane">
       <div class="ticket-lane-heading">
@@ -10331,7 +10344,7 @@
     const workflowWarnings = dashboardHealthWarnings({ scope: "critical" });
 
     target.innerHTML = `
-      <div class="ticket-workspace home-ticket-workspace">
+      <div class="ticket-workspace uy-page-prototype home-ticket-workspace" data-uy-page-contract="home" data-data-source="tickets,jobs,quotes,notifications">
         ${renderWorkspaceSwitcher("overview")}
         <header class="ticket-hero">
           <div>
@@ -10350,6 +10363,11 @@
           ${renderTicketMetric(actions.length, "Action Items", "Needs attention now")}
           ${renderTicketMetric(workflowWarnings.length + notifications.length, "Alerts", "Workflow and notification signals")}
         </section>
+        ${renderWorkspaceFocusStrip([
+          { kicker: "Daily", title: "Priorities first", detail: "Overdue items, new requests, and today's handoffs stay above the fold." },
+          { kicker: "Workflow", title: "One ticket trail", detail: "Home summarizes the same tickets used by Leads, Work, and Money." },
+          { kicker: "Next", title: "Action queue", detail: "Buttons should take the owner directly to the next useful step." }
+        ], "Home page focus")}
         ${renderTicketOwnerStrip(activeTickets)}
         <div class="ticket-lane-grid">
           ${renderTicketColumn("Next Ticket Work", "The closest handoffs and blockers across the workflow.", attentionTickets, "No ticket blockers need review.")}
@@ -10370,7 +10388,7 @@
     const readyTickets = openTickets.filter((ticket) => ticketInLane(ticket, ["ready"]));
     const reviewTickets = openTickets.filter((ticket) => ticketInLane(ticket, ["review", "money"]));
     target.innerHTML = `
-      <div class="ticket-workspace">
+      <div class="ticket-workspace uy-page-prototype job-ticket-workspace" data-uy-page-contract="tickets" data-data-source="job_tickets,quotes,jobs,invoices">
         ${renderWorkspaceSwitcher("tickets")}
         <header class="ticket-hero">
           <div>
@@ -10389,6 +10407,11 @@
           ${renderTicketMetric(ticketCountBy(openTickets, (ticket) => ticketInLane(ticket, ["sales", "accounting"])), "Needs Office", "Scope, quote, cost review")}
           ${renderTicketMetric(ticketCountBy(openTickets, (ticket) => ticketInLane(ticket, ["review", "money"])), "Closeout", "Review, invoice, payment")}
         </section>
+        ${renderWorkspaceFocusStrip([
+          { kicker: "Board", title: "Central workflow", detail: "Every request moves through intake, approval, budget, work, invoice, and closeout." },
+          { kicker: "Filters", title: "Stage and owner", detail: "The board must support status, owner, next action, and blocked work." },
+          { kicker: "Detail", title: "Open the ticket", detail: "The drawer is the source of truth for quote, budget, work proof, and invoice history." }
+        ], "Tickets page focus")}
         <section class="ticket-flow-panel">
           <div class="ticket-flow-step is-active"><span>1</span><strong>Lead Intake</strong><small>Lead and scope</small></div>
           <div class="ticket-flow-step"><span>2</span><strong>Quote Approval</strong><small>Customer yes</small></div>
@@ -10426,7 +10449,7 @@
     const todayTickets = workTickets.filter((ticket) => dateKey(ticket.dateRaw) === today);
     const upcomingTickets = workTickets.filter((ticket) => dateKey(ticket.dateRaw) >= today);
     target.innerHTML = `
-      <div class="work-workspace">
+      <div class="ticket-workspace uy-page-prototype work-workspace" data-uy-page-contract="work" data-data-source="jobs,job_tickets,route_stops,documentation">
         ${renderWorkspaceSwitcher("calendar")}
         <header class="ticket-hero work-hero">
           <div>
@@ -10445,6 +10468,11 @@
           ${renderTicketMetric(ticketCountBy(workTickets, (ticket) => ticketInLane(ticket, ["review"])), "Needs Review", "Photos, actuals, invoice")}
           ${renderTicketMetric(upcomingTickets.length, "Upcoming", "Scheduled tickets")}
         </section>
+        ${renderWorkspaceFocusStrip([
+          { kicker: "Schedule", title: "Assigned work", detail: "Work shows approved tickets that are ready, scheduled, in progress, or awaiting review." },
+          { kicker: "Field", title: "Route and proof", detail: "Site directions, arrival photos, completion photos, and forms stay tied to the ticket." },
+          { kicker: "Done", title: "Completion handoff", detail: "Completed work moves back to review with actuals and documentation attached." }
+        ], "Work page focus")}
         ${renderTicketRoleBrief("field", tickets)}
         <div class="field-grid">
           <section class="ticket-lane field-primary-lane">
@@ -10524,7 +10552,7 @@
     const due = typeof outreachDueProspects === "function" ? outreachDueProspects() : [];
     const hot = typeof outreachHotProspects === "function" ? outreachHotProspects() : [];
     target.innerHTML = `
-      <div class="ticket-workspace leads-workspace">
+      <div class="ticket-workspace uy-page-prototype leads-workspace" data-uy-page-contract="leads" data-data-source="prospects,outreach_companies,outreach_properties,quotes">
         ${renderWorkspaceSwitcher("outreach")}
         <header class="ticket-hero">
           <div>
@@ -10543,6 +10571,11 @@
           ${renderTicketMetric(approvalTickets.length + hot.length, "Quote Action", "Interested or quote pending")}
           ${renderTicketMetric(accountingTickets.length, "Money Handoff", "Approved work needs cost review")}
         </section>
+        ${renderWorkspaceFocusStrip([
+          { kicker: "Prospects", title: "Next contact", detail: "Lead cards should make call, email, follow-up date, and notes easy to reach." },
+          { kicker: "Quotes", title: "Scope to approval", detail: "Qualified leads become tickets once scope and quote approval are real." },
+          { kicker: "Handoff", title: "Ready for Money", detail: "Approved work moves to budget/cost review without creating a second workflow." }
+        ], "Leads page focus")}
         ${renderTicketRoleBrief("sales", dashboardTickets(data))}
         <div class="ticket-lane-grid">
           ${renderTicketColumn("New Intake", "Requests and prospects that need lead review.", intakeTickets, "No new lead intake tickets.")}
@@ -10592,7 +10625,7 @@
       blockers: doc.squareInvoiceNumber ? [] : ["Square invoice #"]
     }));
     target.innerHTML = `
-      <div class="ticket-workspace money-workspace">
+      <div class="ticket-workspace uy-page-prototype money-workspace" data-uy-page-contract="money" data-data-source="documents,invoices,quotes,job_tickets,budgets">
         ${renderWorkspaceSwitcher("documents")}
         <header class="ticket-hero">
           <div>
@@ -10611,6 +10644,11 @@
           ${renderTicketMetric(unpaidInvoices.length, "Open Invoices", "Awaiting payment")}
           ${renderTicketMetric(overdueInvoices.length, "Overdue", "Payment action needed")}
         </section>
+        ${renderWorkspaceFocusStrip([
+          { kicker: "Budget", title: "Cost review", detail: "Budget prep verifies labor, materials, equipment, and margin before work is scheduled." },
+          { kicker: "Invoice", title: "Draft and collect", detail: "Invoices, Square payment state, and outstanding balances stay attached to tickets." },
+          { kicker: "Close", title: "Profit story", detail: "Actual costs and final revenue decide whether a ticket is ready to close." }
+        ], "Money page focus")}
         ${renderTicketRoleBrief("accounting", tickets)}
         <div class="ticket-lane-grid">
           ${renderTicketColumn("Cost Review Queue", "Approved work that needs internal cost review before scheduling.", needsBudget, "No tickets are waiting for cost review.")}
@@ -10644,7 +10682,7 @@
       : "Not published";
     const documentationCount = Number(documentation.templates?.length || 0) + Number(documentation.submissions?.length || 0);
     target.innerHTML = `
-      <div class="ticket-workspace tools-workspace">
+      <div class="ticket-workspace uy-page-prototype tools-workspace" data-uy-page-contract="tools" data-data-source="equipment,documentation,route_tools,ai,imports,settings">
         ${renderWorkspaceSwitcher("settings")}
         <header class="ticket-hero">
           <div>
@@ -10663,6 +10701,11 @@
           ${renderTicketMetric(documents.length, "Financial Documents", "Quotes, invoices, and records")}
           ${renderTicketMetric(documentationCount, "Forms and Files", "Templates and submissions")}
         </section>
+        ${renderWorkspaceFocusStrip([
+          { kicker: "Support", title: "Operational utilities", detail: "Route tools, equipment, documentation, imports, and AI stay available without taking over the workflow." },
+          { kicker: "Admin", title: "Setup and access", detail: "Owner/admin-only settings remain behind the Tools workspace and current role checks." },
+          { kicker: "Health", title: "Repair queue", detail: "Optional module warnings are separated from active ticket workflow blockers." }
+        ], "Tools page focus")}
         <section class="tools-control-grid" aria-label="Dashboard support tools">
           ${renderToolsCard({
             label: "Route & Work Map",

@@ -283,6 +283,24 @@ test("dashboard ticket backend sanitizes mutation payloads before Supabase write
   assert.equal(payload.created_by, actor.userId);
 });
 
+test("dashboard ticket backend accepts field proof updates through protected payloads", () => {
+  const actor = { userId: "bb2f637a-61c8-4ca4-8e29-f4b7286f10a2", email: "team@urbanyards.us" };
+  const payload = ticketFunctionInternals.cleanTicketPayload({
+    arrival_photos_uploaded: true,
+    completion_photos_uploaded: true,
+    before_photos_uploaded: true,
+    after_photos_uploaded: true,
+    field_completion_notes: "Arrived, completed, and photographed the work area."
+  }, actor, { partial: true });
+
+  assert.equal(payload.arrival_photos_uploaded, true);
+  assert.equal(payload.completion_photos_uploaded, true);
+  assert.equal(payload.before_photos_uploaded, true);
+  assert.equal(payload.after_photos_uploaded, true);
+  assert.equal(payload.field_completion_notes, "Arrived, completed, and photographed the work area.");
+  assert.equal(payload.updated_by, actor.userId);
+});
+
 test("dashboard ticket backend exposes read actions through the protected ticket endpoint", () => {
   const source = require("node:fs").readFileSync(require("node:path").join(__dirname, "..", "netlify/functions/dashboard-tickets.js"), "utf8");
   assert.match(source, /"list"/);

@@ -4773,6 +4773,41 @@
 
   function canonicalTicketUpdatePayload(input = {}) {
     const payload = {};
+    const textFields = [
+      ["title", "title"],
+      ["customer_name", "customerName"],
+      ["client_name", "clientName"],
+      ["contact_name", "contactName"],
+      ["company_name", "companyName"],
+      ["property_name", "propertyName"],
+      ["property_address", "propertyAddress"],
+      ["city", "city"],
+      ["requested_service", "requestedService"],
+      ["service", "service"],
+      ["scope_of_work", "scopeOfWork"],
+      ["description", "description"],
+      ["scheduled_date", "scheduledDate"],
+      ["visit_date", "visitDate"],
+      ["due_date", "dueDate"],
+      ["owner_label", "ownerLabel"],
+      ["field_completion_notes", "fieldCompletionNotes"],
+      ["payment_status", "paymentStatus"]
+    ];
+    const boolFields = [
+      ["cost_review_complete", "costReviewComplete"],
+      ["budget_complete", "budgetComplete"],
+      ["scope_complete", "scopeComplete"],
+      ["customer_approval_recorded", "customerApprovalRecorded"],
+      ["owner_approval_recorded", "ownerApprovalRecorded"],
+      ["draft_invoice_exists", "draftInvoiceExists"],
+      ["deposit_required", "depositRequired"],
+      ["deposit_paid", "depositPaid"],
+      ["before_photos_uploaded", "beforePhotosUploaded"],
+      ["after_photos_uploaded", "afterPhotosUploaded"],
+      ["arrival_photos_uploaded", "arrivalPhotosUploaded"],
+      ["completion_photos_uploaded", "completionPhotosUploaded"],
+      ["invoice_finalized", "invoiceFinalized"]
+    ];
     if (Object.prototype.hasOwnProperty.call(input, "stage")) {
       payload.stage = normalizeTicketStageForDashboard(input.stage);
     }
@@ -4788,6 +4823,16 @@
     if (Object.prototype.hasOwnProperty.call(input, "internal_notes") || Object.prototype.hasOwnProperty.call(input, "internalNotes")) {
       payload.internal_notes = blankToNull(input.internal_notes || input.internalNotes);
     }
+    textFields.forEach(([snake, camel]) => {
+      if (Object.prototype.hasOwnProperty.call(input, snake) || Object.prototype.hasOwnProperty.call(input, camel)) {
+        payload[snake] = blankToNull(input[snake] ?? input[camel]);
+      }
+    });
+    boolFields.forEach(([snake, camel]) => {
+      if (Object.prototype.hasOwnProperty.call(input, snake) || Object.prototype.hasOwnProperty.call(input, camel)) {
+        payload[snake] = Boolean(input[snake] ?? input[camel]);
+      }
+    });
     return payload;
   }
 
@@ -4809,6 +4854,9 @@
       state.ticketsReady = true;
       state.ticketsError = "";
       const ticket = normalizeCanonicalTicket(result.ticket);
+      const existingIndex = state.data.tickets.findIndex((item) => item.id === ticket.id);
+      if (existingIndex >= 0) state.data.tickets[existingIndex] = ticket;
+      else state.data.tickets.unshift(ticket);
       return ticket;
     } catch (error) {
       state.ticketsReady = false;
@@ -4835,7 +4883,11 @@
     }
 
     const result = await dashboardTicketRequest("update", { id, ticket: payload });
-    return normalizeCanonicalTicket(result.ticket);
+    const ticket = normalizeCanonicalTicket(result.ticket);
+    const index = state.data.tickets.findIndex((item) => item.id === ticket.id);
+    if (index >= 0) state.data.tickets[index] = ticket;
+    else state.data.tickets.unshift(ticket);
+    return ticket;
   }
 
   async function transitionJobTicketStage(id, toStage, input = {}) {
@@ -4857,7 +4909,11 @@
       nextAction,
       sourceStatus: blankToNull(input.sourceStatus || input.source_status)
     });
-    return normalizeCanonicalTicket(result.ticket);
+    const ticket = normalizeCanonicalTicket(result.ticket);
+    const index = state.data.tickets.findIndex((item) => item.id === ticket.id);
+    if (index >= 0) state.data.tickets[index] = ticket;
+    else state.data.tickets.unshift(ticket);
+    return ticket;
   }
 
   async function insertJobTicketEvent(ticketId, input = {}) {
@@ -4885,6 +4941,113 @@
       recordModuleError("canonical tickets", error);
       return null;
     }
+  }
+
+  function findJobTicketForScheduledJob(jobId) {
+    const id = String(jobId || "");
+    if (!id) return null;
+    return (state.data.tickets || []).find((ticket) => (
+      ticket?.sourceType === "job" && ticket.sourceId === id
+    )) || null;
+  }
+
+  function ticketPayloadFromScheduledJob(job = {}, overrides = {}) {
+    const stage = normalizeTicketStageForDashboard(overrides.stage || jobStage(job), "scheduled");
+    const visitDate = blankToNull(overrides.visit_date || overrides.visitDate || job.dateRaw);
+    const siteName = blankToNull(overrides.customer_name || overrides.customerName || job.site) || "Scheduled visit";
+    const service = blankToNull(overrides.service || overrides.requested_service || overrides.requestedService || job.service) || "Scheduled visit";
+    return {
+      title: service,
+      stage,
+      status: overrides.status || ticketRecordStatusForStage(stage),
+      source_type: "job",
+      source_id: job.id,
+      job_id: job.id,
+      customer_name: siteName,
+      property_name: siteName,
+      city: blankToNull(overrides.city || job.city),
+      requested_service: service,
+      service,
+      description: blankToNull(overrides.description) || [job.date, job.window].filter(Boolean).join(" / "),
+      notes: blankToNull(overrides.notes),
+      internal_notes: blankToNull(overrides.internal_notes || overrides.internalNotes),
+      scheduled_date: visitDate,
+      visit_date: visitDate,
+      owner_label: blankToNull(overrides.owner_label || overrides.ownerLabel) || "Field",
+      next_action: blankToNull(overrides.next_action || overrides.nextAction) || ticketNextAction(stage),
+      field_completion_notes: blankToNull(overrides.field_completion_notes || overrides.fieldCompletionNotes),
+      arrival_photos_uploaded: overrides.arrival_photos_uploaded ?? overrides.arrivalPhotosUploaded,
+      completion_photos_uploaded: overrides.completion_photos_uploaded ?? overrides.completionPhotosUploaded,
+      before_photos_uploaded: overrides.before_photos_uploaded ?? overrides.beforePhotosUploaded,
+      after_photos_uploaded: overrides.after_photos_uploaded ?? overrides.afterPhotosUploaded
+    };
+  }
+
+  async function ensureJobTicketForScheduledJob(jobOrId, overrides = {}) {
+    const job = typeof jobOrId === "string"
+      ? state.data.jobs.find((item) => item.id === jobOrId)
+      : jobOrId;
+    if (!job?.id) return null;
+    const existing = findJobTicketForScheduledJob(job.id);
+    const payload = ticketPayloadFromScheduledJob(job, {
+      stage: existing?.stage,
+      ...overrides
+    });
+    if (existing?.id) {
+      return await updateJobTicket(existing.id, payload) || existing;
+    }
+    return insertJobTicket(payload);
+  }
+
+  async function syncJobTicketPhotoProof(jobId, photoStage) {
+    const ticket = await ensureJobTicketForScheduledJob(jobId);
+    if (!ticket?.id) return null;
+    if (photoStage === "arrival") {
+      return updateJobTicket(ticket.id, {
+        arrival_photos_uploaded: true,
+        before_photos_uploaded: true,
+        next_action: ticketNextAction(normalizeTicketStageForDashboard(ticket.stage, "scheduled"))
+      });
+    }
+    if (photoStage === "completion") {
+      return updateJobTicket(ticket.id, {
+        completion_photos_uploaded: true,
+        after_photos_uploaded: true,
+        next_action: ticketNextAction(normalizeTicketStageForDashboard(ticket.stage, "scheduled"))
+      });
+    }
+    return ticket;
+  }
+
+  async function completeScheduledJobWithTicket(jobOrId) {
+    const job = typeof jobOrId === "string"
+      ? state.data.jobs.find((item) => item.id === jobOrId)
+      : jobOrId;
+    if (!job) throw new Error("Scheduled visit was not found.");
+    const baseTicket = await ensureJobTicketForScheduledJob(job);
+    if (baseTicket?.id) {
+      const currentStage = normalizeTicketStageForDashboard(baseTicket.stage || jobStage(job), "scheduled");
+      let activeTicket = baseTicket;
+      if (currentStage === "scheduled") {
+        activeTicket = await transitionJobTicketStage(baseTicket.id, "in_progress", {
+          notes: "Field work started from the schedule detail panel.",
+          nextAction: ticketNextAction("in_progress"),
+          sourceStatus: "In Progress"
+        });
+      }
+      const ticketId = activeTicket?.id || baseTicket.id;
+      const completionNotes = `Marked complete from the schedule detail panel on ${formatDate(new Date().toISOString())}.`;
+      await updateJobTicket(ticketId, {
+        field_completion_notes: completionNotes,
+        next_action: ticketNextAction("field_work_complete")
+      });
+      await transitionJobTicketStage(ticketId, "field_work_complete", {
+        notes: completionNotes,
+        nextAction: ticketNextAction("field_work_complete"),
+        sourceStatus: "Completed"
+      });
+    }
+    await updateStatus("scheduled_jobs", job.id, "Completed");
   }
 
   async function deleteRow(table, id) {
@@ -5359,15 +5522,19 @@
   async function updateScheduledJob(id, payload) {
     if (isDemoMode()) {
       const index = state.data.jobs.findIndex((job) => job.id === id);
-      if (index >= 0) state.data.jobs[index] = normalizeJob({ id, ...payload });
-      return;
+      if (index >= 0) {
+        state.data.jobs[index] = normalizeJob({ id, ...payload });
+        return state.data.jobs[index];
+      }
+      return null;
     }
 
-    await supabaseRestRequest(`scheduled_jobs?id=eq.${encodeURIComponent(id)}`, {
+    const rows = await supabaseRestRequest(`scheduled_jobs?id=eq.${encodeURIComponent(id)}`, {
       method: "PATCH",
-      headers: { Prefer: "return=minimal" },
+      headers: { Prefer: "return=representation" },
       body: JSON.stringify(payload)
     });
+    return rows?.[0] ? normalizeJob(rows[0]) : normalizeJob({ id, ...payload });
   }
 
   async function cancelScheduledJob(id) {
@@ -16685,12 +16852,15 @@
       } else if (action === "complete-job") {
         try {
           setDashboardState("Marking visit complete...");
-          await updateStatus("scheduled_jobs", id, "Completed");
+          await completeScheduledJobWithTicket(id);
           await refreshDashboard();
           openJobDrawer(id);
           setDashboardState("");
         } catch (error) {
-          setDashboardState(error.message || "Unable to complete visit.", "error");
+          const message = /missing required details/i.test(error.message || "")
+            ? "Upload arrival and completion photos before marking this visit complete."
+            : error.message || "Unable to complete visit.";
+          setDashboardState(message, "error");
         }
       } else if (action === "cancel-job") {
         const ok = window.confirm("Delete this scheduled visit?");
@@ -16999,11 +17169,19 @@
             service: String(formData.get("service") || item.service),
             status: "Scheduled"
           });
-          await insertScheduledJobs(payloads);
+          const jobs = await insertScheduledJobs(payloads);
+          for (const job of jobs) {
+            await ensureJobTicketForScheduledJob(job, {
+              stage: "scheduled",
+              notes: `Created from quote submission ${item.id}.`,
+              owner_label: "Field",
+              next_action: ticketNextAction("scheduled")
+            });
+          }
           await updateStatus("quote_submissions", item.id, "Scheduled");
           await refreshDashboard();
           openSubmissionDrawer(item.id);
-          setDashboardState(payloads.length > 1 ? `${payloads.length} recurring visits created.` : "");
+          setDashboardState(jobs.length > 1 ? `${jobs.length} recurring visits created and linked to Job Tickets.` : "Visit created and linked to a Job Ticket.");
         } catch (error) {
           setDashboardState(error.message || "Unable to create job.", "error");
         }
@@ -17012,19 +17190,38 @@
         const formData = new FormData(event.target);
         try {
           setDashboardState("Saving visit...");
-          await updateScheduledJob(state.selectedJobId, {
+          const requestedStatus = String(formData.get("status") || "Scheduled");
+          const shouldComplete = /complete|done/i.test(requestedStatus);
+          const updatedJob = await updateScheduledJob(state.selectedJobId, {
             visit_date: String(formData.get("visit_date") || ""),
             visit_window: String(formData.get("visit_window") || ""),
             site_name: String(formData.get("site_name") || ""),
             city: String(formData.get("city") || ""),
             service: String(formData.get("service") || ""),
-            status: String(formData.get("status") || "Scheduled")
+            status: shouldComplete ? "In Progress" : requestedStatus
           });
+          if (shouldComplete && updatedJob?.id) {
+            await ensureJobTicketForScheduledJob(updatedJob, {
+              stage: "in_progress",
+              status: ticketRecordStatusForStage("in_progress"),
+              next_action: ticketNextAction("in_progress")
+            });
+            await completeScheduledJobWithTicket(updatedJob);
+          } else if (updatedJob?.id) {
+            await ensureJobTicketForScheduledJob(updatedJob, {
+              stage: jobStage(updatedJob),
+              status: ticketRecordStatusForStage(jobStage(updatedJob)),
+              next_action: ticketNextAction(jobStage(updatedJob))
+            });
+          }
           closeSubmissionDrawer();
           await refreshDashboard();
           setDashboardState("");
         } catch (error) {
-          setDashboardState(error.message || "Unable to save visit.", "error");
+          const message = /missing required details/i.test(error.message || "")
+            ? "Upload arrival and completion photos before marking this visit complete."
+            : error.message || "Unable to save visit.";
+          setDashboardState(message, "error");
         }
       } else if (event.target.matches("[data-job-documentation-form]")) {
         event.preventDefault();
@@ -17050,6 +17247,7 @@
         try {
           setDashboardState(`Uploading ${files.length || ""} ${stageLabel.toLowerCase()} photo${files.length === 1 ? "" : "s"}...`);
           const uploads = await uploadJobSitePhotos(jobId, files, photoStage);
+          await syncJobTicketPhotoProof(jobId, photoStage);
           event.target.reset();
           await refreshDashboard();
           openJobDrawer(jobId);

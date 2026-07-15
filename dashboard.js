@@ -10011,6 +10011,43 @@
     </section>`;
   }
 
+  function renderTicketWorkflowBoard(openTickets = [], filteredTickets = []) {
+    return `<section class="ticket-workflow-board" aria-label="Ticket workflow board">
+      <div class="ticket-workflow-board-heading">
+        <div>
+          <p class="eyebrow">Workflow Board</p>
+          <h3>Request to closeout</h3>
+          <p>See every open ticket by its next operating step, from lead intake through payment and closeout.</p>
+        </div>
+        <dl>
+          <div><dt>Shown</dt><dd>${escapeHtml(String(filteredTickets.length))}</dd></div>
+          <div><dt>Open</dt><dd>${escapeHtml(String(openTickets.length))}</dd></div>
+        </dl>
+      </div>
+      <div class="ticket-workflow-board-grid">
+        ${ticketWorkflowSteps.map((step) => {
+          const totalTickets = openTickets.filter((ticket) => ticketInStage(ticket, step.stages));
+          const shownTickets = filteredTickets.filter((ticket) => ticketInStage(ticket, step.stages));
+          return `<article class="ticket-workflow-board-column ${shownTickets.length ? "is-populated" : ""}" data-workflow-step="${escapeHtml(step.key)}">
+            <div class="ticket-workflow-board-column-head">
+              <div>
+                <strong>${escapeHtml(step.label)}</strong>
+                <small>${escapeHtml(step.detail)}</small>
+              </div>
+              <span title="${escapeHtml(String(totalTickets.length))} open tickets">${escapeHtml(String(shownTickets.length))}</span>
+            </div>
+            <div class="ticket-workflow-board-list">
+              ${shownTickets.length
+                ? shownTickets.slice(0, 3).map((ticket) => renderTicketCard(ticket, true)).join("")
+                : emptyState("No tickets in this step.")}
+              ${shownTickets.length > 3 ? `<p class="ticket-workflow-more">${escapeHtml(String(shownTickets.length - 3))} more tickets match this step.</p>` : ""}
+            </div>
+          </article>`;
+        }).join("")}
+      </div>
+    </section>`;
+  }
+
   function renderTicketWorkflowTracker(stage) {
     const activeIndex = ticketWorkflowIndex(stage);
     return `<section class="ticket-drawer-tracker" aria-label="Job ticket workflow">
@@ -11142,6 +11179,7 @@
         ], "Tickets workspace signals")}
         ${renderTicketEndToEndFlow(openTickets)}
         ${renderTicketOwnerStrip(openTickets)}
+        ${renderTicketWorkflowBoard(openTickets, filteredTickets)}
         <div class="ticket-lane-grid">
           ${renderTicketColumn("Today and Work", "Scheduled, active, and work-owned tickets.", workTickets, "No work tickets are scheduled yet.")}
           ${renderTicketColumn("Office Review", "Scope, quote, cost review, approval, and closeout blockers.", officeTickets, "No office tickets need review.")}

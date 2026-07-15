@@ -1707,13 +1707,16 @@
     if (isDemoMode()) {
       state.userProfilesReady = true;
       const session = getSession();
-      return [normalizeUserProfile({
+      const profiles = [normalizeUserProfile({
         id: session?.userId || "demo-user",
         email: session?.email || "demo@urbanyards.us",
         full_name: "Demo User",
         role: "owner",
         title: "Dashboard user"
       })];
+      state.data.userProfiles = profiles;
+      renderCurrentProfileAvatar(state.data);
+      return profiles;
     }
 
     try {
@@ -1724,14 +1727,32 @@
       const current = profiles.find((profile) => profile.userId && profile.userId === session?.userId)
         || profiles.find((profile) => profile.email && profile.email.toLowerCase() === String(session?.email || "").toLowerCase());
       if (current) syncSessionRoleFromProfile(current);
+      state.data.userProfiles = profiles;
+      renderCurrentProfileAvatar(state.data);
+      renderUsersAccess(state.data);
+      bindAvatarFallbacks();
+      syncDashboardNavAccess();
+      syncDashboardSubviewVisibility();
       return profiles;
     } catch (error) {
       state.userProfilesReady = false;
       const session = getSession();
       const ownProfile = await loadCurrentUserProfile(session).catch(() => null);
-      if (ownProfile) return [normalizeUserProfile(ownProfile)];
+      if (ownProfile) {
+        const profiles = [normalizeUserProfile(ownProfile)];
+        state.data.userProfiles = profiles;
+        renderCurrentProfileAvatar(state.data);
+        renderUsersAccess(state.data);
+        bindAvatarFallbacks();
+        syncDashboardNavAccess();
+        syncDashboardSubviewVisibility();
+        return profiles;
+      }
       if (session) {
-        return [normalizeUserProfile({ id: session.userId, email: session.email, role: "viewer", title: "Dashboard user" })];
+        const profiles = [normalizeUserProfile({ id: session.userId, email: session.email, role: "viewer", title: "Dashboard user" })];
+        state.data.userProfiles = profiles;
+        renderCurrentProfileAvatar(state.data);
+        return profiles;
       }
       return [];
     }
@@ -7967,10 +7988,9 @@
     els.appView.hidden = false;
     if (els.demoBadge) els.demoBadge.hidden = !isDemoMode();
     renderSidebarUserProfile();
-    const profile = await loadCurrentUserProfile(getSession()).catch(() => null);
-    if (profile) renderSidebarUserProfile(profile);
     syncDashboardNavAccess();
     syncDashboardSubviewVisibility();
+    await render();
     await refreshDashboard();
   }
 

@@ -84,6 +84,8 @@ test("dashboard route aliases and new reliability diagnostics are wired", () => 
 
   assert.doesNotMatch(html, /id="budgets"/);
   assert.doesNotMatch(html, /id="connected-operations"/);
+  const primaryDrawerLabels = [...html.matchAll(/<a href="#[^"]+"(?![^>]*legacy-nav-route)[^>]*data-dashboard-link="[^"]+"[\s\S]*?<span class="nav-label">([^<]+)<\/span><\/a>/g)].map((match) => match[1]);
+  assert.deepEqual(primaryDrawerLabels, ["Home", "Tickets", "Work", "Leads", "Money", "Tools"]);
   assert.match(js, /function loadModule/);
   assert.match(js, /function safeRender/);
   assert.match(js, /function renderDashboardHealth/);
@@ -93,6 +95,7 @@ test("dashboard route aliases and new reliability diagnostics are wired", () => 
   assert.match(html, /copy-dashboard-diagnostics/);
   assert.match(js, /"route-planner": "calendar"/);
   assert.doesNotMatch(js, /DASHBOARD_OPERATIONS_SQL/);
+  assert.doesNotMatch(js, /20260713_connected_operations\.sql/);
   assert.match(js, /Job Tickets are not installed yet\. Run supabase\/migrations\/20260714_job_ticket_foundation\.sql/);
 });
 

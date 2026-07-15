@@ -5300,7 +5300,7 @@
   }
 
   async function insertBudget(payload) {
-    if (!state.budgetsReady) throw new Error("Job budgets are not available right now. Refresh the dashboard, then check Supabase/RLS if it stays down.");
+    if (!state.budgetsReady) throw new Error("Job budget tools are folded into Job Tickets and Money during this rebuild.");
     if (isDemoMode()) {
       const budget = normalizeBudget({ id: nextDemoId("budget"), ...payload, created_at: new Date().toISOString(), updated_at: new Date().toISOString() });
       state.data.budgets.budgets.unshift(budget);
@@ -12238,8 +12238,8 @@
     if (els.budgetDateEnd && els.budgetDateEnd.value !== state.budgetDateEnd) els.budgetDateEnd.value = state.budgetDateEnd;
     if (els.budgetStatus) {
       els.budgetStatus.textContent = state.budgetsReady || isDemoMode()
-        ? "Budgets use the shared dashboard records, RLS policies, and the Job Budgeter SQL tables."
-        : (state.budgetsError || "Job budgets could not load right now. Refresh the dashboard, then check Supabase/RLS if it stays down.");
+        ? "Budget tools are folded into Job Tickets and Money during this rebuild."
+        : (state.budgetsError || "Budget tools are folded into Job Tickets and Money during this rebuild.");
     }
     const selected = selectedBudget();
     if (selected && !state.selectedBudgetId) state.selectedBudgetId = selected.id;
@@ -12567,7 +12567,7 @@
     if (els.connectedOpsStatus) {
       els.connectedOpsStatus.textContent = state.connectedOpsReady || isDemoMode()
         ? "Connected operations uses the shared dashboard records and protected Supabase tables."
-        : "Connected operations tables are not installed yet. Run supabase/migrations/20260713_connected_operations.sql, then refresh.";
+        : "Connected Operations has been folded into Job Tickets for this rebuild.";
     }
     if (els.connectedOpsMetrics) {
       els.connectedOpsMetrics.innerHTML = [
@@ -12581,7 +12581,7 @@
     renderConnectedOpsTabs();
     if (!els.connectedOpsMain) return;
     if (!state.connectedOpsReady && !isDemoMode()) {
-      els.connectedOpsMain.innerHTML = emptyState("Connected operations tables are not installed yet.");
+      els.connectedOpsMain.innerHTML = emptyState("Connected Operations has been folded into Job Tickets for this rebuild.");
       return;
     }
     const view = state.connectedOpsView;
@@ -14560,7 +14560,7 @@
     state.data.connectedOps = await loadConnectedOperations();
     await render();
     setActiveSection("connected-operations");
-    setDashboardState(state.connectedOpsReady || isDemoMode() ? message : "Connected operations tables are not installed yet.");
+    setDashboardState(state.connectedOpsReady || isDemoMode() ? message : "Connected Operations has been folded into Job Tickets for this rebuild.");
   }
 
   function connectedOpsPayloadFromForm(form) {
@@ -14623,7 +14623,7 @@
   async function saveConnectedOperationsForm(form) {
     const { table, record } = connectedOpsPayloadFromForm(form);
     if (!record.title && !record.service_name && !record.subject && !record.contact_name) throw new Error("Add a title, service name, subject, or contact first.");
-    if (!state.connectedOpsReady && !isDemoMode()) throw new Error("Run supabase/migrations/20260713_connected_operations.sql first.");
+    if (!state.connectedOpsReady && !isDemoMode()) throw new Error("Connected Operations has been folded into Job Tickets for this rebuild.");
 
     if (isDemoMode()) {
       const now = new Date().toISOString();
@@ -14663,7 +14663,7 @@
       await render();
       return;
     }
-    if (!state.connectedOpsReady) throw new Error("Run supabase/migrations/20260713_connected_operations.sql first.");
+    if (!state.connectedOpsReady) throw new Error("Connected Operations has been folded into Job Tickets for this rebuild.");
     await supabaseRestRequest(`approval_requests?id=eq.${encodeURIComponent(id)}`, {
       method: "PATCH",
       headers: { Prefer: "return=representation" },
@@ -16297,28 +16297,26 @@
       }
 
       if (action === "set-connected-ops-view") {
-        setActiveSection("overview");
-        replaceDashboardHash("overview");
+        setActiveSection("tickets");
+        replaceDashboardHash("tickets");
         await render();
+        setDashboardState("Connected Operations has been folded into Job Tickets for this rebuild.");
         return;
       }
 
       if (action === "refresh-connected-operations") {
-        setActiveSection("overview");
-        replaceDashboardHash("overview");
+        setActiveSection("tickets");
+        replaceDashboardHash("tickets");
         await render();
-        setDashboardState("Operations has been removed from this dashboard version.");
+        setDashboardState("Connected Operations has been folded into Job Tickets for this rebuild.");
         return;
       }
 
       if (action === "resolve-approval") {
-        try {
-          setDashboardState("Updating approval...");
-          await resolveConnectedApproval(id, target.dataset.status || "Approved");
-          setDashboardState(`Approval marked ${(target.dataset.status || "Approved").toLowerCase()}.`);
-        } catch (error) {
-          setDashboardState(error.message || "Unable to update approval.", "error");
-        }
+        setActiveSection("tickets");
+        replaceDashboardHash("tickets");
+        await render();
+        setDashboardState("Approvals now move through Job Tickets instead of the retired Connected Operations module.");
         return;
       }
 
@@ -16719,9 +16717,10 @@
         setActiveSection("route-planner");
         replaceDashboardHash("route-planner");
       } else if (action === "go-connected-operations") {
-        setActiveSection("overview");
-        replaceDashboardHash("overview");
+        setActiveSection("tickets");
+        replaceDashboardHash("tickets");
         await render();
+        setDashboardState("Connected Operations has been folded into Job Tickets for this rebuild.");
       } else if (action === "go-calendar") {
         setActiveSection("calendar");
         replaceDashboardHash("calendar");

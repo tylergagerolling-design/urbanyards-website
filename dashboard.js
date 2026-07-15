@@ -40,7 +40,7 @@
   const USER_AVATAR_ALLOWED_TYPES = new Set(["image/jpeg", "image/png", "image/webp"]);
   const USER_AVATAR_ALLOWED_EXTENSIONS = new Set(["jpg", "jpeg", "png", "webp"]);
   const PROTECTED_USER_EMAIL = "team@urbanyards.us";
-  const DASHBOARD_ROLES = ["owner", "admin", "manager", "sales_outreach", "accountant", "field_worker", "worker", "viewer"];
+  const DASHBOARD_ROLES = ["owner", "admin", "manager", "sales_outreach", "accountant", "field_worker", "worker", "staff", "viewer"];
   const DASHBOARD_ROLE_LABELS = {
     owner: "Owner",
     admin: "Admin",
@@ -49,6 +49,7 @@
     accountant: "Money",
     field_worker: "Work",
     worker: "Worker",
+    staff: "Staff",
     viewer: "Viewer"
   };
   const DASHBOARD_ROLE_PERMISSIONS = {
@@ -59,13 +60,14 @@
     accountant: ["view", "create", "edit", "export"],
     field_worker: ["view", "create", "edit"],
     worker: ["view", "create", "edit"],
+    staff: ["view", "create", "edit"],
     viewer: ["view"]
   };
   const DASHBOARD_WORKSPACE_ACCESS = {
-    overview: ["owner", "admin", "manager", "sales_outreach", "accountant", "field_worker", "worker", "viewer"],
-    tickets: ["owner", "admin", "manager", "sales_outreach", "accountant", "field_worker", "worker"],
-    calendar: ["owner", "admin", "manager", "field_worker", "worker"],
-    outreach: ["owner", "admin", "manager", "sales_outreach"],
+    overview: ["owner", "admin", "manager", "sales_outreach", "accountant", "field_worker", "worker", "staff", "viewer"],
+    tickets: ["owner", "admin", "manager", "sales_outreach", "accountant", "field_worker", "worker", "staff"],
+    calendar: ["owner", "admin", "manager", "field_worker", "worker", "staff"],
+    outreach: ["owner", "admin", "manager", "sales_outreach", "staff"],
     documents: ["owner", "admin", "manager", "accountant"],
     settings: ["owner", "admin"]
   };
@@ -77,6 +79,7 @@
     accountant: "documents",
     field_worker: "calendar",
     worker: "calendar",
+    staff: "overview",
     viewer: "overview"
   };
   const AI_TRAINING_CATEGORIES = {

@@ -309,6 +309,7 @@ test("workspace registry matches the rebuilt ticket-centered dashboard shell", (
   const accountant = { role: ROLES.ACCOUNTANT, userId: "acct-1" };
   const fieldWorker = { role: ROLES.FIELD_WORKER, userId: "worker-1" };
   const worker = { role: ROLES.WORKER, userId: "worker-2" };
+  const staff = { role: ROLES.STAFF, userId: "staff-1" };
 
   assert.deepEqual(getVisibleWorkspaces(owner, permissionService).map((workspace) => workspace.key), [
     "overview",
@@ -341,6 +342,12 @@ test("workspace registry matches the rebuilt ticket-centered dashboard shell", (
     "overview",
     "tickets",
     "calendar"
+  ]);
+  assert.deepEqual(getVisibleWorkspaces(staff, permissionService).map((workspace) => workspace.key), [
+    "overview",
+    "tickets",
+    "calendar",
+    "outreach"
   ]);
   assert.equal(getVisibleWorkspaceNav("route-planner", fieldWorker, permissionService).some((item) => item.key === "route"), true);
 });

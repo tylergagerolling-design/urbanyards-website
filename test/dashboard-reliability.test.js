@@ -78,6 +78,37 @@ test("netlify deploy runs dashboard checks and has dashboard cache guards", () =
   assert.match(toml, /for = "\/dashboard-config\.js"[\s\S]*Cache-Control = "no-store, max-age=0"/);
 });
 
+test("dashboard design system locks the six-page rebuild contract", () => {
+  const styleSystem = read("DASHBOARD_STYLE_SYSTEM.md");
+  const foundation = read("docs/DASHBOARD_REBUILD_V2_FOUNDATION.md");
+
+  [
+    "Home",
+    "Tickets",
+    "Work",
+    "Leads",
+    "Money",
+    "Tools",
+    "Page Layout Contract",
+    "Component Interface Contracts",
+    "Responsive QA Targets"
+  ].forEach((phrase) => assert.match(styleSystem, new RegExp(phrase)));
+
+  [
+    "Lead or client request",
+    "Job Ticket",
+    "Quote and approval",
+    "Budget preparation",
+    "Work assignment and scheduling",
+    "Field completion and documentation",
+    "Final invoice",
+    "Closed ticket"
+  ].forEach((phrase) => assert.match(styleSystem, new RegExp(phrase)));
+
+  assert.match(foundation, /Visible primary labels:[\s\S]*Home[\s\S]*Tickets[\s\S]*Work[\s\S]*Leads[\s\S]*Money[\s\S]*Tools/);
+  assert.match(foundation, /Design-first planning is required/);
+});
+
 test("dashboard route aliases and new reliability diagnostics are wired", () => {
   const html = read("dashboard.html");
   const css = read("dashboard.css");

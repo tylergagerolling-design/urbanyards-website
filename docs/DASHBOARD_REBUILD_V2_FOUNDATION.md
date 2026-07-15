@@ -53,12 +53,37 @@ Created foundation modules:
 Canonical dashboard workspaces:
 
 - `overview`
+- `tickets`
 - `calendar`
 - `outreach`
 - `documents`
 - `settings`
 
-Legacy dashboard routes such as `route-planner`, `groundskeeper-ai`, `sales-outreach`, and `job-budgeter` are treated as aliases into those five workspaces instead of new primary tabs.
+Visible primary labels:
+
+- Home
+- Tickets
+- Work
+- Leads
+- Money
+- Tools
+
+Legacy dashboard routes such as `route-planner`, `groundskeeper-ai`, `sales-outreach`, and `job-budgeter` are treated as aliases into those six workspaces instead of new primary tabs.
+
+## Design System Priority
+
+The rebuild must not treat routes and data connections as enough. Each workspace must also follow the shared visual system documented in `DASHBOARD_STYLE_SYSTEM.md`.
+
+The approved rebuild order is:
+
+1. Stabilize the current dashboard.
+2. Lock the shared design system and page contracts.
+3. Create page-layout prototypes for Home, Tickets, Work, Leads, Money, and Tools.
+4. Inventory Supabase and backend architecture before destructive database work.
+5. Build Tickets as the central workflow.
+6. Reconnect Leads, Work, Money, Tools, and Home around the verified ticket workflow.
+
+Design-first planning is required, but pages must keep realistic data requirements and component interfaces so they can be connected to Supabase incrementally without a second rebuild.
 
 ## Initial Role Model
 

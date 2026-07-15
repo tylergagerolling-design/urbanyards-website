@@ -68,6 +68,7 @@ function isLiteralAction(value) {
 const dashboardHtml = readFile("dashboard.html");
 const dashboardJs = readFile("dashboard.js");
 const dashboardCss = readFile("dashboard.css");
+const dashboardStyleSystem = readFile("DASHBOARD_STYLE_SYSTEM.md");
 
 function checkStylesheets() {
   const stylesheetHrefs = unique(collectMatches(
@@ -250,6 +251,34 @@ function checkLegacyMarkers() {
   addPass("Obsolete dashboard override marker scan is clean.");
 }
 
+function checkDesignSystemDocs() {
+  const requiredPhrases = [
+    "Home",
+    "Tickets",
+    "Work",
+    "Leads",
+    "Money",
+    "Tools",
+    "Page Layout Contract",
+    "Component Interface Contracts",
+    "Responsive QA Targets",
+    "Lead or client request",
+    "Job Ticket",
+    "Quote and approval",
+    "Budget preparation",
+    "Work assignment and scheduling",
+    "Field completion and documentation",
+    "Final invoice",
+    "Closed ticket"
+  ];
+  const missingPhrases = requiredPhrases.filter((phrase) => !dashboardStyleSystem.includes(phrase));
+  if (missingPhrases.length) {
+    addError(`Dashboard design system documentation is missing required rebuild contracts: ${missingPhrases.join(", ")}`);
+    return;
+  }
+  addPass("Dashboard design system documentation covers all six workspaces and the end-to-end ticket workflow.");
+}
+
 checkStylesheets();
 checkForbiddenCssFiles();
 checkDashboardSections();
@@ -257,6 +286,7 @@ checkActions();
 checkCssTokens();
 checkDesktopSidebarSystem();
 checkLegacyMarkers();
+checkDesignSystemDocs();
 
 console.log("Dashboard layout guardrail audit");
 passes.forEach((message) => console.log(`PASS ${message}`));

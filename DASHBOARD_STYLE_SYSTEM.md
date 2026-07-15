@@ -1,161 +1,325 @@
-# Urban Yards Dashboard Style System
+# Urban Yards Dashboard Design System
 
-This file documents the intended dashboard design and layout system so future work does not create duplicate systems.
+This is the source-of-truth design contract for the dashboard rebuild. A page is not complete just because it routes, loads data, or passes a syntax check. It must also follow this visual system and feel intentionally designed.
 
-## A. Design Intent
+## 1. Design Intent
 
-The Urban Yards dashboard should feel like:
+The dashboard should feel:
 
-- one polished owner operating system
-- calm
-- clean
-- field-operations focused
-- card-first
-- action-first
-- responsive across laptop, desktop, tablet, and phone
+- professional, calm, modern, and owner-operated
+- compact without feeling crowded
+- easy for a new employee to understand
+- consistent with the Urban Yards forest-green navigation theme
+- useful on laptop, desktop, tablet, and mobile
 
-It should not feel like unrelated widgets, stacked hotfixes, or a squeezed desktop app on mobile.
+The dashboard should not feel like unrelated widgets, stacked hotfixes, a squeezed desktop table, or a fake front end that must later be rebuilt around the backend.
 
-## B. App Shell
+## 2. App Shell
 
-The dashboard app shell is:
+The dashboard shell is:
 
-- desktop icon rail
-- expandable overlay drawer
-- main content area
-- mobile nav below `901px`
+- desktop icon rail with expandable overlay drawer
+- main content offset only by the closed rail width
+- mobile navigation below `901px`
+- no duplicate desktop rail and drawer systems
+- no main-content shifting when the drawer opens
 
-Opening the drawer should not move, resize, or compress the main content. The main content should remain offset by the closed rail width only.
+Desktop drawer behavior:
 
-## C. CSS Tokens / Source Of Truth
+- closed state shows icons only
+- open state shows the same icons plus labels
+- icons stay pixel-stable between states
+- secondary drawer content hides before primary nav icons are cut off
 
-This dashboard is currently a static HTML/CSS/JS app, so `dashboard.css` is the loaded source of truth. Do not add extra dashboard hotfix stylesheets or unused React-style component files unless the app architecture actually changes.
+Mobile behavior:
 
-Shared layout values should come from dashboard variables. Current variables include both the legacy `--uy-*` layout tokens and the newer design-system aliases:
+- pages use full-width cards
+- primary actions remain reachable
+- default workflows should not require horizontal scrolling
+- dense tables move into advanced/bulk views
 
-```css
-:root {
-  --color-bg: #f8f7ec;
-  --color-surface: #fffdf4;
-  --color-surface-soft: #f1f6e9;
-  --color-primary: #123f31;
-  --color-muted: #63756b;
-  --color-border: #dfe5d5;
-  --radius-card: 24px;
-  --radius-pill: 999px;
-  --shadow-card: 0 12px 30px rgba(18, 63, 50, 0.08);
-  --shadow-button: 0 10px 24px rgba(18, 63, 49, 0.16);
-  --transition-normal: 200ms ease;
+## 3. Shared Tokens
 
-  --uy-rail-width: 76px;
-  --uy-drawer-width: 292px;
-  --uy-sidebar-icon: 48px;
-  --uy-sidebar-icon-art: 24px;
-  --uy-page-pad: 16px;
-  --uy-card-pad: 24px;
-  --uy-section-gap: 20px;
-  --uy-button-h: 42px;
-  --uy-mobile-nav-height: 68px;
-  --uy-topbar-height: 72px;
-}
-```
+`dashboard.css` is the loaded source of truth for the current static app. New dashboard UI must use existing tokens before adding page-specific values.
+
+Required token groups:
+
+- colors: `--color-bg`, `--color-surface`, `--color-surface-solid`, `--color-primary`, `--color-muted`, `--color-border`, `--color-danger`, `--color-warning`
+- spacing: `--uy-page-pad`, `--uy-shell-gap`, `--uy-section-gap`, `--uy-card-pad`, `--uy-panel-pad`
+- sizing: `--uy-button-h`, `--uy-rail-width`, `--uy-drawer-width`, `--uy-sidebar-icon`, `--uy-sidebar-icon-art`
+- radius: `--radius-xs`, `--radius-sm`, `--radius-md`, `--radius-lg`, `--radius-card`, `--radius-pill`
+- shadows: `--shadow-card`, `--shadow-card-elevated`, `--shadow-button`, `--shadow-popover`
+- type: `--font-ui`, `--font-size-xs`, `--font-size-sm`, `--font-size-md`, `--font-size-lg`, `--font-size-xl`, `--font-size-page`
+- motion: `--transition-fast`, `--transition-normal`, `--transition-drawer`
+- layers: `--z-base`, `--z-topbar`, `--z-sidebar`, `--z-popover`, `--z-modal`
 
 Rules:
 
-- Do not hardcode these repeatedly in random sections.
-- Use variables for layout changes.
-- If a token name is missing, add it once near the dashboard source-of-truth layer instead of creating page-specific constants.
-- Do not create a second spacing scale for one dashboard page.
-- Theme, compact, and reduced-motion hooks are applied with `data-theme`, `data-compact`, and `data-reduced-motion` on the document element.
+- add missing tokens once near the dashboard source-of-truth layer
+- do not create private spacing scales for individual pages
+- do not add new hotfix stylesheets
+- do not solve one screen size by breaking another
 
-## D. Page Structure
+## 4. Page Layout Contract
 
-Each dashboard section should follow this rhythm:
+Every major page must follow the same structural rhythm:
 
-1. page header / command header
-2. summary metrics or key actions
-3. primary content
-4. secondary/details
+1. page header with eyebrow, title, short purpose copy, search/filter where useful, and one primary action
+2. summary row with the few metrics that matter for that page
+3. primary working area
+4. secondary/reference area
+5. clear empty, loading, warning, and error states
 
-Do not make pages feel like unrelated widgets. Reuse shared header, card, action, and spacing patterns.
+Use these shared page classes where practical:
 
-## E. Cards And Panels
+- `.uy-standard-page`
+- `.uy-page-header`
+- `.uy-section-header`
+- `.uy-card`
+- `.uy-card--compact`
+- `.uy-card--elevated`
+- `.uy-button`
+- `.uy-button--primary`
+- `.uy-button--secondary`
+- `.uy-badge`
+- `.uy-empty-state`
+
+## 5. Page Contracts
+
+### Home
+
+Purpose: daily command view.
+
+Must show:
+
+- daily priorities
+- overdue or blocked items
+- upcoming work
+- recent activity
+- quick actions
+
+Primary data requirements:
+
+- open tickets
+- work scheduled today
+- overdue follow-ups
+- overdue invoices/payments
+- notifications
+- recent ticket events
+
+### Tickets
+
+Purpose: central workflow board.
+
+Must show:
+
+- stage filters
+- search
+- ownership
+- status
+- next action
+- ticket detail view
+
+Primary data requirements:
+
+- canonical job tickets
+- ticket events/history
+- linked lead/client/property/quote/budget/work/invoice records
+- responsible role
+- blockers and missing requirements
+
+### Work
+
+Purpose: assigned work and field execution.
+
+Must show:
+
+- assigned jobs
+- calendar/schedule
+- route access
+- field instructions
+- completion actions
+- documents and photos
+
+Primary data requirements:
+
+- assigned tickets
+- scheduled visits
+- route stops
+- documentation tasks
+- arrival/completion photos
+- time/mileage and field notes
+
+### Leads
+
+Purpose: sales pipeline and outreach.
+
+Must show:
+
+- prospect list
+- outreach status
+- follow-up dates
+- contact actions
+- quote/ticket creation
+
+Primary data requirements:
+
+- prospects
+- companies
+- properties
+- contact activity
+- quote requests
+- lead-origin tickets
+
+### Money
+
+Purpose: financial workflow.
+
+Must show:
+
+- budgets
+- quote status
+- invoice status
+- payment tracking
+- job profitability
+- accounting actions
+
+Primary data requirements:
+
+- quotes
+- budget/cost review records
+- invoices
+- payments
+- change orders/add-ons
+- profitability summaries
+
+### Tools
+
+Purpose: supporting utilities and admin modules.
+
+Must show:
+
+- equipment
+- documentation
+- imports/exports
+- route tools
+- Groundskeeper AI
+- user/admin utilities
+
+Primary data requirements:
+
+- equipment records
+- documentation templates/submissions
+- import/export jobs
+- AI knowledge/settings
+- users/access
+- dashboard health diagnostics
+
+## 6. Component Interface Contracts
+
+Design-first does not mean disconnected. Each component should accept realistic data shapes and tolerate missing backend data.
+
+Recommended shared interfaces:
+
+- `PageHeader`: eyebrow, title, description, primaryAction, secondaryActions, search
+- `SummaryMetric`: value, label, helper, tone, action
+- `WorkflowCard`: title, owner, stage, nextAction, dueDate, blockers, linkedRecordIds
+- `FilterBar`: search, status, owner, dateRange, serviceType, priority
+- `DataList`: rows, emptyState, loadingState, errorState, rowActions
+- `DetailDrawer`: title, status, sections, primaryAction, history, saveState
+- `StatusBadge`: label, tone, icon, accessibleText
+- `EmptyState`: title, body, action
+- `LoadingState`: label, skeletonCount
+- `ErrorState`: title, body, retryAction, setupAction
+
+Sample data may be used only when a Supabase connection is not ready, and only behind demo/setup states. It must match the eventual component interface so the page can connect incrementally.
+
+## 7. Buttons
+
+Button hierarchy:
+
+- primary: one main action per section
+- secondary: supporting actions
+- outline: standard low-risk actions
+- ghost: quiet utility actions
+- positive: completion/success actions
+- warning: caution actions
+- destructive: deletion/cancellation only after confirmation
 
 Rules:
 
-- Cards should wrap.
-- Cards should have consistent padding, radius, shadow, and spacing.
-- Cards should show summary first.
-- Details should go into drawers, modals, expanded rows, or detail panels.
-- Avoid card-specific one-off styles unless necessary.
-- A card should not become a private layout system.
+- no text-symbol icons such as `->`, raw `x`, `OK`, `CSV`, `JSON`, or `GV` when an icon pattern exists
+- buttons wrap before overflowing
+- mobile tap targets remain comfortable
+- disabled states must still be readable
+- loading states must show clear progress text
 
-## F. Buttons And Actions
+## 8. Cards, Tables, Forms, And Tabs
 
-Rules:
+Cards:
 
-- Use consistent button hierarchy.
-- Primary action should be obvious.
-- Secondary actions should wrap or go into a More menu.
-- Avoid too many visible buttons in cards.
-- Do not add text-symbol icons like `x`, `OK`, `M`, `CSV`, `JSON`, `PDF`, `GV`, arrows, or slashes when an icon component or existing visual pattern is available.
-- Keep touch targets comfortable on mobile.
+- use consistent radius, border, padding, and shadow
+- summarize before detail
+- avoid nested cards unless the inner item is a repeated record
 
-## G. Tables
+Tables:
 
-Rules:
+- use only for bulk or advanced views
+- avoid default table-first workflows on mobile/laptop
+- horizontal scrolling is acceptable only in intentional table wrappers
 
-- Tables are for bulk or advanced views.
-- Cards/lists should be preferred for everyday responsive workflows.
-- Horizontal scroll is acceptable only in intentional table mode.
-- Do not make a table the default if it breaks laptop/mobile layouts.
+Forms:
 
-## H. Drawers And Modals
+- labels are visible or semantically clear
+- focus states use Urban Yards green/yellow styling
+- validation errors appear near the field
+- save state is visible: Saving, Saved, Save failed
 
-Rules:
+Tabs and filters:
 
-- Drawers are allowed to scroll internally.
-- Modals are allowed to scroll internally.
-- Drawers/modals should not cause background layout jumps.
-- On mobile, drawers should become full-screen sheets if needed.
-- Drawer and modal z-index values should follow the documented layer order.
+- active state is obvious and readable
+- labels are short
+- filters wrap cleanly
+- mobile filters stack or collapse without hiding primary actions
 
-## I. Responsive Density
+## 9. Status, Loading, Empty, Warning, And Error States
 
-Responsive density modes:
+Every rebuilt page must include:
 
-- normal desktop
-- short laptop
-- very short laptop
-- tablet/mobile
+- empty state for no records
+- loading state for data fetches
+- setup state for missing optional tables
+- warning state for risky or overdue work
+- error state with retry or setup guidance
 
-Rules:
+Do not leave blank panels.
 
-- Reduce spacing and secondary content first.
-- Do not shrink text to unreadable sizes.
-- Keep main actions and nav visible.
-- Avoid hiding important primary actions.
-- Height-based density should not redesign the page.
+## 10. Responsive QA Targets
 
-## J. Icons
+Visual QA must consider:
 
-Rules:
+- `1280 x 720`
+- `1366 x 768`
+- `1440 x 900`
+- `1536 x 864`
+- `1920 x 1080`
+- tablet widths around `768-1024`
+- mobile under `760`
 
-- Icon size should be stable.
-- The same concept should use the same icon.
-- Avoid creating multiple icon folders/systems unless documented.
-- Future cleanup should move toward one reusable dashboard icon registry.
-- Do not let icons move between drawer open and closed states.
+Pass criteria:
 
-## K. Z-Index / Layers
+- no page content overlaps
+- no primary action is clipped
+- cards wrap naturally
+- long text does not break cards
+- mobile does not horizontally scroll in default views
+- nav icons remain visible
+- focus states are visible
 
-Intended layering order:
+## 11. Workflow Priority
 
-1. base content
-2. sticky topbar
-3. sidebar rail
-4. expanded drawer
-5. notification popover
-6. modal/drawer overlays
+The first complete workflow to prove end-to-end is:
 
-Avoid random z-index values without checking existing layers.
+Lead or client request -> Job Ticket -> Quote and approval -> Budget preparation -> Work assignment and scheduling -> Field completion and documentation -> Final invoice -> Closed ticket
+
+Once verified, reuse those components across Home, Tickets, Work, Leads, Money, and Tools.

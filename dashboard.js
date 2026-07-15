@@ -10923,13 +10923,16 @@
     </nav>`;
   }
 
-  function renderWorkspaceFocusStrip(items = [], label = "Workspace focus") {
+  function renderWorkspaceFocusStrip(items = [], label = "Workspace signals") {
     if (!items.length) return "";
     return `<section class="workspace-focus-strip" aria-label="${escapeHtml(label)}">
       ${items.map((item) => `
         <article class="workspace-focus-card">
           <span>${escapeHtml(item.kicker || "Focus")}</span>
-          <strong>${escapeHtml(item.title || "")}</strong>
+          <div class="workspace-focus-card-main">
+            ${item.value !== undefined && item.value !== null ? `<strong class="workspace-focus-value">${escapeHtml(item.value)}</strong>` : ""}
+            <strong class="workspace-focus-title">${escapeHtml(item.title || "")}</strong>
+          </div>
           <small>${escapeHtml(item.detail || "")}</small>
         </article>
       `).join("")}
@@ -11071,10 +11074,10 @@
           ${renderTicketMetric(workflowWarnings.length + notifications.length, "Alerts", "Workflow and notification signals")}
         </section>
         ${renderWorkspaceFocusStrip([
-          { kicker: "Daily", title: "Priorities first", detail: "Overdue items, new requests, and today's handoffs stay above the fold." },
-          { kicker: "Workflow", title: "One ticket trail", detail: "Home summarizes the same tickets used by Leads, Work, and Money." },
-          { kicker: "Next", title: "Action queue", detail: "Buttons should take the owner directly to the next useful step." }
-        ], "Home page focus")}
+          { kicker: "Open", value: activeTickets.length, title: "Ticket load", detail: "All active work across Leads, Work, Money, and Tools." },
+          { kicker: "Today", value: actions.length, title: "Action queue", detail: "Requests, follow-ups, missed work, and blockers needing attention." },
+          { kicker: "Signals", value: workflowWarnings.length + notifications.length, title: "Dashboard alerts", detail: "Workflow warnings and live notification count." }
+        ], "Home workspace signals")}
         ${renderTicketOwnerStrip(activeTickets)}
         <div class="ticket-lane-grid">
           ${renderTicketColumn("Next Ticket Work", "The closest handoffs and blockers across the workflow.", attentionTickets, "No ticket blockers need review.")}
@@ -11117,10 +11120,10 @@
           ${renderTicketMetric(ticketCountBy(openTickets, (ticket) => ticketInLane(ticket, ["review", "money"])), "Closeout", "Review, invoice, payment")}
         </section>
         ${renderWorkspaceFocusStrip([
-          { kicker: "Board", title: "Central workflow", detail: "Every request moves through intake, approval, budget, work, invoice, and closeout." },
-          { kicker: "Filters", title: "Stage and owner", detail: "The board must support status, owner, next action, and blocked work." },
-          { kicker: "Detail", title: "Open the ticket", detail: "The drawer is the source of truth for quote, budget, work proof, and invoice history." }
-        ], "Tickets page focus")}
+          { kicker: "Shown", value: filteredTickets.length, title: "Board results", detail: "Open tickets matching the current search and filters." },
+          { kicker: "Ready", value: readyTickets.length, title: "Schedule handoff", detail: "Approved work ready to become scheduled visits." },
+          { kicker: "Closeout", value: reviewTickets.length, title: "Review queue", detail: "Completed, invoiced, or paid tickets still needing review." }
+        ], "Tickets workspace signals")}
         ${renderTicketEndToEndFlow(openTickets)}
         ${renderTicketOwnerStrip(openTickets)}
         <div class="ticket-lane-grid">
@@ -11170,10 +11173,10 @@
           ${renderTicketMetric(upcomingTickets.length, "Upcoming", "Scheduled tickets")}
         </section>
         ${renderWorkspaceFocusStrip([
-          { kicker: "Schedule", title: "Assigned work", detail: "Work shows approved tickets that are ready, scheduled, in progress, or awaiting review." },
-          { kicker: "Field", title: "Route and proof", detail: "Site directions, arrival photos, completion photos, and forms stay tied to the ticket." },
-          { kicker: "Done", title: "Completion handoff", detail: "Completed work moves back to review with actuals and documentation attached." }
-        ], "Work page focus")}
+          { kicker: "Today", value: todayTickets.length, title: "Visits due", detail: "Work tickets scheduled for the current day." },
+          { kicker: "Upcoming", value: upcomingTickets.length, title: "Scheduled work", detail: "Future ready or field-owned tickets." },
+          { kicker: "Review", value: ticketCountBy(workTickets, (ticket) => ticketInLane(ticket, ["review"])), title: "Completion handoff", detail: "Work needing proof, actuals, or closeout review." }
+        ], "Work workspace signals")}
         ${renderTicketRoleBrief("field", tickets)}
         <div class="field-grid">
           <section class="ticket-lane field-primary-lane">
@@ -11273,10 +11276,10 @@
           ${renderTicketMetric(accountingTickets.length, "Money Handoff", "Approved work needs cost review")}
         </section>
         ${renderWorkspaceFocusStrip([
-          { kicker: "Prospects", title: "Next contact", detail: "Lead cards should make call, email, follow-up date, and notes easy to reach." },
-          { kicker: "Quotes", title: "Scope to approval", detail: "Qualified leads become tickets once scope and quote approval are real." },
-          { kicker: "Handoff", title: "Ready for Money", detail: "Approved work moves to budget/cost review without creating a second workflow." }
-        ], "Leads page focus")}
+          { kicker: "Due", value: due.length, title: "Follow-ups", detail: "Prospects or leads waiting for contact." },
+          { kicker: "Quote", value: approvalTickets.length + hot.length, title: "Customer action", detail: "Warm prospects, quote follow-ups, and approvals." },
+          { kicker: "Money", value: accountingTickets.length, title: "Cost-review handoff", detail: "Approved work ready for internal review." }
+        ], "Leads workspace signals")}
         ${renderTicketRoleBrief("sales", dashboardTickets(data))}
         <div class="ticket-lane-grid">
           ${renderTicketColumn("New Intake", "Requests and prospects that need lead review.", intakeTickets, "No new lead intake tickets.")}
@@ -11423,10 +11426,10 @@
           ${renderTicketMetric(overdueInvoices.length, "Overdue", "Payment action needed")}
         </section>
         ${renderWorkspaceFocusStrip([
-          { kicker: "Budget", title: "Cost review", detail: "Budget prep verifies labor, materials, equipment, and margin before work is scheduled." },
-          { kicker: "Invoice", title: "Draft and collect", detail: "Invoices, Square payment state, and outstanding balances stay attached to tickets." },
-          { kicker: "Close", title: "Profit story", detail: "Actual costs and final revenue decide whether a ticket is ready to close." }
-        ], "Money page focus")}
+          { kicker: "Budget", value: needsBudget.length, title: "Cost review", detail: "Approved tickets waiting on budget or margin checks." },
+          { kicker: "Invoice", value: unpaidInvoices.length, title: "Open invoices", detail: "Quotes, invoices, and Square payment state needing review." },
+          { kicker: "Overdue", value: overdueInvoices.length, title: "Payment risk", detail: "Invoices past due and ready for follow-up." }
+        ], "Money workspace signals")}
         ${renderTicketRoleBrief("accounting", tickets)}
         ${renderMoneyBudgetPanel(data, tickets)}
         <div class="ticket-lane-grid">
@@ -11481,10 +11484,10 @@
           ${renderTicketMetric(documentationCount, "Forms and Files", "Templates and submissions")}
         </section>
         ${renderWorkspaceFocusStrip([
-          { kicker: "Support", title: "Operational utilities", detail: "Route tools, equipment, documentation, imports, and AI stay available without taking over the workflow." },
-          { kicker: "Admin", title: "Setup and access", detail: "Owner/admin-only settings remain behind the Tools workspace and current role checks." },
-          { kicker: "Health", title: "Repair queue", detail: "Optional module warnings are separated from active ticket workflow blockers." }
-        ], "Tools page focus")}
+          { kicker: "Health", value: criticalWarnings.length, title: "Critical warnings", detail: "Issues affecting rebuilt workflow pages." },
+          { kicker: "Support", value: supportWarnings.length, title: "Setup warnings", detail: "Optional modules or integrations that need attention." },
+          { kicker: "Files", value: documentationCount, title: "Forms and records", detail: "Documentation templates and submissions." }
+        ], "Tools workspace signals")}
         <section class="tools-control-grid" aria-label="Dashboard support tools">
           ${renderToolsCard({
             label: "Route & Work Map",

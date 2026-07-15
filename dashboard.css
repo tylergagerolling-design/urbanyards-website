@@ -14592,6 +14592,13 @@ body:not(.is-login-screen) .workspace-focus-card {
   background: rgba(251, 250, 245, .86);
 }
 
+body:not(.is-login-screen) .workspace-focus-card-main {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  min-width: 0;
+}
+
 body:not(.is-login-screen) .workspace-focus-card span {
   color: rgba(18, 63, 49, .66);
   font-size: .72rem;
@@ -14600,10 +14607,19 @@ body:not(.is-login-screen) .workspace-focus-card span {
   text-transform: uppercase;
 }
 
-body:not(.is-login-screen) .workspace-focus-card strong {
+body:not(.is-login-screen) .workspace-focus-card .workspace-focus-value {
+  color: var(--uy-green);
+  font-size: clamp(1.55rem, 2vw, 2.1rem);
+  font-weight: 950;
+  letter-spacing: -.01em;
+  line-height: .95;
+}
+
+body:not(.is-login-screen) .workspace-focus-card .workspace-focus-title {
   color: var(--uy-green);
   font-size: 1rem;
   line-height: 1.2;
+  overflow-wrap: anywhere;
 }
 
 body:not(.is-login-screen) .workspace-focus-card small {

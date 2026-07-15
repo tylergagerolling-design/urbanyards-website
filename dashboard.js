@@ -5058,6 +5058,75 @@
     return insertJobTicket(payload);
   }
 
+  function findJobTicketForSalesDocument(documentId) {
+    const id = String(documentId || "");
+    if (!id) return null;
+    return (state.data.tickets || []).find((ticket) => (
+      ticket?.sourceType === "document" && ticket.sourceId === id
+    )) || null;
+  }
+
+  function salesDocumentStage(document = {}) {
+    const status = statusText([document.status, document.squareStatus].filter(Boolean).join(" "));
+    const isInvoice = document.type === "invoice";
+    if (/void|cancel|canceled|cancelled|lost|declined/.test(status)) return "cancelled";
+    if (/paid|closed/.test(status)) return "paid";
+    if (/partial/.test(status)) return "partially_paid";
+    if (isInvoice) {
+      if (/sent|open|unpaid|outstanding/.test(status)) return "invoice_sent";
+      return "invoice_preparation";
+    }
+    if (/accepted|approved|won/.test(status)) return "needs_budget";
+    if (/sent|open/.test(status)) return "customer_approval_pending";
+    return "quote_pending";
+  }
+
+  function salesDocumentDescription(document = {}) {
+    return blankToNull(document.lineItems?.[0]?.description)
+      || blankToNull(document.notes)
+      || (document.type === "invoice" ? "Invoice" : "Estimate / Quote");
+  }
+
+  function ticketPayloadFromSalesDocument(document = {}, overrides = {}) {
+    const stage = normalizeTicketStageForDashboard(overrides.stage || salesDocumentStage(document), "quote_pending");
+    const typeLabel = document.type === "invoice" ? "Invoice" : "Estimate / Quote";
+    const description = salesDocumentDescription(document);
+    const total = Number(document.total || 0);
+    return {
+      title: blankToNull(overrides.title) || `${typeLabel}: ${description}`,
+      stage,
+      status: overrides.status || ticketRecordStatusForStage(stage),
+      source_type: "document",
+      source_id: document.id,
+      invoice_id: document.type === "invoice" ? document.id : overrides.invoice_id || overrides.invoiceId || null,
+      customer_name: blankToNull(overrides.customer_name || overrides.customerName || document.clientName),
+      contact_name: blankToNull(overrides.contact_name || overrides.contactName || document.clientName),
+      requested_service: description,
+      service: description,
+      description: `${typeLabel} ${document.number || "Draft"}${total ? ` for $${total.toFixed(2)}` : ""}`,
+      notes: blankToNull(overrides.notes) || document.notes,
+      due_date: blankToNull(overrides.due_date || overrides.dueDate || document.dueDateRaw),
+      owner_label: blankToNull(overrides.owner_label || overrides.ownerLabel) || "Accounting",
+      next_action: blankToNull(overrides.next_action || overrides.nextAction) || ticketNextAction(stage)
+    };
+  }
+
+  async function ensureJobTicketForSalesDocument(documentOrId, overrides = {}) {
+    const document = typeof documentOrId === "string"
+      ? state.data.documents.find((item) => item.id === documentOrId)
+      : documentOrId;
+    if (!document?.id) return null;
+    const existing = findJobTicketForSalesDocument(document.id);
+    const payload = ticketPayloadFromSalesDocument(document, {
+      stage: existing?.stage,
+      ...overrides
+    });
+    if (existing?.id) {
+      return await updateJobTicket(existing.id, payload) || existing;
+    }
+    return insertJobTicket(payload);
+  }
+
   async function syncJobTicketPhotoProof(jobId, photoStage) {
     const ticket = await ensureJobTicketForScheduledJob(jobId);
     if (!ticket?.id) return null;
@@ -12813,6 +12882,7 @@
     const typeLabel = doc.type === "invoice" ? "Invoice" : "Estimate / Quote";
     const squareStatus = doc.squareStatus || "Not synced";
     const amountDue = doc.squareAmountDueCents !== null ? formatCurrency(doc.squareAmountDueCents, doc.squareCurrency) : "Not synced";
+    const ticket = findJobTicketForSalesDocument(id);
     openDetailDrawer();
     els.detailContent.innerHTML = `
       <div class="drawer-content document-drawer">
@@ -12824,6 +12894,7 @@
           </div>
           ${documentStatusBadge(doc)}
         </div>
+        ${renderSourceTicketContext(ticket)}
         ${renderPrintableDocument(doc)}
         <section class="document-sidebar-card">
           <div class="document-sidebar-total">
@@ -17361,6 +17432,7 @@
             amount: Number(formData.get("amount") || 0),
             due_date: String(formData.get("due_date") || "")
           });
+          await ensureJobTicketForSalesDocument(document);
           event.target.reset();
           await refreshDashboard();
           openDocumentDrawer(document.id);
@@ -17771,6 +17843,7 @@
             status: String(formData.get("status") || "draft"),
             notes: String(formData.get("notes") || "")
           });
+          await ensureJobTicketForSalesDocument(document);
           await refreshDashboard();
           openDocumentDrawer(document.id);
           setDashboardState("");

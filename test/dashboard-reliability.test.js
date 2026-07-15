@@ -102,6 +102,10 @@ test("dashboard creates canonical job tickets without removing source fallbacks"
   assert.match(js, /async function insertJobTicketEvent/);
   assert.match(js, /async function ensureJobTicketForScheduledJob/);
   assert.match(js, /async function ensureJobTicketForQuoteSubmission/);
+  assert.match(js, /async function ensureJobTicketForSalesDocument/);
+  assert.match(js, /function findJobTicketForSalesDocument/);
+  assert.match(js, /function ticketPayloadFromSalesDocument/);
+  assert.match(js, /function salesDocumentStage/);
   assert.match(js, /async function completeScheduledJobWithTicket/);
   assert.match(js, /async function syncJobTicketPhotoProof/);
   assert.match(js, /async function dashboardTicketRequest/);
@@ -122,6 +126,8 @@ test("dashboard creates canonical job tickets without removing source fallbacks"
   assert.match(js, /await ensureJobTicketForQuoteSubmission\(updatedSubmission \|\| item/);
   assert.match(js, /await ensureJobTicketForQuoteSubmission\(updatedQuote \|\| item/);
   assert.match(js, /await ensureJobTicketForQuoteSubmission\(updatedSubmission \|\| item, \{/);
+  assert.match(js, /await ensureJobTicketForSalesDocument\(document\)/);
+  assert.match(js, /const ticket = findJobTicketForSalesDocument\(id\)/);
   assert.match(js, /await syncJobTicketPhotoProof\(jobId, photoStage\)/);
   assert.match(js, /field_completion_notes/);
   assert.match(js, /arrival_photos_uploaded/);
@@ -131,6 +137,7 @@ test("dashboard creates canonical job tickets without removing source fallbacks"
   assert.doesNotMatch(js, /job_ticket_events\?select=\*/);
   assert.match(js, /source_type: "quote"/);
   assert.match(js, /source_type: "job"/);
+  assert.match(js, /source_type: "document"/);
   assert.match(js, /ticket_stage_changed/);
   assert.match(js, /openTicketDrawer\("ticket", canonicalTicket\.id\)/);
   assert.match(js, /isMissingOptionalTableError\(error\)\) return null/);

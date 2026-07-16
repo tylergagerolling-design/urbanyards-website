@@ -5643,7 +5643,7 @@
     const visitWindow = String(formData.get("visit_window") || "").trim();
     const assignedUserId = String(formData.get("assigned_user_id") || "").trim();
     if (!visitDate) throw new Error("Choose a visit date before assigning work.");
-    if (!assignedUserId) throw new Error("Choose a field owner before assigning work.");
+    if (!assignedUserId) throw new Error("Choose a work owner before assigning work.");
 
     const assignedProfile = assignmentProfileForId(assignedUserId);
     const assignedUser = assignmentProfileLabel(assignedProfile || { email: assignedUserId });
@@ -10917,7 +10917,7 @@
       <div class="ticket-drawer-card-heading">
         <div>
           <h4>Work assignment</h4>
-          <span>${escapeHtml(linkedJob?.id ? "Linked to a scheduled visit." : "Create the scheduled visit and assign the field owner.")}</span>
+          <span>${escapeHtml(linkedJob?.id ? "Linked to a scheduled visit." : "Create the scheduled visit and assign the work owner.")}</span>
         </div>
       </div>
       <form class="ticket-work-assignment-form" data-ticket-assignment-form data-ticket-id="${escapeHtml(ticket.id || "")}" data-job-id="${escapeHtml(linkedJob?.id || "")}">
@@ -12072,7 +12072,7 @@
         <header class="ticket-hero work-hero">
           <div>
             <p class="eyebrow">Work</p>
-            <h3>Field Work</h3>
+            <h3>Work Queue</h3>
             <p>Open assigned tickets, route stops, site photos, supporting documents, and completion steps from one practical queue.</p>
           </div>
           <div class="ticket-hero-actions">

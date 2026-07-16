@@ -14298,6 +14298,77 @@ body:not(.is-login-screen) .tools-control-grid {
   gap: 14px;
 }
 
+body:not(.is-login-screen) .tools-runway-panel {
+  display: grid;
+  gap: 16px;
+  padding: clamp(18px, 2vw, 24px);
+  border: 1px solid rgba(73, 102, 77, .13);
+  border-radius: var(--uy-card-radius);
+  background:
+    radial-gradient(circle at 94% 6%, rgba(153, 180, 119, .16), transparent 34%),
+    rgba(255, 253, 246, .88);
+  box-shadow: var(--uy-shadow-soft);
+}
+
+body:not(.is-login-screen) .tools-runway-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+  gap: 12px;
+}
+
+body:not(.is-login-screen) .tools-runway-card {
+  min-width: 0;
+  display: grid;
+  align-content: start;
+  gap: 8px;
+  padding: 16px;
+  border: 1px solid rgba(73, 102, 77, .12);
+  border-radius: 18px;
+  background: rgba(255, 255, 255, .76);
+}
+
+body:not(.is-login-screen) .tools-runway-card--warning {
+  border-color: rgba(181, 83, 56, .22);
+  background: rgba(255, 245, 238, .76);
+}
+
+body:not(.is-login-screen) .tools-runway-card--setup {
+  border-color: rgba(217, 182, 111, .26);
+  background: rgba(255, 250, 232, .76);
+}
+
+body:not(.is-login-screen) .tools-runway-card span {
+  color: var(--uy-muted);
+  font-size: .72rem;
+  font-weight: 900;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+}
+
+body:not(.is-login-screen) .tools-runway-card strong {
+  color: var(--uy-green);
+  font-size: clamp(2rem, 3vw, 2.8rem);
+  line-height: .95;
+}
+
+body:not(.is-login-screen) .tools-runway-card p {
+  margin: 0;
+  color: var(--uy-muted);
+  font-size: .9rem;
+  line-height: 1.45;
+}
+
+body:not(.is-login-screen) .tools-runway-card button,
+body:not(.is-login-screen) .tools-runway-panel .ticket-flow-heading > button {
+  justify-self: start;
+  margin-top: 4px;
+}
+
+body:not(.is-login-screen) .tools-runway-card button:hover,
+body:not(.is-login-screen) .tools-runway-panel .ticket-flow-heading > button:hover {
+  transform: translateY(-1px);
+}
+
 body:not(.is-login-screen) .tools-control-card {
   display: flex;
   flex-direction: column;
@@ -17352,7 +17423,8 @@ body:not(.is-login-screen) .field-proof-actions button {
   body:not(.is-login-screen) .home-runway-grid,
   body:not(.is-login-screen) .work-readiness-grid,
   body:not(.is-login-screen) .leads-runway-grid,
-  body:not(.is-login-screen) .money-runway-grid {
+  body:not(.is-login-screen) .money-runway-grid,
+  body:not(.is-login-screen) .tools-runway-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
@@ -17401,6 +17473,7 @@ body:not(.is-login-screen) .field-proof-actions button {
   body:not(.is-login-screen) .work-readiness-grid,
   body:not(.is-login-screen) .leads-runway-grid,
   body:not(.is-login-screen) .money-runway-grid,
+  body:not(.is-login-screen) .tools-runway-grid,
   body:not(.is-login-screen) .leads-workspace .ticket-metrics,
   body:not(.is-login-screen) .ticket-workflow-board-grid,
   body:not(.is-login-screen) .work-plan-tile-grid,

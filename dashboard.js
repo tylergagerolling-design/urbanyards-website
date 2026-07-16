@@ -12993,6 +12993,60 @@
       </div>`;
   }
 
+  function renderToolsRunwayCard({ label, value, detail, tone = "", action, actionLabel }) {
+    return `<article class="tools-runway-card ${tone ? `tools-runway-card--${escapeHtml(tone)}` : ""}">
+      <span>${escapeHtml(label)}</span>
+      <strong>${escapeHtml(String(value))}</strong>
+      <p>${escapeHtml(detail)}</p>
+      ${action ? `<button type="button" data-action="${escapeHtml(action)}">${escapeHtml(actionLabel || "Open")}</button>` : ""}
+    </article>`;
+  }
+
+  function renderToolsRunwayPanel({ criticalWarnings = [], supportWarnings = [], documentationCount = 0, equipmentCount = 0, routeStopsToday = 0, aiLiveVersion = "", usersCount = 0 }) {
+    return `<section class="tools-runway-panel" aria-label="Tools runway">
+      <div class="ticket-flow-heading">
+        <div>
+          <p class="eyebrow">Tools Runway</p>
+          <h3>Keep support systems ready without blocking daily work</h3>
+          <p>Diagnostics, forms, AI, route tools, equipment, imports, and access stay grouped here as admin support for the Job Ticket workflow.</p>
+        </div>
+        <button type="button" data-action="copy-dashboard-diagnostics">Copy Diagnostics</button>
+      </div>
+      <div class="tools-runway-grid">
+        ${renderToolsRunwayCard({
+          label: "Dashboard Health",
+          value: criticalWarnings.length,
+          detail: criticalWarnings.length ? "Active workflow warnings need review." : "No active workflow warnings reported.",
+          tone: criticalWarnings.length ? "warning" : "",
+          action: "copy-dashboard-diagnostics",
+          actionLabel: "Diagnostics"
+        })}
+        ${renderToolsRunwayCard({
+          label: "Route & Equipment",
+          value: routeStopsToday + equipmentCount,
+          detail: `${routeStopsToday} route stops today and ${equipmentCount} equipment records.`,
+          action: "go-route-planner",
+          actionLabel: "Open Route"
+        })}
+        ${renderToolsRunwayCard({
+          label: "Forms & AI",
+          value: documentationCount,
+          detail: `Documentation records with AI live version ${aiLiveVersion || "not published"}.`,
+          action: "go-documentation",
+          actionLabel: "Open Forms"
+        })}
+        ${renderToolsRunwayCard({
+          label: "Data & Access",
+          value: usersCount,
+          detail: supportWarnings.length ? `${supportWarnings.length} setup items plus user access tools.` : "Imports, backups, and user access are ready for review.",
+          tone: supportWarnings.length ? "setup" : "",
+          action: "go-import-export",
+          actionLabel: "Open Data"
+        })}
+      </div>
+    </section>`;
+  }
+
   function renderToolsWorkspace(data = state.data) {
     const target = qs("[data-tools-workspace]");
     if (!target) return;
@@ -13036,6 +13090,7 @@
           { kicker: "Support", value: supportWarnings.length, title: "Setup warnings", detail: "Optional modules or integrations that need attention." },
           { kicker: "Files", value: documentationCount, title: "Forms and records", detail: "Documentation templates and submissions." }
         ], "Tools workspace signals")}
+        ${renderToolsRunwayPanel({ criticalWarnings, supportWarnings, documentationCount, equipmentCount, routeStopsToday, aiLiveVersion, usersCount })}
         <section class="tools-control-grid" aria-label="Dashboard support tools">
           ${renderToolsCard({
             label: "Route Planner",

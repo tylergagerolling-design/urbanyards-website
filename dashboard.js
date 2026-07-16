@@ -369,12 +369,22 @@
       budgets: emptyBudgetBundle()
     },
     moduleErrors: [],
+    performance: {
+      moduleTimings: [],
+      startupStartedAt: "",
+      shellRenderedAt: "",
+      initialDataLoadedAt: "",
+      backgroundDataLoadedAt: "",
+      backgroundLoading: false
+    },
     lastRefreshAt: "",
     loading: false,
     error: ""
   };
 
   const els = {};
+  let dashboardBackgroundLoadPromise = null;
+  let dashboardRefreshSerial = 0;
   const sectionAliases = {
     home: "overview",
     tickets: "tickets",
@@ -634,11 +644,84 @@
     }
   }
 
-  async function loadModule(name, loader, fallback) {
+  function dashboardPerfNow() {
+    return typeof performance !== "undefined" && performance.now ? performance.now() : Date.now();
+  }
+
+  function dashboardRecordCount(value) {
+    if (Array.isArray(value)) return value.length;
+    if (!value || typeof value !== "object") return 0;
+    return Object.values(value).reduce((total, item) => {
+      if (Array.isArray(item)) return total + item.length;
+      if (item && typeof item === "object") {
+        return total + Object.values(item).reduce((innerTotal, innerItem) => (
+          innerTotal + (Array.isArray(innerItem) ? innerItem.length : 0)
+        ), 0);
+      }
+      return total;
+    }, 0);
+  }
+
+  function recordDashboardTiming(entry) {
+    state.performance.moduleTimings.unshift(entry);
+    state.performance.moduleTimings = state.performance.moduleTimings.slice(0, 80);
+    const duration = `${Math.round(entry.durationMs)}ms`;
+    if (config.appEnv !== "production" || entry.durationMs > 3000 || entry.status !== "success") {
+      console.info(`[dashboard:load] ${entry.name}`, {
+        phase: entry.phase,
+        essential: entry.essential,
+        status: entry.status,
+        duration,
+        records: entry.records,
+        detail: entry.detail || ""
+      });
+    }
+  }
+
+  function dashboardModuleTimeout(name, timeoutMs) {
+    const error = new Error(`${name} timed out after ${Math.round(timeoutMs / 1000)} seconds.`);
+    error.code = "DASHBOARD_MODULE_TIMEOUT";
+    return error;
+  }
+
+  async function loadModule(name, loader, fallback, options = {}) {
+    const started = dashboardPerfNow();
+    const startedAt = new Date().toISOString();
+    const phase = options.phase || "full";
+    const essential = Boolean(options.essential);
+    const timeoutMs = Number(options.timeoutMs || (essential ? 12000 : 20000));
+    let timeoutId = null;
     try {
-      const value = await loader();
+      const timeoutPromise = new Promise((_, reject) => {
+        timeoutId = setTimeout(() => reject(dashboardModuleTimeout(name, timeoutMs)), timeoutMs);
+      });
+      const value = await Promise.race([loader(), timeoutPromise]);
+      if (timeoutId) clearTimeout(timeoutId);
+      recordDashboardTiming({
+        name,
+        phase,
+        essential,
+        startedAt,
+        completedAt: new Date().toISOString(),
+        durationMs: dashboardPerfNow() - started,
+        records: dashboardRecordCount(value),
+        status: "success"
+      });
       return value;
     } catch (error) {
+      if (timeoutId) clearTimeout(timeoutId);
+      const timedOut = error?.code === "DASHBOARD_MODULE_TIMEOUT";
+      recordDashboardTiming({
+        name,
+        phase,
+        essential,
+        startedAt,
+        completedAt: new Date().toISOString(),
+        durationMs: dashboardPerfNow() - started,
+        records: 0,
+        status: timedOut ? "timed_out" : "failed",
+        detail: error?.message || String(error || "")
+      });
       recordModuleError(name, error);
       return typeof fallback === "function" ? fallback() : fallback;
     }
@@ -1282,6 +1365,9 @@
     const warnings = dashboardHealthWarnings();
     const criticalWarnings = dashboardHealthWarnings({ scope: "critical" });
     const supportWarnings = dashboardHealthWarnings({ scope: "support" });
+    const slowestModule = state.performance.moduleTimings
+      .slice()
+      .sort((a, b) => b.durationMs - a.durationMs)[0];
     return [
       ["Environment", config.appEnv || "unknown"],
       ["Build", config.buildVersion || "not set"],
@@ -1289,6 +1375,10 @@
       ["Auth session", session?.accessToken ? "present" : "not signed in"],
       ["Current role", currentSessionRole()],
       ["Last refresh", state.lastRefreshAt ? formatDateTime(state.lastRefreshAt) : "not refreshed"],
+      ["Startup shell", state.performance.shellRenderedAt ? formatDateTime(state.performance.shellRenderedAt) : "not rendered"],
+      ["Initial data", state.performance.initialDataLoadedAt ? formatDateTime(state.performance.initialDataLoadedAt) : "not loaded"],
+      ["Background modules", state.performance.backgroundLoading ? "refreshing" : (state.performance.backgroundDataLoadedAt ? formatDateTime(state.performance.backgroundDataLoadedAt) : "not loaded")],
+      ["Slowest module", slowestModule ? `${slowestModule.name} (${Math.round(slowestModule.durationMs)}ms)` : "not measured"],
       ["Active workflow warnings", String(criticalWarnings.length)],
       ["Support module warnings", String(supportWarnings.length)],
       ["Total module warnings", String(warnings.length)]
@@ -1326,7 +1416,14 @@
       ...rows,
       "",
       "Module warnings:",
-      warnings.length ? warnings.join("\n") : "None"
+      warnings.length ? warnings.join("\n") : "None",
+      "",
+      "Recent module timings:",
+      state.performance.moduleTimings.length
+        ? state.performance.moduleTimings.slice(0, 20).map((item) => (
+          `- [${item.phase}] ${item.name}: ${Math.round(item.durationMs)}ms, ${item.records} record(s), ${item.status}${item.essential ? ", essential" : ""}`
+        )).join("\n")
+        : "None"
     ].join("\n");
   }
 
@@ -4402,7 +4499,113 @@
     clearSession();
   }
 
-  async function loadDashboardData() {
+  function dashboardModuleDescriptors() {
+    return [
+      {
+        key: "submissions",
+        name: "quote submissions",
+        loader: () => supabaseRestRequest("quote_submissions?select=*&order=created_at.desc&limit=500", { method: "GET" }),
+        fallback: [],
+        normalize: (rows) => rows.map(normalizeSubmission)
+      },
+      {
+        key: "contacts",
+        name: "contacts",
+        loader: () => supabaseRestRequest("contacts?select=*&order=created_at.desc&limit=500", { method: "GET" }),
+        fallback: [],
+        normalize: (rows) => rows.map(normalizeContact)
+      },
+      {
+        key: "jobs",
+        name: "scheduled jobs",
+        loader: () => supabaseRestRequest("scheduled_jobs?select=*&order=visit_date.asc&limit=500", { method: "GET" }),
+        fallback: [],
+        normalize: (rows) => rows.map(normalizeJob)
+      },
+      { key: "tickets", name: "canonical tickets", loader: loadCanonicalTickets, fallback: [] },
+      { key: "ticketEvents", name: "canonical ticket events", loader: loadCanonicalTicketEvents, fallback: [] },
+      {
+        key: "notes",
+        name: "job notes",
+        loader: () => supabaseRestRequest("job_notes?select=*&order=created_at.desc&limit=500", { method: "GET" }),
+        fallback: [],
+        normalize: (rows) => rows.map(normalizeNote)
+      },
+      {
+        key: "reminders",
+        name: "follow-up reminders",
+        loader: () => supabaseRestRequest("follow_up_reminders?select=*&order=due_date.asc&limit=500", { method: "GET" }),
+        fallback: [],
+        normalize: (rows) => rows.map(normalizeReminder)
+      },
+      { key: "documents", name: "documents", loader: loadSalesDocuments, fallback: [] },
+      { key: "operations", name: "operations", loader: loadOperationsRecords, fallback: [] },
+      { key: "outreachProspects", name: "outreach prospects", loader: loadOutreachProspects, fallback: [] },
+      { key: "outreachCompanies", name: "outreach companies", loader: loadOutreachCompanies, fallback: [] },
+      { key: "outreachProperties", name: "outreach properties", loader: loadOutreachProperties, fallback: [] },
+      { key: "routeStops", name: "route planner", loader: loadRouteStops, fallback: [] },
+      { key: "equipmentItems", name: "equipment", loader: loadEquipmentItems, fallback: [] },
+      { key: "equipmentMaintenance", name: "equipment maintenance", loader: loadEquipmentMaintenance, fallback: [] },
+      { key: "hardwareGuide", name: "hardware guide", loader: loadHardwareGuide, fallback: [] },
+      { key: "groundskeeperAi", name: "Groundskeeper AI", loader: loadGroundskeeperAi, fallback: emptyGroundskeeperAiBundle },
+      { key: "documentation", name: "documentation", loader: loadDocumentation, fallback: () => normalizeDocumentationBundle() },
+      {
+        key: "importExport",
+        name: "import/export",
+        loader: loadImportExportCenter,
+        fallback: () => ({ modules: [], limits: {}, history: { imports: [], exports: [], syncs: [], backups: [] }, google: { configured: false, connections: [] }, fallback: "Import & Export Center could not be loaded." })
+      },
+      { key: "budgets", name: "job budgets", loader: loadBudgets, fallback: emptyBudgetBundle },
+      { key: "leadActivity", name: "call history", loader: loadLeadActivity, fallback: [] },
+      { key: "userProfiles", name: "user profiles", loader: loadUserProfiles, fallback: [] },
+      { key: "auditLogs", name: "audit logs", loader: loadAuditLogs, fallback: [] }
+    ];
+  }
+
+  function dashboardAllModuleKeys() {
+    return dashboardModuleDescriptors().map((module) => module.key);
+  }
+
+  function dashboardInitialModuleKeys(section = state.activeSection) {
+    const keys = new Set([
+      "submissions",
+      "jobs",
+      "tickets",
+      "ticketEvents",
+      "notes",
+      "reminders",
+      "documents",
+      "routeStops"
+    ]);
+    const normalized = normalizeDashboardSection(section);
+    if (["outreach", "contacts"].includes(normalized)) {
+      ["contacts", "outreachProspects", "outreachCompanies", "outreachProperties", "leadActivity"].forEach((key) => keys.add(key));
+    }
+    if (normalized === "documents") {
+      keys.add("budgets");
+    }
+    if (normalized === "route-planner") {
+      keys.add("routeStops");
+    }
+    if (normalized === "equipment") {
+      ["equipmentItems", "equipmentMaintenance", "hardwareGuide"].forEach((key) => keys.add(key));
+    }
+    if (normalized === "documentation") {
+      keys.add("documentation");
+    }
+    if (normalized === "groundskeeper-ai") {
+      keys.add("groundskeeperAi");
+    }
+    if (normalized === "import-export") {
+      keys.add("importExport");
+    }
+    if (normalized === "settings") {
+      ["userProfiles", "auditLogs"].forEach((key) => keys.add(key));
+    }
+    return Array.from(keys);
+  }
+
+  async function loadDashboardData(options = {}) {
     if (isDemoMode() && state.data.submissions.length) {
       return state.data;
     }
@@ -4428,83 +4631,20 @@
       return demoDashboardData();
     }
 
-    state.moduleErrors = [];
+    if (options.resetErrors !== false) state.moduleErrors = [];
 
-    const [
-      submissions,
-      contacts,
-      jobs,
-      tickets,
-      ticketEvents,
-      notes,
-      reminders,
-      documents,
-      operations,
-      outreachProspects,
-      outreachCompanies,
-      outreachProperties,
-      routeStops,
-      equipmentItems,
-      equipmentMaintenance,
-      hardwareGuide,
-      groundskeeperAi,
-      documentation,
-      importExport,
-      budgets,
-      leadActivity,
-      userProfiles,
-      auditLogs
-    ] = await Promise.all([
-      loadModule("quote submissions", () => supabaseRestRequest("quote_submissions?select=*&order=created_at.desc", { method: "GET" }), []),
-      loadModule("contacts", () => supabaseRestRequest("contacts?select=*&order=created_at.desc", { method: "GET" }), []),
-      loadModule("scheduled jobs", () => supabaseRestRequest("scheduled_jobs?select=*&order=visit_date.asc", { method: "GET" }), []),
-      loadCanonicalTickets(),
-      loadCanonicalTicketEvents(),
-      loadModule("job notes", () => supabaseRestRequest("job_notes?select=*&order=created_at.desc", { method: "GET" }), []),
-      loadModule("follow-up reminders", () => supabaseRestRequest("follow_up_reminders?select=*&order=due_date.asc", { method: "GET" }), []),
-      loadModule("documents", loadSalesDocuments, []),
-      loadModule("operations", loadOperationsRecords, []),
-      loadModule("outreach prospects", loadOutreachProspects, []),
-      loadModule("outreach companies", loadOutreachCompanies, []),
-      loadModule("outreach properties", loadOutreachProperties, []),
-      loadModule("route planner", loadRouteStops, []),
-      loadModule("equipment", loadEquipmentItems, []),
-      loadModule("equipment maintenance", loadEquipmentMaintenance, []),
-      loadModule("hardware guide", loadHardwareGuide, []),
-      loadModule("Groundskeeper AI", loadGroundskeeperAi, emptyGroundskeeperAiBundle),
-      loadModule("documentation", loadDocumentation, () => normalizeDocumentationBundle()),
-      loadModule("import/export", loadImportExportCenter, () => ({ modules: [], limits: {}, history: { imports: [], exports: [], syncs: [], backups: [] }, google: { configured: false, connections: [] }, fallback: "Import & Export Center could not be loaded." })),
-      loadModule("job budgets", loadBudgets, emptyBudgetBundle),
-      loadModule("call history", loadLeadActivity, []),
-      loadModule("user profiles", loadUserProfiles, []),
-      loadModule("audit logs", loadAuditLogs, [])
-    ]);
+    const requestedKeys = new Set(options.keys && options.keys.length ? options.keys : dashboardAllModuleKeys());
+    const descriptors = dashboardModuleDescriptors().filter((module) => requestedKeys.has(module.key));
+    const nextData = options.merge === false ? demoDashboardData() : { ...state.data };
+    await Promise.all(descriptors.map(async (module) => {
+      const value = await loadModule(module.name, module.loader, module.fallback, {
+        phase: options.phase || "full",
+        essential: Boolean(options.essential)
+      });
+      nextData[module.key] = module.normalize ? module.normalize(value || []) : value;
+    }));
 
-    return {
-      submissions: submissions.map(normalizeSubmission),
-      contacts: contacts.map(normalizeContact),
-      jobs: jobs.map(normalizeJob),
-      tickets,
-      ticketEvents,
-      notes: notes.map(normalizeNote),
-      reminders: reminders.map(normalizeReminder),
-      documents,
-      operations,
-      outreachProspects,
-      outreachCompanies,
-      outreachProperties,
-      routeStops,
-      equipmentItems,
-      equipmentMaintenance,
-      hardwareGuide,
-      groundskeeperAi,
-      documentation,
-      importExport,
-      budgets,
-      leadActivity,
-      userProfiles,
-      auditLogs
-    };
+    return nextData;
   }
 
   async function loadCanonicalTickets() {
@@ -4588,9 +4728,9 @@
   async function loadDocumentation() {
     try {
       const [templates, assignments, submissions, audit] = await Promise.all([
-        supabaseRestRequest("documentation_templates?select=*&order=category.asc,name.asc", { method: "GET" }),
-        supabaseRestRequest("documentation_assignments?select=*&order=due_date.asc.nullslast,created_at.desc", { method: "GET" }),
-        supabaseRestRequest("documentation_submissions?select=*&order=submitted_at.desc.nullslast,created_at.desc", { method: "GET" }),
+        supabaseRestRequest("documentation_templates?select=*&order=category.asc,name.asc&limit=500", { method: "GET" }),
+        supabaseRestRequest("documentation_assignments?select=*&order=due_date.asc.nullslast,created_at.desc&limit=500", { method: "GET" }),
+        supabaseRestRequest("documentation_submissions?select=*&order=submitted_at.desc.nullslast,created_at.desc&limit=500", { method: "GET" }),
         supabaseRestRequest("documentation_audit_logs?select=*&order=created_at.desc&limit=200", { method: "GET" })
       ]);
       let attachments = [];
@@ -4618,16 +4758,16 @@
     try {
       const [settingsRows, budgets, labor, materials, materialCatalog, equipment, costs, changeOrders, documents, templates, templateItems, history] = await Promise.all([
         supabaseRestRequest("budget_settings?select=*&limit=1", { method: "GET" }),
-        supabaseRestRequest("job_budgets?select=*&order=updated_at.desc", { method: "GET" }),
-        supabaseRestRequest("job_budget_labor?select=*&order=created_at.asc", { method: "GET" }),
-        supabaseRestRequest("job_budget_materials?select=*&order=created_at.asc", { method: "GET" }),
-        supabaseRestRequest("budget_material_catalog?select=*&order=category.asc,material_name.asc", { method: "GET" }),
-        supabaseRestRequest("job_budget_equipment?select=*&order=created_at.asc", { method: "GET" }),
-        supabaseRestRequest("job_budget_costs?select=*&order=created_at.asc", { method: "GET" }),
-        supabaseRestRequest("job_budget_change_orders?select=*&order=requested_date.desc.nullslast,created_at.desc", { method: "GET" }),
-        supabaseRestRequest("job_budget_documents?select=*&order=created_at.desc", { method: "GET" }),
-        supabaseRestRequest("job_budget_templates?select=*&order=name.asc", { method: "GET" }),
-        supabaseRestRequest("job_budget_template_items?select=*&order=created_at.asc", { method: "GET" }),
+        supabaseRestRequest("job_budgets?select=*&order=updated_at.desc&limit=500", { method: "GET" }),
+        supabaseRestRequest("job_budget_labor?select=*&order=created_at.asc&limit=1000", { method: "GET" }),
+        supabaseRestRequest("job_budget_materials?select=*&order=created_at.asc&limit=1000", { method: "GET" }),
+        supabaseRestRequest("budget_material_catalog?select=*&order=category.asc,material_name.asc&limit=500", { method: "GET" }),
+        supabaseRestRequest("job_budget_equipment?select=*&order=created_at.asc&limit=1000", { method: "GET" }),
+        supabaseRestRequest("job_budget_costs?select=*&order=created_at.asc&limit=1000", { method: "GET" }),
+        supabaseRestRequest("job_budget_change_orders?select=*&order=requested_date.desc.nullslast,created_at.desc&limit=500", { method: "GET" }),
+        supabaseRestRequest("job_budget_documents?select=*&order=created_at.desc&limit=500", { method: "GET" }),
+        supabaseRestRequest("job_budget_templates?select=*&order=name.asc&limit=300", { method: "GET" }),
+        supabaseRestRequest("job_budget_template_items?select=*&order=created_at.asc&limit=1000", { method: "GET" }),
         supabaseRestRequest("job_budget_history?select=*&order=created_at.desc&limit=300", { method: "GET" })
       ]);
       state.budgetsReady = true;
@@ -4727,7 +4867,7 @@
 
   async function loadSalesDocuments() {
     try {
-      const rows = await supabaseRestRequest("sales_documents?select=*&order=created_at.desc", { method: "GET" });
+      const rows = await supabaseRestRequest("sales_documents?select=*&order=created_at.desc&limit=500", { method: "GET" });
       state.documentsReady = true;
       return rows.map(normalizeDocument);
     } catch (error) {
@@ -4738,7 +4878,7 @@
 
   async function loadOperationsRecords() {
     try {
-      const rows = await supabaseRestRequest("operations_records?select=*&order=created_at.desc", { method: "GET" });
+      const rows = await supabaseRestRequest("operations_records?select=*&order=created_at.desc&limit=500", { method: "GET" });
       state.operationsReady = true;
       return rows.map(normalizeOperation);
     } catch (error) {
@@ -4749,7 +4889,7 @@
 
   async function loadRouteStops() {
     try {
-      const rows = await supabaseRestRequest("route_stops?select=*&order=route_date.asc,stop_order.asc,created_at.asc", { method: "GET" });
+      const rows = await supabaseRestRequest("route_stops?select=*&order=route_date.asc,stop_order.asc,created_at.asc&limit=1000", { method: "GET" });
       state.routeStopsReady = true;
       return rows.map(normalizeRouteStop);
     } catch (error) {
@@ -4760,7 +4900,7 @@
 
   async function loadEquipmentItems() {
     try {
-      const rows = await supabaseRestRequest("equipment_items?select=*&order=category.asc,name.asc", { method: "GET" });
+      const rows = await supabaseRestRequest("equipment_items?select=*&order=category.asc,name.asc&limit=500", { method: "GET" });
       state.equipmentReady = true;
       return rows.map(normalizeEquipmentItem);
     } catch (error) {
@@ -4771,7 +4911,7 @@
 
   async function loadEquipmentMaintenance() {
     try {
-      const rows = await supabaseRestRequest("equipment_maintenance?select=*&order=maintenance_date.desc,created_at.desc", { method: "GET" });
+      const rows = await supabaseRestRequest("equipment_maintenance?select=*&order=maintenance_date.desc,created_at.desc&limit=500", { method: "GET" });
       state.equipmentMaintenanceReady = true;
       return rows.map(normalizeEquipmentMaintenance);
     } catch (error) {
@@ -4782,7 +4922,7 @@
 
   async function loadHardwareGuide() {
     try {
-      const rows = await supabaseRestRequest("hardware_guide?select=*&order=priority.asc,name.asc", { method: "GET" });
+      const rows = await supabaseRestRequest("hardware_guide?select=*&order=priority.asc,name.asc&limit=500", { method: "GET" });
       state.hardwareGuideReady = true;
       return rows.map(normalizeHardwareGuideItem);
     } catch (error) {
@@ -4793,7 +4933,7 @@
 
   async function loadOutreachProspects() {
     try {
-      const rows = await supabaseRestRequest("outreach_prospects?select=*&order=next_follow_up_at.asc.nullslast,updated_at.desc", { method: "GET" });
+      const rows = await supabaseRestRequest("outreach_prospects?select=*&order=next_follow_up_at.asc.nullslast,updated_at.desc&limit=1000", { method: "GET" });
       state.outreachReady = true;
       return rows.map(normalizeOutreachProspect);
     } catch (error) {
@@ -4804,7 +4944,7 @@
 
   async function loadOutreachCompanies() {
     try {
-      const rows = await supabaseRestRequest("outreach_companies?select=*&order=company.asc", { method: "GET" });
+      const rows = await supabaseRestRequest("outreach_companies?select=*&order=company.asc&limit=1000", { method: "GET" });
       state.outreachCompaniesReady = true;
       return rows.map(normalizeOutreachCompany);
     } catch (error) {
@@ -4815,7 +4955,7 @@
 
   async function loadOutreachProperties() {
     try {
-      const rows = await supabaseRestRequest("outreach_properties?select=*&order=company.asc,property_name.asc", { method: "GET" });
+      const rows = await supabaseRestRequest("outreach_properties?select=*&order=company.asc,property_name.asc&limit=1000", { method: "GET" });
       state.outreachPropertiesReady = true;
       return rows.map(normalizeOutreachProperty);
     } catch (error) {
@@ -8023,6 +8163,7 @@
   }
 
   async function showApp() {
+    state.performance.startupStartedAt = new Date().toISOString();
     document.body.classList.remove("is-login-screen");
     els.loginView.hidden = true;
     els.appView.hidden = false;
@@ -8031,6 +8172,7 @@
     syncDashboardNavAccess();
     syncDashboardSubviewVisibility();
     await render();
+    state.performance.shellRenderedAt = new Date().toISOString();
     await refreshDashboard();
   }
 
@@ -16623,31 +16765,95 @@
     setActiveSection(state.activeSection);
   }
 
-  async function refreshDashboard() {
+  function dashboardSupportStatusMessage() {
+    const warnings = dashboardHealthWarnings({ scope: "critical" });
+    if (isDemoMode()) {
+      return {
+        message: "Demo mode: sample records only. Changes stay in this browser session and do not touch Supabase, Square, or real client data.",
+        tone: ""
+      };
+    }
+    if (warnings.length) {
+      return {
+        message: `${warnings.length} active workflow module${warnings.length === 1 ? "" : "s"} loaded with warnings. Open Tools for diagnostics.`,
+        tone: "warning"
+      };
+    }
+    if (state.performance.backgroundLoading) {
+      return {
+        message: "Dashboard is usable. Support modules are refreshing in the background.",
+        tone: ""
+      };
+    }
+    return { message: "", tone: "" };
+  }
+
+  function applyDashboardSupportStatus() {
+    const status = dashboardSupportStatusMessage();
+    setDashboardState(status.message, status.tone);
+  }
+
+  function scheduleDashboardBackgroundLoad(initialKeys = [], refreshSerial = dashboardRefreshSerial) {
+    if (isDemoMode()) return;
+    const remainingKeys = dashboardAllModuleKeys().filter((key) => !initialKeys.includes(key));
+    if (!remainingKeys.length) return;
+    if (dashboardBackgroundLoadPromise) return;
+    state.performance.backgroundLoading = true;
+    applyDashboardSupportStatus();
+    dashboardBackgroundLoadPromise = new Promise((resolve) => {
+      setTimeout(resolve, 0);
+    }).then(async () => {
+      const serial = refreshSerial;
+      const nextData = await loadDashboardData({
+        keys: remainingKeys,
+        phase: "background",
+        essential: false,
+        merge: true,
+        resetErrors: false
+      });
+      if (serial === dashboardRefreshSerial) {
+        state.data = nextData;
+        state.performance.backgroundDataLoadedAt = new Date().toISOString();
+        state.lastRefreshAt = state.performance.backgroundDataLoadedAt;
+        await render();
+      }
+    }).catch((error) => {
+      recordModuleError("background refresh", error);
+    }).finally(() => {
+      state.performance.backgroundLoading = false;
+      dashboardBackgroundLoadPromise = null;
+      applyDashboardSupportStatus();
+    });
+  }
+
+  async function refreshDashboard(options = {}) {
+    const refreshSerial = ++dashboardRefreshSerial;
+    const phase = options.phase || "initial";
+    const initialKeys = phase === "full" ? dashboardAllModuleKeys() : dashboardInitialModuleKeys(state.activeSection);
     state.loading = true;
     state.error = "";
-    setDashboardState("Loading dashboard records...");
-    if (els.metrics) els.metrics.innerHTML = [
-      ["Today's Jobs", "..."],
-      ["Active Properties", "..."],
-      ["Upcoming", "..."]
-    ].map(([label, value]) => `<article class="metric-card"><strong>${value}</strong><span>${label}</span></article>`).join("");
-    if (els.submissions) els.submissions.innerHTML = loadingState("Loading submissions...");
-    if (els.upcoming) els.upcoming.innerHTML = loadingState("Loading visits...");
+    if (!options.quiet) {
+      setDashboardState(phase === "full" ? "Refreshing dashboard records..." : "Loading dashboard records...");
+    }
 
     try {
-      state.data = await loadDashboardData();
+      state.data = await loadDashboardData({
+        keys: initialKeys,
+        phase,
+        essential: true,
+        merge: true,
+        resetErrors: true
+      });
       state.loading = false;
       state.lastRefreshAt = new Date().toISOString();
+      if (phase !== "full") state.performance.initialDataLoadedAt = state.lastRefreshAt;
       await render();
-      const warnings = dashboardHealthWarnings({ scope: "critical" });
-      if (isDemoMode()) {
-        setDashboardState("Demo mode: sample records only. Changes stay in this browser session and do not touch Supabase, Square, or real client data.");
-      } else if (warnings.length) {
-        setDashboardState(`${warnings.length} active workflow module${warnings.length === 1 ? "" : "s"} loaded with warnings. Open Tools for diagnostics.`, "warning");
+      if (phase === "full") {
+        state.performance.backgroundDataLoadedAt = state.lastRefreshAt;
       } else {
-        setDashboardState("");
+        scheduleDashboardBackgroundLoad(initialKeys, refreshSerial);
       }
+      applyDashboardSupportStatus();
     } catch (error) {
       state.loading = false;
       state.error = error.message || "Unable to load dashboard records.";

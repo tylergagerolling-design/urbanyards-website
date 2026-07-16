@@ -11813,6 +11813,82 @@
     </section>`;
   }
 
+  function renderWorkspaceWorkflowRibbon(tickets = dashboardTickets(), activeKey = "") {
+    const openTickets = tickets.filter(ticketIsOpen);
+    const leadsCount = ticketCountBy(openTickets, (ticket) => ticketInLane(ticket, ["sales"]));
+    const moneyCount = ticketCountBy(openTickets, (ticket) => ticketInLane(ticket, ["accounting", "money"]));
+    const workCount = ticketCountBy(openTickets, (ticket) => ticketInLane(ticket, ["ready", "field"]));
+    const proofCount = ticketCountBy(openTickets, (ticket) => ticketInStage(ticket, ["field_work_complete", "completion_review"]));
+    const closeoutCount = ticketCountBy(openTickets, (ticket) => ticketInStage(ticket, ["invoice_review", "invoice_sent", "partially_paid"]));
+    const steps = [
+      {
+        key: "leads",
+        label: "Lead Intake",
+        detail: "Prospects, calls, scope, and quote follow-up",
+        value: leadsCount,
+        action: "go-leads"
+      },
+      {
+        key: "tickets",
+        label: "Job Tickets",
+        detail: "One source of truth for each job",
+        value: openTickets.length,
+        action: "go-tickets"
+      },
+      {
+        key: "money",
+        label: "Money Review",
+        detail: "Budget, quote, invoice, and payment state",
+        value: moneyCount,
+        action: "go-money"
+      },
+      {
+        key: "work",
+        label: "Work Queue",
+        detail: "Schedule, route, complete, and document",
+        value: workCount,
+        action: "go-work"
+      },
+      {
+        key: "proof",
+        label: "Proof & Records",
+        detail: "Arrival photos, completion photos, forms",
+        value: proofCount,
+        action: "go-work"
+      },
+      {
+        key: "closeout",
+        label: "Closeout",
+        detail: "Actuals, invoice review, collect, archive",
+        value: closeoutCount,
+        action: "go-money"
+      },
+      {
+        key: "tools",
+        label: "Support Tools",
+        detail: "Routes, forms, equipment, imports, AI, access",
+        value: dashboardHealthWarnings({ scope: "critical" }).length + dashboardHealthWarnings({ scope: "support" }).length,
+        action: "go-tools"
+      }
+    ];
+    return `<section class="workspace-workflow-ribbon" aria-label="Urban Yards ticket workflow">
+      <div class="workspace-workflow-ribbon-head">
+        <span>Workflow Map</span>
+        <strong>Lead to closed ticket</strong>
+      </div>
+      <div class="workspace-workflow-ribbon-steps">
+        ${steps.map((step, index) => `
+          <button type="button" class="${step.key === activeKey ? "is-active" : ""}" data-action="${escapeHtml(step.action)}">
+            <span>${escapeHtml(String(index + 1).padStart(2, "0"))}</span>
+            <strong>${escapeHtml(step.label)}</strong>
+            <small>${escapeHtml(step.detail)}</small>
+            <em>${escapeHtml(String(step.value))}</em>
+          </button>
+        `).join("")}
+      </div>
+    </section>`;
+  }
+
   function renderHomeWorkspace(data = state.data) {
     const target = qs("[data-home-workspace]");
     if (!target) return;
@@ -11861,6 +11937,7 @@
           ${renderTicketMetric(actions.length, "Action Items", "Needs attention now")}
           ${renderTicketMetric(workflowWarnings.length + notifications.length, "Alerts", "Workflow and notification signals")}
         </section>
+        ${renderWorkspaceWorkflowRibbon(activeTickets, "")}
         ${renderHomeCommandCenter({ actions, attentionTickets, todayTickets, workTickets, moneyTickets, workflowWarnings, notifications })}
         ${renderTicketEndToEndFlow(activeTickets, "", "Urban Yards job flow")}
         ${renderTicketOwnerStrip(activeTickets)}
@@ -11967,6 +12044,7 @@
           ${renderTicketMetric(ticketCountBy(openTickets, (ticket) => ticketInLane(ticket, ["sales", "accounting"])), "Needs Office", "Scope, quote, cost review")}
           ${renderTicketMetric(ticketCountBy(openTickets, (ticket) => ticketInLane(ticket, ["review", "money"])), "Closeout", "Review, invoice, payment")}
         </section>
+        ${renderWorkspaceWorkflowRibbon(openTickets, "tickets")}
         ${renderWorkspaceFocusStrip([
           { kicker: "Shown", value: filteredTickets.length, title: "Board results", detail: "Open tickets matching the current search and filters." },
           { kicker: "Ready", value: readyTickets.length, title: "Schedule handoff", detail: "Approved work ready to become scheduled visits." },
@@ -12086,6 +12164,7 @@
           ${renderTicketMetric(ticketCountBy(workTickets, (ticket) => ticketInLane(ticket, ["review"])), "Needs Proof", "Photos, actuals, forms")}
           ${renderTicketMetric(upcomingTickets.length, "Upcoming", "Scheduled tickets")}
         </section>
+        ${renderWorkspaceWorkflowRibbon(tickets, "work")}
         ${renderWorkDayPlanPanel(routeStopsToday, todayTickets, upcomingTickets, reviewTickets)}
         ${renderWorkspaceFocusStrip([
           { kicker: "Today", value: todayTickets.length, title: "What to do first", detail: "Start with dated tickets and route stops for the current day." },
@@ -12310,6 +12389,7 @@
           ${renderTicketMetric(approvalTickets.length + hot.length, "Quote-Ready", "Interested or pending approval")}
           ${renderTicketMetric(accountingTickets.length, "Money Handoff", "Approved work needs cost review")}
         </section>
+        ${renderWorkspaceWorkflowRibbon(dashboardTickets(data), "leads")}
         ${renderWorkspaceFocusStrip([
           { kicker: "Contact", value: prospectQueue.length, title: "Call and email queue", detail: "Prospects waiting for a clear next touch." },
           { kicker: "Ticket", value: intakeTickets.length + approvalTickets.length, title: "Scope into tickets", detail: "Requests that need organized ticket detail." },
@@ -12542,6 +12622,7 @@
           ${renderTicketMetric(unpaidInvoices.length, "Open Invoices", "Awaiting payment")}
           ${renderTicketMetric(overdueInvoices.length, "Overdue", "Payment action needed")}
         </section>
+        ${renderWorkspaceWorkflowRibbon(tickets, "money")}
         ${renderWorkspaceFocusStrip([
           { kicker: "Budget", value: needsBudget.length, title: "Cost review", detail: "Approved tickets waiting on budget or margin checks." },
           { kicker: "Invoice", value: unpaidInvoices.length, title: "Open invoices", detail: "Quotes, invoices, and Square payment state needing review." },
@@ -12609,6 +12690,7 @@
           ${renderTicketMetric(documents.length, "Financial Documents", "Quotes, invoices, and records")}
           ${renderTicketMetric(documentationCount, "Forms and Files", "Templates and submissions")}
         </section>
+        ${renderWorkspaceWorkflowRibbon(dashboardTickets(data), "tools")}
         ${renderWorkspaceFocusStrip([
           { kicker: "Health", value: criticalWarnings.length, title: "Critical warnings", detail: "Issues affecting rebuilt workflow pages." },
           { kicker: "Support", value: supportWarnings.length, title: "Setup warnings", detail: "Optional modules or integrations that need attention." },

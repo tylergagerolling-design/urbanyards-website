@@ -12741,6 +12741,59 @@
     </article>`;
   }
 
+  function renderMoneyRunwayCard({ label, value, detail, tone = "", action, actionLabel }) {
+    return `<article class="money-runway-card ${tone ? `money-runway-card--${escapeHtml(tone)}` : ""}">
+      <span>${escapeHtml(label)}</span>
+      <strong>${escapeHtml(String(value))}</strong>
+      <p>${escapeHtml(detail)}</p>
+      ${action ? `<button type="button" data-action="${escapeHtml(action)}">${escapeHtml(actionLabel || "Open")}</button>` : ""}
+    </article>`;
+  }
+
+  function renderMoneyRunwayPanel({ needsBudget = [], ownerApproval = [], invoiceTickets = [], overdueInvoices = [] }) {
+    return `<section class="money-runway-panel" aria-label="Money runway">
+      <div class="ticket-flow-heading">
+        <div>
+          <p class="eyebrow">Money Runway</p>
+          <h3>Estimate, budget, invoice, collect</h3>
+          <p>Keep each financial step visible before tickets move into scheduling or closeout.</p>
+        </div>
+        <button type="button" data-action="go-tickets">Review Tickets</button>
+      </div>
+      <div class="money-runway-grid">
+        ${renderMoneyRunwayCard({
+          label: "Budget Prep",
+          value: needsBudget.length,
+          detail: "Approved tickets waiting on cost or margin review.",
+          action: "go-tickets",
+          actionLabel: "Open Review"
+        })}
+        ${renderMoneyRunwayCard({
+          label: "Approval",
+          value: ownerApproval.length,
+          detail: "Items needing owner approval or invoice preparation.",
+          action: "quick-add-quote",
+          actionLabel: "Create Estimate"
+        })}
+        ${renderMoneyRunwayCard({
+          label: "Invoices",
+          value: invoiceTickets.length,
+          detail: "Open estimate or invoice records to reconcile.",
+          action: "go-documents",
+          actionLabel: "Open Records"
+        })}
+        ${renderMoneyRunwayCard({
+          label: "Payment Risk",
+          value: overdueInvoices.length,
+          detail: "Overdue invoices that need a follow-up or Square sync.",
+          tone: overdueInvoices.length ? "warning" : "",
+          action: "quick-add-invoice-reminder",
+          actionLabel: "Follow Up"
+        })}
+      </div>
+    </section>`;
+  }
+
   function renderMoneyCommandCenter({ needsBudget, ownerApproval, fieldComplete, invoiceTickets, unpaidInvoices, overdueInvoices }) {
     const actionQueue = [
       ...invoiceTickets.filter((ticket) => ticket.tone === "watch"),
@@ -12855,6 +12908,7 @@
           ${renderTicketMetric(overdueInvoices.length, "Overdue", "Payment action needed")}
         </section>
         ${renderWorkspaceWorkflowRibbon(tickets, "money")}
+        ${renderMoneyRunwayPanel({ needsBudget, ownerApproval, invoiceTickets, overdueInvoices })}
         ${renderWorkspaceFocusStrip([
           { kicker: "Budget", value: needsBudget.length, title: "Cost review", detail: "Approved tickets waiting on budget or margin checks." },
           { kicker: "Invoice", value: unpaidInvoices.length, title: "Open invoices", detail: "Quotes, invoices, and Square payment state needing review." },

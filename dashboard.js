@@ -8869,11 +8869,22 @@
     view.line = null;
   }
 
+  function resizeGoogleMapView(view) {
+    if (!view?.map || !window.google?.maps?.event) return;
+    requestAnimationFrame(() => {
+      window.google.maps.event.trigger(view.map, "resize");
+      requestAnimationFrame(() => window.google.maps.event.trigger(view.map, "resize"));
+    });
+  }
+
   async function ensureGoogleMapView(key, mapElement, options = {}) {
     if (!mapElement) return null;
     await loadGoogleMapsScript();
     const existing = googleMapViews.get(key);
-    if (existing?.map && existing.mapElement === mapElement) return existing;
+    if (existing?.map && existing.mapElement === mapElement) {
+      resizeGoogleMapView(existing);
+      return existing;
+    }
     clearGoogleMapView(existing);
     const view = {
       map: new window.google.maps.Map(mapElement, googleMapOptions(options)),
@@ -8882,6 +8893,7 @@
       line: null
     };
     googleMapViews.set(key, view);
+    resizeGoogleMapView(view);
     return view;
   }
 

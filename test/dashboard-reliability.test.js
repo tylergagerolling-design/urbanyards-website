@@ -312,6 +312,10 @@ test("dashboard route aliases and new reliability diagnostics are wired", () => 
   assert.match(css, /ticket-flow-steps[\s\S]*repeat\(auto-fit, minmax\(min\(100%, 280px\), 1fr\)\)/);
   assert.match(css, /ticket-flow-step strong[\s\S]*text-wrap: balance/);
   assert.match(css, /ticket-lane-heading > span[\s\S]*flex: 0 0 auto/);
+  assert.match(css, /ticket-card-actions[\s\S]*grid-template-columns: minmax\(0, 1fr\) auto/);
+  assert.match(css, /ticket-card-actions span[\s\S]*text-wrap: pretty/);
+  assert.match(js, /function resizeGoogleMapView\(view\)/);
+  assert.match(js, /window\.google\.maps\.event\.trigger\(view\.map, "resize"\)/);
   assert.match(css, /\.money-budget-panel/);
   assert.match(css, /\.money-budget-item/);
   assert.match(css, /\.money-budget-stats/);

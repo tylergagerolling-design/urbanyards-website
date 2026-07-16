@@ -10320,6 +10320,55 @@
     </section>`;
   }
 
+  function renderTicketDrawerCockpit(ticket = {}) {
+    const stage = ticketStage(ticket);
+    const meta = ticketStageMeta[stage] || {};
+    const transitions = ticketTransitionOptions(ticket);
+    const command = ticketCommandStatus(ticket, transitions);
+    const workspace = ticketWorkspaceTarget(ticket);
+    const blockers = command.blockers || [];
+    const nextMove = command.move ? ticketStageLabel(command.move.to) : command.title || ticketNextAction(stage);
+    const activeIndex = ticketCardMilestoneIndex(stage);
+    const completeCount = ticketCardMilestones.reduce((count, item, index) => {
+      return count + (index < activeIndex || ticketCardMilestoneOverride(ticket, item.key) ? 1 : 0);
+    }, 0);
+    const cockpitTone = command.state === "blocked"
+      ? "Blocked"
+      : command.state === "ready"
+        ? "Ready"
+        : command.state === "complete"
+          ? "Complete"
+          : "Review";
+    return `<section class="ticket-drawer-cockpit is-${escapeHtml(command.state || "review")}" aria-label="Ticket workflow cockpit">
+      <div class="ticket-cockpit-main">
+        <div>
+          <p class="eyebrow">Ticket Cockpit</p>
+          <h4>${escapeHtml(workspace.label)} owns this step</h4>
+          <p>${escapeHtml(workspace.detail)}</p>
+        </div>
+        <span>${escapeHtml(cockpitTone)}</span>
+      </div>
+      <dl class="ticket-cockpit-stats">
+        <div><dt>Current</dt><dd>${escapeHtml(ticketStageLabel(stage))}</dd></div>
+        <div><dt>Next move</dt><dd>${escapeHtml(nextMove)}</dd></div>
+        <div><dt>Ready checks</dt><dd>${escapeHtml(`${completeCount}/${ticketCardMilestones.length}`)}</dd></div>
+        <div><dt>Lane</dt><dd>${escapeHtml(titleCase(meta.lane || "workflow"))}</dd></div>
+      </dl>
+      <div class="ticket-cockpit-track" aria-label="Ticket lifecycle checkpoints">
+        ${ticketCardMilestones.map((item, index) => {
+          const isComplete = index < activeIndex || ticketCardMilestoneOverride(ticket, item.key);
+          const isActive = index === activeIndex;
+          const stateClass = isActive ? "is-active" : isComplete ? "is-complete" : "is-upcoming";
+          return `<span class="${stateClass}">
+            <i aria-hidden="true"></i>
+            <strong>${escapeHtml(item.label)}</strong>
+          </span>`;
+        }).join("")}
+      </div>
+      <p class="ticket-cockpit-note">${escapeHtml(blockers.length ? `Before the next move: ${blockers.join(", ")}.` : command.detail || "This ticket has enough information for its current workflow step.")}</p>
+    </section>`;
+  }
+
   function renderTicketCard(ticket, compact = false) {
     const blockers = ticket.blockers?.length ? `<div class="ticket-blockers">${ticket.blockers.map((item) => `<span>${escapeHtml(item)}</span>`).join("")}</div>` : "";
     const opensDocument = ticket.source === "document";
@@ -11502,6 +11551,7 @@
         </div>
       </div>
         ${renderTicketDrawerActionStrip(ticket)}
+        ${renderTicketDrawerCockpit(ticket)}
         ${renderTicketDrawerProgress(ticket)}
         ${renderTicketWorkflowTracker(ticket.stage)}
         ${renderTicketEndToEndFlow(dashboardTickets(), ticket.stage, "Current ticket lifecycle")}

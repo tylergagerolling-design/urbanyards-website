@@ -16695,6 +16695,146 @@ body:not(.is-login-screen) .ticket-drawer-progress p {
   line-height: 1.4;
 }
 
+body:not(.is-login-screen) .ticket-drawer-cockpit {
+  display: grid;
+  gap: 14px;
+  padding: 16px;
+  border: 1px solid rgba(73, 102, 77, .16);
+  border-radius: 22px;
+  background:
+    radial-gradient(circle at 96% 0%, rgba(153, 180, 119, .18), transparent 38%),
+    linear-gradient(135deg, rgba(255, 255, 255, .92), rgba(248, 251, 242, .74));
+  box-shadow: 0 16px 34px rgba(19, 36, 28, .055);
+}
+
+body:not(.is-login-screen) .ticket-drawer-cockpit.is-blocked {
+  border-color: rgba(195, 136, 47, .28);
+  background:
+    radial-gradient(circle at 96% 0%, rgba(217, 182, 111, .2), transparent 38%),
+    linear-gradient(135deg, rgba(255, 255, 255, .94), rgba(255, 250, 240, .78));
+}
+
+body:not(.is-login-screen) .ticket-cockpit-main {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+body:not(.is-login-screen) .ticket-cockpit-main h4 {
+  margin: 0;
+  color: var(--uy-green);
+  font-size: 1.18rem;
+}
+
+body:not(.is-login-screen) .ticket-cockpit-main p:not(.eyebrow),
+body:not(.is-login-screen) .ticket-cockpit-note {
+  margin: 5px 0 0;
+  color: var(--uy-muted);
+  line-height: 1.42;
+}
+
+body:not(.is-login-screen) .ticket-cockpit-main > span {
+  display: inline-flex;
+  align-items: center;
+  min-height: 30px;
+  padding: 0 11px;
+  border-radius: 999px;
+  background: #e7efdf;
+  color: var(--uy-green);
+  font-size: .78rem;
+  font-weight: 900;
+  white-space: nowrap;
+}
+
+body:not(.is-login-screen) .ticket-drawer-cockpit.is-blocked .ticket-cockpit-main > span {
+  background: #fff3d9;
+  color: #704b12;
+}
+
+body:not(.is-login-screen) .ticket-cockpit-stats {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 8px;
+  margin: 0;
+}
+
+body:not(.is-login-screen) .ticket-cockpit-stats div {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+  padding: 10px 11px;
+  border: 1px solid rgba(73, 102, 77, .1);
+  border-radius: 14px;
+  background: rgba(255, 255, 255, .72);
+}
+
+body:not(.is-login-screen) .ticket-cockpit-stats dt {
+  color: var(--uy-muted);
+  font-size: .68rem;
+  font-weight: 900;
+  letter-spacing: .07em;
+  text-transform: uppercase;
+}
+
+body:not(.is-login-screen) .ticket-cockpit-stats dd {
+  min-width: 0;
+  margin: 0;
+  color: var(--uy-green);
+  font-weight: 900;
+  overflow-wrap: anywhere;
+}
+
+body:not(.is-login-screen) .ticket-cockpit-track {
+  display: grid;
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+  gap: 6px;
+}
+
+body:not(.is-login-screen) .ticket-cockpit-track span {
+  position: relative;
+  display: grid;
+  gap: 6px;
+  min-width: 0;
+  padding: 9px 8px;
+  border: 1px solid rgba(73, 102, 77, .1);
+  border-radius: 14px;
+  background: rgba(255, 255, 255, .64);
+  color: var(--uy-muted);
+}
+
+body:not(.is-login-screen) .ticket-cockpit-track i {
+  width: 18px;
+  height: 18px;
+  border: 1px solid rgba(73, 102, 77, .22);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, .86);
+}
+
+body:not(.is-login-screen) .ticket-cockpit-track strong {
+  color: inherit;
+  font-size: .76rem;
+  line-height: 1.15;
+}
+
+body:not(.is-login-screen) .ticket-cockpit-track span.is-complete {
+  background: rgba(247, 251, 241, .86);
+  color: var(--uy-green);
+}
+
+body:not(.is-login-screen) .ticket-cockpit-track span.is-complete i,
+body:not(.is-login-screen) .ticket-cockpit-track span.is-active i {
+  border-color: rgba(90, 128, 75, .42);
+  background: #dbeacc;
+}
+
+body:not(.is-login-screen) .ticket-cockpit-track span.is-active {
+  border-color: rgba(18, 63, 49, .24);
+  background: #eef5e8;
+  color: var(--uy-green);
+  box-shadow: inset 0 0 0 1px rgba(217, 182, 111, .18);
+}
+
 body:not(.is-login-screen) .ticket-drawer-status {
   display: flex;
   align-items: center;
@@ -17397,6 +17537,14 @@ body:not(.is-login-screen) .field-proof-actions button {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
+  body:not(.is-login-screen) .ticket-cockpit-stats {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  body:not(.is-login-screen) .ticket-cockpit-track {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
   body:not(.is-login-screen) .ticket-drawer-action-strip-actions {
     grid-column: 1 / -1;
     flex-direction: row;
@@ -17484,6 +17632,15 @@ body:not(.is-login-screen) .field-proof-actions button {
 
   body:not(.is-login-screen) .ticket-drawer-action-strip-actions {
     flex-direction: column;
+  }
+
+  body:not(.is-login-screen) .ticket-cockpit-main {
+    flex-direction: column;
+  }
+
+  body:not(.is-login-screen) .ticket-cockpit-stats,
+  body:not(.is-login-screen) .ticket-cockpit-track {
+    grid-template-columns: 1fr;
   }
 
   body:not(.is-login-screen) .today-action-item {

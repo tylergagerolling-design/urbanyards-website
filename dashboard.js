@@ -15942,6 +15942,63 @@
     </section>`;
   }
 
+  function renderWorkVisitCockpit(job, ticket, isReschedule = false) {
+    const assignments = documentationAssignmentsForJob(job);
+    const arrivalPhotos = documentationAttachmentsForJob(job, "arrival");
+    const completionPhotos = documentationAttachmentsForJob(job, "completion");
+    const status = job.status || "Scheduled";
+    const complete = status === "Completed";
+    const dueLabel = [job.date, job.window].filter(Boolean).join(" / ") || "No visit window";
+    const routeDetail = job.city && job.city !== "Not provided" ? job.city : "Address or area not set";
+    const proofItems = [
+      {
+        label: "Schedule",
+        value: dueLabel,
+        complete: Boolean(job.dateRaw)
+      },
+      {
+        label: "Documentation",
+        value: assignments.length ? `${assignments.length} form${assignments.length === 1 ? "" : "s"} attached` : "Pick from template library",
+        complete: assignments.length > 0
+      },
+      {
+        label: "Arrival photos",
+        value: `${arrivalPhotos.length}/${JOB_SITE_PHOTO_MAX_FILES} uploaded`,
+        complete: arrivalPhotos.length > 0
+      },
+      {
+        label: "Completion photos",
+        value: `${completionPhotos.length}/${JOB_SITE_PHOTO_MAX_FILES} uploaded`,
+        complete: completionPhotos.length > 0
+      },
+      {
+        label: "Closeout",
+        value: complete ? "Visit complete" : "Ready when proof is captured",
+        complete
+      }
+    ];
+    return `<section class="work-visit-cockpit" aria-label="Work visit command center">
+      <div class="work-visit-cockpit-heading">
+        <div>
+          <p class="eyebrow">${escapeHtml(isReschedule ? "Reschedule" : "Work Visit")}</p>
+          <h4>${escapeHtml(complete ? "Visit is complete" : "Finish the visit with proof")}</h4>
+          <p>${escapeHtml(routeDetail)}${ticket?.number ? ` / ${escapeHtml(ticket.number)}` : ""}</p>
+        </div>
+        <span>${escapeHtml(status)}</span>
+      </div>
+      <div class="work-visit-proof-grid">
+        ${proofItems.map((item) => `<article class="${item.complete ? "is-complete" : ""}">
+          <span aria-hidden="true"></span>
+          <div>
+            <strong>${escapeHtml(item.label)}</strong>
+            <small>${escapeHtml(item.value)}</small>
+          </div>
+        </article>`).join("")}
+      </div>
+      <p class="work-visit-cockpit-note">Attach forms from Documentation, capture arrival photos when you get on site, and capture completion photos before closing the visit.</p>
+    </section>`;
+  }
+
   function openJobDrawer(id, options = {}) {
     const job = state.data.jobs.find((item) => item.id === id);
     if (!job || !els.detailDrawer || !els.detailContent) return;
@@ -15952,11 +16009,12 @@
       || buildTicketFromJob(job, state.data.jobs.findIndex((item) => item.id === id));
     openDetailDrawer();
     els.detailContent.innerHTML = `
-      <div class="drawer-content">
+      <div class="drawer-content work-visit-drawer">
         <p class="eyebrow">${isReschedule ? "Overdue Visit" : "Schedule Detail"}</p>
         <h3>${escapeHtml(isReschedule ? `Reschedule ${job.site}` : job.site)}</h3>
         ${isOverdueJob(job) ? `<p class="job-overdue-note">This visit was scheduled for ${escapeHtml(job.date)} and is not marked complete.</p>` : ""}
         ${renderSourceTicketContext(ticket)}
+        ${renderWorkVisitCockpit(job, ticket, isReschedule)}
         <form class="drawer-form" data-job-edit-form>
           <label>Visit date
             <input name="visit_date" type="date" value="${escapeHtml(visitDateValue)}" required>

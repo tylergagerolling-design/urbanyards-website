@@ -8249,6 +8249,116 @@ body.is-detail-drawer-open {
   margin-top: 4px;
 }
 
+.work-visit-drawer {
+  gap: 16px !important;
+}
+
+.work-visit-cockpit {
+  display: grid;
+  gap: 14px;
+  padding: 16px;
+  border: 1px solid rgba(73, 102, 77, .16);
+  border-radius: 22px;
+  background:
+    radial-gradient(circle at 96% 0%, rgba(153, 180, 119, .16), transparent 38%),
+    linear-gradient(135deg, rgba(255, 255, 255, .92), rgba(248, 251, 242, .76));
+  box-shadow: 0 16px 34px rgba(19, 36, 28, .055);
+}
+
+.work-visit-cockpit-heading {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.work-visit-cockpit-heading h4 {
+  margin: 0;
+  color: var(--uy-green, #123f31);
+  font-size: 1.16rem;
+}
+
+.work-visit-cockpit-heading p:not(.eyebrow),
+.work-visit-cockpit-note {
+  margin: 5px 0 0;
+  color: var(--uy-muted, #667267);
+  line-height: 1.42;
+}
+
+.work-visit-cockpit-heading > span {
+  display: inline-flex;
+  align-items: center;
+  min-height: 30px;
+  padding: 0 11px;
+  border-radius: 999px;
+  background: #e7efdf;
+  color: var(--uy-green, #123f31);
+  font-size: .78rem;
+  font-weight: 900;
+  white-space: nowrap;
+}
+
+.work-visit-proof-grid {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.work-visit-proof-grid article {
+  display: grid;
+  grid-template-columns: 20px minmax(0, 1fr);
+  gap: 9px;
+  align-items: start;
+  min-width: 0;
+  padding: 10px;
+  border: 1px solid rgba(73, 102, 77, .1);
+  border-radius: 14px;
+  background: rgba(255, 255, 255, .68);
+}
+
+.work-visit-proof-grid article > span {
+  width: 20px;
+  height: 20px;
+  border: 1px solid rgba(73, 102, 77, .22);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, .86);
+}
+
+.work-visit-proof-grid article.is-complete {
+  background: rgba(247, 251, 241, .86);
+}
+
+.work-visit-proof-grid article.is-complete > span {
+  border-color: rgba(90, 128, 75, .48);
+  background: #dbeacc;
+}
+
+.work-visit-proof-grid article.is-complete > span::after {
+  content: "";
+  display: block;
+  width: 8px;
+  height: 4px;
+  margin: 6px auto 0;
+  border-left: 2px solid var(--uy-green, #123f31);
+  border-bottom: 2px solid var(--uy-green, #123f31);
+  transform: rotate(-45deg);
+}
+
+.work-visit-proof-grid strong,
+.work-visit-proof-grid small {
+  display: block;
+}
+
+.work-visit-proof-grid strong {
+  color: var(--uy-green, #123f31);
+  font-size: .82rem;
+}
+
+.work-visit-proof-grid small {
+  color: var(--uy-muted, #667267);
+  line-height: 1.3;
+}
+
 .job-support-card {
   display: grid;
   gap: 12px;
@@ -8396,7 +8506,9 @@ body.is-detail-drawer-open {
 
   .job-support-heading,
   .job-support-form,
-  .job-photo-grid {
+  .job-photo-grid,
+  .work-visit-cockpit-heading,
+  .work-visit-proof-grid {
     display: grid;
     grid-template-columns: 1fr;
   }

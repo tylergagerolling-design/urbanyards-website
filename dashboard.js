@@ -12530,6 +12530,59 @@
     </article>`;
   }
 
+  function renderLeadsRunwayCard({ label, value, detail, action, actionLabel, extraAttrs = "", tone = "" }) {
+    return `<article class="leads-runway-card ${tone ? `leads-runway-card--${escapeHtml(tone)}` : ""}">
+      <span>${escapeHtml(label)}</span>
+      <strong>${escapeHtml(String(value))}</strong>
+      <p>${escapeHtml(detail)}</p>
+      ${action ? `<button type="button" data-action="${escapeHtml(action)}"${extraAttrs}>${escapeHtml(actionLabel || "Open")}</button>` : ""}
+    </article>`;
+  }
+
+  function renderLeadsRunwayPanel({ due = [], hot = [], intakeTickets = [], approvalTickets = [], accountingTickets = [], companies = [], properties = [] }) {
+    return `<section class="leads-runway-panel" aria-label="Leads runway">
+      <div class="ticket-flow-heading">
+        <div>
+          <p class="eyebrow">Lead Runway</p>
+          <h3>Capture, follow up, quote, hand off</h3>
+          <p>Keep prospect outreach tied to the same Job Ticket workflow before work reaches scheduling.</p>
+        </div>
+        ${canCreateTicketType("quote") ? `<button type="button" data-action="open-ticket-create" data-ticket-type="quote">New Job Ticket</button>` : ""}
+      </div>
+      <div class="leads-runway-grid">
+        ${renderLeadsRunwayCard({
+          label: "Pipeline",
+          value: companies.length + properties.length,
+          detail: "Companies and property locations available for outreach.",
+          action: "import-outreach-csv",
+          actionLabel: "Import Leads"
+        })}
+        ${renderLeadsRunwayCard({
+          label: "Follow Up",
+          value: due.length,
+          detail: "Prospects due for a call, email, or next-touch note.",
+          action: "go-leads",
+          actionLabel: "Open Queue",
+          tone: due.length ? "warning" : ""
+        })}
+        ${renderLeadsRunwayCard({
+          label: "Quote Ready",
+          value: hot.length + approvalTickets.length,
+          detail: "Interested prospects and tickets waiting on quote action.",
+          action: "go-tickets",
+          actionLabel: "Review Quotes"
+        })}
+        ${renderLeadsRunwayCard({
+          label: "Money Handoff",
+          value: accountingTickets.length,
+          detail: "Approved work ready for cost review before scheduling.",
+          action: "go-money",
+          actionLabel: "Open Money"
+        })}
+      </div>
+    </section>`;
+  }
+
   function renderLeadsCommandCenter({ prospectQueue, due, hot, intakeTickets, approvalTickets, accountingTickets, companies, properties }) {
     return `<section class="leads-command-center" aria-label="Leads command center">
       <section class="ticket-lane leads-contact-queue">
@@ -12622,6 +12675,7 @@
           ${renderTicketMetric(accountingTickets.length, "Money Handoff", "Approved work needs cost review")}
         </section>
         ${renderWorkspaceWorkflowRibbon(dashboardTickets(data), "leads")}
+        ${renderLeadsRunwayPanel({ due, hot, intakeTickets, approvalTickets, accountingTickets, companies, properties })}
         ${renderWorkspaceFocusStrip([
           { kicker: "Contact", value: prospectQueue.length, title: "Call and email queue", detail: "Prospects waiting for a clear next touch." },
           { kicker: "Ticket", value: intakeTickets.length + approvalTickets.length, title: "Scope into tickets", detail: "Requests that need organized ticket detail." },

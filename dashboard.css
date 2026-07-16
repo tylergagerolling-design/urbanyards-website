@@ -15788,6 +15788,85 @@ body:not(.is-login-screen) .lead-next-step-card button {
   font-weight: 850;
 }
 
+body:not(.is-login-screen) .leads-runway-panel {
+  display: grid;
+  gap: 16px;
+  padding: clamp(18px, 2vw, 24px);
+  border: 1px solid rgba(73, 102, 77, .16);
+  border-radius: 24px;
+  background:
+    radial-gradient(circle at 94% 8%, rgba(153, 180, 119, .13), transparent 34%),
+    rgba(255, 255, 255, .78);
+  box-shadow: 0 14px 36px rgba(19, 36, 28, .06);
+}
+
+body:not(.is-login-screen) .leads-runway-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 12px;
+}
+
+body:not(.is-login-screen) .leads-runway-card {
+  display: grid;
+  align-content: start;
+  gap: 8px;
+  min-width: 0;
+  padding: 16px;
+  border: 1px solid rgba(73, 102, 77, .13);
+  border-radius: 20px;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, .9), rgba(251, 250, 245, .88)),
+    #fff;
+}
+
+body:not(.is-login-screen) .leads-runway-card--warning {
+  border-color: rgba(195, 136, 47, .28);
+  background:
+    radial-gradient(circle at 100% 0%, rgba(217, 182, 111, .18), transparent 36%),
+    #fffaf0;
+}
+
+body:not(.is-login-screen) .leads-runway-card span {
+  color: rgba(18, 63, 49, .64);
+  font-size: .72rem;
+  font-weight: 900;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+}
+
+body:not(.is-login-screen) .leads-runway-card strong {
+  color: var(--uy-green);
+  font-size: clamp(1.7rem, 2.4vw, 2.35rem);
+  line-height: .9;
+}
+
+body:not(.is-login-screen) .leads-runway-card p {
+  margin: 0;
+  color: var(--uy-muted);
+  font-size: .88rem;
+  line-height: 1.38;
+}
+
+body:not(.is-login-screen) .leads-runway-card button,
+body:not(.is-login-screen) .leads-runway-panel .ticket-flow-heading > button {
+  width: fit-content;
+  min-height: 38px;
+  margin-top: 4px;
+  padding: 0 14px;
+  border: 1px solid rgba(18, 63, 49, .14);
+  border-radius: var(--dashboard-button-radius, 8px);
+  background: rgba(255, 255, 255, .86);
+  color: var(--uy-green);
+  box-shadow: none;
+  font-weight: 850;
+}
+
+body:not(.is-login-screen) .leads-runway-card button:hover,
+body:not(.is-login-screen) .leads-runway-panel .ticket-flow-heading > button:hover {
+  border-color: rgba(18, 63, 49, .28);
+  background: #f8fbf2;
+}
+
 body:not(.is-login-screen) .money-command-center {
   display: grid;
   grid-template-columns: minmax(0, 1.25fr) minmax(300px, .75fr);
@@ -17272,6 +17351,7 @@ body:not(.is-login-screen) .field-proof-actions button {
   body:not(.is-login-screen) .money-next-step-stack,
   body:not(.is-login-screen) .home-runway-grid,
   body:not(.is-login-screen) .work-readiness-grid,
+  body:not(.is-login-screen) .leads-runway-grid,
   body:not(.is-login-screen) .money-runway-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
@@ -17319,6 +17399,7 @@ body:not(.is-login-screen) .field-proof-actions button {
   body:not(.is-login-screen) .money-next-step-stack,
   body:not(.is-login-screen) .home-runway-grid,
   body:not(.is-login-screen) .work-readiness-grid,
+  body:not(.is-login-screen) .leads-runway-grid,
   body:not(.is-login-screen) .money-runway-grid,
   body:not(.is-login-screen) .leads-workspace .ticket-metrics,
   body:not(.is-login-screen) .ticket-workflow-board-grid,

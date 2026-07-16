@@ -384,6 +384,7 @@
 
   const els = {};
   let dashboardBackgroundLoadPromise = null;
+  let currentUserProfileLoadPromise = null;
   let dashboardRefreshSerial = 0;
   const dashboardSectionLoadState = new Map();
   const sectionAliases = {
@@ -464,6 +465,7 @@
     "documentation",
     "job budgets"
   ]);
+  const supportModuleWarningKeys = new Set(Array.from(supportModuleWarningNames).map((name) => String(name).toLowerCase()));
   const DASHBOARD_INITIAL_LOAD_TIMEOUT_MS = 7000;
   const DASHBOARD_BACKGROUND_LOAD_TIMEOUT_MS = 8000;
   const DASHBOARD_SECTION_LOAD_TIMEOUT_MS = 4500;
@@ -643,8 +645,8 @@
   }
 
   function moduleWarningScope(name) {
-    const key = String(name || "").replace(/^render:/, "");
-    return supportModuleWarningNames.has(key) ? "support" : "critical";
+    const key = String(name || "").replace(/^render:/, "").toLowerCase();
+    return supportModuleWarningKeys.has(key) ? "support" : "critical";
   }
 
   function recordModuleError(name, error, meta = {}) {
@@ -1723,51 +1725,31 @@
     }
 
     const method = String(options?.method || "GET").toUpperCase();
-    if (method !== "GET") {
-      const response = await fetch("/.netlify/functions/dashboard-records", {
-        method: "POST",
-        signal: options?.signal,
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${session.accessToken}`
-        },
-        body: JSON.stringify({
-          path,
-          method,
-          prefer: options?.headers?.Prefer || options?.headers?.prefer || "",
-          body: options?.body ? JSON.parse(options.body) : null
-        })
-      });
-      const text = await response.text();
-      const payload = text ? JSON.parse(text) : {};
-      if (!response.ok) {
-        throw new Error(payload?.error || "Dashboard database request failed.");
-      }
-      return payload.data;
-    }
-
-    const headers = {
-      apikey: config.supabaseAnonKey,
-      Authorization: `Bearer ${session.accessToken}`,
-      "Content-Type": "application/json",
-      ...(options && options.headers ? options.headers : {})
-    };
-
-    const response = await fetch(`${getSupabaseUrl()}/rest/v1/${path}`, {
-      ...options,
-      headers
+    const response = await fetch("/.netlify/functions/dashboard-records", {
+      method: "POST",
+      signal: options?.signal,
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${session.accessToken}`
+      },
+      body: JSON.stringify({
+        path,
+        method,
+        prefer: options?.headers?.Prefer || options?.headers?.prefer || "",
+        body: options?.body ? JSON.parse(options.body) : null
+      })
     });
     const text = await response.text();
-    const payload = text ? JSON.parse(text) : null;
+    const payload = text ? JSON.parse(text) : {};
 
     if (!response.ok) {
-      throw new Error(payload?.message || payload?.hint || "Supabase database request failed.");
+      throw new Error(payload?.error || payload?.message || payload?.hint || "Dashboard database request failed.");
     }
 
-    return payload;
+    return payload.data;
   }
 
-  async function loadCurrentUserProfile(session) {
+  async function loadCurrentUserProfile(session, options = {}) {
     if (isDemoMode() || !session || !session.accessToken) return null;
 
     const queries = [];
@@ -1786,7 +1768,7 @@
       seen.add(query);
 
       try {
-        const rows = await supabaseRestRequest(query, { method: "GET" });
+        const rows = await supabaseRestRequest(query, { method: "GET", signal: options.signal });
         if (Array.isArray(rows) && rows.length) {
           syncSessionRoleFromProfile(rows[0]);
           return rows[0];
@@ -1800,7 +1782,7 @@
     }
 
     try {
-      const result = await dashboardUsersRequest("me");
+      const result = await dashboardUsersRequest("me", {}, { signal: options.signal });
       if (result.user) {
         syncSessionRoleFromProfile(result.user);
         return result.user;
@@ -1810,6 +1792,30 @@
     }
 
     return null;
+  }
+
+  function queueCurrentUserProfileHydration() {
+    if (isDemoMode() || currentUserProfileLoadPromise) return currentUserProfileLoadPromise;
+    const session = getSession();
+    if (!session || !session.accessToken) return null;
+
+    currentUserProfileLoadPromise = loadModule("profile avatar", ({ signal }) => loadCurrentUserProfile(session, { signal }), null, {
+      phase: "profile",
+      essential: false,
+      timeoutMs: 2500,
+      recordErrors: false
+    }).then((profile) => {
+      if (profile) {
+        upsertUserProfileRecord(profile);
+      } else {
+        renderCurrentProfileAvatar(state.data);
+      }
+      return profile;
+    }).catch(() => null).finally(() => {
+      currentUserProfileLoadPromise = null;
+    });
+
+    return currentUserProfileLoadPromise;
   }
 
   function normalizeUserProfile(row = {}) {
@@ -4708,13 +4714,15 @@
     if (!shouldHydrateDashboardSection(normalized, options)) return Promise.resolve(state.data);
 
     const keys = dashboardInitialModuleKeys(normalized);
+    const phase = options.phase || `section:${normalized}`;
+    const errorStartIndex = state.moduleErrors.length;
     info.status = "loading";
     info.error = "";
     info.startedAt = new Date().toISOString();
 
     const promise = loadDashboardData({
       keys,
-      phase: options.phase || `section:${normalized}`,
+      phase,
       essential: false,
       merge: true,
       resetErrors: options.resetErrors === true,
@@ -4723,7 +4731,9 @@
       timeoutMs: options.timeoutMs || DASHBOARD_SECTION_LOAD_TIMEOUT_MS
     }).then(async (nextData) => {
       state.data = nextData;
-      info.status = "loaded";
+      const phaseErrors = state.moduleErrors.slice(errorStartIndex).filter((item) => item.phase === phase);
+      info.status = phaseErrors.length ? "partial" : "loaded";
+      info.error = phaseErrors.map((item) => `${item.name}: ${item.message}`).join("; ");
       info.loadedAt = new Date().toISOString();
       state.lastRefreshAt = info.loadedAt;
       if (!state.performance.initialDataLoadedAt) state.performance.initialDataLoadedAt = info.loadedAt;
@@ -8274,6 +8284,7 @@
     els.appView.hidden = false;
     if (els.demoBadge) els.demoBadge.hidden = !isDemoMode();
     renderSidebarUserProfile();
+    queueCurrentUserProfileHydration();
     syncDashboardNavAccess();
     syncDashboardSubviewVisibility();
     await render();
@@ -8343,7 +8354,7 @@
     history.replaceState(null, "", `#${dashboardSectionForRole(section)}`);
   }
 
-  function setActiveSection(section) {
+  function setActiveSection(section, options = {}) {
     const requestedSection = dashboardSectionForRole(section);
     const hasSection = Boolean(qs(`[data-section="${cssEscape(requestedSection)}"]`));
     state.activeSection = hasSection ? requestedSection : dashboardDefaultSectionForRole();
@@ -8378,7 +8389,9 @@
       });
     }, 100);
     syncDashboardSubviewVisibility();
-    queueDashboardSectionHydration(state.activeSection);
+    if (options.hydrate !== false) {
+      queueDashboardSectionHydration(state.activeSection);
+    }
   }
 
   function dashboardSectionFromPath(pathname = window.location.pathname) {
@@ -16888,7 +16901,7 @@
     }
     safeRender("avatar fallbacks", () => bindAvatarFallbacks());
     if (els.todayChip) els.todayChip.textContent = new Date().toLocaleDateString("en-US", { weekday: "long", month: "short", day: "numeric" });
-    setActiveSection(state.activeSection);
+    setActiveSection(state.activeSection, { hydrate: false });
   }
 
   function dashboardSupportStatusMessage() {

@@ -57,6 +57,16 @@ function hasScopedMutationFilter(path, method) {
   return /(^|&)id=eq\.[^&]+/.test(query) || /(^|&)[a-zA-Z0-9_]+_id=eq\.[^&]+/.test(query);
 }
 
+function withSafeReadLimit(path) {
+  const [table, query = ""] = String(path || "").split("?");
+  const params = new URLSearchParams(query);
+  const currentLimit = Number(params.get("limit") || 0);
+  const nextLimit = currentLimit > 0 ? Math.min(currentLimit, 500) : 100;
+  params.set("limit", String(nextLimit));
+  const nextQuery = params.toString();
+  return nextQuery ? `${table}?${nextQuery}` : table;
+}
+
 exports.handler = async (event) => {
   const requestId = requestIdFromEvent(event);
   if (event.httpMethod !== "POST") {
@@ -89,7 +99,7 @@ exports.handler = async (event) => {
     actor = auth.actor;
     if (!auth.ok) return json(auth.statusCode, { error: auth.error, requestId });
 
-    if (!hasScopedMutationFilter(path, method)) {
+    if (method !== "GET" && !hasScopedMutationFilter(path, method)) {
       await writeAuditLog({
         actor,
         action: "unsafe_dashboard_mutation_blocked",
@@ -103,20 +113,23 @@ exports.handler = async (event) => {
     const headers = {};
     const prefer = sanitizePrefer(payload.prefer || payload.headers?.Prefer || payload.headers?.prefer);
     if (prefer) headers.Prefer = prefer;
+    const requestPath = method === "GET" ? withSafeReadLimit(path) : path;
 
-    const result = await supabaseAdminRequest(path, {
+    const result = await supabaseAdminRequest(requestPath, {
       method,
       headers,
       body: method === "GET" || method === "DELETE" ? undefined : JSON.stringify(payload.body ?? null)
     });
 
-    await writeAuditLog({
-      actor,
-      action: `dashboard_${method.toLowerCase()}`,
-      entityType: table,
-      metadata: { path, method },
-      event
-    });
+    if (method !== "GET") {
+      await writeAuditLog({
+        actor,
+        action: `dashboard_${method.toLowerCase()}`,
+        entityType: table,
+        metadata: { path, method },
+        event
+      });
+    }
 
     return json(200, { ok: true, data: result, requestId });
   } catch (error) {

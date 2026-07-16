@@ -14179,6 +14179,67 @@
     }
   }
 
+  function prospectLikelyTickets(item = {}) {
+    if (!item) return [];
+    const identityKeys = [
+      item.propertyName,
+      item.contactName,
+      item.managementCompany,
+      item.city,
+      item.email,
+      normalizePhone(item.phone)?.display
+    ].map(normalizeDedupeKey).filter(Boolean);
+    const serviceKey = normalizeDedupeKey(item.serviceInterest || item.service || "");
+    return dashboardTickets().filter((ticket) => {
+      const ticketKeys = [
+        ticket.customer,
+        ticket.customerName,
+        ticket.property,
+        ticket.propertyName,
+        ticket.contactName,
+        ticket.email,
+        ticket.phone,
+        ticket.city,
+        ticket.title
+      ].map(normalizeDedupeKey).filter(Boolean);
+      const identityMatch = identityKeys.some((key) => ticketKeys.some((ticketKey) => ticketKey.includes(key) || key.includes(ticketKey)));
+      if (!identityMatch) return false;
+      if (!serviceKey) return true;
+      const ticketService = normalizeDedupeKey(ticket.service || ticket.requestedService || ticket.title || "");
+      return !ticketService || ticketService.includes(serviceKey) || serviceKey.includes(ticketService);
+    });
+  }
+
+  function renderProspectTicketBridge(item = {}) {
+    if (!item) return "";
+    const matches = prospectLikelyTickets(item);
+    const openMatch = matches.find(ticketIsOpen) || matches[0];
+    const actionButtonHtml = openMatch
+      ? `<button type="button" data-action="open-ticket" data-ticket-source="${escapeHtml(openMatch.source)}" data-id="${escapeHtml(openMatch.id)}">${buttonContent("Open Job Ticket", "open-ticket-create")}</button>`
+      : canCreateTicketType("quote")
+        ? `<button type="button" data-action="create-ticket-from-prospect" data-id="${escapeHtml(item.id)}">${buttonContent("Create Job Ticket", "open-ticket-create")}</button>`
+        : "";
+    return `<section class="lead-ticket-bridge">
+      <div class="lead-ticket-bridge-copy">
+        <p class="eyebrow">Lead to Job Ticket</p>
+        <h4>${openMatch ? "This lead has a matching workflow." : "Turn this lead into the main workflow."}</h4>
+        <p>${openMatch
+          ? `Matched to ${openMatch.number || "a Job Ticket"} in ${ticketStageLabel(ticketStage(openMatch))}.`
+          : "Create one Job Ticket when this lead is ready for scope, quote, approval, scheduling, and closeout."}</p>
+      </div>
+      <div class="lead-ticket-bridge-steps" aria-label="Lead handoff steps">
+        <span><strong>1</strong>Contact</span>
+        <span><strong>2</strong>Scope</span>
+        <span><strong>3</strong>Quote</span>
+        <span><strong>4</strong>Schedule</span>
+      </div>
+      <div class="lead-ticket-bridge-action">
+        ${actionButtonHtml || `<span>Ticket creation unavailable for this role.</span>`}
+        ${openMatch ? `<small>Next: ${escapeHtml(openMatch.nextAction || ticketNextAction(ticketStage(openMatch)))}</small>` : `<small>Lead details will prefill the ticket form.</small>`}
+      </div>
+    </section>`;
+  }
+
   function openOutreachDrawer(id = "") {
     if (!els.detailDrawer || !els.detailContent) return;
     const item = id ? findOutreachProspect(id) : null;
@@ -14196,6 +14257,7 @@
           phone: item.phone,
           email: item.email
         }) : ""}
+        ${item ? renderProspectTicketBridge(item) : ""}
         <form class="drawer-form outreach-form" data-outreach-form data-id="${escapeHtml(item?.id || "")}" data-duplicate-scope="prospect">
           <div class="duplicate-warning span-full" data-duplicate-warning data-duplicate-scope="prospect" hidden></div>
           <label>Property name<input name="property_name" value="${escapeHtml(item?.propertyName || "")}" placeholder="Example: Cedar Court Apartments"></label>

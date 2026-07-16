@@ -14224,7 +14224,7 @@ body:not(.is-login-screen) #settings.tools-page > :not([data-tools-workspace]) {
 body:not(.is-login-screen) .ticket-workspace,
 body:not(.is-login-screen) .work-workspace {
   display: grid;
-  gap: clamp(18px, 2vw, 28px);
+  gap: clamp(16px, 1.7vw, 24px);
   color: var(--uy-ink);
 }
 
@@ -14302,9 +14302,9 @@ body:not(.is-login-screen) .tools-control-card {
   display: flex;
   flex-direction: column;
   justify-content: space-between;
-  gap: 18px;
-  min-height: 220px;
-  padding: clamp(18px, 2vw, 24px);
+  gap: 14px;
+  min-height: 184px;
+  padding: clamp(16px, 1.7vw, 22px);
   border: 1px solid rgba(73, 102, 77, .16);
   border-radius: 24px;
   background:
@@ -14316,7 +14316,7 @@ body:not(.is-login-screen) .tools-control-card {
 body:not(.is-login-screen) .tools-control-card h3 {
   margin: 0;
   color: var(--uy-green);
-  font-size: clamp(1.2rem, 1.8vw, 1.55rem);
+  font-size: clamp(1.08rem, 1.55vw, 1.34rem);
   line-height: 1.1;
 }
 
@@ -14403,8 +14403,8 @@ body:not(.is-login-screen) .workspace-data-state {
   gap: 10px;
   width: fit-content;
   max-width: min(100%, 780px);
-  min-height: 38px;
-  padding: 7px 10px;
+  min-height: 34px;
+  padding: 6px 9px;
   border: 1px solid rgba(73, 102, 77, .14);
   border-radius: 999px;
   background: rgba(255, 255, 255, .72);
@@ -14555,10 +14555,10 @@ body:not(.is-login-screen) .ticket-hero {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 18px;
-  padding: clamp(22px, 3vw, 34px);
+  gap: clamp(14px, 1.8vw, 22px);
+  padding: clamp(18px, 2.2vw, 28px);
   border: 1px solid rgba(73, 102, 77, .18);
-  border-radius: 26px;
+  border-radius: 24px;
   background:
     radial-gradient(circle at 92% 18%, rgba(153, 180, 119, .18), transparent 30%),
     linear-gradient(135deg, rgba(255, 255, 255, .92), rgba(247, 245, 236, .82));
@@ -14568,17 +14568,17 @@ body:not(.is-login-screen) .ticket-hero {
 body:not(.is-login-screen) .ticket-hero h3 {
   margin: 0;
   color: var(--uy-green);
-  font-size: clamp(2rem, 4vw, 4.2rem);
-  line-height: .94;
+  font-size: clamp(1.9rem, 3vw, 3.25rem);
+  line-height: 1;
   letter-spacing: 0;
 }
 
 body:not(.is-login-screen) .ticket-hero p:not(.eyebrow) {
-  max-width: 760px;
-  margin: 10px 0 0;
+  max-width: 690px;
+  margin: 8px 0 0;
   color: var(--uy-muted);
-  font-size: clamp(.98rem, 1.2vw, 1.12rem);
-  line-height: 1.55;
+  font-size: clamp(.94rem, 1.05vw, 1.04rem);
+  line-height: 1.48;
 }
 
 body:not(.is-login-screen) .ticket-hero-actions,
@@ -14614,12 +14614,12 @@ body:not(.is-login-screen) .ticket-card-actions button {
 body:not(.is-login-screen) .ticket-metrics {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 14px;
+  gap: 12px;
 }
 
 body:not(.is-login-screen) .ticket-metric {
-  min-height: 128px;
-  padding: 20px;
+  min-height: 108px;
+  padding: clamp(15px, 1.45vw, 18px);
   border: 1px solid rgba(73, 102, 77, .16);
   border-radius: 22px;
   background: rgba(255, 255, 255, .76);
@@ -14629,13 +14629,13 @@ body:not(.is-login-screen) .ticket-metric {
 body:not(.is-login-screen) .ticket-metric strong {
   display: block;
   color: var(--uy-green);
-  font-size: clamp(2rem, 3vw, 3rem);
+  font-size: clamp(1.75rem, 2.35vw, 2.55rem);
   line-height: 1;
 }
 
 body:not(.is-login-screen) .ticket-metric span {
   display: block;
-  margin-top: 8px;
+  margin-top: 6px;
   color: var(--uy-green);
   font-weight: 800;
 }
@@ -14650,8 +14650,8 @@ body:not(.is-login-screen) .ticket-metric small {
 body:not(.is-login-screen) .workspace-focus-strip {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 12px;
-  padding: 12px;
+  gap: 10px;
+  padding: 10px;
   border: 1px solid rgba(73, 102, 77, .14);
   border-radius: 24px;
   background:
@@ -14664,7 +14664,7 @@ body:not(.is-login-screen) .workspace-focus-card {
   display: grid;
   gap: 5px;
   min-width: 0;
-  padding: 14px;
+  padding: 12px;
   border: 1px solid rgba(73, 102, 77, .11);
   border-radius: 18px;
   background: rgba(251, 250, 245, .86);
@@ -14707,8 +14707,8 @@ body:not(.is-login-screen) .workspace-focus-card small {
 
 body:not(.is-login-screen) .ticket-flow-panel {
   display: grid;
-  gap: 14px;
-  padding: clamp(14px, 1.8vw, 18px);
+  gap: 12px;
+  padding: clamp(13px, 1.5vw, 16px);
   border: 1px solid rgba(73, 102, 77, .16);
   border-radius: 26px;
   background:
@@ -14832,8 +14832,8 @@ body:not(.is-login-screen) .ticket-flow-step em {
 body:not(.is-login-screen) .ticket-owner-strip {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 12px;
-  padding: 12px;
+  gap: 10px;
+  padding: 10px;
   border: 1px solid rgba(73, 102, 77, .16);
   border-radius: 24px;
   background: rgba(255, 255, 255, .62);

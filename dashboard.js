@@ -11686,8 +11686,8 @@
         <header class="ticket-hero">
           <div>
             <p class="eyebrow">Home</p>
-            <h3>Today&apos;s Job Ticket Dashboard</h3>
-            <p>Start here to see what needs attention, which tickets are moving through the workflow, and where Leads, Work, Money, and Tools need a handoff.</p>
+            <h3>Today&apos;s Command Center</h3>
+            <p>See what needs attention, which tickets are moving, and where Leads, Work, Money, or Tools need the next handoff.</p>
           </div>
           <div class="ticket-hero-actions">
             ${canCreateTicketType("quote") ? `<button type="button" data-action="open-ticket-create" data-ticket-type="quote">New Job Ticket</button>` : ""}
@@ -11791,8 +11791,8 @@
         <header class="ticket-hero">
           <div>
             <p class="eyebrow">Job Ticket System</p>
-            <h3>Job Ticket Command Center</h3>
-            <p>Every request, quote, scheduled visit, work update, invoice step, and closeout flows through one job ticket workflow.</p>
+            <h3>Job Tickets</h3>
+            <p>Every request, quote, scheduled visit, site update, invoice step, and closeout flows through one ticket workflow.</p>
           </div>
           <div class="ticket-hero-actions">
             ${canCreateTicketType("quote") ? `<button type="button" data-action="open-ticket-create" data-ticket-type="quote">New Job Ticket</button>` : ""}
@@ -11911,8 +11911,8 @@
         <header class="ticket-hero work-hero">
           <div>
             <p class="eyebrow">Work</p>
-            <h3>Assigned Work Board</h3>
-            <p>Open job tickets, route stops, photos, supporting documents, and completion review from one practical work queue.</p>
+            <h3>Field Work</h3>
+            <p>Open assigned tickets, route stops, site photos, supporting documents, and completion steps from one practical queue.</p>
           </div>
           <div class="ticket-hero-actions">
             ${canCreateTicketType("field") ? `<button type="button" data-action="open-ticket-create" data-ticket-type="field">Add Visit</button>` : ""}
@@ -12134,8 +12134,8 @@
         <header class="ticket-hero">
           <div>
             <p class="eyebrow">Leads</p>
-            <h3>Lead to Ticket Pipeline</h3>
-            <p>Turn prospects, property contacts, and quote-ready conversations into organized Job Tickets without losing the next follow-up.</p>
+            <h3>Lead Pipeline</h3>
+            <p>Turn prospects, property contacts, and quote-ready conversations into organized tickets without losing the next follow-up.</p>
           </div>
           <div class="ticket-hero-actions">
             ${canManageLeadWorkflow() ? `<button type="button" data-action="new-outreach-prospect">Add Lead</button>` : ""}
@@ -12367,8 +12367,8 @@
         <header class="ticket-hero">
           <div>
             <p class="eyebrow">Money</p>
-            <h3>Cost review, invoice, collect, close.</h3>
-            <p>Review ticket cost readiness, prepare draft invoices, track Square payment state, and close the financial record without splitting the job into a second system.</p>
+            <h3>Money Desk</h3>
+            <p>Review cost readiness, prepare invoices, track Square payment state, and close the financial record inside the ticket workflow.</p>
           </div>
           <div class="ticket-hero-actions">
             ${canManageMoneyWorkflow() ? `<button type="button" data-action="quick-add-quote">Create Estimate</button>` : ""}
@@ -12434,8 +12434,8 @@
         <header class="ticket-hero">
           <div>
             <p class="eyebrow">Tools</p>
-            <h3>Support systems stay behind the ticket workflow.</h3>
-            <p>Use this room for route support, documents, AI, imports, backups, user access, and diagnostics while the main dashboard stays centered on Job Tickets.</p>
+            <h3>Tools &amp; Admin</h3>
+            <p>Route support, documents, AI, imports, backups, user access, and diagnostics stay here while daily work stays centered on tickets.</p>
           </div>
           <div class="ticket-hero-actions">
             <button type="button" data-action="refresh-dashboard">Refresh Dashboard</button>

@@ -10258,6 +10258,45 @@
     </section>`;
   }
 
+  const ticketCardMilestones = [
+    { key: "scope", label: "Scope", stages: ["draft", "sales_intake", "scope_in_progress"] },
+    { key: "quote", label: "Quote", stages: ["quote_pending", "customer_approval_pending", "scope_change_requested"] },
+    { key: "budget", label: "Budget", stages: ["needs_budget", "budget_in_progress", "needs_owner_approval"] },
+    { key: "work", label: "Work", stages: ["invoice_preparation", "ready_to_schedule", "scheduled", "in_progress", "paused"] },
+    { key: "proof", label: "Proof", stages: ["field_work_complete", "completion_review"] },
+    { key: "invoice", label: "Invoice", stages: ["invoice_review", "invoice_sent", "partially_paid", "paid", "closed"] }
+  ];
+
+  function ticketCardMilestoneIndex(stage) {
+    const index = ticketCardMilestones.findIndex((item) => item.stages.includes(stage));
+    return index >= 0 ? index : 0;
+  }
+
+  function ticketCardMilestoneOverride(ticket = {}, key) {
+    if (key === "quote") return Boolean(ticket.quoteId || ticket.proposedPrice || ticket.expectedRevenue);
+    if (key === "budget") return Boolean(ticket.budgetId || ticket.budgetApproved || ticket.costReviewComplete);
+    if (key === "work") return Boolean(ticket.jobId || ticket.scheduledJobId || ticket.scheduledVisitId);
+    if (key === "proof") return Boolean(ticket.actualsRecorded || ticket.completionPhotosReady || ticket.arrivalPhotosReady || ticket.formsComplete);
+    if (key === "invoice") return Boolean(ticket.invoiceId || ticket.invoiceFinalized || ticket.paymentStatus);
+    return true;
+  }
+
+  function renderTicketCardChecklist(ticket = {}) {
+    const stage = ticketStage(ticket);
+    const activeIndex = ticketCardMilestoneIndex(stage);
+    return `<div class="ticket-card-checklist" aria-label="Ticket workflow checklist">
+      ${ticketCardMilestones.map((item, index) => {
+        const complete = index < activeIndex || ticketCardMilestoneOverride(ticket, item.key);
+        const active = index === activeIndex;
+        const stateClass = complete && !active ? "is-done" : active ? "is-active" : "is-needed";
+        const stateLabel = complete && !active ? "done" : active ? "current" : "needed";
+        return `<span class="ticket-card-milestone ${stateClass}" title="${escapeHtml(`${item.label}: ${stateLabel}`)}">
+          <i aria-hidden="true"></i>${escapeHtml(item.label)}
+        </span>`;
+      }).join("")}
+    </div>`;
+  }
+
   function renderTicketCard(ticket, compact = false) {
     const blockers = ticket.blockers?.length ? `<div class="ticket-blockers">${ticket.blockers.map((item) => `<span>${escapeHtml(item)}</span>`).join("")}</div>` : "";
     const opensDocument = ticket.source === "document";
@@ -10274,6 +10313,7 @@
         <small class="ticket-owner">Current owner: ${escapeHtml(ticket.ownerLabel || "Unassigned")}</small>
         ${compact ? "" : `<p class="ticket-detail">${escapeHtml(ticket.detail)}</p>`}
         ${blockers}
+        ${renderTicketCardChecklist(ticket)}
       </div>
       <div class="ticket-card-actions">
         <span>${escapeHtml(ticket.nextAction)}</span>

@@ -16004,6 +16004,56 @@ body:not(.is-login-screen) .ticket-blockers span {
   font-weight: 750;
 }
 
+body:not(.is-login-screen) .ticket-card-checklist {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 12px;
+}
+
+body:not(.is-login-screen) .ticket-card-milestone {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  min-height: 24px;
+  padding: 3px 8px;
+  border: 1px solid rgba(73, 102, 77, .14);
+  border-radius: 999px;
+  background: rgba(255, 253, 246, .82);
+  color: var(--uy-muted);
+  font-size: .72rem;
+  font-weight: 800;
+  line-height: 1;
+}
+
+body:not(.is-login-screen) .ticket-card-milestone i {
+  width: 7px;
+  height: 7px;
+  border-radius: 999px;
+  background: rgba(73, 102, 77, .24);
+  box-shadow: inset 0 0 0 1px rgba(73, 102, 77, .12);
+}
+
+body:not(.is-login-screen) .ticket-card-milestone.is-done {
+  border-color: rgba(79, 130, 72, .20);
+  background: rgba(227, 239, 217, .72);
+  color: var(--uy-green);
+}
+
+body:not(.is-login-screen) .ticket-card-milestone.is-done i {
+  background: #4f8248;
+}
+
+body:not(.is-login-screen) .ticket-card-milestone.is-active {
+  border-color: rgba(217, 182, 111, .42);
+  background: rgba(246, 231, 189, .52);
+  color: #5f4a1f;
+}
+
+body:not(.is-login-screen) .ticket-card-milestone.is-active i {
+  background: #d9a83b;
+}
+
 body:not(.is-login-screen) .ticket-card-actions {
   justify-content: space-between;
   padding-top: 12px;

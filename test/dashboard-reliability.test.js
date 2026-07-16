@@ -209,6 +209,7 @@ test("dashboard route aliases and new reliability diagnostics are wired", () => 
   assert.match(js, /function visibleDashboardWorkspaceLinks/);
   assert.match(js, /dashboardWorkspaceLinks\.filter\(\(item\) => canAccessDashboardSection\(item\.id, role\)\)/);
   assert.match(js, /const links = visibleDashboardWorkspaceLinks\(\)/);
+  assert.doesNotMatch(js, /\$\{renderWorkspaceSwitcher\(/);
   assert.match(js, /function canCreateTicketType/);
   assert.match(js, /function canManageLeadWorkflow/);
   assert.match(js, /function canManageMoneyWorkflow/);

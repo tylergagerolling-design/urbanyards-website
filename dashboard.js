@@ -12071,7 +12071,6 @@
 
     target.innerHTML = `
       <div class="ticket-workspace uy-page-prototype home-ticket-workspace" data-uy-page-contract="home" data-data-source="tickets,jobs,quotes,notifications">
-        ${renderWorkspaceSwitcher("overview")}
         ${renderWorkspaceDataState("overview")}
         <header class="ticket-hero">
           <div>
@@ -12176,7 +12175,6 @@
     const reviewTickets = openTickets.filter((ticket) => ticketInLane(ticket, ["review", "money"]));
     target.innerHTML = `
       <div class="ticket-workspace uy-page-prototype job-ticket-workspace" data-uy-page-contract="tickets" data-data-source="job_tickets,quotes,jobs,invoices">
-        ${renderWorkspaceSwitcher("tickets")}
         ${renderWorkspaceDataState("tickets")}
         <header class="ticket-hero">
           <div>
@@ -12349,7 +12347,6 @@
     const routeStopsToday = dashboardRouteStopsForDate(data, today);
     target.innerHTML = `
       <div class="ticket-workspace uy-page-prototype work-workspace" data-uy-page-contract="work" data-data-source="jobs,job_tickets,route_stops,documentation">
-        ${renderWorkspaceSwitcher("calendar")}
         ${renderWorkspaceDataState("calendar")}
         <header class="ticket-hero work-hero">
           <div>
@@ -12626,7 +12623,6 @@
     const properties = data.outreachProperties || [];
     target.innerHTML = `
       <div class="ticket-workspace uy-page-prototype leads-workspace" data-uy-page-contract="leads" data-data-source="prospects,outreach_companies,outreach_properties,quotes">
-        ${renderWorkspaceSwitcher("outreach")}
         ${renderWorkspaceDataState("outreach")}
         <header class="ticket-hero">
           <div>
@@ -12894,7 +12890,6 @@
     }));
     target.innerHTML = `
       <div class="ticket-workspace uy-page-prototype money-workspace" data-uy-page-contract="money" data-data-source="documents,invoices,quotes,job_tickets,budgets">
-        ${renderWorkspaceSwitcher("documents")}
         ${renderWorkspaceDataState("documents")}
         <header class="ticket-hero">
           <div>
@@ -12996,7 +12991,6 @@
     const usersCount = Number(data.userProfiles?.length || 0);
     target.innerHTML = `
       <div class="ticket-workspace uy-page-prototype tools-workspace" data-uy-page-contract="tools" data-data-source="equipment,documentation,route_tools,ai,imports,settings">
-        ${renderWorkspaceSwitcher("settings")}
         ${renderWorkspaceDataState("settings")}
         <header class="ticket-hero">
           <div>

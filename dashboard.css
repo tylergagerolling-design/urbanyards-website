@@ -15485,6 +15485,11 @@ body:not(.is-login-screen) .work-day-map-card .dashboard-map-preview-shell {
   border-radius: 18px;
 }
 
+body:not(.is-login-screen) .work-day-map-card .dashboard-map-preview {
+  height: clamp(170px, 18vw, 230px);
+  min-height: 100%;
+}
+
 body:not(.is-login-screen) .work-day-route-footer {
   display: flex;
   align-items: center;

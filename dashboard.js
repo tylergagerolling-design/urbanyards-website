@@ -456,8 +456,18 @@
     "global add menu",
     "global search",
     "avatar fallbacks",
-    "canonical tickets"
+    "canonical tickets",
+    "canonical ticket events",
+    "job notes",
+    "documents",
+    "documentation",
+    "job budgets"
   ]);
+  const DASHBOARD_INITIAL_LOAD_TIMEOUT_MS = 7000;
+  const DASHBOARD_BACKGROUND_LOAD_TIMEOUT_MS = 8000;
+  const DASHBOARD_INITIAL_LOAD_CONCURRENCY = 3;
+  const DASHBOARD_BACKGROUND_LOAD_CONCURRENCY = 2;
+  const DASHBOARD_AUTO_BACKGROUND_MODULE_KEYS = [];
   let demoIdCount = 100;
   let googleRouteMap = null;
   let googleRouteLine = null;
@@ -630,13 +640,29 @@
     return supportModuleWarningNames.has(key) ? "support" : "critical";
   }
 
-  function recordModuleError(name, error) {
+  function recordModuleError(name, error, meta = {}) {
     const message = safeModuleMessage(error);
+    const scope = meta.scope || moduleWarningScope(name);
+    const detail = error?.message || String(error || "");
+    const duplicate = state.moduleErrors.find((item) => (
+      item.name === name
+      && item.message === message
+      && item.detail === detail
+      && item.phase === (meta.phase || "")
+    ));
+    if (duplicate) {
+      duplicate.occurredAt = new Date().toISOString();
+      duplicate.count = Number(duplicate.count || 1) + 1;
+      return;
+    }
     state.moduleErrors.push({
       name,
       message,
-      detail: error?.message || String(error || ""),
-      scope: moduleWarningScope(name),
+      detail,
+      scope,
+      phase: meta.phase || "",
+      essential: Boolean(meta.essential),
+      count: 1,
       occurredAt: new Date().toISOString()
     });
     if (config.appEnv !== "production") {
@@ -689,13 +715,17 @@
     const startedAt = new Date().toISOString();
     const phase = options.phase || "full";
     const essential = Boolean(options.essential);
-    const timeoutMs = Number(options.timeoutMs || (essential ? 12000 : 20000));
+    const timeoutMs = Number(options.timeoutMs || (essential ? DASHBOARD_INITIAL_LOAD_TIMEOUT_MS : DASHBOARD_BACKGROUND_LOAD_TIMEOUT_MS));
     let timeoutId = null;
+    const abortController = typeof AbortController !== "undefined" ? new AbortController() : null;
     try {
       const timeoutPromise = new Promise((_, reject) => {
-        timeoutId = setTimeout(() => reject(dashboardModuleTimeout(name, timeoutMs)), timeoutMs);
+        timeoutId = setTimeout(() => {
+          if (abortController) abortController.abort();
+          reject(dashboardModuleTimeout(name, timeoutMs));
+        }, timeoutMs);
       });
-      const value = await Promise.race([loader(), timeoutPromise]);
+      const value = await Promise.race([loader({ signal: abortController?.signal }), timeoutPromise]);
       if (timeoutId) clearTimeout(timeoutId);
       recordDashboardTiming({
         name,
@@ -722,7 +752,9 @@
         status: timedOut ? "timed_out" : "failed",
         detail: error?.message || String(error || "")
       });
-      recordModuleError(name, error);
+      if (options.recordErrors !== false) {
+        recordModuleError(name, error, { phase, essential });
+      }
       return typeof fallback === "function" ? fallback() : fallback;
     }
   }
@@ -1687,6 +1719,7 @@
     if (method !== "GET") {
       const response = await fetch("/.netlify/functions/dashboard-records", {
         method: "POST",
+        signal: options?.signal,
         headers: {
           "Content-Type": "application/json",
           Authorization: `Bearer ${session.accessToken}`
@@ -1812,7 +1845,7 @@
     return profile;
   }
 
-  async function loadUserProfiles() {
+  async function loadUserProfiles({ signal } = {}) {
     if (isDemoMode()) {
       state.userProfilesReady = true;
       const session = getSession();
@@ -1829,7 +1862,7 @@
     }
 
     try {
-      const result = await dashboardUsersRequest("list");
+      const result = await dashboardUsersRequest("list", {}, { signal });
       state.userProfilesReady = true;
       const profiles = Array.isArray(result.users) ? result.users.map(normalizeUserProfile) : [];
       const session = getSession();
@@ -1867,7 +1900,7 @@
     }
   }
 
-  async function loadAuditLogs() {
+  async function loadAuditLogs({ signal } = {}) {
     if (isDemoMode()) {
       state.auditLogsReady = true;
       return [
@@ -1884,7 +1917,7 @@
     }
 
     try {
-      const result = await dashboardActivityRequest({ limit: "150" });
+      const result = await dashboardActivityRequest({ limit: "100" }, { signal });
       state.auditLogsReady = true;
       return Array.isArray(result.logs) ? result.logs : [];
     } catch (error) {
@@ -1954,11 +1987,12 @@
     });
   }
 
-  async function dashboardUsersRequest(action, payload = {}) {
+  async function dashboardUsersRequest(action, payload = {}, options = {}) {
     const session = getSession();
     if (!session || !session.accessToken) throw new Error("Please sign in again.");
     const response = await fetch("/.netlify/functions/dashboard-users", {
       method: "POST",
+      signal: options.signal,
       headers: {
         "Content-Type": "application/json",
         Authorization: `Bearer ${session.accessToken}`
@@ -1970,11 +2004,12 @@
     return result;
   }
 
-  async function dashboardActivityRequest(params = {}) {
+  async function dashboardActivityRequest(params = {}, options = {}) {
     const session = getSession();
     if (!session || !session.accessToken) throw new Error("Please sign in again.");
     const query = new URLSearchParams(params);
     const response = await fetch(`/.netlify/functions/dashboard-activity?${query.toString()}`, {
+      signal: options.signal,
       headers: {
         Authorization: `Bearer ${session.accessToken}`
       }
@@ -1984,11 +2019,12 @@
     return result;
   }
 
-  async function groundskeeperRequest(action, payload = {}) {
+  async function groundskeeperRequest(action, payload = {}, options = {}) {
     const session = getSession();
     if (!session || !session.accessToken) throw new Error("Please sign in again.");
     const response = await fetch("/.netlify/functions/groundskeeper-ai", {
       method: "POST",
+      signal: options.signal,
       headers: {
         "Content-Type": "application/json",
         Authorization: `Bearer ${session.accessToken}`
@@ -2004,11 +2040,12 @@
     return result;
   }
 
-  async function dashboardTicketRequest(action, payload = {}) {
+  async function dashboardTicketRequest(action, payload = {}, options = {}) {
     const session = getSession();
     if (!session || !session.accessToken) throw new Error("Please sign in again.");
     const response = await fetch("/.netlify/functions/dashboard-tickets", {
       method: "POST",
+      signal: options.signal,
       headers: {
         "Content-Type": "application/json",
         Authorization: `Bearer ${session.accessToken}`
@@ -2039,12 +2076,13 @@
     };
   }
 
-  async function importExportRequest(action, payload = {}) {
+  async function importExportRequest(action, payload = {}, options = {}) {
     if (isDemoMode()) throw new Error("Import & Export Center is available after signing in to the live dashboard.");
     const session = getSession();
     if (!session || !session.accessToken) throw new Error("Please sign in again.");
     const response = await fetch(`/.netlify/functions/dashboard-import-export?action=${encodeURIComponent(action)}`, {
       method: "POST",
+      signal: options.signal,
       headers: {
         "Content-Type": "application/json",
         Authorization: `Bearer ${session.accessToken}`
@@ -2103,16 +2141,16 @@
     return btoa(binary);
   }
 
-  async function loadImportExportCenter() {
+  async function loadImportExportCenter({ signal } = {}) {
     if (isDemoMode()) {
       state.importExportReady = true;
       return demoImportExportSnapshot();
     }
     try {
       const [registry, history, google] = await Promise.all([
-        importExportRequest("registry"),
-        importExportRequest("history").catch(() => ({ imports: [], exports: [], syncs: [], backups: [] })),
-        importExportRequest("google-status").catch((error) => ({ configured: false, connections: [], error: error.message }))
+        importExportRequest("registry", {}, { signal }),
+        importExportRequest("history", {}, { signal }).catch(() => ({ imports: [], exports: [], syncs: [], backups: [] })),
+        importExportRequest("google-status", {}, { signal }).catch((error) => ({ configured: false, connections: [], error: error.message }))
       ]);
       state.importExportReady = true;
       state.importExportError = "";
@@ -4504,39 +4542,39 @@
       {
         key: "submissions",
         name: "quote submissions",
-        loader: () => supabaseRestRequest("quote_submissions?select=*&order=created_at.desc&limit=500", { method: "GET" }),
+        loader: ({ signal } = {}) => supabaseRestRequest("quote_submissions?select=*&limit=120", { method: "GET", signal }),
         fallback: [],
-        normalize: (rows) => rows.map(normalizeSubmission)
+        normalize: (rows) => rows.map(normalizeSubmission).sort((a, b) => String(b.createdAtRaw || "").localeCompare(String(a.createdAtRaw || "")))
       },
       {
         key: "contacts",
         name: "contacts",
-        loader: () => supabaseRestRequest("contacts?select=*&order=created_at.desc&limit=500", { method: "GET" }),
+        loader: ({ signal } = {}) => supabaseRestRequest("contacts?select=*&limit=150", { method: "GET", signal }),
         fallback: [],
-        normalize: (rows) => rows.map(normalizeContact)
+        normalize: (rows) => rows.map(normalizeContact).sort((a, b) => String(b.createdAtRaw || "").localeCompare(String(a.createdAtRaw || "")))
       },
       {
         key: "jobs",
         name: "scheduled jobs",
-        loader: () => supabaseRestRequest("scheduled_jobs?select=*&order=visit_date.asc&limit=500", { method: "GET" }),
+        loader: ({ signal } = {}) => supabaseRestRequest("scheduled_jobs?select=*&limit=150", { method: "GET", signal }),
         fallback: [],
-        normalize: (rows) => rows.map(normalizeJob)
+        normalize: (rows) => rows.map(normalizeJob).sort((a, b) => String(a.dateRaw || "").localeCompare(String(b.dateRaw || "")))
       },
       { key: "tickets", name: "canonical tickets", loader: loadCanonicalTickets, fallback: [] },
       { key: "ticketEvents", name: "canonical ticket events", loader: loadCanonicalTicketEvents, fallback: [] },
       {
         key: "notes",
         name: "job notes",
-        loader: () => supabaseRestRequest("job_notes?select=*&order=created_at.desc&limit=500", { method: "GET" }),
+        loader: ({ signal } = {}) => supabaseRestRequest("job_notes?select=*&limit=100", { method: "GET", signal }),
         fallback: [],
-        normalize: (rows) => rows.map(normalizeNote)
+        normalize: (rows) => rows.map(normalizeNote).sort((a, b) => String(b.createdAtRaw || "").localeCompare(String(a.createdAtRaw || "")))
       },
       {
         key: "reminders",
         name: "follow-up reminders",
-        loader: () => supabaseRestRequest("follow_up_reminders?select=*&order=due_date.asc&limit=500", { method: "GET" }),
+        loader: ({ signal } = {}) => supabaseRestRequest("follow_up_reminders?select=*&limit=120", { method: "GET", signal }),
         fallback: [],
-        normalize: (rows) => rows.map(normalizeReminder)
+        normalize: (rows) => rows.map(normalizeReminder).sort((a, b) => String(a.dueRaw || "").localeCompare(String(b.dueRaw || "")))
       },
       { key: "documents", name: "documents", loader: loadSalesDocuments, fallback: [] },
       { key: "operations", name: "operations", loader: loadOperationsRecords, fallback: [] },
@@ -4567,42 +4605,22 @@
   }
 
   function dashboardInitialModuleKeys(section = state.activeSection) {
-    const keys = new Set([
-      "submissions",
-      "jobs",
-      "tickets",
-      "ticketEvents",
-      "notes",
-      "reminders",
-      "documents",
-      "routeStops"
-    ]);
     const normalized = normalizeDashboardSection(section);
-    if (["outreach", "contacts"].includes(normalized)) {
-      ["contacts", "outreachProspects", "outreachCompanies", "outreachProperties", "leadActivity"].forEach((key) => keys.add(key));
-    }
-    if (normalized === "documents") {
-      keys.add("budgets");
-    }
-    if (normalized === "route-planner") {
-      keys.add("routeStops");
-    }
-    if (normalized === "equipment") {
-      ["equipmentItems", "equipmentMaintenance", "hardwareGuide"].forEach((key) => keys.add(key));
-    }
-    if (normalized === "documentation") {
-      keys.add("documentation");
-    }
-    if (normalized === "groundskeeper-ai") {
-      keys.add("groundskeeperAi");
-    }
-    if (normalized === "import-export") {
-      keys.add("importExport");
-    }
-    if (normalized === "settings") {
-      ["userProfiles", "auditLogs"].forEach((key) => keys.add(key));
-    }
-    return Array.from(keys);
+    const keysBySection = {
+      overview: ["submissions", "jobs", "reminders"],
+      tickets: ["tickets", "ticketEvents", "submissions", "jobs"],
+      calendar: ["jobs", "tickets", "ticketEvents", "routeStops", "documentation"],
+      outreach: ["outreachProspects", "outreachCompanies", "outreachProperties", "contacts", "leadActivity"],
+      contacts: ["contacts", "jobs", "documents", "routeStops", "reminders"],
+      documents: ["documents", "budgets", "submissions", "tickets"],
+      settings: ["userProfiles", "auditLogs"],
+      "route-planner": ["routeStops", "jobs"],
+      equipment: ["equipmentItems", "equipmentMaintenance", "hardwareGuide"],
+      documentation: ["documentation"],
+      "groundskeeper-ai": ["groundskeeperAi"],
+      "import-export": ["importExport"]
+    };
+    return Array.from(new Set(keysBySection[normalized] || keysBySection.overview));
   }
 
   async function loadDashboardData(options = {}) {
@@ -4636,20 +4654,26 @@
     const requestedKeys = new Set(options.keys && options.keys.length ? options.keys : dashboardAllModuleKeys());
     const descriptors = dashboardModuleDescriptors().filter((module) => requestedKeys.has(module.key));
     const nextData = options.merge === false ? demoDashboardData() : { ...state.data };
-    await Promise.all(descriptors.map(async (module) => {
-      const value = await loadModule(module.name, module.loader, module.fallback, {
-        phase: options.phase || "full",
-        essential: Boolean(options.essential)
-      });
-      nextData[module.key] = module.normalize ? module.normalize(value || []) : value;
-    }));
+    const concurrency = Math.max(1, Number(options.concurrency || descriptors.length || 1));
+    for (let index = 0; index < descriptors.length; index += concurrency) {
+      const chunk = descriptors.slice(index, index + concurrency);
+      await Promise.all(chunk.map(async (module) => {
+        const value = await loadModule(module.name, module.loader, module.fallback, {
+          phase: options.phase || "full",
+          essential: Boolean(options.essential),
+          timeoutMs: options.timeoutMs,
+          recordErrors: options.recordErrors
+        });
+        nextData[module.key] = module.normalize ? module.normalize(value || []) : value;
+      }));
+    }
 
     return nextData;
   }
 
-  async function loadCanonicalTickets() {
+  async function loadCanonicalTickets({ signal } = {}) {
     try {
-      const result = await dashboardTicketRequest("list", { limit: 1000 });
+      const result = await dashboardTicketRequest("list", { limit: 250 }, { signal });
       const rows = Array.isArray(result.tickets) ? result.tickets : [];
       state.ticketsReady = true;
       state.ticketsError = "";
@@ -4658,41 +4682,41 @@
       state.ticketsReady = false;
       state.ticketsError = error.message || "Canonical job tickets could not load.";
       if (!isMissingOptionalTableError(error)) {
-        recordModuleError("canonical tickets", error);
+        recordModuleError("canonical tickets", error, { scope: "support" });
       }
       return [];
     }
   }
 
-  async function loadCanonicalTicketEvents() {
+  async function loadCanonicalTicketEvents({ signal } = {}) {
     try {
-      const result = await dashboardTicketRequest("events", { limit: 500 });
+      const result = await dashboardTicketRequest("events", { limit: 250 }, { signal });
       const rows = Array.isArray(result.events) ? result.events : [];
       state.ticketEventsReady = true;
       return rows.map(normalizeJobTicketEvent);
     } catch (error) {
       state.ticketEventsReady = false;
       if (!isMissingOptionalTableError(error)) {
-        recordModuleError("canonical tickets", error);
+        recordModuleError("canonical ticket events", error, { scope: "support" });
       }
       return [];
     }
   }
 
-  async function loadLeadActivity() {
+  async function loadLeadActivity({ signal } = {}) {
     try {
-      const rows = await supabaseRestRequest("lead_activity?select=*&order=created_at.desc&limit=500", { method: "GET" });
+      const rows = await supabaseRestRequest("lead_activity?select=*&limit=150", { method: "GET", signal });
       state.leadActivityReady = true;
-      return rows.map(normalizeLeadActivity);
+      return rows.map(normalizeLeadActivity).sort((a, b) => String(b.createdAtRaw || "").localeCompare(String(a.createdAtRaw || "")));
     } catch (error) {
       state.leadActivityReady = false;
       return [];
     }
   }
 
-  async function loadGroundskeeperAi() {
+  async function loadGroundskeeperAi({ signal } = {}) {
     try {
-      const snapshot = await groundskeeperRequest("admin-list");
+      const snapshot = await groundskeeperRequest("admin-list", {}, { signal });
       state.groundskeeperAiReady = true;
       state.groundskeeperAiError = "";
       return {
@@ -4725,17 +4749,17 @@
     }
   }
 
-  async function loadDocumentation() {
+  async function loadDocumentation({ signal } = {}) {
     try {
       const [templates, assignments, submissions, audit] = await Promise.all([
-        supabaseRestRequest("documentation_templates?select=*&order=category.asc,name.asc&limit=500", { method: "GET" }),
-        supabaseRestRequest("documentation_assignments?select=*&order=due_date.asc.nullslast,created_at.desc&limit=500", { method: "GET" }),
-        supabaseRestRequest("documentation_submissions?select=*&order=submitted_at.desc.nullslast,created_at.desc&limit=500", { method: "GET" }),
-        supabaseRestRequest("documentation_audit_logs?select=*&order=created_at.desc&limit=200", { method: "GET" })
+        supabaseRestRequest("documentation_templates?select=*&limit=150", { method: "GET", signal }),
+        supabaseRestRequest("documentation_assignments?select=*&limit=150", { method: "GET", signal }),
+        supabaseRestRequest("documentation_submissions?select=*&limit=150", { method: "GET", signal }),
+        supabaseRestRequest("documentation_audit_logs?select=*&limit=100", { method: "GET", signal })
       ]);
       let attachments = [];
       try {
-        attachments = await supabaseRestRequest("documentation_attachments?select=*&order=created_at.desc&limit=500", { method: "GET" });
+        attachments = await supabaseRestRequest("documentation_attachments?select=*&limit=150", { method: "GET", signal });
       } catch {
         attachments = [];
       }
@@ -4749,7 +4773,7 @@
     }
   }
 
-  async function loadBudgets() {
+  async function loadBudgets({ signal } = {}) {
     if (isDemoMode()) {
       state.budgetsReady = true;
       return normalizeBudgetBundle(demoBudgetBundle());
@@ -4757,18 +4781,18 @@
 
     try {
       const [settingsRows, budgets, labor, materials, materialCatalog, equipment, costs, changeOrders, documents, templates, templateItems, history] = await Promise.all([
-        supabaseRestRequest("budget_settings?select=*&limit=1", { method: "GET" }),
-        supabaseRestRequest("job_budgets?select=*&order=updated_at.desc&limit=500", { method: "GET" }),
-        supabaseRestRequest("job_budget_labor?select=*&order=created_at.asc&limit=1000", { method: "GET" }),
-        supabaseRestRequest("job_budget_materials?select=*&order=created_at.asc&limit=1000", { method: "GET" }),
-        supabaseRestRequest("budget_material_catalog?select=*&order=category.asc,material_name.asc&limit=500", { method: "GET" }),
-        supabaseRestRequest("job_budget_equipment?select=*&order=created_at.asc&limit=1000", { method: "GET" }),
-        supabaseRestRequest("job_budget_costs?select=*&order=created_at.asc&limit=1000", { method: "GET" }),
-        supabaseRestRequest("job_budget_change_orders?select=*&order=requested_date.desc.nullslast,created_at.desc&limit=500", { method: "GET" }),
-        supabaseRestRequest("job_budget_documents?select=*&order=created_at.desc&limit=500", { method: "GET" }),
-        supabaseRestRequest("job_budget_templates?select=*&order=name.asc&limit=300", { method: "GET" }),
-        supabaseRestRequest("job_budget_template_items?select=*&order=created_at.asc&limit=1000", { method: "GET" }),
-        supabaseRestRequest("job_budget_history?select=*&order=created_at.desc&limit=300", { method: "GET" })
+        supabaseRestRequest("budget_settings?select=*&limit=1", { method: "GET", signal }),
+        supabaseRestRequest("job_budgets?select=*&limit=150", { method: "GET", signal }),
+        supabaseRestRequest("job_budget_labor?select=*&limit=300", { method: "GET", signal }),
+        supabaseRestRequest("job_budget_materials?select=*&limit=300", { method: "GET", signal }),
+        supabaseRestRequest("budget_material_catalog?select=*&limit=150", { method: "GET", signal }),
+        supabaseRestRequest("job_budget_equipment?select=*&limit=300", { method: "GET", signal }),
+        supabaseRestRequest("job_budget_costs?select=*&limit=300", { method: "GET", signal }),
+        supabaseRestRequest("job_budget_change_orders?select=*&limit=150", { method: "GET", signal }),
+        supabaseRestRequest("job_budget_documents?select=*&limit=150", { method: "GET", signal }),
+        supabaseRestRequest("job_budget_templates?select=*&limit=150", { method: "GET", signal }),
+        supabaseRestRequest("job_budget_template_items?select=*&limit=300", { method: "GET", signal }),
+        supabaseRestRequest("job_budget_history?select=*&limit=150", { method: "GET", signal })
       ]);
       state.budgetsReady = true;
       state.budgetsError = "";
@@ -4865,99 +4889,99 @@
     }
   }
 
-  async function loadSalesDocuments() {
+  async function loadSalesDocuments({ signal } = {}) {
     try {
-      const rows = await supabaseRestRequest("sales_documents?select=*&order=created_at.desc&limit=500", { method: "GET" });
+      const rows = await supabaseRestRequest("sales_documents?select=*&limit=150", { method: "GET", signal });
       state.documentsReady = true;
-      return rows.map(normalizeDocument);
+      return rows.map(normalizeDocument).sort((a, b) => String(b.createdAtRaw || "").localeCompare(String(a.createdAtRaw || "")));
     } catch (error) {
       state.documentsReady = false;
       return [];
     }
   }
 
-  async function loadOperationsRecords() {
+  async function loadOperationsRecords({ signal } = {}) {
     try {
-      const rows = await supabaseRestRequest("operations_records?select=*&order=created_at.desc&limit=500", { method: "GET" });
+      const rows = await supabaseRestRequest("operations_records?select=*&limit=150", { method: "GET", signal });
       state.operationsReady = true;
-      return rows.map(normalizeOperation);
+      return rows.map(normalizeOperation).sort((a, b) => String(b.createdAtRaw || "").localeCompare(String(a.createdAtRaw || "")));
     } catch (error) {
       state.operationsReady = false;
       return [];
     }
   }
 
-  async function loadRouteStops() {
+  async function loadRouteStops({ signal } = {}) {
     try {
-      const rows = await supabaseRestRequest("route_stops?select=*&order=route_date.asc,stop_order.asc,created_at.asc&limit=1000", { method: "GET" });
+      const rows = await supabaseRestRequest("route_stops?select=*&limit=250", { method: "GET", signal });
       state.routeStopsReady = true;
-      return rows.map(normalizeRouteStop);
+      return rows.map(normalizeRouteStop).sort((a, b) => String(a.routeDate || "").localeCompare(String(b.routeDate || "")) || a.stopOrder - b.stopOrder || String(a.createdAt || "").localeCompare(String(b.createdAt || "")));
     } catch (error) {
       state.routeStopsReady = false;
       return [];
     }
   }
 
-  async function loadEquipmentItems() {
+  async function loadEquipmentItems({ signal } = {}) {
     try {
-      const rows = await supabaseRestRequest("equipment_items?select=*&order=category.asc,name.asc&limit=500", { method: "GET" });
+      const rows = await supabaseRestRequest("equipment_items?select=*&limit=150", { method: "GET", signal });
       state.equipmentReady = true;
-      return rows.map(normalizeEquipmentItem);
+      return rows.map(normalizeEquipmentItem).sort((a, b) => String(a.category || "").localeCompare(String(b.category || "")) || String(a.name || "").localeCompare(String(b.name || "")));
     } catch (error) {
       state.equipmentReady = false;
       return [];
     }
   }
 
-  async function loadEquipmentMaintenance() {
+  async function loadEquipmentMaintenance({ signal } = {}) {
     try {
-      const rows = await supabaseRestRequest("equipment_maintenance?select=*&order=maintenance_date.desc,created_at.desc&limit=500", { method: "GET" });
+      const rows = await supabaseRestRequest("equipment_maintenance?select=*&limit=150", { method: "GET", signal });
       state.equipmentMaintenanceReady = true;
-      return rows.map(normalizeEquipmentMaintenance);
+      return rows.map(normalizeEquipmentMaintenance).sort((a, b) => String(b.maintenanceDateRaw || "").localeCompare(String(a.maintenanceDateRaw || "")) || String(b.createdAtRaw || "").localeCompare(String(a.createdAtRaw || "")));
     } catch (error) {
       state.equipmentMaintenanceReady = false;
       return [];
     }
   }
 
-  async function loadHardwareGuide() {
+  async function loadHardwareGuide({ signal } = {}) {
     try {
-      const rows = await supabaseRestRequest("hardware_guide?select=*&order=priority.asc,name.asc&limit=500", { method: "GET" });
+      const rows = await supabaseRestRequest("hardware_guide?select=*&limit=150", { method: "GET", signal });
       state.hardwareGuideReady = true;
-      return rows.map(normalizeHardwareGuideItem);
+      return rows.map(normalizeHardwareGuideItem).sort((a, b) => Number(a.priority || 0) - Number(b.priority || 0) || String(a.name || "").localeCompare(String(b.name || "")));
     } catch (error) {
       state.hardwareGuideReady = false;
       return [];
     }
   }
 
-  async function loadOutreachProspects() {
+  async function loadOutreachProspects({ signal } = {}) {
     try {
-      const rows = await supabaseRestRequest("outreach_prospects?select=*&order=next_follow_up_at.asc.nullslast,updated_at.desc&limit=1000", { method: "GET" });
+      const rows = await supabaseRestRequest("outreach_prospects?select=*&limit=250", { method: "GET", signal });
       state.outreachReady = true;
-      return rows.map(normalizeOutreachProspect);
+      return rows.map(normalizeOutreachProspect).sort((a, b) => String(a.nextFollowUpAtRaw || "9999").localeCompare(String(b.nextFollowUpAtRaw || "9999")) || String(b.updatedAtRaw || "").localeCompare(String(a.updatedAtRaw || "")));
     } catch (error) {
       state.outreachReady = false;
       return [];
     }
   }
 
-  async function loadOutreachCompanies() {
+  async function loadOutreachCompanies({ signal } = {}) {
     try {
-      const rows = await supabaseRestRequest("outreach_companies?select=*&order=company.asc&limit=1000", { method: "GET" });
+      const rows = await supabaseRestRequest("outreach_companies?select=*&limit=250", { method: "GET", signal });
       state.outreachCompaniesReady = true;
-      return rows.map(normalizeOutreachCompany);
+      return rows.map(normalizeOutreachCompany).sort((a, b) => String(a.company || "").localeCompare(String(b.company || "")));
     } catch (error) {
       state.outreachCompaniesReady = false;
       return [];
     }
   }
 
-  async function loadOutreachProperties() {
+  async function loadOutreachProperties({ signal } = {}) {
     try {
-      const rows = await supabaseRestRequest("outreach_properties?select=*&order=company.asc,property_name.asc&limit=1000", { method: "GET" });
+      const rows = await supabaseRestRequest("outreach_properties?select=*&limit=250", { method: "GET", signal });
       state.outreachPropertiesReady = true;
-      return rows.map(normalizeOutreachProperty);
+      return rows.map(normalizeOutreachProperty).sort((a, b) => String(a.company || "").localeCompare(String(b.company || "")) || String(a.propertyName || "").localeCompare(String(b.propertyName || "")));
     } catch (error) {
       state.outreachPropertiesReady = false;
       return [];
@@ -16775,7 +16799,7 @@
     }
     if (warnings.length) {
       return {
-        message: `${warnings.length} active workflow module${warnings.length === 1 ? "" : "s"} loaded with warnings. Open Tools for diagnostics.`,
+        message: "Some dashboard records are temporarily unavailable. Open Tools for diagnostics.",
         tone: "warning"
       };
     }
@@ -16795,7 +16819,7 @@
 
   function scheduleDashboardBackgroundLoad(initialKeys = [], refreshSerial = dashboardRefreshSerial) {
     if (isDemoMode()) return;
-    const remainingKeys = dashboardAllModuleKeys().filter((key) => !initialKeys.includes(key));
+    const remainingKeys = DASHBOARD_AUTO_BACKGROUND_MODULE_KEYS.filter((key) => !initialKeys.includes(key));
     if (!remainingKeys.length) return;
     if (dashboardBackgroundLoadPromise) return;
     state.performance.backgroundLoading = true;
@@ -16809,7 +16833,10 @@
         phase: "background",
         essential: false,
         merge: true,
-        resetErrors: false
+        resetErrors: false,
+        recordErrors: false,
+        concurrency: DASHBOARD_BACKGROUND_LOAD_CONCURRENCY,
+        timeoutMs: DASHBOARD_BACKGROUND_LOAD_TIMEOUT_MS
       });
       if (serial === dashboardRefreshSerial) {
         state.data = nextData;
@@ -16842,7 +16869,10 @@
         phase,
         essential: true,
         merge: true,
-        resetErrors: true
+        resetErrors: options.resetErrors !== false,
+        recordErrors: options.recordErrors,
+        concurrency: options.concurrency || DASHBOARD_INITIAL_LOAD_CONCURRENCY,
+        timeoutMs: options.timeoutMs || DASHBOARD_INITIAL_LOAD_TIMEOUT_MS
       });
       state.loading = false;
       state.lastRefreshAt = new Date().toISOString();
@@ -16850,7 +16880,7 @@
       await render();
       if (phase === "full") {
         state.performance.backgroundDataLoadedAt = state.lastRefreshAt;
-      } else {
+      } else if (options.background !== false) {
         scheduleDashboardBackgroundLoad(initialKeys, refreshSerial);
       }
       applyDashboardSupportStatus();
@@ -16974,13 +17004,22 @@
       }
     });
 
-    document.addEventListener("click", (event) => {
+    document.addEventListener("click", async (event) => {
       const link = event.target instanceof Element ? event.target.closest("[data-dashboard-link]") : null;
       if (!link) return;
       event.preventDefault();
       const nextSection = dashboardSectionForRole(link.dataset.dashboardLink);
       setActiveSection(nextSection);
       replaceDashboardHash(nextSection);
+      await render();
+      await refreshDashboard({
+        phase: "section",
+        quiet: true,
+        background: false,
+        resetErrors: false,
+        concurrency: DASHBOARD_INITIAL_LOAD_CONCURRENCY,
+        timeoutMs: DASHBOARD_INITIAL_LOAD_TIMEOUT_MS
+      });
     });
 
     if (els.sidebarClose) {

@@ -10449,16 +10449,17 @@
         </dl>
       </div>
       <div class="ticket-workflow-board-grid">
-        ${ticketWorkflowSteps.map((step) => {
+        ${ticketWorkflowSteps.map((step, index) => {
           const totalTickets = openTickets.filter((ticket) => ticketInStage(ticket, step.stages));
           const shownTickets = filteredTickets.filter((ticket) => ticketInStage(ticket, step.stages));
           return `<article class="ticket-workflow-board-column ${shownTickets.length ? "is-populated" : ""}" data-workflow-step="${escapeHtml(step.key)}">
             <div class="ticket-workflow-board-column-head">
+              <span class="ticket-workflow-board-index">${escapeHtml(String(index + 1).padStart(2, "0"))}</span>
               <div>
                 <strong>${escapeHtml(step.label)}</strong>
                 <small>${escapeHtml(step.detail)}</small>
               </div>
-              <span title="${escapeHtml(String(totalTickets.length))} open tickets">${escapeHtml(String(shownTickets.length))}</span>
+              <em title="${escapeHtml(String(totalTickets.length))} open tickets">${escapeHtml(String(shownTickets.length))}</em>
             </div>
             <div class="ticket-workflow-board-list">
               ${shownTickets.length

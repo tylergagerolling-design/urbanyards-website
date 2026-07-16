@@ -15138,11 +15138,29 @@ body:not(.is-login-screen) .ticket-workflow-board-column.is-populated {
 }
 
 body:not(.is-login-screen) .ticket-workflow-board-column-head {
-  display: flex;
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
   align-items: start;
-  justify-content: space-between;
   gap: 10px;
   min-width: 0;
+}
+
+body:not(.is-login-screen) .ticket-workflow-board-column-head > div {
+  min-width: 0;
+}
+
+body:not(.is-login-screen) .ticket-workflow-board-index {
+  display: inline-grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 10px;
+  background: rgba(231, 239, 223, .86);
+  color: rgba(18, 63, 49, .72);
+  font-size: .72rem;
+  font-weight: 950;
+  letter-spacing: .04em;
+  line-height: 1;
 }
 
 body:not(.is-login-screen) .ticket-workflow-board-column-head strong {
@@ -15151,6 +15169,8 @@ body:not(.is-login-screen) .ticket-workflow-board-column-head strong {
   color: var(--uy-green);
   line-height: 1.15;
   text-wrap: balance;
+  overflow-wrap: break-word;
+  word-break: normal;
 }
 
 body:not(.is-login-screen) .ticket-workflow-board-column-head small {
@@ -15161,11 +15181,12 @@ body:not(.is-login-screen) .ticket-workflow-board-column-head small {
   font-weight: 750;
   line-height: 1.3;
   text-wrap: pretty;
+  overflow-wrap: break-word;
+  word-break: normal;
 }
 
-body:not(.is-login-screen) .ticket-workflow-board-column-head span {
+body:not(.is-login-screen) .ticket-workflow-board-column-head em {
   display: inline-grid;
-  flex: 0 0 auto;
   place-items: center;
   min-width: 32px;
   height: 32px;
@@ -15173,6 +15194,7 @@ body:not(.is-login-screen) .ticket-workflow-board-column-head span {
   border-radius: 999px;
   background: #e7efdf;
   color: var(--uy-green);
+  font-style: normal;
   font-weight: 900;
 }
 

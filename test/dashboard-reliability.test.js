@@ -307,6 +307,9 @@ test("dashboard route aliases and new reliability diagnostics are wired", () => 
   assert.match(css, /workspace-focus-card-main[\s\S]*grid-template-columns: auto minmax\(0, 1fr\)/);
   assert.match(css, /home-runway-tile[\s\S]*grid-template-areas:[\s\S]*"label value"[\s\S]*"detail detail"[\s\S]*"action action"/);
   assert.match(css, /home-runway-tile > strong[\s\S]*border-radius: 999px/);
+  assert.match(js, /ticket-workflow-board-index/);
+  assert.match(css, /ticket-workflow-board-column-head[\s\S]*grid-template-columns: auto minmax\(0, 1fr\) auto/);
+  assert.match(css, /ticket-workflow-board-column-head em[\s\S]*border-radius: 999px/);
   assert.doesNotMatch(css, /\.ticket-end-to-end-flow/);
   assert.doesNotMatch(css, /\.ticket-flow-step/);
   assert.doesNotMatch(css, /ticket-flow-steps/);

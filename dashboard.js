@@ -12295,6 +12295,73 @@
     </section>`;
   }
 
+  function renderWorkReadinessCard({ label, value, detail, tickets = [], action, actionLabel }) {
+    const preview = tickets.slice(0, 3).map((ticket) => {
+      const title = ticket.customerName || ticket.service || "Untitled ticket";
+      const meta = [ticket.stageLabel || ticket.status, ticket.dateLabel || ticket.dateRaw].filter(Boolean).join(" / ");
+      return `<li>
+        <strong>${escapeHtml(title)}</strong>
+        <span>${escapeHtml(meta || "Needs next step")}</span>
+      </li>`;
+    }).join("");
+    return `<article class="work-readiness-card">
+      <div class="work-readiness-card-main">
+        <span>${escapeHtml(label)}</span>
+        <strong>${escapeHtml(String(value))}</strong>
+        <p>${escapeHtml(detail)}</p>
+      </div>
+      <ul>${preview || `<li><strong>Clear</strong><span>No tickets in this group.</span></li>`}</ul>
+      ${action ? `<button type="button" data-action="${escapeHtml(action)}">${escapeHtml(actionLabel || "Open")}</button>` : ""}
+    </article>`;
+  }
+
+  function renderWorkReadinessPanel({ readyTickets = [], todayTickets = [], activeTickets = [], reviewTickets = [] }) {
+    return `<section class="work-readiness-panel" aria-label="Work readiness">
+      <div class="ticket-flow-heading">
+        <div>
+          <p class="eyebrow">Work Readiness</p>
+          <h3>What can move today</h3>
+          <p>Use this as the fast daily handoff before opening individual Job Tickets.</p>
+        </div>
+        <button type="button" data-action="go-tickets">Open Tickets</button>
+      </div>
+      <div class="work-readiness-grid">
+        ${renderWorkReadinessCard({
+          label: "Ready",
+          value: readyTickets.length,
+          detail: "Approved work that can be scheduled or assigned.",
+          tickets: readyTickets,
+          action: "go-tickets",
+          actionLabel: "Schedule"
+        })}
+        ${renderWorkReadinessCard({
+          label: "Today",
+          value: todayTickets.length,
+          detail: "Dated work and visits for the current day.",
+          tickets: todayTickets,
+          action: "go-calendar",
+          actionLabel: "Open Work"
+        })}
+        ${renderWorkReadinessCard({
+          label: "Active",
+          value: activeTickets.length,
+          detail: "Jobs already scheduled, started, or paused.",
+          tickets: activeTickets,
+          action: "go-work",
+          actionLabel: "View Queue"
+        })}
+        ${renderWorkReadinessCard({
+          label: "Proof",
+          value: reviewTickets.length,
+          detail: "Completed work waiting on photos, forms, actuals, or review.",
+          tickets: reviewTickets,
+          action: "go-tickets",
+          actionLabel: "Review"
+        })}
+      </div>
+    </section>`;
+  }
+
   function renderWorkWorkspace(data = state.data) {
     const target = qs("[data-work-workspace]");
     if (!target) return;
@@ -12303,6 +12370,8 @@
     const today = todayKey();
     const todayTickets = workTickets.filter((ticket) => dateKey(ticket.dateRaw) === today);
     const upcomingTickets = workTickets.filter((ticket) => dateKey(ticket.dateRaw) >= today);
+    const readyTickets = workTickets.filter((ticket) => ticketInLane(ticket, ["ready"]));
+    const activeTickets = workTickets.filter((ticket) => ticketInStage(ticket, ["scheduled", "in_progress", "paused"]));
     const reviewTickets = workTickets.filter((ticket) => ticketInLane(ticket, ["review"]));
     const routeStopsToday = dashboardRouteStopsForDate(data, today);
     target.innerHTML = `
@@ -12327,6 +12396,7 @@
           ${renderTicketMetric(upcomingTickets.length, "Upcoming", "Scheduled tickets")}
         </section>
         ${renderWorkspaceWorkflowRibbon(tickets, "work")}
+        ${renderWorkReadinessPanel({ readyTickets, todayTickets, activeTickets, reviewTickets })}
         ${renderWorkDayPlanPanel(routeStopsToday, todayTickets, upcomingTickets, reviewTickets)}
         ${renderWorkspaceFocusStrip([
           { kicker: "Today", value: todayTickets.length, title: "What to do first", detail: "Start with dated tickets and route stops for the current day." },

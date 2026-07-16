@@ -15365,6 +15365,117 @@ body:not(.is-login-screen) .work-plan-tile button {
   margin-top: 4px;
 }
 
+body:not(.is-login-screen) .work-readiness-panel {
+  display: grid;
+  gap: 16px;
+  padding: clamp(18px, 2vw, 24px);
+  border: 1px solid rgba(73, 102, 77, .16);
+  border-radius: 24px;
+  background:
+    radial-gradient(circle at 94% 8%, rgba(153, 180, 119, .13), transparent 34%),
+    rgba(255, 255, 255, .78);
+  box-shadow: 0 14px 36px rgba(19, 36, 28, .06);
+}
+
+body:not(.is-login-screen) .work-readiness-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 12px;
+}
+
+body:not(.is-login-screen) .work-readiness-card {
+  display: grid;
+  grid-template-rows: auto 1fr auto;
+  gap: 12px;
+  min-width: 0;
+  padding: 16px;
+  border: 1px solid rgba(73, 102, 77, .13);
+  border-radius: 20px;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, .9), rgba(251, 250, 245, .88)),
+    #fff;
+}
+
+body:not(.is-login-screen) .work-readiness-card-main {
+  display: grid;
+  gap: 6px;
+}
+
+body:not(.is-login-screen) .work-readiness-card-main span {
+  color: rgba(18, 63, 49, .64);
+  font-size: .72rem;
+  font-weight: 900;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+}
+
+body:not(.is-login-screen) .work-readiness-card-main strong {
+  color: var(--uy-green);
+  font-size: clamp(1.7rem, 2.4vw, 2.35rem);
+  line-height: .9;
+}
+
+body:not(.is-login-screen) .work-readiness-card-main p {
+  margin: 0;
+  color: var(--uy-muted);
+  font-size: .88rem;
+  line-height: 1.38;
+}
+
+body:not(.is-login-screen) .work-readiness-card ul {
+  display: grid;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+body:not(.is-login-screen) .work-readiness-card li {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+  padding-top: 8px;
+  border-top: 1px solid rgba(73, 102, 77, .1);
+}
+
+body:not(.is-login-screen) .work-readiness-card li strong,
+body:not(.is-login-screen) .work-readiness-card li span {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+body:not(.is-login-screen) .work-readiness-card li strong {
+  color: var(--uy-green);
+  font-size: .88rem;
+}
+
+body:not(.is-login-screen) .work-readiness-card li span {
+  color: var(--uy-muted);
+  font-size: .78rem;
+  font-weight: 750;
+}
+
+body:not(.is-login-screen) .work-readiness-card button,
+body:not(.is-login-screen) .work-readiness-panel .ticket-flow-heading > button {
+  width: fit-content;
+  min-height: 38px;
+  padding: 0 14px;
+  border: 1px solid rgba(18, 63, 49, .14);
+  border-radius: var(--dashboard-button-radius, 8px);
+  background: rgba(255, 255, 255, .86);
+  color: var(--uy-green);
+  box-shadow: none;
+  font-weight: 850;
+}
+
+body:not(.is-login-screen) .work-readiness-card button:hover,
+body:not(.is-login-screen) .work-readiness-panel .ticket-flow-heading > button:hover {
+  border-color: rgba(18, 63, 49, .28);
+  background: #f8fbf2;
+}
+
 body:not(.is-login-screen) .home-runway-tile {
   min-height: 160px;
   border-color: rgba(73, 102, 77, .13);
@@ -17080,7 +17191,8 @@ body:not(.is-login-screen) .field-proof-actions button {
   body:not(.is-login-screen) .home-next-step-stack,
   body:not(.is-login-screen) .lead-next-step-stack,
   body:not(.is-login-screen) .money-next-step-stack,
-  body:not(.is-login-screen) .home-runway-grid {
+  body:not(.is-login-screen) .home-runway-grid,
+  body:not(.is-login-screen) .work-readiness-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
@@ -17126,6 +17238,7 @@ body:not(.is-login-screen) .field-proof-actions button {
   body:not(.is-login-screen) .lead-next-step-stack,
   body:not(.is-login-screen) .money-next-step-stack,
   body:not(.is-login-screen) .home-runway-grid,
+  body:not(.is-login-screen) .work-readiness-grid,
   body:not(.is-login-screen) .leads-workspace .ticket-metrics,
   body:not(.is-login-screen) .ticket-workflow-board-grid,
   body:not(.is-login-screen) .work-plan-tile-grid,

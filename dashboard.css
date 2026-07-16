@@ -16983,6 +16983,21 @@ body:not(.is-login-screen) .ticket-detail-drawer {
   gap: 18px;
 }
 
+body:not(.is-login-screen) .ticket-drawer-operating-grid {
+  display: grid;
+  grid-template-columns: minmax(240px, .82fr) minmax(300px, 1.18fr);
+  gap: 14px;
+  align-items: start;
+}
+
+body:not(.is-login-screen) .ticket-drawer-operating-grid > * {
+  min-width: 0;
+}
+
+body:not(.is-login-screen) .ticket-drawer-operating-grid .ticket-command-card {
+  height: 100%;
+}
+
 body:not(.is-login-screen) .ticket-drawer-heading {
   display: flex;
   align-items: flex-start;
@@ -17904,6 +17919,10 @@ body:not(.is-login-screen) .field-proof-actions button {
 
   body:not(.is-login-screen) .ticket-drawer-action-strip {
     grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  body:not(.is-login-screen) .ticket-drawer-operating-grid {
+    grid-template-columns: 1fr;
   }
 
   body:not(.is-login-screen) .ticket-cockpit-stats {

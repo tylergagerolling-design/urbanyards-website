@@ -251,7 +251,7 @@ test("dashboard route aliases and new reliability diagnostics are wired", () => 
   assert.match(css, /grid-template-areas:\s*"step title"\s*"\. detail"\s*"\. count"/);
   assert.doesNotMatch(js, /renderTicketEndToEndFlow\(activeTickets/);
   assert.doesNotMatch(js, /renderTicketEndToEndFlow\(openTickets\)/);
-  assert.match(js, /renderTicketEndToEndFlow\(dashboardTickets\(\), ticket\.stage/);
+  assert.doesNotMatch(js, /renderTicketEndToEndFlow\(dashboardTickets\(\), ticket\.stage/);
   const homeWorkspace = js.match(/function renderHomeWorkspace[\s\S]*?function renderTicketNextStepCard/)?.[0] || "";
   assert.doesNotMatch(homeWorkspace, /renderTicketOwnerStrip/);
   const ticketWorkspace = js.match(/function renderJobTicketWorkspace[\s\S]*?function renderWorkPlanTile/)?.[0] || "";
@@ -316,6 +316,9 @@ test("dashboard route aliases and new reliability diagnostics are wired", () => 
   assert.match(css, /ticket-card-actions span[\s\S]*text-wrap: pretty/);
   assert.match(js, /function resizeGoogleMapView\(view\)/);
   assert.match(js, /window\.google\.maps\.event\.trigger\(view\.map, "resize"\)/);
+  assert.match(js, /ticket-drawer-operating-grid/);
+  assert.doesNotMatch(js, /renderTicketEndToEndFlow\(dashboardTickets\(\), ticket\.stage, "Current ticket lifecycle"\)/);
+  assert.match(css, /ticket-drawer-operating-grid[\s\S]*grid-template-columns: minmax\(240px, \.82fr\) minmax\(300px, 1\.18fr\)/);
   assert.match(css, /\.money-budget-panel/);
   assert.match(css, /\.money-budget-item/);
   assert.match(css, /\.money-budget-stats/);

@@ -11589,10 +11589,10 @@
         </div>
       </div>
         ${renderTicketDrawerActionStrip(ticket)}
-        ${renderTicketDrawerCockpit(ticket)}
-        ${renderTicketDrawerProgress(ticket)}
-        ${renderTicketWorkflowTracker(ticket.stage)}
-        ${renderTicketEndToEndFlow(dashboardTickets(), ticket.stage, "Current ticket lifecycle")}
+        <section class="ticket-drawer-operating-grid" aria-label="Ticket operating controls">
+          ${renderTicketDrawerProgress(ticket)}
+          ${renderTicketDetailCommandCenter(ticket)}
+        </section>
         <div class="drawer-grid ticket-drawer-grid">
           <div class="drawer-field"><span>Current owner</span>${escapeHtml(ticket.ownerLabel || "Unassigned")}</div>
           <div class="drawer-field"><span>Next action</span>${escapeHtml(ticket.nextAction || "Open ticket")}</div>
@@ -11601,7 +11601,6 @@
           <div class="drawer-field span-full"><span>Details</span>${escapeHtml(ticket.detail || "No details yet.")}</div>
         </div>
         ${renderTicketWorkbench(ticket)}
-        ${renderTicketDetailCommandCenter(ticket)}
         ${renderTicketWorkAssignmentBridge(ticket, sourceItem)}
         ${renderTicketSiteProofBridge(ticket, sourceItem)}
         ${renderTicketInvoiceBridge(ticket)}

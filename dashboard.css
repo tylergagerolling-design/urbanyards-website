@@ -14691,7 +14691,7 @@ body:not(.is-login-screen) .workspace-workflow-ribbon-head strong {
 
 body:not(.is-login-screen) .workspace-workflow-ribbon-steps {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(132px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(178px, 1fr));
   gap: 8px;
   min-width: 0;
 }
@@ -14699,12 +14699,15 @@ body:not(.is-login-screen) .workspace-workflow-ribbon-steps {
 body:not(.is-login-screen) .workspace-workflow-ribbon-steps button {
   position: relative;
   display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
-  gap: 3px 8px;
+  grid-template-columns: auto minmax(0, 1fr);
+  grid-template-areas:
+    "step title"
+    "detail detail";
+  gap: 4px 8px;
   align-content: start;
   min-width: 0;
-  min-height: 92px;
-  padding: 11px 12px;
+  min-height: 84px;
+  padding: 11px 44px 11px 12px;
   border: 1px solid rgba(73, 102, 77, .12);
   border-radius: 17px;
   background: rgba(255, 253, 246, .64);
@@ -14721,23 +14724,37 @@ body:not(.is-login-screen) .workspace-workflow-ribbon-steps button.is-active {
   box-shadow: 0 10px 22px rgba(19, 36, 28, .055);
 }
 
+body:not(.is-login-screen) .workspace-workflow-ribbon-steps button span {
+  grid-area: step;
+  align-self: start;
+  padding-top: 2px;
+  white-space: nowrap;
+}
+
 body:not(.is-login-screen) .workspace-workflow-ribbon-steps button strong {
-  grid-column: 1;
+  grid-area: title;
+  min-width: 0;
   color: var(--uy-green);
   font-size: .92rem;
   line-height: 1.15;
+  overflow-wrap: anywhere;
+  white-space: normal;
 }
 
 body:not(.is-login-screen) .workspace-workflow-ribbon-steps button small {
-  grid-column: 1 / -1;
+  grid-area: detail;
+  min-width: 0;
   color: var(--uy-muted);
   font-size: .76rem;
   line-height: 1.28;
+  overflow-wrap: anywhere;
+  white-space: normal;
 }
 
 body:not(.is-login-screen) .workspace-workflow-ribbon-steps button em {
-  grid-column: 2;
-  grid-row: 1 / span 2;
+  position: absolute;
+  top: 10px;
+  right: 10px;
   display: inline-grid;
   place-items: center;
   min-width: 28px;

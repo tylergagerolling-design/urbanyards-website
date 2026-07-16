@@ -363,8 +363,10 @@ test("dashboard route aliases and new reliability diagnostics are wired", () => 
   assert.match(js, /data-ticket-board-search/);
   assert.match(js, /data-ticket-board-stage-filter/);
   assert.match(js, /data-ticket-board-owner-filter/);
+  assert.match(js, /data-ticket-board-result-count/);
   assert.match(js, /reset-ticket-board-filters/);
   assert.match(css, /\.ticket-board-controls/);
+  assert.match(css, /\.ticket-board-result-count/);
   assert.match(js, /workspace-focus-value/);
   assert.match(js, /Home workspace signals/);
   assert.match(js, /Tickets workspace signals/);

@@ -11897,8 +11897,8 @@
           </select>
         </label>
         <button type="button" data-action="reset-ticket-board-filters">Reset Filters</button>
+        <span class="ticket-board-result-count" data-ticket-board-result-count>${escapeHtml(filteredTickets.length)} of ${escapeHtml(tickets.length)} shown</span>
       </div>
-      <p>${escapeHtml(filteredTickets.length)} of ${escapeHtml(tickets.length)} open tickets shown</p>
     </section>`;
   }
 

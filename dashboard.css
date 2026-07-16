@@ -14767,12 +14767,18 @@ body:not(.is-login-screen) .ticket-board-filter-row button {
   box-shadow: none;
 }
 
-body:not(.is-login-screen) .ticket-board-controls > p {
-  grid-column: 1 / -1;
-  margin: -2px 0 0;
+body:not(.is-login-screen) .ticket-board-result-count {
+  display: inline-flex;
+  align-items: center;
+  min-height: 42px;
+  padding: 0 12px;
+  border: 1px solid rgba(73, 102, 77, .12);
+  border-radius: 999px;
+  background: rgba(231, 239, 223, .58);
   color: var(--uy-muted);
   font-size: .84rem;
   font-weight: 800;
+  white-space: nowrap;
 }
 
 body:not(.is-login-screen) .ticket-hero {
@@ -17979,7 +17985,8 @@ body:not(.is-login-screen) .field-proof-actions button {
   }
 
   body:not(.is-login-screen) .ticket-board-filter-row label,
-  body:not(.is-login-screen) .ticket-board-filter-row button {
+  body:not(.is-login-screen) .ticket-board-filter-row button,
+  body:not(.is-login-screen) .ticket-board-result-count {
     flex: 1 1 100%;
   }
 

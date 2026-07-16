@@ -226,6 +226,12 @@ test("dashboard route aliases and new reliability diagnostics are wired", () => 
   const workSection = html.match(/<section class="dashboard-section work-page work-hub-page" id="calendar"[\s\S]*?<\/section>/)?.[0] || "";
   assert.match(workSection, /data-work-workspace/);
   assert.doesNotMatch(workSection, /work-command-header|work-secondary-tools|data-work-snapshot|data-calendar-list/);
+  const leadsSection = html.match(/<section class="dashboard-section uy-standard-page leads-page" id="outreach"[\s\S]*?<\/section>/)?.[0] || "";
+  assert.match(leadsSection, /data-leads-workspace/);
+  assert.doesNotMatch(leadsSection, /outreach-hero|data-outreach-view-panel|data-outreach-table|data-outreach-company-table/);
+  const moneySection = html.match(/<section class="dashboard-section uy-standard-page money-page" id="documents"[\s\S]*?<\/section>/)?.[0] || "";
+  assert.match(moneySection, /data-money-workspace/);
+  assert.doesNotMatch(moneySection, /data-quote-table|data-pipeline|data-document-form/);
   assert.match(js, /function renderTicketEndToEndFlow/);
   assert.match(js, /data-ticket-lifecycle-map/);
   assert.match(css, /grid-template-areas:\s*"step title"\s*"\. detail"\s*"\. count"/);

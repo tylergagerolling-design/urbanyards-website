@@ -14332,7 +14332,7 @@ body:not(.is-login-screen) #tickets.job-ticket-page > :not([data-job-ticket-work
 body:not(.is-login-screen) #calendar.work-hub-page > :not([data-work-workspace]),
 body:not(.is-login-screen) #outreach.leads-page > :not([data-leads-workspace]),
 body:not(.is-login-screen) #documents.money-page > :not([data-money-workspace]),
-body:not(.is-login-screen) #settings.tools-page > :not([data-tools-workspace]) {
+body:not(.is-login-screen) #settings.tools-page > :not([data-tools-workspace]):not([data-tools-runtime]) {
   display: none !important;
 }
 

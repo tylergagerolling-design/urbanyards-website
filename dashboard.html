@@ -12,10 +12,10 @@
     <link rel="icon" href="/favicon.ico" sizes="any">
     <link rel="apple-touch-icon" href="/apple-touch-icon.png">
     <link rel="manifest" href="/dashboard.webmanifest">
-    <link rel="stylesheet" href="dashboard.css?v=20260716-rebuild-28">
+    <link rel="stylesheet" href="dashboard.css?v=20260716-rebuild-29">
     <script src="dashboard-config.js?v=20260716-loader-1" defer></script>
     <script src="scripts/budget-calculations.js?v=20260716-loader-1" defer></script>
-    <script src="dashboard.js?v=20260716-rebuild-28" defer></script>
+    <script src="dashboard.js?v=20260716-rebuild-29" defer></script>
   </head>
   <body>
     <main class="dashboard-shell" aria-labelledby="dashboard-title">
@@ -467,88 +467,7 @@
 
           <section class="dashboard-section uy-standard-page tools-page" id="settings" data-section="settings">
             <div data-tools-workspace></div>
-            <div class="panel uy-page-intro-panel">
-              <div class="panel-heading">
-                <div>
-                  <p class="eyebrow">Dashboard Support</p>
-                  <h3>Tools</h3>
-                  <p>Support modules, backups, user access, diagnostics, and system refresh stay here while daily operations stay centered on Job Tickets.</p>
-                </div>
-              </div>
-              <div class="rebuild-tool-grid" aria-label="Dashboard support modules">
-                <article class="rebuild-tool-card">
-                  <span class="button-icon" aria-hidden="true">MAP</span>
-                  <div>
-                    <strong>Route &amp; Work Map</strong>
-                    <small>Routes now live with Work so map work stays attached to visits.</small>
-                  </div>
-                  <button type="button" data-action="go-route-planner">Open Work Route</button>
-                </article>
-                <article class="rebuild-tool-card">
-                  <span class="button-icon" aria-hidden="true">DOC</span>
-                  <div>
-                    <strong>Forms &amp; Job Documents</strong>
-                    <small>Documentation stays available for visit proof, uploaded forms, and job support files.</small>
-                  </div>
-                  <button type="button" data-action="refresh-documentation">Refresh Forms</button>
-                </article>
-                <article class="rebuild-tool-card">
-                  <span class="button-icon" aria-hidden="true">AI</span>
-                  <div>
-                    <strong>Groundskeeper AI</strong>
-                    <small>Training and website helper records remain loaded through the secure backend.</small>
-                  </div>
-                  <button type="button" data-action="refresh-groundskeeper-ai">Refresh AI</button>
-                </article>
-                <article class="rebuild-tool-card">
-                  <span class="button-icon" aria-hidden="true">CSV</span>
-                  <div>
-                    <strong>Import, Export &amp; Backups</strong>
-                    <small>Keep data movement and recovery tools here while workflows are simplified.</small>
-                  </div>
-                  <button type="button" data-action="refresh-import-export">Refresh Data Tools</button>
-                </article>
-              </div>
-              <div class="settings-grid">
-                <button type="button" data-export="jobs"><span class="button-icon" aria-hidden="true">CSV</span><span>Export Jobs</span></button>
-                <button type="button" data-export="contacts"><span class="button-icon" aria-hidden="true">CSV</span><span>Export Contacts</span></button>
-                <button type="button" data-export="submissions"><span class="button-icon" aria-hidden="true">CSV</span><span>Export Quotes</span></button>
-                <button type="button" data-action="export-full-backup"><span class="button-icon" aria-hidden="true">JSON</span><span>Export Full Backup</span></button>
-                <button type="button" data-action="export-backend-backup"><span class="button-icon" aria-hidden="true">DB</span><span>Backend Export</span></button>
-                <button type="button" data-action="import-backup"><span class="button-icon" aria-hidden="true">IN</span><span>Import Backup</span></button>
-                <button type="button" data-action="clear-demo-data"><span class="button-icon" aria-hidden="true">x</span><span>Clear Demo Data</span></button>
-                <button type="button" data-action="refresh-dashboard"><span class="button-icon" aria-hidden="true">R</span><span>Refresh</span></button>
-              </div>
-              <div class="users-access-panel">
-                <div class="panel-heading">
-                  <div>
-                    <h3>Users &amp; Access</h3>
-                    <p>Invite users, manage roles, disable access, and keep profile avatars clean.</p>
-                  </div>
-                </div>
-                <div class="users-access-status" data-users-access-status></div>
-                <div class="users-access-list" data-users-access-list></div>
-                <p class="form-note">Allowed avatar files: JPG, PNG, or WebP up to 2 MB. SVG and document uploads are blocked.</p>
-              </div>
-              <div class="activity-log-panel">
-                <div class="panel-heading">
-                  <div>
-                    <h3>Activity Log</h3>
-                    <p>Recent protected dashboard actions, exports, user changes, imports, and system activity.</p>
-                  </div>
-                </div>
-                <div class="activity-log-list" data-activity-log-list></div>
-              </div>
-              <div class="dashboard-health-panel">
-                <div class="panel-heading">
-                  <div>
-                    <h3>Dashboard Health</h3>
-                    <p>Safe diagnostics for configuration, auth, module loading, and deploy version.</p>
-                  </div>
-                  <button class="inline-action" type="button" data-action="copy-dashboard-diagnostics">Copy Summary</button>
-                </div>
-                <div class="dashboard-health-list" data-dashboard-health></div>
-              </div>
+            <div data-tools-runtime hidden>
               <input data-import-backup type="file" accept="application/json" hidden>
               <input data-user-avatar-upload type="file" accept=".jpg,.jpeg,.png,.webp,image/jpeg,image/png,image/webp" hidden>
             </div>

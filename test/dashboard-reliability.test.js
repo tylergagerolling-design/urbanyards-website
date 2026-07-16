@@ -239,6 +239,7 @@ test("dashboard route aliases and new reliability diagnostics are wired", () => 
   assert.match(toolsWorkspace, /renderUsersAccess\(data\)/);
   assert.match(toolsWorkspace, /renderActivityLog\(data\)/);
   assert.match(toolsWorkspace, /renderDashboardHealth\(\)/);
+  assert.doesNotMatch(toolsWorkspace, /data-import-backup|data-user-avatar-upload/);
   assert.match(js, /function renderTicketEndToEndFlow/);
   assert.match(js, /data-ticket-lifecycle-map/);
   assert.match(css, /grid-template-areas:\s*"step title"\s*"\. detail"\s*"\. count"/);

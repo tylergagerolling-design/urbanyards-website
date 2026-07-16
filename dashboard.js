@@ -13108,8 +13108,6 @@
             <div class="activity-log-list" data-activity-log-list></div>
           </article>
         </section>
-        <input data-import-backup type="file" accept="application/json" hidden>
-        <input data-user-avatar-upload type="file" accept=".jpg,.jpeg,.png,.webp,image/jpeg,image/png,image/webp" hidden>
         <section class="ticket-review-strip tools-health-strip">
           <div>
             <p class="eyebrow">Diagnostics</p>
@@ -13145,8 +13143,6 @@
           </section>
         ` : ""}
       </div>`;
-    els.importBackup = qs("[data-import-backup]");
-    els.userAvatarUpload = qs("[data-user-avatar-upload]");
     els.usersAccessStatus = qs("[data-users-access-status]");
     els.usersAccessList = qs("[data-users-access-list]");
     els.activityLogList = qs("[data-activity-log-list]");

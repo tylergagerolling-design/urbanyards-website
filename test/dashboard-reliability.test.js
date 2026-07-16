@@ -218,7 +218,8 @@ test("dashboard route aliases and new reliability diagnostics are wired", () => 
   assert.match(js, /function renderWorkspaceFocusStrip/);
   assert.match(js, /function renderTicketEndToEndFlow/);
   assert.match(js, /data-ticket-lifecycle-map/);
-  assert.match(js, /renderTicketEndToEndFlow\(openTickets\)/);
+  assert.doesNotMatch(js, /renderTicketEndToEndFlow\(activeTickets/);
+  assert.doesNotMatch(js, /renderTicketEndToEndFlow\(openTickets\)/);
   assert.match(js, /renderTicketEndToEndFlow\(dashboardTickets\(\), ticket\.stage/);
   assert.match(js, /function renderMoneyBudgetPanel/);
   assert.match(js, /function findTicketForBudget/);

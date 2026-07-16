@@ -12176,7 +12176,6 @@
         </section>
         ${renderHomeRunway({ todayTickets, overdueTickets, leadTickets, workTickets, moneyTickets, reviewTickets, actions })}
         ${renderHomeCommandCenter({ actions, attentionTickets, todayTickets, workTickets, moneyTickets, workflowWarnings, notifications })}
-        ${renderTicketEndToEndFlow(activeTickets, "", "Urban Yards job flow")}
         ${renderTicketOwnerStrip(activeTickets)}
       </div>`;
   }
@@ -12287,7 +12286,6 @@
           { kicker: "Closeout", value: reviewTickets.length, title: "Review queue", detail: "Completed, invoiced, or paid tickets still needing review." }
         ], "Tickets workspace signals")}
         ${renderTicketCommandCenter({ filteredTickets, workTickets, officeTickets, readyTickets, reviewTickets })}
-        ${renderTicketEndToEndFlow(openTickets)}
         ${renderTicketOwnerStrip(openTickets)}
         ${renderTicketWorkflowBoard(openTickets, filteredTickets)}
         <div class="ticket-lane-grid">

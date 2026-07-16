@@ -385,6 +385,7 @@
   const els = {};
   let dashboardBackgroundLoadPromise = null;
   let dashboardRefreshSerial = 0;
+  const dashboardSectionLoadState = new Map();
   const sectionAliases = {
     home: "overview",
     tickets: "tickets",
@@ -465,9 +466,15 @@
   ]);
   const DASHBOARD_INITIAL_LOAD_TIMEOUT_MS = 7000;
   const DASHBOARD_BACKGROUND_LOAD_TIMEOUT_MS = 8000;
+  const DASHBOARD_SECTION_LOAD_TIMEOUT_MS = 4500;
   const DASHBOARD_INITIAL_LOAD_CONCURRENCY = 3;
   const DASHBOARD_BACKGROUND_LOAD_CONCURRENCY = 2;
+  const DASHBOARD_SECTION_LOAD_CONCURRENCY = 2;
   const DASHBOARD_AUTO_BACKGROUND_MODULE_KEYS = [];
+  const SUBMISSION_LIST_SELECT = "id,name,email,phone,property_type,city,service,status,source,created_at,notes";
+  const CONTACT_LIST_SELECT = "id,first_name,last_name,name,job_title,company,property,contact_type,city,state,zip,address,email,phone_display,phone,phone_e164,phone_extension,secondary_phone,preferred_contact_method,priority,assigned_user,last_contacted_at,next_follow_up_at,call_outcome,notes,source,status";
+  const JOB_LIST_SELECT = "id,visit_date,visit_window,site_name,city,service,status";
+  const REMINDER_LIST_SELECT = "id,due_date,task,status";
   let demoIdCount = 100;
   let googleRouteMap = null;
   let googleRouteLine = null;
@@ -1428,7 +1435,7 @@
     if (!state.documentationReady && state.documentationError) {
       warnings.push({ name: "Documentation", message: state.documentationError, detail: state.documentationError, scope: "support" });
     }
-    if (!state.importExportReady) {
+    if (!state.importExportReady && state.importExportError) {
       warnings.push({ name: "Import & Export", message: state.importExportError || "Import/export center is not ready.", detail: state.importExportError || "", scope: "support" });
     }
     if (options.scope === "critical") return warnings.filter((item) => item.scope !== "support");
@@ -4542,21 +4549,21 @@
       {
         key: "submissions",
         name: "quote submissions",
-        loader: ({ signal } = {}) => supabaseRestRequest("quote_submissions?select=*&limit=120", { method: "GET", signal }),
+        loader: ({ signal } = {}) => supabaseRestRequest(`quote_submissions?select=${SUBMISSION_LIST_SELECT}&limit=80`, { method: "GET", signal }),
         fallback: [],
         normalize: (rows) => rows.map(normalizeSubmission).sort((a, b) => String(b.createdAtRaw || "").localeCompare(String(a.createdAtRaw || "")))
       },
       {
         key: "contacts",
         name: "contacts",
-        loader: ({ signal } = {}) => supabaseRestRequest("contacts?select=*&limit=150", { method: "GET", signal }),
+        loader: ({ signal } = {}) => supabaseRestRequest(`contacts?select=${CONTACT_LIST_SELECT}&limit=100`, { method: "GET", signal }),
         fallback: [],
         normalize: (rows) => rows.map(normalizeContact).sort((a, b) => String(b.createdAtRaw || "").localeCompare(String(a.createdAtRaw || "")))
       },
       {
         key: "jobs",
         name: "scheduled jobs",
-        loader: ({ signal } = {}) => supabaseRestRequest("scheduled_jobs?select=*&limit=150", { method: "GET", signal }),
+        loader: ({ signal } = {}) => supabaseRestRequest(`scheduled_jobs?select=${JOB_LIST_SELECT}&limit=100`, { method: "GET", signal }),
         fallback: [],
         normalize: (rows) => rows.map(normalizeJob).sort((a, b) => String(a.dateRaw || "").localeCompare(String(b.dateRaw || "")))
       },
@@ -4572,7 +4579,7 @@
       {
         key: "reminders",
         name: "follow-up reminders",
-        loader: ({ signal } = {}) => supabaseRestRequest("follow_up_reminders?select=*&limit=120", { method: "GET", signal }),
+        loader: ({ signal } = {}) => supabaseRestRequest(`follow_up_reminders?select=${REMINDER_LIST_SELECT}&limit=80`, { method: "GET", signal }),
         fallback: [],
         normalize: (rows) => rows.map(normalizeReminder).sort((a, b) => String(a.dueRaw || "").localeCompare(String(b.dueRaw || "")))
       },
@@ -4669,6 +4676,80 @@
     }
 
     return nextData;
+  }
+
+  function dashboardSectionLoadInfo(section) {
+    const normalized = normalizeDashboardSection(section);
+    if (!dashboardSectionLoadState.has(normalized)) {
+      dashboardSectionLoadState.set(normalized, {
+        status: "idle",
+        error: "",
+        startedAt: "",
+        loadedAt: "",
+        promise: null
+      });
+    }
+    return dashboardSectionLoadState.get(normalized);
+  }
+
+  function shouldHydrateDashboardSection(section, options = {}) {
+    if (isDemoMode()) return false;
+    if (!els.appView || els.appView.hidden) return false;
+    if (options.force) return true;
+    const info = dashboardSectionLoadInfo(section);
+    return info.status !== "loaded" && !info.promise;
+  }
+
+  function hydrateDashboardSection(section = state.activeSection, options = {}) {
+    const normalized = normalizeDashboardSection(section);
+    const info = dashboardSectionLoadInfo(normalized);
+    if (isDemoMode()) return Promise.resolve(state.data);
+    if (info.promise && !options.force) return info.promise;
+    if (!shouldHydrateDashboardSection(normalized, options)) return Promise.resolve(state.data);
+
+    const keys = dashboardInitialModuleKeys(normalized);
+    info.status = "loading";
+    info.error = "";
+    info.startedAt = new Date().toISOString();
+
+    const promise = loadDashboardData({
+      keys,
+      phase: options.phase || `section:${normalized}`,
+      essential: false,
+      merge: true,
+      resetErrors: options.resetErrors === true,
+      recordErrors: options.recordErrors,
+      concurrency: options.concurrency || DASHBOARD_SECTION_LOAD_CONCURRENCY,
+      timeoutMs: options.timeoutMs || DASHBOARD_SECTION_LOAD_TIMEOUT_MS
+    }).then(async (nextData) => {
+      state.data = nextData;
+      info.status = "loaded";
+      info.loadedAt = new Date().toISOString();
+      state.lastRefreshAt = info.loadedAt;
+      if (!state.performance.initialDataLoadedAt) state.performance.initialDataLoadedAt = info.loadedAt;
+      if (state.activeSection === normalized || options.render !== false) {
+        await render();
+      }
+      applyDashboardSupportStatus();
+      return state.data;
+    }).catch(async (error) => {
+      info.status = "failed";
+      info.error = error.message || "This dashboard section could not load.";
+      recordModuleError(`section:${normalized}`, error, { phase: options.phase || `section:${normalized}`, scope: "support" });
+      if (state.activeSection === normalized) await render();
+      applyDashboardSupportStatus();
+      return state.data;
+    }).finally(() => {
+      info.promise = null;
+    });
+
+    info.promise = promise;
+    return promise;
+  }
+
+  function queueDashboardSectionHydration(section = state.activeSection, options = {}) {
+    if (!shouldHydrateDashboardSection(section, options)) return;
+    Promise.resolve().then(() => hydrateDashboardSection(section, options));
   }
 
   async function loadCanonicalTickets({ signal } = {}) {
@@ -8197,7 +8278,13 @@
     syncDashboardSubviewVisibility();
     await render();
     state.performance.shellRenderedAt = new Date().toISOString();
-    await refreshDashboard();
+    state.loading = false;
+    setDashboardState("");
+    queueDashboardSectionHydration(state.activeSection, {
+      phase: "startup",
+      resetErrors: true,
+      recordErrors: true
+    });
   }
 
   function normalizeDashboardSection(section) {
@@ -8291,6 +8378,7 @@
       });
     }, 100);
     syncDashboardSubviewVisibility();
+    queueDashboardSectionHydration(state.activeSection);
   }
 
   function dashboardSectionFromPath(pathname = window.location.pathname) {
@@ -16746,61 +16834,68 @@
   async function render() {
     const data = state.data;
     safeRender("notifications", () => renderNotifications(data));
-    safeRender("home ticket workspace", () => renderHomeWorkspace(data));
-    safeRender("job ticket workspace", () => renderJobTicketWorkspace(data));
-    safeRender("work workspace", () => renderWorkWorkspace(data));
-    safeRender("leads workspace", () => renderLeadsWorkspace(data));
-    safeRender("money workspace", () => renderMoneyWorkspace(data));
-    safeRender("tools workspace", () => renderToolsWorkspace(data));
-    safeRender("property filters", () => populatePropertyFilter(data));
-    safeRender("metrics", () => renderMetrics(data));
-    safeRender("dashboard alerts", () => renderDashboardAlerts(data));
-    safeRender("overdue jobs", () => renderOverdueJobAlerts(data));
-    safeRender("today actions", () => renderTodayActions(data));
-    safeRender("submissions", () => renderSubmissions(data));
-    safeRender("upcoming", () => renderUpcoming(data));
-    safeRender("home reminders", () => renderHomeReminders(data));
-    safeRender("home notes", () => renderHomeNotes(data));
-    safeRender("route snapshot", () => renderTodayRouteSnapshot(data));
-    safeRender("quote table", () => renderQuoteTable(data));
-    safeRender("pipeline", () => renderPipeline(data));
-    safeRender("documents", () => renderDocuments(data));
-    safeRender("documentation", () => renderDocumentation(data));
-    safeRender("contacts", () => renderContacts(data));
-    safeRender("outreach", () => renderOutreach(data));
-    safeRender("equipment", () => renderEquipment(data));
-    safeRender("jobs", () => renderJobs(data));
-    safeRender("notes", () => renderNotes());
-    safeRender("reminders", () => renderReminders(data));
-    safeRender("calendar", () => renderCalendar(data));
-    safeRender("operations", () => renderOperations(data));
-    safeRender("route planner", () => renderRoutePlanner(data));
-    safeRender("Groundskeeper AI", () => renderGroundskeeperAi(data));
-    safeRender("import/export", () => renderImportExport(data));
-    safeRender("users access", () => renderUsersAccess(data));
-    safeRender("activity log", () => renderActivityLog(data));
     safeRender("profile avatar", () => renderCurrentProfileAvatar(data));
     safeRender("environment indicator", () => renderEnvironmentIndicator());
     safeRender("dashboard health", () => renderDashboardHealth());
     safeRender("global add menu", () => renderGlobalAddMenu());
     safeRender("global search", () => renderGlobalSearchPanel());
+    const active = normalizeDashboardSection(state.activeSection);
+    if (active === "overview") {
+      safeRender("home ticket workspace", () => renderHomeWorkspace(data));
+      safeRender("property filters", () => populatePropertyFilter(data));
+      safeRender("metrics", () => renderMetrics(data));
+      safeRender("dashboard alerts", () => renderDashboardAlerts(data));
+      safeRender("overdue jobs", () => renderOverdueJobAlerts(data));
+      safeRender("today actions", () => renderTodayActions(data));
+      safeRender("submissions", () => renderSubmissions(data));
+      safeRender("upcoming", () => renderUpcoming(data));
+      safeRender("home reminders", () => renderHomeReminders(data));
+      safeRender("home notes", () => renderHomeNotes(data));
+      safeRender("route snapshot", () => renderTodayRouteSnapshot(data));
+    } else if (active === "tickets") {
+      safeRender("job ticket workspace", () => renderJobTicketWorkspace(data));
+    } else if (active === "calendar") {
+      safeRender("work workspace", () => renderWorkWorkspace(data));
+      safeRender("jobs", () => renderJobs(data));
+      safeRender("calendar", () => renderCalendar(data));
+      safeRender("overdue jobs", () => renderOverdueJobAlerts(data));
+    } else if (active === "outreach") {
+      safeRender("leads workspace", () => renderLeadsWorkspace(data));
+      safeRender("outreach", () => renderOutreach(data));
+    } else if (active === "documents") {
+      safeRender("money workspace", () => renderMoneyWorkspace(data));
+      safeRender("quote table", () => renderQuoteTable(data));
+      safeRender("pipeline", () => renderPipeline(data));
+      safeRender("documents", () => renderDocuments(data));
+    } else if (active === "settings") {
+      safeRender("tools workspace", () => renderToolsWorkspace(data));
+      safeRender("notes", () => renderNotes());
+      safeRender("reminders", () => renderReminders(data));
+      safeRender("users access", () => renderUsersAccess(data));
+      safeRender("activity log", () => renderActivityLog(data));
+    } else if (active === "contacts") {
+      safeRender("contacts", () => renderContacts(data));
+    } else if (active === "documentation") {
+      safeRender("documentation", () => renderDocumentation(data));
+    } else if (active === "equipment") {
+      safeRender("equipment", () => renderEquipment(data));
+    } else if (active === "route-planner") {
+      safeRender("route planner", () => renderRoutePlanner(data));
+    } else if (active === "groundskeeper-ai") {
+      safeRender("Groundskeeper AI", () => renderGroundskeeperAi(data));
+    } else if (active === "import-export") {
+      safeRender("import/export", () => renderImportExport(data));
+    }
     safeRender("avatar fallbacks", () => bindAvatarFallbacks());
     if (els.todayChip) els.todayChip.textContent = new Date().toLocaleDateString("en-US", { weekday: "long", month: "short", day: "numeric" });
     setActiveSection(state.activeSection);
   }
 
   function dashboardSupportStatusMessage() {
-    const warnings = dashboardHealthWarnings({ scope: "critical" });
     if (isDemoMode()) {
       return {
         message: "Demo mode: sample records only. Changes stay in this browser session and do not touch Supabase, Square, or real client data.",
         tone: ""
-      };
-    }
-    if (warnings.length) {
-      return {
-        message: "Some dashboard records are temporarily unavailable. Open Tools for diagnostics.",
-        tone: "warning"
       };
     }
     if (state.performance.backgroundLoading) {
@@ -16854,35 +16949,26 @@
   }
 
   async function refreshDashboard(options = {}) {
-    const refreshSerial = ++dashboardRefreshSerial;
-    const phase = options.phase || "initial";
-    const initialKeys = phase === "full" ? dashboardAllModuleKeys() : dashboardInitialModuleKeys(state.activeSection);
-    state.loading = true;
+    const phase = options.phase || "section";
+    const section = normalizeDashboardSection(options.section || state.activeSection);
+    state.loading = false;
     state.error = "";
     if (!options.quiet) {
-      setDashboardState(phase === "full" ? "Refreshing dashboard records..." : "Loading dashboard records...");
+      setDashboardState("Refreshing current view...");
     }
 
     try {
-      state.data = await loadDashboardData({
-        keys: initialKeys,
+      await hydrateDashboardSection(section, {
         phase,
-        essential: true,
-        merge: true,
+        force: true,
         resetErrors: options.resetErrors !== false,
         recordErrors: options.recordErrors,
-        concurrency: options.concurrency || DASHBOARD_INITIAL_LOAD_CONCURRENCY,
-        timeoutMs: options.timeoutMs || DASHBOARD_INITIAL_LOAD_TIMEOUT_MS
+        concurrency: options.concurrency || DASHBOARD_SECTION_LOAD_CONCURRENCY,
+        timeoutMs: options.timeoutMs || DASHBOARD_SECTION_LOAD_TIMEOUT_MS
       });
       state.loading = false;
       state.lastRefreshAt = new Date().toISOString();
-      if (phase !== "full") state.performance.initialDataLoadedAt = state.lastRefreshAt;
-      await render();
-      if (phase === "full") {
-        state.performance.backgroundDataLoadedAt = state.lastRefreshAt;
-      } else if (options.background !== false) {
-        scheduleDashboardBackgroundLoad(initialKeys, refreshSerial);
-      }
+      if (!state.performance.initialDataLoadedAt) state.performance.initialDataLoadedAt = state.lastRefreshAt;
       applyDashboardSupportStatus();
     } catch (error) {
       state.loading = false;
@@ -17012,14 +17098,6 @@
       setActiveSection(nextSection);
       replaceDashboardHash(nextSection);
       await render();
-      await refreshDashboard({
-        phase: "section",
-        quiet: true,
-        background: false,
-        resetErrors: false,
-        concurrency: DASHBOARD_INITIAL_LOAD_CONCURRENCY,
-        timeoutMs: DASHBOARD_INITIAL_LOAD_TIMEOUT_MS
-      });
     });
 
     if (els.sidebarClose) {

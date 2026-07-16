@@ -222,6 +222,7 @@ test("dashboard route aliases and new reliability diagnostics are wired", () => 
   assert.doesNotMatch(js, /Leads handoff rule/);
   assert.match(js, /function renderTicketEndToEndFlow/);
   assert.match(js, /data-ticket-lifecycle-map/);
+  assert.match(css, /grid-template-areas:\s*"step title"\s*"\. detail"\s*"\. count"/);
   assert.doesNotMatch(js, /renderTicketEndToEndFlow\(activeTickets/);
   assert.doesNotMatch(js, /renderTicketEndToEndFlow\(openTickets\)/);
   assert.match(js, /renderTicketEndToEndFlow\(dashboardTickets\(\), ticket\.stage/);

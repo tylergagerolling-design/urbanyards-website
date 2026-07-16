@@ -14958,16 +14958,17 @@ body:not(.is-login-screen) .ticket-flow-heading dd {
 
 body:not(.is-login-screen) .ticket-flow-steps {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
   gap: 10px;
 }
 
 body:not(.is-login-screen) .ticket-flow-step {
   display: grid;
-  grid-template-columns: 30px minmax(0, 1fr) auto;
+  grid-template-columns: 30px minmax(0, 1fr);
   grid-template-areas:
-    "step title count"
-    ". detail count";
+    "step title"
+    ". detail"
+    ". count";
   align-items: start;
   gap: 8px 10px;
   min-width: 0;
@@ -15023,27 +15024,17 @@ body:not(.is-login-screen) .ticket-flow-step.is-populated {
 
 body:not(.is-login-screen) .ticket-flow-step em {
   grid-area: count;
-  justify-self: end;
-  align-self: start;
+  justify-self: start;
+  align-self: center;
+  width: fit-content;
+  padding: 3px 8px;
+  border-radius: 999px;
+  background: rgba(222, 237, 210, .75);
   color: var(--uy-green);
   font-size: .72rem;
   font-style: normal;
   font-weight: 900;
   white-space: nowrap;
-}
-
-@media (max-width: 760px) {
-  body:not(.is-login-screen) .ticket-flow-step {
-    grid-template-columns: 30px minmax(0, 1fr);
-    grid-template-areas:
-      "step title"
-      ". detail"
-      ". count";
-  }
-
-  body:not(.is-login-screen) .ticket-flow-step em {
-    justify-self: start;
-  }
 }
 
 body:not(.is-login-screen) .ticket-owner-strip {

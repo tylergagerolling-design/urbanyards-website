@@ -16229,6 +16229,144 @@ body:not(.is-login-screen) .ticket-command-card .ticket-drawer-card-heading {
   margin-bottom: 0;
 }
 
+body:not(.is-login-screen) .ticket-next-move-panel {
+  display: grid;
+  gap: 12px;
+  padding: 14px;
+  border: 1px solid rgba(18, 63, 49, .14);
+  border-radius: 16px;
+  background:
+    radial-gradient(circle at 100% 0%, rgba(153, 180, 119, .16), transparent 40%),
+    rgba(251, 250, 245, .92);
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, .6);
+}
+
+body:not(.is-login-screen) .ticket-next-move-panel.is-ready {
+  border-color: rgba(90, 128, 75, .32);
+  background:
+    radial-gradient(circle at 100% 0%, rgba(153, 180, 119, .22), transparent 42%),
+    #f7fbf1;
+}
+
+body:not(.is-login-screen) .ticket-next-move-panel.is-blocked {
+  border-color: rgba(195, 136, 47, .28);
+  background:
+    radial-gradient(circle at 100% 0%, rgba(217, 182, 111, .2), transparent 42%),
+    rgba(255, 252, 244, .94);
+}
+
+body:not(.is-login-screen) .ticket-next-move-panel.is-complete {
+  border-color: rgba(73, 102, 77, .18);
+  background: rgba(248, 251, 242, .88);
+}
+
+body:not(.is-login-screen) .ticket-next-move-main {
+  display: grid;
+  gap: 5px;
+}
+
+body:not(.is-login-screen) .ticket-next-move-main span {
+  width: fit-content;
+  padding: 4px 9px;
+  border-radius: 999px;
+  background: #e7f0dd;
+  color: var(--uy-green);
+  font-size: .72rem;
+  font-weight: 900;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+}
+
+body:not(.is-login-screen) .ticket-next-move-main h5 {
+  margin: 0;
+  color: var(--uy-green);
+  font-size: 1.03rem;
+}
+
+body:not(.is-login-screen) .ticket-next-move-main p {
+  margin: 0;
+  color: var(--uy-muted);
+  line-height: 1.45;
+}
+
+body:not(.is-login-screen) .ticket-next-move-meta {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+  margin: 0;
+}
+
+body:not(.is-login-screen) .ticket-next-move-meta div {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+  padding: 9px 10px;
+  border: 1px solid rgba(73, 102, 77, .1);
+  border-radius: 12px;
+  background: rgba(255, 255, 255, .64);
+}
+
+body:not(.is-login-screen) .ticket-next-move-meta dt {
+  color: var(--uy-muted);
+  font-size: .7rem;
+  font-weight: 850;
+  letter-spacing: .06em;
+  text-transform: uppercase;
+}
+
+body:not(.is-login-screen) .ticket-next-move-meta dd {
+  min-width: 0;
+  margin: 0;
+  color: var(--uy-green);
+  font-size: .88rem;
+  font-weight: 850;
+  overflow-wrap: anywhere;
+}
+
+body:not(.is-login-screen) .ticket-next-move-blockers {
+  display: grid;
+  gap: 6px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+body:not(.is-login-screen) .ticket-next-move-blockers li {
+  position: relative;
+  padding-left: 18px;
+  color: var(--uy-muted);
+  font-weight: 720;
+  line-height: 1.35;
+}
+
+body:not(.is-login-screen) .ticket-next-move-blockers li::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: .45em;
+  width: 8px;
+  height: 8px;
+  border-radius: 999px;
+  background: #d9b66f;
+}
+
+body:not(.is-login-screen) .ticket-next-move-button {
+  justify-self: start;
+  min-height: 40px;
+  padding: 0 16px;
+  border: 1px solid rgba(18, 63, 49, .2);
+  border-radius: 999px;
+  background: var(--uy-green);
+  color: #fff;
+  font-weight: 900;
+  box-shadow: 0 12px 24px rgba(18, 63, 49, .16);
+}
+
+body:not(.is-login-screen) .ticket-next-move-button:hover {
+  transform: translateY(-1px);
+  filter: brightness(1.04);
+}
+
 body:not(.is-login-screen) .ticket-command-field {
   display: grid;
   gap: 7px;
@@ -16341,6 +16479,12 @@ body:not(.is-login-screen) .ticket-handoff-actions button small {
   color: var(--uy-muted);
   font-weight: 650;
   line-height: 1.35;
+}
+
+@media (max-width: 720px) {
+  body:not(.is-login-screen) .ticket-next-move-meta {
+    grid-template-columns: 1fr;
+  }
 }
 
 body:not(.is-login-screen) .ticket-requirement-list {

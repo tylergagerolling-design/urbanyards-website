@@ -10403,7 +10403,9 @@
   }
 
   function renderTicketRequirements(ticket) {
-    const blockers = ticket.blockers?.length ? ticket.blockers : [];
+    const transitionBlockers = ticketTransitionOptions(ticket || {})
+      .flatMap((item) => item.missing || []);
+    const blockers = ticket.blockers?.length ? ticket.blockers : [...new Set(transitionBlockers)];
     return `<section class="ticket-drawer-card">
       <div class="ticket-drawer-card-heading">
         <h4>Next requirements</h4>
@@ -10668,6 +10670,14 @@
     if (field === "paymentStatus") return statusText(ticket.paymentStatus) === "paid";
     if (field === "costReviewComplete") return Boolean(ticket.costReviewComplete || ticket.budgetComplete);
     if (field === "dateRaw") return Boolean(ticket.dateRaw && ticket.dateLabel !== "No date");
+    if (field === "customerId") return Boolean(ticket.customerId || ticket.customer);
+    if (field === "propertyId") return Boolean(ticket.propertyId || ticket.property || ticket.city);
+    if (field === "primaryContact") return Boolean(ticket.primaryContact || ticket.email || ticket.phone);
+    if (field === "scopeOfWork") return Boolean(ticket.scopeOfWork || ticket.detail || ticket.notes);
+    if (field === "proposedPrice") return Boolean(ticket.proposedPrice || ticket.expectedRevenue || ticket.finalRevenue);
+    if (field === "expectedRevenue") return Boolean(ticket.expectedRevenue || ticket.proposedPrice || ticket.finalRevenue);
+    if (field === "draftInvoiceExists") return Boolean(ticket.draftInvoiceExists || findInvoiceForTicket(ticket));
+    if (field === "invoiceFinalized") return Boolean(ticket.invoiceFinalized || findInvoiceForTicket(ticket));
     const value = ticket[field];
     return value !== undefined && value !== null && value !== "" && value !== false;
   }
@@ -10690,6 +10700,93 @@
       missing: ticketMissingRequirementsForStage(ticket, item.to),
       nextAction: ticketNextAction(item.to)
     }));
+  }
+
+  function ticketCommandStatus(ticket, transitions = []) {
+    if (!ticket) {
+      return {
+        state: "empty",
+        title: "No ticket selected",
+        detail: "Open a ticket to review its next workflow move.",
+        blockers: []
+      };
+    }
+    const stage = ticketStage(ticket);
+    const meta = ticketStageMeta[stage] || {};
+    const readyMove = transitions.find((item) => !(item.missing || []).length);
+    const blockedMove = transitions.find((item) => (item.missing || []).length);
+    if (readyMove) {
+      return {
+        state: "ready",
+        title: `Ready for ${ticketStageLabel(readyMove.to)}`,
+        detail: readyMove.detail || `Move this ticket to ${ticketStageLabel(readyMove.to)} when the note looks right.`,
+        move: readyMove,
+        blockers: []
+      };
+    }
+    if (blockedMove) {
+      return {
+        state: "blocked",
+        title: `Blocked before ${ticketStageLabel(blockedMove.to)}`,
+        detail: blockedMove.detail || "Complete the missing requirements before moving this ticket forward.",
+        move: blockedMove,
+        blockers: blockedMove.missing || []
+      };
+    }
+    if (stage === "closed" || stage === "cancelled") {
+      return {
+        state: "complete",
+        title: `${meta.label || "Ticket"} complete`,
+        detail: "This ticket has reached the end of its active workflow.",
+        blockers: []
+      };
+    }
+    return {
+      state: "waiting",
+      title: "No configured move",
+      detail: "Save a next action or use the source record controls below.",
+      blockers: []
+    };
+  }
+
+  function renderTicketNextMovePanel(ticket, transitions = [], isCanonical = true) {
+    const stage = ticketStage(ticket || {});
+    const meta = ticketStageMeta[stage] || ticketStageMeta.sales_intake;
+    const status = ticketCommandStatus(ticket, transitions);
+    const owner = ticket?.ownerLabel || meta.owner || "Unassigned";
+    if (!isCanonical) {
+      return `<div class="ticket-next-move-panel is-source-preview">
+        <div class="ticket-next-move-main">
+          <span>Source preview</span>
+          <h5>Create the unified ticket first</h5>
+          <p>This source record can be reviewed here, but stage moves happen on a unified Job Ticket.</p>
+        </div>
+        <dl class="ticket-next-move-meta">
+          <div><dt>Owner</dt><dd>${escapeHtml(owner)}</dd></div>
+          <div><dt>Stage</dt><dd>${escapeHtml(ticketStageLabel(stage))}</dd></div>
+          <div><dt>Next</dt><dd>${escapeHtml(ticket?.nextAction || "Open ticket")}</dd></div>
+        </dl>
+      </div>`;
+    }
+    const primaryMove = status.move && !(status.blockers || []).length ? status.move : null;
+    return `<div class="ticket-next-move-panel is-${escapeHtml(status.state)}">
+      <div class="ticket-next-move-main">
+        <span>${escapeHtml(owner)}</span>
+        <h5>${escapeHtml(status.title)}</h5>
+        <p>${escapeHtml(status.detail)}</p>
+      </div>
+      <dl class="ticket-next-move-meta">
+        <div><dt>Current stage</dt><dd>${escapeHtml(ticketStageLabel(stage))}</dd></div>
+        <div><dt>Next action</dt><dd>${escapeHtml(ticket?.nextAction || ticketNextAction(stage))}</dd></div>
+        <div><dt>Lane</dt><dd>${escapeHtml(titleCase(meta.lane || "workflow"))}</dd></div>
+      </dl>
+      ${(status.blockers || []).length ? `<ul class="ticket-next-move-blockers">
+        ${status.blockers.map((item) => `<li>${escapeHtml(item)}</li>`).join("")}
+      </ul>` : ""}
+      ${primaryMove ? `<button type="button" class="ticket-next-move-button" data-action="transition-ticket-stage" data-id="${escapeHtml(ticket.id)}" data-stage="${escapeHtml(primaryMove.to)}" data-next-action="${escapeHtml(primaryMove.nextAction)}">
+        ${buttonContent(primaryMove.label, "complete-reminder")}
+      </button>` : ""}
+    </div>`;
   }
 
   function renderTicketBudgetBridge(ticket = {}) {
@@ -10829,6 +10926,7 @@
           <span>${escapeHtml(isCanonical ? "Move this ticket through the workflow." : "Create or open the unified ticket before moving stages.")}</span>
         </div>
       </div>
+      ${renderTicketNextMovePanel(ticket, transitions, isCanonical)}
       <label class="ticket-command-field">Next action
         <input data-ticket-next-action-input value="${escapeHtml(ticket?.nextAction || "")}" placeholder="What needs to happen next?">
       </label>

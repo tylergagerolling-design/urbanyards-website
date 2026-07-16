@@ -10297,6 +10297,29 @@
     </div>`;
   }
 
+  function renderTicketDrawerProgress(ticket = {}) {
+    const stage = ticketStage(ticket);
+    const activeIndex = ticketCardMilestoneIndex(stage);
+    const completeCount = ticketCardMilestones.reduce((count, item, index) => {
+      return count + (index < activeIndex || ticketCardMilestoneOverride(ticket, item.key) ? 1 : 0);
+    }, 0);
+    const denominator = Math.max(ticketCardMilestones.length - 1, 1);
+    const progress = Math.max(0, Math.min(100, Math.round((activeIndex / denominator) * 100)));
+    const missing = ticketMissingRequirementsForStage(ticket, stage);
+    return `<section class="ticket-drawer-progress" aria-label="Ticket workflow progress">
+      <div class="ticket-drawer-progress-head">
+        <div>
+          <span>Workflow progress</span>
+          <strong>${escapeHtml(String(completeCount))}/${escapeHtml(String(ticketCardMilestones.length))} checkpoints ready</strong>
+        </div>
+        <b>${escapeHtml(ticketStageLabel(stage))}</b>
+      </div>
+      <div class="ticket-drawer-progress-bar" aria-hidden="true"><i style="width:${escapeHtml(String(progress))}%"></i></div>
+      ${renderTicketCardChecklist(ticket)}
+      <p>${escapeHtml(missing.length ? `Current stage needs: ${missing.join(", ")}` : "Current stage has the required basics. Use the command center below for the next move.")}</p>
+    </section>`;
+  }
+
   function renderTicketCard(ticket, compact = false) {
     const blockers = ticket.blockers?.length ? `<div class="ticket-blockers">${ticket.blockers.map((item) => `<span>${escapeHtml(item)}</span>`).join("")}</div>` : "";
     const opensDocument = ticket.source === "document";
@@ -11372,11 +11395,12 @@
             <h3>${escapeHtml(ticket.title)}</h3>
             <p>${escapeHtml(ticket.customer)}${ticket.property ? ` / ${escapeHtml(ticket.property)}` : ""}</p>
           </div>
-          <div class="ticket-drawer-status">
-            <span class="ticket-number">${escapeHtml(ticket.number)}</span>
-            <span class="ticket-stage">${escapeHtml(ticket.stageLabel)}</span>
-          </div>
+        <div class="ticket-drawer-status">
+          <span class="ticket-number">${escapeHtml(ticket.number)}</span>
+          <span class="ticket-stage">${escapeHtml(ticket.stageLabel)}</span>
         </div>
+      </div>
+        ${renderTicketDrawerProgress(ticket)}
         ${renderTicketWorkflowTracker(ticket.stage)}
         ${renderTicketEndToEndFlow(dashboardTickets(), ticket.stage, "Current ticket lifecycle")}
         <div class="drawer-grid ticket-drawer-grid">

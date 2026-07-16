@@ -16332,6 +16332,81 @@ body:not(.is-login-screen) .ticket-drawer-status {
   gap: 6px;
 }
 
+body:not(.is-login-screen) .ticket-drawer-action-strip {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr)) auto;
+  align-items: stretch;
+  gap: 10px;
+  padding: 12px;
+  border: 1px solid rgba(73, 102, 77, .14);
+  border-radius: 20px;
+  background:
+    radial-gradient(circle at 100% 0%, rgba(153, 180, 119, .16), transparent 36%),
+    rgba(255, 255, 255, .72);
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, .58);
+}
+
+body:not(.is-login-screen) .ticket-drawer-action-strip article {
+  display: grid;
+  gap: 4px;
+  min-width: 0;
+  padding: 12px;
+  border: 1px solid rgba(73, 102, 77, .1);
+  border-radius: 16px;
+  background: rgba(251, 250, 245, .82);
+}
+
+body:not(.is-login-screen) .ticket-drawer-action-strip article.is-ready {
+  border-color: rgba(90, 128, 75, .22);
+  background: #f7fbf1;
+}
+
+body:not(.is-login-screen) .ticket-drawer-action-strip article.is-blocked {
+  border-color: rgba(195, 136, 47, .24);
+  background: #fffaf0;
+}
+
+body:not(.is-login-screen) .ticket-drawer-action-strip span {
+  color: var(--uy-muted);
+  font-size: .68rem;
+  font-weight: 900;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+}
+
+body:not(.is-login-screen) .ticket-drawer-action-strip strong {
+  min-width: 0;
+  color: var(--uy-green);
+  font-size: .98rem;
+  line-height: 1.15;
+}
+
+body:not(.is-login-screen) .ticket-drawer-action-strip small {
+  min-width: 0;
+  color: var(--uy-muted);
+  line-height: 1.35;
+}
+
+body:not(.is-login-screen) .ticket-drawer-action-strip-actions {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 8px;
+  min-width: 132px;
+}
+
+body:not(.is-login-screen) .ticket-drawer-action-strip-actions button {
+  width: 100%;
+  min-height: 38px;
+}
+
+body:not(.is-login-screen) .ticket-drawer-action-strip-actions button:first-child {
+  background: var(--uy-green);
+  border-color: var(--uy-green);
+  color: #fff;
+  box-shadow: 0 10px 22px rgba(18, 63, 49, .14);
+}
+
 body:not(.is-login-screen) .ticket-drawer-tracker {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(112px, 1fr));
@@ -16947,6 +17022,17 @@ body:not(.is-login-screen) .field-proof-actions button {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
+  body:not(.is-login-screen) .ticket-drawer-action-strip {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  body:not(.is-login-screen) .ticket-drawer-action-strip-actions {
+    grid-column: 1 / -1;
+    flex-direction: row;
+    justify-content: flex-start;
+    min-width: 0;
+  }
+
   body:not(.is-login-screen) .ticket-lane-grid,
   body:not(.is-login-screen) .ticket-command-center,
   body:not(.is-login-screen) .home-command-center,
@@ -17010,8 +17096,13 @@ body:not(.is-login-screen) .field-proof-actions button {
   body:not(.is-login-screen) .leads-workspace .ticket-metrics,
   body:not(.is-login-screen) .ticket-workflow-board-grid,
   body:not(.is-login-screen) .work-plan-tile-grid,
-  body:not(.is-login-screen) .ticket-owner-strip {
+  body:not(.is-login-screen) .ticket-owner-strip,
+  body:not(.is-login-screen) .ticket-drawer-action-strip {
     grid-template-columns: 1fr;
+  }
+
+  body:not(.is-login-screen) .ticket-drawer-action-strip-actions {
+    flex-direction: column;
   }
 
   body:not(.is-login-screen) .today-action-item {

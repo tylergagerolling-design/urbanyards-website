@@ -11110,6 +11110,107 @@
     </section>`;
   }
 
+  function ticketWorkspaceTarget(ticket) {
+    const stage = ticketStage(ticket || {});
+    const meta = ticketStageMeta[stage] || {};
+    const lane = meta.lane || ticketLane(ticket || {});
+    if (lane === "sales") {
+      return {
+        label: "Leads",
+        action: "go-leads",
+        detail: "Intake, scope, quote, and customer approval."
+      };
+    }
+    if (lane === "accounting" || lane === "money") {
+      return {
+        label: "Money",
+        action: "go-money",
+        detail: "Cost review, invoices, payment, and closeout."
+      };
+    }
+    if (lane === "field" || lane === "ready") {
+      return {
+        label: "Work",
+        action: "go-work",
+        detail: "Scheduling, site instructions, photos, and completion."
+      };
+    }
+    if (lane === "review") {
+      return {
+        label: "Tickets",
+        action: "go-tickets",
+        detail: "Review proof, actuals, and next workflow move."
+      };
+    }
+    return {
+      label: meta.owner || "Tickets",
+      action: "go-tickets",
+      detail: "Review this ticket in the central workflow."
+    };
+  }
+
+  function ticketSourceQuickAction(ticket) {
+    const sourceType = ticket?.sourceType || ticket?.source;
+    const sourceId = ticket?.sourceId || ticket?.id;
+    if (!sourceId) return null;
+    if (sourceType === "quote") {
+      return { label: "Open Quote", action: "open-submission", id: sourceId };
+    }
+    if (sourceType === "job") {
+      return { label: "Open Visit", action: "edit-job", id: sourceId };
+    }
+    if (sourceType === "document") {
+      return { label: "Open Document", action: "open-document", id: sourceId };
+    }
+    return null;
+  }
+
+  function renderTicketDrawerActionStrip(ticket) {
+    if (!ticket) return "";
+    const transitions = ticketTransitionOptions(ticket);
+    const command = ticketCommandStatus(ticket, transitions);
+    const workspace = ticketWorkspaceTarget(ticket);
+    const sourceAction = ticketSourceQuickAction(ticket);
+    const blockers = command.blockers || [];
+    const readinessTitle = blockers.length
+      ? `${blockers.length} blocker${blockers.length === 1 ? "" : "s"}`
+      : command.state === "ready"
+        ? "Ready to move"
+        : command.state === "complete"
+          ? "Complete"
+          : "Needs review";
+    const readinessDetail = blockers.length
+      ? `Missing ${blockers.slice(0, 2).join(", ")}${blockers.length > 2 ? ` and ${blockers.length - 2} more` : ""}.`
+      : command.detail || "No blocking requirements detected.";
+    const nextTitle = command.move
+      ? ticketStageLabel(command.move.to)
+      : ticket.nextAction || "Review next action";
+    const nextDetail = command.move
+      ? command.move.detail || command.nextAction || "Ready for the next workflow move."
+      : command.detail || ticket.detail || "Review the ticket details and choose the next step.";
+    return `<section class="ticket-drawer-action-strip" aria-label="Ticket action summary">
+      <article>
+        <span>Current workspace</span>
+        <strong>${escapeHtml(workspace.label)}</strong>
+        <small>${escapeHtml(workspace.detail)}</small>
+      </article>
+      <article>
+        <span>Next move</span>
+        <strong>${escapeHtml(nextTitle)}</strong>
+        <small>${escapeHtml(nextDetail)}</small>
+      </article>
+      <article class="${blockers.length ? "is-blocked" : "is-ready"}">
+        <span>Readiness</span>
+        <strong>${escapeHtml(readinessTitle)}</strong>
+        <small>${escapeHtml(readinessDetail)}</small>
+      </article>
+      <div class="ticket-drawer-action-strip-actions">
+        <button type="button" data-action="${escapeHtml(workspace.action)}">${buttonContent(`Open ${workspace.label}`, workspace.action)}</button>
+        ${sourceAction ? `<button type="button" data-action="${escapeHtml(sourceAction.action)}" data-id="${escapeHtml(sourceAction.id)}">${buttonContent(sourceAction.label, sourceAction.action)}</button>` : ""}
+      </div>
+    </section>`;
+  }
+
   function ticketHandoffActions(ticket) {
     if (!ticket) return [];
     const sourceType = ticket.sourceType || ticket.source;
@@ -11400,6 +11501,7 @@
           <span class="ticket-stage">${escapeHtml(ticket.stageLabel)}</span>
         </div>
       </div>
+        ${renderTicketDrawerActionStrip(ticket)}
         ${renderTicketDrawerProgress(ticket)}
         ${renderTicketWorkflowTracker(ticket.stage)}
         ${renderTicketEndToEndFlow(dashboardTickets(), ticket.stage, "Current ticket lifecycle")}

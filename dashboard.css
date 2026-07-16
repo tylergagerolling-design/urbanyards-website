@@ -15544,11 +15544,49 @@ body:not(.is-login-screen) .work-readiness-panel .ticket-flow-heading > button:h
 }
 
 body:not(.is-login-screen) .home-runway-tile {
+  grid-template-columns: minmax(0, 1fr) auto;
+  grid-template-areas:
+    "label value"
+    "detail detail"
+    "action action";
+  align-items: start;
   min-height: 160px;
   border-color: rgba(73, 102, 77, .13);
   background:
     radial-gradient(circle at 100% 0%, rgba(153, 180, 119, .12), transparent 36%),
     rgba(251, 250, 245, .88);
+}
+
+body:not(.is-login-screen) .home-runway-tile > span {
+  grid-area: label;
+  min-width: 0;
+  line-height: 1.25;
+  overflow-wrap: break-word;
+  word-break: normal;
+}
+
+body:not(.is-login-screen) .home-runway-tile > strong {
+  grid-area: value;
+  justify-self: end;
+  min-width: 42px;
+  padding: 8px 10px;
+  border-radius: 999px;
+  background: #e7efdf;
+  text-align: center;
+  font-size: clamp(1.15rem, 1.6vw, 1.55rem);
+  line-height: 1;
+}
+
+body:not(.is-login-screen) .home-runway-tile > p {
+  grid-area: detail;
+  max-width: 32ch;
+  overflow-wrap: break-word;
+  word-break: normal;
+}
+
+body:not(.is-login-screen) .home-runway-tile > button {
+  grid-area: action;
+  align-self: end;
 }
 
 body:not(.is-login-screen) .home-runway-tile.is-warning {

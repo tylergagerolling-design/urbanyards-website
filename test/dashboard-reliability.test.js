@@ -220,6 +220,12 @@ test("dashboard route aliases and new reliability diagnostics are wired", () => 
   assert.doesNotMatch(js, /renderWorkspaceWorkflowRibbon/);
   assert.doesNotMatch(css, /workspace-workflow-ribbon/);
   assert.doesNotMatch(js, /Leads handoff rule/);
+  const overviewSection = html.match(/<section class="dashboard-section home-ticket-page" id="overview"[\s\S]*?<\/section>/)?.[0] || "";
+  assert.match(overviewSection, /data-home-workspace/);
+  assert.doesNotMatch(overviewSection, /overview-command-header|home-secondary-tools|data-metrics|data-command-deadlines/);
+  const workSection = html.match(/<section class="dashboard-section work-page work-hub-page" id="calendar"[\s\S]*?<\/section>/)?.[0] || "";
+  assert.match(workSection, /data-work-workspace/);
+  assert.doesNotMatch(workSection, /work-command-header|work-secondary-tools|data-work-snapshot|data-calendar-list/);
   assert.match(js, /function renderTicketEndToEndFlow/);
   assert.match(js, /data-ticket-lifecycle-map/);
   assert.match(css, /grid-template-areas:\s*"step title"\s*"\. detail"\s*"\. count"/);

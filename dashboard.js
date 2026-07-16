@@ -12174,7 +12174,6 @@
           ${renderTicketMetric(actions.length, "Action Items", "Needs attention now")}
           ${renderTicketMetric(workflowWarnings.length + notifications.length, "Alerts", "Workflow and notification signals")}
         </section>
-        ${renderWorkspaceWorkflowRibbon(activeTickets, "")}
         ${renderHomeRunway({ todayTickets, overdueTickets, leadTickets, workTickets, moneyTickets, reviewTickets, actions })}
         ${renderHomeCommandCenter({ actions, attentionTickets, todayTickets, workTickets, moneyTickets, workflowWarnings, notifications })}
         ${renderTicketEndToEndFlow(activeTickets, "", "Urban Yards job flow")}
@@ -12282,7 +12281,6 @@
           ${renderTicketMetric(ticketCountBy(openTickets, (ticket) => ticketInLane(ticket, ["sales", "accounting"])), "Needs Office", "Scope, quote, cost review")}
           ${renderTicketMetric(ticketCountBy(openTickets, (ticket) => ticketInLane(ticket, ["review", "money"])), "Closeout", "Review, invoice, payment")}
         </section>
-        ${renderWorkspaceWorkflowRibbon(openTickets, "tickets")}
         ${renderWorkspaceFocusStrip([
           { kicker: "Shown", value: filteredTickets.length, title: "Board results", detail: "Open tickets matching the current search and filters." },
           { kicker: "Ready", value: readyTickets.length, title: "Schedule handoff", detail: "Approved work ready to become scheduled visits." },
@@ -12471,7 +12469,6 @@
           ${renderTicketMetric(ticketCountBy(workTickets, (ticket) => ticketInLane(ticket, ["review"])), "Needs Proof", "Photos, actuals, forms")}
           ${renderTicketMetric(upcomingTickets.length, "Upcoming", "Scheduled tickets")}
         </section>
-        ${renderWorkspaceWorkflowRibbon(tickets, "work")}
         ${renderWorkReadinessPanel({ readyTickets, todayTickets, activeTickets, reviewTickets })}
         ${renderWorkDayPlanPanel(routeStopsToday, todayTickets, upcomingTickets, reviewTickets)}
         ${renderWorkspaceFocusStrip([
@@ -12750,7 +12747,6 @@
           ${renderTicketMetric(approvalTickets.length + hot.length, "Quote-Ready", "Interested or pending approval")}
           ${renderTicketMetric(accountingTickets.length, "Money Handoff", "Approved work needs cost review")}
         </section>
-        ${renderWorkspaceWorkflowRibbon(dashboardTickets(data), "leads")}
         ${renderLeadsRunwayPanel({ due, hot, intakeTickets, approvalTickets, accountingTickets, companies, properties })}
         ${renderWorkspaceFocusStrip([
           { kicker: "Contact", value: prospectQueue.length, title: "Call and email queue", detail: "Prospects waiting for a clear next touch." },
@@ -13037,7 +13033,6 @@
           ${renderTicketMetric(unpaidInvoices.length, "Open Invoices", "Awaiting payment")}
           ${renderTicketMetric(overdueInvoices.length, "Overdue", "Payment action needed")}
         </section>
-        ${renderWorkspaceWorkflowRibbon(tickets, "money")}
         ${renderMoneyRunwayPanel({ needsBudget, ownerApproval, invoiceTickets, overdueInvoices })}
         ${renderWorkspaceFocusStrip([
           { kicker: "Budget", value: needsBudget.length, title: "Cost review", detail: "Approved tickets waiting on budget or margin checks." },
@@ -13160,7 +13155,6 @@
           ${renderTicketMetric(documents.length, "Financial Documents", "Quotes, invoices, and records")}
           ${renderTicketMetric(documentationCount, "Forms and Files", "Templates and submissions")}
         </section>
-        ${renderWorkspaceWorkflowRibbon(dashboardTickets(data), "tools")}
         ${renderWorkspaceFocusStrip([
           { kicker: "Health", value: criticalWarnings.length, title: "Critical warnings", detail: "Issues affecting rebuilt workflow pages." },
           { kicker: "Support", value: supportWarnings.length, title: "Setup warnings", detail: "Optional modules or integrations that need attention." },

@@ -11806,18 +11806,10 @@
     }
 
     if (status === "loaded") {
-      return `<div class="workspace-data-state is-synced" role="status">
-        <span class="workspace-data-dot" aria-hidden="true"></span>
-        <strong>${escapeHtml(label)} synced</strong>
-        <small>${escapeHtml(info.loadedAt ? formatDateTime(info.loadedAt) : "Ready")}</small>
-      </div>`;
+      return "";
     }
 
-    return `<div class="workspace-data-state is-idle" role="status">
-      <span class="workspace-data-dot" aria-hidden="true"></span>
-      <strong>${escapeHtml(label)} ready</strong>
-      <small>Records load when this page opens.</small>
-    </div>`;
+    return "";
   }
 
   function renderWorkspaceFocusStrip(items = [], label = "Workspace signals") {

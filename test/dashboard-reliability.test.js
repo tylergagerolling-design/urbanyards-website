@@ -246,9 +246,8 @@ test("dashboard route aliases and new reliability diagnostics are wired", () => 
   assert.match(toolsSection, /data-import-backup/);
   assert.match(toolsSection, /data-user-avatar-upload/);
   assert.doesNotMatch(toolsSection, /uy-page-intro-panel|rebuild-tool-grid|settings-grid/);
-  assert.match(js, /function renderTicketEndToEndFlow/);
-  assert.match(js, /data-ticket-lifecycle-map/);
-  assert.match(css, /grid-template-areas:\s*"step title"\s*"\. detail"\s*"\. count"/);
+  assert.doesNotMatch(js, /function renderTicketEndToEndFlow/);
+  assert.doesNotMatch(js, /data-ticket-lifecycle-map/);
   assert.doesNotMatch(js, /renderTicketEndToEndFlow\(activeTickets/);
   assert.doesNotMatch(js, /renderTicketEndToEndFlow\(openTickets\)/);
   assert.doesNotMatch(js, /renderTicketEndToEndFlow\(dashboardTickets\(\), ticket\.stage/);
@@ -296,7 +295,7 @@ test("dashboard route aliases and new reliability diagnostics are wired", () => 
   assert.match(js, /action: "go-money"[\s\S]*actionLabel: "Open Money"/);
   assert.match(js, /action: "go-tools"[\s\S]*actionLabel: "Open Tools"/);
   assert.doesNotMatch(js, /label: "Budgets"/);
-  ["Lead", "Job Ticket", "Quote", "Budget", "Work Assignment", "Completion", "Invoice", "Closed"].forEach((label) => {
+  ["Leads", "Approval", "Cost Review", "Invoice Prep", "Work", "Review", "Close"].forEach((label) => {
     assert.match(js, new RegExp(`label: "${label}"`));
   });
   ["home", "tickets", "work", "leads", "money", "tools"].forEach((page) => {
@@ -306,16 +305,15 @@ test("dashboard route aliases and new reliability diagnostics are wired", () => 
   assert.match(css, /\.workspace-focus-card/);
   assert.match(css, /workspace-focus-strip[\s\S]*repeat\(auto-fit, minmax\(min\(100%, 260px\), 1fr\)\)/);
   assert.match(css, /workspace-focus-card-main[\s\S]*grid-template-columns: auto minmax\(0, 1fr\)/);
-  assert.match(css, /\.ticket-end-to-end-flow/);
-  assert.match(css, /\.ticket-flow-step\.is-populated/);
-  assert.match(css, /\.ticket-flow-step em/);
-  assert.match(css, /ticket-flow-steps[\s\S]*repeat\(auto-fit, minmax\(min\(100%, 280px\), 1fr\)\)/);
-  assert.match(css, /ticket-flow-step strong[\s\S]*text-wrap: balance/);
+  assert.doesNotMatch(css, /\.ticket-end-to-end-flow/);
+  assert.doesNotMatch(css, /\.ticket-flow-step/);
+  assert.doesNotMatch(css, /ticket-flow-steps/);
   assert.match(css, /ticket-lane-heading > span[\s\S]*flex: 0 0 auto/);
   assert.match(css, /ticket-card-actions[\s\S]*grid-template-columns: minmax\(0, 1fr\) auto/);
   assert.match(css, /ticket-card-actions span[\s\S]*text-wrap: pretty/);
   assert.match(js, /function resizeGoogleMapView\(view\)/);
   assert.match(js, /window\.google\.maps\.event\.trigger\(view\.map, "resize"\)/);
+  assert.match(css, /dashboard-map-preview > div[\s\S]*height: 100% !important/);
   assert.match(js, /ticket-drawer-operating-grid/);
   assert.doesNotMatch(js, /renderTicketEndToEndFlow\(dashboardTickets\(\), ticket\.stage, "Current ticket lifecycle"\)/);
   assert.match(css, /ticket-drawer-operating-grid[\s\S]*grid-template-columns: minmax\(240px, \.82fr\) minmax\(300px, 1\.18fr\)/);

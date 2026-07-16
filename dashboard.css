@@ -3475,6 +3475,11 @@ button:active,
   background: rgba(235, 244, 229, .75);
 }
 
+.dashboard-map-preview > div {
+  width: 100% !important;
+  height: 100% !important;
+}
+
 .dashboard-map-preview-message {
   position: absolute;
   inset: 0;
@@ -14936,18 +14941,6 @@ body:not(.is-login-screen) .workspace-focus-card small {
   line-height: 1.38;
 }
 
-body:not(.is-login-screen) .ticket-flow-panel {
-  display: grid;
-  gap: 12px;
-  padding: clamp(13px, 1.5vw, 16px);
-  border: 1px solid rgba(73, 102, 77, .16);
-  border-radius: 26px;
-  background:
-    linear-gradient(135deg, rgba(255, 255, 255, .9), rgba(246, 249, 241, .76)),
-    radial-gradient(circle at 92% 6%, rgba(153, 180, 119, .16), transparent 34%);
-  box-shadow: 0 16px 38px rgba(19, 36, 28, .055);
-}
-
 body:not(.is-login-screen) .ticket-flow-heading {
   display: flex;
   align-items: end;
@@ -15005,90 +14998,6 @@ body:not(.is-login-screen) .ticket-flow-heading dd {
   font-size: 1.45rem;
   font-weight: 950;
   line-height: 1;
-}
-
-body:not(.is-login-screen) .ticket-flow-steps {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(min(100%, 280px), 1fr));
-  gap: 10px;
-}
-
-body:not(.is-login-screen) .ticket-flow-step {
-  display: grid;
-  grid-template-columns: 30px minmax(0, 1fr);
-  grid-template-areas:
-    "step title"
-    ". detail"
-    ". count";
-  align-items: start;
-  gap: 8px 10px;
-  min-width: 0;
-  padding: 12px;
-  border-radius: 16px;
-  color: var(--uy-muted);
-  background: rgba(255, 253, 246, .54);
-}
-
-body:not(.is-login-screen) .ticket-flow-step span {
-  grid-area: step;
-  display: inline-grid;
-  place-items: center;
-  width: 30px;
-  height: 30px;
-  border-radius: 999px;
-  background: #e7efdf;
-  color: var(--uy-green);
-  font-weight: 900;
-}
-
-body:not(.is-login-screen) .ticket-flow-step strong {
-  grid-area: title;
-  min-width: 0;
-  color: var(--uy-green);
-  line-height: 1.18;
-  hyphens: none;
-  text-wrap: balance;
-  overflow-wrap: normal;
-  word-break: normal;
-}
-
-body:not(.is-login-screen) .ticket-flow-step small {
-  grid-area: detail;
-  min-width: 0;
-  color: var(--uy-muted);
-  line-height: 1.3;
-  hyphens: none;
-  text-wrap: pretty;
-  overflow-wrap: normal;
-  word-break: normal;
-}
-
-body:not(.is-login-screen) .ticket-flow-step.is-active {
-  background: #eef5e8;
-}
-
-body:not(.is-login-screen) .ticket-end-to-end-flow {
-  grid-template-columns: 1fr;
-}
-
-body:not(.is-login-screen) .ticket-flow-step.is-populated {
-  background: rgba(238, 245, 232, .58);
-}
-
-body:not(.is-login-screen) .ticket-flow-step em {
-  grid-area: count;
-  justify-self: start;
-  align-self: center;
-  max-width: 100%;
-  width: fit-content;
-  padding: 3px 8px;
-  border-radius: 999px;
-  background: rgba(222, 237, 210, .75);
-  color: var(--uy-green);
-  font-size: .72rem;
-  font-style: normal;
-  font-weight: 900;
-  white-space: nowrap;
 }
 
 body:not(.is-login-screen) .ticket-owner-strip {
@@ -17915,7 +17824,6 @@ body:not(.is-login-screen) .field-proof-actions button {
 
 @media (max-width: 1180px) {
   body:not(.is-login-screen) .ticket-metrics,
-  body:not(.is-login-screen) .ticket-flow-panel,
   body:not(.is-login-screen) .money-budget-stats,
   body:not(.is-login-screen) .workspace-focus-strip,
   body:not(.is-login-screen) .ticket-workflow-board-grid,
@@ -18005,7 +17913,6 @@ body:not(.is-login-screen) .field-proof-actions button {
   }
 
   body:not(.is-login-screen) .ticket-metrics,
-  body:not(.is-login-screen) .ticket-flow-panel,
   body:not(.is-login-screen) .money-budget-stats,
   body:not(.is-login-screen) .workspace-focus-strip,
   body:not(.is-login-screen) .ticket-next-step-stack,

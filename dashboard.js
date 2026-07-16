@@ -10431,51 +10431,8 @@
     { key: "close", label: "Close", detail: "Invoice and payment", stages: ["invoice_sent", "partially_paid", "paid", "closed"] }
   ];
 
-  const ticketEndToEndFlow = [
-    { key: "lead", label: "Lead", detail: "Request captured", stages: ["draft", "sales_intake"] },
-    { key: "ticket", label: "Job Ticket", detail: "Scope organized", stages: ["scope_in_progress"] },
-    { key: "quote", label: "Quote", detail: "Approval tracked", stages: ["quote_pending", "customer_approval_pending"] },
-    { key: "budget", label: "Budget", detail: "Cost review", stages: ["needs_budget", "budget_in_progress", "needs_owner_approval"] },
-    { key: "assignment", label: "Work Assignment", detail: "Ready and scheduled", stages: ["invoice_preparation", "ready_to_schedule", "scheduled"] },
-    { key: "completion", label: "Completion", detail: "Work proof and review", stages: ["in_progress", "paused", "scope_change_requested", "field_work_complete", "completion_review"] },
-    { key: "invoice", label: "Invoice", detail: "Sent and collected", stages: ["invoice_review", "invoice_sent", "partially_paid", "paid"] },
-    { key: "closed", label: "Closed", detail: "Final record", stages: ["closed"] }
-  ];
-
   function ticketWorkflowIndex(stage) {
     return Math.max(0, ticketWorkflowSteps.findIndex((step) => step.stages.includes(stage)));
-  }
-
-  function renderTicketEndToEndFlow(tickets = [], activeStage = "", label = "End-to-end ticket workflow") {
-    const normalizedActiveStage = activeStage ? ticketStage({ stage: activeStage }) : "";
-    const openCount = tickets.filter(ticketIsOpen).length;
-    const closedCount = tickets.filter((ticket) => ticketInStage(ticket, ["closed"])).length;
-    return `<section class="ticket-flow-panel ticket-end-to-end-flow" data-ticket-lifecycle-map aria-label="${escapeHtml(label)}">
-      <div class="ticket-flow-heading">
-        <div>
-          <p class="eyebrow">Workflow Map</p>
-          <h3>${escapeHtml(label)}</h3>
-          <p>One job trail from request to closeout, shared by Home, Tickets, Work, Leads, Money, and Tools.</p>
-        </div>
-        <dl>
-          <div><dt>Open</dt><dd>${escapeHtml(String(openCount))}</dd></div>
-          <div><dt>Closed</dt><dd>${escapeHtml(String(closedCount))}</dd></div>
-        </dl>
-      </div>
-      <div class="ticket-flow-steps">
-        ${ticketEndToEndFlow.map((step, index) => {
-          const count = tickets.filter((ticket) => ticketInStage(ticket, step.stages)).length;
-          const isActive = normalizedActiveStage && step.stages.includes(normalizedActiveStage);
-          const isPopulated = !normalizedActiveStage && count > 0;
-          return `<article class="ticket-flow-step ${isActive ? "is-active" : ""} ${isPopulated ? "is-populated" : ""}" data-flow-key="${escapeHtml(step.key)}">
-            <span>${escapeHtml(index + 1)}</span>
-            <strong>${escapeHtml(step.label)}</strong>
-            <small>${escapeHtml(step.detail)}</small>
-            <em>${escapeHtml(String(count))} tickets</em>
-          </article>`;
-        }).join("")}
-      </div>
-    </section>`;
   }
 
   function renderTicketWorkflowBoard(openTickets = [], filteredTickets = []) {

@@ -226,6 +226,8 @@ test("dashboard route aliases and new reliability diagnostics are wired", () => 
   assert.match(js, /function renderMoneyBudgetPanel/);
   assert.match(js, /function findTicketForBudget/);
   assert.match(js, /function findBudgetForTicket/);
+  assert.doesNotMatch(js, /Cost Review Queue/);
+  assert.doesNotMatch(js, /Financial Closeout/);
   assert.match(js, /function budgetPayloadFromTicket/);
   assert.match(js, /async function ensureBudgetForTicket/);
   assert.match(js, /async function syncBudgetToTicket/);

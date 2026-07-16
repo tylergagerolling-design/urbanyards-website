@@ -12948,26 +12948,6 @@
         ], "Money workspace signals")}
         ${renderMoneyCommandCenter({ needsBudget, ownerApproval, fieldComplete, invoiceTickets, unpaidInvoices, overdueInvoices })}
         ${renderMoneyBudgetPanel(data, tickets)}
-        <div class="ticket-lane-grid">
-          ${renderTicketColumn("Cost Review Queue", "Approved work that needs internal cost review before scheduling.", needsBudget, "No tickets are waiting for cost review.")}
-          ${renderTicketColumn("Owner and Invoice Prep", "Cost approvals and draft invoices required before scheduling.", ownerApproval, "No tickets are waiting on owner approval.")}
-          ${renderTicketColumn("Completion Closeout", "Finished work that needs actuals, documents, invoice, and payment review.", fieldComplete, "No completed work is waiting for closeout.")}
-        </div>
-        <section class="ticket-review-strip">
-          <div>
-            <p class="eyebrow">Financial Closeout</p>
-            <h3>Money items needing review</h3>
-            <p>Cost review, invoice preparation, payment follow-up, and completed work waiting on actuals.</p>
-          </div>
-          <div class="ticket-review-list">
-            ${[
-              ...needsBudget,
-              ...ownerApproval,
-              ...fieldComplete,
-              ...invoiceTickets
-            ].slice(0, 4).map((ticket) => renderTicketCard(ticket, true)).join("") || emptyState("No Money review items require attention.")}
-          </div>
-        </section>
       </div>`;
   }
 

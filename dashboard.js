@@ -13061,7 +13061,7 @@
             detail: "Invite users, manage roles, disable access, and keep profile avatars clean.",
             meta: `${usersCount} dashboard users`,
             primary: "Manage Access",
-            primaryAction: "go-settings"
+            primaryAction: "focus-users-access"
           })}
           ${renderToolsCard({
             label: "Dashboard Health",
@@ -13073,6 +13073,43 @@
             secondaryAction: "refresh-dashboard"
           })}
         </section>
+        <section class="tools-admin-grid" aria-label="Admin tools and diagnostics">
+          <article class="users-access-panel tools-admin-panel" data-tools-users-access>
+            <div class="panel-heading">
+              <div>
+                <p class="eyebrow">Access</p>
+                <h3>Users &amp; Access</h3>
+                <p>Invite users, manage roles, disable access, and keep profile avatars clean.</p>
+              </div>
+            </div>
+            <div class="users-access-status" data-users-access-status></div>
+            <div class="users-access-list" data-users-access-list></div>
+            <p class="form-note">Allowed avatar files: JPG, PNG, or WebP up to 2 MB. SVG and document uploads are blocked.</p>
+          </article>
+          <article class="dashboard-health-panel tools-admin-panel">
+            <div class="panel-heading">
+              <div>
+                <p class="eyebrow">Health</p>
+                <h3>Dashboard Health</h3>
+                <p>Safe diagnostics for configuration, auth, module loading, and deploy version.</p>
+              </div>
+              <button class="inline-action" type="button" data-action="copy-dashboard-diagnostics">Copy Summary</button>
+            </div>
+            <div class="dashboard-health-list" data-dashboard-health></div>
+          </article>
+          <article class="activity-log-panel tools-admin-panel tools-admin-panel--wide">
+            <div class="panel-heading">
+              <div>
+                <p class="eyebrow">Audit</p>
+                <h3>Activity Log</h3>
+                <p>Recent protected dashboard actions, exports, user changes, imports, and system activity.</p>
+              </div>
+            </div>
+            <div class="activity-log-list" data-activity-log-list></div>
+          </article>
+        </section>
+        <input data-import-backup type="file" accept="application/json" hidden>
+        <input data-user-avatar-upload type="file" accept=".jpg,.jpeg,.png,.webp,image/jpeg,image/png,image/webp" hidden>
         <section class="ticket-review-strip tools-health-strip">
           <div>
             <p class="eyebrow">Diagnostics</p>
@@ -13108,6 +13145,16 @@
           </section>
         ` : ""}
       </div>`;
+    els.importBackup = qs("[data-import-backup]");
+    els.userAvatarUpload = qs("[data-user-avatar-upload]");
+    els.usersAccessStatus = qs("[data-users-access-status]");
+    els.usersAccessList = qs("[data-users-access-list]");
+    els.activityLogList = qs("[data-activity-log-list]");
+    els.dashboardHealth = qs("[data-dashboard-health]");
+    renderUsersAccess(data);
+    renderActivityLog(data);
+    renderDashboardHealth();
+    bindAvatarFallbacks();
   }
 
   function renderToolsCard({ label, detail, meta, primary, primaryAction, secondary, secondaryAction }) {
@@ -20170,6 +20217,11 @@
       } else if (action === "go-settings") {
         setActiveSection("settings");
         replaceDashboardHash("settings");
+      } else if (action === "focus-users-access") {
+        setActiveSection("settings");
+        replaceDashboardHash("settings");
+        await render();
+        qs("[data-tools-users-access]")?.scrollIntoView({ behavior: "smooth", block: "start" });
       } else if (action === "go-contacts") {
         setActiveSection("contacts");
         replaceDashboardHash("contacts");

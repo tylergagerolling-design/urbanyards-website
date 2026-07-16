@@ -232,6 +232,13 @@ test("dashboard route aliases and new reliability diagnostics are wired", () => 
   const moneySection = html.match(/<section class="dashboard-section uy-standard-page money-page" id="documents"[\s\S]*?<\/section>/)?.[0] || "";
   assert.match(moneySection, /data-money-workspace/);
   assert.doesNotMatch(moneySection, /data-quote-table|data-pipeline|data-document-form/);
+  const toolsWorkspace = js.match(/function renderToolsWorkspace[\s\S]*?function renderToolsCard/)?.[0] || "";
+  assert.match(toolsWorkspace, /data-users-access-list/);
+  assert.match(toolsWorkspace, /data-dashboard-health/);
+  assert.match(toolsWorkspace, /data-activity-log-list/);
+  assert.match(toolsWorkspace, /renderUsersAccess\(data\)/);
+  assert.match(toolsWorkspace, /renderActivityLog\(data\)/);
+  assert.match(toolsWorkspace, /renderDashboardHealth\(\)/);
   assert.match(js, /function renderTicketEndToEndFlow/);
   assert.match(js, /data-ticket-lifecycle-map/);
   assert.match(css, /grid-template-areas:\s*"step title"\s*"\. detail"\s*"\. count"/);

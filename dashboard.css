@@ -14413,6 +14413,37 @@ body:not(.is-login-screen) .tools-control-grid {
   gap: 14px;
 }
 
+body:not(.is-login-screen) .tools-admin-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.2fr) minmax(280px, .8fr);
+  gap: clamp(16px, 1.8vw, 24px);
+  align-items: start;
+}
+
+body:not(.is-login-screen) .tools-admin-panel {
+  min-width: 0;
+  margin: 0;
+}
+
+body:not(.is-login-screen) .tools-admin-panel--wide {
+  grid-column: 1 / -1;
+}
+
+body:not(.is-login-screen) .tools-admin-panel .panel-heading {
+  gap: 14px;
+  align-items: start;
+}
+
+body:not(.is-login-screen) .tools-admin-panel .panel-heading p:not(.eyebrow) {
+  max-width: 62ch;
+}
+
+@media (max-width: 980px) {
+  body:not(.is-login-screen) .tools-admin-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
 body:not(.is-login-screen) .tools-runway-panel {
   display: grid;
   gap: 16px;

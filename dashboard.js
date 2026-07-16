@@ -10875,6 +10875,103 @@
     </section>`;
   }
 
+  function ticketLinkedScheduledJob(ticket = {}, sourceItem = null) {
+    if (sourceItem?.id && (ticket.sourceType === "job" || ticket.source === "job")) return sourceItem;
+    const sourceType = ticket.sourceType || ticket.source;
+    const candidateIds = new Set([
+      ticket.jobId,
+      ticket.job_id,
+      sourceType === "job" ? ticket.sourceId : "",
+      sourceType === "job" ? ticket.source_id : ""
+    ].map((value) => String(value || "").trim()).filter(Boolean));
+    if (candidateIds.size) {
+      const byId = (state.data.jobs || []).find((job) => candidateIds.has(String(job.id || "")));
+      if (byId) return byId;
+    }
+    const ticketDate = dateKey(ticket.dateRaw || ticket.visitDate || ticket.scheduledDate);
+    const ticketCustomer = statusText(ticket.customer || ticket.customerName || ticket.clientName);
+    const ticketService = statusText(ticket.requestedService || ticket.service || ticket.title);
+    if (!ticketDate || !ticketCustomer) return null;
+    return (state.data.jobs || []).find((job) => {
+      const sameDate = dateKey(job.dateRaw) === ticketDate;
+      const sameCustomer = statusText(job.site).includes(ticketCustomer) || ticketCustomer.includes(statusText(job.site));
+      const sameService = !ticketService || statusText(job.service).includes(ticketService) || ticketService.includes(statusText(job.service));
+      return sameDate && sameCustomer && sameService;
+    }) || null;
+  }
+
+  function renderTicketProofStatus(label, value, detail, complete) {
+    return `<article class="ticket-proof-status ${complete ? "is-complete" : "is-needed"}">
+      <span aria-hidden="true"></span>
+      <div>
+        <strong>${escapeHtml(label)}</strong>
+        <b>${escapeHtml(String(value))}</b>
+        <small>${escapeHtml(detail)}</small>
+      </div>
+    </article>`;
+  }
+
+  function renderTicketSiteProofBridge(ticket = {}, sourceItem = null) {
+    const stage = ticketStage(ticket);
+    const linkedJob = ticketLinkedScheduledJob(ticket, sourceItem);
+    const shouldShow = linkedJob || [
+      "ready_to_schedule",
+      "scheduled",
+      "in_progress",
+      "paused",
+      "field_work_complete",
+      "completion_review",
+      "invoice_review",
+      "invoice_sent",
+      "partially_paid",
+      "paid",
+      "closed"
+    ].includes(stage);
+    if (!shouldShow) return "";
+
+    if (!linkedJob) {
+      return `<section class="ticket-drawer-card ticket-site-proof-bridge">
+        <div class="ticket-drawer-card-heading">
+          <div>
+            <h4>Site proof and forms</h4>
+            <span>Schedule or link a Work visit before attaching required forms and photos.</span>
+          </div>
+        </div>
+        <div class="ticket-proof-status-grid">
+          ${renderTicketProofStatus("Work visit", "Not linked", "Create the visit from the Work assignment card.", false)}
+          ${renderTicketProofStatus("Forms", "Waiting", "Pick templates after the visit exists.", false)}
+          ${renderTicketProofStatus("Arrival photos", ticket.beforePhotosUploaded ? "Uploaded" : "Waiting", "Use the phone camera once the visit is linked.", Boolean(ticket.beforePhotosUploaded))}
+          ${renderTicketProofStatus("Completion photos", ticket.afterPhotosUploaded ? "Uploaded" : "Waiting", "Upload completion proof before closeout.", Boolean(ticket.afterPhotosUploaded))}
+        </div>
+      </section>`;
+    }
+
+    const assignments = documentationAssignmentsForJob(linkedJob);
+    const arrivalPhotos = documentationAttachmentsForJob(linkedJob, "arrival");
+    const completionPhotos = documentationAttachmentsForJob(linkedJob, "completion");
+    const submittedForms = assignments.filter((item) => ["Submitted", "Approved"].includes(item.status)).length;
+    const requiresPhotos = assignments.some((item) => item.requiresPhotos || item.metadata?.requiresPhotos);
+    return `<section class="ticket-drawer-card ticket-site-proof-bridge">
+      <div class="ticket-drawer-card-heading">
+        <div>
+          <h4>Site proof and forms</h4>
+          <span>${escapeHtml(linkedJob.site || ticket.customer || "Linked Work visit")} / ${escapeHtml(linkedJob.date || ticket.dateLabel || "No date")}</span>
+        </div>
+        <button type="button" class="inline-action" data-action="edit-job" data-id="${escapeHtml(linkedJob.id)}">${buttonContent("Open Visit", "edit-job")}</button>
+      </div>
+      <div class="ticket-proof-status-grid">
+        ${renderTicketProofStatus("Work visit", "Linked", [linkedJob.service, linkedJob.window].filter(Boolean).join(" / ") || "Visit details ready", true)}
+        ${renderTicketProofStatus("Forms", assignments.length ? `${submittedForms}/${assignments.length}` : "None", assignments.length ? "Submitted or approved forms." : "Pick from the Documentation library.", assignments.length ? submittedForms >= assignments.length : false)}
+        ${renderTicketProofStatus("Arrival photos", String(arrivalPhotos.length), "Upload up to 10 photos at a time.", Boolean(arrivalPhotos.length || ticket.beforePhotosUploaded))}
+        ${renderTicketProofStatus("Completion photos", String(completionPhotos.length), requiresPhotos ? "Required by a form template." : "Needed before closeout.", Boolean(completionPhotos.length || ticket.afterPhotosUploaded))}
+      </div>
+      <div class="job-support-sections ticket-support-sections">
+        ${renderJobDocumentationSection(linkedJob)}
+        ${renderJobPhotosSection(linkedJob)}
+      </div>
+    </section>`;
+  }
+
   function renderTicketInvoiceBridge(ticket = {}) {
     const stage = ticketStage(ticket);
     if (!["invoice_preparation", "field_work_complete", "completion_review", "invoice_review", "invoice_sent", "partially_paid", "paid", "closed"].includes(stage)) return "";
@@ -11252,6 +11349,7 @@
         ${renderTicketWorkbench(ticket)}
         ${renderTicketDetailCommandCenter(ticket)}
         ${renderTicketWorkAssignmentBridge(ticket, sourceItem)}
+        ${renderTicketSiteProofBridge(ticket, sourceItem)}
         ${renderTicketInvoiceBridge(ticket)}
         ${renderTicketHandoffActions(ticket)}
         ${renderTicketRequirements(ticket)}
@@ -11259,7 +11357,6 @@
         ${renderTicketSourceActions(ticket)}
         ${sourceType === "document" && sourceItem ? renderTicketDocumentSource(sourceItem) : ""}
         ${sourceType === "quote" && sourceItem ? renderCallPanel(callPanelContext("quote_submission", sourceItem.id)) : ""}
-        ${sourceType === "job" && sourceItem ? `<div class="job-support-sections">${renderJobDocumentationSection(sourceItem)}${renderJobPhotosSection(sourceItem)}</div>` : ""}
         ${sourceType === "quote" && sourceItem ? `<div data-call-outcome-slot></div>${renderActivityTimeline({
           leadId: sourceItem.id,
           leadType: "quote_submission",

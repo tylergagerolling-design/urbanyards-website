@@ -5808,7 +5808,7 @@
   }
 
   async function insertBudget(payload) {
-    if (!state.budgetsReady) throw new Error("Job budget tools are folded into Job Tickets and Money during this rebuild.");
+    if (!state.budgetsReady) throw new Error("Job budget tools are managed inside Job Tickets and Money.");
     if (isDemoMode()) {
       const budget = normalizeBudget({ id: nextDemoId("budget"), ...payload, created_at: new Date().toISOString(), updated_at: new Date().toISOString() });
       state.data.budgets.budgets.unshift(budget);
@@ -11861,6 +11861,59 @@
     </article>`;
   }
 
+  function renderHomeRunwayTile({ label, value, detail, action, actionLabel, tone = "" }) {
+    return `<article class="work-plan-tile home-runway-tile ${tone ? `is-${escapeHtml(tone)}` : ""}">
+      <span>${escapeHtml(label)}</span>
+      <strong>${escapeHtml(String(value))}</strong>
+      <p>${escapeHtml(detail)}</p>
+      <button type="button" data-action="${escapeHtml(action)}">${escapeHtml(actionLabel)}</button>
+    </article>`;
+  }
+
+  function renderHomeRunway({ todayTickets = [], overdueTickets = [], leadTickets = [], workTickets = [], moneyTickets = [], reviewTickets = [], actions = [] }) {
+    return `<section class="home-runway-panel" aria-label="Today workflow runway">
+      <div class="ticket-lane-heading">
+        <div>
+          <p class="eyebrow">Today</p>
+          <h3>Daily workflow runway</h3>
+          <p>Start with late or dated work, then move Leads, Work, and Money handoffs through the ticket flow.</p>
+        </div>
+        <span>${escapeHtml(String(todayTickets.length + overdueTickets.length + actions.length))}</span>
+      </div>
+      <div class="work-plan-tile-grid home-runway-grid">
+        ${renderHomeRunwayTile({
+          label: overdueTickets.length ? "Late / Today" : "Today",
+          value: overdueTickets.length + todayTickets.length,
+          detail: overdueTickets.length ? "Late or dated tickets need the first pass." : "Dated work and urgent action items.",
+          action: "go-work",
+          actionLabel: "Open Work",
+          tone: overdueTickets.length ? "warning" : ""
+        })}
+        ${renderHomeRunwayTile({
+          label: "Leads",
+          value: leadTickets.length,
+          detail: "New intake, follow-ups, scope, and customer approval.",
+          action: "go-leads",
+          actionLabel: "Open Leads"
+        })}
+        ${renderHomeRunwayTile({
+          label: "Work",
+          value: workTickets.length,
+          detail: "Scheduled, ready, active, paused, or proof-ready work.",
+          action: "go-work",
+          actionLabel: "Open Work"
+        })}
+        ${renderHomeRunwayTile({
+          label: "Money",
+          value: moneyTickets.length + reviewTickets.length,
+          detail: "Cost review, invoice prep, payment, and closeout.",
+          action: "go-money",
+          actionLabel: "Open Money"
+        })}
+      </div>
+    </section>`;
+  }
+
   function renderHomeCommandCenter(details = {}) {
     const actions = details.actions || [];
     const todayTickets = details.todayTickets || [];
@@ -11998,6 +12051,10 @@
     const today = todayKey();
     const activeTickets = tickets.filter(ticketIsOpen);
     const todayTickets = activeTickets.filter((ticket) => dateKey(ticket.dateRaw) === today);
+    const overdueTickets = activeTickets.filter((ticket) => {
+      const key = dateKey(ticket.dateRaw);
+      return key && key < today;
+    });
     const attentionTickets = activeTickets.filter((ticket) => ticketInStage(ticket, [
       "sales_intake",
       "scope_in_progress",
@@ -12012,8 +12069,10 @@
       "invoice_sent",
       "partially_paid"
     ]));
+    const leadTickets = activeTickets.filter((ticket) => ticketInLane(ticket, ["sales"]));
     const workTickets = activeTickets.filter((ticket) => ticketInLane(ticket, ["ready", "field"]));
     const moneyTickets = activeTickets.filter((ticket) => ticketInLane(ticket, ["accounting", "money"]));
+    const reviewTickets = activeTickets.filter((ticket) => ticketInLane(ticket, ["review"]));
     const actions = todayActionItems(data);
     const notifications = buildNotifications(data);
     const workflowWarnings = dashboardHealthWarnings({ scope: "critical" });
@@ -12040,6 +12099,7 @@
           ${renderTicketMetric(workflowWarnings.length + notifications.length, "Alerts", "Workflow and notification signals")}
         </section>
         ${renderWorkspaceWorkflowRibbon(activeTickets, "")}
+        ${renderHomeRunway({ todayTickets, overdueTickets, leadTickets, workTickets, moneyTickets, reviewTickets, actions })}
         ${renderHomeCommandCenter({ actions, attentionTickets, todayTickets, workTickets, moneyTickets, workflowWarnings, notifications })}
         ${renderTicketEndToEndFlow(activeTickets, "", "Urban Yards job flow")}
         ${renderTicketOwnerStrip(activeTickets)}
@@ -12555,7 +12615,7 @@
       .sort((a, b) => budgetPanelSortValue(a) - budgetPanelSortValue(b) || String(b.budget.updatedAtRaw || "").localeCompare(String(a.budget.updatedAtRaw || "")))
       .slice(0, 4);
     const setupMessage = !state.budgetsReady && !isDemoMode()
-      ? `<p class="money-budget-note">${escapeHtml(state.budgetsError || "Budget records are optional during this rebuild. Money still tracks cost-review tickets even when budget tables are not connected.")}</p>`
+      ? `<p class="money-budget-note">${escapeHtml(state.budgetsError || "Budget tables are not connected yet. Money still tracks cost-review tickets and invoice handoffs.")}</p>`
       : "";
 
     return `<section class="money-budget-panel" data-money-budget-panel>
@@ -14950,8 +15010,8 @@
     if (els.budgetDateEnd && els.budgetDateEnd.value !== state.budgetDateEnd) els.budgetDateEnd.value = state.budgetDateEnd;
     if (els.budgetStatus) {
       els.budgetStatus.textContent = state.budgetsReady || isDemoMode()
-        ? "Budget tools are folded into Job Tickets and Money during this rebuild."
-        : (state.budgetsError || "Budget tools are folded into Job Tickets and Money during this rebuild.");
+        ? "Budget tools live inside Job Tickets and Money."
+        : (state.budgetsError || "Budget tools live inside Job Tickets and Money.");
     }
     const selected = selectedBudget();
     if (selected && !state.selectedBudgetId) state.selectedBudgetId = selected.id;
@@ -15279,7 +15339,7 @@
     if (els.connectedOpsStatus) {
       els.connectedOpsStatus.textContent = state.connectedOpsReady || isDemoMode()
         ? "Connected operations uses the shared dashboard records and protected Supabase tables."
-        : "Connected Operations has been folded into Job Tickets for this rebuild.";
+        : "Connected Operations is handled by Job Tickets now.";
     }
     if (els.connectedOpsMetrics) {
       els.connectedOpsMetrics.innerHTML = [
@@ -15293,7 +15353,7 @@
     renderConnectedOpsTabs();
     if (!els.connectedOpsMain) return;
     if (!state.connectedOpsReady && !isDemoMode()) {
-      els.connectedOpsMain.innerHTML = emptyState("Connected Operations has been folded into Job Tickets for this rebuild.");
+      els.connectedOpsMain.innerHTML = emptyState("Connected Operations is handled by Job Tickets now.");
       return;
     }
     const view = state.connectedOpsView;
@@ -17275,7 +17335,7 @@
     state.data.connectedOps = await loadConnectedOperations();
     await render();
     setActiveSection("connected-operations");
-    setDashboardState(state.connectedOpsReady || isDemoMode() ? message : "Connected Operations has been folded into Job Tickets for this rebuild.");
+    setDashboardState(state.connectedOpsReady || isDemoMode() ? message : "Connected Operations is handled by Job Tickets now.");
   }
 
   function connectedOpsPayloadFromForm(form) {
@@ -17338,7 +17398,7 @@
   async function saveConnectedOperationsForm(form) {
     const { table, record } = connectedOpsPayloadFromForm(form);
     if (!record.title && !record.service_name && !record.subject && !record.contact_name) throw new Error("Add a title, service name, subject, or contact first.");
-    if (!state.connectedOpsReady && !isDemoMode()) throw new Error("Connected Operations has been folded into Job Tickets for this rebuild.");
+    if (!state.connectedOpsReady && !isDemoMode()) throw new Error("Connected Operations is handled by Job Tickets now.");
 
     if (isDemoMode()) {
       const now = new Date().toISOString();
@@ -17378,7 +17438,7 @@
       await render();
       return;
     }
-    if (!state.connectedOpsReady) throw new Error("Connected Operations has been folded into Job Tickets for this rebuild.");
+    if (!state.connectedOpsReady) throw new Error("Connected Operations is handled by Job Tickets now.");
     await supabaseRestRequest(`approval_requests?id=eq.${encodeURIComponent(id)}`, {
       method: "PATCH",
       headers: { Prefer: "return=representation" },
@@ -19205,7 +19265,7 @@
         setActiveSection("tickets");
         replaceDashboardHash("tickets");
         await render();
-        setDashboardState("Connected Operations has been folded into Job Tickets for this rebuild.");
+        setDashboardState("Connected Operations is handled by Job Tickets now.");
         return;
       }
 
@@ -19213,7 +19273,7 @@
         setActiveSection("tickets");
         replaceDashboardHash("tickets");
         await render();
-        setDashboardState("Connected Operations has been folded into Job Tickets for this rebuild.");
+        setDashboardState("Connected Operations is handled by Job Tickets now.");
         return;
       }
 
@@ -19757,7 +19817,7 @@
         setActiveSection("tickets");
         replaceDashboardHash("tickets");
         await render();
-        setDashboardState("Connected Operations has been folded into Job Tickets for this rebuild.");
+        setDashboardState("Connected Operations is handled by Job Tickets now.");
       } else if (action === "go-calendar") {
         setActiveSection("calendar");
         replaceDashboardHash("calendar");

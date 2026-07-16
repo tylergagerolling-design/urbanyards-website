@@ -16136,6 +16136,44 @@
     `;
   }
 
+  function renderDocumentTicketBridge(doc = {}, ticket = null) {
+    const hasTicket = Boolean(ticket?.id);
+    const stage = hasTicket ? ticketStage(ticket) : salesDocumentStage(doc);
+    const stageLabel = hasTicket ? ticketStageLabel(stage) : ticketStageLabel(stage);
+    const workspace = hasTicket
+      ? ticketWorkspaceTarget(ticket)
+      : { label: "Money", detail: "Create a Job Ticket so this document can move through quote, budget, work, and closeout." };
+    const isInvoice = doc.type === "invoice";
+    const amount = doc.squareAmountDueCents !== null && doc.squareAmountDueCents !== undefined
+      ? formatCurrency(doc.squareAmountDueCents, doc.squareCurrency)
+      : `$${Number(doc.total || 0).toFixed(2)}`;
+    const status = [doc.status, doc.squareStatus].filter(Boolean).join(" / ") || (isInvoice ? "Invoice" : "Estimate");
+    const nextAction = hasTicket ? ticket.nextAction || ticketNextAction(stage) : "Create or link a Job Ticket";
+    const actionSummary = hasTicket
+      ? `${ticket.number || "Job Ticket"} is in ${stageLabel}.`
+      : "This document is not connected to a unified Job Ticket yet.";
+    const steps = [
+      { label: isInvoice ? "Invoice" : "Estimate", state: "is-ready", detail: doc.number || amount },
+      { label: "Ticket", state: hasTicket ? "is-ready" : "is-needed", detail: hasTicket ? ticket.number : "Needed" },
+      { label: "Next", state: hasTicket ? "is-active" : "is-needed", detail: nextAction }
+    ];
+    return `<section class="document-ticket-bridge ${hasTicket ? "has-ticket" : "needs-ticket"}" aria-label="Document ticket workflow">
+      <div class="document-ticket-bridge-copy">
+        <p class="eyebrow">Job Ticket Workflow</p>
+        <h4>${escapeHtml(actionSummary)}</h4>
+        <p>${escapeHtml(workspace.detail)} ${escapeHtml(doc.clientName || "Client")} / ${escapeHtml(amount)} / ${escapeHtml(status)}</p>
+      </div>
+      <div class="document-ticket-bridge-action">
+        ${hasTicket ? `<button type="button" data-action="open-ticket" data-ticket-source="${escapeHtml(ticket.source)}" data-id="${escapeHtml(ticket.id)}">${buttonContent("Open Job Ticket", "open-ticket")}</button>` : ""}
+        ${!hasTicket && canManageMoneyWorkflow() ? `<button type="button" data-action="create-ticket-from-document" data-id="${escapeHtml(doc.id)}">${buttonContent("Create Job Ticket", "quick-add-job")}</button>` : ""}
+        ${doc.squarePaymentUrl ? `<a class="button" href="${escapeHtml(doc.squarePaymentUrl)}" target="_blank" rel="noopener noreferrer">Payment Link</a>` : ""}
+      </div>
+      <div class="document-ticket-bridge-steps">
+        ${steps.map((item) => `<span class="${escapeHtml(item.state)}"><strong aria-hidden="true"></strong><b>${escapeHtml(item.label)}</b><small>${escapeHtml(item.detail)}</small></span>`).join("")}
+      </div>
+    </section>`;
+  }
+
   function openDocumentDrawer(id) {
     const doc = state.data.documents.find((item) => item.id === id);
     if (!doc || !els.detailDrawer || !els.detailContent) return;
@@ -16155,6 +16193,7 @@
           ${documentStatusBadge(doc)}
         </div>
         ${renderSourceTicketContext(ticket)}
+        ${renderDocumentTicketBridge(doc, ticket)}
         ${renderPrintableDocument(doc)}
         <section class="document-sidebar-card">
           <div class="document-sidebar-total">
@@ -19016,6 +19055,32 @@
           setDashboardState(result.created ? "Final invoice prepared." : "Existing invoice opened.");
         } catch (error) {
           setDashboardState(error.message || "Unable to prepare invoice.", "error");
+        }
+        return;
+      }
+
+      if (action === "create-ticket-from-document") {
+        if (!canManageMoneyWorkflow()) {
+          setDashboardState("Your dashboard role cannot create Money tickets.", "error");
+          return;
+        }
+        const document = state.data.documents.find((item) => item.id === id);
+        if (!document) {
+          setDashboardState("Document record not found.", "error");
+          return;
+        }
+        try {
+          setDashboardState("Creating Job Ticket from document...");
+          const ticket = await ensureJobTicketForSalesDocument(document);
+          await refreshDashboard();
+          const refreshedTicket = ticket?.id
+            ? dashboardTickets().find((item) => item.source === "ticket" && item.id === ticket.id)
+            : null;
+          if (refreshedTicket?.id) openTicketDrawer("ticket", refreshedTicket.id);
+          else openDocumentDrawer(id);
+          setDashboardState("Job Ticket connected to document.");
+        } catch (error) {
+          setDashboardState(error.message || "Unable to create Job Ticket from document.", "error");
         }
         return;
       }

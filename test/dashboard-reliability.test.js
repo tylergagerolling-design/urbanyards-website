@@ -216,6 +216,8 @@ test("dashboard route aliases and new reliability diagnostics are wired", () => 
   assert.match(js, /Your dashboard role cannot manage leads/);
   assert.match(js, /Your dashboard role cannot import leads/);
   assert.match(js, /function renderWorkspaceFocusStrip/);
+  assert.doesNotMatch(js, /renderWorkspaceWorkflowRibbon/);
+  assert.doesNotMatch(css, /workspace-workflow-ribbon/);
   assert.match(js, /function renderTicketEndToEndFlow/);
   assert.match(js, /data-ticket-lifecycle-map/);
   assert.doesNotMatch(js, /renderTicketEndToEndFlow\(activeTickets/);

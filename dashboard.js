@@ -12044,82 +12044,6 @@
     </section>`;
   }
 
-  function renderWorkspaceWorkflowRibbon(tickets = dashboardTickets(), activeKey = "") {
-    const openTickets = tickets.filter(ticketIsOpen);
-    const leadsCount = ticketCountBy(openTickets, (ticket) => ticketInLane(ticket, ["sales"]));
-    const moneyCount = ticketCountBy(openTickets, (ticket) => ticketInLane(ticket, ["accounting", "money"]));
-    const workCount = ticketCountBy(openTickets, (ticket) => ticketInLane(ticket, ["ready", "field"]));
-    const proofCount = ticketCountBy(openTickets, (ticket) => ticketInStage(ticket, ["field_work_complete", "completion_review"]));
-    const closeoutCount = ticketCountBy(openTickets, (ticket) => ticketInStage(ticket, ["invoice_review", "invoice_sent", "partially_paid"]));
-    const steps = [
-      {
-        key: "leads",
-        label: "Lead Intake",
-        detail: "Prospects, calls, scope, and quote follow-up",
-        value: leadsCount,
-        action: "go-leads"
-      },
-      {
-        key: "tickets",
-        label: "Job Tickets",
-        detail: "One source of truth for each job",
-        value: openTickets.length,
-        action: "go-tickets"
-      },
-      {
-        key: "money",
-        label: "Money Review",
-        detail: "Budget, quote, invoice, and payment state",
-        value: moneyCount,
-        action: "go-money"
-      },
-      {
-        key: "work",
-        label: "Work Queue",
-        detail: "Schedule, route, complete, and document",
-        value: workCount,
-        action: "go-work"
-      },
-      {
-        key: "proof",
-        label: "Proof & Records",
-        detail: "Arrival photos, completion photos, forms",
-        value: proofCount,
-        action: "go-work"
-      },
-      {
-        key: "closeout",
-        label: "Closeout",
-        detail: "Actuals, invoice review, collect, archive",
-        value: closeoutCount,
-        action: "go-money"
-      },
-      {
-        key: "tools",
-        label: "Support Tools",
-        detail: "Routes, forms, equipment, imports, AI, access",
-        value: dashboardHealthWarnings({ scope: "critical" }).length + dashboardHealthWarnings({ scope: "support" }).length,
-        action: "go-tools"
-      }
-    ];
-    return `<section class="workspace-workflow-ribbon" aria-label="Urban Yards ticket workflow">
-      <div class="workspace-workflow-ribbon-head">
-        <span>Workflow Map</span>
-        <strong>Lead to closed ticket</strong>
-      </div>
-      <div class="workspace-workflow-ribbon-steps">
-        ${steps.map((step, index) => `
-          <button type="button" class="${step.key === activeKey ? "is-active" : ""}" data-action="${escapeHtml(step.action)}">
-            <span>${escapeHtml(String(index + 1).padStart(2, "0"))}</span>
-            <strong>${escapeHtml(step.label)}</strong>
-            <small>${escapeHtml(step.detail)}</small>
-            <em>${escapeHtml(String(step.value))}</em>
-          </button>
-        `).join("")}
-      </div>
-    </section>`;
-  }
-
   function renderHomeWorkspace(data = state.data) {
     const target = qs("[data-home-workspace]");
     if (!target) return;
@@ -12288,21 +12212,6 @@
         ${renderTicketCommandCenter({ filteredTickets, workTickets, officeTickets, readyTickets, reviewTickets })}
         ${renderTicketOwnerStrip(openTickets)}
         ${renderTicketWorkflowBoard(openTickets, filteredTickets)}
-        <div class="ticket-lane-grid">
-          ${renderTicketColumn("Today and Work", "Scheduled, active, and work-owned tickets.", workTickets, "No work tickets are scheduled yet.")}
-          ${renderTicketColumn("Office Review", "Scope, quote, cost review, approval, and closeout blockers.", officeTickets, "No office tickets need review.")}
-          ${renderTicketColumn("Ready to Schedule", "Approved work that can move into the schedule.", readyTickets, "No approved tickets are waiting to schedule.")}
-        </div>
-        <section class="ticket-review-strip">
-          <div>
-            <p class="eyebrow">Closeout</p>
-            <h3>Completion and invoice review</h3>
-            <p>Finished jobs should collect actuals, arrival/completion photos, supporting forms, invoice review, and payment status before closing.</p>
-          </div>
-          <div class="ticket-review-list">
-            ${reviewTickets.length ? reviewTickets.slice(0, 3).map((ticket) => renderTicketCard(ticket, true)).join("") : emptyState("No tickets are waiting for closeout.")}
-          </div>
-        </section>
       </div>`;
   }
 

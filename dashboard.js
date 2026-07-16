@@ -12091,7 +12091,6 @@
         </section>
         ${renderHomeRunway({ todayTickets, overdueTickets, leadTickets, workTickets, moneyTickets, reviewTickets, actions })}
         ${renderHomeCommandCenter({ actions, attentionTickets, todayTickets, workTickets, moneyTickets, workflowWarnings, notifications })}
-        ${renderTicketOwnerStrip(activeTickets)}
       </div>`;
   }
 

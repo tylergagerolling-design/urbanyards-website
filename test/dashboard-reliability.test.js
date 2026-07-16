@@ -226,6 +226,10 @@ test("dashboard route aliases and new reliability diagnostics are wired", () => 
   assert.doesNotMatch(js, /renderTicketEndToEndFlow\(activeTickets/);
   assert.doesNotMatch(js, /renderTicketEndToEndFlow\(openTickets\)/);
   assert.match(js, /renderTicketEndToEndFlow\(dashboardTickets\(\), ticket\.stage/);
+  const homeWorkspace = js.match(/function renderHomeWorkspace[\s\S]*?function renderTicketNextStepCard/)?.[0] || "";
+  assert.doesNotMatch(homeWorkspace, /renderTicketOwnerStrip/);
+  const ticketWorkspace = js.match(/function renderJobTicketWorkspace[\s\S]*?function renderWorkPlanTile/)?.[0] || "";
+  assert.match(ticketWorkspace, /renderTicketOwnerStrip\(openTickets\)/);
   assert.match(js, /function renderMoneyBudgetPanel/);
   assert.match(js, /function findTicketForBudget/);
   assert.match(js, /function findBudgetForTicket/);

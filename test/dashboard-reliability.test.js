@@ -304,9 +304,14 @@ test("dashboard route aliases and new reliability diagnostics are wired", () => 
   });
   assert.match(css, /\.workspace-focus-strip/);
   assert.match(css, /\.workspace-focus-card/);
+  assert.match(css, /workspace-focus-strip[\s\S]*repeat\(auto-fit, minmax\(min\(100%, 260px\), 1fr\)\)/);
+  assert.match(css, /workspace-focus-card-main[\s\S]*grid-template-columns: auto minmax\(0, 1fr\)/);
   assert.match(css, /\.ticket-end-to-end-flow/);
   assert.match(css, /\.ticket-flow-step\.is-populated/);
   assert.match(css, /\.ticket-flow-step em/);
+  assert.match(css, /ticket-flow-steps[\s\S]*repeat\(auto-fit, minmax\(min\(100%, 280px\), 1fr\)\)/);
+  assert.match(css, /ticket-flow-step strong[\s\S]*text-wrap: balance/);
+  assert.match(css, /ticket-lane-heading > span[\s\S]*flex: 0 0 auto/);
   assert.match(css, /\.money-budget-panel/);
   assert.match(css, /\.money-budget-item/);
   assert.match(css, /\.money-budget-stats/);

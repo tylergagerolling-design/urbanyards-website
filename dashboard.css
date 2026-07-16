@@ -14325,8 +14325,8 @@ body:not(.is-login-screen) .app-view .dashboard-main #calendar .calendar-tabs bu
   }
 }
 
-/* Rebuild v2: ticket-first workspaces. Legacy tab bodies stay in the
-   markup for rollback, but the rebuilt workspace is the visible source of truth. */
+/* Rebuild v2: ticket-first workspaces. The six primary pages render from
+   dynamic workspace roots so old static tab bodies cannot compete visually. */
 body:not(.is-login-screen) #overview.home-ticket-page > :not([data-home-workspace]),
 body:not(.is-login-screen) #tickets.job-ticket-page > :not([data-job-ticket-workspace]),
 body:not(.is-login-screen) #calendar.work-hub-page > :not([data-work-workspace]),
@@ -14341,6 +14341,13 @@ body:not(.is-login-screen) .work-workspace {
   display: grid;
   gap: clamp(16px, 1.7vw, 24px);
   color: var(--uy-ink);
+}
+
+body:not(.is-login-screen) .ticket-workspace :is(h3, h4, p, small, strong) {
+  max-width: 100%;
+  overflow-wrap: normal;
+  text-wrap: pretty;
+  word-break: normal;
 }
 
 body:not(.is-login-screen) .dashboard-nav a.legacy-nav-route {
@@ -14866,7 +14873,7 @@ body:not(.is-login-screen) .ticket-metric small {
 
 body:not(.is-login-screen) .workspace-focus-strip {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 260px), 1fr));
   gap: 10px;
   padding: 10px;
   border: 1px solid rgba(73, 102, 77, .14);
@@ -14888,8 +14895,9 @@ body:not(.is-login-screen) .workspace-focus-card {
 }
 
 body:not(.is-login-screen) .workspace-focus-card-main {
-  display: flex;
-  align-items: baseline;
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: start;
   gap: 10px;
   min-width: 0;
 }
@@ -14942,6 +14950,12 @@ body:not(.is-login-screen) .ticket-flow-heading {
   padding: 4px 4px 2px;
 }
 
+body:not(.is-login-screen) .ticket-flow-heading > div,
+body:not(.is-login-screen) .ticket-workflow-board-heading > div,
+body:not(.is-login-screen) .ticket-lane-heading > div {
+  min-width: 0;
+}
+
 body:not(.is-login-screen) .ticket-flow-heading h3 {
   margin: 0;
   color: var(--uy-green);
@@ -14989,7 +15003,7 @@ body:not(.is-login-screen) .ticket-flow-heading dd {
 
 body:not(.is-login-screen) .ticket-flow-steps {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 280px), 1fr));
   gap: 10px;
 }
 
@@ -15027,6 +15041,7 @@ body:not(.is-login-screen) .ticket-flow-step strong {
   color: var(--uy-green);
   line-height: 1.18;
   hyphens: none;
+  text-wrap: balance;
   overflow-wrap: normal;
   word-break: normal;
 }
@@ -15037,6 +15052,7 @@ body:not(.is-login-screen) .ticket-flow-step small {
   color: var(--uy-muted);
   line-height: 1.3;
   hyphens: none;
+  text-wrap: pretty;
   overflow-wrap: normal;
   word-break: normal;
 }
@@ -15057,6 +15073,7 @@ body:not(.is-login-screen) .ticket-flow-step em {
   grid-area: count;
   justify-self: start;
   align-self: center;
+  max-width: 100%;
   width: fit-content;
   padding: 3px 8px;
   border-radius: 999px;
@@ -15185,7 +15202,7 @@ body:not(.is-login-screen) .ticket-workflow-board-heading dd {
 
 body:not(.is-login-screen) .ticket-workflow-board-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 280px), 1fr));
   gap: 12px;
 }
 
@@ -15215,16 +15232,20 @@ body:not(.is-login-screen) .ticket-workflow-board-column-head {
 
 body:not(.is-login-screen) .ticket-workflow-board-column-head strong {
   display: block;
+  min-width: 0;
   color: var(--uy-green);
   line-height: 1.15;
+  text-wrap: balance;
 }
 
 body:not(.is-login-screen) .ticket-workflow-board-column-head small {
   display: block;
+  min-width: 0;
   margin-top: 3px;
   color: var(--uy-muted);
   font-weight: 750;
   line-height: 1.3;
+  text-wrap: pretty;
 }
 
 body:not(.is-login-screen) .ticket-workflow-board-column-head span {
@@ -15701,22 +15722,29 @@ body:not(.is-login-screen) .home-next-step-kicker {
 
 body:not(.is-login-screen) .home-next-step-main {
   display: grid;
-  grid-template-columns: auto minmax(0, 1fr);
+  grid-template-columns: minmax(46px, auto) minmax(0, 1fr);
   gap: 12px;
   align-items: start;
 }
 
+body:not(.is-login-screen) .home-next-step-main > div {
+  min-width: 0;
+}
+
 body:not(.is-login-screen) .home-next-step-main > strong {
   min-width: 52px;
+  justify-self: start;
   color: var(--uy-green);
   font-size: 2.25rem;
   line-height: .95;
+  white-space: nowrap;
 }
 
 body:not(.is-login-screen) .home-next-step-card h4 {
   margin: 0;
   color: var(--uy-green);
   font-size: 1rem;
+  text-wrap: balance;
 }
 
 body:not(.is-login-screen) .home-next-step-card p {
@@ -15772,6 +15800,7 @@ body:not(.is-login-screen) .ticket-next-step-card h4 {
   margin: 0;
   color: var(--uy-green);
   font-size: 1rem;
+  text-wrap: balance;
 }
 
 body:not(.is-login-screen) .ticket-next-step-card p {
@@ -15815,7 +15844,7 @@ body:not(.is-login-screen) .lead-queue-list {
 
 body:not(.is-login-screen) .lead-queue-item {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
+  grid-template-columns: minmax(0, 1fr) minmax(170px, auto);
   gap: 14px;
   align-items: center;
   min-width: 0;
@@ -15899,6 +15928,7 @@ body:not(.is-login-screen) .lead-next-step-card h4 {
   margin: 0;
   color: var(--uy-green);
   font-size: 1rem;
+  text-wrap: balance;
 }
 
 body:not(.is-login-screen) .lead-next-step-card p {
@@ -16239,6 +16269,7 @@ body:not(.is-login-screen) .money-next-step-card h4 {
   margin: 0;
   color: var(--uy-green);
   font-size: 1rem;
+  text-wrap: balance;
 }
 
 body:not(.is-login-screen) .money-next-step-card p {
@@ -16667,6 +16698,7 @@ body:not(.is-login-screen) .ticket-review-strip p {
 
 body:not(.is-login-screen) .ticket-lane-heading > span {
   display: inline-grid;
+  flex: 0 0 auto;
   place-items: center;
   min-width: 34px;
   height: 34px;
@@ -16720,6 +16752,8 @@ body:not(.is-login-screen) .ticket-card h4 {
   margin: 0;
   color: var(--uy-green);
   font-size: 1.05rem;
+  line-height: 1.2;
+  text-wrap: balance;
 }
 
 body:not(.is-login-screen) .ticket-card p,

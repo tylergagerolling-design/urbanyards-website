@@ -382,22 +382,22 @@
     "job-tickets": "tickets",
     work: "calendar",
     properties: "outreach",
-    contacts: "outreach",
+    contacts: "contacts",
     clients: "outreach",
     leads: "outreach",
     sales: "outreach",
     more: "settings",
-    docs: "settings",
-    forms: "settings",
-    documentation: "settings",
-    "import-export": "settings",
-    data: "settings",
-    equipment: "settings",
-    "groundskeeper-ai": "settings",
-    ai: "settings",
+    docs: "documentation",
+    forms: "documentation",
+    documentation: "documentation",
+    "import-export": "import-export",
+    data: "import-export",
+    equipment: "equipment",
+    "groundskeeper-ai": "groundskeeper-ai",
+    ai: "groundskeeper-ai",
     tools: "settings",
-    "route-planner": "calendar",
-    route: "calendar",
+    "route-planner": "route-planner",
+    route: "route-planner",
     quotes: "documents",
     money: "documents",
     pipeline: "documents",
@@ -412,6 +412,18 @@
     reminders: "settings"
   };
   const rebuildPrimarySections = new Set(["overview", "tickets", "calendar", "outreach", "documents", "settings"]);
+  const supportSectionParents = {
+    contacts: "outreach",
+    documentation: "settings",
+    "import-export": "settings",
+    "route-planner": "calendar",
+    equipment: "settings",
+    "groundskeeper-ai": "settings"
+  };
+  const dashboardRoutableSections = new Set([
+    ...rebuildPrimarySections,
+    ...Object.keys(supportSectionParents)
+  ]);
   const DEFAULT_DASHBOARD_SECTION = "overview";
   const supportModuleWarningNames = new Set([
     "operations",
@@ -7997,13 +8009,19 @@
   function normalizeDashboardSection(section) {
     const key = String(section || DEFAULT_DASHBOARD_SECTION).replace(/^#/, "").trim() || DEFAULT_DASHBOARD_SECTION;
     const mapped = sectionAliases[key] || key;
-    return rebuildPrimarySections.has(mapped) ? mapped : DEFAULT_DASHBOARD_SECTION;
+    return dashboardRoutableSections.has(mapped) ? mapped : DEFAULT_DASHBOARD_SECTION;
+  }
+
+  function dashboardPrimarySection(section) {
+    const normalizedSection = normalizeDashboardSection(section);
+    return supportSectionParents[normalizedSection] || normalizedSection;
   }
 
   function canAccessDashboardSection(section, role = currentSessionRole()) {
     const normalizedSection = normalizeDashboardSection(section);
+    const accessSection = dashboardPrimarySection(normalizedSection);
     const normalizedRole = normalizeDashboardRole(role);
-    const allowedRoles = DASHBOARD_WORKSPACE_ACCESS[normalizedSection] || [];
+    const allowedRoles = DASHBOARD_WORKSPACE_ACCESS[accessSection] || [];
     return allowedRoles.includes(normalizedRole);
   }
 
@@ -8053,7 +8071,7 @@
       node.classList.toggle("is-active", node.dataset.section === state.activeSection);
     });
     qsa("[data-dashboard-link]").forEach((node) => {
-      const isActive = normalizeDashboardSection(node.dataset.dashboardLink) === state.activeSection;
+      const isActive = dashboardPrimarySection(node.dataset.dashboardLink) === dashboardPrimarySection(state.activeSection);
       node.classList.toggle("is-active", isActive);
       if (isActive) {
         node.setAttribute("aria-current", "page");
@@ -10988,7 +11006,7 @@
   }
 
   function renderWorkspaceSwitcher(activeId) {
-    const activeSection = dashboardSectionForRole(activeId);
+    const activeSection = dashboardPrimarySection(activeId);
     const links = visibleDashboardWorkspaceLinks();
     return `<nav class="ticket-workspace-switcher" aria-label="Job ticket workspaces">
       ${links.map((item) => `<a href="${escapeHtml(item.href)}" class="${item.id === activeSection ? "is-active" : ""}" data-dashboard-link="${escapeHtml(item.id)}">${escapeHtml(item.label)}</a>`).join("")}

@@ -11382,6 +11382,32 @@
               <option value="field"${safeType === "field" ? " selected" : ""}>Scheduled work visit</option>
             </select>
           </label>
+          <section class="ticket-create-guidance span-full" aria-live="polite">
+            <article class="ticket-create-guidance-card ticket-create-guidance-card--quote">
+              <div>
+                <p class="eyebrow">Lead Intake Path</p>
+                <h4>Capture the request, then move it through quote and approval.</h4>
+                <p>Use this for new website requests, call-ins, property manager leads, and prospects that still need scope, pricing, or customer approval.</p>
+              </div>
+              <ol>
+                <li><strong>Lead</strong><span>Contact, service, property, and next follow-up.</span></li>
+                <li><strong>Quote</strong><span>Scope, estimate, photos, and customer approval.</span></li>
+                <li><strong>Money</strong><span>Cost review and invoice preparation before scheduling.</span></li>
+              </ol>
+            </article>
+            <article class="ticket-create-guidance-card ticket-create-guidance-card--field">
+              <div>
+                <p class="eyebrow">Scheduled Work Path</p>
+                <h4>Create a visit that is ready for the Work queue.</h4>
+                <p>Use this when the job is already approved or you are adding a planned visit directly to the schedule.</p>
+              </div>
+              <ol>
+                <li><strong>Schedule</strong><span>Date, window, site, and service.</span></li>
+                <li><strong>Complete</strong><span>Arrival photos, completion photos, forms, and notes.</span></li>
+                <li><strong>Closeout</strong><span>Review actuals, documents, invoice, and payment.</span></li>
+              </ol>
+            </article>
+          </section>
           <label>Customer or site
             <input name="customer_name" placeholder="Client, property, or site name" value="${escapeHtml(values.customerName)}" required>
           </label>

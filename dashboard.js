@@ -12661,25 +12661,6 @@
           { kicker: "Money", value: accountingTickets.length, title: "Cost-review handoff", detail: "Approved work ready for internal review." }
         ], "Leads workspace signals")}
         ${renderLeadsCommandCenter({ prospectQueue, due, hot, intakeTickets, approvalTickets, accountingTickets, companies, properties })}
-        <div class="ticket-lane-grid">
-          ${renderTicketColumn("New Intake", "New requests that need scope, property details, or a first response.", intakeTickets, "No new lead intake tickets.")}
-          ${renderTicketColumn("Quote Action", "Warm leads, quote follow-ups, and customer approval items.", approvalTickets.concat(hot.map((item, index) => buildTicketFromQuote(item, index))), "No quote follow-ups are waiting.")}
-          ${renderTicketColumn("Ready for Money", "Approved work ready for cost review, owner approval, and invoice preparation.", accountingTickets, "No approved tickets are ready for Money.")}
-        </div>
-        <section class="ticket-review-strip">
-          <div>
-            <p class="eyebrow">Leads handoff rule</p>
-            <h3>Lead work ready for the next step</h3>
-            <p>Follow-ups, quote approvals, and approved work that should move into Money for cost review.</p>
-          </div>
-          <div class="ticket-review-list">
-            ${[
-              ...approvalTickets,
-              ...accountingTickets,
-              ...due.slice(0, 3).map((item, index) => buildTicketFromQuote(item, index))
-            ].slice(0, 4).map((ticket) => renderTicketCard(ticket, true)).join("") || emptyState("No urgent Leads handoffs.")}
-          </div>
-        </section>
       </div>`;
   }
 

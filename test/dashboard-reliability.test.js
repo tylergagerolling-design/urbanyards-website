@@ -218,6 +218,7 @@ test("dashboard route aliases and new reliability diagnostics are wired", () => 
   assert.match(js, /function renderWorkspaceFocusStrip/);
   assert.doesNotMatch(js, /renderWorkspaceWorkflowRibbon/);
   assert.doesNotMatch(css, /workspace-workflow-ribbon/);
+  assert.doesNotMatch(js, /Leads handoff rule/);
   assert.match(js, /function renderTicketEndToEndFlow/);
   assert.match(js, /data-ticket-lifecycle-map/);
   assert.doesNotMatch(js, /renderTicketEndToEndFlow\(activeTickets/);
@@ -297,7 +298,7 @@ test("dashboard route aliases and new reliability diagnostics are wired", () => 
   assert.doesNotMatch(js, /qsa\("\[data-dashboard-link\]"\)\.forEach\(\(link\) => \{\s*link\.addEventListener\("click"/);
   assert.match(js, /label: "Leads"/);
   assert.match(workspaceRegistry, /Lead Dashboard/);
-  assert.match(js, /Leads handoff rule/);
+  assert.match(js, /Lead Runway/);
   assert.match(html, /data-action="refresh-documentation">Refresh Forms/);
   assert.doesNotMatch(html, /data-action="go-documents">Open Money<\/button>\s*<\/article>/);
   assert.match(css, /#overview\.home-ticket-page > :not\(\[data-home-workspace\]\)/);

@@ -508,6 +508,12 @@
       .replace(/'/g, "&#039;");
   }
 
+  function truncateText(value, maxLength = 140) {
+    const text = String(value ?? "").trim();
+    if (text.length <= maxLength) return text;
+    return `${text.slice(0, Math.max(0, maxLength - 1)).trim()}...`;
+  }
+
   function slug(value) {
     return String(value).toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
   }
@@ -1752,6 +1758,16 @@
   async function loadCurrentUserProfile(session, options = {}) {
     if (isDemoMode() || !session || !session.accessToken) return null;
 
+    try {
+      const result = await dashboardUsersRequest("me", {}, { signal: options.signal });
+      if (result.user) {
+        syncSessionRoleFromProfile(result.user);
+        return result.user;
+      }
+    } catch (error) {
+      // Fall back to direct profile reads while the admin function or SQL is being installed.
+    }
+
     const queries = [];
     if (session.userId) {
       const userId = encodeURIComponent(session.userId);
@@ -1779,16 +1795,6 @@
           return null;
         }
       }
-    }
-
-    try {
-      const result = await dashboardUsersRequest("me", {}, { signal: options.signal });
-      if (result.user) {
-        syncSessionRoleFromProfile(result.user);
-        return result.user;
-      }
-    } catch (error) {
-      // Keep the dashboard usable while the admin function or SQL is being installed.
     }
 
     return null;
@@ -4621,12 +4627,12 @@
     const normalized = normalizeDashboardSection(section);
     const keysBySection = {
       overview: ["submissions", "jobs", "reminders"],
-      tickets: ["tickets", "ticketEvents", "submissions", "jobs"],
-      calendar: ["jobs", "tickets", "ticketEvents", "routeStops", "documentation"],
-      outreach: ["outreachProspects", "outreachCompanies", "outreachProperties", "contacts", "leadActivity"],
+      tickets: ["tickets", "submissions", "jobs"],
+      calendar: ["jobs", "tickets"],
+      outreach: ["outreachProspects", "tickets", "submissions"],
       contacts: ["contacts", "jobs", "documents", "routeStops", "reminders"],
-      documents: ["documents", "budgets", "submissions", "tickets"],
-      settings: ["userProfiles", "auditLogs"],
+      documents: ["documents", "tickets", "submissions"],
+      settings: [],
       "route-planner": ["routeStops", "jobs"],
       equipment: ["equipmentItems", "equipmentMaintenance", "hardwareGuide"],
       documentation: ["documentation"],
@@ -4664,7 +4670,8 @@
 
     if (options.resetErrors !== false) state.moduleErrors = [];
 
-    const requestedKeys = new Set(options.keys && options.keys.length ? options.keys : dashboardAllModuleKeys());
+    const hasExplicitKeys = Array.isArray(options.keys);
+    const requestedKeys = new Set(hasExplicitKeys ? options.keys : dashboardAllModuleKeys());
     const descriptors = dashboardModuleDescriptors().filter((module) => requestedKeys.has(module.key));
     const nextData = options.merge === false ? demoDashboardData() : { ...state.data };
     const concurrency = Math.max(1, Number(options.concurrency || descriptors.length || 1));
@@ -4719,6 +4726,9 @@
     info.status = "loading";
     info.error = "";
     info.startedAt = new Date().toISOString();
+    if (state.activeSection === normalized && options.renderLoading !== false) {
+      Promise.resolve().then(() => render());
+    }
 
     const promise = loadDashboardData({
       keys,
@@ -10809,7 +10819,7 @@
     </section>`;
   }
 
-  function renderTicketCommandCenter(ticket) {
+  function renderTicketDetailCommandCenter(ticket) {
     const isCanonical = ticket?.source === "ticket";
     const transitions = ticketTransitionOptions(ticket || {});
     return `<section class="ticket-drawer-card ticket-command-card" data-ticket-command-panel data-ticket-id="${escapeHtml(ticket?.id || "")}">
@@ -10929,13 +10939,24 @@
     </section>`;
   }
 
-  function openTicketCreateDrawer(ticketType = "quote") {
+  function openTicketCreateDrawer(ticketType = "quote", prefill = {}) {
     if (!els.detailDrawer || !els.detailContent) return;
     const safeType = ticketType === "field" ? "field" : "quote";
     if (!canCreateTicketType(safeType)) {
       setDashboardState("Your dashboard role cannot create that type of ticket.", "error");
       return;
     }
+    const values = {
+      customerName: prefill.customerName || "",
+      email: prefill.email || "",
+      phone: prefill.phone || "",
+      city: prefill.city || "",
+      propertyType: prefill.propertyType || "",
+      service: prefill.service || "",
+      visitDate: prefill.visitDate || todayKey(),
+      visitWindow: prefill.visitWindow || "",
+      notes: prefill.notes || ""
+    };
     openDetailDrawer();
     els.detailContent.innerHTML = `
       <div class="drawer-content ticket-detail-drawer">
@@ -10954,33 +10975,33 @@
             </select>
           </label>
           <label>Customer or site
-            <input name="customer_name" placeholder="Client, property, or site name" required>
+            <input name="customer_name" placeholder="Client, property, or site name" value="${escapeHtml(values.customerName)}" required>
           </label>
           <label>Email
-            <input name="email" type="email" placeholder="team@example.com">
+            <input name="email" type="email" placeholder="team@example.com" value="${escapeHtml(values.email)}">
           </label>
           <label>Phone
-            <input name="phone" inputmode="tel" placeholder="(971) 258-1109">
+            <input name="phone" inputmode="tel" placeholder="(971) 258-1109" value="${escapeHtml(values.phone)}">
           </label>
           <label>Property / area
-            <input name="city" placeholder="Property, city, or neighborhood" autocomplete="street-address" data-address-autocomplete>
+            <input name="city" placeholder="Property, city, or neighborhood" autocomplete="street-address" data-address-autocomplete value="${escapeHtml(values.city)}">
           </label>
           <label>Property type
-            <input name="property_type" placeholder="Home, apartment, HOA, property management...">
+            <input name="property_type" placeholder="Home, apartment, HOA, property management..." value="${escapeHtml(values.propertyType)}">
           </label>
           <label class="span-full">Service / request
-            <input name="service" placeholder="Mowing, cleanup, mulch refresh, walkthrough..." required>
+            <input name="service" placeholder="Mowing, cleanup, mulch refresh, walkthrough..." value="${escapeHtml(values.service)}" required>
           </label>
           <div class="ticket-create-schedule span-full">
             <label>Visit date
-              <input name="visit_date" type="date" value="${escapeHtml(todayKey())}"${safeType === "field" ? " required" : ""}>
+              <input name="visit_date" type="date" value="${escapeHtml(values.visitDate)}"${safeType === "field" ? " required" : ""}>
             </label>
             <label>Visit window
-              <input name="visit_window" placeholder="9 AM - 11 AM">
+              <input name="visit_window" placeholder="9 AM - 11 AM" value="${escapeHtml(values.visitWindow)}">
             </label>
           </div>
           <label class="span-full">Notes
-            <textarea name="notes" rows="5" placeholder="Scope notes, access details, customer request, or internal context..."></textarea>
+            <textarea name="notes" rows="5" placeholder="Scope notes, access details, customer request, or internal context...">${escapeHtml(values.notes)}</textarea>
           </label>
           <div class="drawer-actions span-full">
             <button type="submit">${buttonContent("Create Ticket", "quick-add-job")}</button>
@@ -11131,7 +11152,7 @@
           <div class="drawer-field span-full"><span>Details</span>${escapeHtml(ticket.detail || "No details yet.")}</div>
         </div>
         ${renderTicketWorkbench(ticket)}
-        ${renderTicketCommandCenter(ticket)}
+        ${renderTicketDetailCommandCenter(ticket)}
         ${renderTicketWorkAssignmentBridge(ticket, sourceItem)}
         ${renderTicketInvoiceBridge(ticket)}
         ${renderTicketHandoffActions(ticket)}
@@ -11306,6 +11327,60 @@
     return `<nav class="ticket-workspace-switcher" aria-label="Job ticket workspaces">
       ${links.map((item) => `<a href="${escapeHtml(item.href)}" class="${item.id === activeSection ? "is-active" : ""}" data-dashboard-link="${escapeHtml(item.id)}">${escapeHtml(item.label)}</a>`).join("")}
     </nav>`;
+  }
+
+  function renderWorkspaceDataState(section = state.activeSection) {
+    const normalized = normalizeDashboardSection(section);
+    const info = dashboardSectionLoadInfo(normalized);
+    const labels = {
+      overview: "Home data",
+      tickets: "Ticket data",
+      calendar: "Work data",
+      outreach: "Lead data",
+      documents: "Money data",
+      settings: "Tool data"
+    };
+    const label = labels[dashboardPrimarySection(normalized)] || "Dashboard data";
+    const status = info.status || "idle";
+    if (isDemoMode()) {
+      return `<div class="workspace-data-state is-demo" role="status">
+        <span class="workspace-data-dot" aria-hidden="true"></span>
+        <strong>Demo data</strong>
+        <small>Sample records are loaded locally.</small>
+      </div>`;
+    }
+
+    if (status === "loading") {
+      return `<div class="workspace-data-state is-loading" role="status">
+        <span class="workspace-data-dot" aria-hidden="true"></span>
+        <strong>${escapeHtml(label)} loading</strong>
+        <small>This page is hydrating independently.</small>
+      </div>`;
+    }
+
+    if (status === "failed" || status === "partial") {
+      const detail = info.error ? truncateText(info.error, 160) : "Some records are temporarily unavailable.";
+      return `<div class="workspace-data-state is-warning" role="status">
+        <span class="workspace-data-dot" aria-hidden="true"></span>
+        <strong>${status === "failed" ? "Could not load all data" : "Some data is unavailable"}</strong>
+        <small>${escapeHtml(detail)}</small>
+        <button type="button" data-action="retry-workspace-load" data-section="${escapeHtml(normalized)}">Retry</button>
+      </div>`;
+    }
+
+    if (status === "loaded") {
+      return `<div class="workspace-data-state is-synced" role="status">
+        <span class="workspace-data-dot" aria-hidden="true"></span>
+        <strong>${escapeHtml(label)} synced</strong>
+        <small>${escapeHtml(info.loadedAt ? formatDateTime(info.loadedAt) : "Ready")}</small>
+      </div>`;
+    }
+
+    return `<div class="workspace-data-state is-idle" role="status">
+      <span class="workspace-data-dot" aria-hidden="true"></span>
+      <strong>${escapeHtml(label)} ready</strong>
+      <small>Records load when this page opens.</small>
+    </div>`;
   }
 
   function renderWorkspaceFocusStrip(items = [], label = "Workspace signals") {
@@ -11509,6 +11584,7 @@
     target.innerHTML = `
       <div class="ticket-workspace uy-page-prototype home-ticket-workspace" data-uy-page-contract="home" data-data-source="tickets,jobs,quotes,notifications">
         ${renderWorkspaceSwitcher("overview")}
+        ${renderWorkspaceDataState("overview")}
         <header class="ticket-hero">
           <div>
             <p class="eyebrow">Home</p>
@@ -11613,6 +11689,7 @@
     target.innerHTML = `
       <div class="ticket-workspace uy-page-prototype job-ticket-workspace" data-uy-page-contract="tickets" data-data-source="job_tickets,quotes,jobs,invoices">
         ${renderWorkspaceSwitcher("tickets")}
+        ${renderWorkspaceDataState("tickets")}
         <header class="ticket-hero">
           <div>
             <p class="eyebrow">Job Ticket System</p>
@@ -11732,6 +11809,7 @@
     target.innerHTML = `
       <div class="ticket-workspace uy-page-prototype work-workspace" data-uy-page-contract="work" data-data-source="jobs,job_tickets,route_stops,documentation">
         ${renderWorkspaceSwitcher("calendar")}
+        ${renderWorkspaceDataState("calendar")}
         <header class="ticket-hero work-hero">
           <div>
             <p class="eyebrow">Work</p>
@@ -11842,9 +11920,30 @@
       </div>
       <div class="lead-queue-actions">
         ${renderPhoneActions(item.phone, { leadId: item.id, leadType: "outreach_prospect", compact: true, helper: false })}
+        ${canCreateTicketType("quote") ? `<button type="button" class="inline-action" data-action="create-ticket-from-prospect" data-id="${escapeHtml(item.id)}">Create Ticket</button>` : ""}
         <button type="button" class="inline-action" data-action="open-outreach-prospect" data-id="${escapeHtml(item.id)}">Open Lead</button>
       </div>
     </article>`;
+  }
+
+  function prospectTicketPrefill(item = {}) {
+    const customerName = item.propertyName || item.managementCompany || item.contactName || "";
+    const contactLine = [item.managementCompany, item.contactName].filter(Boolean).join(" / ");
+    const notes = [
+      item.notes,
+      contactLine ? `Lead contact: ${contactLine}` : "",
+      item.address ? `Address: ${item.address}` : "",
+      item.source ? `Source: ${item.source}` : ""
+    ].filter(Boolean).join("\n\n");
+    return {
+      customerName,
+      email: item.email || "",
+      phone: item.phone || "",
+      city: item.city || item.neighborhood || "",
+      propertyType: item.propertyType || item.type || "",
+      service: item.serviceInterest || item.service || "Property care walkthrough",
+      notes
+    };
   }
 
   function renderLeadNextStepCard({ kicker, value, title, detail, action, actionLabel, extraAttrs = "" }) {
@@ -11933,6 +12032,7 @@
     target.innerHTML = `
       <div class="ticket-workspace uy-page-prototype leads-workspace" data-uy-page-contract="leads" data-data-source="prospects,outreach_companies,outreach_properties,quotes">
         ${renderWorkspaceSwitcher("outreach")}
+        ${renderWorkspaceDataState("outreach")}
         <header class="ticket-hero">
           <div>
             <p class="eyebrow">Leads</p>
@@ -12165,6 +12265,7 @@
     target.innerHTML = `
       <div class="ticket-workspace uy-page-prototype money-workspace" data-uy-page-contract="money" data-data-source="documents,invoices,quotes,job_tickets,budgets">
         ${renderWorkspaceSwitcher("documents")}
+        ${renderWorkspaceDataState("documents")}
         <header class="ticket-hero">
           <div>
             <p class="eyebrow">Money</p>
@@ -12173,7 +12274,7 @@
           </div>
           <div class="ticket-hero-actions">
             ${canManageMoneyWorkflow() ? `<button type="button" data-action="quick-add-quote">Create Estimate</button>` : ""}
-            ${canManageMoneyWorkflow() ? `<button type="button" data-action="quick-add-invoice-reminder">Payment Follow-Up</button>` : ""}
+            ${canManageMoneyWorkflow() ? `<button type="button" data-action="go-tickets">Review Tickets</button>` : ""}
           </div>
         </header>
         <section class="ticket-metrics" aria-label="Money ticket summary">
@@ -12231,6 +12332,7 @@
     target.innerHTML = `
       <div class="ticket-workspace uy-page-prototype tools-workspace" data-uy-page-contract="tools" data-data-source="equipment,documentation,route_tools,ai,imports,settings">
         ${renderWorkspaceSwitcher("settings")}
+        ${renderWorkspaceDataState("settings")}
         <header class="ticket-hero">
           <div>
             <p class="eyebrow">Tools</p>
@@ -13302,6 +13404,7 @@
           <div class="drawer-actions">
             <button type="submit">${buttonContent(item ? "Save Prospect" : "Add Prospect", "new-outreach-prospect")}</button>
             ${item ? `<button type="button" data-action="mark-outreach-contacted" data-id="${escapeHtml(item.id)}">${buttonContent("Mark Contacted", "mark-outreach-contacted")}</button>` : ""}
+            ${item && canCreateTicketType("quote") ? `<button type="button" data-action="create-ticket-from-prospect" data-id="${escapeHtml(item.id)}">${buttonContent("Create Job Ticket", "open-ticket-create")}</button>` : ""}
             ${item ? `<button type="button" data-action="create-outreach-quote" data-id="${escapeHtml(item.id)}"${item.convertedToQuote ? " disabled" : ""}>${buttonContent(item.convertedToQuote ? "Quote Lead Created" : "Create Quote Lead", "create-outreach-quote")}</button>` : ""}
             ${item ? `<button type="button" data-action="route-outreach-prospect" data-id="${escapeHtml(item.id)}"${state.routeStopsReady ? "" : " disabled"}>${buttonContent(item.routeAdded ? "Route Added" : "Add to Route", "route-outreach-prospect")}</button>` : ""}
             ${item ? `<button type="button" class="danger-action" data-action="delete-outreach-prospect" data-id="${escapeHtml(item.id)}">${buttonContent("Delete Prospect", "delete-outreach-prospect")}</button>` : ""}
@@ -16855,37 +16958,16 @@
     const active = normalizeDashboardSection(state.activeSection);
     if (active === "overview") {
       safeRender("home ticket workspace", () => renderHomeWorkspace(data));
-      safeRender("property filters", () => populatePropertyFilter(data));
-      safeRender("metrics", () => renderMetrics(data));
-      safeRender("dashboard alerts", () => renderDashboardAlerts(data));
-      safeRender("overdue jobs", () => renderOverdueJobAlerts(data));
-      safeRender("today actions", () => renderTodayActions(data));
-      safeRender("submissions", () => renderSubmissions(data));
-      safeRender("upcoming", () => renderUpcoming(data));
-      safeRender("home reminders", () => renderHomeReminders(data));
-      safeRender("home notes", () => renderHomeNotes(data));
-      safeRender("route snapshot", () => renderTodayRouteSnapshot(data));
     } else if (active === "tickets") {
       safeRender("job ticket workspace", () => renderJobTicketWorkspace(data));
     } else if (active === "calendar") {
       safeRender("work workspace", () => renderWorkWorkspace(data));
-      safeRender("jobs", () => renderJobs(data));
-      safeRender("calendar", () => renderCalendar(data));
-      safeRender("overdue jobs", () => renderOverdueJobAlerts(data));
     } else if (active === "outreach") {
       safeRender("leads workspace", () => renderLeadsWorkspace(data));
-      safeRender("outreach", () => renderOutreach(data));
     } else if (active === "documents") {
       safeRender("money workspace", () => renderMoneyWorkspace(data));
-      safeRender("quote table", () => renderQuoteTable(data));
-      safeRender("pipeline", () => renderPipeline(data));
-      safeRender("documents", () => renderDocuments(data));
     } else if (active === "settings") {
       safeRender("tools workspace", () => renderToolsWorkspace(data));
-      safeRender("notes", () => renderNotes());
-      safeRender("reminders", () => renderReminders(data));
-      safeRender("users access", () => renderUsersAccess(data));
-      safeRender("activity log", () => renderActivityLog(data));
     } else if (active === "contacts") {
       safeRender("contacts", () => renderContacts(data));
     } else if (active === "documentation") {
@@ -18290,34 +18372,52 @@
       }
 
       if (action === "quick-add-note-from-detail") {
-        setActiveSection("overview");
-        replaceDashboardHash("overview");
-        const tools = qs(".home-secondary-tools");
-        if (tools) tools.open = true;
-        const form = qs("[data-operations-form]");
-        if (form) {
-          form.record_type.value = "task";
-          form.title.value = `Note: ${target.dataset.relatedTitle || "Contact"}`;
-          form.description.value = target.dataset.relatedContext || "";
-          form.status.value = "Open";
-          form.title.focus();
+        if (!hasDashboardPermission("create")) {
+          setDashboardState("Your dashboard role cannot create notes.", "error");
+          return;
+        }
+        const relatedTitle = target.dataset.relatedTitle || "Contact";
+        const body = window.prompt("Note details", target.dataset.relatedContext || "");
+        if (body === null) {
+          setDashboardState("Note cancelled.");
+          return;
+        }
+        try {
+          setDashboardState("Saving note...");
+          await insertJobNote(`Note: ${relatedTitle}`, body.trim());
+          await hydrateDashboardSection(state.activeSection, {
+            force: true,
+            phase: "note:create",
+            recordErrors: true
+          });
+          setDashboardState("Note saved.");
+        } catch (error) {
+          setDashboardState(error.message || "Unable to save note.", "error");
         }
         return;
       }
 
       if (action === "schedule-follow-up-from-detail") {
-        setActiveSection("overview");
-        replaceDashboardHash("overview");
-        const tools = qs(".home-secondary-tools");
-        if (tools) tools.open = true;
-        const form = qs("[data-operations-form]");
-        if (form) {
-          form.record_type.value = "client";
-          form.title.value = `Follow up with ${target.dataset.relatedTitle || "contact"}`;
-          form.description.value = target.dataset.relatedContext || "";
-          form.due_date.value = daysFromToday(1);
-          form.status.value = "Open";
-          form.title.focus();
+        if (!hasDashboardPermission("create")) {
+          setDashboardState("Your dashboard role cannot create follow-ups.", "error");
+          return;
+        }
+        try {
+          setDashboardState("Saving follow-up...");
+          const relatedContext = target.dataset.relatedContext ? ` (${target.dataset.relatedContext})` : "";
+          await insertReminder({
+            task: `Follow up with ${target.dataset.relatedTitle || "contact"}${relatedContext}`,
+            due_date: daysFromToday(1),
+            status: "New"
+          });
+          await hydrateDashboardSection("overview", {
+            force: true,
+            phase: "follow-up:create",
+            recordErrors: true
+          });
+          setDashboardState("Follow-up saved for tomorrow.");
+        } catch (error) {
+          setDashboardState(error.message || "Unable to save follow-up.", "error");
         }
         return;
       }
@@ -18937,16 +19037,34 @@
         }
         openTicketCreateDrawer("quote");
       } else if (action === "quick-add-follow-up" || action === "quick-add-invoice-reminder") {
-        setActiveSection("overview");
-        replaceDashboardHash("overview");
-        const tools = qs(".home-secondary-tools");
-        if (tools) tools.open = true;
-        const form = qs("[data-operations-form]");
-        if (form) {
-          form.record_type.value = action === "quick-add-invoice-reminder" ? "payment" : "client";
-          form.title.value = action === "quick-add-invoice-reminder" ? "Invoice reminder" : "Follow-up";
-          form.status.value = "Open";
-          form.title.focus();
+        if (!hasDashboardPermission("create")) {
+          setDashboardState("Your dashboard role cannot create follow-ups.", "error");
+          return;
+        }
+        const defaultTask = action === "quick-add-invoice-reminder" ? "Follow up on open invoice" : "Follow up with client";
+        const task = window.prompt("Follow-up task", defaultTask);
+        if (!task || !task.trim()) {
+          setDashboardState("Follow-up cancelled.");
+          return;
+        }
+        const dueDate = window.prompt("Due date (YYYY-MM-DD)", daysFromToday(1)) || daysFromToday(1);
+        try {
+          setDashboardState("Saving follow-up...");
+          await insertReminder({
+            task: task.trim(),
+            due_date: dueDate,
+            status: "New"
+          });
+          setActiveSection("overview");
+          replaceDashboardHash("overview");
+          await hydrateDashboardSection("overview", {
+            force: true,
+            phase: "follow-up:create",
+            recordErrors: true
+          });
+          setDashboardState("Follow-up saved.");
+        } catch (error) {
+          setDashboardState(error.message || "Unable to save follow-up.", "error");
         }
       } else if (action === "quick-add-property") {
         openOutreachPropertyCreateDrawer();
@@ -18988,6 +19106,17 @@
         setDashboardState("Property CSV import canceled.");
       } else if (action === "open-outreach-prospect" || action === "edit-outreach-prospect") {
         openOutreachDrawer(id);
+      } else if (action === "create-ticket-from-prospect") {
+        if (!canCreateTicketType("quote")) {
+          setDashboardState("Your dashboard role cannot create job tickets.", "error");
+          return;
+        }
+        const prospect = findOutreachProspect(id);
+        if (!prospect) {
+          setDashboardState("Lead record not found.", "error");
+          return;
+        }
+        openTicketCreateDrawer("quote", prospectTicketPrefill(prospect));
       } else if (action === "open-outreach-company") {
         openOutreachCompanyDrawer(id);
       } else if (action === "open-outreach-property") {
@@ -19078,18 +19207,16 @@
       } else if (action === "add-client-job") {
         const contact = state.data.contacts.find((item) => item.id === id);
         if (!contact) return;
-        setActiveSection("calendar");
-        replaceDashboardHash("calendar");
         closeSubmissionDrawer();
-        const form = qs("[data-job-create-form]");
-        if (form) {
-          form.visit_date.value = todayKey();
-          form.visit_window.value = "";
-          form.site_name.value = contact.name;
-          form.city.value = contact.city === "Not provided" ? "" : contact.city;
-          form.service.value = "Groundskeeping visit";
-          form.service.focus();
-        }
+        openTicketCreateDrawer("field", {
+          customerName: contact.name,
+          email: contact.email === "No email" ? "" : contact.email,
+          phone: contact.phone === "No phone" ? "" : contact.phone,
+          city: contact.address || (contact.city === "Not provided" ? "" : contact.city),
+          propertyType: contact.type || "",
+          service: "Groundskeeping visit",
+          notes: [contact.company, contact.property, contact.notes].filter(Boolean).join("\n")
+        });
       } else if (action === "add-client-route") {
         const contact = state.data.contacts.find((item) => item.id === id);
         if (!contact) return;
@@ -19108,43 +19235,51 @@
       } else if (action === "add-client-follow-up") {
         const contact = state.data.contacts.find((item) => item.id === id);
         if (!contact) return;
-        setActiveSection("overview");
-        replaceDashboardHash("overview");
-        const tools = qs(".home-secondary-tools");
-        if (tools) tools.open = true;
         closeSubmissionDrawer();
-        const form = qs("[data-operations-form]");
-        if (form) {
-          form.record_type.value = "client";
-          form.title.value = `Follow up with ${contact.name}`;
-          form.description.value = contact.city === "Not provided" ? contact.name : contact.city;
-          form.priority.value = "Normal";
-          form.status.value = "Open";
-          form.title.focus();
+        try {
+          setDashboardState("Saving follow-up...");
+          await insertReminder({
+            task: `Follow up with ${contact.name}`,
+            due_date: contact.nextFollowUpAtRaw || daysFromToday(1),
+            status: "New"
+          });
+          await hydrateDashboardSection("overview", {
+            force: true,
+            phase: "contact-follow-up:create",
+            recordErrors: true
+          });
+          setDashboardState("Follow-up saved.");
+        } catch (error) {
+          setDashboardState(error.message || "Unable to save follow-up.", "error");
         }
       } else if (action === "add-client-document") {
         const contact = state.data.contacts.find((item) => item.id === id);
         if (!contact) return;
-        setActiveSection("documents");
-        replaceDashboardHash("documents");
         closeSubmissionDrawer();
-        const form = qs("[data-document-form]");
-        if (form) {
-          form.document_type.value = "estimate";
-          form.client_name.value = contact.name;
-          form.client_email.value = contact.email === "No email" ? "" : contact.email;
-          form.square_invoice_number.value = "";
-          form.description.value = "Groundskeeping service";
-          form.amount.value = "";
-          form.description.focus();
-        }
+        openTicketCreateDrawer("quote", {
+          customerName: contact.name,
+          email: contact.email === "No email" ? "" : contact.email,
+          phone: contact.phone === "No phone" ? "" : contact.phone,
+          city: contact.address || (contact.city === "Not provided" ? "" : contact.city),
+          propertyType: contact.type || "",
+          service: "Groundskeeping service",
+          notes: [contact.company, contact.property, contact.notes].filter(Boolean).join("\n")
+        });
       } else if (action === "quick-add-operation") {
-        setActiveSection("overview");
-        replaceDashboardHash("overview");
-        const tools = qs(".home-secondary-tools");
-        if (tools) tools.open = true;
-        const input = qs("[data-operations-form] input[name='title']");
-        if (input) input.focus();
+        openTicketCreateDrawer("field", {
+          customerName: "Internal task",
+          service: "Dashboard task",
+          notes: "Created from the dashboard task shortcut."
+        });
+      } else if (action === "retry-workspace-load") {
+        const section = target.dataset.section || state.activeSection;
+        setDashboardState("Retrying page data...");
+        await hydrateDashboardSection(section, {
+          force: true,
+          phase: `retry:${normalizeDashboardSection(section)}`,
+          recordErrors: true
+        });
+        setDashboardState("");
       } else if (action === "go-tickets") {
         setActiveSection("tickets");
         replaceDashboardHash("tickets");
@@ -19199,19 +19334,12 @@
         if (els.operationsFilter) els.operationsFilter.value = state.operationsFilter;
         await render();
       } else if (action === "prefill-operation") {
-        setActiveSection("overview");
-        replaceDashboardHash("overview");
-        const tools = qs(".home-secondary-tools");
-        if (tools) tools.open = true;
-        const form = qs("[data-operations-form]");
-        if (form) {
-          form.record_type.value = target.dataset.type || "task";
-          form.title.value = target.dataset.title || "";
-          if (form.elements.description) form.elements.description.value = target.dataset.notes || "";
-          if (form.elements.priority) form.elements.priority.value = target.dataset.priority || "Normal";
-          form.status.value = "Open";
-          form.title.focus();
-        }
+        openTicketCreateDrawer("field", {
+          customerName: target.dataset.title || "Internal task",
+          service: target.dataset.type || "Task",
+          notes: target.dataset.notes || "",
+          visitDate: target.dataset.dueDate || todayKey()
+        });
       } else if (action === "previous-30-days") {
         state.calendarView = "thirty";
         state.calendarRangeOffset -= 1;

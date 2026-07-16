@@ -5219,6 +5219,34 @@
     return insertJobTicket(payload);
   }
 
+  async function ensureJobTicketForSourceRecord(source, sourceId, overrides = {}) {
+    const normalizedSource = String(source || "").trim();
+    const normalizedStatus = String(overrides.source_status || overrides.sourceStatus || "").trim();
+    if (normalizedSource === "quote") {
+      const sourceItem = findSubmission(sourceId);
+      if (!sourceItem?.id) return null;
+      const item = normalizedStatus ? { ...sourceItem, status: normalizedStatus } : sourceItem;
+      const stage = normalizeTicketStageForDashboard(overrides.stage || quoteStage(item), "sales_intake");
+      return ensureJobTicketForQuoteSubmission(item, {
+        ...overrides,
+        stage,
+        next_action: overrides.next_action || overrides.nextAction || ticketNextAction(stage)
+      });
+    }
+    if (normalizedSource === "job") {
+      const sourceItem = state.data.jobs.find((item) => item.id === sourceId);
+      if (!sourceItem?.id) return null;
+      const item = normalizedStatus ? { ...sourceItem, status: normalizedStatus } : sourceItem;
+      const stage = normalizeTicketStageForDashboard(overrides.stage || jobStage(item), "scheduled");
+      return ensureJobTicketForScheduledJob(item, {
+        ...overrides,
+        stage,
+        next_action: overrides.next_action || overrides.nextAction || ticketNextAction(stage)
+      });
+    }
+    return null;
+  }
+
   function findJobTicketForSalesDocument(documentId) {
     const id = String(documentId || "");
     if (!id) return null;
@@ -18481,17 +18509,26 @@
         if (!table || !status) return;
         try {
           setDashboardState("Moving ticket forward...");
+          let canonicalTicket = null;
           if (ticketId) {
             const nextStage = source === "quote" ? quoteStage({ status }) : jobStage({ status });
-            await transitionJobTicketStage(ticketId, nextStage, {
+            canonicalTicket = await transitionJobTicketStage(ticketId, nextStage, {
               notes: `${source === "quote" ? "Quote" : "Job"} source status set to ${status}.`,
               nextAction: ticketNextAction(nextStage),
               sourceStatus: status
             });
           }
           await updateStatus(table, id, status);
+          canonicalTicket = canonicalTicket || await ensureJobTicketForSourceRecord(source, id, {
+            source_status: status,
+            internal_notes: `${source === "quote" ? "Lead" : "Work visit"} moved forward from the ticket handoff panel.`
+          });
           await refreshDashboard();
-          openTicketDrawer(ticketId ? "ticket" : source, ticketId || id);
+          const reopenedTicket = canonicalTicket?.id
+            ? dashboardTickets().find((item) => item.source === "ticket" && item.id === canonicalTicket.id)
+            : null;
+          if (reopenedTicket?.id) openTicketDrawer("ticket", reopenedTicket.id);
+          else openTicketDrawer(ticketId ? "ticket" : source, ticketId || id);
           setDashboardState("Ticket updated.");
         } catch (error) {
           setDashboardState(error.message || "Unable to move ticket forward.", "error");

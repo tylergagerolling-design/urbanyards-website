@@ -254,7 +254,9 @@ test("dashboard route aliases and new reliability diagnostics are wired", () => 
   const homeWorkspace = js.match(/function renderHomeWorkspace[\s\S]*?function renderTicketNextStepCard/)?.[0] || "";
   assert.doesNotMatch(homeWorkspace, /renderTicketOwnerStrip/);
   const ticketWorkspace = js.match(/function renderJobTicketWorkspace[\s\S]*?function renderWorkPlanTile/)?.[0] || "";
-  assert.match(ticketWorkspace, /renderTicketOwnerStrip\(openTickets\)/);
+  assert.doesNotMatch(ticketWorkspace, /renderTicketOwnerStrip/);
+  assert.doesNotMatch(js, /function renderTicketOwnerStrip/);
+  assert.doesNotMatch(css, /ticket-owner-strip/);
   assert.match(js, /function renderMoneyBudgetPanel/);
   assert.match(js, /function findTicketForBudget/);
   assert.match(js, /function findBudgetForTicket/);
@@ -329,6 +331,8 @@ test("dashboard route aliases and new reliability diagnostics are wired", () => 
   assert.match(js, /function resizeGoogleMapView\(view\)/);
   assert.match(js, /window\.google\.maps\.event\.trigger\(view\.map, "resize"\)/);
   assert.match(css, /dashboard-map-preview > div[\s\S]*height: 100% !important/);
+  assert.match(css, /work-day-map-card \.dashboard-map-preview-shell[\s\S]*aspect-ratio: 16 \/ 5\.25/);
+  assert.match(css, /work-day-map-card \.dashboard-map-preview \.gm-style[\s\S]*height: 100% !important/);
   assert.match(js, /ticket-drawer-operating-grid/);
   assert.doesNotMatch(js, /renderTicketEndToEndFlow\(dashboardTickets\(\), ticket\.stage, "Current ticket lifecycle"\)/);
   assert.match(css, /ticket-drawer-operating-grid[\s\S]*grid-template-columns: minmax\(240px, \.82fr\) minmax\(300px, 1\.18fr\)/);
@@ -350,7 +354,6 @@ test("dashboard route aliases and new reliability diagnostics are wired", () => 
   assert.match(js, /function ticketActionItems\(data = state\.data\)/);
   assert.match(js, /ticketActionItems\(data\)\.forEach\(push\)/);
   assert.match(js, /data-ticket-source="\$\{escapeHtml\(item\.ticketSource\)\}"/);
-  assert.match(js, /function ticketsInStages\(tickets, stages\) \{\s*return tickets\.filter\(\(ticket\) => ticketInStage\(ticket, stages \|\| \[\]\)\);/);
   assert.match(js, /ticketInLane\(ticket, \["ready", "field", "review"\]\)/);
   assert.match(js, /ticketInLane\(ticket, \["sales"\]\)/);
   assert.match(js, /dashboardTickets\(data\)\.filter\(ticketIsOpen\)/);

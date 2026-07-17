@@ -10188,86 +10188,8 @@
     </article>`;
   }
 
-  const ticketOwnerGroups = [
-    {
-      id: "sales",
-      label: "Leads",
-      title: "Leads owns intake, scope, and customer approval.",
-      detail: "Confirm the request, collect the missing details, prepare the quote, and hand approved work to Money.",
-      stages: ["draft", "sales_intake", "scope_in_progress", "quote_pending", "customer_approval_pending", "scope_change_requested"]
-    },
-    {
-      id: "accounting",
-      label: "Money",
-      title: "Money owns cost review, approval, invoice prep, and payment.",
-      detail: "Check costs, get owner approval, prepare draft invoices, reconcile actuals, and track Square payment status.",
-      stages: ["needs_budget", "budget_in_progress", "needs_owner_approval", "invoice_preparation", "invoice_review", "invoice_sent", "partially_paid", "paid"]
-    },
-    {
-      id: "field",
-      label: "Work",
-      title: "Work owns schedule, visits, photos, and completion notes.",
-      detail: "Run the visit, add arrival and completion proof, attach forms, and send completed work into review.",
-      stages: ["ready_to_schedule", "scheduled", "in_progress", "paused"]
-    },
-    {
-      id: "review",
-      label: "Review",
-      title: "Owner review closes the loop before billing.",
-      detail: "Check completion proof, actual costs, documents, and whether any scope changes or add-ons need invoice attention.",
-      stages: ["field_work_complete", "completion_review"]
-    }
-  ];
-
   function ticketStageLabel(stage) {
     return (ticketStageMeta[stage] && ticketStageMeta[stage].label) || titleCase(String(stage || "").replace(/_/g, " "));
-  }
-
-  function ticketsInStages(tickets, stages) {
-    return tickets.filter((ticket) => ticketInStage(ticket, stages || []));
-  }
-
-  function renderTicketOwnerStrip(tickets, activeId = "") {
-    return `<section class="ticket-owner-strip" aria-label="Ticket ownership map">
-      ${ticketOwnerGroups.map((group) => {
-        const owned = ticketsInStages(tickets, group.stages);
-        return `<article class="${group.id === activeId ? "is-active" : ""}">
-          <span>${escapeHtml(owned.length)}</span>
-          <div>
-            <strong>${escapeHtml(group.label)}</strong>
-            <small>${escapeHtml(group.detail)}</small>
-          </div>
-        </article>`;
-      }).join("")}
-    </section>`;
-  }
-
-  function renderTicketRoleBrief(roleId, tickets) {
-    const group = ticketOwnerGroups.find((item) => item.id === roleId);
-    if (!group) return "";
-    const owned = ticketsInStages(tickets, group.stages);
-    const nextTickets = owned.slice(0, 3);
-    return `<section class="ticket-role-brief">
-      <div>
-        <p class="eyebrow">${escapeHtml(group.label)} workspace</p>
-        <h3>${escapeHtml(group.title)}</h3>
-        <p>${escapeHtml(group.detail)}</p>
-        <div class="ticket-stage-pill-list">
-          ${group.stages.map((stage) => `<span>${escapeHtml(ticketStageLabel(stage))}</span>`).join("")}
-        </div>
-      </div>
-      <aside>
-        <strong>${escapeHtml(owned.length)}</strong>
-        <span>Ticket${owned.length === 1 ? "" : "s"} in this lane</span>
-        <div class="ticket-role-mini-list">
-          ${nextTickets.length ? nextTickets.map((ticket) => `<button type="button" data-action="open-ticket" data-ticket-source="${escapeHtml(ticket.source)}" data-id="${escapeHtml(ticket.id)}">
-            <span>${escapeHtml(ticket.number)}</span>
-            <strong>${escapeHtml(ticket.customer)}</strong>
-            <small>${escapeHtml(ticket.nextAction)}</small>
-          </button>`).join("") : `<p>No tickets are waiting in this workspace.</p>`}
-        </div>
-      </aside>
-    </section>`;
   }
 
   const ticketCardMilestones = [
@@ -12168,7 +12090,6 @@
           { kicker: "Closeout", value: reviewTickets.length, title: "Review queue", detail: "Completed, invoiced, or paid tickets still needing review." }
         ], "Tickets workspace signals")}
         ${renderTicketCommandCenter({ filteredTickets, workTickets, officeTickets, readyTickets, reviewTickets })}
-        ${renderTicketOwnerStrip(openTickets)}
         ${renderTicketWorkflowBoard(openTickets, filteredTickets)}
       </div>`;
   }

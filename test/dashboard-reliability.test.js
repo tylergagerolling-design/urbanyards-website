@@ -315,9 +315,8 @@ test("dashboard route aliases and new reliability diagnostics are wired", () => 
   assert.match(css, /home-focus-grid[\s\S]*grid-template-columns: repeat\(auto-fit, minmax\(min\(100%, 240px\), 1fr\)\)/);
   assert.match(css, /home-focus-card-head[\s\S]*grid-template-columns: minmax\(0, 1fr\) auto/);
   assert.match(css, /home-focus-card-head strong[\s\S]*border-radius: 999px/);
-  assert.match(css, /home-runway-grid[\s\S]*repeat\(auto-fit, minmax\(min\(100%, 220px\), 1fr\)\)/);
-  assert.match(css, /home-runway-tile[\s\S]*grid-template-areas:[\s\S]*"label value"[\s\S]*"detail detail"[\s\S]*"action action"/);
-  assert.match(css, /home-runway-tile > strong[\s\S]*border-radius: 999px/);
+  assert.doesNotMatch(js, /renderHomeRunway/);
+  assert.doesNotMatch(css, /home-runway/);
   assert.match(css, /work-readiness-grid[\s\S]*repeat\(auto-fit, minmax\(min\(100%, 220px\), 1fr\)\)/);
   assert.match(css, /leads-runway-card,[\s\S]*money-runway-card,[\s\S]*tools-runway-card[\s\S]*grid-template-areas:[\s\S]*"label value"[\s\S]*"detail detail"[\s\S]*"action action"/);
   assert.match(css, /tools-runway-card > strong[\s\S]*border-radius: 999px/);

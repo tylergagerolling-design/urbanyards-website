@@ -11830,59 +11830,6 @@
     </article>`;
   }
 
-  function renderHomeRunwayTile({ label, value, detail, action, actionLabel, tone = "" }) {
-    return `<article class="work-plan-tile home-runway-tile ${tone ? `is-${escapeHtml(tone)}` : ""}">
-      <span>${escapeHtml(label)}</span>
-      <strong>${escapeHtml(String(value))}</strong>
-      <p>${escapeHtml(detail)}</p>
-      <button type="button" data-action="${escapeHtml(action)}">${escapeHtml(actionLabel)}</button>
-    </article>`;
-  }
-
-  function renderHomeRunway({ todayTickets = [], overdueTickets = [], leadTickets = [], workTickets = [], moneyTickets = [], reviewTickets = [], actions = [] }) {
-    return `<section class="home-runway-panel" aria-label="Today workflow runway">
-      <div class="ticket-lane-heading">
-        <div>
-          <p class="eyebrow">Today</p>
-          <h3>Daily workflow runway</h3>
-          <p>Start with late or dated work, then move Leads, Work, and Money handoffs through the ticket flow.</p>
-        </div>
-        <span>${escapeHtml(String(todayTickets.length + overdueTickets.length + actions.length))}</span>
-      </div>
-      <div class="work-plan-tile-grid home-runway-grid">
-        ${renderHomeRunwayTile({
-          label: overdueTickets.length ? "Late / Today" : "Today",
-          value: overdueTickets.length + todayTickets.length,
-          detail: overdueTickets.length ? "Late or dated tickets need the first pass." : "Dated work and urgent action items.",
-          action: "go-work",
-          actionLabel: "Open Work",
-          tone: overdueTickets.length ? "warning" : ""
-        })}
-        ${renderHomeRunwayTile({
-          label: "Leads",
-          value: leadTickets.length,
-          detail: "New intake, follow-ups, scope, and customer approval.",
-          action: "go-leads",
-          actionLabel: "Open Leads"
-        })}
-        ${renderHomeRunwayTile({
-          label: "Work",
-          value: workTickets.length,
-          detail: "Scheduled, ready, active, paused, or proof-ready work.",
-          action: "go-work",
-          actionLabel: "Open Work"
-        })}
-        ${renderHomeRunwayTile({
-          label: "Money",
-          value: moneyTickets.length + reviewTickets.length,
-          detail: "Cost review, invoice prep, payment, and closeout.",
-          action: "go-money",
-          actionLabel: "Open Money"
-        })}
-      </div>
-    </section>`;
-  }
-
   function homeFocusTitle(item = {}) {
     return item.title || item.customer || item.property || item.number || "Untitled item";
   }
@@ -12068,7 +12015,6 @@
           ${renderTicketMetric(workflowWarnings.length + notifications.length, "Alerts", "Workflow and notification signals")}
         </section>
         ${renderHomeFocusPanel({ todayTickets, overdueTickets, leadTickets, workTickets, moneyTickets, reviewTickets, actions })}
-        ${renderHomeRunway({ todayTickets, overdueTickets, leadTickets, workTickets, moneyTickets, reviewTickets, actions })}
         ${renderHomeCommandCenter({ actions, attentionTickets, todayTickets, workTickets, moneyTickets, workflowWarnings, notifications })}
       </div>`;
   }

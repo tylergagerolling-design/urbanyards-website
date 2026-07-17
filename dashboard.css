@@ -15432,22 +15432,6 @@ body:not(.is-login-screen) .work-plan-tile-grid {
   gap: 12px;
 }
 
-body:not(.is-login-screen) .home-runway-panel {
-  display: grid;
-  gap: 14px;
-  padding: clamp(18px, 2vw, 24px);
-  border: 1px solid rgba(73, 102, 77, .16);
-  border-radius: 24px;
-  background:
-    radial-gradient(circle at 94% 8%, rgba(153, 180, 119, .14), transparent 34%),
-    rgba(255, 255, 255, .78);
-  box-shadow: 0 14px 36px rgba(19, 36, 28, .06);
-}
-
-body:not(.is-login-screen) .home-runway-grid {
-  grid-template-columns: repeat(auto-fit, minmax(min(100%, 220px), 1fr));
-}
-
 body:not(.is-login-screen) .work-plan-tile {
   display: grid;
   align-content: start;
@@ -15720,59 +15704,6 @@ body:not(.is-login-screen) .work-field-packet-step button {
 body:not(.is-login-screen) .work-field-packet-step button:hover {
   border-color: rgba(18, 63, 49, .28);
   background: #f8fbf2;
-}
-
-body:not(.is-login-screen) .home-runway-tile {
-  grid-template-columns: minmax(0, 1fr) auto;
-  grid-template-areas:
-    "label value"
-    "detail detail"
-    "action action";
-  align-items: start;
-  min-height: 160px;
-  border-color: rgba(73, 102, 77, .13);
-  background:
-    radial-gradient(circle at 100% 0%, rgba(153, 180, 119, .12), transparent 36%),
-    rgba(251, 250, 245, .88);
-}
-
-body:not(.is-login-screen) .home-runway-tile > span {
-  grid-area: label;
-  min-width: 0;
-  line-height: 1.25;
-  overflow-wrap: break-word;
-  word-break: normal;
-}
-
-body:not(.is-login-screen) .home-runway-tile > strong {
-  grid-area: value;
-  justify-self: end;
-  min-width: 42px;
-  padding: 8px 10px;
-  border-radius: 999px;
-  background: #e7efdf;
-  text-align: center;
-  font-size: clamp(1.15rem, 1.6vw, 1.55rem);
-  line-height: 1;
-}
-
-body:not(.is-login-screen) .home-runway-tile > p {
-  grid-area: detail;
-  max-width: 32ch;
-  overflow-wrap: break-word;
-  word-break: normal;
-}
-
-body:not(.is-login-screen) .home-runway-tile > button {
-  grid-area: action;
-  align-self: end;
-}
-
-body:not(.is-login-screen) .home-runway-tile.is-warning {
-  border-color: rgba(195, 136, 47, .26);
-  background:
-    radial-gradient(circle at 100% 0%, rgba(217, 182, 111, .2), transparent 40%),
-    #fffaf0;
 }
 
 body:not(.is-login-screen) .home-focus-panel {
@@ -18887,7 +18818,6 @@ body:not(.is-login-screen) .field-proof-actions button {
   body:not(.is-login-screen) .home-next-step-stack,
   body:not(.is-login-screen) .lead-next-step-stack,
   body:not(.is-login-screen) .money-next-step-stack,
-  body:not(.is-login-screen) .home-runway-grid,
   body:not(.is-login-screen) .work-readiness-grid,
   body:not(.is-login-screen) .leads-runway-grid,
   body:not(.is-login-screen) .money-runway-grid,
@@ -18986,7 +18916,6 @@ body:not(.is-login-screen) .field-proof-actions button {
   body:not(.is-login-screen) .home-next-step-stack,
   body:not(.is-login-screen) .lead-next-step-stack,
   body:not(.is-login-screen) .money-next-step-stack,
-  body:not(.is-login-screen) .home-runway-grid,
   body:not(.is-login-screen) .work-readiness-grid,
   body:not(.is-login-screen) .leads-runway-grid,
   body:not(.is-login-screen) .money-runway-grid,

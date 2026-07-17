@@ -12009,6 +12009,74 @@
     </article>`;
   }
 
+  function renderTicketHandoffCard({ label, value, detail, tickets = [], action, actionLabel }) {
+    const preview = tickets.slice(0, 2).map((ticket) => {
+      const meta = [ticket.stageLabel, ticket.ownerLabel].filter(Boolean).join(" / ");
+      return `<li>
+        <strong>${escapeHtml(ticket.title || ticket.customer || "Untitled ticket")}</strong>
+        <span>${escapeHtml(meta || ticket.nextAction || "Needs next step")}</span>
+      </li>`;
+    }).join("");
+    return `<article class="ticket-handoff-card">
+      <div class="ticket-handoff-card-main">
+        <span>${escapeHtml(label)}</span>
+        <strong>${escapeHtml(String(value))}</strong>
+        <p>${escapeHtml(detail)}</p>
+      </div>
+      <ul>${preview || `<li><strong>Clear</strong><span>No tickets waiting here.</span></li>`}</ul>
+      <button type="button" data-action="${escapeHtml(action)}">${escapeHtml(actionLabel)}</button>
+    </article>`;
+  }
+
+  function renderTicketHandoffPanel({ leadsTickets, moneyTickets, workTickets, closeoutTickets, blockedTickets }) {
+    return `<section class="ticket-handoff-panel" aria-label="Ticket handoff summary">
+      <div class="ticket-flow-heading">
+        <div>
+          <p class="eyebrow">Handoff Summary</p>
+          <h3>Who owns the next move?</h3>
+          <p>Use this row to decide whether the ticket should be worked by Leads, Money, Work, or owner review before moving forward.</p>
+        </div>
+        <dl>
+          <div><dt>Blocked</dt><dd>${escapeHtml(String(blockedTickets.length))}</dd></div>
+        </dl>
+      </div>
+      <div class="ticket-handoff-grid">
+        ${renderTicketHandoffCard({
+          label: "Leads",
+          value: leadsTickets.length,
+          detail: "Intake, scope, quote follow-up, and customer approval.",
+          tickets: leadsTickets,
+          action: "go-leads",
+          actionLabel: "Open Leads"
+        })}
+        ${renderTicketHandoffCard({
+          label: "Money",
+          value: moneyTickets.length,
+          detail: "Cost review, budget prep, invoice draft, and payment state.",
+          tickets: moneyTickets,
+          action: "go-money",
+          actionLabel: "Open Money"
+        })}
+        ${renderTicketHandoffCard({
+          label: "Work",
+          value: workTickets.length,
+          detail: "Scheduling, route access, field notes, forms, and photos.",
+          tickets: workTickets,
+          action: "go-work",
+          actionLabel: "Open Work"
+        })}
+        ${renderTicketHandoffCard({
+          label: "Closeout",
+          value: closeoutTickets.length,
+          detail: "Completion review, actuals, final invoice, and payment close.",
+          tickets: closeoutTickets,
+          action: "go-tickets",
+          actionLabel: "Review Tickets"
+        })}
+      </div>
+    </section>`;
+  }
+
   function renderTicketCommandCenter({ filteredTickets, workTickets, officeTickets, readyTickets, reviewTickets }) {
     const priorityTickets = [
       ...officeTickets,
@@ -12073,6 +12141,21 @@
     const officeTickets = filteredTickets.filter((ticket) => ticketInLane(ticket, ["sales", "accounting", "review", "money"]));
     const readyTickets = filteredTickets.filter((ticket) => ticketInLane(ticket, ["ready"]));
     const reviewTickets = openTickets.filter((ticket) => ticketInLane(ticket, ["review", "money"]));
+    const blockedTickets = filteredTickets.filter((ticket) => {
+      const transitionBlockers = ticketTransitionOptions(ticket).flatMap((item) => item.missing || []);
+      return Boolean(ticket.blockers?.length || transitionBlockers.length);
+    });
+    const leadsTickets = filteredTickets.filter((ticket) => ticketInLane(ticket, ["sales"]));
+    const moneyReviewTickets = filteredTickets.filter((ticket) => ticketInLane(ticket, ["accounting", "money"]));
+    const workQueueTickets = filteredTickets.filter((ticket) => ticketInLane(ticket, ["ready", "field"]));
+    const closeoutTickets = filteredTickets.filter((ticket) => ticketInStage(ticket, [
+      "field_work_complete",
+      "completion_review",
+      "invoice_review",
+      "invoice_sent",
+      "partially_paid",
+      "paid"
+    ]));
     target.innerHTML = `
       <div class="ticket-workspace uy-page-prototype job-ticket-workspace" data-uy-page-contract="tickets" data-data-source="job_tickets,quotes,jobs,invoices">
         ${renderWorkspaceDataState("tickets")}
@@ -12094,6 +12177,7 @@
           ${renderTicketMetric(ticketCountBy(openTickets, (ticket) => ticketInLane(ticket, ["sales", "accounting"])), "Needs Office", "Scope, quote, cost review")}
           ${renderTicketMetric(ticketCountBy(openTickets, (ticket) => ticketInLane(ticket, ["review", "money"])), "Closeout", "Review, invoice, payment")}
         </section>
+        ${renderTicketHandoffPanel({ leadsTickets, moneyTickets: moneyReviewTickets, workTickets: workQueueTickets, closeoutTickets, blockedTickets })}
         ${renderTicketCommandCenter({ filteredTickets, workTickets, officeTickets, readyTickets, reviewTickets })}
         ${renderTicketWorkflowBoard(openTickets, filteredTickets)}
       </div>`;

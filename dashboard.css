@@ -15213,7 +15213,7 @@ body:not(.is-login-screen) .ticket-workflow-board-heading dd {
 
 body:not(.is-login-screen) .ticket-workflow-board-grid {
   display: grid;
-  grid-template-columns: repeat(7, minmax(0, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 196px), 1fr));
   gap: 10px;
 }
 
@@ -15236,12 +15236,11 @@ body:not(.is-login-screen) .ticket-workflow-board-column.is-populated {
 body:not(.is-login-screen) .ticket-workflow-board-column-head {
   display: grid;
   position: relative;
-  grid-template-columns: minmax(0, 1fr) auto;
+  grid-template-columns: auto minmax(0, 1fr) auto;
   align-items: start;
   column-gap: 8px;
   row-gap: 4px;
   min-width: 0;
-  padding-left: 30px;
 }
 
 body:not(.is-login-screen) .ticket-workflow-board-column-head > div {
@@ -15251,9 +15250,7 @@ body:not(.is-login-screen) .ticket-workflow-board-column-head > div {
 body:not(.is-login-screen) .ticket-workflow-board-index {
   display: inline-grid;
   place-items: center;
-  position: absolute;
-  left: 0;
-  top: 0;
+  flex: 0 0 auto;
   width: 24px;
   height: 24px;
   border-radius: 9px;
@@ -15272,7 +15269,7 @@ body:not(.is-login-screen) .ticket-workflow-board-column-head strong {
   font-size: .98rem;
   line-height: 1.18;
   text-wrap: balance;
-  overflow-wrap: break-word;
+  overflow-wrap: normal;
   word-break: normal;
   hyphens: none;
 }
@@ -15286,7 +15283,7 @@ body:not(.is-login-screen) .ticket-workflow-board-column-head small {
   font-weight: 750;
   line-height: 1.28;
   text-wrap: pretty;
-  overflow-wrap: break-word;
+  overflow-wrap: normal;
   word-break: normal;
   hyphens: none;
 }
@@ -15294,6 +15291,7 @@ body:not(.is-login-screen) .ticket-workflow-board-column-head small {
 body:not(.is-login-screen) .ticket-workflow-board-column-head em {
   display: inline-grid;
   place-items: center;
+  flex: 0 0 auto;
   min-width: 28px;
   height: 28px;
   padding: 0 7px;

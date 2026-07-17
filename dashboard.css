@@ -15169,7 +15169,7 @@ body:not(.is-login-screen) .field-grid {
 
 body:not(.is-login-screen) .work-day-plan-panel {
   display: grid;
-  grid-template-columns: minmax(0, 1.05fr) minmax(360px, .95fr);
+  grid-template-columns: minmax(0, 1.18fr) minmax(340px, .82fr);
   gap: 16px;
 }
 
@@ -15191,9 +15191,9 @@ body:not(.is-login-screen) .work-day-map-card {
 }
 
 body:not(.is-login-screen) .work-day-map-card .dashboard-map-preview-shell {
-  aspect-ratio: 16 / 5.25;
-  height: auto;
-  min-height: clamp(210px, 19vw, 280px);
+  height: clamp(184px, 16vw, 246px);
+  min-height: 0;
+  margin-bottom: 0;
   overflow: hidden;
   border: 1px solid rgba(73, 102, 77, .12);
   border-radius: 18px;
@@ -15202,6 +15202,7 @@ body:not(.is-login-screen) .work-day-map-card .dashboard-map-preview-shell {
 body:not(.is-login-screen) .work-day-map-card .dashboard-map-preview,
 body:not(.is-login-screen) .work-day-map-card .dashboard-map-preview > div,
 body:not(.is-login-screen) .work-day-map-card .dashboard-map-preview .gm-style {
+  width: 100% !important;
   height: 100% !important;
   min-height: 0;
 }
@@ -18070,6 +18071,10 @@ body:not(.is-login-screen) .field-proof-actions button {
   body:not(.is-login-screen) .work-day-route-footer {
     align-items: stretch;
     flex-direction: column;
+  }
+
+  body:not(.is-login-screen) .work-day-map-card .dashboard-map-preview-shell {
+    height: clamp(164px, 48vw, 218px);
   }
 
   body:not(.is-login-screen) .work-day-route-footer button,

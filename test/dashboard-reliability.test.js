@@ -336,7 +336,8 @@ test("dashboard route aliases and new reliability diagnostics are wired", () => 
   assert.match(js, /function resizeGoogleMapView\(view\)/);
   assert.match(js, /window\.google\.maps\.event\.trigger\(view\.map, "resize"\)/);
   assert.match(css, /dashboard-map-preview > div[\s\S]*height: 100% !important/);
-  assert.match(css, /work-day-map-card \.dashboard-map-preview-shell[\s\S]*aspect-ratio: 16 \/ 5\.25/);
+  assert.match(css, /work-day-map-card \.dashboard-map-preview-shell[\s\S]*height: clamp\(184px, 16vw, 246px\)/);
+  assert.match(css, /work-day-map-card \.dashboard-map-preview-shell[\s\S]*margin-bottom: 0/);
   assert.match(css, /work-day-map-card \.dashboard-map-preview \.gm-style[\s\S]*height: 100% !important/);
   assert.match(js, /ticket-drawer-operating-grid/);
   assert.doesNotMatch(js, /renderTicketEndToEndFlow\(dashboardTickets\(\), ticket\.stage, "Current ticket lifecycle"\)/);

@@ -12320,8 +12320,8 @@
               </div>
               <div class="field-proof-actions">
                 <button type="button" data-action="go-route-planner">Open Route Planner</button>
-                <button type="button" data-action="go-tools">Open Tools</button>
-                <button type="button" data-action="go-tools">Dashboard Health</button>
+                <button type="button" data-action="go-documentation">Open Documentation</button>
+                <button type="button" data-action="copy-dashboard-diagnostics">Copy Diagnostics</button>
               </div>
             </section>
           </aside>

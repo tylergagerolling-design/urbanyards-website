@@ -274,6 +274,7 @@ test("dashboard route aliases and new reliability diagnostics are wired", () => 
   assert.match(js, /await ensureBudgetForTicket\(ticket\)/);
   assert.match(js, /await syncBudgetToTicket\(budget\)/);
   assert.match(js, /function canManageWorkWorkflow/);
+  assert.match(js, /field-proof-actions[\s\S]*data-action="go-route-planner"[\s\S]*data-action="go-documentation"[\s\S]*data-action="copy-dashboard-diagnostics"/);
   assert.match(js, /function renderTicketWorkAssignmentBridge/);
   assert.match(js, /async function saveTicketWorkAssignment/);
   assert.match(js, /data-ticket-assignment-form/);

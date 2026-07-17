@@ -12898,11 +12898,6 @@
           ${renderTicketMetric(documents.length, "Financial Documents", "Quotes, invoices, and records")}
           ${renderTicketMetric(documentationCount, "Forms and Files", "Templates and submissions")}
         </section>
-        ${renderWorkspaceFocusStrip([
-          { kicker: "Health", value: criticalWarnings.length, title: "Critical warnings", detail: "Issues affecting rebuilt workflow pages." },
-          { kicker: "Support", value: supportWarnings.length, title: "Setup warnings", detail: "Optional modules or integrations that need attention." },
-          { kicker: "Files", value: documentationCount, title: "Forms and records", detail: "Documentation templates and submissions." }
-        ], "Tools workspace signals")}
         ${renderToolsRunwayPanel({ criticalWarnings, supportWarnings, documentationCount, equipmentCount, routeStopsToday, aiLiveVersion, usersCount })}
         <section class="tools-control-grid" aria-label="Dashboard support tools">
           ${renderToolsCard({
@@ -12997,21 +12992,6 @@
             </div>
             <div class="activity-log-list" data-activity-log-list></div>
           </article>
-        </section>
-        <section class="ticket-review-strip tools-health-strip">
-          <div>
-            <p class="eyebrow">Diagnostics</p>
-            <h3>Dashboard health</h3>
-            <p>Support warnings are separated from active workflow warnings, so optional modules do not make the whole dashboard look broken.</p>
-          </div>
-          <div class="tools-health-list">
-            ${rows.map(([label, value]) => `
-              <div class="tools-health-row">
-                <span>${escapeHtml(label)}</span>
-                <strong>${escapeHtml(value || "not set")}</strong>
-              </div>
-            `).join("")}
-          </div>
         </section>
         ${supportWarnings.length ? `
           <section class="ticket-lane">

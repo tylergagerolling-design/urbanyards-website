@@ -240,6 +240,7 @@ test("dashboard route aliases and new reliability diagnostics are wired", () => 
   assert.match(toolsWorkspace, /renderActivityLog\(data\)/);
   assert.match(toolsWorkspace, /renderDashboardHealth\(\)/);
   assert.doesNotMatch(toolsWorkspace, /data-import-backup|data-user-avatar-upload/);
+  assert.doesNotMatch(toolsWorkspace, /Tools workspace signals|tools-health-strip/);
   const toolsSection = html.match(/<section class="dashboard-section uy-standard-page tools-page" id="settings"[\s\S]*?<\/section>/)?.[0] || "";
   assert.match(toolsSection, /data-tools-workspace/);
   assert.match(toolsSection, /data-tools-runtime/);
@@ -344,8 +345,10 @@ test("dashboard route aliases and new reliability diagnostics are wired", () => 
   assert.match(css, /money-budget-actions[\s\S]*flex-wrap: wrap/);
   assert.match(css, /money-budget-actions \.inline-action[\s\S]*flex: 1 1 128px/);
   assert.match(css, /tools-control-card[\s\S]*grid-template-rows: auto minmax\(0, 1fr\) auto/);
+  assert.match(css, /tools-control-grid[\s\S]*repeat\(auto-fit, minmax\(min\(100%, 260px\), 1fr\)\)/);
   assert.match(css, /tools-control-card \.ticket-card-actions[\s\S]*flex-wrap: wrap/);
   assert.match(css, /tools-control-card \.ticket-card-actions button[\s\S]*flex: 1 1 136px/);
+  assert.doesNotMatch(css, /tools-health-strip|tools-health-row/);
   assert.match(css, /\.ticket-budget-bridge/);
   assert.match(css, /\.money-budget-drawer/);
   assert.match(js, /function ticketStage\(ticket = \{\}\)/);

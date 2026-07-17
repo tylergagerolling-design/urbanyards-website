@@ -14421,13 +14421,13 @@ body:not(.is-login-screen) .rebuild-tool-card button {
 
 body:not(.is-login-screen) .tools-control-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 260px), 1fr));
   gap: 14px;
 }
 
 body:not(.is-login-screen) .tools-admin-grid {
   display: grid;
-  grid-template-columns: minmax(0, 1.2fr) minmax(280px, .8fr);
+  grid-template-columns: minmax(0, 1.12fr) minmax(min(100%, 320px), .88fr);
   gap: clamp(16px, 1.8vw, 24px);
   align-items: start;
 }
@@ -14470,7 +14470,7 @@ body:not(.is-login-screen) .tools-runway-panel {
 
 body:not(.is-login-screen) .tools-runway-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 220px), 1fr));
   gap: 12px;
 }
 
@@ -14580,17 +14580,6 @@ body:not(.is-login-screen) .tools-control-card .ticket-card-actions button {
   max-width: 210px;
 }
 
-body:not(.is-login-screen) .tools-health-strip {
-  align-items: start;
-}
-
-body:not(.is-login-screen) .tools-health-list {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
-  gap: 10px;
-}
-
-body:not(.is-login-screen) .tools-health-row,
 body:not(.is-login-screen) .tools-warning-item {
   padding: 12px 14px;
   border: 1px solid rgba(73, 102, 77, .14);
@@ -14598,14 +14587,12 @@ body:not(.is-login-screen) .tools-warning-item {
   background: rgba(255, 255, 255, .74);
 }
 
-body:not(.is-login-screen) .tools-health-row span,
 body:not(.is-login-screen) .tools-warning-item small {
   display: block;
   color: var(--uy-muted);
   line-height: 1.4;
 }
 
-body:not(.is-login-screen) .tools-health-row strong,
 body:not(.is-login-screen) .tools-warning-item strong {
   display: block;
   margin-top: 4px;

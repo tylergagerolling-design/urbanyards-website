@@ -18318,7 +18318,7 @@
   }
 
   function bindEvents() {
-    els.loginForm.addEventListener("submit", async (event) => {
+    els.loginForm?.addEventListener("submit", async (event) => {
       event.preventDefault();
       const formData = new FormData(els.loginForm);
       const email = String(formData.get("email") || "").trim();
@@ -18430,10 +18430,12 @@
       });
     });
 
-    els.statusFilter.addEventListener("change", async () => {
-      state.statusFilter = els.statusFilter.value;
-      await render();
-    });
+    if (els.statusFilter) {
+      els.statusFilter.addEventListener("change", async () => {
+        state.statusFilter = els.statusFilter.value;
+        await render();
+      });
+    }
 
     if (els.search) {
       els.search.addEventListener("input", async () => {
@@ -21749,7 +21751,7 @@
       });
     }
 
-    els.signOut.addEventListener("click", async () => {
+    els.signOut?.addEventListener("click", async () => {
       await signOutOwner();
       showLogin();
     });

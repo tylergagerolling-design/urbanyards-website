@@ -181,6 +181,9 @@ test("dashboard route aliases and new reliability diagnostics are wired", () => 
   assert.match(js, /settings: \["owner", "admin"\]/);
   assert.match(js, /function dashboardSectionForRole/);
   assert.match(js, /syncDashboardNavAccess\(role\)/);
+  assert.match(js, /els\.loginForm\?\.addEventListener\("submit"/);
+  assert.match(js, /if \(els\.statusFilter\) \{\s*els\.statusFilter\.addEventListener\("change"/);
+  assert.match(js, /els\.signOut\?\.addEventListener\("click"/);
   assert.doesNotMatch(js, /DASHBOARD_OPERATIONS_SQL/);
   assert.doesNotMatch(js, /20260713_connected_operations\.sql/);
   assert.match(js, /Job Tickets are not installed yet\. Run supabase\/migrations\/20260714_job_ticket_foundation\.sql/);

@@ -323,6 +323,9 @@ test("dashboard route aliases and new reliability diagnostics are wired", () => 
   assert.match(js, /compact \? "ticket-card--compact" : ""/);
   assert.match(css, /ticket-card--compact[\s\S]*gap: 10px/);
   assert.match(css, /ticket-workflow-board-list \.ticket-card--compact \.ticket-card-checklist[\s\S]*display: none/);
+  assert.match(css, /lead-queue-item[\s\S]*grid-template-columns: minmax\(280px, 1fr\) minmax\(250px, \.72fr\)/);
+  assert.match(css, /lead-queue-actions[\s\S]*grid-template-columns: repeat\(2, minmax\(0, max-content\)\)/);
+  assert.match(css, /lead-queue-actions \.phone-call-control[\s\S]*grid-column: 1 \/ -1/);
   assert.match(js, /function resizeGoogleMapView\(view\)/);
   assert.match(js, /window\.google\.maps\.event\.trigger\(view\.map, "resize"\)/);
   assert.match(css, /dashboard-map-preview > div[\s\S]*height: 100% !important/);
@@ -332,6 +335,12 @@ test("dashboard route aliases and new reliability diagnostics are wired", () => 
   assert.match(css, /\.money-budget-panel/);
   assert.match(css, /\.money-budget-item/);
   assert.match(css, /\.money-budget-stats/);
+  assert.match(css, /money-budget-item dl[\s\S]*grid-template-columns: repeat\(3, minmax\(68px, 1fr\)\)/);
+  assert.match(css, /money-budget-actions[\s\S]*flex-wrap: wrap/);
+  assert.match(css, /money-budget-actions \.inline-action[\s\S]*flex: 1 1 128px/);
+  assert.match(css, /tools-control-card[\s\S]*grid-template-rows: auto minmax\(0, 1fr\) auto/);
+  assert.match(css, /tools-control-card \.ticket-card-actions[\s\S]*flex-wrap: wrap/);
+  assert.match(css, /tools-control-card \.ticket-card-actions button[\s\S]*flex: 1 1 136px/);
   assert.match(css, /\.ticket-budget-bridge/);
   assert.match(css, /\.money-budget-drawer/);
   assert.match(js, /function ticketStage\(ticket = \{\}\)/);

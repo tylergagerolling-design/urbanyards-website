@@ -14528,10 +14528,11 @@ body:not(.is-login-screen) .tools-runway-panel .ticket-flow-heading > button:hov
 }
 
 body:not(.is-login-screen) .tools-control-card {
-  display: flex;
-  flex-direction: column;
-  justify-content: space-between;
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr) auto;
+  align-content: start;
   gap: 14px;
+  min-width: 0;
   min-height: 184px;
   padding: clamp(16px, 1.7vw, 22px);
   border: 1px solid rgba(73, 102, 77, .16);
@@ -14542,17 +14543,41 @@ body:not(.is-login-screen) .tools-control-card {
   box-shadow: 0 14px 34px rgba(19, 36, 28, .06);
 }
 
+body:not(.is-login-screen) .tools-control-card > div:first-child {
+  min-width: 0;
+}
+
 body:not(.is-login-screen) .tools-control-card h3 {
   margin: 0;
   color: var(--uy-green);
   font-size: clamp(1.08rem, 1.55vw, 1.34rem);
   line-height: 1.1;
+  overflow-wrap: break-word;
+  text-wrap: pretty;
 }
 
 body:not(.is-login-screen) .tools-control-card p:not(.eyebrow) {
   margin: 8px 0 0;
   color: var(--uy-muted);
   line-height: 1.5;
+  overflow-wrap: break-word;
+  text-wrap: pretty;
+}
+
+body:not(.is-login-screen) .tools-control-card .ticket-card-actions {
+  align-self: end;
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-start;
+  gap: 8px;
+  padding-top: 12px;
+  border-top: 1px solid rgba(73, 102, 77, .10);
+}
+
+body:not(.is-login-screen) .tools-control-card .ticket-card-actions button {
+  flex: 1 1 136px;
+  justify-content: center;
+  max-width: 210px;
 }
 
 body:not(.is-login-screen) .tools-health-strip {
@@ -15840,9 +15865,9 @@ body:not(.is-login-screen) .lead-queue-list {
 
 body:not(.is-login-screen) .lead-queue-item {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(170px, auto);
+  grid-template-columns: minmax(280px, 1fr) minmax(250px, .72fr);
   gap: 14px;
-  align-items: center;
+  align-items: start;
   min-width: 0;
   padding: 14px;
   border: 1px solid rgba(73, 102, 77, .13);
@@ -15880,6 +15905,9 @@ body:not(.is-login-screen) .lead-queue-copy h4 {
   margin: 0;
   color: var(--uy-green);
   font-size: 1rem;
+  line-height: 1.2;
+  overflow-wrap: break-word;
+  text-wrap: pretty;
 }
 
 body:not(.is-login-screen) .lead-queue-copy p,
@@ -15888,17 +15916,26 @@ body:not(.is-login-screen) .lead-queue-copy small {
   margin: 4px 0 0;
   color: var(--uy-muted);
   line-height: 1.38;
+  overflow-wrap: break-word;
+  text-wrap: pretty;
 }
 
 body:not(.is-login-screen) .lead-queue-actions {
-  display: flex;
-  flex-wrap: wrap;
-  justify-content: flex-end;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, max-content));
+  justify-content: end;
   gap: 8px;
 }
 
 body:not(.is-login-screen) .lead-queue-actions .phone-call-control {
+  grid-column: 1 / -1;
+  width: 100%;
   justify-content: flex-end;
+}
+
+body:not(.is-login-screen) .lead-queue-actions > .inline-action {
+  min-width: 112px;
+  justify-content: center;
 }
 
 body:not(.is-login-screen) .lead-next-step-stack {
@@ -16463,29 +16500,43 @@ body:not(.is-login-screen) .money-budget-list {
 body:not(.is-login-screen) .money-budget-item {
   display: grid;
   gap: 12px;
+  min-width: 0;
   padding: 14px;
   border: 1px solid rgba(73, 102, 77, .14);
   border-radius: 18px;
   background: rgba(251, 250, 245, .92);
 }
 
+body:not(.is-login-screen) .money-budget-item > div:first-child {
+  min-width: 0;
+}
+
 body:not(.is-login-screen) .money-budget-item h4 {
   margin: 0;
   color: var(--uy-green);
   font-size: 1rem;
+  line-height: 1.2;
+  overflow-wrap: break-word;
+  text-wrap: pretty;
 }
 
 body:not(.is-login-screen) .money-budget-item p {
   margin: 4px 0 0;
   color: var(--uy-muted);
   line-height: 1.4;
+  overflow-wrap: break-word;
+  text-wrap: pretty;
 }
 
 body:not(.is-login-screen) .money-budget-item dl {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-columns: repeat(3, minmax(68px, 1fr));
   gap: 8px;
   margin: 0;
+}
+
+body:not(.is-login-screen) .money-budget-item dl div {
+  min-width: 0;
 }
 
 body:not(.is-login-screen) .money-budget-item dt {
@@ -16500,15 +16551,28 @@ body:not(.is-login-screen) .money-budget-item dd {
   margin: 2px 0 0;
   color: var(--uy-green);
   font-weight: 900;
+  line-height: 1.1;
+  overflow-wrap: break-word;
 }
 
 body:not(.is-login-screen) .money-budget-actions {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
-  justify-content: space-between;
+  justify-content: flex-start;
   gap: 10px;
   padding-top: 10px;
   border-top: 1px solid rgba(73, 102, 77, .10);
+}
+
+body:not(.is-login-screen) .money-budget-actions .budget-badge {
+  flex: 0 0 auto;
+}
+
+body:not(.is-login-screen) .money-budget-actions .inline-action {
+  flex: 1 1 128px;
+  justify-content: center;
+  max-width: 180px;
 }
 
 body:not(.is-login-screen) .money-budget-actions > span:not(.budget-badge) {
@@ -18156,6 +18220,15 @@ body:not(.is-login-screen) .field-proof-actions button {
   body:not(.is-login-screen) .lead-queue-actions,
   body:not(.is-login-screen) .lead-queue-actions .phone-call-control {
     justify-content: flex-start;
+  }
+
+  body:not(.is-login-screen) .lead-queue-actions {
+    grid-template-columns: 1fr;
+  }
+
+  body:not(.is-login-screen) .lead-queue-actions .phone-call-control,
+  body:not(.is-login-screen) .lead-queue-actions > .inline-action {
+    width: 100%;
   }
 
   body:not(.is-login-screen) .today-action-status {

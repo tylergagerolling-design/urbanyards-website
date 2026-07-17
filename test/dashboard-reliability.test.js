@@ -232,6 +232,8 @@ test("dashboard route aliases and new reliability diagnostics are wired", () => 
   const moneySection = html.match(/<section class="dashboard-section uy-standard-page money-page" id="documents"[\s\S]*?<\/section>/)?.[0] || "";
   assert.match(moneySection, /data-money-workspace/);
   assert.doesNotMatch(moneySection, /data-quote-table|data-pipeline|data-document-form/);
+  const moneyWorkspace = js.match(/function renderMoneyWorkspace[\s\S]*?function renderToolsRunwayCard/)?.[0] || "";
+  assert.doesNotMatch(moneyWorkspace, /Money workspace signals/);
   const toolsWorkspace = js.match(/function renderToolsWorkspace[\s\S]*?function renderToolsCard/)?.[0] || "";
   assert.match(toolsWorkspace, /data-users-access-list/);
   assert.match(toolsWorkspace, /data-dashboard-health/);

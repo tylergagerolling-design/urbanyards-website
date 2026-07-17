@@ -12798,11 +12798,6 @@
           ${renderTicketMetric(overdueInvoices.length, "Overdue", "Payment action needed")}
         </section>
         ${renderMoneyRunwayPanel({ needsBudget, ownerApproval, invoiceTickets, overdueInvoices })}
-        ${renderWorkspaceFocusStrip([
-          { kicker: "Budget", value: needsBudget.length, title: "Cost review", detail: "Approved tickets waiting on budget or margin checks." },
-          { kicker: "Invoice", value: unpaidInvoices.length, title: "Open invoices", detail: "Quotes, invoices, and Square payment state needing review." },
-          { kicker: "Overdue", value: overdueInvoices.length, title: "Payment risk", detail: "Invoices past due and ready for follow-up." }
-        ], "Money workspace signals")}
         ${renderMoneyCommandCenter({ needsBudget, ownerApproval, fieldComplete, invoiceTickets, unpaidInvoices, overdueInvoices })}
         ${renderMoneyBudgetPanel(data, tickets)}
       </div>`;

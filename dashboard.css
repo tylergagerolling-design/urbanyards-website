@@ -15701,12 +15701,12 @@ body:not(.is-login-screen) .ticket-next-step-card button {
 }
 
 body:not(.is-login-screen) .leads-workspace .ticket-metrics {
-  grid-template-columns: repeat(5, minmax(0, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 190px), 1fr));
 }
 
 body:not(.is-login-screen) .leads-command-center {
   display: grid;
-  grid-template-columns: minmax(0, 1.25fr) minmax(300px, .75fr);
+  grid-template-columns: minmax(0, 1.18fr) minmax(min(100%, 320px), .82fr);
   gap: 16px;
   align-items: start;
 }
@@ -15723,7 +15723,7 @@ body:not(.is-login-screen) .lead-queue-list {
 
 body:not(.is-login-screen) .lead-queue-item {
   display: grid;
-  grid-template-columns: minmax(280px, 1fr) minmax(250px, .72fr);
+  grid-template-columns: minmax(0, 1.08fr) minmax(min(100%, 260px), .92fr);
   gap: 14px;
   align-items: start;
   min-width: 0;
@@ -15780,8 +15780,8 @@ body:not(.is-login-screen) .lead-queue-copy small {
 
 body:not(.is-login-screen) .lead-queue-actions {
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, max-content));
-  justify-content: end;
+  grid-template-columns: repeat(2, minmax(112px, 1fr));
+  justify-content: stretch;
   gap: 8px;
 }
 
@@ -15792,7 +15792,7 @@ body:not(.is-login-screen) .lead-queue-actions .phone-call-control {
 }
 
 body:not(.is-login-screen) .lead-queue-actions > .inline-action {
-  min-width: 112px;
+  min-width: 0;
   justify-content: center;
 }
 
@@ -15854,7 +15854,7 @@ body:not(.is-login-screen) .leads-runway-panel {
 
 body:not(.is-login-screen) .leads-runway-grid {
   display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 220px), 1fr));
   gap: 12px;
 }
 
@@ -16127,7 +16127,7 @@ body:not(.is-login-screen) .document-ticket-bridge-steps small {
 
 body:not(.is-login-screen) .money-command-center {
   display: grid;
-  grid-template-columns: minmax(0, 1.25fr) minmax(300px, .75fr);
+  grid-template-columns: minmax(0, 1.18fr) minmax(min(100%, 320px), .82fr);
   gap: 16px;
   align-items: start;
 }
@@ -16195,7 +16195,7 @@ body:not(.is-login-screen) .money-runway-panel {
 
 body:not(.is-login-screen) .money-runway-grid {
   display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 220px), 1fr));
   gap: 12px;
 }
 

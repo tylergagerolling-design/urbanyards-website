@@ -325,8 +325,9 @@ test("dashboard route aliases and new reliability diagnostics are wired", () => 
   assert.match(js, /compact \? "ticket-card--compact" : ""/);
   assert.match(css, /ticket-card--compact[\s\S]*gap: 10px/);
   assert.match(css, /ticket-workflow-board-list \.ticket-card--compact \.ticket-card-checklist[\s\S]*display: none/);
-  assert.match(css, /lead-queue-item[\s\S]*grid-template-columns: minmax\(280px, 1fr\) minmax\(250px, \.72fr\)/);
-  assert.match(css, /lead-queue-actions[\s\S]*grid-template-columns: repeat\(2, minmax\(0, max-content\)\)/);
+  assert.match(css, /leads-workspace \.ticket-metrics[\s\S]*repeat\(auto-fit, minmax\(min\(100%, 190px\), 1fr\)\)/);
+  assert.match(css, /lead-queue-item[\s\S]*grid-template-columns: minmax\(0, 1\.08fr\) minmax\(min\(100%, 260px\), \.92fr\)/);
+  assert.match(css, /lead-queue-actions[\s\S]*grid-template-columns: repeat\(2, minmax\(112px, 1fr\)\)/);
   assert.match(css, /lead-queue-actions \.phone-call-control[\s\S]*grid-column: 1 \/ -1/);
   assert.match(js, /function resizeGoogleMapView\(view\)/);
   assert.match(js, /window\.google\.maps\.event\.trigger\(view\.map, "resize"\)/);

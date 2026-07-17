@@ -444,9 +444,11 @@ test("dashboard route aliases and new reliability diagnostics are wired", () => 
   assert.match(css, /\.ticket-workbench-section\.is-active/);
   assert.match(js, /function renderTicketBoardControls/);
   assert.match(js, /function ticketMatchesBoardFilters/);
+  assert.match(js, /function titleCase\(value\)/);
   assert.match(js, /function findTicketForDrawer\(source, id\)/);
   assert.match(js, /item\.sourceId === idText/);
   assert.match(js, /renderTicketDrawerFallback\(source, id/);
+  assert.match(js, /The ticket matched, but the detail panel hit a rendering error/);
   assert.match(js, /Ticket Command Center/);
   assert.match(js, /Board Filters/);
   assert.match(js, /Find the right ticket fast/);

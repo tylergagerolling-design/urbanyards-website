@@ -508,6 +508,13 @@
       .replace(/'/g, "&#039;");
   }
 
+  function titleCase(value) {
+    return String(value ?? "")
+      .trim()
+      .toLowerCase()
+      .replace(/\b([a-z])/g, (match) => match.toUpperCase());
+  }
+
   function truncateText(value, maxLength = 140) {
     const text = String(value ?? "").trim();
     if (text.length <= maxLength) return text;
@@ -11489,7 +11496,7 @@
     return tickets.find((item) => item.id === idText) || null;
   }
 
-  function renderTicketDrawerFallback(source, id, message = "This ticket could not be opened.") {
+  function renderTicketDrawerFallback(source, id, message = "This ticket could not be opened.", detail = "The dashboard could not match this button to a ticket record.") {
     return `<div class="drawer-content ticket-detail-drawer">
       <p class="eyebrow">Unified Job Ticket</p>
       <div class="ticket-drawer-heading">
@@ -11502,7 +11509,7 @@
         <div class="ticket-drawer-card-heading">
           <div>
             <h4>What happened</h4>
-            <span>The dashboard could not match this button to a ticket record.</span>
+            <span>${escapeHtml(detail)}</span>
           </div>
         </div>
         <div class="drawer-grid ticket-drawer-grid">
@@ -11592,7 +11599,7 @@
     } catch (error) {
       console.error("Ticket drawer failed to render", error);
       openDetailDrawer();
-      els.detailContent.innerHTML = renderTicketDrawerFallback(source, id, error.message || "The ticket matched, but the detail panel could not render it.");
+      els.detailContent.innerHTML = renderTicketDrawerFallback(source, id, error.message || "The ticket matched, but the detail panel could not render it.", "The ticket matched, but the detail panel hit a rendering error.");
     }
   }
 

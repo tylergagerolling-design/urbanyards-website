@@ -10386,7 +10386,7 @@
             <div class="ticket-workflow-board-list">
               ${shownTickets.length
                 ? shownTickets.slice(0, 3).map((ticket) => renderTicketCard(ticket, true)).join("")
-                : emptyState("No tickets in this step.")}
+                : `<p class="ticket-workflow-empty">Clear</p>`}
               ${shownTickets.length > 3 ? `<p class="ticket-workflow-more">${escapeHtml(String(shownTickets.length - 3))} more tickets match this step.</p>` : ""}
             </div>
           </article>`;

@@ -309,8 +309,11 @@ test("dashboard route aliases and new reliability diagnostics are wired", () => 
   });
   assert.doesNotMatch(js, /Tickets workspace signals|Work workspace signals|Leads workspace signals|Money workspace signals/);
   assert.doesNotMatch(css, /workspace-focus-strip|workspace-focus-card/);
+  assert.match(css, /ticket-metrics[\s\S]*grid-template-columns: repeat\(auto-fit, minmax\(min\(100%, 190px\), 1fr\)\)/);
+  assert.match(css, /home-runway-grid[\s\S]*repeat\(auto-fit, minmax\(min\(100%, 220px\), 1fr\)\)/);
   assert.match(css, /home-runway-tile[\s\S]*grid-template-areas:[\s\S]*"label value"[\s\S]*"detail detail"[\s\S]*"action action"/);
   assert.match(css, /home-runway-tile > strong[\s\S]*border-radius: 999px/);
+  assert.match(css, /work-readiness-grid[\s\S]*repeat\(auto-fit, minmax\(min\(100%, 220px\), 1fr\)\)/);
   assert.match(css, /leads-runway-card,[\s\S]*money-runway-card,[\s\S]*tools-runway-card[\s\S]*grid-template-areas:[\s\S]*"label value"[\s\S]*"detail detail"[\s\S]*"action action"/);
   assert.match(css, /tools-runway-card > strong[\s\S]*border-radius: 999px/);
   assert.match(css, /work-readiness-card-main[\s\S]*grid-template-areas:[\s\S]*"label value"[\s\S]*"detail detail"/);
@@ -335,6 +338,10 @@ test("dashboard route aliases and new reliability diagnostics are wired", () => 
   assert.match(css, /lead-queue-detail-grid[\s\S]*grid-template-columns: repeat\(2, minmax\(0, 1fr\)\)/);
   assert.match(css, /lead-queue-actions[\s\S]*grid-template-columns: repeat\(2, minmax\(0, 1fr\)\)/);
   assert.match(css, /lead-queue-actions \.phone-call-control[\s\S]*grid-column: 1 \/ -1/);
+  assert.match(css, /@media \(max-width: 1380px\) and \(min-width: 761px\)[\s\S]*home-command-center,[\s\S]*ticket-command-center[\s\S]*grid-template-columns: 1fr/);
+  assert.match(css, /@media \(max-width: 1380px\) and \(min-width: 761px\)[\s\S]*leads-command-center[\s\S]*grid-template-columns: 1fr/);
+  assert.match(css, /@media \(max-width: 1380px\) and \(min-width: 761px\)[\s\S]*money-command-center[\s\S]*grid-template-columns: 1fr/);
+  assert.match(css, /@media \(max-width: 1280px\) and \(min-width: 761px\)[\s\S]*tools-admin-grid[\s\S]*grid-template-columns: 1fr/);
   assert.match(js, /function resizeGoogleMapView\(view\)/);
   assert.match(js, /window\.google\.maps\.event\.trigger\(view\.map, "resize"\)/);
   assert.match(css, /dashboard-map-preview > div[\s\S]*height: 100% !important/);

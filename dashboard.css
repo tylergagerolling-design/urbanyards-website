@@ -18118,6 +18118,29 @@ body:not(.is-login-screen) .field-proof-actions button {
   }
 }
 
+@media (max-width: 1380px) and (min-width: 761px) {
+  body:not(.is-login-screen) .leads-command-center {
+    grid-template-columns: 1fr;
+  }
+
+  body:not(.is-login-screen) .lead-next-step-stack {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  body:not(.is-login-screen) .lead-queue-item {
+    grid-template-columns: 1fr;
+    align-items: stretch;
+  }
+
+  body:not(.is-login-screen) .lead-queue-actions {
+    grid-template-columns: repeat(auto-fit, minmax(172px, 1fr));
+  }
+
+  body:not(.is-login-screen) .lead-queue-actions .phone-call-control {
+    grid-column: 1 / -1;
+  }
+}
+
 @media (max-width: 760px) {
   body:not(.is-login-screen) .ticket-board-controls {
     grid-template-columns: 1fr;

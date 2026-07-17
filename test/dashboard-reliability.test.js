@@ -216,7 +216,7 @@ test("dashboard route aliases and new reliability diagnostics are wired", () => 
   assert.match(js, /Your dashboard role cannot create that type of ticket/);
   assert.match(js, /Your dashboard role cannot manage leads/);
   assert.match(js, /Your dashboard role cannot import leads/);
-  assert.match(js, /function renderWorkspaceFocusStrip/);
+  assert.doesNotMatch(js, /function renderWorkspaceFocusStrip/);
   assert.doesNotMatch(js, /renderWorkspaceWorkflowRibbon/);
   assert.doesNotMatch(css, /workspace-workflow-ribbon/);
   assert.doesNotMatch(js, /Leads handoff rule/);
@@ -307,10 +307,8 @@ test("dashboard route aliases and new reliability diagnostics are wired", () => 
   ["home", "tickets", "work", "leads", "money", "tools"].forEach((page) => {
     assert.match(js, new RegExp(`data-uy-page-contract="${page}"`));
   });
-  assert.match(css, /\.workspace-focus-strip/);
-  assert.match(css, /\.workspace-focus-card/);
-  assert.match(css, /workspace-focus-strip[\s\S]*repeat\(auto-fit, minmax\(min\(100%, 260px\), 1fr\)\)/);
-  assert.match(css, /workspace-focus-card-main[\s\S]*grid-template-columns: auto minmax\(0, 1fr\)/);
+  assert.doesNotMatch(js, /Tickets workspace signals|Work workspace signals|Leads workspace signals|Money workspace signals/);
+  assert.doesNotMatch(css, /workspace-focus-strip|workspace-focus-card/);
   assert.match(css, /home-runway-tile[\s\S]*grid-template-areas:[\s\S]*"label value"[\s\S]*"detail detail"[\s\S]*"action action"/);
   assert.match(css, /home-runway-tile > strong[\s\S]*border-radius: 999px/);
   assert.match(css, /leads-runway-card,[\s\S]*money-runway-card,[\s\S]*tools-runway-card[\s\S]*grid-template-areas:[\s\S]*"label value"[\s\S]*"detail detail"[\s\S]*"action action"/);
@@ -398,9 +396,9 @@ test("dashboard route aliases and new reliability diagnostics are wired", () => 
   assert.match(css, /ticket-board-controls[\s\S]*grid-template-columns: minmax\(0, 1fr\)/);
   assert.match(css, /ticket-board-filter-row[\s\S]*grid-template-columns: repeat\(auto-fit, minmax\(min\(100%, 156px\), 1fr\)\)/);
   assert.match(css, /\.ticket-board-result-count/);
-  assert.match(js, /workspace-focus-value/);
+  assert.doesNotMatch(js, /workspace-focus-value/);
   assert.match(js, /Home workspace signals/);
-  assert.match(js, /Tickets workspace signals/);
+  assert.doesNotMatch(js, /Tickets workspace signals/);
   assert.doesNotMatch(css, /#overview\.job-ticket-page > :not\(\[data-job-ticket-workspace\]\)/);
 });
 

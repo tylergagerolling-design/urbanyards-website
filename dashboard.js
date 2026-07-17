@@ -11703,22 +11703,6 @@
     return "";
   }
 
-  function renderWorkspaceFocusStrip(items = [], label = "Workspace signals") {
-    if (!items.length) return "";
-    return `<section class="workspace-focus-strip" aria-label="${escapeHtml(label)}">
-      ${items.map((item) => `
-        <article class="workspace-focus-card">
-          <span>${escapeHtml(item.kicker || "Focus")}</span>
-          <div class="workspace-focus-card-main">
-            ${item.value !== undefined && item.value !== null ? `<strong class="workspace-focus-value">${escapeHtml(item.value)}</strong>` : ""}
-            <strong class="workspace-focus-title">${escapeHtml(item.title || "")}</strong>
-          </div>
-          <small>${escapeHtml(item.detail || "")}</small>
-        </article>
-      `).join("")}
-    </section>`;
-  }
-
   function ticketMatchesBoardFilters(ticket = {}) {
     const query = String(state.ticketBoardSearch || "").trim().toLowerCase();
     const stageFilter = state.ticketBoardStageFilter || "All";
@@ -12084,11 +12068,6 @@
           ${renderTicketMetric(ticketCountBy(openTickets, (ticket) => ticketInLane(ticket, ["sales", "accounting"])), "Needs Office", "Scope, quote, cost review")}
           ${renderTicketMetric(ticketCountBy(openTickets, (ticket) => ticketInLane(ticket, ["review", "money"])), "Closeout", "Review, invoice, payment")}
         </section>
-        ${renderWorkspaceFocusStrip([
-          { kicker: "Shown", value: filteredTickets.length, title: "Board results", detail: "Open tickets matching the current search and filters." },
-          { kicker: "Ready", value: readyTickets.length, title: "Schedule handoff", detail: "Approved work ready to become scheduled visits." },
-          { kicker: "Closeout", value: reviewTickets.length, title: "Review queue", detail: "Completed, invoiced, or paid tickets still needing review." }
-        ], "Tickets workspace signals")}
         ${renderTicketCommandCenter({ filteredTickets, workTickets, officeTickets, readyTickets, reviewTickets })}
         ${renderTicketWorkflowBoard(openTickets, filteredTickets)}
       </div>`;
@@ -12256,11 +12235,6 @@
         </section>
         ${renderWorkReadinessPanel({ readyTickets, todayTickets, activeTickets, reviewTickets })}
         ${renderWorkDayPlanPanel(routeStopsToday, todayTickets, upcomingTickets, reviewTickets)}
-        ${renderWorkspaceFocusStrip([
-          { kicker: "Today", value: todayTickets.length, title: "What to do first", detail: "Start with dated tickets and route stops for the current day." },
-          { kicker: "Next", value: upcomingTickets.length, title: "What is coming up", detail: "Future ready and scheduled tickets stay visible here." },
-          { kicker: "Proof", value: reviewTickets.length, title: "What needs closeout", detail: "Capture photos, forms, actuals, and completion notes before review." }
-        ], "Work workspace signals")}
         <div class="field-grid work-execution-grid">
           <section class="ticket-lane field-primary-lane">
             <div class="ticket-lane-heading">
@@ -12532,11 +12506,6 @@
           ${renderTicketMetric(accountingTickets.length, "Money Handoff", "Approved work needs cost review")}
         </section>
         ${renderLeadsRunwayPanel({ due, hot, intakeTickets, approvalTickets, accountingTickets, companies, properties })}
-        ${renderWorkspaceFocusStrip([
-          { kicker: "Contact", value: prospectQueue.length, title: "Call and email queue", detail: "Prospects waiting for a clear next touch." },
-          { kicker: "Ticket", value: intakeTickets.length + approvalTickets.length, title: "Scope into tickets", detail: "Requests that need organized ticket detail." },
-          { kicker: "Money", value: accountingTickets.length, title: "Cost-review handoff", detail: "Approved work ready for internal review." }
-        ], "Leads workspace signals")}
         ${renderLeadsCommandCenter({ prospectQueue, due, hot, intakeTickets, approvalTickets, accountingTickets, companies, properties })}
       </div>`;
   }

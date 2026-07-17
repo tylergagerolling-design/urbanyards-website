@@ -12670,6 +12670,84 @@
     </section>`;
   }
 
+  function leadHandoffTitle(item = {}) {
+    return item.propertyName || item.managementCompany || item.contactName || homeFocusTitle(item);
+  }
+
+  function leadHandoffMeta(item = {}) {
+    return item.nextFollowUpAt || item.status || item.nextAction || item.stageLabel || item.serviceInterest || "Needs next action";
+  }
+
+  function renderLeadHandoffCard({ label, value, detail, items = [], action, actionLabel, extraAttrs = "", tone = "" }) {
+    const preview = items.slice(0, 2).map((item) => `<li>
+      <strong>${escapeHtml(leadHandoffTitle(item))}</strong>
+      <span>${escapeHtml(leadHandoffMeta(item))}</span>
+    </li>`).join("");
+    return `<article class="lead-handoff-card ${tone ? `is-${escapeHtml(tone)}` : ""}">
+      <div class="lead-handoff-card-head">
+        <span>${escapeHtml(label)}</span>
+        <strong>${escapeHtml(String(value))}</strong>
+      </div>
+      <p>${escapeHtml(detail)}</p>
+      <ul>${preview || `<li><strong>Clear</strong><span>No items waiting here.</span></li>`}</ul>
+      <button type="button" data-action="${escapeHtml(action)}"${extraAttrs}>${escapeHtml(actionLabel)}</button>
+    </article>`;
+  }
+
+  function renderLeadsHandoffPanel({ due = [], hot = [], intakeTickets = [], approvalTickets = [], accountingTickets = [] }) {
+    const readyToTicket = [...hot, ...intakeTickets];
+    const totalWaiting = due.length + readyToTicket.length + approvalTickets.length + accountingTickets.length;
+    return `<section class="leads-handoff-panel" aria-label="Lead handoff planner">
+      <div class="ticket-flow-heading">
+        <div>
+          <p class="eyebrow">Conversion Path</p>
+          <h3>From prospect to ticket</h3>
+          <p>Keep calls, scope, quote approvals, and Money handoffs in one readable sequence.</p>
+        </div>
+        <dl>
+          <div><dt>Waiting</dt><dd>${escapeHtml(String(totalWaiting))}</dd></div>
+        </dl>
+      </div>
+      <div class="leads-handoff-grid">
+        ${renderLeadHandoffCard({
+          label: "Call Today",
+          value: due.length,
+          detail: "Prospects with a follow-up date due now or missing the next touch.",
+          items: due,
+          action: "go-leads",
+          actionLabel: "Open Queue",
+          tone: due.length ? "warning" : ""
+        })}
+        ${renderLeadHandoffCard({
+          label: "Ready to Ticket",
+          value: readyToTicket.length,
+          detail: "Interested leads or intake tickets with enough scope to track as work.",
+          items: readyToTicket,
+          action: "open-ticket-create",
+          actionLabel: "New Job Ticket",
+          extraAttrs: ' data-ticket-type="quote"'
+        })}
+        ${renderLeadHandoffCard({
+          label: "Quote Approval",
+          value: approvalTickets.length,
+          detail: "Tickets waiting on quote prep, customer approval, or scope clarification.",
+          items: approvalTickets,
+          action: "go-tickets",
+          actionLabel: "Open Tickets"
+        })}
+        ${renderLeadHandoffCard({
+          label: "To Money",
+          value: accountingTickets.length,
+          detail: "Approved work that should move to cost review before scheduling.",
+          items: accountingTickets,
+          action: "go-money",
+          actionLabel: "Open Money",
+          tone: accountingTickets.length ? "warning" : ""
+        })}
+      </div>
+    </section>`;
+  }
+
   function renderLeadsCommandCenter({ prospectQueue, due, hot, intakeTickets, approvalTickets, accountingTickets, companies, properties }) {
     return `<section class="leads-command-center" aria-label="Leads command center">
       <section class="ticket-lane leads-contact-queue">
@@ -12761,6 +12839,7 @@
           ${renderTicketMetric(accountingTickets.length, "Money Handoff", "Approved work needs cost review")}
         </section>
         ${renderLeadsRunwayPanel({ due, hot, intakeTickets, approvalTickets, accountingTickets, companies, properties })}
+        ${renderLeadsHandoffPanel({ due, hot, intakeTickets, approvalTickets, accountingTickets })}
         ${renderLeadsCommandCenter({ prospectQueue, due, hot, intakeTickets, approvalTickets, accountingTickets, companies, properties })}
       </div>`;
   }

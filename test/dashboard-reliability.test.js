@@ -328,6 +328,12 @@ test("dashboard route aliases and new reliability diagnostics are wired", () => 
   assert.match(css, /work-field-packet-grid[\s\S]*grid-template-columns: repeat\(auto-fit, minmax\(min\(100%, 260px\), 1fr\)\)/);
   assert.match(css, /work-field-packet-step[\s\S]*grid-template-areas:[\s\S]*"step copy value"[\s\S]*"step copy action"/);
   assert.match(css, /work-field-packet-step em[\s\S]*border-radius: 999px/);
+  assert.match(js, /function renderLeadsHandoffPanel/);
+  assert.match(js, /From prospect to ticket/);
+  assert.match(css, /leads-handoff-grid[\s\S]*grid-template-columns: repeat\(auto-fit, minmax\(min\(100%, 240px\), 1fr\)\)/);
+  assert.match(css, /lead-handoff-card[\s\S]*grid-template-rows: auto auto minmax\(0, 1fr\) auto/);
+  assert.match(css, /lead-handoff-card-head[\s\S]*grid-template-columns: minmax\(0, 1fr\) auto/);
+  assert.match(css, /lead-handoff-card li strong,[\s\S]*lead-handoff-card li span[\s\S]*text-overflow: ellipsis/);
   assert.match(js, /ticket-workflow-board-index/);
   assert.match(js, /function renderTicketHandoffPanel/);
   assert.match(js, /ticket-handoff-panel/);

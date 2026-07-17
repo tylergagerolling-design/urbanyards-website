@@ -6,5 +6,5 @@ window.URBAN_YARDS_DASHBOARD_CONFIG = {
   "siteUrl": "https://urbanyards.us",
   "ownerEmail": "team@urbanyards.us",
   "appEnv": "production",
-  "buildVersion": "2026-07-17T07:01:56.457Z"
+  "buildVersion": "2026-07-17T07:09:38.234Z"
 };

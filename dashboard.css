@@ -16445,6 +16445,141 @@ body:not(.is-login-screen) .leads-runway-card {
     #fff;
 }
 
+body:not(.is-login-screen) .leads-handoff-panel {
+  display: grid;
+  gap: 16px;
+  min-width: 0;
+  padding: clamp(18px, 2vw, 24px);
+  border: 1px solid rgba(73, 102, 77, .16);
+  border-radius: 24px;
+  background:
+    radial-gradient(circle at 94% 8%, rgba(153, 180, 119, .13), transparent 34%),
+    rgba(255, 255, 255, .80);
+  box-shadow: 0 14px 36px rgba(19, 36, 28, .055);
+}
+
+body:not(.is-login-screen) .leads-handoff-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 240px), 1fr));
+  gap: 12px;
+  min-width: 0;
+}
+
+body:not(.is-login-screen) .lead-handoff-card {
+  display: grid;
+  grid-template-rows: auto auto minmax(0, 1fr) auto;
+  gap: 12px;
+  min-width: 0;
+  padding: 16px;
+  border: 1px solid rgba(73, 102, 77, .13);
+  border-radius: 20px;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, .92), rgba(251, 250, 245, .88)),
+    #fff;
+}
+
+body:not(.is-login-screen) .lead-handoff-card.is-warning {
+  border-color: rgba(195, 136, 47, .30);
+  background:
+    radial-gradient(circle at 100% 0%, rgba(217, 182, 111, .17), transparent 34%),
+    #fffaf0;
+}
+
+body:not(.is-login-screen) .lead-handoff-card-head {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 10px;
+  align-items: center;
+  min-width: 0;
+}
+
+body:not(.is-login-screen) .lead-handoff-card-head span {
+  min-width: 0;
+  color: rgba(18, 63, 49, .66);
+  font-size: .72rem;
+  font-weight: 900;
+  letter-spacing: .08em;
+  line-height: 1.2;
+  text-transform: uppercase;
+  overflow-wrap: normal;
+  word-break: normal;
+  text-wrap: pretty;
+}
+
+body:not(.is-login-screen) .lead-handoff-card-head strong {
+  min-width: 42px;
+  padding: 8px 10px;
+  border-radius: 999px;
+  background: #e7efdf;
+  color: var(--uy-green);
+  font-size: clamp(1.1rem, 1.45vw, 1.45rem);
+  font-weight: 900;
+  line-height: 1;
+  text-align: center;
+  white-space: nowrap;
+}
+
+body:not(.is-login-screen) .lead-handoff-card p {
+  margin: 0;
+  color: var(--uy-muted);
+  font-size: .88rem;
+  line-height: 1.42;
+  overflow-wrap: break-word;
+  text-wrap: pretty;
+}
+
+body:not(.is-login-screen) .lead-handoff-card ul {
+  display: grid;
+  gap: 8px;
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+body:not(.is-login-screen) .lead-handoff-card li {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+  padding: 9px 10px;
+  border: 1px solid rgba(73, 102, 77, .10);
+  border-radius: 14px;
+  background: rgba(255, 255, 255, .72);
+}
+
+body:not(.is-login-screen) .lead-handoff-card li strong,
+body:not(.is-login-screen) .lead-handoff-card li span {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+body:not(.is-login-screen) .lead-handoff-card li strong {
+  color: var(--uy-green);
+  font-size: .88rem;
+  font-weight: 900;
+}
+
+body:not(.is-login-screen) .lead-handoff-card li span {
+  color: var(--uy-muted);
+  font-size: .78rem;
+  font-weight: 750;
+}
+
+body:not(.is-login-screen) .lead-handoff-card button {
+  justify-self: start;
+  width: fit-content;
+  min-height: 38px;
+  padding: 0 14px;
+  border: 1px solid rgba(18, 63, 49, .14);
+  border-radius: var(--dashboard-button-radius, 8px);
+  background: rgba(255, 255, 255, .88);
+  color: var(--uy-green);
+  box-shadow: none;
+  font-weight: 850;
+}
+
 body:not(.is-login-screen) .leads-runway-card--warning {
   border-color: rgba(195, 136, 47, .28);
   background:

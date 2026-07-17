@@ -309,6 +309,8 @@ test("dashboard route aliases and new reliability diagnostics are wired", () => 
   assert.match(css, /home-runway-tile > strong[\s\S]*border-radius: 999px/);
   assert.match(css, /leads-runway-card,[\s\S]*money-runway-card,[\s\S]*tools-runway-card[\s\S]*grid-template-areas:[\s\S]*"label value"[\s\S]*"detail detail"[\s\S]*"action action"/);
   assert.match(css, /tools-runway-card > strong[\s\S]*border-radius: 999px/);
+  assert.match(css, /work-readiness-card-main[\s\S]*grid-template-areas:[\s\S]*"label value"[\s\S]*"detail detail"/);
+  assert.match(css, /work-readiness-card-main strong[\s\S]*border-radius: 999px/);
   assert.match(js, /ticket-workflow-board-index/);
   assert.match(css, /ticket-workflow-board-column-head[\s\S]*grid-template-columns: auto minmax\(0, 1fr\) auto/);
   assert.match(css, /ticket-workflow-board-column-head em[\s\S]*border-radius: 999px/);
@@ -318,6 +320,9 @@ test("dashboard route aliases and new reliability diagnostics are wired", () => 
   assert.match(css, /ticket-lane-heading > span[\s\S]*flex: 0 0 auto/);
   assert.match(css, /ticket-card-actions[\s\S]*grid-template-columns: minmax\(0, 1fr\) auto/);
   assert.match(css, /ticket-card-actions span[\s\S]*text-wrap: pretty/);
+  assert.match(js, /compact \? "ticket-card--compact" : ""/);
+  assert.match(css, /ticket-card--compact[\s\S]*gap: 10px/);
+  assert.match(css, /ticket-workflow-board-list \.ticket-card--compact \.ticket-card-checklist[\s\S]*display: none/);
   assert.match(js, /function resizeGoogleMapView\(view\)/);
   assert.match(js, /window\.google\.maps\.event\.trigger\(view\.map, "resize"\)/);
   assert.match(css, /dashboard-map-preview > div[\s\S]*height: 100% !important/);

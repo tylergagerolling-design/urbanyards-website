@@ -10387,7 +10387,7 @@
     const actionAttrs = opensDocument
       ? `data-action="open-document" data-id="${escapeHtml(ticket.id)}"`
       : `data-action="open-ticket" data-ticket-source="${escapeHtml(ticket.source)}" data-id="${escapeHtml(ticket.id)}"`;
-    return `<article class="ticket-card ticket-card--${escapeHtml(ticket.tone || "new")}">
+    return `<article class="ticket-card ticket-card--${escapeHtml(ticket.tone || "new")} ${compact ? "ticket-card--compact" : ""}">
       <div class="ticket-card-main">
         <span class="ticket-number">${escapeHtml(ticket.number)}</span>
         <span class="ticket-stage">${escapeHtml(ticket.stageLabel)}</span>

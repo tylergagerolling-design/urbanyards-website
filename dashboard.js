@@ -11467,10 +11467,64 @@
     </section>`;
   }
 
+  function findTicketForDrawer(source, id) {
+    const sourceText = String(source || "").trim();
+    const idText = String(id || "").trim();
+    if (!idText) return null;
+    const tickets = dashboardTickets();
+    const direct = tickets.find((item) => item.id === idText && (!sourceText || item.source === sourceText));
+    if (direct) return direct;
+    if (sourceText === "ticket") return tickets.find((item) => item.id === idText) || null;
+    const sourceMatch = tickets.find((item) => {
+      const itemSource = item.sourceType || item.source;
+      if (sourceText && itemSource !== sourceText && item.source !== sourceText) return false;
+      return item.sourceId === idText
+        || item.quoteId === idText
+        || item.jobId === idText
+        || item.invoiceId === idText
+        || item.customerId === idText
+        || item.propertyId === idText;
+    });
+    if (sourceMatch) return sourceMatch;
+    return tickets.find((item) => item.id === idText) || null;
+  }
+
+  function renderTicketDrawerFallback(source, id, message = "This ticket could not be opened.") {
+    return `<div class="drawer-content ticket-detail-drawer">
+      <p class="eyebrow">Unified Job Ticket</p>
+      <div class="ticket-drawer-heading">
+        <div>
+          <h3>Ticket unavailable</h3>
+          <p>${escapeHtml(message)}</p>
+        </div>
+      </div>
+      <section class="ticket-drawer-card">
+        <div class="ticket-drawer-card-heading">
+          <div>
+            <h4>What happened</h4>
+            <span>The dashboard could not match this button to a ticket record.</span>
+          </div>
+        </div>
+        <div class="drawer-grid ticket-drawer-grid">
+          <div class="drawer-field"><span>Source</span>${escapeHtml(source || "Not provided")}</div>
+          <div class="drawer-field"><span>Record ID</span>${escapeHtml(id || "Not provided")}</div>
+        </div>
+        <div class="drawer-actions">
+          <button type="button" data-action="go-tickets">${buttonContent("Open Tickets", "open-ticket")}</button>
+          <button type="button" data-action="close-drawer">${buttonContent("Close", "close")}</button>
+        </div>
+      </section>
+    </div>`;
+  }
+
   function openTicketDrawer(source, id) {
     if (!els.detailDrawer || !els.detailContent) return;
-    const ticket = dashboardTickets().find((item) => item.id === id && item.source === source);
-    if (!ticket) return;
+    const ticket = findTicketForDrawer(source, id);
+    if (!ticket) {
+      openDetailDrawer();
+      els.detailContent.innerHTML = renderTicketDrawerFallback(source, id);
+      return;
+    }
     const sourceType = ticket.sourceType || ticket.source;
     const sourceId = ticket.sourceId || ticket.id;
     const sourceItem = sourceType === "quote"
@@ -11480,8 +11534,9 @@
         : sourceType === "document"
           ? state.data.documents.find((item) => item.id === sourceId)
           : null;
-    openDetailDrawer();
-    els.detailContent.innerHTML = `
+    try {
+      openDetailDrawer();
+      els.detailContent.innerHTML = `
       <div class="drawer-content ticket-detail-drawer">
         <p class="eyebrow">Unified Job Ticket</p>
         <div class="ticket-drawer-heading">
@@ -11534,6 +11589,11 @@
         })}` : ""}
       </div>
     `;
+    } catch (error) {
+      console.error("Ticket drawer failed to render", error);
+      openDetailDrawer();
+      els.detailContent.innerHTML = renderTicketDrawerFallback(source, id, error.message || "The ticket matched, but the detail panel could not render it.");
+    }
   }
 
   function openMoneyBudgetDrawer(id) {

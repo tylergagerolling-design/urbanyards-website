@@ -17447,6 +17447,34 @@ body:not(.is-login-screen) .ticket-drawer-card {
   background: rgba(251, 250, 245, .86);
 }
 
+body:not(.is-login-screen) .ticket-essentials-card {
+  background:
+    radial-gradient(circle at 96% 0%, rgba(153, 180, 119, .12), transparent 34%),
+    rgba(255, 255, 255, .76);
+}
+
+body:not(.is-login-screen) .ticket-essentials-card .ticket-drawer-grid {
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 160px), 1fr));
+  gap: 8px;
+}
+
+body:not(.is-login-screen) .ticket-essentials-card .drawer-field {
+  min-height: 74px;
+  padding: 10px 11px;
+  border-radius: 14px;
+  background: rgba(251, 250, 245, .78);
+}
+
+body:not(.is-login-screen) .ticket-essentials-card .drawer-field.span-full {
+  min-height: 0;
+}
+
+body:not(.is-login-screen) .ticket-source-actions-card {
+  background:
+    radial-gradient(circle at 98% 4%, rgba(217, 182, 111, .13), transparent 34%),
+    rgba(255, 253, 246, .84);
+}
+
 body:not(.is-login-screen) .ticket-workbench {
   display: grid;
   gap: 12px;
@@ -17938,8 +17966,16 @@ body:not(.is-login-screen) .ticket-history-row small {
 }
 
 body:not(.is-login-screen) .ticket-source-actions {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 150px), 1fr));
+  gap: 8px;
   padding-top: 0;
   border-top: 0;
+}
+
+body:not(.is-login-screen) .ticket-source-actions button {
+  width: 100%;
+  justify-content: center;
 }
 
 body:not(.is-login-screen) .ticket-source-context {

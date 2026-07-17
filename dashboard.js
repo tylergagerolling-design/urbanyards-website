@@ -11341,30 +11341,48 @@
   function renderTicketSourceActions(ticket) {
     const sourceType = ticket.sourceType || ticket.source;
     const sourceId = ticket.sourceId || ticket.id;
+    const actionHeading = `<div class="ticket-drawer-card-heading">
+      <div>
+        <h4>Source shortcuts</h4>
+        <span>Jump back to the original record when you need more context.</span>
+      </div>
+    </div>`;
     if (sourceType === "quote") {
-      return `<div class="drawer-actions ticket-source-actions">
+      return `<section class="ticket-drawer-card ticket-source-actions-card">
+        ${actionHeading}
+        <div class="drawer-actions ticket-source-actions">
         <button type="button" data-action="open-submission" data-id="${escapeHtml(sourceId)}">${buttonContent("Open Quote Details", "open-submission")}</button>
         <button type="button" data-action="sync-contact" data-id="${escapeHtml(sourceId)}">${buttonContent("Sync Contact", "sync-contact")}</button>
         <button type="button" data-action="create-estimate" data-id="${escapeHtml(sourceId)}">${buttonContent("Create Estimate", "create-estimate")}</button>
         <button type="button" data-action="create-invoice" data-id="${escapeHtml(sourceId)}">${buttonContent("Draft Invoice", "create-invoice")}</button>
-      </div>`;
+      </div>
+      </section>`;
     }
     if (sourceType === "job") {
-      return `<div class="drawer-actions ticket-source-actions">
+      return `<section class="ticket-drawer-card ticket-source-actions-card">
+        ${actionHeading}
+        <div class="drawer-actions ticket-source-actions">
         <button type="button" data-action="edit-job" data-id="${escapeHtml(sourceId)}">${buttonContent("Open Visit Details", "edit-job")}</button>
         <button type="button" data-action="go-route-planner">${buttonContent("Open Route", "go-route-planner")}</button>
         <button type="button" data-action="go-tools">${buttonContent("Open Tools", "go-tools")}</button>
         ${ticket.stage !== "field_work_complete" && ticket.stage !== "completion_review" && ticket.stage !== "closed" ? `<button type="button" data-action="complete-job" data-id="${escapeHtml(sourceId)}">${buttonContent("Mark Work Complete", "complete-reminder")}</button>` : ""}
-      </div>`;
+      </div>
+      </section>`;
     }
     if (sourceType === "document") {
-      return `<div class="drawer-actions ticket-source-actions">
+      return `<section class="ticket-drawer-card ticket-source-actions-card">
+        ${actionHeading}
+        <div class="drawer-actions ticket-source-actions">
         <button type="button" data-action="open-document" data-id="${escapeHtml(sourceId)}">${buttonContent("Open Document", "open-document")}</button>
-      </div>`;
+      </div>
+      </section>`;
     }
-    return `<div class="drawer-actions ticket-source-actions">
+    return `<section class="ticket-drawer-card ticket-source-actions-card">
+      ${actionHeading}
+      <div class="drawer-actions ticket-source-actions">
       <button type="button" disabled>${buttonContent("Source Record Pending", "open-document")}</button>
-    </div>`;
+    </div>
+    </section>`;
   }
 
   function renderSourceTicketContext(ticket) {
@@ -11470,16 +11488,24 @@
       </div>
         ${renderTicketDrawerActionStrip(ticket)}
         <section class="ticket-drawer-operating-grid" aria-label="Ticket operating controls">
-          ${renderTicketDrawerProgress(ticket)}
+          ${renderTicketDrawerCockpit(ticket)}
           ${renderTicketDetailCommandCenter(ticket)}
         </section>
-        <div class="drawer-grid ticket-drawer-grid">
-          <div class="drawer-field"><span>Current owner</span>${escapeHtml(ticket.ownerLabel || "Unassigned")}</div>
-          <div class="drawer-field"><span>Next action</span>${escapeHtml(ticket.nextAction || "Open ticket")}</div>
-          <div class="drawer-field"><span>Source</span>${escapeHtml(ticket.sourceLabel || ticketSourceLabel(ticket))}</div>
-          <div class="drawer-field"><span>Date</span>${escapeHtml(ticket.dateLabel || "No date")}</div>
-          <div class="drawer-field span-full"><span>Details</span>${escapeHtml(ticket.detail || "No details yet.")}</div>
-        </div>
+        <section class="ticket-drawer-card ticket-essentials-card">
+          <div class="ticket-drawer-card-heading">
+            <div>
+              <h4>Ticket essentials</h4>
+              <span>Current owner, source, date, and working detail.</span>
+            </div>
+          </div>
+          <div class="drawer-grid ticket-drawer-grid">
+            <div class="drawer-field"><span>Current owner</span>${escapeHtml(ticket.ownerLabel || "Unassigned")}</div>
+            <div class="drawer-field"><span>Next action</span>${escapeHtml(ticket.nextAction || "Open ticket")}</div>
+            <div class="drawer-field"><span>Source</span>${escapeHtml(ticket.sourceLabel || ticketSourceLabel(ticket))}</div>
+            <div class="drawer-field"><span>Date</span>${escapeHtml(ticket.dateLabel || "No date")}</div>
+            <div class="drawer-field span-full"><span>Details</span>${escapeHtml(ticket.detail || "No details yet.")}</div>
+          </div>
+        </section>
         ${renderTicketWorkbench(ticket)}
         ${renderTicketWorkAssignmentBridge(ticket, sourceItem)}
         ${renderTicketSiteProofBridge(ticket, sourceItem)}

@@ -392,6 +392,20 @@ test("dashboard route aliases and new reliability diagnostics are wired", () => 
   assert.doesNotMatch(css, /#overview\.job-ticket-page > :not\(\[data-job-ticket-workspace\]\)/);
 });
 
+test("ticket drawer workbench layouts wrap without overlapping content", () => {
+  const css = read("dashboard.css");
+
+  assert.match(css, /ticket-work-assignment-form[\s\S]*grid-template-columns: repeat\(auto-fit, minmax\(min\(100%, 190px\), 1fr\)\)/);
+  assert.match(css, /ticket-invoice-form[\s\S]*grid-template-columns: repeat\(auto-fit, minmax\(min\(100%, 210px\), 1fr\)\)/);
+  assert.match(css, /ticket-cockpit-stats[\s\S]*grid-template-columns: repeat\(auto-fit, minmax\(min\(100%, 118px\), 1fr\)\)/);
+  assert.match(css, /ticket-cockpit-track[\s\S]*grid-template-columns: repeat\(auto-fit, minmax\(min\(100%, 92px\), 1fr\)\)/);
+  assert.match(css, /ticket-drawer-action-strip[\s\S]*grid-template-columns: repeat\(auto-fit, minmax\(min\(100%, 180px\), 1fr\)\)/);
+  assert.match(css, /ticket-drawer-action-strip-actions[\s\S]*grid-column: 1 \/ -1[\s\S]*flex-wrap: wrap/);
+  assert.match(css, /ticket-drawer-action-strip-actions button[\s\S]*flex: 1 1 150px/);
+  assert.match(css, /ticket-source-context \{[\s\S]*grid-template-columns: 1fr/);
+  assert.match(css, /ticket-source-context-meta[\s\S]*grid-template-columns: repeat\(auto-fit, minmax\(min\(100%, 140px\), 1fr\)\)/);
+});
+
 test("dashboard creates canonical job tickets without removing source fallbacks", () => {
   const js = read("dashboard.js");
 

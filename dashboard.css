@@ -16629,7 +16629,7 @@ body:not(.is-login-screen) .ticket-work-assignment-bridge {
 
 body:not(.is-login-screen) .ticket-work-assignment-form {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 190px), 1fr));
   gap: 12px;
 }
 
@@ -16740,7 +16740,7 @@ body:not(.is-login-screen) .ticket-invoice-bridge {
 
 body:not(.is-login-screen) .ticket-invoice-form {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 210px), 1fr));
   gap: 12px;
   align-items: end;
 }
@@ -17162,11 +17162,18 @@ body:not(.is-login-screen) .ticket-drawer-heading {
   display: flex;
   align-items: flex-start;
   justify-content: space-between;
+  flex-wrap: wrap;
   gap: 16px;
+}
+
+body:not(.is-login-screen) .ticket-drawer-heading > div {
+  min-width: min(100%, 260px);
 }
 
 body:not(.is-login-screen) .ticket-drawer-heading h3 {
   margin-bottom: 6px;
+  overflow-wrap: break-word;
+  text-wrap: balance;
 }
 
 body:not(.is-login-screen) .ticket-drawer-heading p {
@@ -17190,6 +17197,7 @@ body:not(.is-login-screen) .ticket-drawer-progress-head {
   display: flex;
   align-items: flex-start;
   justify-content: space-between;
+  flex-wrap: wrap;
   gap: 12px;
 }
 
@@ -17262,7 +17270,12 @@ body:not(.is-login-screen) .ticket-cockpit-main {
   display: flex;
   align-items: flex-start;
   justify-content: space-between;
+  flex-wrap: wrap;
   gap: 16px;
+}
+
+body:not(.is-login-screen) .ticket-cockpit-main > div {
+  min-width: min(100%, 260px);
 }
 
 body:not(.is-login-screen) .ticket-cockpit-main h4 {
@@ -17298,7 +17311,7 @@ body:not(.is-login-screen) .ticket-drawer-cockpit.is-blocked .ticket-cockpit-mai
 
 body:not(.is-login-screen) .ticket-cockpit-stats {
   display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 118px), 1fr));
   gap: 8px;
   margin: 0;
 }
@@ -17331,7 +17344,7 @@ body:not(.is-login-screen) .ticket-cockpit-stats dd {
 
 body:not(.is-login-screen) .ticket-cockpit-track {
   display: grid;
-  grid-template-columns: repeat(6, minmax(0, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 92px), 1fr));
   gap: 6px;
 }
 
@@ -17389,7 +17402,7 @@ body:not(.is-login-screen) .ticket-drawer-status {
 
 body:not(.is-login-screen) .ticket-drawer-action-strip {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr)) auto;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 180px), 1fr));
   align-items: stretch;
   gap: 10px;
   padding: 12px;
@@ -17444,14 +17457,18 @@ body:not(.is-login-screen) .ticket-drawer-action-strip small {
 
 body:not(.is-login-screen) .ticket-drawer-action-strip-actions {
   display: flex;
-  flex-direction: column;
+  grid-column: 1 / -1;
+  flex-direction: row;
+  flex-wrap: wrap;
   justify-content: center;
+  align-items: stretch;
   gap: 8px;
-  min-width: 132px;
+  min-width: 0;
 }
 
 body:not(.is-login-screen) .ticket-drawer-action-strip-actions button {
-  width: 100%;
+  flex: 1 1 150px;
+  width: auto;
   min-height: 38px;
 }
 
@@ -17534,7 +17551,13 @@ body:not(.is-login-screen) .ticket-workbench-section-heading {
   display: flex;
   align-items: center;
   justify-content: space-between;
+  flex-wrap: wrap;
   gap: 12px;
+}
+
+body:not(.is-login-screen) .ticket-workbench-heading > div,
+body:not(.is-login-screen) .ticket-workbench-section-heading > div {
+  min-width: min(100%, 180px);
 }
 
 body:not(.is-login-screen) .ticket-workbench-heading h4,
@@ -17631,6 +17654,8 @@ body:not(.is-login-screen) .ticket-workbench-section li.is-complete > span::afte
 body:not(.is-login-screen) .ticket-workbench-section li strong,
 body:not(.is-login-screen) .ticket-workbench-section li small {
   display: block;
+  min-width: 0;
+  overflow-wrap: break-word;
 }
 
 body:not(.is-login-screen) .ticket-workbench-section li strong {
@@ -17645,10 +17670,15 @@ body:not(.is-login-screen) .ticket-workbench-section li small {
 
 body:not(.is-login-screen) .ticket-drawer-card-heading {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   justify-content: space-between;
+  flex-wrap: wrap;
   gap: 12px;
   margin-bottom: 10px;
+}
+
+body:not(.is-login-screen) .ticket-drawer-card-heading > div {
+  min-width: min(100%, 220px);
 }
 
 body:not(.is-login-screen) .ticket-drawer-card-heading h4 {
@@ -18001,7 +18031,7 @@ body:not(.is-login-screen) .ticket-source-actions {
 
 body:not(.is-login-screen) .ticket-source-context {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(220px, auto);
+  grid-template-columns: 1fr;
   gap: 14px;
   align-items: center;
   padding: 14px;
@@ -18026,7 +18056,7 @@ body:not(.is-login-screen) .ticket-source-context p:not(.eyebrow) {
 
 body:not(.is-login-screen) .ticket-source-context-meta {
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 140px), 1fr));
   gap: 8px;
   align-items: stretch;
 }

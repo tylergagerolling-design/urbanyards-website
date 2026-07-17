@@ -12389,6 +12389,66 @@
     </section>`;
   }
 
+  function renderWorkFieldPacketStep({ step, label, value, detail, action, actionLabel }) {
+    return `<article class="work-field-packet-step">
+      <span>${escapeHtml(step)}</span>
+      <div>
+        <strong>${escapeHtml(label)}</strong>
+        <p>${escapeHtml(detail)}</p>
+      </div>
+      <em>${escapeHtml(String(value))}</em>
+      <button type="button" data-action="${escapeHtml(action)}">${escapeHtml(actionLabel)}</button>
+    </article>`;
+  }
+
+  function renderWorkFieldPacketPanel({ routeStops = [], todayTickets = [], reviewTickets = [] }) {
+    const nextStop = routeStops.find((stop) => stop.status !== "Complete") || routeStops[0];
+    return `<section class="work-field-packet-panel" aria-label="Field packet">
+      <div class="ticket-flow-heading">
+        <div>
+          <p class="eyebrow">Field Packet</p>
+          <h3>What the crew needs on-site</h3>
+          <p>Keep the visit list, route, photos, forms, and closeout proof visible before opening a ticket detail.</p>
+        </div>
+        <button type="button" data-action="go-tickets">Open Tickets</button>
+      </div>
+      <div class="work-field-packet-grid">
+        ${renderWorkFieldPacketStep({
+          step: "01",
+          label: "Route and first stop",
+          value: routeStops.length,
+          detail: nextStop ? [nextStop.clientName, nextStop.city].filter(Boolean).join(" / ") || "Route stop ready." : "No route stops planned yet.",
+          action: "go-route-planner",
+          actionLabel: "Open Route"
+        })}
+        ${renderWorkFieldPacketStep({
+          step: "02",
+          label: "Today's visit list",
+          value: todayTickets.length,
+          detail: "Review assigned work, site notes, service scope, and visit status for today.",
+          action: "go-calendar",
+          actionLabel: "Open Work"
+        })}
+        ${renderWorkFieldPacketStep({
+          step: "03",
+          label: "Arrival and completion proof",
+          value: reviewTickets.length,
+          detail: "Capture photos, forms, actuals, and completion notes before closeout review.",
+          action: "go-tickets",
+          actionLabel: "Review Proof"
+        })}
+        ${renderWorkFieldPacketStep({
+          step: "04",
+          label: "Supporting documents",
+          value: "Docs",
+          detail: "Use templates, submitted records, and job paperwork from Tools when needed.",
+          action: "go-documentation",
+          actionLabel: "Open Docs"
+        })}
+      </div>
+    </section>`;
+  }
+
   function renderWorkWorkspace(data = state.data) {
     const target = qs("[data-work-workspace]");
     if (!target) return;
@@ -12422,6 +12482,7 @@
           ${renderTicketMetric(upcomingTickets.length, "Upcoming", "Scheduled tickets")}
         </section>
         ${renderWorkReadinessPanel({ readyTickets, todayTickets, activeTickets, reviewTickets })}
+        ${renderWorkFieldPacketPanel({ routeStops: routeStopsToday, todayTickets, reviewTickets })}
         ${renderWorkDayPlanPanel(routeStopsToday, todayTickets, upcomingTickets, reviewTickets)}
         <div class="field-grid work-execution-grid">
           <section class="ticket-lane field-primary-lane">
@@ -12512,7 +12573,7 @@
           <span><b>Contact</b><em>${escapeHtml(contact)}</em></span>
           <span><b>Need</b><em>${escapeHtml(detail)}</em></span>
         </div>
-        <small>${escapeHtml(detail)} · ${escapeHtml(followUp)}</small>
+        <small>${escapeHtml(detail)} - ${escapeHtml(followUp)}</small>
       </div>
       <div class="lead-queue-actions">
         ${renderPhoneActions(item.phone, { leadId: item.id, leadType: "outreach_prospect", compact: true, helper: false })}

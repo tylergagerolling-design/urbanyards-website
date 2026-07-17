@@ -323,6 +323,11 @@ test("dashboard route aliases and new reliability diagnostics are wired", () => 
   assert.match(css, /tools-runway-card > strong[\s\S]*border-radius: 999px/);
   assert.match(css, /work-readiness-card-main[\s\S]*grid-template-areas:[\s\S]*"label value"[\s\S]*"detail detail"/);
   assert.match(css, /work-readiness-card-main strong[\s\S]*border-radius: 999px/);
+  assert.match(js, /function renderWorkFieldPacketPanel/);
+  assert.match(js, /What the crew needs on-site/);
+  assert.match(css, /work-field-packet-grid[\s\S]*grid-template-columns: repeat\(auto-fit, minmax\(min\(100%, 260px\), 1fr\)\)/);
+  assert.match(css, /work-field-packet-step[\s\S]*grid-template-areas:[\s\S]*"step copy value"[\s\S]*"step copy action"/);
+  assert.match(css, /work-field-packet-step em[\s\S]*border-radius: 999px/);
   assert.match(js, /ticket-workflow-board-index/);
   assert.match(js, /function renderTicketHandoffPanel/);
   assert.match(js, /ticket-handoff-panel/);

@@ -15480,6 +15480,116 @@ body:not(.is-login-screen) .work-readiness-panel .ticket-flow-heading > button:h
   background: #f8fbf2;
 }
 
+body:not(.is-login-screen) .work-field-packet-panel {
+  display: grid;
+  gap: 14px;
+  padding: clamp(16px, 1.8vw, 22px);
+  border: 1px solid rgba(73, 102, 77, .16);
+  border-radius: 24px;
+  background:
+    radial-gradient(circle at 96% 8%, rgba(153, 180, 119, .12), transparent 34%),
+    rgba(255, 255, 255, .78);
+  box-shadow: 0 14px 34px rgba(19, 36, 28, .05);
+}
+
+body:not(.is-login-screen) .work-field-packet-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 260px), 1fr));
+  gap: 12px;
+}
+
+body:not(.is-login-screen) .work-field-packet-step {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  grid-template-areas:
+    "step copy value"
+    "step copy action";
+  gap: 8px 12px;
+  align-items: start;
+  min-width: 0;
+  padding: 16px;
+  border: 1px solid rgba(73, 102, 77, .13);
+  border-radius: 20px;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, .9), rgba(251, 250, 245, .88)),
+    #fff;
+}
+
+body:not(.is-login-screen) .work-field-packet-step > span {
+  display: inline-grid;
+  grid-area: step;
+  place-items: center;
+  width: 34px;
+  height: 34px;
+  border-radius: 14px;
+  background: #e7efdf;
+  color: var(--uy-green);
+  font-size: .72rem;
+  font-weight: 900;
+  line-height: 1;
+}
+
+body:not(.is-login-screen) .work-field-packet-step > div {
+  grid-area: copy;
+  min-width: 0;
+}
+
+body:not(.is-login-screen) .work-field-packet-step strong {
+  display: block;
+  color: var(--uy-green);
+  font-size: 1rem;
+  line-height: 1.18;
+  text-wrap: balance;
+}
+
+body:not(.is-login-screen) .work-field-packet-step p {
+  max-width: 38ch;
+  margin: 5px 0 0;
+  color: var(--uy-muted);
+  font-size: .88rem;
+  line-height: 1.38;
+  overflow-wrap: normal;
+  word-break: normal;
+  text-wrap: pretty;
+}
+
+body:not(.is-login-screen) .work-field-packet-step em {
+  display: inline-grid;
+  grid-area: value;
+  place-items: center;
+  justify-self: end;
+  min-width: 38px;
+  padding: 7px 9px;
+  border-radius: 999px;
+  background: #edf4e7;
+  color: var(--uy-green);
+  font-size: .9rem;
+  font-style: normal;
+  font-weight: 900;
+  line-height: 1;
+  white-space: nowrap;
+}
+
+body:not(.is-login-screen) .work-field-packet-step button {
+  grid-area: action;
+  justify-self: end;
+  width: fit-content;
+  min-height: 36px;
+  padding: 0 12px;
+  border: 1px solid rgba(18, 63, 49, .14);
+  border-radius: var(--dashboard-button-radius, 8px);
+  background: rgba(255, 255, 255, .86);
+  color: var(--uy-green);
+  box-shadow: none;
+  font-size: .86rem;
+  font-weight: 850;
+}
+
+body:not(.is-login-screen) .work-field-packet-step button:hover {
+  border-color: rgba(18, 63, 49, .28);
+  background: #f8fbf2;
+}
+
 body:not(.is-login-screen) .home-runway-tile {
   grid-template-columns: minmax(0, 1fr) auto;
   grid-template-areas:
@@ -18543,6 +18653,23 @@ body:not(.is-login-screen) .field-proof-actions button {
 
   body:not(.is-login-screen) .today-action-status {
     width: fit-content;
+  }
+
+  body:not(.is-login-screen) .work-field-packet-step {
+    grid-template-columns: auto minmax(0, 1fr);
+    grid-template-areas:
+      "step copy"
+      "value copy"
+      "action action";
+  }
+
+  body:not(.is-login-screen) .work-field-packet-step em {
+    justify-self: start;
+  }
+
+  body:not(.is-login-screen) .work-field-packet-step button {
+    justify-self: stretch;
+    width: 100%;
   }
 
   body:not(.is-login-screen) .work-day-route-footer {

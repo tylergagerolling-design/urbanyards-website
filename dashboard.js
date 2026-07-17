@@ -8871,10 +8871,18 @@
 
   function resizeGoogleMapView(view) {
     if (!view?.map || !window.google?.maps?.event) return;
-    requestAnimationFrame(() => {
+    const triggerResize = () => {
       window.google.maps.event.trigger(view.map, "resize");
-      requestAnimationFrame(() => window.google.maps.event.trigger(view.map, "resize"));
+    };
+    requestAnimationFrame(() => {
+      triggerResize();
+      requestAnimationFrame(triggerResize);
     });
+    // Google Maps can measure the old card height if the dashboard has just
+    // swapped workspaces. Re-check after layout settles so the map fills its
+    // rounded preview shell instead of leaving a short tile area.
+    window.setTimeout(triggerResize, 160);
+    window.setTimeout(triggerResize, 360);
   }
 
   async function ensureGoogleMapView(key, mapElement, options = {}) {
@@ -11769,6 +11777,14 @@
     const ownerValue = owners.some(([lane]) => lane === state.ticketBoardOwnerFilter) ? state.ticketBoardOwnerFilter : "All";
 
     return `<section class="ticket-board-controls" aria-label="Ticket board controls">
+      <div class="ticket-board-controls-heading">
+        <div>
+          <p class="eyebrow">Board Filters</p>
+          <h4>Find the right ticket fast</h4>
+          <p>Search, narrow by stage, or isolate the owner lane before opening the detailed workflow board.</p>
+        </div>
+        <span class="ticket-board-result-count" data-ticket-board-result-count>${escapeHtml(filteredTickets.length)} of ${escapeHtml(tickets.length)} shown</span>
+      </div>
       <div class="ticket-board-search">
         <label for="ticket-board-search">Search tickets</label>
         <input id="ticket-board-search" type="search" placeholder="Search ticket, client, property, next action..." value="${escapeHtml(state.ticketBoardSearch || "")}" data-ticket-board-search>
@@ -11787,7 +11803,6 @@
           </select>
         </label>
         <button type="button" data-action="reset-ticket-board-filters">Reset Filters</button>
-        <span class="ticket-board-result-count" data-ticket-board-result-count>${escapeHtml(filteredTickets.length)} of ${escapeHtml(tickets.length)} shown</span>
       </div>
     </section>`;
   }
@@ -12186,7 +12201,7 @@
         <header class="ticket-hero">
           <div>
             <p class="eyebrow">Job Ticket System</p>
-            <h3>Job Tickets</h3>
+            <h3>Ticket Command Center</h3>
             <p>Every request, quote, scheduled visit, site update, invoice step, and closeout flows through one ticket workflow.</p>
           </div>
           <div class="ticket-hero-actions">
@@ -12194,7 +12209,6 @@
             ${canCreateTicketType("field") ? `<button type="button" data-action="open-ticket-create" data-ticket-type="field">Schedule Visit</button>` : ""}
           </div>
         </header>
-        ${renderTicketBoardControls(openTickets, filteredTickets)}
         <section class="ticket-metrics" aria-label="Job ticket summary">
           ${renderTicketMetric(openTickets.length, "Open Tickets", "Quotes and work")}
           ${renderTicketMetric(ticketCountBy(openTickets, (ticket) => ticketInLane(ticket, ["field"])), "In Work", "Scheduled or active")}
@@ -12203,6 +12217,7 @@
         </section>
         ${renderTicketHandoffPanel({ leadsTickets, moneyTickets: moneyReviewTickets, workTickets: workQueueTickets, closeoutTickets, blockedTickets })}
         ${renderTicketCommandCenter({ filteredTickets, workTickets, officeTickets, readyTickets, reviewTickets })}
+        ${renderTicketBoardControls(openTickets, filteredTickets)}
         ${renderTicketWorkflowBoard(openTickets, filteredTickets)}
       </div>`;
   }
@@ -12573,10 +12588,10 @@
   }
 
   function renderLeadsRunwayPanel({ due = [], hot = [], intakeTickets = [], approvalTickets = [], accountingTickets = [], companies = [], properties = [] }) {
-    return `<section class="leads-runway-panel" aria-label="Leads runway">
+    return `<section class="leads-runway-panel" aria-label="Lead intake focus">
       <div class="ticket-flow-heading">
         <div>
-          <p class="eyebrow">Lead Runway</p>
+          <p class="eyebrow">Intake Focus</p>
           <h3>Capture, follow up, quote, hand off</h3>
           <p>Keep prospect outreach tied to the same Job Ticket workflow before work reaches scheduling.</p>
         </div>
@@ -12825,7 +12840,7 @@
       .sort((a, b) => budgetPanelSortValue(a) - budgetPanelSortValue(b) || String(b.budget.updatedAtRaw || "").localeCompare(String(a.budget.updatedAtRaw || "")))
       .slice(0, 4);
     const setupMessage = !state.budgetsReady && !isDemoMode()
-      ? `<p class="money-budget-note">${escapeHtml(state.budgetsError || "Budget tables are not connected yet. Money still tracks cost-review tickets and invoice handoffs.")}</p>`
+      ? `<p class="money-budget-note" title="${escapeHtml(state.budgetsError || "Budget setup details are available in Tools diagnostics.")}">Budget records are optional right now. Money still tracks cost review, invoice handoffs, and payment follow-up from Job Tickets.</p>`
       : "";
 
     return `<section class="money-budget-panel" data-money-budget-panel>
@@ -12862,7 +12877,7 @@
               ${ticket ? `<button type="button" class="inline-action" data-action="open-ticket" data-ticket-source="${escapeHtml(ticket.source)}" data-id="${escapeHtml(ticket.id)}">Open Ticket</button>` : `<span>No linked ticket</span>`}
             </div>
           </article>`;
-        }).join("") : emptyState("No budget records are connected yet. Approved tickets can still move through Money for cost review.")}
+        }).join("") : emptyState("No budget records are active yet. Approved tickets can still move through Money for cost review, invoicing, payment follow-up, and closeout.")}
       </div>
     </section>`;
   }
@@ -12891,10 +12906,10 @@
   }
 
   function renderMoneyRunwayPanel({ needsBudget = [], ownerApproval = [], invoiceTickets = [], overdueInvoices = [] }) {
-    return `<section class="money-runway-panel" aria-label="Money runway">
+    return `<section class="money-runway-panel" aria-label="Financial workflow focus">
       <div class="ticket-flow-heading">
         <div>
-          <p class="eyebrow">Money Runway</p>
+          <p class="eyebrow">Financial Focus</p>
           <h3>Estimate, budget, invoice, collect</h3>
           <p>Keep each financial step visible before tickets move into scheduling or closeout.</p>
         </div>
@@ -13135,10 +13150,10 @@
   }
 
   function renderToolsRunwayPanel({ criticalWarnings = [], supportWarnings = [], documentationCount = 0, equipmentCount = 0, routeStopsToday = 0, aiLiveVersion = "", usersCount = 0 }) {
-    return `<section class="tools-runway-panel" aria-label="Tools runway">
+    return `<section class="tools-runway-panel" aria-label="Support systems focus">
       <div class="ticket-flow-heading">
         <div>
-          <p class="eyebrow">Tools Runway</p>
+          <p class="eyebrow">Support Focus</p>
           <h3>Keep support systems ready without blocking daily work</h3>
           <p>Diagnostics, forms, AI, route tools, equipment, imports, and access stay grouped here as admin support for the Job Ticket workflow.</p>
         </div>

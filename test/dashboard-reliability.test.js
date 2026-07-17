@@ -320,6 +320,12 @@ test("dashboard route aliases and new reliability diagnostics are wired", () => 
   assert.match(css, /work-readiness-grid[\s\S]*repeat\(auto-fit, minmax\(min\(100%, 220px\), 1fr\)\)/);
   assert.match(css, /leads-runway-card,[\s\S]*money-runway-card,[\s\S]*tools-runway-card[\s\S]*grid-template-areas:[\s\S]*"label value"[\s\S]*"detail detail"[\s\S]*"action action"/);
   assert.match(css, /tools-runway-card > strong[\s\S]*border-radius: 999px/);
+  assert.match(js, /Intake Focus/);
+  assert.match(js, /Financial Focus/);
+  assert.match(js, /Support Focus/);
+  assert.doesNotMatch(js, />Lead Runway</);
+  assert.doesNotMatch(js, />Money Runway</);
+  assert.doesNotMatch(js, />Tools Runway</);
   assert.match(css, /work-readiness-card-main[\s\S]*grid-template-areas:[\s\S]*"label value"[\s\S]*"detail detail"/);
   assert.match(css, /work-readiness-card-main strong[\s\S]*border-radius: 999px/);
   assert.match(js, /function renderWorkFieldPacketPanel/);
@@ -365,7 +371,9 @@ test("dashboard route aliases and new reliability diagnostics are wired", () => 
   assert.match(css, /@media \(max-width: 1280px\) and \(min-width: 761px\)[\s\S]*tools-admin-grid[\s\S]*grid-template-columns: 1fr/);
   assert.match(js, /function resizeGoogleMapView\(view\)/);
   assert.match(js, /window\.google\.maps\.event\.trigger\(view\.map, "resize"\)/);
+  assert.match(js, /window\.setTimeout\(triggerResize, 160\)/);
   assert.match(css, /dashboard-map-preview > div[\s\S]*height: 100% !important/);
+  assert.match(css, /dashboard-map-preview \.gm-style > div[\s\S]*height: 100% !important/);
   assert.match(css, /work-day-map-card \.dashboard-map-preview-shell[\s\S]*height: clamp\(184px, 16vw, 246px\)/);
   assert.match(css, /work-day-map-card \.dashboard-map-preview-shell[\s\S]*margin-bottom: 0/);
   assert.match(css, /work-day-map-card \.dashboard-map-preview \.gm-style[\s\S]*height: 100% !important/);
@@ -415,7 +423,7 @@ test("dashboard route aliases and new reliability diagnostics are wired", () => 
   assert.doesNotMatch(js, /qsa\("\[data-dashboard-link\]"\)\.forEach\(\(link\) => \{\s*link\.addEventListener\("click"/);
   assert.match(js, /label: "Leads"/);
   assert.match(workspaceRegistry, /Lead Dashboard/);
-  assert.match(js, /Lead Runway/);
+  assert.match(js, /Intake Focus/);
   assert.match(js, /data-action="\$\{escapeHtml\(secondaryAction\)\}">/);
   assert.match(js, /secondaryAction: "refresh-documentation"/);
   assert.doesNotMatch(html, /data-action="go-documents">Open Money<\/button>\s*<\/article>/);
@@ -433,6 +441,9 @@ test("dashboard route aliases and new reliability diagnostics are wired", () => 
   assert.match(css, /\.ticket-workbench-section\.is-active/);
   assert.match(js, /function renderTicketBoardControls/);
   assert.match(js, /function ticketMatchesBoardFilters/);
+  assert.match(js, /Ticket Command Center/);
+  assert.match(js, /Board Filters/);
+  assert.match(js, /Find the right ticket fast/);
   assert.match(js, /data-ticket-board-search/);
   assert.match(js, /data-ticket-board-stage-filter/);
   assert.match(js, /data-ticket-board-owner-filter/);

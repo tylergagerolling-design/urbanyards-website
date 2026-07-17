@@ -3480,6 +3480,13 @@ button:active,
   height: 100% !important;
 }
 
+.dashboard-map-preview .gm-style,
+.dashboard-map-preview .gm-style > div,
+.dashboard-map-preview .gm-style > div > div {
+  width: 100% !important;
+  height: 100% !important;
+}
+
 .dashboard-map-preview-message {
   position: absolute;
   inset: 0;
@@ -14921,6 +14928,34 @@ body:not(.is-login-screen) .ticket-board-controls {
   box-shadow: 0 12px 30px rgba(19, 36, 28, .05);
 }
 
+body:not(.is-login-screen) .ticket-board-controls-heading {
+  display: flex;
+  align-items: end;
+  justify-content: space-between;
+  gap: 14px;
+  min-width: 0;
+  padding-bottom: 2px;
+}
+
+body:not(.is-login-screen) .ticket-board-controls-heading > div {
+  min-width: 0;
+}
+
+body:not(.is-login-screen) .ticket-board-controls-heading h4 {
+  margin: 0;
+  color: var(--uy-green);
+  font-size: clamp(1.05rem, 1.45vw, 1.25rem);
+  line-height: 1.15;
+}
+
+body:not(.is-login-screen) .ticket-board-controls-heading p:not(.eyebrow) {
+  max-width: 620px;
+  margin: 5px 0 0;
+  color: var(--uy-muted);
+  font-size: .9rem;
+  line-height: 1.42;
+}
+
 body:not(.is-login-screen) .ticket-board-search,
 body:not(.is-login-screen) .ticket-board-filter-row label {
   display: grid;
@@ -15394,7 +15429,9 @@ body:not(.is-login-screen) .work-day-map-card .dashboard-map-preview-shell {
 
 body:not(.is-login-screen) .work-day-map-card .dashboard-map-preview,
 body:not(.is-login-screen) .work-day-map-card .dashboard-map-preview > div,
-body:not(.is-login-screen) .work-day-map-card .dashboard-map-preview .gm-style {
+body:not(.is-login-screen) .work-day-map-card .dashboard-map-preview .gm-style,
+body:not(.is-login-screen) .work-day-map-card .dashboard-map-preview .gm-style > div,
+body:not(.is-login-screen) .work-day-map-card .dashboard-map-preview .gm-style > div > div {
   width: 100% !important;
   height: 100% !important;
   min-height: 0;
@@ -19022,6 +19059,11 @@ body:not(.is-login-screen) .field-proof-actions button {
   }
 
   body:not(.is-login-screen) .ticket-workflow-board-heading {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  body:not(.is-login-screen) .ticket-board-controls-heading {
     align-items: flex-start;
     flex-direction: column;
   }

@@ -381,6 +381,12 @@ test("dashboard route aliases and new reliability diagnostics are wired", () => 
   assert.match(css, /money-budget-actions[\s\S]*flex-wrap: wrap/);
   assert.match(css, /money-budget-actions \.inline-action[\s\S]*flex: 1 1 128px/);
   assert.match(css, /tools-control-card[\s\S]*grid-template-rows: auto minmax\(0, 1fr\) auto/);
+  assert.match(js, /function renderToolsSystemsPanel/);
+  assert.match(js, /Where each utility lives/);
+  assert.match(css, /tools-systems-grid[\s\S]*grid-template-columns: repeat\(auto-fit, minmax\(min\(100%, 240px\), 1fr\)\)/);
+  assert.match(css, /tools-system-card[\s\S]*grid-template-rows: auto auto minmax\(0, 1fr\) auto/);
+  assert.match(css, /tools-system-card-head[\s\S]*grid-template-columns: minmax\(0, 1fr\) auto/);
+  assert.match(css, /tools-system-card li[\s\S]*grid-template-columns: minmax\(0, 1fr\) auto/);
   assert.match(css, /tools-control-grid[\s\S]*repeat\(auto-fit, minmax\(min\(100%, 260px\), 1fr\)\)/);
   assert.match(css, /tools-control-card \.ticket-card-actions[\s\S]*flex-wrap: wrap/);
   assert.match(css, /tools-control-card \.ticket-card-actions button[\s\S]*flex: 1 1 136px/);

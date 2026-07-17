@@ -13154,6 +13154,81 @@
     </section>`;
   }
 
+  function renderToolsSystemCard({ label, value, detail, rows = [], action, actionLabel, tone = "" }) {
+    const rowMarkup = rows.map((row) => `<li>
+      <span>${escapeHtml(row.label)}</span>
+      <strong>${escapeHtml(String(row.value))}</strong>
+    </li>`).join("");
+    return `<article class="tools-system-card ${tone ? `is-${escapeHtml(tone)}` : ""}">
+      <div class="tools-system-card-head">
+        <span>${escapeHtml(label)}</span>
+        <strong>${escapeHtml(String(value))}</strong>
+      </div>
+      <p>${escapeHtml(detail)}</p>
+      <ul>${rowMarkup}</ul>
+      <button type="button" data-action="${escapeHtml(action)}">${escapeHtml(actionLabel)}</button>
+    </article>`;
+  }
+
+  function renderToolsSystemsPanel({ criticalWarnings = [], supportWarnings = [], documentationCount = 0, equipmentCount = 0, routeStopsToday = 0, aiLiveVersion = "", usersCount = 0, documentsCount = 0 }) {
+    return `<section class="tools-systems-panel" aria-label="Tools operating groups">
+      <div class="ticket-flow-heading">
+        <div>
+          <p class="eyebrow">Support Map</p>
+          <h3>Where each utility lives</h3>
+          <p>Use Tools when the workflow needs routes, equipment, forms, AI knowledge, imports, users, or diagnostics.</p>
+        </div>
+      </div>
+      <div class="tools-systems-grid">
+        ${renderToolsSystemCard({
+          label: "Field Utilities",
+          value: routeStopsToday + equipmentCount,
+          detail: "Route planning and equipment records that support Work without cluttering the Work queue.",
+          rows: [
+            { label: "Route stops today", value: routeStopsToday },
+            { label: "Equipment records", value: equipmentCount }
+          ],
+          action: "go-route-planner",
+          actionLabel: "Open Route"
+        })}
+        ${renderToolsSystemCard({
+          label: "Records + AI",
+          value: documentationCount,
+          detail: "Documentation, templates, submissions, and Groundskeeper AI training stay in one admin lane.",
+          rows: [
+            { label: "Forms and files", value: documentationCount },
+            { label: "AI live version", value: aiLiveVersion || "Not published" }
+          ],
+          action: "go-documentation",
+          actionLabel: "Open Documentation"
+        })}
+        ${renderToolsSystemCard({
+          label: "Data + Access",
+          value: usersCount,
+          detail: "Imports, exports, backups, profile avatars, and dashboard permissions stay together.",
+          rows: [
+            { label: "Dashboard users", value: usersCount },
+            { label: "Financial documents", value: documentsCount }
+          ],
+          action: "go-import-export",
+          actionLabel: "Open Data Tools"
+        })}
+        ${renderToolsSystemCard({
+          label: "Diagnostics",
+          value: criticalWarnings.length + supportWarnings.length,
+          detail: "Warnings are visible here without blocking Home, Tickets, Work, Leads, or Money.",
+          rows: [
+            { label: "Workflow warnings", value: criticalWarnings.length },
+            { label: "Support warnings", value: supportWarnings.length }
+          ],
+          action: "copy-dashboard-diagnostics",
+          actionLabel: "Copy Diagnostics",
+          tone: criticalWarnings.length ? "warning" : ""
+        })}
+      </div>
+    </section>`;
+  }
+
   function renderToolsWorkspace(data = state.data) {
     const target = qs("[data-tools-workspace]");
     if (!target) return;
@@ -13191,6 +13266,7 @@
           ${renderTicketMetric(documentationCount, "Forms and Files", "Templates and submissions")}
         </section>
         ${renderToolsRunwayPanel({ criticalWarnings, supportWarnings, documentationCount, equipmentCount, routeStopsToday, aiLiveVersion, usersCount })}
+        ${renderToolsSystemsPanel({ criticalWarnings, supportWarnings, documentationCount, equipmentCount, routeStopsToday, aiLiveVersion, usersCount, documentsCount: documents.length })}
         <section class="tools-control-grid" aria-label="Dashboard support tools">
           ${renderToolsCard({
             label: "Route Planner",

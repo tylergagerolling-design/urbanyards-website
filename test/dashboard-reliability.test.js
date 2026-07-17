@@ -367,6 +367,13 @@ test("dashboard route aliases and new reliability diagnostics are wired", () => 
   assert.match(js, /ticket-drawer-operating-grid/);
   assert.doesNotMatch(js, /renderTicketEndToEndFlow\(dashboardTickets\(\), ticket\.stage, "Current ticket lifecycle"\)/);
   assert.match(css, /ticket-drawer-operating-grid[\s\S]*grid-template-columns: minmax\(240px, \.82fr\) minmax\(300px, 1\.18fr\)/);
+  assert.match(js, /function renderMoneyCloseoutPanel/);
+  assert.match(js, /Closeout Checklist/);
+  assert.match(js, /Protect the final handoff/);
+  assert.match(css, /money-closeout-grid[\s\S]*grid-template-columns: repeat\(auto-fit, minmax\(min\(100%, 240px\), 1fr\)\)/);
+  assert.match(css, /money-closeout-step[\s\S]*grid-template-rows: auto auto minmax\(0, 1fr\) auto/);
+  assert.match(css, /money-closeout-step-head[\s\S]*grid-template-columns: minmax\(0, 1fr\) auto/);
+  assert.match(css, /money-closeout-step li strong,[\s\S]*money-closeout-step li span[\s\S]*text-overflow: ellipsis/);
   assert.match(css, /\.money-budget-panel/);
   assert.match(css, /\.money-budget-item/);
   assert.match(css, /\.money-budget-stats/);

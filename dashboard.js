@@ -12972,6 +12972,78 @@
     </section>`;
   }
 
+  function renderMoneyCloseoutStep({ label, value, detail, items = [], action, actionLabel, tone = "" }) {
+    const previewItems = items.slice(0, 2).map((item) => `<li>
+      <strong>${escapeHtml(homeFocusTitle(item))}</strong>
+      <span>${escapeHtml(homeFocusMeta(item))}</span>
+    </li>`).join("");
+    return `<article class="money-closeout-step ${tone ? `is-${escapeHtml(tone)}` : ""}">
+      <div class="money-closeout-step-head">
+        <span>${escapeHtml(label)}</span>
+        <strong>${escapeHtml(String(value))}</strong>
+      </div>
+      <p>${escapeHtml(detail)}</p>
+      <ul>${previewItems || `<li><strong>Clear</strong><span>No items waiting here.</span></li>`}</ul>
+      <button type="button" data-action="${escapeHtml(action)}">${escapeHtml(actionLabel)}</button>
+    </article>`;
+  }
+
+  function renderMoneyCloseoutPanel({ needsBudget = [], fieldComplete = [], invoiceTickets = [], unpaidInvoices = [], overdueInvoices = [] }) {
+    const invoiceReady = [...fieldComplete, ...invoiceTickets.filter((ticket) => ticket.tone !== "watch")];
+    const paymentItems = invoiceTickets.filter((ticket) => ticket.tone === "watch");
+    const setupItems = needsBudget.slice(0, 4);
+    const totalWaiting = invoiceReady.length + paymentItems.length + unpaidInvoices.length + setupItems.length;
+    return `<section class="money-closeout-panel" aria-label="Money closeout checklist">
+      <div class="ticket-flow-heading">
+        <div>
+          <p class="eyebrow">Closeout Checklist</p>
+          <h3>Protect the final handoff</h3>
+          <p>Check costs, proof, invoice status, and payment before a ticket leaves Money.</p>
+        </div>
+        <dl>
+          <div><dt>Waiting</dt><dd>${escapeHtml(String(totalWaiting))}</dd></div>
+        </dl>
+      </div>
+      <div class="money-closeout-grid">
+        ${renderMoneyCloseoutStep({
+          label: "Cost Review",
+          value: setupItems.length,
+          detail: "Tickets that should have budget or margin review before scheduling.",
+          items: setupItems,
+          action: "go-tickets",
+          actionLabel: "Open Tickets",
+          tone: setupItems.length ? "warning" : ""
+        })}
+        ${renderMoneyCloseoutStep({
+          label: "Actuals + Proof",
+          value: fieldComplete.length,
+          detail: "Completed work waiting on actual costs, photos, forms, or review notes.",
+          items: fieldComplete,
+          action: "go-work",
+          actionLabel: "Open Work",
+          tone: fieldComplete.length ? "warning" : ""
+        })}
+        ${renderMoneyCloseoutStep({
+          label: "Invoice Ready",
+          value: invoiceReady.length,
+          detail: "Records that need an estimate, invoice draft, Square sync, or final review.",
+          items: invoiceReady,
+          action: "quick-add-quote",
+          actionLabel: "Create Estimate"
+        })}
+        ${renderMoneyCloseoutStep({
+          label: "Collect",
+          value: overdueInvoices.length || paymentItems.length,
+          detail: "Overdue or unpaid invoices that need a payment note or follow-up.",
+          items: paymentItems,
+          action: "quick-add-invoice-reminder",
+          actionLabel: "Payment Follow-Up",
+          tone: overdueInvoices.length ? "warning" : ""
+        })}
+      </div>
+    </section>`;
+  }
+
   function renderMoneyWorkspace(data = state.data) {
     const target = qs("[data-money-workspace]");
     if (!target) return;
@@ -13023,6 +13095,7 @@
         </section>
         ${renderMoneyRunwayPanel({ needsBudget, ownerApproval, invoiceTickets, overdueInvoices })}
         ${renderMoneyCommandCenter({ needsBudget, ownerApproval, fieldComplete, invoiceTickets, unpaidInvoices, overdueInvoices })}
+        ${renderMoneyCloseoutPanel({ needsBudget, fieldComplete, invoiceTickets, unpaidInvoices, overdueInvoices })}
         ${renderMoneyBudgetPanel(data, tickets)}
       </div>`;
   }

@@ -12315,9 +12315,15 @@
     const contact = [item.managementCompany, item.contactName, item.city].filter(Boolean).join(" / ") || "Contact details needed";
     return `<article class="lead-queue-item ${tone ? `lead-queue-item--${escapeHtml(tone)}` : ""}">
       <div class="lead-queue-copy">
-        <span>${escapeHtml(status)}</span>
+        <div class="lead-queue-meta">
+          <span class="lead-queue-status">${escapeHtml(status)}</span>
+          <span class="lead-queue-touch">${escapeHtml(followUp)}</span>
+        </div>
         <h4>${escapeHtml(outreachTitle(item))}</h4>
-        <p>${escapeHtml(contact)}</p>
+        <div class="lead-queue-detail-grid">
+          <span><b>Contact</b><em>${escapeHtml(contact)}</em></span>
+          <span><b>Need</b><em>${escapeHtml(detail)}</em></span>
+        </div>
         <small>${escapeHtml(detail)} · ${escapeHtml(followUp)}</small>
       </div>
       <div class="lead-queue-actions">

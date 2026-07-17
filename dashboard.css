@@ -15673,11 +15673,11 @@ body:not(.is-login-screen) .lead-queue-list {
 
 body:not(.is-login-screen) .lead-queue-item {
   display: grid;
-  grid-template-columns: minmax(0, 1.08fr) minmax(min(100%, 260px), .92fr);
-  gap: 14px;
-  align-items: start;
+  grid-template-columns: minmax(0, 1fr) minmax(236px, .58fr);
+  gap: 16px;
+  align-items: center;
   min-width: 0;
-  padding: 14px;
+  padding: 16px;
   border: 1px solid rgba(73, 102, 77, .13);
   border-radius: 18px;
   background: rgba(251, 250, 245, .88);
@@ -15695,10 +15695,19 @@ body:not(.is-login-screen) .lead-queue-actions {
   min-width: 0;
 }
 
-body:not(.is-login-screen) .lead-queue-copy span {
+body:not(.is-login-screen) .lead-queue-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-bottom: 7px;
+}
+
+body:not(.is-login-screen) .lead-queue-status,
+body:not(.is-login-screen) .lead-queue-touch {
   display: inline-flex;
+  align-items: center;
+  min-width: 0;
   width: fit-content;
-  margin-bottom: 5px;
   padding: 4px 8px;
   border-radius: 999px;
   background: rgba(225, 236, 215, .86);
@@ -15707,6 +15716,11 @@ body:not(.is-login-screen) .lead-queue-copy span {
   font-weight: 900;
   letter-spacing: .04em;
   text-transform: uppercase;
+}
+
+body:not(.is-login-screen) .lead-queue-touch {
+  background: rgba(255, 255, 255, .78);
+  color: rgba(18, 63, 49, .68);
 }
 
 body:not(.is-login-screen) .lead-queue-copy h4 {
@@ -15718,19 +15732,48 @@ body:not(.is-login-screen) .lead-queue-copy h4 {
   text-wrap: pretty;
 }
 
-body:not(.is-login-screen) .lead-queue-copy p,
-body:not(.is-login-screen) .lead-queue-copy small {
-  display: block;
-  margin: 4px 0 0;
+body:not(.is-login-screen) .lead-queue-detail-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+  margin-top: 10px;
+}
+
+body:not(.is-login-screen) .lead-queue-detail-grid span {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+  padding: 9px 10px;
+  border: 1px solid rgba(73, 102, 77, .09);
+  border-radius: 13px;
+  background: rgba(255, 255, 255, .6);
+}
+
+body:not(.is-login-screen) .lead-queue-detail-grid b {
+  color: rgba(18, 63, 49, .62);
+  font-size: .68rem;
+  font-weight: 900;
+  letter-spacing: .06em;
+  line-height: 1;
+  text-transform: uppercase;
+}
+
+body:not(.is-login-screen) .lead-queue-detail-grid em {
   color: var(--uy-muted);
+  font-style: normal;
+  font-size: .86rem;
   line-height: 1.38;
   overflow-wrap: break-word;
   text-wrap: pretty;
 }
 
+body:not(.is-login-screen) .lead-queue-copy small {
+  display: none;
+}
+
 body:not(.is-login-screen) .lead-queue-actions {
   display: grid;
-  grid-template-columns: repeat(2, minmax(112px, 1fr));
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   justify-content: stretch;
   gap: 8px;
 }
@@ -15738,7 +15781,12 @@ body:not(.is-login-screen) .lead-queue-actions {
 body:not(.is-login-screen) .lead-queue-actions .phone-call-control {
   grid-column: 1 / -1;
   width: 100%;
-  justify-content: flex-end;
+  justify-content: flex-start;
+}
+
+body:not(.is-login-screen) .lead-queue-actions .phone-call-link {
+  flex: 1 1 100%;
+  min-width: 0;
 }
 
 body:not(.is-login-screen) .lead-queue-actions > .inline-action {

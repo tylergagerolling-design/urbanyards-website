@@ -14528,6 +14528,8 @@ body:not(.is-login-screen) .tools-runway-panel .ticket-flow-heading > button:hov
 }
 
 body:not(.is-login-screen) .tools-control-card {
+  position: relative;
+  overflow: hidden;
   display: grid;
   grid-template-rows: auto minmax(0, 1fr) auto;
   align-content: start;
@@ -14543,8 +14545,62 @@ body:not(.is-login-screen) .tools-control-card {
   box-shadow: 0 14px 34px rgba(19, 36, 28, .06);
 }
 
+body:not(.is-login-screen) .tools-control-card--warning {
+  border-color: rgba(195, 136, 47, .24);
+  background:
+    radial-gradient(circle at 88% 16%, rgba(217, 182, 111, .18), transparent 30%),
+    rgba(255, 250, 232, .82);
+}
+
+body:not(.is-login-screen) .tools-control-card--healthy {
+  border-color: rgba(73, 102, 77, .14);
+}
+
 body:not(.is-login-screen) .tools-control-card > div:first-child {
   min-width: 0;
+}
+
+body:not(.is-login-screen) .tools-control-card-copy {
+  display: grid;
+  gap: 8px;
+  align-content: start;
+}
+
+body:not(.is-login-screen) .tools-control-card-topline {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  min-width: 0;
+}
+
+body:not(.is-login-screen) .tools-control-card-topline .eyebrow {
+  min-width: 0;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+body:not(.is-login-screen) .tools-control-card-topline span {
+  flex: 0 0 auto;
+  max-width: 46%;
+  padding: 5px 8px;
+  border: 1px solid rgba(73, 102, 77, .14);
+  border-radius: 999px;
+  background: #e7efdf;
+  color: var(--uy-green);
+  font-size: .68rem;
+  font-weight: 900;
+  line-height: 1;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+body:not(.is-login-screen) .tools-control-card--warning .tools-control-card-topline span {
+  border-color: rgba(195, 136, 47, .22);
+  background: rgba(217, 182, 111, .18);
+  color: #765a1d;
 }
 
 body:not(.is-login-screen) .tools-control-card h3 {
@@ -14565,6 +14621,7 @@ body:not(.is-login-screen) .tools-control-card p:not(.eyebrow) {
 }
 
 body:not(.is-login-screen) .tools-control-card .ticket-card-actions {
+  grid-row: 3;
   align-self: end;
   display: flex;
   flex-wrap: wrap;

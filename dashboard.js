@@ -12874,6 +12874,7 @@
             label: "Route Planner",
             detail: "Build the day route, pin stops, and keep route support close to scheduled work.",
             meta: `${routeStopsToday} stops today`,
+            status: "Route",
             primary: "Open Route Planner",
             primaryAction: "go-route-planner"
           })}
@@ -12881,6 +12882,7 @@
             label: "Equipment",
             detail: "Track owned equipment, maintenance, replacement priorities, and hardware recommendations.",
             meta: `${equipmentCount} equipment records`,
+            status: "Assets",
             primary: "Open Equipment",
             primaryAction: "go-equipment"
           })}
@@ -12888,6 +12890,7 @@
             label: "Documentation",
             detail: "Manage form templates, submitted paperwork, job photos, and reusable records.",
             meta: `${documentationCount} files or forms`,
+            status: "Records",
             primary: "Open Documentation",
             primaryAction: "go-documentation",
             secondary: "Refresh Forms",
@@ -12897,6 +12900,7 @@
             label: "Groundskeeper AI",
             detail: "Train and review the public website helper with backend-protected knowledge and rules.",
             meta: `Live version: ${aiLiveVersion}`,
+            status: "Assistant",
             primary: "Open AI Studio",
             primaryAction: "go-groundskeeper-ai",
             secondary: "Refresh AI",
@@ -12906,6 +12910,7 @@
             label: "Import, Export & Backups",
             detail: "Move records through CSV, Excel, Google Sheets, PDF reports, and full JSON backups.",
             meta: state.importExportReady ? "Data tools ready" : "Setup may be needed",
+            status: "Data",
             primary: "Open Data Tools",
             primaryAction: "go-import-export",
             secondary: "Full Backup",
@@ -12915,6 +12920,7 @@
             label: "Users & Access",
             detail: "Invite users, manage roles, disable access, and keep profile avatars clean.",
             meta: `${usersCount} dashboard users`,
+            status: "Access",
             primary: "Manage Access",
             primaryAction: "focus-users-access"
           })}
@@ -12922,6 +12928,8 @@
             label: "Dashboard Health",
             detail: "Copy diagnostics, refresh dashboard data, and separate setup warnings from workflow issues.",
             meta: `${rows.length} diagnostics`,
+            status: criticalWarnings.length ? "Needs Review" : "Healthy",
+            tone: criticalWarnings.length ? "warning" : "healthy",
             primary: "Copy Diagnostics",
             primaryAction: "copy-dashboard-diagnostics",
             secondary: "Refresh Dashboard",
@@ -12993,11 +13001,14 @@
     bindAvatarFallbacks();
   }
 
-  function renderToolsCard({ label, detail, meta, primary, primaryAction, secondary, secondaryAction }) {
+  function renderToolsCard({ label, detail, meta, status = "Support", tone = "", primary, primaryAction, secondary, secondaryAction }) {
     return `
-      <article class="tools-control-card">
-        <div>
-          <p class="eyebrow">${escapeHtml(meta || "Support")}</p>
+      <article class="tools-control-card ${tone ? `tools-control-card--${escapeHtml(tone)}` : ""}">
+        <div class="tools-control-card-copy">
+          <div class="tools-control-card-topline">
+            <p class="eyebrow">${escapeHtml(meta || "Support")}</p>
+            <span>${escapeHtml(status)}</span>
+          </div>
           <h3>${escapeHtml(label)}</h3>
           <p>${escapeHtml(detail)}</p>
         </div>

@@ -389,6 +389,8 @@ test("dashboard route aliases and new reliability diagnostics are wired", () => 
   assert.match(js, /data-ticket-board-result-count/);
   assert.match(js, /reset-ticket-board-filters/);
   assert.match(css, /\.ticket-board-controls/);
+  assert.match(css, /ticket-board-controls[\s\S]*grid-template-columns: minmax\(0, 1fr\)/);
+  assert.match(css, /ticket-board-filter-row[\s\S]*grid-template-columns: repeat\(auto-fit, minmax\(min\(100%, 156px\), 1fr\)\)/);
   assert.match(css, /\.ticket-board-result-count/);
   assert.match(js, /workspace-focus-value/);
   assert.match(js, /Home workspace signals/);

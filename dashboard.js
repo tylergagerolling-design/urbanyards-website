@@ -11883,6 +11883,83 @@
     </section>`;
   }
 
+  function homeFocusTitle(item = {}) {
+    return item.title || item.customer || item.property || item.number || "Untitled item";
+  }
+
+  function homeFocusMeta(item = {}) {
+    return item.nextAction || item.detail || item.stageLabel || item.status || item.ownerLabel || "Needs review";
+  }
+
+  function renderHomeFocusCard({ label, value, detail, items = [], action, actionLabel, tone = "" }) {
+    const preview = items.slice(0, 3).map((item) => `<li>
+      <strong>${escapeHtml(homeFocusTitle(item))}</strong>
+      <span>${escapeHtml(homeFocusMeta(item))}</span>
+    </li>`).join("");
+    return `<article class="home-focus-card ${tone ? `is-${escapeHtml(tone)}` : ""}">
+      <div class="home-focus-card-head">
+        <span>${escapeHtml(label)}</span>
+        <strong>${escapeHtml(String(value))}</strong>
+      </div>
+      <p>${escapeHtml(detail)}</p>
+      <ul>${preview || `<li><strong>Clear</strong><span>No items waiting here.</span></li>`}</ul>
+      <button type="button" data-action="${escapeHtml(action)}">${escapeHtml(actionLabel)}</button>
+    </article>`;
+  }
+
+  function renderHomeFocusPanel({ todayTickets = [], overdueTickets = [], leadTickets = [], workTickets = [], moneyTickets = [], reviewTickets = [], actions = [] }) {
+    const lateAndToday = [...overdueTickets, ...todayTickets];
+    const officeItems = [...leadTickets, ...actions.filter((item) => ["quote", "lead", "follow-up"].some((word) => String(item.type || item.title || "").toLowerCase().includes(word)))];
+    const closeoutItems = [...moneyTickets, ...reviewTickets];
+    return `<section class="home-focus-panel" aria-label="Daily handoff focus">
+      <div class="ticket-flow-heading">
+        <div>
+          <p class="eyebrow">Daily Focus</p>
+          <h3>Start with the next handoff</h3>
+          <p>Use this board to see what needs the first pass today before jumping into the full Tickets, Work, Leads, or Money pages.</p>
+        </div>
+        <dl>
+          <div><dt>Waiting</dt><dd>${escapeHtml(String(lateAndToday.length + officeItems.length + workTickets.length + closeoutItems.length))}</dd></div>
+        </dl>
+      </div>
+      <div class="home-focus-grid">
+        ${renderHomeFocusCard({
+          label: "Late / Today",
+          value: lateAndToday.length,
+          detail: "Dated tickets, scheduled work, and overdue items that should be checked first.",
+          items: lateAndToday,
+          action: "go-work",
+          actionLabel: "Open Work",
+          tone: overdueTickets.length ? "warning" : ""
+        })}
+        ${renderHomeFocusCard({
+          label: "Office Handoff",
+          value: officeItems.length,
+          detail: "Lead intake, follow-ups, quote approvals, and owner decisions that need movement.",
+          items: officeItems,
+          action: "go-leads",
+          actionLabel: "Open Leads"
+        })}
+        ${renderHomeFocusCard({
+          label: "Field Ready",
+          value: workTickets.length,
+          detail: "Tickets ready for scheduling, route access, site notes, forms, photos, or completion.",
+          items: workTickets,
+          action: "go-work",
+          actionLabel: "Open Work"
+        })}
+        ${renderHomeFocusCard({
+          label: "Money / Closeout",
+          value: closeoutItems.length,
+          detail: "Budget prep, cost review, invoice work, payment checks, and closeout review.",
+          items: closeoutItems,
+          action: "go-money",
+          actionLabel: "Open Money"
+        })}
+      </div>
+    </section>`;
+  }
+
   function renderHomeCommandCenter(details = {}) {
     const actions = details.actions || [];
     const todayTickets = details.todayTickets || [];
@@ -11990,6 +12067,7 @@
           ${renderTicketMetric(actions.length, "Action Items", "Needs attention now")}
           ${renderTicketMetric(workflowWarnings.length + notifications.length, "Alerts", "Workflow and notification signals")}
         </section>
+        ${renderHomeFocusPanel({ todayTickets, overdueTickets, leadTickets, workTickets, moneyTickets, reviewTickets, actions })}
         ${renderHomeRunway({ todayTickets, overdueTickets, leadTickets, workTickets, moneyTickets, reviewTickets, actions })}
         ${renderHomeCommandCenter({ actions, attentionTickets, todayTickets, workTickets, moneyTickets, workflowWarnings, notifications })}
       </div>`;

@@ -310,6 +310,11 @@ test("dashboard route aliases and new reliability diagnostics are wired", () => 
   assert.doesNotMatch(js, /Tickets workspace signals|Work workspace signals|Leads workspace signals|Money workspace signals/);
   assert.doesNotMatch(css, /workspace-focus-strip|workspace-focus-card/);
   assert.match(css, /ticket-metrics[\s\S]*grid-template-columns: repeat\(auto-fit, minmax\(min\(100%, 190px\), 1fr\)\)/);
+  assert.match(js, /function renderHomeFocusPanel/);
+  assert.match(js, /Start with the next handoff/);
+  assert.match(css, /home-focus-grid[\s\S]*grid-template-columns: repeat\(auto-fit, minmax\(min\(100%, 240px\), 1fr\)\)/);
+  assert.match(css, /home-focus-card-head[\s\S]*grid-template-columns: minmax\(0, 1fr\) auto/);
+  assert.match(css, /home-focus-card-head strong[\s\S]*border-radius: 999px/);
   assert.match(css, /home-runway-grid[\s\S]*repeat\(auto-fit, minmax\(min\(100%, 220px\), 1fr\)\)/);
   assert.match(css, /home-runway-tile[\s\S]*grid-template-areas:[\s\S]*"label value"[\s\S]*"detail detail"[\s\S]*"action action"/);
   assert.match(css, /home-runway-tile > strong[\s\S]*border-radius: 999px/);

@@ -14918,7 +14918,7 @@ body:not(.is-login-screen) .ticket-card-actions button {
 
 body:not(.is-login-screen) .ticket-metrics {
   display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 190px), 1fr));
   gap: 12px;
 }
 
@@ -15313,7 +15313,7 @@ body:not(.is-login-screen) .home-runway-panel {
 }
 
 body:not(.is-login-screen) .home-runway-grid {
-  grid-template-columns: repeat(4, minmax(0, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 220px), 1fr));
 }
 
 body:not(.is-login-screen) .work-plan-tile {
@@ -15362,7 +15362,7 @@ body:not(.is-login-screen) .work-readiness-panel {
 
 body:not(.is-login-screen) .work-readiness-grid {
   display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 220px), 1fr));
   gap: 12px;
 }
 
@@ -18119,6 +18119,11 @@ body:not(.is-login-screen) .field-proof-actions button {
 }
 
 @media (max-width: 1380px) and (min-width: 761px) {
+  body:not(.is-login-screen) .home-command-center,
+  body:not(.is-login-screen) .ticket-command-center {
+    grid-template-columns: 1fr;
+  }
+
   body:not(.is-login-screen) .leads-command-center {
     grid-template-columns: 1fr;
   }
@@ -18128,6 +18133,11 @@ body:not(.is-login-screen) .field-proof-actions button {
   }
 
   body:not(.is-login-screen) .lead-next-step-stack {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  body:not(.is-login-screen) .home-next-step-stack,
+  body:not(.is-login-screen) .ticket-next-step-stack {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 

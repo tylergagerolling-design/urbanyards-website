@@ -488,8 +488,9 @@ test("owner overview kanban keeps four freely movable stages and reserves comple
   assert.match(js, /\{ key: "new", label: "New"[\s\S]*\{ key: "planned", label: "Planned"[\s\S]*\{ key: "in_progress", label: "In Progress"[\s\S]*\{ key: "review", label: "Review"/);
   assert.doesNotMatch(js, /\{ key: "completed", label: "Completed"/);
   assert.match(js, /function ownerKanbanTargetStage/);
-  assert.match(js, /owner-kanban-drag-handle/);
-  assert.match(js, /addEventListener\("pointerdown"[\s\S]*setPointerCapture[\s\S]*addEventListener\("pointermove"[\s\S]*elementFromPoint[\s\S]*addEventListener\("pointerup"/);
+  assert.doesNotMatch(js, /owner-kanban-drag-handle/);
+  assert.match(js, /addEventListener\("pointerdown"[\s\S]*closest\?\.\("\[data-owner-kanban-card\]"\)[\s\S]*setPointerCapture[\s\S]*Math\.hypot[\s\S]*distance < 7[\s\S]*addEventListener\("pointerup"/);
+  assert.match(js, /ownerKanbanSuppressClickUntil/);
   assert.match(js, /data-action="clear-owner-kanban-leads"/);
   assert.match(js, /async function moveOwnerKanbanSourceCard[\s\S]*updateSubmission[\s\S]*updateScheduledJob/);
   assert.match(js, /addEventListener\("pointerup"[\s\S]*moveOwnerKanbanSourceCard[\s\S]*refreshDashboard/);

@@ -12275,7 +12275,6 @@
     const [categoryLabel, categoryTone] = ownerKanbanCategory(ticket);
     const saving = state.ownerKanbanMovingId === ticket.id;
     return `<article class="owner-kanban-card ${dateState === "overdue" ? "is-overdue" : ""} ${blockers.length ? "is-blocked" : ""} ${saving ? "is-saving" : ""}" tabindex="0" ${dragAttrs} aria-busy="${saving ? "true" : "false"}">
-      ${["ticket", "quote", "job"].includes(ticket.source) && canManageOwnerWorkflow() ? `<span class="owner-kanban-drag-handle" role="button" aria-label="Drag ticket to another stage" title="Click and hold to move this ticket"><i></i></span>` : ""}
       <button type="button" class="owner-kanban-card-open" data-action="open-ticket" data-ticket-source="${escapeHtml(ticket.source)}" data-id="${escapeHtml(ticket.id)}">
         <strong>${escapeHtml(ticket.title || "Untitled ticket")}</strong>
         <small>${escapeHtml([ticket.customer, ticket.property].filter(Boolean).join(" · ") || ticket.number)}</small>
@@ -19518,6 +19517,11 @@
     });
 
     els.appView.addEventListener("click", async (event) => {
+      if (Date.now() < Number(state.ownerKanbanSuppressClickUntil || 0) && event.target?.closest?.("[data-owner-kanban-card]")) {
+        event.preventDefault();
+        event.stopPropagation();
+        return;
+      }
       const target = event.target.closest("[data-action], [data-export]");
       if (!target) return;
 
@@ -21623,24 +21627,29 @@
     };
 
     els.appView.addEventListener("pointerdown", (event) => {
-      const handle = event.target?.closest?.(".owner-kanban-drag-handle");
-      const card = handle?.closest?.("[data-owner-kanban-card]");
-      if (!handle || !card || !card.dataset.id || event.button > 0) return;
-      event.preventDefault();
+      const card = event.target?.closest?.("[data-owner-kanban-card]");
+      if (!card || !card.dataset.id || event.button > 0 || event.target?.closest?.("select, input, textarea, label")) return;
       ownerKanbanPointerDrag = {
         card,
-        handle,
         pointerId: event.pointerId,
         ticketId: card.dataset.id,
-        ticketSource: card.dataset.ticketSource || "ticket"
+        ticketSource: card.dataset.ticketSource || "ticket",
+        startX: event.clientX,
+        startY: event.clientY,
+        active: false
       };
-      state.ownerKanbanMovingId = card.dataset.id;
-      card.classList.add("is-dragging");
-      handle.setPointerCapture?.(event.pointerId);
+      card.setPointerCapture?.(event.pointerId);
     });
 
     els.appView.addEventListener("pointermove", (event) => {
       if (!ownerKanbanPointerDrag || ownerKanbanPointerDrag.pointerId !== event.pointerId) return;
+      if (!ownerKanbanPointerDrag.active) {
+        const distance = Math.hypot(event.clientX - ownerKanbanPointerDrag.startX, event.clientY - ownerKanbanPointerDrag.startY);
+        if (distance < 7) return;
+        ownerKanbanPointerDrag.active = true;
+        state.ownerKanbanMovingId = ownerKanbanPointerDrag.ticketId;
+        ownerKanbanPointerDrag.card.classList.add("is-dragging");
+      }
       event.preventDefault();
       const column = document.elementFromPoint(event.clientX, event.clientY)?.closest?.("[data-owner-kanban-column]");
       qsa("[data-owner-kanban-column].is-drag-over").forEach((item) => item.classList.toggle("is-drag-over", item === column));
@@ -21650,8 +21659,13 @@
 
     els.appView.addEventListener("pointerup", async (event) => {
       if (!ownerKanbanPointerDrag || ownerKanbanPointerDrag.pointerId !== event.pointerId) return;
+      const { ticketId, ticketSource, active } = ownerKanbanPointerDrag;
+      if (!active) {
+        clearOwnerKanbanPointerDrag();
+        return;
+      }
       event.preventDefault();
-      const { ticketId, ticketSource } = ownerKanbanPointerDrag;
+      state.ownerKanbanSuppressClickUntil = Date.now() + 400;
       const column = document.elementFromPoint(event.clientX, event.clientY)?.closest?.("[data-owner-kanban-column]");
       const nextColumn = column?.dataset.ownerKanbanColumn || "";
       clearOwnerKanbanPointerDrag();

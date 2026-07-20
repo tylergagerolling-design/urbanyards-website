@@ -15310,6 +15310,7 @@ body:not(.is-login-screen) .owner-kanban-column-list {
 }
 
 body:not(.is-login-screen) .owner-kanban-card {
+  position: relative;
   display: grid;
   gap: 9px;
   padding: 12px;
@@ -15318,6 +15319,32 @@ body:not(.is-login-screen) .owner-kanban-card {
   background: rgba(255, 255, 255, .88);
   box-shadow: 0 10px 22px rgba(19, 36, 28, .045);
   cursor: grab;
+}
+
+body:not(.is-login-screen) .owner-kanban-drag-handle {
+  position: absolute;
+  top: 7px;
+  right: 8px;
+  z-index: 2;
+  display: inline-grid;
+  place-items: center;
+  width: 22px;
+  height: 22px;
+  border-radius: 7px;
+  color: #78857b;
+  font-size: .9rem;
+  line-height: 1;
+  cursor: grab;
+  touch-action: none;
+}
+
+body:not(.is-login-screen) .owner-kanban-drag-handle:hover {
+  background: #eef2eb;
+  color: var(--uy-green);
+}
+
+body:not(.is-login-screen) .owner-kanban-card.is-dragging .owner-kanban-drag-handle {
+  cursor: grabbing;
 }
 
 body:not(.is-login-screen) .owner-kanban-card:focus-within,
@@ -15353,6 +15380,7 @@ body:not(.is-login-screen) .owner-kanban-card-open {
 }
 
 body:not(.is-login-screen) .owner-kanban-card-open strong {
+  padding-right: 22px;
   color: var(--uy-green);
   font-size: .98rem;
   line-height: 1.18;

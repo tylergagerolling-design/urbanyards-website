@@ -5412,8 +5412,11 @@
     const ticket = dashboardTickets().find((item) => item.source === "ticket" && item.id === ticketId);
     if (!ticket) throw new Error("Only unified Job Tickets can be moved on the Owner Kanban board.");
     if (!canManageOwnerWorkflow()) throw new Error("Your dashboard role cannot move tickets on the owner board.");
-    const nextStage = normalizeTicketStageForDashboard(ownerKanbanTargetStage(toStage));
     const fromStage = ticketStage(ticket);
+    const nextStage = ownerKanbanTransitionStage(ticket, toStage);
+    if (!nextStage) {
+      throw new Error(`This ticket cannot move directly from ${ticketStageLabel(fromStage)} to ${ownerKanbanColumnLabel(toStage)}. Complete its next workflow step first.`);
+    }
     if (fromStage === nextStage) return ticket;
     const missing = ticketMissingRequirementsForStage(ticket, nextStage);
     if (missing.length) {
@@ -12012,6 +12015,14 @@
     return ownerKanbanColumns.find((column) => column.key === value)?.label || ticketStageLabel(value);
   }
 
+  function ownerKanbanTransitionStage(ticket = {}, columnKey = "") {
+    const fromStage = ticketStage(ticket);
+    if (ownerKanbanColumnForTicket(ticket) === columnKey) return fromStage;
+    const directTransition = (ticketLifecycleTransitions[fromStage] || [])
+      .find((transition) => ownerKanbanColumnForTicket({ stage: transition.to }) === columnKey);
+    return directTransition?.to || "";
+  }
+
   function loadOwnerKanbanFilters() {
     try {
       const stored = JSON.parse(localStorage.getItem(OWNER_KANBAN_FILTER_KEY) || "{}");
@@ -12224,7 +12235,8 @@
     const completed = ownerKanbanColumnForTicket(ticket) === "completed";
     const saving = state.ownerKanbanMovingId === ticket.id;
     return `<article class="owner-kanban-card ${dateState === "overdue" ? "is-overdue" : ""} ${blockers.length ? "is-blocked" : ""} ${saving ? "is-saving" : ""}" tabindex="0" ${dragAttrs} aria-busy="${saving ? "true" : "false"}">
-      <button type="button" class="owner-kanban-card-open" data-action="open-ticket" data-ticket-source="${escapeHtml(ticket.source)}" data-id="${escapeHtml(ticket.id)}">
+      ${isCanonical && canManageOwnerWorkflow() ? `<span class="owner-kanban-drag-handle" draggable="true" aria-hidden="true" title="Drag ticket">⠿</span>` : ""}
+      <button type="button" class="owner-kanban-card-open" draggable="${isCanonical && canManageOwnerWorkflow() ? "true" : "false"}" data-action="open-ticket" data-ticket-source="${escapeHtml(ticket.source)}" data-id="${escapeHtml(ticket.id)}">
         <strong>${escapeHtml(ticket.title || "Untitled ticket")}</strong>
         <small>${escapeHtml([ticket.customer, ticket.property].filter(Boolean).join(" · ") || ticket.number)}</small>
       </button>

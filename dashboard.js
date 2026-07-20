@@ -12224,15 +12224,13 @@
     const dateState = ownerKanbanDateState(ticket);
     const blockers = ticket.blockers || [];
     const isCanonical = ticket.source === "ticket";
-    const dragAttrs = isCanonical && canManageOwnerWorkflow()
-      ? `draggable="true" data-owner-kanban-card data-ticket-source="ticket" data-id="${escapeHtml(ticket.id)}"`
-      : `data-owner-kanban-card data-ticket-source="${escapeHtml(ticket.source)}" data-id="${escapeHtml(ticket.id)}"`;
+    const dragAttrs = `data-owner-kanban-card data-ticket-source="${escapeHtml(ticket.source)}" data-id="${escapeHtml(ticket.id)}"`;
     const [categoryLabel, categoryTone] = ownerKanbanCategory(ticket);
     const completed = ownerKanbanColumnForTicket(ticket) === "completed";
     const saving = state.ownerKanbanMovingId === ticket.id;
     return `<article class="owner-kanban-card ${dateState === "overdue" ? "is-overdue" : ""} ${blockers.length ? "is-blocked" : ""} ${saving ? "is-saving" : ""}" tabindex="0" ${dragAttrs} aria-busy="${saving ? "true" : "false"}">
-      ${isCanonical && canManageOwnerWorkflow() ? `<span class="owner-kanban-drag-handle" draggable="true" aria-hidden="true" title="Click and hold to drag this ticket"><i></i></span>` : ""}
-      <button type="button" class="owner-kanban-card-open" draggable="${isCanonical && canManageOwnerWorkflow() ? "true" : "false"}" data-action="open-ticket" data-ticket-source="${escapeHtml(ticket.source)}" data-id="${escapeHtml(ticket.id)}">
+      ${isCanonical && canManageOwnerWorkflow() ? `<span class="owner-kanban-drag-handle" role="button" tabindex="0" aria-label="Drag ticket" title="Click and hold to drag this ticket"><i></i></span>` : ""}
+      <button type="button" class="owner-kanban-card-open" data-action="open-ticket" data-ticket-source="${escapeHtml(ticket.source)}" data-id="${escapeHtml(ticket.id)}">
         <strong>${escapeHtml(ticket.title || "Untitled ticket")}</strong>
         <small>${escapeHtml([ticket.customer, ticket.property].filter(Boolean).join(" · ") || ticket.number)}</small>
       </button>
@@ -21533,42 +21531,42 @@
       }
     });
 
-    els.appView.addEventListener("dragstart", (event) => {
-      const card = event.target?.closest?.("[data-owner-kanban-card][draggable='true']");
-      if (!card) return;
-      state.ownerKanbanMovingId = card.dataset.id || "";
-      event.dataTransfer.effectAllowed = "move";
-      event.dataTransfer.setData("text/plain", state.ownerKanbanMovingId);
-      card.classList.add("is-dragging");
-    });
+    let ownerKanbanPointerDrag = null;
 
-    els.appView.addEventListener("dragend", (event) => {
-      event.target?.closest?.("[data-owner-kanban-card]")?.classList.remove("is-dragging");
+    const clearOwnerKanbanPointerDrag = () => {
+      ownerKanbanPointerDrag?.card?.classList.remove("is-dragging");
       qsa("[data-owner-kanban-column].is-drag-over").forEach((column) => column.classList.remove("is-drag-over"));
+      ownerKanbanPointerDrag = null;
       state.ownerKanbanMovingId = "";
-    });
+    };
 
-    els.appView.addEventListener("dragover", (event) => {
-      const column = event.target?.closest?.("[data-owner-kanban-column]");
-      if (!column || !state.ownerKanbanMovingId) return;
+    els.appView.addEventListener("pointerdown", (event) => {
+      const handle = event.target?.closest?.(".owner-kanban-drag-handle");
+      const card = handle?.closest?.("[data-owner-kanban-card]");
+      if (!handle || !card || !card.dataset.id || event.button > 0) return;
       event.preventDefault();
-      event.dataTransfer.dropEffect = "move";
-      column.classList.add("is-drag-over");
+      ownerKanbanPointerDrag = { card, handle, pointerId: event.pointerId, ticketId: card.dataset.id };
+      state.ownerKanbanMovingId = card.dataset.id;
+      card.classList.add("is-dragging");
+      handle.setPointerCapture?.(event.pointerId);
     });
 
-    els.appView.addEventListener("dragleave", (event) => {
-      const column = event.target?.closest?.("[data-owner-kanban-column]");
-      if (!column || column.contains(event.relatedTarget)) return;
-      column.classList.remove("is-drag-over");
-    });
-
-    els.appView.addEventListener("drop", async (event) => {
-      const column = event.target?.closest?.("[data-owner-kanban-column]");
-      if (!column) return;
+    els.appView.addEventListener("pointermove", (event) => {
+      if (!ownerKanbanPointerDrag || ownerKanbanPointerDrag.pointerId !== event.pointerId) return;
       event.preventDefault();
-      column.classList.remove("is-drag-over");
-      const ticketId = event.dataTransfer?.getData("text/plain") || state.ownerKanbanMovingId;
-      const nextStage = column.dataset.ownerKanbanColumn || "";
+      const column = document.elementFromPoint(event.clientX, event.clientY)?.closest?.("[data-owner-kanban-column]");
+      qsa("[data-owner-kanban-column].is-drag-over").forEach((item) => item.classList.toggle("is-drag-over", item === column));
+    });
+
+    els.appView.addEventListener("pointercancel", clearOwnerKanbanPointerDrag);
+
+    els.appView.addEventListener("pointerup", async (event) => {
+      if (!ownerKanbanPointerDrag || ownerKanbanPointerDrag.pointerId !== event.pointerId) return;
+      event.preventDefault();
+      const { ticketId } = ownerKanbanPointerDrag;
+      const column = document.elementFromPoint(event.clientX, event.clientY)?.closest?.("[data-owner-kanban-column]");
+      const nextStage = column?.dataset.ownerKanbanColumn || "";
+      clearOwnerKanbanPointerDrag();
       if (!ticketId || !nextStage) return;
       try {
         setDashboardState("Moving ticket...");
@@ -21577,8 +21575,6 @@
       } catch (error) {
         setDashboardState(error.message || "Unable to move ticket.", "error");
         openTicketDrawer("ticket", ticketId);
-      } finally {
-        state.ownerKanbanMovingId = "";
       }
     });
 

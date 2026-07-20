@@ -488,6 +488,7 @@ test("owner overview kanban keeps five visual stages over canonical ticket workf
   assert.match(js, /\{ key: "new", label: "New"[\s\S]*\{ key: "planned", label: "Planned"[\s\S]*\{ key: "in_progress", label: "In Progress"[\s\S]*\{ key: "review", label: "Review"[\s\S]*\{ key: "completed", label: "Completed"/);
   assert.match(js, /function ownerKanbanTargetStage/);
   assert.match(js, /owner-kanban-drag-handle/);
+  assert.match(js, /addEventListener\("pointerdown"[\s\S]*setPointerCapture[\s\S]*addEventListener\("pointermove"[\s\S]*elementFromPoint[\s\S]*addEventListener\("pointerup"/);
   assert.match(js, /async function moveOwnerKanbanTicket[\s\S]*previousTickets[\s\S]*updateJobTicket[\s\S]*insertJobTicketEvent[\s\S]*state\.data\.tickets = previousTickets/);
   assert.match(js, /data-owner-kanban-search/);
   assert.match(js, /data-owner-kanban-filter="assignee"/);

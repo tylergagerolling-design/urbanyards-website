@@ -5456,6 +5456,39 @@
     }
   }
 
+  function ownerKanbanSourceStatus(columnKey, source) {
+    const statuses = source === "job"
+      ? { new: "Kanban New", planned: "Scheduled", in_progress: "In Progress", review: "Review" }
+      : { new: "New", planned: "Interested", in_progress: "Won", review: "Review" };
+    return statuses[columnKey] || statuses.new;
+  }
+
+  async function moveOwnerKanbanSourceCard(ticketId, ticketSource, columnKey) {
+    if (ticketSource === "ticket") {
+      return moveOwnerKanbanTicket(ticketId, columnKey, { notes: "Moved freely on the Owner Overview Kanban." });
+    }
+    if (ticketSource === "quote") {
+      const item = findSubmission(ticketId);
+      if (!item) throw new Error("This lead could not be found.");
+      return updateSubmission(ticketId, {
+        status: ownerKanbanSourceStatus(columnKey, "quote"),
+        follow_up: item.followUp === "Not set" ? "" : item.followUp,
+        notes: item.notes || ""
+      });
+    }
+    if (ticketSource === "job") {
+      const item = state.data.jobs.find((job) => String(job.id) === String(ticketId));
+      if (!item) throw new Error("This scheduled job could not be found.");
+      const updated = await updateScheduledJob(ticketId, {
+        status: ownerKanbanSourceStatus(columnKey, "job")
+      });
+      const index = state.data.jobs.findIndex((job) => String(job.id) === String(ticketId));
+      if (index >= 0 && updated) state.data.jobs[index] = updated;
+      return updated;
+    }
+    throw new Error("This card type cannot be moved on the Kanban board.");
+  }
+
   async function insertJobTicketEvent(ticketId, input = {}) {
     if (!ticketId) return null;
     if (isDemoMode()) return null;
@@ -9983,6 +10016,7 @@
 
   function jobStage(item) {
     const status = statusText(item.status);
+    if (/kanban new/.test(status)) return "sales_intake";
     if (/cancel/.test(status)) return "cancelled";
     if (/paid|closed/.test(status)) return "closed";
     if (/invoice sent/.test(status)) return "invoice_sent";
@@ -19533,27 +19567,6 @@
         return;
       }
 
-      if (action === "push-owner-kanban-forward") {
-        const nextColumn = target.dataset.nextColumn || "";
-        const ticketSource = target.dataset.ticketSource || "ticket";
-        if (!id || !nextColumn) return;
-        try {
-          target.disabled = true;
-          setDashboardState("Moving ticket forward...");
-          const canonicalTicket = ticketSource === "ticket"
-            ? dashboardTickets().find((ticket) => ticket.source === "ticket" && ticket.id === id)
-            : await ensureJobTicketForSourceRecord(ticketSource, id);
-          if (!canonicalTicket?.id) throw new Error("Unable to create a unified ticket for this board card.");
-          await moveOwnerKanbanTicket(canonicalTicket.id, nextColumn, { notes: "Pushed forward from Owner Overview Kanban." });
-          setDashboardState(`Ticket moved to ${ownerKanbanColumnLabel(nextColumn)}.`);
-        } catch (error) {
-          target.disabled = false;
-          setDashboardState(error.message || "Unable to move ticket forward.", "error");
-          openTicketDrawer("ticket", id);
-        }
-        return;
-      }
-
       if (action === "clear-owner-kanban-leads") {
         if (!canManageOwnerWorkflow()) {
           setDashboardState("Only Owner or Admin users can clear Kanban leads.", "error");
@@ -19570,20 +19583,27 @@
           target.disabled = true;
           setDashboardState(`Clearing ${leads.length} lead${leads.length === 1 ? "" : "s"}...`);
           for (const lead of leads) {
-            const canonicalLead = lead.source === "ticket" ? lead : await ensureJobTicketForSourceRecord(lead.source, lead.id);
-            if (!canonicalLead?.id) throw new Error(`Unable to create a unified ticket for ${lead.customer || lead.title || "a lead"}.`);
-            const fromStage = ticketStage(canonicalLead);
-            await updateJobTicket(canonicalLead.id, {
-              stage: "cancelled",
-              status: "cancelled",
-              next_action: ticketNextAction("cancelled")
-            });
-            await insertJobTicketEvent(canonicalLead.id, {
-              eventType: "ticket_stage_changed",
-              fromStage,
-              toStage: "cancelled",
-              notes: "Cleared from the Owner Overview Kanban leads column."
-            });
+            if (lead.source === "quote") {
+              const item = findSubmission(lead.id);
+              await updateSubmission(lead.id, {
+                status: "Lost",
+                follow_up: item?.followUp === "Not set" ? "" : item?.followUp || "",
+                notes: item?.notes || ""
+              });
+            } else {
+              const fromStage = ticketStage(lead);
+              await updateJobTicket(lead.id, {
+                stage: "cancelled",
+                status: "cancelled",
+                next_action: ticketNextAction("cancelled")
+              });
+              await insertJobTicketEvent(lead.id, {
+                eventType: "ticket_stage_changed",
+                fromStage,
+                toStage: "cancelled",
+                notes: "Cleared from the Owner Overview Kanban leads column."
+              });
+            }
           }
           await refreshDashboard();
           setDashboardState(`${leads.length} lead${leads.length === 1 ? "" : "s"} cleared from the active board.`);
@@ -21639,11 +21659,8 @@
       if (!ticketId || !nextColumn) return;
       try {
         setDashboardState("Moving ticket...");
-        const canonicalTicket = ticketSource === "ticket"
-          ? dashboardTickets().find((ticket) => ticket.source === "ticket" && ticket.id === ticketId)
-          : await ensureJobTicketForSourceRecord(ticketSource, ticketId);
-        if (!canonicalTicket?.id) throw new Error("Unable to create a unified ticket for this board card.");
-        await moveOwnerKanbanTicket(canonicalTicket.id, nextColumn, { notes: "Moved freely on the Owner Overview Kanban." });
+        await moveOwnerKanbanSourceCard(ticketId, ticketSource, nextColumn);
+        await refreshDashboard();
         setDashboardState(`Ticket moved to ${ownerKanbanColumnLabel(nextColumn)}.`);
       } catch (error) {
         setDashboardState(error.message || "Unable to move ticket.", "error");

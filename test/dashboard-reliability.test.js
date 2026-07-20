@@ -491,8 +491,10 @@ test("owner overview kanban keeps four freely movable stages and reserves comple
   assert.match(js, /owner-kanban-drag-handle/);
   assert.match(js, /addEventListener\("pointerdown"[\s\S]*setPointerCapture[\s\S]*addEventListener\("pointermove"[\s\S]*elementFromPoint[\s\S]*addEventListener\("pointerup"/);
   assert.match(js, /data-action="clear-owner-kanban-leads"/);
-  assert.match(js, /ticketSource === "ticket"[\s\S]*ensureJobTicketForSourceRecord[\s\S]*moveOwnerKanbanTicket/);
-  assert.match(js, /action === "clear-owner-kanban-leads"[\s\S]*window\.confirm[\s\S]*stage: "cancelled"[\s\S]*refreshDashboard/);
+  assert.match(js, /async function moveOwnerKanbanSourceCard[\s\S]*updateSubmission[\s\S]*updateScheduledJob/);
+  assert.match(js, /addEventListener\("pointerup"[\s\S]*moveOwnerKanbanSourceCard[\s\S]*refreshDashboard/);
+  assert.match(js, /action === "clear-owner-kanban-leads"[\s\S]*window\.confirm[\s\S]*status: "Lost"[\s\S]*stage: "cancelled"[\s\S]*refreshDashboard/);
+  assert.match(css, /grid-template-columns: repeat\(4, minmax\(220px, 1fr\)\)/);
   assert.match(js, /async function moveOwnerKanbanTicket[\s\S]*previousTickets[\s\S]*updateJobTicket[\s\S]*insertJobTicketEvent[\s\S]*state\.data\.tickets = previousTickets/);
   assert.match(js, /data-owner-kanban-search/);
   assert.match(js, /data-owner-kanban-filter="assignee"/);
@@ -502,7 +504,7 @@ test("owner overview kanban keeps four freely movable stages and reserves comple
   assert.match(js, /data-owner-kanban-filter="status"/);
   assert.match(js, /data-owner-kanban-filter="sort"/);
   assert.match(js, /owner-kanban-empty[\s\S]*Clear for now/);
-  assert.match(css, /owner-kanban-scroll[\s\S]*grid-template-columns: repeat\(5, minmax\(210px, 1fr\)\)/);
+  assert.match(css, /owner-kanban-scroll[\s\S]*grid-template-columns: repeat\(4, minmax\(220px, 1fr\)\)/);
   assert.match(css, /@media \(max-width: 700px\)[\s\S]*grid-auto-columns: minmax\(260px, 84vw\)/);
 });
 

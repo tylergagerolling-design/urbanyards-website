@@ -15624,7 +15624,7 @@ body:not(.is-login-screen) .owner-kanban-toggle {
 
 body:not(.is-login-screen) .owner-kanban-scroll {
   grid-auto-columns: minmax(210px, 1fr);
-  grid-template-columns: repeat(5, minmax(210px, 1fr));
+  grid-template-columns: repeat(4, minmax(220px, 1fr));
   gap: 10px;
   padding: 2px 2px 8px;
 }
@@ -15640,7 +15640,6 @@ body:not(.is-login-screen) .owner-kanban-column {
 body:not(.is-login-screen) .owner-kanban-column--planned { background: #f4f1e7; }
 body:not(.is-login-screen) .owner-kanban-column--in_progress { background: #eaf0f1; }
 body:not(.is-login-screen) .owner-kanban-column--review { background: #f0edf4; }
-body:not(.is-login-screen) .owner-kanban-column--completed { background: #e9f1e9; }
 
 body:not(.is-login-screen) .owner-kanban-column-head {
   align-items: center;

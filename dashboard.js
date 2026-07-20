@@ -12142,7 +12142,7 @@
     const assignees = tickets.map(ticketAssigneeLabel);
     const priorities = tickets.map(ticketPriorityLabel);
     const types = tickets.map((ticket) => ticket.sourceType || ticket.source || "ticket");
-    const clearableLeads = tickets.filter((ticket) => ticket.source === "ticket" && ownerKanbanColumnForTicket(ticket) === "new");
+    const clearableLeads = tickets.filter((ticket) => ["ticket", "quote"].includes(ticket.source) && ownerKanbanColumnForTicket(ticket) === "new");
     return `<section class="owner-kanban-toolbar" aria-label="Owner Kanban filters">
       <div class="owner-kanban-toolbar-head">
         <div>
@@ -12153,7 +12153,7 @@
         <div class="owner-kanban-toolbar-actions">
           <span>${escapeHtml(filteredTickets.length)} of ${escapeHtml(tickets.length)} shown</span>
           <button type="button" data-action="refresh-owner-kanban">Refresh</button>
-          ${canManageOwnerWorkflow() && clearableLeads.length ? `<button type="button" class="owner-kanban-clear-leads" data-action="clear-owner-kanban-leads" data-count="${escapeHtml(clearableLeads.length)}">Clear All Leads (${escapeHtml(clearableLeads.length)})</button>` : ""}
+          ${canManageOwnerWorkflow() ? `<button type="button" class="owner-kanban-clear-leads" data-action="clear-owner-kanban-leads" data-count="${escapeHtml(clearableLeads.length)}"${clearableLeads.length ? "" : " disabled"}>Clear All Leads (${escapeHtml(clearableLeads.length)})</button>` : ""}
           <details class="owner-kanban-view-settings">
             <summary>View Settings</summary>
             <div>
@@ -12252,7 +12252,7 @@
       </div>
       ${blockers.length ? `<div class="owner-kanban-blockers">${blockers.slice(0, 2).map((item) => `<span>${escapeHtml(item)}</span>`).join("")}</div>` : ""}
       ${saving ? `<div class="owner-kanban-saving" role="status">Saving…</div>` : ""}
-      ${isCanonical && canManageOwnerWorkflow() && nextColumn ? `<button type="button" class="owner-kanban-push-forward" data-action="push-owner-kanban-forward" data-id="${escapeHtml(ticket.id)}" data-next-column="${escapeHtml(nextColumn.key)}"${saving ? " disabled" : ""}>Push Forward <span aria-hidden="true">→</span></button>` : ""}
+      ${["ticket", "quote", "job"].includes(ticket.source) && canManageOwnerWorkflow() && nextColumn ? `<button type="button" class="owner-kanban-push-forward" data-action="push-owner-kanban-forward" data-id="${escapeHtml(ticket.id)}" data-ticket-source="${escapeHtml(ticket.source)}" data-next-column="${escapeHtml(nextColumn.key)}"${saving ? " disabled" : ""}>Push Forward <span aria-hidden="true">→</span></button>` : ""}
       ${renderOwnerKanbanMoveSelect(ticket)}
     </article>`;
   }
@@ -19542,11 +19542,16 @@
 
       if (action === "push-owner-kanban-forward") {
         const nextColumn = target.dataset.nextColumn || "";
+        const ticketSource = target.dataset.ticketSource || "ticket";
         if (!id || !nextColumn) return;
         try {
           target.disabled = true;
           setDashboardState("Moving ticket forward...");
-          await moveOwnerKanbanTicket(id, nextColumn, { notes: "Pushed forward from Owner Overview Kanban." });
+          const canonicalTicket = ticketSource === "ticket"
+            ? dashboardTickets().find((ticket) => ticket.source === "ticket" && ticket.id === id)
+            : await ensureJobTicketForSourceRecord(ticketSource, id);
+          if (!canonicalTicket?.id) throw new Error("Unable to create a unified ticket for this board card.");
+          await moveOwnerKanbanTicket(canonicalTicket.id, nextColumn, { notes: "Pushed forward from Owner Overview Kanban." });
           setDashboardState(`Ticket moved to ${ownerKanbanColumnLabel(nextColumn)}.`);
         } catch (error) {
           target.disabled = false;
@@ -19561,7 +19566,7 @@
           setDashboardState("Only Owner or Admin users can clear Kanban leads.", "error");
           return;
         }
-        const leads = dashboardTickets().filter((ticket) => ticket.source === "ticket" && ownerKanbanColumnForTicket(ticket) === "new");
+        const leads = dashboardTickets().filter((ticket) => ["ticket", "quote"].includes(ticket.source) && ownerKanbanColumnForTicket(ticket) === "new");
         if (!leads.length) {
           setDashboardState("There are no leads to clear.");
           return;
@@ -19572,13 +19577,15 @@
           target.disabled = true;
           setDashboardState(`Clearing ${leads.length} lead${leads.length === 1 ? "" : "s"}...`);
           for (const lead of leads) {
-            const fromStage = ticketStage(lead);
-            await updateJobTicket(lead.id, {
+            const canonicalLead = lead.source === "ticket" ? lead : await ensureJobTicketForSourceRecord(lead.source, lead.id);
+            if (!canonicalLead?.id) throw new Error(`Unable to create a unified ticket for ${lead.customer || lead.title || "a lead"}.`);
+            const fromStage = ticketStage(canonicalLead);
+            await updateJobTicket(canonicalLead.id, {
               stage: "cancelled",
               status: "cancelled",
               next_action: ticketNextAction("cancelled")
             });
-            await insertJobTicketEvent(lead.id, {
+            await insertJobTicketEvent(canonicalLead.id, {
               eventType: "ticket_stage_changed",
               fromStage,
               toStage: "cancelled",

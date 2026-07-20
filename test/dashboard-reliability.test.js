@@ -491,6 +491,8 @@ test("owner overview kanban keeps five visual stages over canonical ticket workf
   assert.match(js, /data-action="push-owner-kanban-forward"/);
   assert.match(js, /action === "push-owner-kanban-forward"[\s\S]*moveOwnerKanbanTicket/);
   assert.match(js, /data-action="clear-owner-kanban-leads"/);
+  assert.match(js, /push-owner-kanban-forward"[\s\S]*data-ticket-source/);
+  assert.match(js, /ticketSource === "ticket"[\s\S]*ensureJobTicketForSourceRecord/);
   assert.match(js, /action === "clear-owner-kanban-leads"[\s\S]*window\.confirm[\s\S]*stage: "cancelled"[\s\S]*refreshDashboard/);
   assert.match(js, /async function moveOwnerKanbanTicket[\s\S]*previousTickets[\s\S]*updateJobTicket[\s\S]*insertJobTicketEvent[\s\S]*state\.data\.tickets = previousTickets/);
   assert.match(js, /data-owner-kanban-search/);

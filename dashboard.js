@@ -5413,10 +5413,7 @@
     if (!ticket) throw new Error("Only unified Job Tickets can be moved on the Owner Kanban board.");
     if (!canManageOwnerWorkflow()) throw new Error("Your dashboard role cannot move tickets on the owner board.");
     const fromStage = ticketStage(ticket);
-    const nextStage = ownerKanbanTransitionStage(ticket, toStage);
-    if (!nextStage) {
-      throw new Error(`This ticket cannot move directly from ${ticketStageLabel(fromStage)} to ${ownerKanbanColumnLabel(toStage)}. Complete its next workflow step first.`);
-    }
+    const nextStage = normalizeTicketStageForDashboard(ownerKanbanTargetStage(toStage));
     if (fromStage === nextStage) return ticket;
     const missing = ticketMissingRequirementsForStage(ticket, nextStage);
     if (missing.length) {
@@ -5439,9 +5436,16 @@
     }
 
     try {
-      const updated = await transitionJobTicketStage(ticketId, nextStage, {
-        notes: options.notes || `Moved from ${ticketStageLabel(fromStage)} to ${ticketStageLabel(nextStage)} from Owner Overview Kanban.`,
-        nextAction: ticketNextAction(nextStage)
+      const updated = await updateJobTicket(ticketId, {
+        stage: nextStage,
+        status: ticketRecordStatusForStage(nextStage),
+        next_action: ticketNextAction(nextStage)
+      });
+      await insertJobTicketEvent(ticketId, {
+        eventType: "ticket_stage_changed",
+        fromStage,
+        toStage: nextStage,
+        notes: options.notes || `Moved from ${ticketStageLabel(fromStage)} to ${ticketStageLabel(nextStage)} from Owner Overview Kanban.`
       });
       state.ownerKanbanMovingId = "";
       renderHomeWorkspace(state.data);
@@ -12013,14 +12017,6 @@
 
   function ownerKanbanColumnLabel(value) {
     return ownerKanbanColumns.find((column) => column.key === value)?.label || ticketStageLabel(value);
-  }
-
-  function ownerKanbanTransitionStage(ticket = {}, columnKey = "") {
-    const fromStage = ticketStage(ticket);
-    if (ownerKanbanColumnForTicket(ticket) === columnKey) return fromStage;
-    const directTransition = (ticketLifecycleTransitions[fromStage] || [])
-      .find((transition) => ownerKanbanColumnForTicket({ stage: transition.to }) === columnKey);
-    return directTransition?.to || "";
   }
 
   function loadOwnerKanbanFilters() {

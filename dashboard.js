@@ -12235,7 +12235,7 @@
     const completed = ownerKanbanColumnForTicket(ticket) === "completed";
     const saving = state.ownerKanbanMovingId === ticket.id;
     return `<article class="owner-kanban-card ${dateState === "overdue" ? "is-overdue" : ""} ${blockers.length ? "is-blocked" : ""} ${saving ? "is-saving" : ""}" tabindex="0" ${dragAttrs} aria-busy="${saving ? "true" : "false"}">
-      ${isCanonical && canManageOwnerWorkflow() ? `<span class="owner-kanban-drag-handle" draggable="true" aria-hidden="true" title="Drag ticket">⠿</span>` : ""}
+      ${isCanonical && canManageOwnerWorkflow() ? `<span class="owner-kanban-drag-handle" draggable="true" aria-hidden="true" title="Click and hold to drag this ticket"><i></i></span>` : ""}
       <button type="button" class="owner-kanban-card-open" draggable="${isCanonical && canManageOwnerWorkflow() ? "true" : "false"}" data-action="open-ticket" data-ticket-source="${escapeHtml(ticket.source)}" data-id="${escapeHtml(ticket.id)}">
         <strong>${escapeHtml(ticket.title || "Untitled ticket")}</strong>
         <small>${escapeHtml([ticket.customer, ticket.property].filter(Boolean).join(" · ") || ticket.number)}</small>

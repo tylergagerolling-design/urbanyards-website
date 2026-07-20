@@ -15331,11 +15331,38 @@ body:not(.is-login-screen) .owner-kanban-drag-handle {
   width: 22px;
   height: 22px;
   border-radius: 7px;
-  color: #78857b;
-  font-size: .9rem;
-  line-height: 1;
+  border: 1px solid rgba(18, 63, 49, .12);
+  background: #f5f7f2;
   cursor: grab;
   touch-action: none;
+}
+
+body:not(.is-login-screen) .owner-kanban-drag-handle i,
+body:not(.is-login-screen) .owner-kanban-drag-handle i::before,
+body:not(.is-login-screen) .owner-kanban-drag-handle i::after {
+  display: block;
+  width: 3px;
+  height: 3px;
+  border-radius: 50%;
+  background: #66766b;
+  box-shadow: 6px 0 #66766b;
+  content: "";
+}
+
+body:not(.is-login-screen) .owner-kanban-drag-handle i {
+  position: relative;
+}
+
+body:not(.is-login-screen) .owner-kanban-drag-handle i::before {
+  position: absolute;
+  top: -6px;
+  left: 0;
+}
+
+body:not(.is-login-screen) .owner-kanban-drag-handle i::after {
+  position: absolute;
+  top: 6px;
+  left: 0;
 }
 
 body:not(.is-login-screen) .owner-kanban-drag-handle:hover {

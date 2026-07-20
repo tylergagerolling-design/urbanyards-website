@@ -5382,6 +5382,17 @@
     return ticket;
   }
 
+  async function deleteJobTicket(id) {
+    if (!id) return false;
+    if (isDemoMode()) {
+      state.data.tickets = state.data.tickets.filter((ticket) => String(ticket.id) !== String(id));
+      return true;
+    }
+    await dashboardTicketRequest("delete", { id });
+    state.data.tickets = state.data.tickets.filter((ticket) => String(ticket.id) !== String(id));
+    return true;
+  }
+
   async function transitionJobTicketStage(id, toStage, input = {}) {
     if (!id || !toStage) return null;
     const nextStage = normalizeTicketStageForDashboard(toStage);
@@ -12171,7 +12182,7 @@
     const assignees = tickets.map(ticketAssigneeLabel);
     const priorities = tickets.map(ticketPriorityLabel);
     const types = tickets.map((ticket) => ticket.sourceType || ticket.source || "ticket");
-    const clearableLeads = tickets.filter((ticket) => ["ticket", "quote"].includes(ticket.source) && ownerKanbanColumnForTicket(ticket) === "new");
+    const clearableLeads = tickets.filter((ticket) => ["ticket", "quote", "job"].includes(ticket.source) && ownerKanbanColumnForTicket(ticket) === "new");
     return `<section class="owner-kanban-toolbar" aria-label="Owner Kanban filters">
       <div class="owner-kanban-toolbar-head">
         <div>
@@ -12182,7 +12193,7 @@
         <div class="owner-kanban-toolbar-actions">
           <span>${escapeHtml(filteredTickets.length)} of ${escapeHtml(tickets.length)} shown</span>
           <button type="button" data-action="refresh-owner-kanban">Refresh</button>
-          ${canManageOwnerWorkflow() ? `<button type="button" class="owner-kanban-clear-leads" data-action="clear-owner-kanban-leads" data-count="${escapeHtml(clearableLeads.length)}"${clearableLeads.length ? "" : " disabled"}>Clear All Leads (${escapeHtml(clearableLeads.length)})</button>` : ""}
+          ${canManageOwnerWorkflow() ? `<button type="button" class="owner-kanban-clear-leads" data-action="clear-owner-kanban-leads" data-count="${escapeHtml(clearableLeads.length)}"${clearableLeads.length ? "" : " disabled"}>Clear New Column (${escapeHtml(clearableLeads.length)})</button>` : ""}
           <details class="owner-kanban-view-settings">
             <summary>View Settings</summary>
             <div>
@@ -19572,41 +19583,29 @@
           setDashboardState("Only Owner or Admin users can clear Kanban leads.", "error");
           return;
         }
-        const leads = dashboardTickets().filter((ticket) => ["ticket", "quote"].includes(ticket.source) && ownerKanbanColumnForTicket(ticket) === "new");
+        const leads = dashboardTickets().filter((ticket) => ["ticket", "quote", "job"].includes(ticket.source) && ownerKanbanColumnForTicket(ticket) === "new");
         if (!leads.length) {
           setDashboardState("There are no leads to clear.");
           return;
         }
-        const ok = window.confirm(`Clear all ${leads.length} lead${leads.length === 1 ? "" : "s"} from the active Kanban board? They will be marked Cancelled, not permanently deleted.`);
+        const ok = window.confirm(`Permanently delete all ${leads.length} card${leads.length === 1 ? "" : "s"} in the New column? This deletes their underlying records and cannot be undone.`);
         if (!ok) return;
         try {
           target.disabled = true;
-          setDashboardState(`Clearing ${leads.length} lead${leads.length === 1 ? "" : "s"}...`);
+          setDashboardState(`Deleting ${leads.length} New-column card${leads.length === 1 ? "" : "s"}...`);
           for (const lead of leads) {
             if (lead.source === "quote") {
-              const item = findSubmission(lead.id);
-              await updateSubmission(lead.id, {
-                status: "Lost",
-                follow_up: item?.followUp === "Not set" ? "" : item?.followUp || "",
-                notes: item?.notes || ""
-              });
+              await deleteRow("quote_submissions", lead.id);
+            } else if (lead.source === "job") {
+              await deleteRow("scheduled_jobs", lead.id);
             } else {
-              const fromStage = ticketStage(lead);
-              await updateJobTicket(lead.id, {
-                stage: "cancelled",
-                status: "cancelled",
-                next_action: ticketNextAction("cancelled")
-              });
-              await insertJobTicketEvent(lead.id, {
-                eventType: "ticket_stage_changed",
-                fromStage,
-                toStage: "cancelled",
-                notes: "Cleared from the Owner Overview Kanban leads column."
-              });
+              if (lead.sourceType === "quote" && lead.sourceId) await deleteRow("quote_submissions", lead.sourceId);
+              if (lead.sourceType === "job" && lead.sourceId) await deleteRow("scheduled_jobs", lead.sourceId);
+              await deleteJobTicket(lead.id);
             }
           }
           await refreshDashboard();
-          setDashboardState(`${leads.length} lead${leads.length === 1 ? "" : "s"} cleared from the active board.`);
+          setDashboardState(`${leads.length} New-column card${leads.length === 1 ? "" : "s"} permanently deleted.`);
         } catch (error) {
           target.disabled = false;
           await refreshDashboard();

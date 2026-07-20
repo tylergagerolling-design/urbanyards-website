@@ -309,6 +309,19 @@ async function updateTicket(id, payload) {
   return Array.isArray(rows) ? rows[0] || null : null;
 }
 
+async function deleteTicket(id) {
+  await supabaseAdminRequest(`job_ticket_events?ticket_id=eq.${encodeURIComponent(id)}`, {
+    method: "DELETE",
+    headers: { Prefer: "return=minimal" }
+  }).catch((error) => {
+    if (!tableMissing(error)) throw error;
+  });
+  await supabaseAdminRequest(`job_tickets?id=eq.${encodeURIComponent(id)}`, {
+    method: "DELETE",
+    headers: { Prefer: "return=minimal" }
+  });
+}
+
 async function getTicket(id) {
   const rows = await supabaseAdminRequest(`job_tickets?id=eq.${encodeURIComponent(id)}&select=*&limit=1`, {
     method: "GET"
@@ -437,7 +450,7 @@ exports.handler = async (event) => {
   try {
     body = parseBody(event);
     const action = String(body.action || "").trim().toLowerCase();
-    if (!["list", "events", "create", "update", "transition", "event"].includes(action)) {
+    if (!["list", "events", "create", "update", "delete", "transition", "event"].includes(action)) {
       return json(400, { error: "Unsupported ticket action.", requestId });
     }
 
@@ -503,6 +516,21 @@ exports.handler = async (event) => {
         module: "tickets"
       });
       return json(200, { ok: true, ticket, requestId });
+    }
+
+    if (action === "delete") {
+      const id = uuidOrNull(body.id || body.ticketId);
+      if (!id) return json(400, { error: "A valid ticket id is required.", requestId });
+      await deleteTicket(id);
+      await writeAuditLog({
+        actor,
+        action: "ticket_deleted",
+        entityType: "job_tickets",
+        entityId: id,
+        event,
+        module: "tickets"
+      });
+      return json(200, { ok: true, deleted: true, id, requestId });
     }
 
     if (action === "transition") {

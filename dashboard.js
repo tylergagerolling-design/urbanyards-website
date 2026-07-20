@@ -12202,7 +12202,6 @@
               <label><input type="checkbox" data-owner-kanban-toggle="overdueOnly"${state.ownerKanbanOverdueOnly ? " checked" : ""}> Overdue only</label>
             </div>
           </details>
-          ${canCreateTicketType("quote") ? `<button type="button" data-action="open-ticket-create" data-ticket-type="quote">+ New Ticket</button>` : ""}
         </div>
       </div>
       <div class="owner-kanban-filters">
@@ -12313,7 +12312,6 @@
             <div class="owner-kanban-column-list">
               ${shownTickets.length ? shownTickets.map(renderOwnerKanbanCard).join("") : `<p class="owner-kanban-empty"><strong>Clear for now</strong><span>Drop a ticket here or add a new one.</span></p>`}
             </div>
-            ${canCreateTicketType("quote") ? `<button class="owner-kanban-add" type="button" data-action="open-ticket-create" data-ticket-type="quote">+ Add Ticket</button>` : ""}
           </section>`;
         }).join("")}
       </div>
@@ -21686,14 +21684,20 @@
       state.ownerKanbanSuppressClickUntil = Date.now() + 400;
       const column = document.elementFromPoint(event.clientX, event.clientY)?.closest?.("[data-owner-kanban-column]");
       const nextColumn = column?.dataset.ownerKanbanColumn || "";
-      clearOwnerKanbanPointerDrag();
-      if (!ticketId || !nextColumn) return;
+      if (!ticketId || !nextColumn) {
+        clearOwnerKanbanPointerDrag();
+        return;
+      }
       try {
-        setDashboardState("Moving ticket...");
+        setDashboardState(`Moving ticket to ${ownerKanbanColumnLabel(nextColumn)}...`);
         await moveOwnerKanbanSourceCard(ticketId, ticketSource, nextColumn);
+        clearOwnerKanbanPointerDrag();
+        renderHomeWorkspace(state.data);
         await refreshDashboard();
         setDashboardState(`Ticket moved to ${ownerKanbanColumnLabel(nextColumn)}.`);
       } catch (error) {
+        clearOwnerKanbanPointerDrag();
+        renderHomeWorkspace(state.data);
         setDashboardState(error.message || "Unable to move ticket.", "error");
       }
     });

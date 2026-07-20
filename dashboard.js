@@ -12142,16 +12142,18 @@
     const assignees = tickets.map(ticketAssigneeLabel);
     const priorities = tickets.map(ticketPriorityLabel);
     const types = tickets.map((ticket) => ticket.sourceType || ticket.source || "ticket");
+    const clearableLeads = tickets.filter((ticket) => ticket.source === "ticket" && ownerKanbanColumnForTicket(ticket) === "new");
     return `<section class="owner-kanban-toolbar" aria-label="Owner Kanban filters">
       <div class="owner-kanban-toolbar-head">
         <div>
           <p class="eyebrow">Owner Overview</p>
           <h3>Kanban Board</h3>
-          <p>Drag and drop tickets to update status.</p>
+          <p>Use Push Forward to advance tickets through the board.</p>
         </div>
         <div class="owner-kanban-toolbar-actions">
           <span>${escapeHtml(filteredTickets.length)} of ${escapeHtml(tickets.length)} shown</span>
           <button type="button" data-action="refresh-owner-kanban">Refresh</button>
+          ${canManageOwnerWorkflow() && clearableLeads.length ? `<button type="button" class="owner-kanban-clear-leads" data-action="clear-owner-kanban-leads" data-count="${escapeHtml(clearableLeads.length)}">Clear All Leads (${escapeHtml(clearableLeads.length)})</button>` : ""}
           <details class="owner-kanban-view-settings">
             <summary>View Settings</summary>
             <div>
@@ -19550,6 +19552,45 @@
           target.disabled = false;
           setDashboardState(error.message || "Unable to move ticket forward.", "error");
           openTicketDrawer("ticket", id);
+        }
+        return;
+      }
+
+      if (action === "clear-owner-kanban-leads") {
+        if (!canManageOwnerWorkflow()) {
+          setDashboardState("Only Owner or Admin users can clear Kanban leads.", "error");
+          return;
+        }
+        const leads = dashboardTickets().filter((ticket) => ticket.source === "ticket" && ownerKanbanColumnForTicket(ticket) === "new");
+        if (!leads.length) {
+          setDashboardState("There are no leads to clear.");
+          return;
+        }
+        const ok = window.confirm(`Clear all ${leads.length} lead${leads.length === 1 ? "" : "s"} from the active Kanban board? They will be marked Cancelled, not permanently deleted.`);
+        if (!ok) return;
+        try {
+          target.disabled = true;
+          setDashboardState(`Clearing ${leads.length} lead${leads.length === 1 ? "" : "s"}...`);
+          for (const lead of leads) {
+            const fromStage = ticketStage(lead);
+            await updateJobTicket(lead.id, {
+              stage: "cancelled",
+              status: "cancelled",
+              next_action: ticketNextAction("cancelled")
+            });
+            await insertJobTicketEvent(lead.id, {
+              eventType: "ticket_stage_changed",
+              fromStage,
+              toStage: "cancelled",
+              notes: "Cleared from the Owner Overview Kanban leads column."
+            });
+          }
+          await refreshDashboard();
+          setDashboardState(`${leads.length} lead${leads.length === 1 ? "" : "s"} cleared from the active board.`);
+        } catch (error) {
+          target.disabled = false;
+          await refreshDashboard();
+          setDashboardState(error.message || "Unable to clear all leads.", "error");
         }
         return;
       }

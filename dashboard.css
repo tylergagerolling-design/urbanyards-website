@@ -15515,6 +15515,17 @@ body:not(.is-login-screen) .owner-kanban-push-forward:disabled {
   transform: none;
 }
 
+body:not(.is-login-screen) .owner-kanban-toolbar-actions .owner-kanban-clear-leads {
+  border-color: rgba(151, 48, 39, .22);
+  background: rgba(255, 241, 238, .94);
+  color: #8c2e25;
+}
+
+body:not(.is-login-screen) .owner-kanban-toolbar-actions .owner-kanban-clear-leads:hover {
+  border-color: rgba(151, 48, 39, .4);
+  background: #fbe5e0;
+}
+
 body:not(.is-login-screen) .owner-kanban-empty {
   margin: 0;
   padding: 14px 12px;

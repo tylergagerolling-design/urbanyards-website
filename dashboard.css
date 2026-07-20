@@ -15255,9 +15255,15 @@ body:not(.is-login-screen) .owner-kanban-column {
 }
 
 body:not(.is-login-screen) .owner-kanban-column.is-drag-over {
-  border-color: rgba(45, 113, 77, .45);
-  background: rgba(231, 239, 223, .62);
-  transform: translateY(-2px);
+  border-color: #2d714d;
+  background: rgba(213, 235, 204, .92);
+  box-shadow: inset 0 0 0 3px rgba(45, 113, 77, .28), 0 14px 28px rgba(18, 63, 49, .14);
+  transform: translateY(-3px);
+}
+
+body:not(.is-login-screen) .owner-kanban-column.is-drag-over .owner-kanban-column-list {
+  outline: 2px dashed rgba(45, 113, 77, .5);
+  outline-offset: 3px;
 }
 
 body:not(.is-login-screen) .owner-kanban-column-head {

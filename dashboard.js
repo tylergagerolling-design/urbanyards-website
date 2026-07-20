@@ -12274,7 +12274,7 @@
     const [categoryLabel, categoryTone] = ownerKanbanCategory(ticket);
     const saving = state.ownerKanbanMovingId === ticket.id;
     return `<article class="owner-kanban-card ${dateState === "overdue" ? "is-overdue" : ""} ${blockers.length ? "is-blocked" : ""} ${saving ? "is-saving" : ""}" tabindex="0" ${dragAttrs} aria-busy="${saving ? "true" : "false"}">
-      <button type="button" class="owner-kanban-card-open" data-action="open-ticket" data-ticket-source="${escapeHtml(ticket.source)}" data-id="${escapeHtml(ticket.id)}">
+      <button type="button" class="owner-kanban-card-open" draggable="true" data-action="open-ticket" data-ticket-source="${escapeHtml(ticket.source)}" data-id="${escapeHtml(ticket.id)}">
         <strong>${escapeHtml(ticket.title || "Untitled ticket")}</strong>
         <small>${escapeHtml([ticket.customer, ticket.property].filter(Boolean).join(" · ") || ticket.number)}</small>
       </button>
@@ -21716,9 +21716,9 @@
         ticketSource: card.dataset.ticketSource || "ticket"
       };
       state.ownerKanbanMovingId = card.dataset.id;
-      card.classList.add("is-dragging");
       event.dataTransfer.effectAllowed = "move";
       event.dataTransfer.setData("text/plain", card.dataset.id);
+      requestAnimationFrame(() => card.classList.add("is-dragging"));
     });
 
     els.appView.addEventListener("dragover", (event) => {

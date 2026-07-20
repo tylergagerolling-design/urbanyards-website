@@ -481,18 +481,17 @@ test("ticket drawer workbench layouts wrap without overlapping content", () => {
   assert.match(css, /ticket-source-context-meta[\s\S]*grid-template-columns: repeat\(auto-fit, minmax\(min\(100%, 140px\), 1fr\)\)/);
 });
 
-test("owner overview kanban keeps five visual stages over canonical ticket workflow", () => {
+test("owner overview kanban keeps four freely movable stages and reserves completion for the ticket workflow", () => {
   const js = read("dashboard.js");
   const css = read("dashboard.css");
 
-  assert.match(js, /\{ key: "new", label: "New"[\s\S]*\{ key: "planned", label: "Planned"[\s\S]*\{ key: "in_progress", label: "In Progress"[\s\S]*\{ key: "review", label: "Review"[\s\S]*\{ key: "completed", label: "Completed"/);
+  assert.match(js, /\{ key: "new", label: "New"[\s\S]*\{ key: "planned", label: "Planned"[\s\S]*\{ key: "in_progress", label: "In Progress"[\s\S]*\{ key: "review", label: "Review"/);
+  assert.doesNotMatch(js, /\{ key: "completed", label: "Completed"/);
   assert.match(js, /function ownerKanbanTargetStage/);
-  assert.match(js, /function ownerKanbanNextColumn/);
-  assert.match(js, /data-action="push-owner-kanban-forward"/);
-  assert.match(js, /action === "push-owner-kanban-forward"[\s\S]*moveOwnerKanbanTicket/);
+  assert.match(js, /owner-kanban-drag-handle/);
+  assert.match(js, /addEventListener\("pointerdown"[\s\S]*setPointerCapture[\s\S]*addEventListener\("pointermove"[\s\S]*elementFromPoint[\s\S]*addEventListener\("pointerup"/);
   assert.match(js, /data-action="clear-owner-kanban-leads"/);
-  assert.match(js, /push-owner-kanban-forward"[\s\S]*data-ticket-source/);
-  assert.match(js, /ticketSource === "ticket"[\s\S]*ensureJobTicketForSourceRecord/);
+  assert.match(js, /ticketSource === "ticket"[\s\S]*ensureJobTicketForSourceRecord[\s\S]*moveOwnerKanbanTicket/);
   assert.match(js, /action === "clear-owner-kanban-leads"[\s\S]*window\.confirm[\s\S]*stage: "cancelled"[\s\S]*refreshDashboard/);
   assert.match(js, /async function moveOwnerKanbanTicket[\s\S]*previousTickets[\s\S]*updateJobTicket[\s\S]*insertJobTicketEvent[\s\S]*state\.data\.tickets = previousTickets/);
   assert.match(js, /data-owner-kanban-search/);

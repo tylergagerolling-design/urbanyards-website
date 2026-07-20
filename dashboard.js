@@ -5415,10 +5415,6 @@
     const fromStage = ticketStage(ticket);
     const nextStage = normalizeTicketStageForDashboard(ownerKanbanTargetStage(toStage));
     if (fromStage === nextStage) return ticket;
-    const missing = ticketMissingRequirementsForStage(ticket, nextStage);
-    if (missing.length) {
-      throw new Error(`Before moving to ${ticketStageLabel(nextStage)}, add: ${missing.join(", ")}.`);
-    }
 
     const previousTickets = state.data.tickets.slice();
     state.ownerKanbanMovingId = ticketId;
@@ -11982,8 +11978,7 @@
     { key: "new", label: "New", detail: "New requests and intake", targetStage: "sales_intake" },
     { key: "planned", label: "Planned", detail: "Quoted, approved, or scheduled", targetStage: "scope_in_progress" },
     { key: "in_progress", label: "In Progress", detail: "Active work and preparation", targetStage: "in_progress" },
-    { key: "review", label: "Review", detail: "Approval and closeout checks", targetStage: "completion_review" },
-    { key: "completed", label: "Completed", detail: "Invoiced, paid, or closed", targetStage: "field_work_complete" }
+    { key: "review", label: "Review", detail: "Approval and closeout checks", targetStage: "completion_review" }
   ];
 
   const ownerKanbanStageMap = {
@@ -12148,7 +12143,7 @@
         <div>
           <p class="eyebrow">Owner Overview</p>
           <h3>Kanban Board</h3>
-          <p>Use Push Forward to advance tickets through the board.</p>
+          <p>Drag any ticket between board stages. Complete tickets through the normal workflow.</p>
         </div>
         <div class="owner-kanban-toolbar-actions">
           <span>${escapeHtml(filteredTickets.length)} of ${escapeHtml(tickets.length)} shown</span>
@@ -12233,10 +12228,9 @@
     const isCanonical = ticket.source === "ticket";
     const dragAttrs = `data-owner-kanban-card data-ticket-source="${escapeHtml(ticket.source)}" data-id="${escapeHtml(ticket.id)}"`;
     const [categoryLabel, categoryTone] = ownerKanbanCategory(ticket);
-    const completed = ownerKanbanColumnForTicket(ticket) === "completed";
-    const nextColumn = ownerKanbanNextColumn(ticket);
     const saving = state.ownerKanbanMovingId === ticket.id;
     return `<article class="owner-kanban-card ${dateState === "overdue" ? "is-overdue" : ""} ${blockers.length ? "is-blocked" : ""} ${saving ? "is-saving" : ""}" tabindex="0" ${dragAttrs} aria-busy="${saving ? "true" : "false"}">
+      ${["ticket", "quote", "job"].includes(ticket.source) && canManageOwnerWorkflow() ? `<span class="owner-kanban-drag-handle" role="button" aria-label="Drag ticket to another stage" title="Click and hold to move this ticket"><i></i></span>` : ""}
       <button type="button" class="owner-kanban-card-open" data-action="open-ticket" data-ticket-source="${escapeHtml(ticket.source)}" data-id="${escapeHtml(ticket.id)}">
         <strong>${escapeHtml(ticket.title || "Untitled ticket")}</strong>
         <small>${escapeHtml([ticket.customer, ticket.property].filter(Boolean).join(" · ") || ticket.number)}</small>
@@ -12248,22 +12242,21 @@
       <div class="owner-kanban-card-date">
         <span><span aria-hidden="true">▣</span> ${escapeHtml(ticket.dateLabel || "No due date")}</span>
         <span class="owner-kanban-assignee" title="${escapeHtml(ticketAssigneeLabel(ticket))}">${escapeHtml(ownerKanbanAssigneeInitials(ticket))}</span>
-        ${completed ? `<span class="owner-kanban-complete" aria-label="Completed">✓</span>` : ""}
       </div>
       ${blockers.length ? `<div class="owner-kanban-blockers">${blockers.slice(0, 2).map((item) => `<span>${escapeHtml(item)}</span>`).join("")}</div>` : ""}
       ${saving ? `<div class="owner-kanban-saving" role="status">Saving…</div>` : ""}
-      ${["ticket", "quote", "job"].includes(ticket.source) && canManageOwnerWorkflow() && nextColumn ? `<button type="button" class="owner-kanban-push-forward" data-action="push-owner-kanban-forward" data-id="${escapeHtml(ticket.id)}" data-ticket-source="${escapeHtml(ticket.source)}" data-next-column="${escapeHtml(nextColumn.key)}"${saving ? " disabled" : ""}>Push Forward <span aria-hidden="true">→</span></button>` : ""}
       ${renderOwnerKanbanMoveSelect(ticket)}
     </article>`;
   }
 
   function renderOwnerKanbanBoard(tickets = []) {
-    const filteredTickets = tickets.filter(ownerKanbanTicketMatches);
+    const boardTickets = tickets.filter((ticket) => ownerKanbanColumns.some((column) => column.key === ownerKanbanColumnForTicket(ticket)));
+    const filteredTickets = boardTickets.filter(ownerKanbanTicketMatches);
     return `<section class="owner-kanban-board" aria-label="Owner ticket Kanban board" data-owner-kanban-board>
-      ${renderOwnerKanbanToolbar(tickets, filteredTickets)}
+      ${renderOwnerKanbanToolbar(boardTickets, filteredTickets)}
       <div class="owner-kanban-scroll" role="list" aria-label="Ticket workflow columns">
         ${ownerKanbanColumns.map((column) => {
-          const totalTickets = tickets.filter((ticket) => ownerKanbanColumnForTicket(ticket) === column.key);
+          const totalTickets = boardTickets.filter((ticket) => ownerKanbanColumnForTicket(ticket) === column.key);
           const shownTickets = sortOwnerKanbanTickets(filteredTickets.filter((ticket) => ownerKanbanColumnForTicket(ticket) === column.key));
           return `<section class="owner-kanban-column owner-kanban-column--${escapeHtml(column.key)}" data-owner-kanban-column="${escapeHtml(column.key)}" aria-label="${escapeHtml(column.label)} column">
             <div class="owner-kanban-column-head">
@@ -21598,6 +21591,62 @@
         } catch (error) {
           setDashboardState(error.message || "Unable to mark task done.", "error");
         }
+      }
+    });
+
+    let ownerKanbanPointerDrag = null;
+
+    const clearOwnerKanbanPointerDrag = () => {
+      ownerKanbanPointerDrag?.card?.classList.remove("is-dragging");
+      qsa("[data-owner-kanban-column].is-drag-over").forEach((column) => column.classList.remove("is-drag-over"));
+      ownerKanbanPointerDrag = null;
+      state.ownerKanbanMovingId = "";
+    };
+
+    els.appView.addEventListener("pointerdown", (event) => {
+      const handle = event.target?.closest?.(".owner-kanban-drag-handle");
+      const card = handle?.closest?.("[data-owner-kanban-card]");
+      if (!handle || !card || !card.dataset.id || event.button > 0) return;
+      event.preventDefault();
+      ownerKanbanPointerDrag = {
+        card,
+        handle,
+        pointerId: event.pointerId,
+        ticketId: card.dataset.id,
+        ticketSource: card.dataset.ticketSource || "ticket"
+      };
+      state.ownerKanbanMovingId = card.dataset.id;
+      card.classList.add("is-dragging");
+      handle.setPointerCapture?.(event.pointerId);
+    });
+
+    els.appView.addEventListener("pointermove", (event) => {
+      if (!ownerKanbanPointerDrag || ownerKanbanPointerDrag.pointerId !== event.pointerId) return;
+      event.preventDefault();
+      const column = document.elementFromPoint(event.clientX, event.clientY)?.closest?.("[data-owner-kanban-column]");
+      qsa("[data-owner-kanban-column].is-drag-over").forEach((item) => item.classList.toggle("is-drag-over", item === column));
+    });
+
+    els.appView.addEventListener("pointercancel", clearOwnerKanbanPointerDrag);
+
+    els.appView.addEventListener("pointerup", async (event) => {
+      if (!ownerKanbanPointerDrag || ownerKanbanPointerDrag.pointerId !== event.pointerId) return;
+      event.preventDefault();
+      const { ticketId, ticketSource } = ownerKanbanPointerDrag;
+      const column = document.elementFromPoint(event.clientX, event.clientY)?.closest?.("[data-owner-kanban-column]");
+      const nextColumn = column?.dataset.ownerKanbanColumn || "";
+      clearOwnerKanbanPointerDrag();
+      if (!ticketId || !nextColumn) return;
+      try {
+        setDashboardState("Moving ticket...");
+        const canonicalTicket = ticketSource === "ticket"
+          ? dashboardTickets().find((ticket) => ticket.source === "ticket" && ticket.id === ticketId)
+          : await ensureJobTicketForSourceRecord(ticketSource, ticketId);
+        if (!canonicalTicket?.id) throw new Error("Unable to create a unified ticket for this board card.");
+        await moveOwnerKanbanTicket(canonicalTicket.id, nextColumn, { notes: "Moved freely on the Owner Overview Kanban." });
+        setDashboardState(`Ticket moved to ${ownerKanbanColumnLabel(nextColumn)}.`);
+      } catch (error) {
+        setDashboardState(error.message || "Unable to move ticket.", "error");
       }
     });
 

@@ -21621,6 +21621,7 @@
 
     const clearOwnerKanbanPointerDrag = () => {
       ownerKanbanPointerDrag?.card?.classList.remove("is-dragging");
+      ownerKanbanPointerDrag?.ghost?.remove();
       qsa("[data-owner-kanban-column].is-drag-over").forEach((column) => column.classList.remove("is-drag-over"));
       ownerKanbanPointerDrag = null;
       state.ownerKanbanMovingId = "";
@@ -21636,6 +21637,9 @@
         ticketSource: card.dataset.ticketSource || "ticket",
         startX: event.clientX,
         startY: event.clientY,
+        offsetX: event.clientX - card.getBoundingClientRect().left,
+        offsetY: event.clientY - card.getBoundingClientRect().top,
+        ghost: null,
         active: false
       };
       card.setPointerCapture?.(event.pointerId);
@@ -21649,8 +21653,22 @@
         ownerKanbanPointerDrag.active = true;
         state.ownerKanbanMovingId = ownerKanbanPointerDrag.ticketId;
         ownerKanbanPointerDrag.card.classList.add("is-dragging");
+        const rect = ownerKanbanPointerDrag.card.getBoundingClientRect();
+        const ghost = ownerKanbanPointerDrag.card.cloneNode(true);
+        ghost.classList.add("owner-kanban-drag-ghost");
+        ghost.classList.remove("is-dragging", "is-saving");
+        ghost.removeAttribute("id");
+        ghost.setAttribute("aria-hidden", "true");
+        ghost.querySelectorAll("button, select, input, textarea").forEach((control) => control.setAttribute("tabindex", "-1"));
+        ghost.style.width = `${rect.width}px`;
+        ownerKanbanPointerDrag.ghost = ghost;
+        document.body.appendChild(ghost);
       }
       event.preventDefault();
+      if (ownerKanbanPointerDrag.ghost) {
+        ownerKanbanPointerDrag.ghost.style.left = `${event.clientX - ownerKanbanPointerDrag.offsetX}px`;
+        ownerKanbanPointerDrag.ghost.style.top = `${event.clientY - ownerKanbanPointerDrag.offsetY}px`;
+      }
       const column = document.elementFromPoint(event.clientX, event.clientY)?.closest?.("[data-owner-kanban-column]");
       qsa("[data-owner-kanban-column].is-drag-over").forEach((item) => item.classList.toggle("is-drag-over", item === column));
     });

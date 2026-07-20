@@ -81,8 +81,11 @@
               </button>
               <div class="sidebar-notifications-panel" id="dashboard-notifications-panel" data-notification-panel hidden>
                 <div class="sidebar-notifications-heading">
-                  <strong>Notifications</strong>
-                  <span data-notification-summary>No urgent items</span>
+                  <div class="sidebar-notifications-title-row">
+                    <strong>Notifications</strong>
+                    <button class="sidebar-notifications-clear" type="button" data-action="clear-notifications" data-notification-clear hidden>Clear all</button>
+                  </div>
+                  <span data-notification-summary aria-live="polite">No urgent items</span>
                 </div>
                 <div class="sidebar-notifications-list" data-notification-list></div>
               </div>

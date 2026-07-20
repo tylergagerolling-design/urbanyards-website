@@ -32,6 +32,7 @@
   const DASHBOARD_THEME_KEY = "urbanYardsDashboardTheme";
   const DASHBOARD_COMPACT_KEY = "urbanYardsDashboardCompact";
   const DASHBOARD_REDUCED_MOTION_KEY = "urbanYardsDashboardReducedMotion";
+  const DISMISSED_NOTIFICATIONS_KEY = "urbanYardsDismissedNotifications";
   const GOOGLE_VOICE_HOME_URL = "https://voice.google.com/";
   const GOOGLE_VOICE_CALLS_URL = "https://voice.google.com/u/0/calls";
   const URBAN_YARDS_GOOGLE_VOICE_NUMBER = "(971) 258-1109";
@@ -205,6 +206,7 @@
     { key: "follow-up", label: "Follow-up", action: "quick-add-follow-up", icon: "upcoming-clock.svg", permission: "create" },
     { key: "equipment", label: "Equipment Item", action: "quick-add-equipment", icon: "activity-check-circle.svg", permission: "create" }
   ];
+  const OWNER_KANBAN_FILTER_KEY = "urbanYardsOwnerKanbanFilters";
   const FOLLOW_UP_SUGGESTIONS = [
     ["tomorrow", "Tomorrow", 1],
     ["three-days", "3 Days", 3],
@@ -278,6 +280,17 @@
     ticketBoardSearch: "",
     ticketBoardStageFilter: "All",
     ticketBoardOwnerFilter: "All",
+    ownerKanbanSearch: "",
+    ownerKanbanAssigneeFilter: "All",
+    ownerKanbanPriorityFilter: "All",
+    ownerKanbanTypeFilter: "All",
+    ownerKanbanClientFilter: "",
+    ownerKanbanDateFilter: "All",
+    ownerKanbanActiveOnly: true,
+    ownerKanbanBlockedOnly: false,
+    ownerKanbanOverdueOnly: false,
+    ownerKanbanMovingId: "",
+    ownerKanbanFiltersLoaded: false,
     addMenuOpen: false,
     globalSearchOpen: false,
     globalSearchActiveIndex: -1,
@@ -484,6 +497,7 @@
   let googleMapsBrowserKeyPromise = null;
   let sidebarCloseTimer = null;
   let notificationCloseTimer = null;
+  let dismissedNotificationFallback = new Set();
   const addressAutocompleteInputs = new WeakSet();
   let googleRouteMarkers = [];
   const googleMapViews = new Map();
@@ -1396,6 +1410,10 @@
 
   function canManageWorkWorkflow(role = currentSessionRole()) {
     return ["owner", "admin", "manager", "field_worker", "staff"].includes(normalizeDashboardRole(role));
+  }
+
+  function canManageOwnerWorkflow(role = currentSessionRole()) {
+    return ["owner", "admin", "manager"].includes(normalizeDashboardRole(role));
   }
 
   function canManageUsers() {
@@ -2733,6 +2751,31 @@
     return attrs.join(" ");
   }
 
+  function notificationKey(item) {
+    return [item.type, item.id || item.leadId || "", item.sort || "", item.title || ""].join(":");
+  }
+
+  function dismissedNotificationKeys() {
+    try {
+      const stored = JSON.parse(localStorage.getItem(DISMISSED_NOTIFICATIONS_KEY) || "[]");
+      dismissedNotificationFallback = new Set(Array.isArray(stored) ? stored : []);
+    } catch (error) {
+      // Use the in-memory set when browser storage is unavailable.
+    }
+    return new Set(dismissedNotificationFallback);
+  }
+
+  function dismissNotifications(notifications) {
+    try {
+      const dismissed = dismissedNotificationKeys();
+      notifications.forEach((item) => dismissed.add(notificationKey(item)));
+      dismissedNotificationFallback = new Set([...dismissed].slice(-250));
+      localStorage.setItem(DISMISSED_NOTIFICATIONS_KEY, JSON.stringify([...dismissedNotificationFallback]));
+    } catch (error) {
+      notifications.forEach((item) => dismissedNotificationFallback.add(notificationKey(item)));
+    }
+  }
+
   function buildNotifications(data = state.data) {
     const websiteRequests = data.submissions
       .filter((item) => item.status === "New")
@@ -2784,7 +2827,9 @@
         sort: activity.createdAtRaw || ""
       }));
 
+    const dismissed = dismissedNotificationKeys();
     return [...websiteRequests, ...overduePayments, ...rescheduleNeeded, ...voicemails]
+      .filter((item) => !dismissed.has(notificationKey(item)))
       .sort((a, b) => String(b.sort || "").localeCompare(String(a.sort || "")));
   }
 
@@ -2802,6 +2847,7 @@
     if (els.notificationSummary) {
       els.notificationSummary.textContent = count ? `${count} item${count === 1 ? "" : "s"} need attention` : "No urgent items";
     }
+    if (els.notificationClear) els.notificationClear.hidden = count === 0;
     if (!els.notificationList) return;
     if (!count) {
       els.notificationList.innerHTML = `<p class="sidebar-notification-empty">No website requests, overdue payments, missed visits, or voicemails right now.</p>`;
@@ -5354,6 +5400,48 @@
     if (index >= 0) state.data.tickets[index] = ticket;
     else state.data.tickets.unshift(ticket);
     return ticket;
+  }
+
+  async function moveOwnerKanbanTicket(ticketId, toStage, options = {}) {
+    const ticket = dashboardTickets().find((item) => item.source === "ticket" && item.id === ticketId);
+    if (!ticket) throw new Error("Only unified Job Tickets can be moved on the Owner Kanban board.");
+    if (!canManageOwnerWorkflow()) throw new Error("Your dashboard role cannot move tickets on the owner board.");
+    const nextStage = normalizeTicketStageForDashboard(toStage);
+    const fromStage = ticketStage(ticket);
+    if (fromStage === nextStage) return ticket;
+    const missing = ticketMissingRequirementsForStage(ticket, nextStage);
+    if (missing.length) {
+      throw new Error(`Before moving to ${ticketStageLabel(nextStage)}, add: ${missing.join(", ")}.`);
+    }
+
+    const previousTickets = state.data.tickets.slice();
+    const optimisticIndex = state.data.tickets.findIndex((item) => item.id === ticketId);
+    if (optimisticIndex >= 0) {
+      state.data.tickets[optimisticIndex] = normalizeCanonicalTicket({
+        ...state.data.tickets[optimisticIndex],
+        stage: nextStage,
+        status: ticketRecordStatusForStage(nextStage),
+        next_action: ticketNextAction(nextStage),
+        updated_at: new Date().toISOString()
+      });
+      renderHomeWorkspace(state.data);
+      renderJobTicketWorkspace(state.data);
+    }
+
+    try {
+      const updated = await transitionJobTicketStage(ticketId, nextStage, {
+        notes: options.notes || `Moved from ${ticketStageLabel(fromStage)} to ${ticketStageLabel(nextStage)} from Owner Overview Kanban.`,
+        nextAction: ticketNextAction(nextStage)
+      });
+      renderHomeWorkspace(state.data);
+      renderJobTicketWorkspace(state.data);
+      return updated;
+    } catch (error) {
+      state.data.tickets = previousTickets;
+      renderHomeWorkspace(state.data);
+      renderJobTicketWorkspace(state.data);
+      throw error;
+    }
   }
 
   async function insertJobTicketEvent(ticketId, input = {}) {
@@ -11874,6 +11962,259 @@
     </section>`;
   }
 
+  const ownerKanbanColumns = [
+    { key: "sales_intake", label: "New Lead", detail: "Needs intake", limit: 12 },
+    { key: "scope_in_progress", label: "Contacted", detail: "Scope in progress", limit: 12 },
+    { key: "quote_pending", label: "Quote Needed", detail: "Prepare pricing", limit: 8 },
+    { key: "customer_approval_pending", label: "Quote Sent", detail: "Waiting approval", limit: 10 },
+    { key: "needs_budget", label: "Approved", detail: "Ready for cost review", limit: 8 },
+    { key: "budget_in_progress", label: "Budgeting", detail: "Internal review", limit: 8 },
+    { key: "ready_to_schedule", label: "Ready to Schedule", detail: "Schedule next", limit: 10 },
+    { key: "scheduled", label: "Scheduled", detail: "On calendar", limit: 14 },
+    { key: "in_progress", label: "In Progress", detail: "Field work active", limit: 6 },
+    { key: "field_work_complete", label: "Completed", detail: "Needs closeout", limit: 10 },
+    { key: "invoice_sent", label: "Invoiced", detail: "Payment pending", limit: 12 },
+    { key: "paid", label: "Paid", detail: "Ready to close", limit: 12 }
+  ];
+
+  const ownerKanbanStageMap = {
+    draft: "sales_intake",
+    sales_intake: "sales_intake",
+    scope_in_progress: "scope_in_progress",
+    quote_pending: "quote_pending",
+    customer_approval_pending: "customer_approval_pending",
+    needs_budget: "needs_budget",
+    needs_owner_approval: "budget_in_progress",
+    budget_in_progress: "budget_in_progress",
+    invoice_preparation: "ready_to_schedule",
+    ready_to_schedule: "ready_to_schedule",
+    scheduled: "scheduled",
+    in_progress: "in_progress",
+    paused: "in_progress",
+    scope_change_requested: "scope_in_progress",
+    field_work_complete: "field_work_complete",
+    completion_review: "field_work_complete",
+    invoice_review: "field_work_complete",
+    invoice_sent: "invoice_sent",
+    partially_paid: "invoice_sent",
+    paid: "paid"
+  };
+
+  function loadOwnerKanbanFilters() {
+    try {
+      const stored = JSON.parse(localStorage.getItem(OWNER_KANBAN_FILTER_KEY) || "{}");
+      if (!stored || typeof stored !== "object") return;
+      state.ownerKanbanSearch = stored.search || "";
+      state.ownerKanbanAssigneeFilter = stored.assignee || "All";
+      state.ownerKanbanPriorityFilter = stored.priority || "All";
+      state.ownerKanbanTypeFilter = stored.type || "All";
+      state.ownerKanbanClientFilter = stored.client || "";
+      state.ownerKanbanDateFilter = stored.date || "All";
+      state.ownerKanbanActiveOnly = stored.activeOnly !== false;
+      state.ownerKanbanBlockedOnly = Boolean(stored.blockedOnly);
+      state.ownerKanbanOverdueOnly = Boolean(stored.overdueOnly);
+    } catch (error) {
+      // Preference reads should never block the dashboard shell.
+    }
+  }
+
+  function persistOwnerKanbanFilters() {
+    try {
+      localStorage.setItem(OWNER_KANBAN_FILTER_KEY, JSON.stringify({
+        search: state.ownerKanbanSearch,
+        assignee: state.ownerKanbanAssigneeFilter,
+        priority: state.ownerKanbanPriorityFilter,
+        type: state.ownerKanbanTypeFilter,
+        client: state.ownerKanbanClientFilter,
+        date: state.ownerKanbanDateFilter,
+        activeOnly: state.ownerKanbanActiveOnly,
+        blockedOnly: state.ownerKanbanBlockedOnly,
+        overdueOnly: state.ownerKanbanOverdueOnly
+      }));
+    } catch (error) {
+      // Local persistence is a convenience only.
+    }
+  }
+
+  function ownerKanbanColumnForTicket(ticket = {}) {
+    const stage = ticketStage(ticket);
+    return ownerKanbanStageMap[stage] || "sales_intake";
+  }
+
+  function ticketPriorityLabel(ticket = {}) {
+    return ticket.priority || ticket.priorityLabel || ticket.urgency || "Normal";
+  }
+
+  function ticketAssigneeLabel(ticket = {}) {
+    const profile = assignmentProfileForId(ticket.assignedUserId);
+    return profile ? assignmentProfileLabel(profile) : ticket.assignedUserId || ticket.ownerLabel || "Unassigned";
+  }
+
+  function ticketValueLabel(ticket = {}) {
+    const value = budgetNumberOrNull(ticket.expectedRevenue ?? ticket.proposedPrice ?? ticket.finalRevenue);
+    return value ? formatCurrency(value) : "Value TBD";
+  }
+
+  function ownerKanbanDateState(ticket = {}) {
+    const key = dateKey(ticket.dateRaw);
+    const today = todayKey();
+    if (!key) return "none";
+    if (key < today) return "overdue";
+    if (key === today) return "today";
+    return "upcoming";
+  }
+
+  function ownerKanbanTicketMatches(ticket = {}) {
+    const stage = ticketStage(ticket);
+    if (state.ownerKanbanActiveOnly && !ticketIsOpen(ticket)) return false;
+    if (state.ownerKanbanBlockedOnly && !(ticket.blockers || []).length) return false;
+    if (state.ownerKanbanOverdueOnly && ownerKanbanDateState(ticket) !== "overdue") return false;
+    if (state.ownerKanbanAssigneeFilter !== "All" && ticketAssigneeLabel(ticket) !== state.ownerKanbanAssigneeFilter) return false;
+    if (state.ownerKanbanPriorityFilter !== "All" && ticketPriorityLabel(ticket) !== state.ownerKanbanPriorityFilter) return false;
+    if (state.ownerKanbanTypeFilter !== "All" && ticket.sourceType !== state.ownerKanbanTypeFilter) return false;
+    if (state.ownerKanbanDateFilter !== "All" && ownerKanbanDateState(ticket) !== state.ownerKanbanDateFilter) return false;
+    const clientFilter = String(state.ownerKanbanClientFilter || "").trim().toLowerCase();
+    if (clientFilter && ![ticket.customer, ticket.property].some((value) => String(value || "").toLowerCase().includes(clientFilter))) return false;
+    const query = String(state.ownerKanbanSearch || "").trim().toLowerCase();
+    if (!query) return true;
+    return [
+      ticket.number,
+      ticket.title,
+      ticket.customer,
+      ticket.property,
+      ticket.detail,
+      ticket.stageLabel,
+      ticket.nextAction,
+      ticket.ownerLabel,
+      ticketAssigneeLabel(ticket),
+      ticketPriorityLabel(ticket),
+      ticketValueLabel(ticket),
+      stage
+    ].some((value) => String(value || "").toLowerCase().includes(query));
+  }
+
+  function ownerKanbanOptions(values = [], selected = "All", fallback = "All") {
+    const cleanValues = [...new Set(values.map((value) => String(value || "").trim()).filter(Boolean))].sort((a, b) => a.localeCompare(b));
+    return `<option value="All">${escapeHtml(fallback)}</option>${cleanValues.map((value) => `<option value="${escapeHtml(value)}"${value === selected ? " selected" : ""}>${escapeHtml(value)}</option>`).join("")}`;
+  }
+
+  function renderOwnerKanbanToolbar(tickets = [], filteredTickets = []) {
+    const assignees = tickets.map(ticketAssigneeLabel);
+    const priorities = tickets.map(ticketPriorityLabel);
+    const types = tickets.map((ticket) => ticket.sourceType || ticket.source || "ticket");
+    return `<section class="owner-kanban-toolbar" aria-label="Owner Kanban filters">
+      <div class="owner-kanban-toolbar-head">
+        <div>
+          <p class="eyebrow">Ticket Kanban</p>
+          <h3>Move active tickets through the workflow</h3>
+          <p>Drag canonical job tickets between columns, or use the status menu on each card.</p>
+        </div>
+        <div class="owner-kanban-toolbar-actions">
+          <span>${escapeHtml(filteredTickets.length)} of ${escapeHtml(tickets.length)} shown</span>
+          <button type="button" data-action="refresh-owner-kanban">Refresh Board</button>
+          ${canCreateTicketType("quote") ? `<button type="button" data-action="open-ticket-create" data-ticket-type="quote">New Ticket</button>` : ""}
+        </div>
+      </div>
+      <div class="owner-kanban-filters">
+        <label>Search
+          <input type="search" placeholder="Search tickets, clients, properties..." value="${escapeHtml(state.ownerKanbanSearch || "")}" data-owner-kanban-search>
+        </label>
+        <label>Assignee
+          <select data-owner-kanban-filter="assignee">${ownerKanbanOptions(assignees, state.ownerKanbanAssigneeFilter, "All assignees")}</select>
+        </label>
+        <label>Priority
+          <select data-owner-kanban-filter="priority">${ownerKanbanOptions(priorities, state.ownerKanbanPriorityFilter, "All priorities")}</select>
+        </label>
+        <label>Type
+          <select data-owner-kanban-filter="type">${ownerKanbanOptions(types, state.ownerKanbanTypeFilter, "All types")}</select>
+        </label>
+        <label>Client/property
+          <input type="search" placeholder="Filter by client or property" value="${escapeHtml(state.ownerKanbanClientFilter || "")}" data-owner-kanban-client>
+        </label>
+        <label>Date
+          <select data-owner-kanban-filter="date">
+            ${["All", "overdue", "today", "upcoming", "none"].map((value) => `<option value="${escapeHtml(value)}"${value === state.ownerKanbanDateFilter ? " selected" : ""}>${escapeHtml(value === "All" ? "All dates" : titleCase(value))}</option>`).join("")}
+          </select>
+        </label>
+        <label class="owner-kanban-toggle"><input type="checkbox" data-owner-kanban-toggle="activeOnly"${state.ownerKanbanActiveOnly ? " checked" : ""}> Active only</label>
+        <label class="owner-kanban-toggle"><input type="checkbox" data-owner-kanban-toggle="blockedOnly"${state.ownerKanbanBlockedOnly ? " checked" : ""}> Blocked only</label>
+        <label class="owner-kanban-toggle"><input type="checkbox" data-owner-kanban-toggle="overdueOnly"${state.ownerKanbanOverdueOnly ? " checked" : ""}> Overdue only</label>
+        <button type="button" data-action="reset-owner-kanban-filters">Reset Filters</button>
+      </div>
+    </section>`;
+  }
+
+  function renderOwnerKanbanMoveSelect(ticket = {}) {
+    const currentColumn = ownerKanbanColumnForTicket(ticket);
+    const disabled = ticket.source !== "ticket" || !canManageOwnerWorkflow();
+    return `<label class="owner-kanban-move">
+      <span>Move</span>
+      <select data-owner-kanban-move data-id="${escapeHtml(ticket.id)}" data-ticket-source="${escapeHtml(ticket.source)}"${disabled ? " disabled aria-disabled=\"true\"" : ""}>
+        ${ownerKanbanColumns.map((column) => `<option value="${escapeHtml(column.key)}"${column.key === currentColumn ? " selected" : ""}>${escapeHtml(column.label)}</option>`).join("")}
+      </select>
+    </label>`;
+  }
+
+  function renderOwnerKanbanCard(ticket = {}) {
+    const dateState = ownerKanbanDateState(ticket);
+    const blockers = ticket.blockers || [];
+    const isCanonical = ticket.source === "ticket";
+    const dragAttrs = isCanonical && canManageOwnerWorkflow()
+      ? `draggable="true" data-owner-kanban-card data-ticket-source="ticket" data-id="${escapeHtml(ticket.id)}"`
+      : `data-owner-kanban-card data-ticket-source="${escapeHtml(ticket.source)}" data-id="${escapeHtml(ticket.id)}"`;
+    const notesCount = (state.data.ticketEvents || []).filter((event) => event.ticketId === ticket.id).length;
+    return `<article class="owner-kanban-card ${dateState === "overdue" ? "is-overdue" : ""} ${blockers.length ? "is-blocked" : ""}" tabindex="0" ${dragAttrs}>
+      <button type="button" class="owner-kanban-card-open" data-action="open-ticket" data-ticket-source="${escapeHtml(ticket.source)}" data-id="${escapeHtml(ticket.id)}">
+        <span class="ticket-number">${escapeHtml(ticket.number)}</span>
+        <strong>${escapeHtml(ticket.title || "Untitled ticket")}</strong>
+        <small>${escapeHtml(ticket.customer || "Client not set")}</small>
+        <small>${escapeHtml(ticket.property || "Property not set")}</small>
+      </button>
+      <div class="owner-kanban-card-meta">
+        <span>${escapeHtml(ticketAssigneeLabel(ticket))}</span>
+        <span>${escapeHtml(ticketPriorityLabel(ticket))}</span>
+        <span>${escapeHtml(ticket.sourceLabel || ticketSourceLabel(ticket))}</span>
+      </div>
+      <div class="owner-kanban-card-date">
+        <span>${escapeHtml(ticket.dateLabel || "No date")}</span>
+        <b>${escapeHtml(ticketValueLabel(ticket))}</b>
+      </div>
+      ${blockers.length ? `<div class="owner-kanban-blockers">${blockers.slice(0, 2).map((item) => `<span>${escapeHtml(item)}</span>`).join("")}</div>` : ""}
+      <div class="owner-kanban-indicators" aria-label="Ticket indicators">
+        <span>${escapeHtml(String(notesCount))} updates</span>
+        <span>${escapeHtml(ticket.nextAction || ticketNextAction(ticketStage(ticket)))}</span>
+      </div>
+      ${renderOwnerKanbanMoveSelect(ticket)}
+    </article>`;
+  }
+
+  function renderOwnerKanbanBoard(tickets = []) {
+    const filteredTickets = tickets.filter(ownerKanbanTicketMatches);
+    return `<section class="owner-kanban-board" aria-label="Owner ticket Kanban board" data-owner-kanban-board>
+      ${renderOwnerKanbanToolbar(tickets, filteredTickets)}
+      <div class="owner-kanban-scroll" role="list" aria-label="Ticket workflow columns">
+        ${ownerKanbanColumns.map((column) => {
+          const totalTickets = tickets.filter((ticket) => ownerKanbanColumnForTicket(ticket) === column.key);
+          const shownTickets = filteredTickets.filter((ticket) => ownerKanbanColumnForTicket(ticket) === column.key);
+          const overLimit = column.limit && totalTickets.length > column.limit;
+          return `<section class="owner-kanban-column ${overLimit ? "is-over-limit" : ""}" data-owner-kanban-column="${escapeHtml(column.key)}" aria-label="${escapeHtml(column.label)} column">
+            <div class="owner-kanban-column-head">
+              <div>
+                <h4>${escapeHtml(column.label)}</h4>
+                <p>${escapeHtml(column.detail)}</p>
+              </div>
+              <span title="${escapeHtml(String(totalTickets.length))} total tickets">${escapeHtml(String(shownTickets.length))}</span>
+            </div>
+            ${overLimit ? `<p class="owner-kanban-limit">Over WIP target of ${escapeHtml(String(column.limit))}</p>` : ""}
+            <div class="owner-kanban-column-list">
+              ${shownTickets.length ? shownTickets.map(renderOwnerKanbanCard).join("") : `<p class="owner-kanban-empty">No tickets here.</p>`}
+            </div>
+          </section>`;
+        }).join("")}
+      </div>
+    </section>`;
+  }
+
   function renderHomeActionQueue(items) {
     return `<section class="ticket-lane home-ticket-action-lane">
       <div class="ticket-lane-heading">
@@ -12046,6 +12387,10 @@
   function renderHomeWorkspace(data = state.data) {
     const target = qs("[data-home-workspace]");
     if (!target) return;
+    if (!state.ownerKanbanFiltersLoaded) {
+      loadOwnerKanbanFilters();
+      state.ownerKanbanFiltersLoaded = true;
+    }
     const tickets = dashboardTickets(data);
     const today = todayKey();
     const activeTickets = tickets.filter(ticketIsOpen);
@@ -12096,6 +12441,7 @@
           ${renderTicketMetric(actions.length, "Action Items", "Needs attention now")}
           ${renderTicketMetric(workflowWarnings.length + notifications.length, "Alerts", "Workflow and notification signals")}
         </section>
+        ${renderOwnerKanbanBoard(activeTickets)}
         ${renderHomeFocusPanel({ todayTickets, overdueTickets, leadTickets, workTickets, moneyTickets, reviewTickets, actions })}
         ${renderHomeCommandCenter({ actions, attentionTickets, todayTickets, workTickets, moneyTickets, workflowWarnings, notifications })}
       </div>`;
@@ -18879,6 +19225,43 @@
         return;
       }
 
+      if (target.matches("[data-owner-kanban-filter]")) {
+        const filter = target.dataset.ownerKanbanFilter;
+        if (filter === "assignee") state.ownerKanbanAssigneeFilter = target.value || "All";
+        if (filter === "priority") state.ownerKanbanPriorityFilter = target.value || "All";
+        if (filter === "type") state.ownerKanbanTypeFilter = target.value || "All";
+        if (filter === "date") state.ownerKanbanDateFilter = target.value || "All";
+        persistOwnerKanbanFilters();
+        renderHomeWorkspace(state.data);
+        return;
+      }
+
+      if (target.matches("[data-owner-kanban-toggle]")) {
+        const filter = target.dataset.ownerKanbanToggle;
+        if (filter === "activeOnly") state.ownerKanbanActiveOnly = target.checked;
+        if (filter === "blockedOnly") state.ownerKanbanBlockedOnly = target.checked;
+        if (filter === "overdueOnly") state.ownerKanbanOverdueOnly = target.checked;
+        persistOwnerKanbanFilters();
+        renderHomeWorkspace(state.data);
+        return;
+      }
+
+      if (target.matches("[data-owner-kanban-move]")) {
+        const ticketId = target.dataset.id || "";
+        const nextStage = target.value || "";
+        const previousValue = ownerKanbanColumnForTicket(dashboardTickets().find((ticket) => ticket.id === ticketId) || {});
+        try {
+          setDashboardState("Moving ticket...");
+          await moveOwnerKanbanTicket(ticketId, nextStage, { notes: "Moved from Owner Overview Kanban status menu." });
+          setDashboardState(`Ticket moved to ${ticketStageLabel(nextStage)}.`);
+        } catch (error) {
+          target.value = previousValue;
+          setDashboardState(error.message || "Unable to move ticket.", "error");
+          openTicketDrawer("ticket", ticketId);
+        }
+        return;
+      }
+
       if (target.matches("input[name='visit_date']")) {
         const form = target.closest("form");
         const toggle = form?.querySelector("[data-recurring-toggle]");
@@ -19001,6 +19384,22 @@
         return;
       }
 
+      if (event.target?.matches?.("[data-owner-kanban-search]")) {
+        state.ownerKanbanSearch = event.target.value || "";
+        persistOwnerKanbanFilters();
+        window.clearTimeout(state._ownerKanbanSearchTimer);
+        state._ownerKanbanSearchTimer = window.setTimeout(() => renderHomeWorkspace(state.data), 120);
+        return;
+      }
+
+      if (event.target?.matches?.("[data-owner-kanban-client]")) {
+        state.ownerKanbanClientFilter = event.target.value || "";
+        persistOwnerKanbanFilters();
+        window.clearTimeout(state._ownerKanbanClientTimer);
+        state._ownerKanbanClientTimer = window.setTimeout(() => renderHomeWorkspace(state.data), 120);
+        return;
+      }
+
       const form = event.target?.closest?.("form");
       if (!form || !form.querySelector("[data-duplicate-warning]")) return;
       window.clearTimeout(form._duplicateTimer);
@@ -19040,6 +19439,32 @@
         return;
       }
 
+      if (action === "reset-owner-kanban-filters") {
+        state.ownerKanbanSearch = "";
+        state.ownerKanbanAssigneeFilter = "All";
+        state.ownerKanbanPriorityFilter = "All";
+        state.ownerKanbanTypeFilter = "All";
+        state.ownerKanbanClientFilter = "";
+        state.ownerKanbanDateFilter = "All";
+        state.ownerKanbanActiveOnly = true;
+        state.ownerKanbanBlockedOnly = false;
+        state.ownerKanbanOverdueOnly = false;
+        persistOwnerKanbanFilters();
+        renderHomeWorkspace(state.data);
+        setDashboardState("Owner Kanban filters reset.");
+        return;
+      }
+
+      if (action === "refresh-owner-kanban") {
+        await hydrateDashboardSection("overview", {
+          force: true,
+          phase: "owner-kanban:refresh",
+          recordErrors: true
+        });
+        setDashboardState("Owner Kanban refreshed.");
+        return;
+      }
+
       if (action === "close-drawer") {
         closeSubmissionDrawer();
         return;
@@ -19053,6 +19478,14 @@
       if (action === "toggle-notifications") {
         const isOpen = els.notificationPanel ? els.notificationPanel.hidden : false;
         setNotificationsOpen(isOpen);
+        return;
+      }
+
+      if (action === "clear-notifications") {
+        const notifications = buildNotifications(state.data);
+        dismissNotifications(notifications);
+        renderNotifications(state.data);
+        setDashboardState("Notifications cleared.");
         return;
       }
 
@@ -21021,6 +21454,55 @@
       }
     });
 
+    els.appView.addEventListener("dragstart", (event) => {
+      const card = event.target?.closest?.("[data-owner-kanban-card][draggable='true']");
+      if (!card) return;
+      state.ownerKanbanMovingId = card.dataset.id || "";
+      event.dataTransfer.effectAllowed = "move";
+      event.dataTransfer.setData("text/plain", state.ownerKanbanMovingId);
+      card.classList.add("is-dragging");
+    });
+
+    els.appView.addEventListener("dragend", (event) => {
+      event.target?.closest?.("[data-owner-kanban-card]")?.classList.remove("is-dragging");
+      qsa("[data-owner-kanban-column].is-drag-over").forEach((column) => column.classList.remove("is-drag-over"));
+      state.ownerKanbanMovingId = "";
+    });
+
+    els.appView.addEventListener("dragover", (event) => {
+      const column = event.target?.closest?.("[data-owner-kanban-column]");
+      if (!column || !state.ownerKanbanMovingId) return;
+      event.preventDefault();
+      event.dataTransfer.dropEffect = "move";
+      column.classList.add("is-drag-over");
+    });
+
+    els.appView.addEventListener("dragleave", (event) => {
+      const column = event.target?.closest?.("[data-owner-kanban-column]");
+      if (!column || column.contains(event.relatedTarget)) return;
+      column.classList.remove("is-drag-over");
+    });
+
+    els.appView.addEventListener("drop", async (event) => {
+      const column = event.target?.closest?.("[data-owner-kanban-column]");
+      if (!column) return;
+      event.preventDefault();
+      column.classList.remove("is-drag-over");
+      const ticketId = event.dataTransfer?.getData("text/plain") || state.ownerKanbanMovingId;
+      const nextStage = column.dataset.ownerKanbanColumn || "";
+      if (!ticketId || !nextStage) return;
+      try {
+        setDashboardState("Moving ticket...");
+        await moveOwnerKanbanTicket(ticketId, nextStage, { notes: "Moved by drag and drop from Owner Overview Kanban." });
+        setDashboardState(`Ticket moved to ${ticketStageLabel(nextStage)}.`);
+      } catch (error) {
+        setDashboardState(error.message || "Unable to move ticket.", "error");
+        openTicketDrawer("ticket", ticketId);
+      } finally {
+        state.ownerKanbanMovingId = "";
+      }
+    });
+
   els.appView.addEventListener("submit", async (event) => {
       if (event.target.matches("[data-users-invite-form]")) {
         event.preventDefault();
@@ -21973,6 +22455,7 @@
     els.notificationCount = qs("[data-notification-count]");
     els.notificationPanel = qs("[data-notification-panel]");
     els.notificationSummary = qs("[data-notification-summary]");
+    els.notificationClear = qs("[data-notification-clear]");
     els.notificationList = qs("[data-notification-list]");
     els.statusFilter = qs("[data-status-filter]");
     els.submissions = qs("[data-submissions]");

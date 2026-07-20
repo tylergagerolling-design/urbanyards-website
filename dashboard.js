@@ -286,6 +286,8 @@
     ownerKanbanTypeFilter: "All",
     ownerKanbanClientFilter: "",
     ownerKanbanDateFilter: "All",
+    ownerKanbanStatusFilter: "All",
+    ownerKanbanSort: "priority",
     ownerKanbanActiveOnly: true,
     ownerKanbanBlockedOnly: false,
     ownerKanbanOverdueOnly: false,
@@ -1402,6 +1404,10 @@
 
   function canManageLeadWorkflow(role = currentSessionRole()) {
     return ["owner", "admin", "manager", "sales_outreach", "staff"].includes(normalizeDashboardRole(role));
+  }
+
+  function canDeleteLeadRecords(role = currentSessionRole()) {
+    return ["owner", "admin", "manager"].includes(normalizeDashboardRole(role));
   }
 
   function canManageMoneyWorkflow(role = currentSessionRole()) {
@@ -5406,7 +5412,7 @@
     const ticket = dashboardTickets().find((item) => item.source === "ticket" && item.id === ticketId);
     if (!ticket) throw new Error("Only unified Job Tickets can be moved on the Owner Kanban board.");
     if (!canManageOwnerWorkflow()) throw new Error("Your dashboard role cannot move tickets on the owner board.");
-    const nextStage = normalizeTicketStageForDashboard(toStage);
+    const nextStage = normalizeTicketStageForDashboard(ownerKanbanTargetStage(toStage));
     const fromStage = ticketStage(ticket);
     if (fromStage === nextStage) return ticket;
     const missing = ticketMissingRequirementsForStage(ticket, nextStage);
@@ -5415,6 +5421,7 @@
     }
 
     const previousTickets = state.data.tickets.slice();
+    state.ownerKanbanMovingId = ticketId;
     const optimisticIndex = state.data.tickets.findIndex((item) => item.id === ticketId);
     if (optimisticIndex >= 0) {
       state.data.tickets[optimisticIndex] = normalizeCanonicalTicket({
@@ -5433,11 +5440,13 @@
         notes: options.notes || `Moved from ${ticketStageLabel(fromStage)} to ${ticketStageLabel(nextStage)} from Owner Overview Kanban.`,
         nextAction: ticketNextAction(nextStage)
       });
+      state.ownerKanbanMovingId = "";
       renderHomeWorkspace(state.data);
       renderJobTicketWorkspace(state.data);
       return updated;
     } catch (error) {
       state.data.tickets = previousTickets;
+      state.ownerKanbanMovingId = "";
       renderHomeWorkspace(state.data);
       renderJobTicketWorkspace(state.data);
       throw error;
@@ -11963,42 +11972,45 @@
   }
 
   const ownerKanbanColumns = [
-    { key: "sales_intake", label: "New Lead", detail: "Needs intake", limit: 12 },
-    { key: "scope_in_progress", label: "Contacted", detail: "Scope in progress", limit: 12 },
-    { key: "quote_pending", label: "Quote Needed", detail: "Prepare pricing", limit: 8 },
-    { key: "customer_approval_pending", label: "Quote Sent", detail: "Waiting approval", limit: 10 },
-    { key: "needs_budget", label: "Approved", detail: "Ready for cost review", limit: 8 },
-    { key: "budget_in_progress", label: "Budgeting", detail: "Internal review", limit: 8 },
-    { key: "ready_to_schedule", label: "Ready to Schedule", detail: "Schedule next", limit: 10 },
-    { key: "scheduled", label: "Scheduled", detail: "On calendar", limit: 14 },
-    { key: "in_progress", label: "In Progress", detail: "Field work active", limit: 6 },
-    { key: "field_work_complete", label: "Completed", detail: "Needs closeout", limit: 10 },
-    { key: "invoice_sent", label: "Invoiced", detail: "Payment pending", limit: 12 },
-    { key: "paid", label: "Paid", detail: "Ready to close", limit: 12 }
+    { key: "new", label: "New", detail: "New requests and intake", targetStage: "sales_intake" },
+    { key: "planned", label: "Planned", detail: "Quoted, approved, or scheduled", targetStage: "scope_in_progress" },
+    { key: "in_progress", label: "In Progress", detail: "Active work and preparation", targetStage: "in_progress" },
+    { key: "review", label: "Review", detail: "Approval and closeout checks", targetStage: "completion_review" },
+    { key: "completed", label: "Completed", detail: "Invoiced, paid, or closed", targetStage: "field_work_complete" }
   ];
 
   const ownerKanbanStageMap = {
-    draft: "sales_intake",
-    sales_intake: "sales_intake",
-    scope_in_progress: "scope_in_progress",
-    quote_pending: "quote_pending",
-    customer_approval_pending: "customer_approval_pending",
-    needs_budget: "needs_budget",
-    needs_owner_approval: "budget_in_progress",
-    budget_in_progress: "budget_in_progress",
-    invoice_preparation: "ready_to_schedule",
-    ready_to_schedule: "ready_to_schedule",
-    scheduled: "scheduled",
+    draft: "new",
+    sales_intake: "new",
+    scope_in_progress: "planned",
+    quote_pending: "planned",
+    ready_to_schedule: "planned",
+    scheduled: "planned",
+    needs_budget: "in_progress",
+    budget_in_progress: "in_progress",
+    invoice_preparation: "in_progress",
     in_progress: "in_progress",
     paused: "in_progress",
-    scope_change_requested: "scope_in_progress",
-    field_work_complete: "field_work_complete",
-    completion_review: "field_work_complete",
-    invoice_review: "field_work_complete",
-    invoice_sent: "invoice_sent",
-    partially_paid: "invoice_sent",
-    paid: "paid"
+    customer_approval_pending: "review",
+    needs_owner_approval: "review",
+    scope_change_requested: "review",
+    completion_review: "review",
+    invoice_review: "review",
+    field_work_complete: "completed",
+    invoice_sent: "completed",
+    partially_paid: "completed",
+    paid: "completed",
+    closed: "completed",
+    cancelled: "completed"
   };
+
+  function ownerKanbanTargetStage(value) {
+    return ownerKanbanColumns.find((column) => column.key === value)?.targetStage || value;
+  }
+
+  function ownerKanbanColumnLabel(value) {
+    return ownerKanbanColumns.find((column) => column.key === value)?.label || ticketStageLabel(value);
+  }
 
   function loadOwnerKanbanFilters() {
     try {
@@ -12010,6 +12022,8 @@
       state.ownerKanbanTypeFilter = stored.type || "All";
       state.ownerKanbanClientFilter = stored.client || "";
       state.ownerKanbanDateFilter = stored.date || "All";
+      state.ownerKanbanStatusFilter = stored.status || "All";
+      state.ownerKanbanSort = stored.sort || "priority";
       state.ownerKanbanActiveOnly = stored.activeOnly !== false;
       state.ownerKanbanBlockedOnly = Boolean(stored.blockedOnly);
       state.ownerKanbanOverdueOnly = Boolean(stored.overdueOnly);
@@ -12027,6 +12041,8 @@
         type: state.ownerKanbanTypeFilter,
         client: state.ownerKanbanClientFilter,
         date: state.ownerKanbanDateFilter,
+        status: state.ownerKanbanStatusFilter,
+        sort: state.ownerKanbanSort,
         activeOnly: state.ownerKanbanActiveOnly,
         blockedOnly: state.ownerKanbanBlockedOnly,
         overdueOnly: state.ownerKanbanOverdueOnly
@@ -12073,6 +12089,7 @@
     if (state.ownerKanbanPriorityFilter !== "All" && ticketPriorityLabel(ticket) !== state.ownerKanbanPriorityFilter) return false;
     if (state.ownerKanbanTypeFilter !== "All" && ticket.sourceType !== state.ownerKanbanTypeFilter) return false;
     if (state.ownerKanbanDateFilter !== "All" && ownerKanbanDateState(ticket) !== state.ownerKanbanDateFilter) return false;
+    if (state.ownerKanbanStatusFilter !== "All" && ownerKanbanColumnForTicket(ticket) !== state.ownerKanbanStatusFilter) return false;
     const clientFilter = String(state.ownerKanbanClientFilter || "").trim().toLowerCase();
     if (clientFilter && ![ticket.customer, ticket.property].some((value) => String(value || "").toLowerCase().includes(clientFilter))) return false;
     const query = String(state.ownerKanbanSearch || "").trim().toLowerCase();
@@ -12093,6 +12110,17 @@
     ].some((value) => String(value || "").toLowerCase().includes(query));
   }
 
+  function sortOwnerKanbanTickets(tickets = []) {
+    const priorityRank = { urgent: 0, high: 1, normal: 2, low: 3 };
+    return tickets.slice().sort((a, b) => {
+      if (state.ownerKanbanSort === "due") return String(dateKey(a.dateRaw) || "9999-99-99").localeCompare(String(dateKey(b.dateRaw) || "9999-99-99"));
+      if (state.ownerKanbanSort === "newest") return String(b.createdAtRaw || b.updatedAtRaw || "").localeCompare(String(a.createdAtRaw || a.updatedAtRaw || ""));
+      if (state.ownerKanbanSort === "oldest") return String(a.createdAtRaw || a.updatedAtRaw || "").localeCompare(String(b.createdAtRaw || b.updatedAtRaw || ""));
+      return (priorityRank[String(ticketPriorityLabel(a)).toLowerCase()] ?? 2) - (priorityRank[String(ticketPriorityLabel(b)).toLowerCase()] ?? 2)
+        || String(dateKey(a.dateRaw) || "9999-99-99").localeCompare(String(dateKey(b.dateRaw) || "9999-99-99"));
+    });
+  }
+
   function ownerKanbanOptions(values = [], selected = "All", fallback = "All") {
     const cleanValues = [...new Set(values.map((value) => String(value || "").trim()).filter(Boolean))].sort((a, b) => a.localeCompare(b));
     return `<option value="All">${escapeHtml(fallback)}</option>${cleanValues.map((value) => `<option value="${escapeHtml(value)}"${value === selected ? " selected" : ""}>${escapeHtml(value)}</option>`).join("")}`;
@@ -12105,18 +12133,26 @@
     return `<section class="owner-kanban-toolbar" aria-label="Owner Kanban filters">
       <div class="owner-kanban-toolbar-head">
         <div>
-          <p class="eyebrow">Ticket Kanban</p>
-          <h3>Move active tickets through the workflow</h3>
-          <p>Drag canonical job tickets between columns, or use the status menu on each card.</p>
+          <p class="eyebrow">Owner Overview</p>
+          <h3>Kanban Board</h3>
+          <p>Drag and drop tickets to update status.</p>
         </div>
         <div class="owner-kanban-toolbar-actions">
           <span>${escapeHtml(filteredTickets.length)} of ${escapeHtml(tickets.length)} shown</span>
-          <button type="button" data-action="refresh-owner-kanban">Refresh Board</button>
-          ${canCreateTicketType("quote") ? `<button type="button" data-action="open-ticket-create" data-ticket-type="quote">New Ticket</button>` : ""}
+          <button type="button" data-action="refresh-owner-kanban">Refresh</button>
+          <details class="owner-kanban-view-settings">
+            <summary>View Settings</summary>
+            <div>
+              <label><input type="checkbox" data-owner-kanban-toggle="activeOnly"${state.ownerKanbanActiveOnly ? " checked" : ""}> Active tickets only</label>
+              <label><input type="checkbox" data-owner-kanban-toggle="blockedOnly"${state.ownerKanbanBlockedOnly ? " checked" : ""}> Blocked only</label>
+              <label><input type="checkbox" data-owner-kanban-toggle="overdueOnly"${state.ownerKanbanOverdueOnly ? " checked" : ""}> Overdue only</label>
+            </div>
+          </details>
+          ${canCreateTicketType("quote") ? `<button type="button" data-action="open-ticket-create" data-ticket-type="quote">+ New Ticket</button>` : ""}
         </div>
       </div>
       <div class="owner-kanban-filters">
-        <label>Search
+        <label class="owner-kanban-search">Search
           <input type="search" placeholder="Search tickets, clients, properties..." value="${escapeHtml(state.ownerKanbanSearch || "")}" data-owner-kanban-search>
         </label>
         <label>Assignee
@@ -12125,20 +12161,25 @@
         <label>Priority
           <select data-owner-kanban-filter="priority">${ownerKanbanOptions(priorities, state.ownerKanbanPriorityFilter, "All priorities")}</select>
         </label>
-        <label>Type
+        <label>Category
           <select data-owner-kanban-filter="type">${ownerKanbanOptions(types, state.ownerKanbanTypeFilter, "All types")}</select>
         </label>
-        <label>Client/property
-          <input type="search" placeholder="Filter by client or property" value="${escapeHtml(state.ownerKanbanClientFilter || "")}" data-owner-kanban-client>
-        </label>
-        <label>Date
+        <label>Due date
           <select data-owner-kanban-filter="date">
             ${["All", "overdue", "today", "upcoming", "none"].map((value) => `<option value="${escapeHtml(value)}"${value === state.ownerKanbanDateFilter ? " selected" : ""}>${escapeHtml(value === "All" ? "All dates" : titleCase(value))}</option>`).join("")}
           </select>
         </label>
-        <label class="owner-kanban-toggle"><input type="checkbox" data-owner-kanban-toggle="activeOnly"${state.ownerKanbanActiveOnly ? " checked" : ""}> Active only</label>
-        <label class="owner-kanban-toggle"><input type="checkbox" data-owner-kanban-toggle="blockedOnly"${state.ownerKanbanBlockedOnly ? " checked" : ""}> Blocked only</label>
-        <label class="owner-kanban-toggle"><input type="checkbox" data-owner-kanban-toggle="overdueOnly"${state.ownerKanbanOverdueOnly ? " checked" : ""}> Overdue only</label>
+        <label>Status
+          <select data-owner-kanban-filter="status">
+            <option value="All">All statuses</option>
+            ${ownerKanbanColumns.map((column) => `<option value="${escapeHtml(column.key)}"${column.key === state.ownerKanbanStatusFilter ? " selected" : ""}>${escapeHtml(column.label)}</option>`).join("")}
+          </select>
+        </label>
+        <label>Sort
+          <select data-owner-kanban-filter="sort">
+            ${[["priority", "Priority"], ["due", "Due date"], ["newest", "Newest"], ["oldest", "Oldest"]].map(([value, label]) => `<option value="${value}"${value === state.ownerKanbanSort ? " selected" : ""}>${label}</option>`).join("")}
+          </select>
+        </label>
         <button type="button" data-action="reset-owner-kanban-filters">Reset Filters</button>
       </div>
     </section>`;
@@ -12155,6 +12196,23 @@
     </label>`;
   }
 
+  function ownerKanbanCategory(ticket = {}) {
+    const stage = ticketStage(ticket);
+    if (["draft", "sales_intake"].includes(stage)) return ["Lead", "lead"];
+    if (["scope_in_progress", "quote_pending", "customer_approval_pending", "scope_change_requested"].includes(stage)) return ["Quote", "quote"];
+    if (["ready_to_schedule", "scheduled"].includes(stage)) return ["Scheduling", "scheduling"];
+    if (["in_progress", "paused", "field_work_complete", "completion_review"].includes(stage)) return ["Field Work", "field-work"];
+    if (["needs_budget", "budget_in_progress", "needs_owner_approval"].includes(stage)) return ["Budget", "budget"];
+    if (["invoice_preparation", "invoice_review", "invoice_sent", "partially_paid", "paid"].includes(stage)) return ["Invoice", "invoice"];
+    return [ticket.sourceLabel || ticketSourceLabel(ticket) || "Internal", "internal"];
+  }
+
+  function ownerKanbanAssigneeInitials(ticket = {}) {
+    const label = ticketAssigneeLabel(ticket);
+    if (!label || label === "Unassigned") return "—";
+    return label.split(/\s+/).filter(Boolean).slice(0, 2).map((part) => part[0]).join("").toUpperCase();
+  }
+
   function renderOwnerKanbanCard(ticket = {}) {
     const dateState = ownerKanbanDateState(ticket);
     const blockers = ticket.blockers || [];
@@ -12162,28 +12220,25 @@
     const dragAttrs = isCanonical && canManageOwnerWorkflow()
       ? `draggable="true" data-owner-kanban-card data-ticket-source="ticket" data-id="${escapeHtml(ticket.id)}"`
       : `data-owner-kanban-card data-ticket-source="${escapeHtml(ticket.source)}" data-id="${escapeHtml(ticket.id)}"`;
-    const notesCount = (state.data.ticketEvents || []).filter((event) => event.ticketId === ticket.id).length;
-    return `<article class="owner-kanban-card ${dateState === "overdue" ? "is-overdue" : ""} ${blockers.length ? "is-blocked" : ""}" tabindex="0" ${dragAttrs}>
+    const [categoryLabel, categoryTone] = ownerKanbanCategory(ticket);
+    const completed = ownerKanbanColumnForTicket(ticket) === "completed";
+    const saving = state.ownerKanbanMovingId === ticket.id;
+    return `<article class="owner-kanban-card ${dateState === "overdue" ? "is-overdue" : ""} ${blockers.length ? "is-blocked" : ""} ${saving ? "is-saving" : ""}" tabindex="0" ${dragAttrs} aria-busy="${saving ? "true" : "false"}">
       <button type="button" class="owner-kanban-card-open" data-action="open-ticket" data-ticket-source="${escapeHtml(ticket.source)}" data-id="${escapeHtml(ticket.id)}">
-        <span class="ticket-number">${escapeHtml(ticket.number)}</span>
         <strong>${escapeHtml(ticket.title || "Untitled ticket")}</strong>
-        <small>${escapeHtml(ticket.customer || "Client not set")}</small>
-        <small>${escapeHtml(ticket.property || "Property not set")}</small>
+        <small>${escapeHtml([ticket.customer, ticket.property].filter(Boolean).join(" · ") || ticket.number)}</small>
       </button>
       <div class="owner-kanban-card-meta">
-        <span>${escapeHtml(ticketAssigneeLabel(ticket))}</span>
-        <span>${escapeHtml(ticketPriorityLabel(ticket))}</span>
-        <span>${escapeHtml(ticket.sourceLabel || ticketSourceLabel(ticket))}</span>
+        <span class="owner-kanban-tag is-${escapeHtml(categoryTone)}">${escapeHtml(categoryLabel)}</span>
+        ${String(ticketPriorityLabel(ticket)).toLowerCase() !== "normal" ? `<span class="owner-kanban-priority is-${escapeHtml(String(ticketPriorityLabel(ticket)).toLowerCase())}">${escapeHtml(ticketPriorityLabel(ticket))}</span>` : ""}
       </div>
       <div class="owner-kanban-card-date">
-        <span>${escapeHtml(ticket.dateLabel || "No date")}</span>
-        <b>${escapeHtml(ticketValueLabel(ticket))}</b>
+        <span><span aria-hidden="true">▣</span> ${escapeHtml(ticket.dateLabel || "No due date")}</span>
+        <span class="owner-kanban-assignee" title="${escapeHtml(ticketAssigneeLabel(ticket))}">${escapeHtml(ownerKanbanAssigneeInitials(ticket))}</span>
+        ${completed ? `<span class="owner-kanban-complete" aria-label="Completed">✓</span>` : ""}
       </div>
       ${blockers.length ? `<div class="owner-kanban-blockers">${blockers.slice(0, 2).map((item) => `<span>${escapeHtml(item)}</span>`).join("")}</div>` : ""}
-      <div class="owner-kanban-indicators" aria-label="Ticket indicators">
-        <span>${escapeHtml(String(notesCount))} updates</span>
-        <span>${escapeHtml(ticket.nextAction || ticketNextAction(ticketStage(ticket)))}</span>
-      </div>
+      ${saving ? `<div class="owner-kanban-saving" role="status">Saving…</div>` : ""}
       ${renderOwnerKanbanMoveSelect(ticket)}
     </article>`;
   }
@@ -12195,9 +12250,8 @@
       <div class="owner-kanban-scroll" role="list" aria-label="Ticket workflow columns">
         ${ownerKanbanColumns.map((column) => {
           const totalTickets = tickets.filter((ticket) => ownerKanbanColumnForTicket(ticket) === column.key);
-          const shownTickets = filteredTickets.filter((ticket) => ownerKanbanColumnForTicket(ticket) === column.key);
-          const overLimit = column.limit && totalTickets.length > column.limit;
-          return `<section class="owner-kanban-column ${overLimit ? "is-over-limit" : ""}" data-owner-kanban-column="${escapeHtml(column.key)}" aria-label="${escapeHtml(column.label)} column">
+          const shownTickets = sortOwnerKanbanTickets(filteredTickets.filter((ticket) => ownerKanbanColumnForTicket(ticket) === column.key));
+          return `<section class="owner-kanban-column owner-kanban-column--${escapeHtml(column.key)}" data-owner-kanban-column="${escapeHtml(column.key)}" aria-label="${escapeHtml(column.label)} column">
             <div class="owner-kanban-column-head">
               <div>
                 <h4>${escapeHtml(column.label)}</h4>
@@ -12205,10 +12259,10 @@
               </div>
               <span title="${escapeHtml(String(totalTickets.length))} total tickets">${escapeHtml(String(shownTickets.length))}</span>
             </div>
-            ${overLimit ? `<p class="owner-kanban-limit">Over WIP target of ${escapeHtml(String(column.limit))}</p>` : ""}
             <div class="owner-kanban-column-list">
-              ${shownTickets.length ? shownTickets.map(renderOwnerKanbanCard).join("") : `<p class="owner-kanban-empty">No tickets here.</p>`}
+              ${shownTickets.length ? shownTickets.map(renderOwnerKanbanCard).join("") : `<p class="owner-kanban-empty"><strong>Clear for now</strong><span>Drop a ticket here or add a new one.</span></p>`}
             </div>
+            ${canCreateTicketType("quote") ? `<button class="owner-kanban-add" type="button" data-action="open-ticket-create" data-ticket-type="quote">+ Add Ticket</button>` : ""}
           </section>`;
         }).join("")}
       </div>
@@ -12953,6 +13007,7 @@
         ${renderPhoneActions(item.phone, { leadId: item.id, leadType: "outreach_prospect", compact: true, helper: false })}
         ${canCreateTicketType("quote") ? `<button type="button" class="inline-action" data-action="create-ticket-from-prospect" data-id="${escapeHtml(item.id)}">Create Ticket</button>` : ""}
         <button type="button" class="inline-action" data-action="open-outreach-prospect" data-id="${escapeHtml(item.id)}">Open Lead</button>
+        ${canDeleteLeadRecords() ? `<button type="button" class="inline-action danger-action" data-action="delete-outreach-prospect" data-id="${escapeHtml(item.id)}">Delete Lead</button>` : ""}
       </div>
     </article>`;
   }
@@ -13188,7 +13243,8 @@
     const accountingTickets = dashboardTickets(data).filter((ticket) => ticketIsOpen(ticket) && ticketInStage(ticket, ["needs_budget"]));
     const due = typeof outreachDueProspects === "function" ? outreachDueProspects() : [];
     const hot = typeof outreachHotProspects === "function" ? outreachHotProspects() : [];
-    const prospectQueue = Array.from(new Map([...due, ...hot].map((item) => [String(item.id || outreachTitle(item)), item])).values()).slice(0, 5);
+    const activeProspects = (data.outreachProspects || []).filter((item) => !isClosedOutreach(item));
+    const prospectQueue = Array.from(new Map([...due, ...hot, ...activeProspects].map((item) => [String(item.id || outreachTitle(item)), item])).values());
     const companies = data.outreachCompanies || [];
     const properties = data.outreachProperties || [];
     target.innerHTML = `
@@ -14495,6 +14551,7 @@
             ${actionButton("Mark Contacted", "mark-outreach-contacted", item.id)}
             <button class="inline-action" type="button" data-action="create-outreach-quote" data-id="${escapeHtml(item.id)}"${item.convertedToQuote ? " disabled" : ""}>${buttonContent(item.convertedToQuote ? "Quote Lead Created" : "Create Quote Lead", "create-outreach-quote")}</button>
             <button class="inline-action" type="button" data-action="route-outreach-prospect" data-id="${escapeHtml(item.id)}"${routeDisabled}>${buttonContent(item.routeAdded ? "Route Added" : "Add Route", "route-outreach-prospect")}</button>
+            ${canDeleteLeadRecords() ? actionButton("Delete Lead", "delete-outreach-prospect", item.id).replace("inline-action", "inline-action danger-action") : ""}
           </div>
         </details>
       </div>
@@ -14873,7 +14930,7 @@
             ${item && canCreateTicketType("quote") ? `<button type="button" data-action="create-ticket-from-prospect" data-id="${escapeHtml(item.id)}">${buttonContent("Create Job Ticket", "open-ticket-create")}</button>` : ""}
             ${item ? `<button type="button" data-action="create-outreach-quote" data-id="${escapeHtml(item.id)}"${item.convertedToQuote ? " disabled" : ""}>${buttonContent(item.convertedToQuote ? "Quote Lead Created" : "Create Quote Lead", "create-outreach-quote")}</button>` : ""}
             ${item ? `<button type="button" data-action="route-outreach-prospect" data-id="${escapeHtml(item.id)}"${state.routeStopsReady ? "" : " disabled"}>${buttonContent(item.routeAdded ? "Route Added" : "Add to Route", "route-outreach-prospect")}</button>` : ""}
-            ${item ? `<button type="button" class="danger-action" data-action="delete-outreach-prospect" data-id="${escapeHtml(item.id)}">${buttonContent("Delete Prospect", "delete-outreach-prospect")}</button>` : ""}
+            ${item && canDeleteLeadRecords() ? `<button type="button" class="danger-action" data-action="delete-outreach-prospect" data-id="${escapeHtml(item.id)}">${buttonContent("Delete Lead", "delete-outreach-prospect")}</button>` : ""}
           </div>
         </form>
         ${item ? renderCallPanel(callPanelContext("outreach_prospect", item.id)) : ""}
@@ -19231,6 +19288,8 @@
         if (filter === "priority") state.ownerKanbanPriorityFilter = target.value || "All";
         if (filter === "type") state.ownerKanbanTypeFilter = target.value || "All";
         if (filter === "date") state.ownerKanbanDateFilter = target.value || "All";
+        if (filter === "status") state.ownerKanbanStatusFilter = target.value || "All";
+        if (filter === "sort") state.ownerKanbanSort = target.value || "priority";
         persistOwnerKanbanFilters();
         renderHomeWorkspace(state.data);
         return;
@@ -19253,7 +19312,7 @@
         try {
           setDashboardState("Moving ticket...");
           await moveOwnerKanbanTicket(ticketId, nextStage, { notes: "Moved from Owner Overview Kanban status menu." });
-          setDashboardState(`Ticket moved to ${ticketStageLabel(nextStage)}.`);
+          setDashboardState(`Ticket moved to ${ownerKanbanColumnLabel(nextStage)}.`);
         } catch (error) {
           target.value = previousValue;
           setDashboardState(error.message || "Unable to move ticket.", "error");
@@ -19446,6 +19505,8 @@
         state.ownerKanbanTypeFilter = "All";
         state.ownerKanbanClientFilter = "";
         state.ownerKanbanDateFilter = "All";
+        state.ownerKanbanStatusFilter = "All";
+        state.ownerKanbanSort = "priority";
         state.ownerKanbanActiveOnly = true;
         state.ownerKanbanBlockedOnly = false;
         state.ownerKanbanOverdueOnly = false;
@@ -21135,17 +21196,23 @@
           setDashboardState(error.message || "Unable to add route stop.", "error");
         }
       } else if (action === "delete-outreach-prospect") {
-        const ok = window.confirm("Delete this outreach prospect?");
+        if (!canDeleteLeadRecords()) {
+          setDashboardState("Only Owner, Admin, or Manager users can delete leads.", "error");
+          return;
+        }
+        const lead = state.data.outreachProspects.find((item) => String(item.id) === String(id));
+        const leadName = lead ? outreachTitle(lead) : "this lead";
+        const ok = window.confirm(`Permanently delete ${leadName}? This cannot be undone.`);
         if (!ok) return;
         try {
-          setDashboardState("Deleting prospect...");
+          setDashboardState("Deleting lead...");
           await deleteRow("outreach_prospects", id);
           state.selectedOutreachIds.delete(id);
           closeSubmissionDrawer();
           await refreshDashboard();
-          setDashboardState("");
+          setDashboardState(`${leadName} was deleted.`);
         } catch (error) {
-          setDashboardState(error.message || "Unable to delete prospect.", "error");
+          setDashboardState(error.message || "Unable to delete lead.", "error");
         }
       } else if (action === "delete-outreach-property") {
         const ok = window.confirm("Delete this managed property?");
@@ -21167,6 +21234,10 @@
         state.selectedOutreachPropertyIds.clear();
         await render();
       } else if (action === "delete-selected-outreach") {
+        if (!canDeleteLeadRecords()) {
+          setDashboardState("Only Owner, Admin, or Manager users can delete leads.", "error");
+          return;
+        }
         const ids = Array.from(state.selectedOutreachIds);
         if (!ids.length) return;
         const ok = window.confirm(`Delete ${ids.length} selected prospect${ids.length === 1 ? "" : "s"}?`);
@@ -21494,7 +21565,7 @@
       try {
         setDashboardState("Moving ticket...");
         await moveOwnerKanbanTicket(ticketId, nextStage, { notes: "Moved by drag and drop from Owner Overview Kanban." });
-        setDashboardState(`Ticket moved to ${ticketStageLabel(nextStage)}.`);
+        setDashboardState(`Ticket moved to ${ownerKanbanColumnLabel(nextStage)}.`);
       } catch (error) {
         setDashboardState(error.message || "Unable to move ticket.", "error");
         openTicketDrawer("ticket", ticketId);

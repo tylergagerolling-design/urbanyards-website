@@ -481,6 +481,25 @@ test("ticket drawer workbench layouts wrap without overlapping content", () => {
   assert.match(css, /ticket-source-context-meta[\s\S]*grid-template-columns: repeat\(auto-fit, minmax\(min\(100%, 140px\), 1fr\)\)/);
 });
 
+test("owner overview kanban keeps five visual stages over canonical ticket workflow", () => {
+  const js = read("dashboard.js");
+  const css = read("dashboard.css");
+
+  assert.match(js, /\{ key: "new", label: "New"[\s\S]*\{ key: "planned", label: "Planned"[\s\S]*\{ key: "in_progress", label: "In Progress"[\s\S]*\{ key: "review", label: "Review"[\s\S]*\{ key: "completed", label: "Completed"/);
+  assert.match(js, /function ownerKanbanTargetStage/);
+  assert.match(js, /async function moveOwnerKanbanTicket[\s\S]*previousTickets[\s\S]*transitionJobTicketStage[\s\S]*state\.data\.tickets = previousTickets/);
+  assert.match(js, /data-owner-kanban-search/);
+  assert.match(js, /data-owner-kanban-filter="assignee"/);
+  assert.match(js, /data-owner-kanban-filter="priority"/);
+  assert.match(js, /data-owner-kanban-filter="type"/);
+  assert.match(js, /data-owner-kanban-filter="date"/);
+  assert.match(js, /data-owner-kanban-filter="status"/);
+  assert.match(js, /data-owner-kanban-filter="sort"/);
+  assert.match(js, /owner-kanban-empty[\s\S]*Clear for now/);
+  assert.match(css, /owner-kanban-scroll[\s\S]*grid-template-columns: repeat\(5, minmax\(210px, 1fr\)\)/);
+  assert.match(css, /@media \(max-width: 700px\)[\s\S]*grid-auto-columns: minmax\(260px, 84vw\)/);
+});
+
 test("dashboard creates canonical job tickets without removing source fallbacks", () => {
   const js = read("dashboard.js");
 

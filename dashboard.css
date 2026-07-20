@@ -15491,6 +15491,30 @@ body:not(.is-login-screen) .owner-kanban-move select {
   text-transform: none;
 }
 
+body:not(.is-login-screen) .owner-kanban-push-forward {
+  width: 100%;
+  min-height: 38px;
+  border: 0;
+  border-radius: 11px;
+  background: var(--uy-green);
+  color: #fff;
+  font: inherit;
+  font-size: .82rem;
+  font-weight: 900;
+  cursor: pointer;
+}
+
+body:not(.is-login-screen) .owner-kanban-push-forward:hover {
+  background: #164d2c;
+  transform: translateY(-1px);
+}
+
+body:not(.is-login-screen) .owner-kanban-push-forward:disabled {
+  opacity: .58;
+  cursor: wait;
+  transform: none;
+}
+
 body:not(.is-login-screen) .owner-kanban-empty {
   margin: 0;
   padding: 14px 12px;

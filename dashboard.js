@@ -12019,6 +12019,11 @@
     return ownerKanbanColumns.find((column) => column.key === value)?.label || ticketStageLabel(value);
   }
 
+  function ownerKanbanNextColumn(ticket = {}) {
+    const currentIndex = ownerKanbanColumns.findIndex((column) => column.key === ownerKanbanColumnForTicket(ticket));
+    return currentIndex >= 0 ? ownerKanbanColumns[currentIndex + 1] || null : null;
+  }
+
   function loadOwnerKanbanFilters() {
     try {
       const stored = JSON.parse(localStorage.getItem(OWNER_KANBAN_FILTER_KEY) || "{}");
@@ -12227,9 +12232,9 @@
     const dragAttrs = `data-owner-kanban-card data-ticket-source="${escapeHtml(ticket.source)}" data-id="${escapeHtml(ticket.id)}"`;
     const [categoryLabel, categoryTone] = ownerKanbanCategory(ticket);
     const completed = ownerKanbanColumnForTicket(ticket) === "completed";
+    const nextColumn = ownerKanbanNextColumn(ticket);
     const saving = state.ownerKanbanMovingId === ticket.id;
     return `<article class="owner-kanban-card ${dateState === "overdue" ? "is-overdue" : ""} ${blockers.length ? "is-blocked" : ""} ${saving ? "is-saving" : ""}" tabindex="0" ${dragAttrs} aria-busy="${saving ? "true" : "false"}">
-      ${isCanonical && canManageOwnerWorkflow() ? `<span class="owner-kanban-drag-handle" role="button" tabindex="0" aria-label="Drag ticket" title="Click and hold to drag this ticket"><i></i></span>` : ""}
       <button type="button" class="owner-kanban-card-open" data-action="open-ticket" data-ticket-source="${escapeHtml(ticket.source)}" data-id="${escapeHtml(ticket.id)}">
         <strong>${escapeHtml(ticket.title || "Untitled ticket")}</strong>
         <small>${escapeHtml([ticket.customer, ticket.property].filter(Boolean).join(" · ") || ticket.number)}</small>
@@ -12245,6 +12250,7 @@
       </div>
       ${blockers.length ? `<div class="owner-kanban-blockers">${blockers.slice(0, 2).map((item) => `<span>${escapeHtml(item)}</span>`).join("")}</div>` : ""}
       ${saving ? `<div class="owner-kanban-saving" role="status">Saving…</div>` : ""}
+      ${isCanonical && canManageOwnerWorkflow() && nextColumn ? `<button type="button" class="owner-kanban-push-forward" data-action="push-owner-kanban-forward" data-id="${escapeHtml(ticket.id)}" data-next-column="${escapeHtml(nextColumn.key)}"${saving ? " disabled" : ""}>Push Forward <span aria-hidden="true">→</span></button>` : ""}
       ${renderOwnerKanbanMoveSelect(ticket)}
     </article>`;
   }
@@ -19532,6 +19538,22 @@
         return;
       }
 
+      if (action === "push-owner-kanban-forward") {
+        const nextColumn = target.dataset.nextColumn || "";
+        if (!id || !nextColumn) return;
+        try {
+          target.disabled = true;
+          setDashboardState("Moving ticket forward...");
+          await moveOwnerKanbanTicket(id, nextColumn, { notes: "Pushed forward from Owner Overview Kanban." });
+          setDashboardState(`Ticket moved to ${ownerKanbanColumnLabel(nextColumn)}.`);
+        } catch (error) {
+          target.disabled = false;
+          setDashboardState(error.message || "Unable to move ticket forward.", "error");
+          openTicketDrawer("ticket", id);
+        }
+        return;
+      }
+
       if (action === "close-drawer") {
         closeSubmissionDrawer();
         return;
@@ -21528,53 +21550,6 @@
         } catch (error) {
           setDashboardState(error.message || "Unable to mark task done.", "error");
         }
-      }
-    });
-
-    let ownerKanbanPointerDrag = null;
-
-    const clearOwnerKanbanPointerDrag = () => {
-      ownerKanbanPointerDrag?.card?.classList.remove("is-dragging");
-      qsa("[data-owner-kanban-column].is-drag-over").forEach((column) => column.classList.remove("is-drag-over"));
-      ownerKanbanPointerDrag = null;
-      state.ownerKanbanMovingId = "";
-    };
-
-    els.appView.addEventListener("pointerdown", (event) => {
-      const handle = event.target?.closest?.(".owner-kanban-drag-handle");
-      const card = handle?.closest?.("[data-owner-kanban-card]");
-      if (!handle || !card || !card.dataset.id || event.button > 0) return;
-      event.preventDefault();
-      ownerKanbanPointerDrag = { card, handle, pointerId: event.pointerId, ticketId: card.dataset.id };
-      state.ownerKanbanMovingId = card.dataset.id;
-      card.classList.add("is-dragging");
-      handle.setPointerCapture?.(event.pointerId);
-    });
-
-    els.appView.addEventListener("pointermove", (event) => {
-      if (!ownerKanbanPointerDrag || ownerKanbanPointerDrag.pointerId !== event.pointerId) return;
-      event.preventDefault();
-      const column = document.elementFromPoint(event.clientX, event.clientY)?.closest?.("[data-owner-kanban-column]");
-      qsa("[data-owner-kanban-column].is-drag-over").forEach((item) => item.classList.toggle("is-drag-over", item === column));
-    });
-
-    els.appView.addEventListener("pointercancel", clearOwnerKanbanPointerDrag);
-
-    els.appView.addEventListener("pointerup", async (event) => {
-      if (!ownerKanbanPointerDrag || ownerKanbanPointerDrag.pointerId !== event.pointerId) return;
-      event.preventDefault();
-      const { ticketId } = ownerKanbanPointerDrag;
-      const column = document.elementFromPoint(event.clientX, event.clientY)?.closest?.("[data-owner-kanban-column]");
-      const nextStage = column?.dataset.ownerKanbanColumn || "";
-      clearOwnerKanbanPointerDrag();
-      if (!ticketId || !nextStage) return;
-      try {
-        setDashboardState("Moving ticket...");
-        await moveOwnerKanbanTicket(ticketId, nextStage, { notes: "Moved by drag and drop from Owner Overview Kanban." });
-        setDashboardState(`Ticket moved to ${ownerKanbanColumnLabel(nextStage)}.`);
-      } catch (error) {
-        setDashboardState(error.message || "Unable to move ticket.", "error");
-        openTicketDrawer("ticket", ticketId);
       }
     });
 

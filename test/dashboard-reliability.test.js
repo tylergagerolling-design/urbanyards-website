@@ -495,6 +495,8 @@ test("owner overview kanban keeps four freely movable stages and reserves comple
   assert.match(css, /owner-kanban-drag-ghost[\s\S]*position: fixed[\s\S]*opacity: \.82[\s\S]*pointer-events: none/);
   assert.doesNotMatch(js, /owner-kanban-add[\s\S]*\+ Add Ticket/);
   assert.match(js, /await moveOwnerKanbanSourceCard[\s\S]*clearOwnerKanbanPointerDrag\(\)[\s\S]*renderHomeWorkspace/);
+  assert.match(js, /draggable="true" data-owner-kanban-card/);
+  assert.match(js, /addEventListener\("dragstart"[\s\S]*dataTransfer\.setData[\s\S]*addEventListener\("dragover"[\s\S]*addEventListener\("drop"[\s\S]*moveOwnerKanbanSourceCard[\s\S]*addEventListener\("dragend"/);
   assert.match(js, /data-action="clear-owner-kanban-leads"/);
   assert.match(js, /async function moveOwnerKanbanSourceCard[\s\S]*updateSubmission[\s\S]*updateScheduledJob/);
   assert.match(js, /addEventListener\("pointerup"[\s\S]*moveOwnerKanbanSourceCard[\s\S]*refreshDashboard/);

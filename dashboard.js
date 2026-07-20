@@ -12270,7 +12270,7 @@
     const dateState = ownerKanbanDateState(ticket);
     const blockers = ticket.blockers || [];
     const isCanonical = ticket.source === "ticket";
-    const dragAttrs = `data-owner-kanban-card data-ticket-source="${escapeHtml(ticket.source)}" data-id="${escapeHtml(ticket.id)}"`;
+    const dragAttrs = `draggable="true" data-owner-kanban-card data-ticket-source="${escapeHtml(ticket.source)}" data-id="${escapeHtml(ticket.id)}"`;
     const [categoryLabel, categoryTone] = ownerKanbanCategory(ticket);
     const saving = state.ownerKanbanMovingId === ticket.id;
     return `<article class="owner-kanban-card ${dateState === "overdue" ? "is-overdue" : ""} ${blockers.length ? "is-blocked" : ""} ${saving ? "is-saving" : ""}" tabindex="0" ${dragAttrs} aria-busy="${saving ? "true" : "false"}">
@@ -21616,6 +21616,7 @@
     });
 
     let ownerKanbanPointerDrag = null;
+    let ownerKanbanNativeDrag = null;
 
     const clearOwnerKanbanPointerDrag = () => {
       ownerKanbanPointerDrag?.card?.classList.remove("is-dragging");
@@ -21626,6 +21627,7 @@
     };
 
     els.appView.addEventListener("pointerdown", (event) => {
+      if (event.pointerType === "mouse") return;
       const card = event.target?.closest?.("[data-owner-kanban-card]");
       if (!card || !card.dataset.id || event.button > 0 || event.target?.closest?.("select, input, textarea, label")) return;
       ownerKanbanPointerDrag = {
@@ -21700,6 +21702,68 @@
         renderHomeWorkspace(state.data);
         setDashboardState(error.message || "Unable to move ticket.", "error");
       }
+    });
+
+    els.appView.addEventListener("dragstart", (event) => {
+      const card = event.target?.closest?.("[data-owner-kanban-card][draggable='true']");
+      if (!card?.dataset.id || !event.dataTransfer) {
+        event.preventDefault();
+        return;
+      }
+      ownerKanbanNativeDrag = {
+        card,
+        ticketId: card.dataset.id,
+        ticketSource: card.dataset.ticketSource || "ticket"
+      };
+      state.ownerKanbanMovingId = card.dataset.id;
+      card.classList.add("is-dragging");
+      event.dataTransfer.effectAllowed = "move";
+      event.dataTransfer.setData("text/plain", card.dataset.id);
+    });
+
+    els.appView.addEventListener("dragover", (event) => {
+      const column = event.target?.closest?.("[data-owner-kanban-column]");
+      if (!column || !ownerKanbanNativeDrag) return;
+      event.preventDefault();
+      event.dataTransfer.dropEffect = "move";
+      qsa("[data-owner-kanban-column].is-drag-over").forEach((item) => item.classList.toggle("is-drag-over", item === column));
+    });
+
+    els.appView.addEventListener("drop", async (event) => {
+      const column = event.target?.closest?.("[data-owner-kanban-column]");
+      if (!column || !ownerKanbanNativeDrag) return;
+      event.preventDefault();
+      const { ticketId, ticketSource, card } = ownerKanbanNativeDrag;
+      const nextColumn = column.dataset.ownerKanbanColumn || "";
+      ownerKanbanNativeDrag = null;
+      state.ownerKanbanSuppressClickUntil = Date.now() + 400;
+      qsa("[data-owner-kanban-column].is-drag-over").forEach((item) => item.classList.remove("is-drag-over"));
+      if (!ticketId || !nextColumn) {
+        card.classList.remove("is-dragging");
+        state.ownerKanbanMovingId = "";
+        return;
+      }
+      try {
+        setDashboardState(`Moving ticket to ${ownerKanbanColumnLabel(nextColumn)}...`);
+        await moveOwnerKanbanSourceCard(ticketId, ticketSource, nextColumn);
+        card.classList.remove("is-dragging");
+        state.ownerKanbanMovingId = "";
+        renderHomeWorkspace(state.data);
+        await refreshDashboard();
+        setDashboardState(`Ticket moved to ${ownerKanbanColumnLabel(nextColumn)}.`);
+      } catch (error) {
+        card.classList.remove("is-dragging");
+        state.ownerKanbanMovingId = "";
+        renderHomeWorkspace(state.data);
+        setDashboardState(error.message || "Unable to move ticket.", "error");
+      }
+    });
+
+    els.appView.addEventListener("dragend", () => {
+      ownerKanbanNativeDrag?.card?.classList.remove("is-dragging");
+      ownerKanbanNativeDrag = null;
+      state.ownerKanbanMovingId = "";
+      qsa("[data-owner-kanban-column].is-drag-over").forEach((item) => item.classList.remove("is-drag-over"));
     });
 
   els.appView.addEventListener("submit", async (event) => {

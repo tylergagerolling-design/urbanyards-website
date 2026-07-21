@@ -7585,6 +7585,7 @@ body:not(.is-login-screen) .dashboard-nav .dashboard-subnav a {
   display: flex !important;
   min-height: 42px !important;
   align-items: center !important;
+  gap: 10px !important;
   padding: 10px 12px !important;
   border: 1px solid transparent !important;
   border-radius: 12px !important;
@@ -7598,6 +7599,16 @@ body:not(.is-login-screen) .dashboard-nav .dashboard-subnav a {
     transform var(--transition-fast) !important;
 }
 
+body:not(.is-login-screen) .dashboard-nav .dashboard-subnav a::before {
+  width: 7px;
+  min-width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: transparent;
+  box-shadow: none;
+  content: "";
+}
+
 body:not(.is-login-screen) .dashboard-nav .dashboard-subnav a:hover {
   border-color: rgba(61, 105, 73, .12) !important;
   background: rgba(231, 239, 221, .7) !important;
@@ -7606,10 +7617,15 @@ body:not(.is-login-screen) .dashboard-nav .dashboard-subnav a:hover {
 }
 
 body:not(.is-login-screen) .dashboard-nav .dashboard-subnav a.is-active {
-  border-color: rgba(56, 105, 67, .15) !important;
-  background: linear-gradient(135deg, #dcebd3, #edf3e6) !important;
+  border-color: transparent !important;
+  background: transparent !important;
   color: #143829 !important;
-  box-shadow: inset 3px 0 0 #3f734d, 0 7px 16px rgba(35, 73, 48, .08) !important;
+  box-shadow: none !important;
+}
+
+body:not(.is-login-screen) .dashboard-nav .dashboard-subnav a.is-active::before {
+  background: #3f734d;
+  box-shadow: 0 0 0 3px rgba(63, 115, 77, .13);
 }
 
 .sidebar-bottom {

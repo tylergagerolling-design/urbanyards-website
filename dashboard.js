@@ -8509,10 +8509,23 @@
         node.setAttribute("tabindex", "-1");
       }
     });
+    qsa("[data-sidebar-nav-group]").forEach((group) => {
+      const links = qsa("[data-dashboard-link]", group);
+      group.hidden = links.length > 0 && links.every((link) => link.hidden);
+    });
   }
 
   function replaceDashboardHash(section) {
     history.replaceState(null, "", `#${dashboardSectionForRole(section)}`);
+  }
+
+  function setSidebarSubnavOpen(groupKey, open) {
+    qsa("[data-sidebar-nav-group]").forEach((group) => {
+      const isOpen = open && group.dataset.sidebarNavGroup === groupKey;
+      group.classList.toggle("is-open", isOpen);
+      const toggle = group.querySelector("[data-sidebar-subnav-toggle]");
+      if (toggle) toggle.setAttribute("aria-expanded", String(isOpen));
+    });
   }
 
   function setActiveSection(section, options = {}) {
@@ -8524,7 +8537,10 @@
       node.classList.toggle("is-active", node.dataset.section === state.activeSection);
     });
     qsa("[data-dashboard-link]").forEach((node) => {
-      const isActive = dashboardPrimarySection(node.dataset.dashboardLink) === dashboardPrimarySection(state.activeSection);
+      const isSubnavLink = Boolean(node.closest("[data-sidebar-subnav]"));
+      const isActive = isSubnavLink
+        ? normalizeDashboardSection(node.dataset.dashboardLink) === state.activeSection
+        : dashboardPrimarySection(node.dataset.dashboardLink) === dashboardPrimarySection(state.activeSection);
       node.classList.toggle("is-active", isActive);
       if (isActive) {
         node.setAttribute("aria-current", "page");
@@ -8532,6 +8548,9 @@
         node.removeAttribute("aria-current");
       }
     });
+    const activeGroup = dashboardPrimarySection(state.activeSection);
+    if (qs(`[data-sidebar-nav-group="${cssEscape(activeGroup)}"]`)) setSidebarSubnavOpen(activeGroup, true);
+    else setSidebarSubnavOpen("", false);
     if (state.activeSection === "route-planner" && googleRouteMap && window.google?.maps) {
       setTimeout(() => {
         window.google.maps.event.trigger(googleRouteMap, "resize");
@@ -18844,8 +18863,19 @@
     });
 
     document.addEventListener("click", async (event) => {
+      const subnavToggle = event.target instanceof Element ? event.target.closest("[data-sidebar-subnav-toggle]") : null;
+      if (subnavToggle) {
+        event.preventDefault();
+        event.stopPropagation();
+        const groupKey = subnavToggle.dataset.sidebarSubnavToggle || "";
+        setSidebarSubnavOpen(groupKey, subnavToggle.getAttribute("aria-expanded") !== "true");
+        return;
+      }
       const link = event.target instanceof Element ? event.target.closest("[data-dashboard-link]") : null;
-      if (!link) return;
+      if (!link) {
+        if (!(event.target instanceof Element) || !event.target.closest(".dashboard-nav")) setSidebarSubnavOpen("", false);
+        return;
+      }
       event.preventDefault();
       const nextSection = dashboardSectionForRole(link.dataset.dashboardLink);
       setActiveSection(nextSection);

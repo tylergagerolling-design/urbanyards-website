@@ -19981,3 +19981,32 @@ body:not(.is-login-screen) .field-proof-actions button {
     grid-template-columns: 1fr;
   }
 }
+
+/* Final drawer typography lock. Keep every label on one line through all width
+   transitions so rows never grow, wrap, or push neighboring items. */
+@media (min-width: 821px) {
+  body:not(.is-login-screen) .dashboard-sidebar :is(
+    .nav-label,
+    .dashboard-subnav a > span,
+    .sidebar-profile > span:not(.user-avatar),
+    .sign-out span:not(.button-icon)
+  ) {
+    display: block !important;
+    min-width: 0 !important;
+    overflow: hidden !important;
+    text-overflow: ellipsis !important;
+    white-space: nowrap !important;
+    line-height: 1.15 !important;
+  }
+
+  body:not(.is-login-screen) .dashboard-sidebar .dashboard-nav .dashboard-subnav a,
+  body:not(.is-login-screen) .dashboard-sidebar .dashboard-nav .dashboard-subnav a:hover,
+  body:not(.is-login-screen) .dashboard-sidebar .dashboard-nav .dashboard-subnav a.is-active {
+    grid-template-columns: minmax(0, 1fr) 7px !important;
+    grid-auto-rows: 1fr !important;
+    height: 42px !important;
+    min-height: 42px !important;
+    max-height: 42px !important;
+    overflow: hidden !important;
+  }
+}

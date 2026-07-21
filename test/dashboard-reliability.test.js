@@ -488,6 +488,9 @@ test("dashboard sidebar exposes a secondary drawer for multi-workspace sections"
   assert.match(css, /dashboard-subnav a\.is-active::after[\s\S]*background: #3f734d[\s\S]*opacity: 1/);
   assert.match(css, /Stable drawer alignment[\s\S]*grid-template-columns: var\(--uy-sidebar-icon\) minmax\(0, 1fr\) 7px/);
   assert.match(css, /dashboard-subnav a,[\s\S]*grid-template-columns: minmax\(0, 1fr\) 7px[\s\S]*transform: none/);
+  assert.match(html, /data-sidebar-subnav="settings"[\s\S]*<span>Import &amp; Export<\/span>/);
+  assert.match(css, /Final drawer typography lock[\s\S]*dashboard-subnav a > span[\s\S]*white-space: nowrap/);
+  assert.match(css, /dashboard-subnav a,[\s\S]*height: 42px[\s\S]*max-height: 42px[\s\S]*overflow: hidden/);
 });
 
 test("ticket drawer workbench layouts wrap without overlapping content", () => {

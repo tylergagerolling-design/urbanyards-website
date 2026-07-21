@@ -7614,7 +7614,7 @@ body:not(.is-login-screen) .dashboard-nav .dashboard-subnav a:hover {
   border-color: rgba(61, 105, 73, .12) !important;
   background: rgba(231, 239, 221, .7) !important;
   color: #173e2e !important;
-  transform: translateX(2px);
+  transform: none !important;
 }
 
 body:not(.is-login-screen) .dashboard-nav .dashboard-subnav a.is-active {
@@ -7628,6 +7628,33 @@ body:not(.is-login-screen) .dashboard-nav .dashboard-subnav a.is-active::after {
   background: #3f734d;
   box-shadow: 0 0 0 3px rgba(63, 115, 77, .13);
   opacity: 1;
+}
+
+/* Stable drawer alignment: reserve fixed icon and indicator columns so state
+   changes never recenter or shift navigation content. */
+@media (min-width: 821px) {
+  body:not(.is-login-screen) .dashboard-sidebar .dashboard-nav > a,
+  body:not(.is-login-screen) .dashboard-sidebar .dashboard-nav-group-row > a {
+    grid-template-columns: var(--uy-sidebar-icon) minmax(0, 1fr) 7px !important;
+  }
+
+  body:not(.is-login-screen) .dashboard-sidebar .dashboard-nav a::after {
+    justify-self: end !important;
+  }
+
+  body:not(.is-login-screen) .dashboard-sidebar .dashboard-nav .dashboard-subnav a,
+  body:not(.is-login-screen) .dashboard-sidebar .dashboard-nav .dashboard-subnav a:hover,
+  body:not(.is-login-screen) .dashboard-sidebar .dashboard-nav .dashboard-subnav a.is-active {
+    display: grid !important;
+    grid-template-columns: minmax(0, 1fr) 7px !important;
+    gap: 12px !important;
+    width: 100% !important;
+    height: auto !important;
+    min-height: 42px !important;
+    max-height: none !important;
+    padding: 10px 12px !important;
+    transform: none !important;
+  }
 }
 
 .sidebar-bottom {

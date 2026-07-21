@@ -20491,6 +20491,11 @@ body:not(.is-login-screen) .field-proof-actions button {
 /* Final shared-drawer scroll boundary. */
 html body:not(.is-login-screen).is-detail-drawer-open {
   overflow: hidden !important;
+  overflow-y: hidden !important;
+}
+
+html:has(body:not(.is-login-screen).is-detail-drawer-open) {
+  overflow-y: hidden !important;
 }
 
 html body:not(.is-login-screen) .detail-drawer,

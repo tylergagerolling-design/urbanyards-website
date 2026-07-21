@@ -410,7 +410,6 @@ function resolveRole(user, profile) {
     profile?.dashboard_role ||
     profile?.app_role ||
     user?.app_metadata?.role ||
-    user?.user_metadata?.role ||
     "viewer"
   ) || "viewer";
 }

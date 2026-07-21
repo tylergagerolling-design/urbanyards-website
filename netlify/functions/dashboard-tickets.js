@@ -309,6 +309,10 @@ async function updateTicket(id, payload) {
   return Array.isArray(rows) ? rows[0] || null : null;
 }
 
+function canDeleteTicket(actor) {
+  return Boolean(actor && hasPermission(actor.role, "admin:manage"));
+}
+
 async function deleteTicket(id) {
   await supabaseAdminRequest(`job_ticket_events?ticket_id=eq.${encodeURIComponent(id)}`, {
     method: "DELETE",
@@ -519,6 +523,17 @@ exports.handler = async (event) => {
     }
 
     if (action === "delete") {
+      if (!canDeleteTicket(actor)) {
+        await writeAuditLog({
+          actor,
+          action: "permission_denied_ticket_delete",
+          entityType: "job_tickets",
+          entityId: body.id || body.ticketId || null,
+          event,
+          module: "tickets"
+        });
+        return json(403, { error: "Only an owner or admin can delete job tickets.", requestId });
+      }
       const id = uuidOrNull(body.id || body.ticketId);
       if (!id) return json(400, { error: "A valid ticket id is required.", requestId });
       await deleteTicket(id);
@@ -569,6 +584,7 @@ exports.handler = async (event) => {
 };
 
 module.exports._internals = {
+  canDeleteTicket,
   cleanTicketPayload,
   cleanEventPayload,
   normalizeStage,

@@ -711,3 +711,14 @@ test("dashboard navigation and workspace calls to action have working destinatio
   assert.doesNotMatch(js, /action: "go-calendar",\s*actionLabel: "Add Visit"/);
   assert.doesNotMatch(js, /action: "go-calendar",\s*actionLabel: "Open Work"/);
 });
+
+test("production dashboard responses and invite sessions use hardened security defaults", () => {
+  const netlify = read("netlify.toml");
+  const callback = read("auth/callback.js");
+
+  assert.match(netlify, /Strict-Transport-Security = "max-age=31536000; includeSubDomains"/);
+  assert.match(netlify, /Cross-Origin-Opener-Policy = "same-origin"/);
+  assert.match(netlify, /X-Permitted-Cross-Domain-Policies = "none"/);
+  assert.match(callback, /normalizeRole\(firstText\(appMetadata\.role, user\.role\)\)/);
+  assert.doesNotMatch(callback, /normalizeRole\(firstText\(userMetadata\.role/);
+});

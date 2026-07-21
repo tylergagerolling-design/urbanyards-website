@@ -76,7 +76,7 @@
     const email = text(user.email).toLowerCase();
     const userMetadata = user.user_metadata || {};
     const appMetadata = user.app_metadata || {};
-    const role = normalizeRole(firstText(userMetadata.role, user.role, appMetadata.role));
+    const role = normalizeRole(firstText(appMetadata.role, user.role));
     const name = firstText(profileName(userMetadata), profileName(appMetadata), profileName(user), email);
     const session = {
       accessToken,

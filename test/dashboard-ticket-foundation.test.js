@@ -36,6 +36,32 @@ const {
 } = require("../netlify/functions/dashboard-tickets");
 const dashboardAuth = require("../netlify/functions/lib/dashboard-auth");
 
+test("dashboard roles never trust user-editable auth metadata", () => {
+  assert.equal(dashboardAuth.resolveRole({
+    email: "viewer@example.com",
+    app_metadata: {},
+    user_metadata: { role: "owner" }
+  }, null), "viewer");
+  assert.equal(dashboardAuth.resolveRole({
+    email: "admin@example.com",
+    app_metadata: { role: "admin" },
+    user_metadata: { role: "viewer" }
+  }, null), "admin");
+  assert.equal(dashboardAuth.resolveRole({
+    email: "worker@example.com",
+    app_metadata: { role: "viewer" },
+    user_metadata: { role: "owner" }
+  }, { role: "field_worker" }), "field_worker");
+});
+
+test("job ticket deletion remains an administrator-only operation", () => {
+  assert.equal(ticketFunctionInternals.canDeleteTicket({ role: "owner" }), true);
+  assert.equal(ticketFunctionInternals.canDeleteTicket({ role: "admin" }), true);
+  assert.equal(ticketFunctionInternals.canDeleteTicket({ role: "manager" }), false);
+  assert.equal(ticketFunctionInternals.canDeleteTicket({ role: "staff" }), false);
+  assert.equal(ticketFunctionInternals.canDeleteTicket({ role: "field_worker" }), false);
+});
+
 test("ticket permissions keep one canonical role-aware workflow", () => {
   const owner = { role: ROLES.OWNER, userId: "owner-1" };
   const sales = { role: ROLES.SALES_OUTREACH, userId: "sales-1" };

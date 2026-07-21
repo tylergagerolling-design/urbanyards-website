@@ -81,7 +81,8 @@ const ROLE_PERMISSIONS = {
     "documentation:read",
     "notes:read", "notes:write",
     "call_logs:read", "call_logs:write",
-    "exports:read"
+    "exports:read",
+    "imports:read", "imports:write"
   ],
   accountant: [
     "dashboard:read",

@@ -25,6 +25,17 @@ const {
   US_STATES,
   validateImportRows
 } = require("./lib/import-export-registry");
+const {
+  canonicalHeader,
+  normalizeBusiness,
+  normalizeLocation,
+  normalizePhone: normalizeLeadPhone,
+  validateHeaders: validateLeadHeaders,
+  normalizeRecord: normalizeLeadRecord,
+  classifyRecords: classifyLeadRecords,
+  summarize: summarizeLeadRecords,
+  canUndoLead
+} = require("./lib/lead-intake");
 
 const MAX_IMPORT_BYTES = Number(process.env.DASHBOARD_IMPORT_MAX_BYTES || 5 * 1024 * 1024);
 const MAX_IMPORT_ROWS = Number(process.env.DASHBOARD_IMPORT_MAX_ROWS || 2000);
@@ -128,15 +139,25 @@ async function parseImportSource(payload) {
   const format = String(payload.format || payload.sourceType || "").toLowerCase();
   const buffer = sourceBuffer(payload);
   if (buffer.length > MAX_IMPORT_BYTES) {
-    throw new Error(`File is too large. Maximum import size is ${Math.round(MAX_IMPORT_BYTES / 1024 / 1024)} MB.`);
+    const error = new Error(`File is too large. Maximum import size is ${Math.round(MAX_IMPORT_BYTES / 1024 / 1024)} MB.`);
+    error.statusCode = 400;
+    throw error;
   }
   if (format === "xlsx" || /\.xlsx$/i.test(payload.filename || "")) {
     const parsed = await parseWorkbook(buffer, payload.worksheetName || payload.sheetName || "");
-    if (parsed.rows.length > MAX_IMPORT_ROWS) throw new Error(`This file has too many rows. Maximum import rows: ${MAX_IMPORT_ROWS}.`);
+    if (parsed.rows.length > MAX_IMPORT_ROWS) {
+      const error = new Error(`This file has too many rows. Maximum import rows: ${MAX_IMPORT_ROWS}.`);
+      error.statusCode = 400;
+      throw error;
+    }
     return parsed;
   }
   const parsed = parseCsv(buffer.toString("utf8"));
-  if (parsed.rows.length > MAX_IMPORT_ROWS) throw new Error(`This file has too many rows. Maximum import rows: ${MAX_IMPORT_ROWS}.`);
+  if (parsed.rows.length > MAX_IMPORT_ROWS) {
+    const error = new Error(`This file has too many rows. Maximum import rows: ${MAX_IMPORT_ROWS}.`);
+    error.statusCode = 400;
+    throw error;
+  }
   return parsed;
 }
 
@@ -1102,6 +1123,218 @@ async function handleGoogleExport(event, payload) {
   return json(200, { ok: true, spreadsheetId, spreadsheetUrl: spreadsheetUrl || `https://docs.google.com/spreadsheets/d/${spreadsheetId}/edit`, rows: records.length });
 }
 
+function leadIntakeRowSource(row, headers) {
+  const source = {};
+  headers.forEach((header) => { source[canonicalHeader(header)] = row[header] ?? ""; });
+  return source;
+}
+
+function leadIntakeCandidate(record, recordType) {
+  const business = record.property_name || record.management_company || record.company || record.name || record.contact_name || "";
+  const location = record.city || record.location || record.address || record.property || "";
+  const phone = normalizeLeadPhone(record.phone_e164 || record.phone || record.phone_display || record.phone_number || "");
+  return {
+    recordType,
+    recordId: record.id || "",
+    business,
+    location,
+    phone: phone.display || record.phone || "",
+    normalizedPhone: phone.normalized,
+    normalizedBusiness: normalizeBusiness(business),
+    normalizedLocation: normalizeLocation(location)
+  };
+}
+
+async function leadIntakeExistingCandidates() {
+  const [prospects, contacts, clients, staged] = await Promise.all([
+    safeRows("outreach_prospects?select=id,property_name,management_company,city,address,phone&order=updated_at.desc&limit=500"),
+    safeRows("contacts?select=id,name,company,city,address,phone,phone_e164,phone_display&order=updated_at.desc&limit=500"),
+    safeRows("clients?select=id,name,company,city,address,phone&order=updated_at.desc&limit=250"),
+    safeRows("import_rows?select=id,batch_id,normalized_data,status&status=in.(new_unique,possible_duplicate,definite_duplicate)&order=created_at.desc&limit=500")
+  ]);
+  return [
+    ...prospects.map((row) => leadIntakeCandidate(row, "lead")),
+    ...contacts.map((row) => leadIntakeCandidate(row, "contact")),
+    ...clients.map((row) => leadIntakeCandidate(row, "client")),
+    ...staged.map((row) => ({
+      recordType: "staged import",
+      recordId: row.id,
+      batchId: row.batch_id,
+      business: row.normalized_data?.original?.business || "",
+      location: row.normalized_data?.original?.location || "",
+      phone: row.normalized_data?.normalized?.phone_display || "",
+      normalizedPhone: row.normalized_data?.normalized?.phone_number || "",
+      normalizedBusiness: row.normalized_data?.normalized?.business || "",
+      normalizedLocation: row.normalized_data?.normalized?.location || ""
+    }))
+  ].filter((row) => row.normalizedPhone || row.normalizedBusiness);
+}
+
+async function handleLeadIntakeTemplate(event) {
+  const auth = await requirePermission(event, "imports:read", { route: "dashboard-import-export", action: "lead-intake-template" });
+  if (!auth.ok) return json(auth.statusCode, { error: auth.error });
+  const body = rowsToCsv([
+    { business: "Rose City Apartments", type: "Apartment Community", location: "Portland OR", phone_number: "503-555-0123", source: "ChatGPT" },
+    { business: "Evergreen Property Management", type: "Property Management", location: "Beaverton OR", phone_number: "503-555-0187", source: "Claude" },
+    { business: "Columbia Office Center", type: "Commercial Property", location: "Vancouver WA", phone_number: "360-555-0144", source: "Research" }
+  ], ["business", "type", "location", "phone_number", "source"]);
+  return responseFile({ filename: "urban-yards-lead-intake-template.csv", contentType: "text/csv; charset=utf-8", body });
+}
+
+async function handleLeadIntakePreview(event, payload) {
+  const auth = await requirePermission(event, "imports:write", { route: "dashboard-import-export", action: "lead-intake-preview" });
+  if (!auth.ok) return json(auth.statusCode, { error: auth.error });
+  if (!/\.csv$/i.test(String(payload.filename || ""))) return json(400, { error: "Lead Intake accepts .csv files only." });
+  const parsed = await parseImportSource({ ...payload, format: "csv" });
+  const headerCheck = validateLeadHeaders(parsed.headers);
+  if (!headerCheck.valid) {
+    const details = [headerCheck.missing.length ? `Missing required headers: ${headerCheck.missing.join(", ")}.` : "", headerCheck.duplicates.length ? `Duplicate headers: ${headerCheck.duplicates.join(", ")}.` : ""].filter(Boolean).join(" ");
+    return json(400, { error: `${details} Use: business,type,location,phone_number with optional source.` });
+  }
+  if (!parsed.rows.length) return json(400, { error: "The CSV has columns but no actual records." });
+  const normalized = parsed.rows.map((row) => normalizeLeadRecord(leadIntakeRowSource(row, parsed.headers), row._rowNumber));
+  const candidates = await leadIntakeExistingCandidates();
+  const reviewed = classifyLeadRecords(normalized, candidates);
+  const summary = summarizeLeadRecords(reviewed);
+  const sources = [...new Set(reviewed.map((row) => row.original.source).filter(Boolean))];
+  const defaultName = `${sources[0] || String(payload.filename || "Lead list").replace(/\.csv$/i, "")} — ${new Date().toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" })}`;
+  const batches = await supabaseAdminRequest("import_batches", {
+    method: "POST", headers: { Prefer: "return=representation" }, body: JSON.stringify({
+      module: "lead_intake", table_name: "outreach_prospects", source_type: "csv", source_name: String(payload.filename || "lead-list.csv").slice(0, 240), file_name: String(payload.filename || "lead-list.csv").slice(0, 240), status: "preview",
+      created_by: auth.actor.userId || null, created_by_email: auth.actor.email || null, total_rows: summary.total,
+      duplicate_count: summary.definiteDuplicates + summary.possibleDuplicates, rejected_count: summary.invalid,
+      metadata: { name: String(payload.batchName || defaultName).slice(0, 240), sources, summary, stage: "awaiting_review" }
+    })
+  });
+  const batch = Array.isArray(batches) ? batches[0] : batches;
+  for (let index = 0; index < reviewed.length; index += 200) {
+    const chunk = reviewed.slice(index, index + 200).map((row) => ({
+      batch_id: batch.id, row_number: row.rowNumber, status: row.duplicateStatus, action_type: row.reviewAction,
+      source_data: row.original, normalized_data: row, errors: row.errors, warnings: row.match ? [row.match.reason] : [], message: row.match?.reason || ""
+    }));
+    await supabaseAdminRequest("import_rows", { method: "POST", headers: { Prefer: "return=minimal" }, body: JSON.stringify(chunk) });
+  }
+  await writeAuditLog({ actor: auth.actor, action: "lead_intake_uploaded", entityType: "import_batches", entityId: batch.id, metadata: summary, event });
+  return json(200, { ok: true, batch: { ...batch, metadata: { ...(batch.metadata || {}), summary } }, summary });
+}
+
+async function handleLeadIntakeBatches(event, payload) {
+  const auth = await requirePermission(event, "imports:read", { route: "dashboard-import-export", action: "lead-intake-batches" });
+  if (!auth.ok) return json(auth.statusCode, { error: auth.error });
+  const batchId = String(payload.batchId || "").trim();
+  const batches = await safeRows(batchId
+    ? `import_batches?id=eq.${encodeURIComponent(batchId)}&module=eq.lead_intake&select=*&limit=1`
+    : "import_batches?module=eq.lead_intake&select=*&order=created_at.desc&limit=20");
+  let rows = [];
+  if (batchId && batches[0]) rows = await safeRows(`import_rows?batch_id=eq.${encodeURIComponent(batchId)}&select=*&order=row_number.asc&limit=2000`);
+  return json(200, { ok: true, batches, batch: batches[0] || null, rows });
+}
+
+async function handleLeadIntakeReview(event, payload) {
+  const auth = await requirePermission(event, "imports:write", { route: "dashboard-import-export", action: "lead-intake-review" });
+  if (!auth.ok) return json(auth.statusCode, { error: auth.error });
+  const rowId = String(payload.rowId || "").trim();
+  const rowIds = Array.isArray(payload.rowIds) ? payload.rowIds.map((id) => String(id || "").trim()).filter(Boolean).slice(0, 2000) : [];
+  const action = String(payload.reviewAction || "").trim();
+  const allowed = new Set(["approve", "keep_existing", "use_imported", "merge_missing", "keep_both", "skip", "exclude", "unresolved"]);
+  if ((!rowId && !rowIds.length) || !allowed.has(action)) return json(400, { error: "Choose a valid review action." });
+  const ids = rowIds.length ? rowIds : [rowId];
+  for (let index = 0; index < ids.length; index += 100) {
+    const chunk = ids.slice(index, index + 100);
+    await supabaseAdminRequest(`import_rows?id=in.(${chunk.map((id) => encodeURIComponent(id)).join(",")})`, { method: "PATCH", headers: { Prefer: "return=minimal" }, body: JSON.stringify({ action_type: action }) });
+  }
+  await writeAuditLog({ actor: auth.actor, action: "lead_intake_row_reviewed", entityType: "import_rows", entityId: rowId || null, metadata: { reviewAction: action, rowCount: ids.length }, event });
+  return json(200, { ok: true });
+}
+
+function leadInsertFromImport(row, batch, actor) {
+  const original = row.normalized_data?.original || row.source_data || {};
+  const normalized = row.normalized_data?.normalized || {};
+  return {
+    property_name: original.business || null, management_company: original.business || null, property_type: original.type || "Other",
+    city: original.location || null, phone: normalized.phone_display || original.phone_number || null,
+    source: original.source || "Lead Intake", status: "Prospect", priority: "Normal", service_interest: "General Property Care",
+    notes: null, last_contacted_at: null, next_follow_up_at: null
+  };
+}
+
+async function handleLeadIntakeApprove(event, payload) {
+  const auth = await requirePermission(event, "imports:write", { route: "dashboard-import-export", action: "lead-intake-approve" });
+  if (!auth.ok) return json(auth.statusCode, { error: auth.error });
+  const batchId = String(payload.batchId || "").trim();
+  const batches = await safeRows(`import_batches?id=eq.${encodeURIComponent(batchId)}&module=eq.lead_intake&select=*&limit=1`);
+  const batch = batches[0];
+  if (!batch) return json(404, { error: "Import batch was not found." });
+  if (!["preview", "completed_with_warnings"].includes(batch.status)) return json(409, { error: "This import batch has already been completed or cancelled." });
+  const rows = await safeRows(`import_rows?batch_id=eq.${encodeURIComponent(batchId)}&select=*&order=row_number.asc&limit=2000`);
+  const creatable = rows.filter((row) => ["approve", "keep_both"].includes(row.action_type) && row.status !== "invalid");
+  const mergeable = rows.filter((row) => ["use_imported", "merge_missing"].includes(row.action_type) && row.normalized_data?.match?.recordType === "lead" && row.normalized_data?.match?.recordId);
+  if (!creatable.length && !mergeable.length) return json(409, { error: "No reviewed prospects are approved for the Call Queue." });
+  let updatedCount = 0;
+  for (const row of mergeable) {
+    const matchId = row.normalized_data.match.recordId;
+    const existingRows = await safeRows(`outreach_prospects?id=eq.${encodeURIComponent(matchId)}&select=*&limit=1`);
+    const existing = existingRows[0];
+    if (!existing) continue;
+    const imported = leadInsertFromImport(row, batch, auth.actor);
+    const patch = {};
+    Object.entries(imported).forEach(([key, value]) => {
+      if (value === null || value === "") return;
+      if (row.action_type === "use_imported" || existing[key] === null || existing[key] === "" || existing[key] === undefined) patch[key] = value;
+    });
+    if (!Object.keys(patch).length) continue;
+    const updatedRows = await supabaseAdminRequest(`outreach_prospects?id=eq.${encodeURIComponent(matchId)}`, { method: "PATCH", headers: { Prefer: "return=representation" }, body: JSON.stringify(patch) });
+    const updated = Array.isArray(updatedRows) ? updatedRows[0] : updatedRows;
+    await supabaseAdminRequest("import_changes", { method: "POST", headers: { Prefer: "return=minimal" }, body: JSON.stringify({ batch_id: batch.id, module: "lead_intake", table_name: "outreach_prospects", record_id: matchId, change_type: "update", old_value: existing, new_value: updated, changed_fields: Object.keys(patch) }) }).catch(() => null);
+    await supabaseAdminRequest(`import_rows?id=eq.${encodeURIComponent(row.id)}`, { method: "PATCH", headers: { Prefer: "return=minimal" }, body: JSON.stringify({ status: "updated", message: `${row.action_type === "merge_missing" ? "Filled missing information on" : "Updated"} existing lead ${matchId}.` }) });
+    updatedCount += 1;
+  }
+  const inserts = creatable.map((row) => leadInsertFromImport(row, batch, auth.actor));
+  const created = inserts.length ? await supabaseAdminRequest("outreach_prospects", { method: "POST", headers: { Prefer: "return=representation" }, body: JSON.stringify(inserts) }) : [];
+  const createdRows = Array.isArray(created) ? created : created ? [created] : [];
+  for (let index = 0; index < createdRows.length; index += 1) {
+    const lead = createdRows[index];
+    const sourceRow = creatable[index];
+    await supabaseAdminRequest("import_changes", { method: "POST", headers: { Prefer: "return=minimal" }, body: JSON.stringify({ batch_id: batch.id, module: "lead_intake", table_name: "outreach_prospects", record_id: lead.id, change_type: "create", old_value: null, new_value: lead, changed_fields: Object.keys(inserts[index]) }) }).catch(() => null);
+    await supabaseAdminRequest(`import_rows?id=eq.${encodeURIComponent(sourceRow.id)}`, { method: "PATCH", headers: { Prefer: "return=minimal" }, body: JSON.stringify({ status: "created", message: `Approved as lead ${lead.id}.` }) });
+  }
+  const skipped = rows.length - createdRows.length - updatedCount;
+  const batchName = String(payload.batchName || batch.metadata?.name || batch.source_name || "Lead Intake batch").trim().slice(0, 240);
+  await supabaseAdminRequest(`import_batches?id=eq.${encodeURIComponent(batch.id)}`, { method: "PATCH", headers: { Prefer: "return=minimal" }, body: JSON.stringify({ status: skipped ? "completed_with_warnings" : "complete", created_count: createdRows.length, updated_count: updatedCount, success_count: createdRows.length + updatedCount, skipped_count: skipped, completed_at: new Date().toISOString(), metadata: { ...(batch.metadata || {}), name: batchName, stage: "approved", approvedAt: new Date().toISOString(), approvedBy: auth.actor.email || "", approvedCount: createdRows.length, updatedCount } }) });
+  await writeAuditLog({ actor: auth.actor, action: "lead_intake_approved", entityType: "import_batches", entityId: batch.id, metadata: { approved: createdRows.length, updated: updatedCount, skipped }, event });
+  return json(200, { ok: true, approved: createdRows.length, updated: updatedCount, skipped });
+}
+
+async function handleLeadIntakeCancel(event, payload) {
+  const auth = await requirePermission(event, "imports:write", { route: "dashboard-import-export", action: "lead-intake-cancel" });
+  if (!auth.ok) return json(auth.statusCode, { error: auth.error });
+  const batchId = String(payload.batchId || "").trim();
+  await supabaseAdminRequest(`import_batches?id=eq.${encodeURIComponent(batchId)}&module=eq.lead_intake&status=eq.preview`, { method: "PATCH", headers: { Prefer: "return=minimal" }, body: JSON.stringify({ status: "archived", archived_at: new Date().toISOString(), metadata: { stage: "cancelled" } }) });
+  await writeAuditLog({ actor: auth.actor, action: "lead_intake_cancelled", entityType: "import_batches", entityId: batchId, event });
+  return json(200, { ok: true });
+}
+
+async function handleLeadIntakeUndo(event, payload) {
+  const auth = await requirePermission(event, "imports:rollback", { route: "dashboard-import-export", action: "lead-intake-undo" });
+  if (!auth.ok) return json(auth.statusCode, { error: auth.error });
+  const batchId = String(payload.batchId || "").trim();
+  const changes = await safeRows(`import_changes?batch_id=eq.${encodeURIComponent(batchId)}&module=eq.lead_intake&change_type=eq.create&select=*&limit=2000`);
+  const result = { removed: 0, blocked: [] };
+  for (const change of changes) {
+    const leads = await safeRows(`outreach_prospects?id=eq.${encodeURIComponent(change.record_id)}&select=*&limit=1`);
+    const lead = leads[0];
+    if (!lead) continue;
+    const activity = await safeRows(`lead_activity?lead_type=eq.outreach_prospect&lead_id=eq.${encodeURIComponent(lead.id)}&select=id&limit=1`);
+    const check = canUndoLead({ lead, activity });
+    if (!check.allowed) { result.blocked.push({ id: lead.id, business: lead.property_name || lead.management_company || "Lead", reasons: check.blocked }); continue; }
+    await supabaseAdminRequest(`outreach_prospects?id=eq.${encodeURIComponent(lead.id)}`, { method: "DELETE" });
+    result.removed += 1;
+  }
+  await supabaseAdminRequest(`import_batches?id=eq.${encodeURIComponent(batchId)}`, { method: "PATCH", headers: { Prefer: "return=minimal" }, body: JSON.stringify({ rollback_status: result.blocked.length ? "rolled_back_with_conflicts" : "rolled_back", rolled_back_by: auth.actor.userId || null, rolled_back_at: new Date().toISOString() }) }).catch(() => null);
+  await writeAuditLog({ actor: auth.actor, action: "lead_intake_undone", entityType: "import_batches", entityId: batchId, metadata: result, event });
+  return json(200, { ok: true, ...result });
+}
+
 exports.handler = async (event) => {
   const requestId = requestIdFromEvent(event);
   const action = queryValue(event, "action") || parseJsonBody(event).action || (event.httpMethod === "GET" ? "registry" : "");
@@ -1125,9 +1358,17 @@ exports.handler = async (event) => {
     if (action === "google-start") return handleGoogleStart(event, payload);
     if (action === "google-status") return handleGoogleStatus(event);
     if (action === "google-export") return handleGoogleExport(event, payload);
+    if (action === "lead-intake-template") return handleLeadIntakeTemplate(event);
+    if (action === "lead-intake-preview") return handleLeadIntakePreview(event, payload);
+    if (action === "lead-intake-batches") return handleLeadIntakeBatches(event, payload);
+    if (action === "lead-intake-review") return handleLeadIntakeReview(event, payload);
+    if (action === "lead-intake-approve") return handleLeadIntakeApprove(event, payload);
+    if (action === "lead-intake-cancel") return handleLeadIntakeCancel(event, payload);
+    if (action === "lead-intake-undo") return handleLeadIntakeUndo(event, payload);
     return json(400, { error: "Unsupported import/export action.", requestId });
   } catch (error) {
     await writeSystemError({ route: "dashboard-import-export", error, actor, metadata: { action } });
-    return json(error.statusCode || 500, { error: safeError(error.statusCode === 503 ? error.message : "Import/export request failed."), requestId });
+    const statusCode = error.statusCode || 500;
+    return json(statusCode, { error: safeError(statusCode < 500 ? error.message : "Import/export request failed."), requestId });
   }
 };

@@ -275,6 +275,14 @@
     callQueueSelectedId: "",
     callQueueVisibleCount: 25,
     callQueueSaving: false,
+    leadIntakeBatches: [],
+    leadIntakeLoaded: false,
+    leadIntakeLoading: false,
+    leadIntakeSelectedBatch: null,
+    leadIntakeRows: [],
+    leadIntakePage: 1,
+    leadIntakeSearch: "",
+    leadIntakeStatusFilter: "All",
     equipmentView: "inventory",
     equipmentSearch: "",
     equipmentCategoryFilter: "All",
@@ -13189,6 +13197,119 @@
     </article>`).join("")}</div>`;
   }
 
+  function leadIntakeSummary(batch = {}) {
+    return batch.metadata?.summary || {
+      total: Number(batch.total_rows || 0),
+      unique: Math.max(0, Number(batch.total_rows || 0) - Number(batch.duplicate_count || 0) - Number(batch.rejected_count || 0)),
+      definiteDuplicates: Number(batch.duplicate_count || 0),
+      possibleDuplicates: 0,
+      invalid: Number(batch.rejected_count || 0),
+      approved: Number(batch.created_count || 0)
+    };
+  }
+
+  function leadIntakeBatchName(batch = {}) {
+    return batch.metadata?.name || batch.source_name || batch.file_name || "Lead Intake batch";
+  }
+
+  function leadIntakeStatusLabel(batch = {}) {
+    if (batch.rollback_status) return batch.rollback_status === "rolled_back" ? "Undone" : "Undo Needs Review";
+    if (batch.metadata?.stage === "cancelled" || batch.status === "archived") return "Cancelled";
+    if (batch.status === "preview") return "Awaiting Review";
+    if (["complete", "completed_with_warnings"].includes(batch.status)) return "Approved";
+    if (batch.status === "failed") return "Failed";
+    return "Processing";
+  }
+
+  async function loadLeadIntakeBatches(force = false) {
+    if (state.leadIntakeLoading || (state.leadIntakeLoaded && !force)) return;
+    state.leadIntakeLoading = true;
+    try {
+      const result = await importExportRequest("lead-intake-batches");
+      state.leadIntakeBatches = Array.isArray(result.batches) ? result.batches : [];
+      state.leadIntakeLoaded = true;
+    } catch (error) {
+      state.leadIntakeLoaded = true;
+      state.leadIntakeError = error.message || "Import batches could not load.";
+    } finally {
+      state.leadIntakeLoading = false;
+      if (state.activeSection === "call-queue") renderCallQueueWorkspace();
+    }
+  }
+
+  function renderLeadIntakeCard() {
+    const awaiting = state.leadIntakeBatches.filter((batch) => batch.status === "preview");
+    const awaitingCount = awaiting.reduce((total, batch) => total + Number(leadIntakeSummary(batch).approved || 0), 0);
+    const duplicateCount = awaiting.reduce((total, batch) => {
+      const summary = leadIntakeSummary(batch);
+      return total + Number(summary.definiteDuplicates || 0) + Number(summary.possibleDuplicates || 0);
+    }, 0);
+    const recent = state.leadIntakeBatches.slice(0, 3);
+    return `<section class="lead-intake-card" aria-labelledby="lead-intake-title">
+      <div class="lead-intake-heading">
+        <div><p class="eyebrow">Lead Intake</p><h3 id="lead-intake-title">Review prospect lists before they enter the queue</h3><p>Upload LLM research CSVs, validate records, resolve duplicates, and approve only clean prospects.</p></div>
+        <div class="lead-intake-actions">
+          <button type="button" data-action="lead-intake-import">Import CSV</button>
+          <button type="button" class="secondary-action" data-action="lead-intake-template">Download CSV Template</button>
+          <button type="button" class="secondary-action" data-action="lead-intake-review-imports">Review Imports</button>
+          <input type="file" accept=".csv,text/csv" data-lead-intake-file hidden>
+        </div>
+      </div>
+      <div class="lead-intake-metrics" aria-label="Lead Intake status">
+        <div><span>Awaiting review</span><strong>${escapeHtml(String(awaitingCount))}</strong></div>
+        <div><span>Possible duplicates</span><strong>${escapeHtml(String(duplicateCount))}</strong></div>
+        <div><span>Import batches</span><strong>${escapeHtml(String(state.leadIntakeBatches.length))}</strong></div>
+      </div>
+      <div class="lead-intake-recent"><strong>Import Batches</strong>${state.leadIntakeLoading ? `<span>Loading…</span>` : recent.length ? recent.map((batch) => `<button type="button" data-action="lead-intake-open-batch" data-id="${escapeHtml(batch.id)}"><span>${escapeHtml(leadIntakeBatchName(batch))}</span><small>${escapeHtml(leadIntakeStatusLabel(batch))} · ${escapeHtml(formatDate(batch.created_at))}</small></button>`).join("") : `<span>${escapeHtml(state.leadIntakeError || "No import batches yet.")}</span>`}</div>
+    </section>`;
+  }
+
+  async function openLeadIntakeBatch(batchId) {
+    setDashboardState("Loading import batch…");
+    const result = await importExportRequest("lead-intake-batches", { batchId });
+    state.leadIntakeSelectedBatch = result.batch;
+    state.leadIntakeRows = Array.isArray(result.rows) ? result.rows : [];
+    state.leadIntakePage = 1;
+    renderLeadIntakeReviewDrawer();
+    setDashboardState("");
+  }
+
+  function leadIntakeFilteredRows() {
+    const query = state.leadIntakeSearch.trim().toLowerCase();
+    return state.leadIntakeRows.filter((row) => {
+      const original = row.normalized_data?.original || row.source_data || {};
+      const statusMatches = state.leadIntakeStatusFilter === "All" || row.status === state.leadIntakeStatusFilter;
+      const queryMatches = !query || [original.business, original.type, original.location, original.phone_number, original.source].some((value) => String(value || "").toLowerCase().includes(query));
+      return statusMatches && queryMatches;
+    });
+  }
+
+  function renderLeadIntakeReviewDrawer() {
+    const batch = state.leadIntakeSelectedBatch;
+    if (!batch || !els.detailContent) return;
+    openDetailDrawer();
+    const summary = leadIntakeSummary(batch);
+    const filtered = leadIntakeFilteredRows();
+    const pageSize = 50;
+    const pageCount = Math.max(1, Math.ceil(filtered.length / pageSize));
+    state.leadIntakePage = Math.min(state.leadIntakePage, pageCount);
+    const visible = filtered.slice((state.leadIntakePage - 1) * pageSize, state.leadIntakePage * pageSize);
+    const approvalCount = state.leadIntakeRows.filter((row) => ["approve", "keep_both"].includes(row.action_type) && row.status !== "invalid").length;
+    els.detailContent.innerHTML = `<div class="drawer-content lead-intake-review" data-lead-intake-review>
+      <p class="eyebrow">Lead Intake</p><div class="lead-intake-review-title"><div><h3>Review Imported Leads</h3><label>Batch name<input data-lead-intake-batch-name value="${escapeHtml(leadIntakeBatchName(batch))}" maxlength="240"></label><p>${escapeHtml(batch.source_name || "CSV import")}</p></div><span class="status">${escapeHtml(leadIntakeStatusLabel(batch))}</span></div>
+      <div class="lead-intake-review-summary"><div><span>Imported records</span><strong>${summary.total}</strong></div><div><span>New unique prospects</span><strong>${summary.unique}</strong></div><div><span>Definite duplicates</span><strong>${summary.definiteDuplicates}</strong></div><div><span>Possible duplicates</span><strong>${summary.possibleDuplicates}</strong></div><div><span>Invalid rows</span><strong>${summary.invalid}</strong></div></div>
+      <div class="lead-intake-review-controls"><input type="search" data-lead-intake-search value="${escapeHtml(state.leadIntakeSearch)}" placeholder="Search imported records" aria-label="Search imported records"><select data-lead-intake-status-filter aria-label="Filter imported records"><option>All</option><option value="new_unique"${state.leadIntakeStatusFilter === "new_unique" ? " selected" : ""}>New Unique</option><option value="definite_duplicate"${state.leadIntakeStatusFilter === "definite_duplicate" ? " selected" : ""}>Definite Duplicate</option><option value="possible_duplicate"${state.leadIntakeStatusFilter === "possible_duplicate" ? " selected" : ""}>Possible Duplicate</option><option value="invalid"${state.leadIntakeStatusFilter === "invalid" ? " selected" : ""}>Invalid</option></select><button type="button" class="secondary-action" data-action="lead-intake-approve-unique">Approve All Unique Records</button><button type="button" class="secondary-action" data-action="lead-intake-skip-definite">Skip All Definite Duplicates</button></div>
+      <div class="lead-intake-table-wrap"><table class="lead-intake-table"><thead><tr><th>Imported prospect</th><th>Type / Source</th><th>Location</th><th>Phone</th><th>Duplicate review</th><th>Decision</th></tr></thead><tbody>${visible.map((row) => {
+        const original = row.normalized_data?.original || row.source_data || {};
+        const match = row.normalized_data?.match || {};
+        const action = row.action_type || "unresolved";
+        return `<tr data-lead-intake-row="${escapeHtml(row.id)}"><td><strong>${escapeHtml(original.business || `Row ${row.row_number}`)}</strong><small>${escapeHtml(row.status.replace(/_/g, " "))}</small></td><td>${escapeHtml(original.type || "—")}<small>${escapeHtml(original.source || "No source")}</small></td><td>${escapeHtml(original.location || "—")}</td><td>${escapeHtml(row.normalized_data?.normalized?.phone_display || original.phone_number || "—")}</td><td>${match.reason ? `<strong>${escapeHtml(match.confidence || "Possible")}</strong><small>${escapeHtml(match.reason)}</small><small>${escapeHtml([match.business, match.location, match.phone].filter(Boolean).join(" · "))}</small>` : row.errors?.length ? `<strong>Invalid</strong><small>${escapeHtml(row.errors.join(" "))}</small>` : `<span>New Unique</span>`}</td><td><select data-lead-intake-row-action="${escapeHtml(row.id)}"${row.status === "invalid" ? " disabled" : ""}><option value="approve"${action === "approve" ? " selected" : ""}>Add to Call Queue</option><option value="keep_existing"${action === "keep_existing" ? " selected" : ""}>Keep Existing</option><option value="use_imported"${action === "use_imported" ? " selected" : ""}>Use Imported Version</option><option value="merge_missing"${action === "merge_missing" ? " selected" : ""}>Merge Missing Information</option><option value="keep_both"${action === "keep_both" ? " selected" : ""}>Keep Both</option><option value="skip"${action === "skip" ? " selected" : ""}>Skip Imported Record</option><option value="exclude"${action === "exclude" ? " selected" : ""}>Exclude</option><option value="unresolved"${action === "unresolved" ? " selected" : ""}>Needs Review</option></select></td></tr>`;
+      }).join("") || `<tr><td colspan="6">No imported records match these filters.</td></tr>`}</tbody></table></div>
+      <div class="lead-intake-pagination"><button type="button" data-action="lead-intake-page-prev"${state.leadIntakePage <= 1 ? " disabled" : ""}>Previous</button><span>Page ${state.leadIntakePage} of ${pageCount} · ${filtered.length} records</span><button type="button" data-action="lead-intake-page-next"${state.leadIntakePage >= pageCount ? " disabled" : ""}>Next</button></div>
+      <div class="drawer-actions"><button type="button" data-action="lead-intake-approve-batch" data-id="${escapeHtml(batch.id)}"${approvalCount ? "" : " disabled"}>Add ${approvalCount} Leads to Call Queue</button><button type="button" class="secondary-action" data-action="lead-intake-error-report">Download Error Report</button>${batch.status === "preview" ? `<button type="button" class="secondary-action danger-action" data-action="lead-intake-cancel-batch" data-id="${escapeHtml(batch.id)}">Cancel Import</button>` : `<button type="button" class="secondary-action" data-action="lead-intake-undo-batch" data-id="${escapeHtml(batch.id)}">Undo Approved Batch</button>`}</div>
+    </div>`;
+  }
+
   function renderCallQueueWorkspace() {
     const target = qs("[data-call-queue-workspace]");
     if (!target) return;
@@ -13209,11 +13330,13 @@
     const phone = phoneInfo(selected?.phone || "");
     const duplicates = selected ? callQueueDuplicateMatches(selected) : [];
     const relatedQuotes = selected ? (state.data.submissions || []).filter((quote) => (selected.email && String(quote.email || "").toLowerCase() === selected.email.toLowerCase()) || (phone.valid && phoneInfo(quote.phone).e164 === phone.e164)) : [];
+    if (!state.leadIntakeLoaded && !state.leadIntakeLoading) queueMicrotask(() => loadLeadIntakeBatches());
     target.innerHTML = `<div class="call-queue-workspace" data-call-queue-root>
       <header class="ticket-hero call-queue-hero">
         <div><p class="eyebrow">Leads · Call Queue</p><h3>Sales Calling Workspace</h3><p>Work the next outreach call, record the result, and keep follow-ups connected to the existing lead and ticket workflow.</p></div>
         <div class="call-queue-navigation"><button type="button" data-action="call-queue-previous"${selectedIndex <= 0 ? " disabled" : ""}>Previous</button><strong>${selected ? `${selectedIndex + 1} of ${queue.length}` : `0 of ${queue.length}`}</strong><button type="button" data-action="call-queue-next"${selectedIndex < 0 || selectedIndex >= queue.length - 1 ? " disabled" : ""}>Next</button></div>
       </header>
+      ${renderLeadIntakeCard()}
       <div class="call-queue-layout">
         <aside class="call-queue-panel call-queue-list-panel">
           <div class="call-queue-panel-head"><div><span>Queue</span><strong>${escapeHtml(String(queue.length))}</strong></div><small>${state.callQueueStatusFilter === "Active" ? "Needs outreach" : "Filtered leads"}</small></div>
@@ -19484,6 +19607,51 @@
         return;
       }
 
+      if (target.matches("[data-lead-intake-file]")) {
+        const file = target.files && target.files[0];
+        target.value = "";
+        if (!file) return;
+        if (!/\.csv$/i.test(file.name)) {
+          setDashboardState("Lead Intake accepts .csv files only.", "error");
+          return;
+        }
+        try {
+          setDashboardState("Uploading and validating prospect records…");
+          const result = await importExportRequest("lead-intake-preview", { filename: file.name, format: "csv", fileBase64: await readFileAsBase64(file) });
+          state.leadIntakeLoaded = false;
+          await loadLeadIntakeBatches(true);
+          await openLeadIntakeBatch(result.batch.id);
+          setDashboardState("Import is ready for review.");
+        } catch (error) {
+          setDashboardState(error.message || "Lead Intake could not process this CSV.", "error");
+        }
+        return;
+      }
+
+      if (target.matches("[data-lead-intake-row-action]")) {
+        const rowId = target.dataset.leadIntakeRowAction;
+        const row = state.leadIntakeRows.find((item) => item.id === rowId);
+        if (!row) return;
+        const previous = row.action_type;
+        row.action_type = target.value;
+        try {
+          await importExportRequest("lead-intake-review", { rowId, reviewAction: target.value });
+          renderLeadIntakeReviewDrawer();
+        } catch (error) {
+          row.action_type = previous;
+          renderLeadIntakeReviewDrawer();
+          setDashboardState(error.message || "Review decision could not be saved.", "error");
+        }
+        return;
+      }
+
+      if (target.matches("[data-lead-intake-status-filter]")) {
+        state.leadIntakeStatusFilter = target.value || "All";
+        state.leadIntakePage = 1;
+        renderLeadIntakeReviewDrawer();
+        return;
+      }
+
       if (target.matches("[data-user-avatar-upload]")) {
         const file = target.files && target.files[0];
         if (!file) return;
@@ -19712,6 +19880,13 @@
         state.callQueueVisibleCount = 25;
         window.clearTimeout(state._callQueueSearchTimer);
         state._callQueueSearchTimer = window.setTimeout(() => renderCallQueueWorkspace(), 120);
+        return;
+      }
+      if (event.target?.matches?.("[data-lead-intake-search]")) {
+        state.leadIntakeSearch = event.target.value || "";
+        state.leadIntakePage = 1;
+        window.clearTimeout(state._leadIntakeSearchTimer);
+        state._leadIntakeSearchTimer = window.setTimeout(() => renderLeadIntakeReviewDrawer(), 120);
         return;
       }
 
@@ -21170,6 +21345,76 @@
       } else if (action === "select-call-queue-lead") {
         state.callQueueSelectedId = id;
         renderCallQueueWorkspace();
+      } else if (action === "lead-intake-import") {
+        const input = qs("[data-lead-intake-file]");
+        if (input) input.click();
+      } else if (action === "lead-intake-template") {
+        try {
+          await importExportDownload("lead-intake-template", {}, "urban-yards-lead-intake-template.csv");
+          setDashboardState("CSV template downloaded.");
+        } catch (error) {
+          setDashboardState(error.message || "Template could not be downloaded.", "error");
+        }
+      } else if (action === "lead-intake-review-imports") {
+        try {
+          await loadLeadIntakeBatches(true);
+          const batch = state.leadIntakeBatches.find((item) => item.status === "preview") || state.leadIntakeBatches[0];
+          if (!batch) { setDashboardState("No import batches yet. Choose Import CSV to begin."); return; }
+          await openLeadIntakeBatch(batch.id);
+        } catch (error) {
+          setDashboardState(error.message || "Import batches could not be opened.", "error");
+        }
+      } else if (action === "lead-intake-open-batch") {
+        try { await openLeadIntakeBatch(id); } catch (error) { setDashboardState(error.message || "Import batch could not be opened.", "error"); }
+      } else if (action === "lead-intake-page-prev" || action === "lead-intake-page-next") {
+        state.leadIntakePage += action === "lead-intake-page-prev" ? -1 : 1;
+        renderLeadIntakeReviewDrawer();
+      } else if (action === "lead-intake-approve-unique" || action === "lead-intake-skip-definite") {
+        const status = action === "lead-intake-approve-unique" ? "new_unique" : "definite_duplicate";
+        const reviewAction = action === "lead-intake-approve-unique" ? "approve" : "keep_existing";
+        const rows = state.leadIntakeRows.filter((row) => row.status === status);
+        try {
+          await importExportRequest("lead-intake-review", { rowIds: rows.map((row) => row.id), reviewAction });
+          rows.forEach((row) => { row.action_type = reviewAction; });
+          renderLeadIntakeReviewDrawer();
+          setDashboardState(`${rows.length} imported record${rows.length === 1 ? "" : "s"} updated.`);
+        } catch (error) {
+          setDashboardState(error.message || "Bulk review could not be saved.", "error");
+        }
+      } else if (action === "lead-intake-approve-batch") {
+        if (!window.confirm("Add the approved imported prospects to the live Call Queue?")) return;
+        try {
+          setDashboardState("Adding approved leads to the Call Queue…");
+          const result = await importExportRequest("lead-intake-approve", { batchId: id, batchName: qs("[data-lead-intake-batch-name]")?.value || leadIntakeBatchName(state.leadIntakeSelectedBatch) });
+          closeSubmissionDrawer();
+          state.leadIntakeLoaded = false;
+          await refreshDashboard();
+          await loadLeadIntakeBatches(true);
+          setDashboardState(`${result.approved} lead${result.approved === 1 ? "" : "s"} added to the Call Queue.${result.updated ? ` ${result.updated} existing lead${result.updated === 1 ? "" : "s"} updated.` : ""}`);
+        } catch (error) {
+          setDashboardState(error.message || "Approved leads could not be added.", "error");
+        }
+      } else if (action === "lead-intake-cancel-batch") {
+        if (!window.confirm("Cancel this staged import? No live leads will be deleted.")) return;
+        try {
+          await importExportRequest("lead-intake-cancel", { batchId: id });
+          closeSubmissionDrawer(); state.leadIntakeLoaded = false; await loadLeadIntakeBatches(true); setDashboardState("Import cancelled.");
+        } catch (error) { setDashboardState(error.message || "Import could not be cancelled.", "error"); }
+      } else if (action === "lead-intake-undo-batch") {
+        if (!window.confirm("Undo only untouched leads created by this batch? Leads with calls, notes, follow-ups, or downstream work will be kept.")) return;
+        try {
+          const result = await importExportRequest("lead-intake-undo", { batchId: id });
+          closeSubmissionDrawer(); state.leadIntakeLoaded = false; await refreshDashboard(); await loadLeadIntakeBatches(true);
+          setDashboardState(`${result.removed} untouched lead${result.removed === 1 ? "" : "s"} removed.${result.blocked?.length ? ` ${result.blocked.length} kept because they have downstream activity.` : ""}`);
+        } catch (error) { setDashboardState(error.message || "Batch could not be undone.", "error"); }
+      } else if (action === "lead-intake-error-report") {
+        const invalid = state.leadIntakeRows.filter((row) => row.status === "invalid");
+        if (!invalid.length) { setDashboardState("This batch has no invalid rows."); return; }
+        const safeCell = (value) => /^[=+\-@]/.test(String(value || "").trim()) ? `'${String(value || "")}` : String(value || "");
+        downloadCsv("urban-yards-lead-intake-errors.csv", [["row_number", "business", "type", "location", "phone_number", "errors"], ...invalid.map((row) => {
+          const original = row.normalized_data?.original || row.source_data || {};
+          return [row.row_number, safeCell(original.business), safeCell(original.type), safeCell(original.location), safeCell(original.phone_number), safeCell((row.errors || []).join(" "))];
+        })]);
       } else if (action === "call-queue-previous" || action === "call-queue-next") {
         const queue = filteredCallQueue();
         const currentIndex = queue.findIndex((item) => item.id === state.callQueueSelectedId);

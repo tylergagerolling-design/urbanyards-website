@@ -7657,6 +7657,183 @@ body:not(.is-login-screen) .dashboard-nav .dashboard-subnav a.is-active::after {
   }
 }
 
+/* Lead Intake lives inside Call Queue and keeps staged imports visually
+   separate from live leads until final approval. */
+body:not(.is-login-screen) .lead-intake-card {
+  display: grid;
+  gap: 16px;
+  padding: 20px;
+  border: 1px solid rgba(23, 54, 43, .12);
+  border-radius: 22px;
+  background: linear-gradient(135deg, rgba(255, 253, 247, .98), rgba(231, 239, 222, .9));
+  box-shadow: 0 16px 34px rgba(23, 54, 43, .08);
+}
+
+body:not(.is-login-screen) .lead-intake-heading,
+body:not(.is-login-screen) .lead-intake-actions,
+body:not(.is-login-screen) .lead-intake-recent,
+body:not(.is-login-screen) .lead-intake-review-title,
+body:not(.is-login-screen) .lead-intake-review-controls,
+body:not(.is-login-screen) .lead-intake-pagination {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+body:not(.is-login-screen) .lead-intake-heading,
+body:not(.is-login-screen) .lead-intake-review-title,
+body:not(.is-login-screen) .lead-intake-pagination {
+  justify-content: space-between;
+}
+
+body:not(.is-login-screen) .lead-intake-heading h3,
+body:not(.is-login-screen) .lead-intake-heading p {
+  margin: 0;
+}
+
+body:not(.is-login-screen) .lead-intake-heading > div:first-child {
+  display: grid;
+  gap: 6px;
+  max-width: 720px;
+}
+
+body:not(.is-login-screen) .lead-intake-actions {
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
+body:not(.is-login-screen) .lead-intake-metrics,
+body:not(.is-login-screen) .lead-intake-review-summary {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+}
+
+body:not(.is-login-screen) .lead-intake-review-summary {
+  grid-template-columns: repeat(5, minmax(110px, 1fr));
+}
+
+body:not(.is-login-screen) .lead-intake-metrics > div,
+body:not(.is-login-screen) .lead-intake-review-summary > div {
+  display: grid;
+  gap: 4px;
+  padding: 12px 14px;
+  border: 1px solid rgba(23, 54, 43, .1);
+  border-radius: 14px;
+  background: rgba(255, 253, 247, .76);
+}
+
+body:not(.is-login-screen) .lead-intake-metrics span,
+body:not(.is-login-screen) .lead-intake-review-summary span {
+  color: var(--uy-app-muted);
+  font-size: .72rem;
+  font-weight: 800;
+  letter-spacing: .06em;
+  text-transform: uppercase;
+}
+
+body:not(.is-login-screen) .lead-intake-metrics strong,
+body:not(.is-login-screen) .lead-intake-review-summary strong {
+  color: var(--uy-app-ink);
+  font-size: 1.25rem;
+}
+
+body:not(.is-login-screen) .lead-intake-recent {
+  min-width: 0;
+  overflow-x: auto;
+}
+
+body:not(.is-login-screen) .lead-intake-recent > strong {
+  flex: 0 0 auto;
+}
+
+body:not(.is-login-screen) .lead-intake-recent button {
+  display: grid;
+  min-width: 210px;
+  gap: 2px;
+  padding: 9px 12px;
+  border: 1px solid rgba(23, 54, 43, .1);
+  border-radius: 12px;
+  background: rgba(255, 255, 255, .7);
+  color: var(--uy-app-ink);
+  text-align: left;
+}
+
+body:not(.is-login-screen) .lead-intake-recent small,
+body:not(.is-login-screen) .lead-intake-table small {
+  display: block;
+  margin-top: 3px;
+  color: var(--uy-app-muted);
+}
+
+body:not(.is-login-screen) .lead-intake-review {
+  min-width: 0;
+}
+
+body:not(.is-login-screen) .lead-intake-review-controls {
+  flex-wrap: wrap;
+}
+
+body:not(.is-login-screen) .lead-intake-review-controls input {
+  flex: 1 1 240px;
+}
+
+body:not(.is-login-screen) .lead-intake-table-wrap {
+  max-width: 100%;
+  overflow-x: auto;
+  border: 1px solid rgba(23, 54, 43, .1);
+  border-radius: 16px;
+  background: rgba(255, 255, 255, .7);
+}
+
+body:not(.is-login-screen) .lead-intake-table {
+  width: 100%;
+  min-width: 920px;
+  border-collapse: collapse;
+  font-size: .82rem;
+}
+
+body:not(.is-login-screen) .lead-intake-table th,
+body:not(.is-login-screen) .lead-intake-table td {
+  padding: 10px;
+  border-bottom: 1px solid rgba(23, 54, 43, .08);
+  text-align: left;
+  vertical-align: top;
+}
+
+body:not(.is-login-screen) .lead-intake-table th {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  background: #edf2e8;
+  color: #365247;
+  font-size: .7rem;
+  letter-spacing: .06em;
+  text-transform: uppercase;
+}
+
+@media (max-width: 820px) {
+  body:not(.is-login-screen) .lead-intake-heading,
+  body:not(.is-login-screen) .lead-intake-review-title {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  body:not(.is-login-screen) .lead-intake-actions {
+    display: grid;
+    grid-template-columns: 1fr;
+  }
+
+  body:not(.is-login-screen) .lead-intake-metrics,
+  body:not(.is-login-screen) .lead-intake-review-summary {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  body:not(.is-login-screen) .lead-intake-table {
+    min-width: 760px;
+  }
+}
+
 /* Keep the shared drawer scroll boundary authoritative over legacy workspace
    overflow helpers declared earlier in the cascade. */
 html body:not(.is-login-screen).is-detail-drawer-open {

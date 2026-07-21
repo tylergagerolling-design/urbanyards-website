@@ -750,3 +750,29 @@ test("expanded dashboard drawer centers the complete sign out control", () => {
 
   assert.match(css, /app-view\.is-sidebar-open \.dashboard-sidebar[\s\S]*\.sign-out[\s\S]*display: flex !important[\s\S]*justify-content: center !important/);
 });
+
+test("Call Queue contains staged Lead Intake without changing Leads navigation", () => {
+  const html = read("dashboard.html");
+  const js = read("dashboard.js");
+  const css = read("dashboard.css");
+  const backend = read("netlify/functions/dashboard-import-export.js");
+  const migration = read("supabase/migrations/20260721_lead_intake.sql");
+
+  assert.match(html, /Lead Pipeline[\s\S]*Clients[\s\S]*Call Queue/);
+  assert.doesNotMatch(html, /data-dashboard-link="lead-intake"/);
+  assert.match(js, /Lead Intake[\s\S]*Import CSV[\s\S]*Download CSV Template[\s\S]*Review Imports/);
+  assert.match(js, /Review Imported Leads/);
+  assert.match(js, /Possible Duplicate/);
+  assert.match(js, /Add \$\{approvalCount\} Leads to Call Queue/);
+  assert.match(js, /pageSize = 50/);
+  assert.match(backend, /lead-intake-preview/);
+  assert.match(backend, /lead-intake-approve/);
+  assert.match(backend, /lead-intake-undo/);
+  assert.match(backend, /requirePermission\(event, "imports:write"/);
+  assert.match(backend, /status: "preview"/);
+  assert.match(backend, /canUndoLead/);
+  assert.match(css, /lead-intake-card/);
+  assert.match(migration, /alter table public\.outreach_prospects/);
+  assert.match(migration, /import_batch_id uuid references public\.import_batches/);
+  assert.doesNotMatch(migration, /create table[^;]+lead/i);
+});

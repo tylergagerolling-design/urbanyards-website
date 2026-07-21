@@ -510,6 +510,14 @@ test("closeout Review Tickets opens a focused, visible ticket queue", () => {
   assert.match(js, /reset-ticket-board-filters[\s\S]*ticketBoardCloseoutOnly = false/);
 });
 
+test("Open Records opens the financial closeout records", () => {
+  const js = read("dashboard.js");
+
+  assert.doesNotMatch(js, /action: "go-documents"/);
+  assert.match(js, /title: "Close the financial record"[\s\S]*action: "open-financial-records"[\s\S]*actionLabel: "Open Records"/);
+  assert.match(js, /action === "open-financial-records"[\s\S]*setActiveSection\("documents"\)[\s\S]*renderMoneyWorkspace[\s\S]*money-closeout-panel[\s\S]*scrollIntoView/);
+});
+
 test("ticket drawer workbench layouts wrap without overlapping content", () => {
   const css = read("dashboard.css");
 

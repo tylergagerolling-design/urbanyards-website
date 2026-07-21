@@ -13460,7 +13460,7 @@
           label: "Invoices",
           value: invoiceTickets.length,
           detail: "Open estimate or invoice records to reconcile.",
-          action: "go-documents",
+          action: "open-financial-records",
           actionLabel: "Open Records"
         })}
         ${renderMoneyRunwayCard({
@@ -13531,7 +13531,7 @@
           value: fieldComplete.length + unpaidInvoices.length,
           title: "Close the financial record",
           detail: "Check actuals, documents, invoice status, and payment state before closing tickets.",
-          action: "go-documents",
+          action: "open-financial-records",
           actionLabel: "Open Records"
         })}
       </aside>
@@ -21135,6 +21135,17 @@
       } else if (action === "go-money") {
         setActiveSection("documents");
         replaceDashboardHash("documents");
+      } else if (action === "open-financial-records") {
+        setActiveSection("documents");
+        replaceDashboardHash("documents");
+        renderMoneyWorkspace(state.data);
+        window.requestAnimationFrame(() => {
+          qs(".money-closeout-panel")?.scrollIntoView({
+            behavior: window.matchMedia?.("(prefers-reduced-motion: reduce)")?.matches ? "auto" : "smooth",
+            block: "start"
+          });
+        });
+        setDashboardState("Showing financial records ready for review.");
       } else if (action === "go-tools") {
         setActiveSection("settings");
         replaceDashboardHash("settings");

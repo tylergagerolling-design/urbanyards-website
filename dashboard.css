@@ -7854,7 +7854,7 @@ html body:not(.is-login-screen) .detail-drawer .drawer-panel {
    and collapses cleanly with the existing responsive filter grid. */
 body:not(.is-login-screen) .owner-kanban-date-range {
   display: grid;
-  grid-template-columns: repeat(2, minmax(130px, 1fr)) auto;
+  grid-template-columns: repeat(2, minmax(130px, 1fr));
   grid-column: span 2;
   align-items: end;
   gap: 8px;
@@ -7898,20 +7898,12 @@ body:not(.is-login-screen) .owner-kanban-date-range input[type="date"] {
   font-weight: 800;
 }
 
-body:not(.is-login-screen) .owner-kanban-date-range button {
-  min-width: 88px;
-}
-
 @media (max-width: 700px) {
   body:not(.is-login-screen) .owner-kanban-date-range {
     grid-template-columns: 1fr 1fr;
     grid-column: 1 / -1;
   }
 
-  body:not(.is-login-screen) .owner-kanban-date-range button {
-    grid-column: 1 / -1;
-    width: 100%;
-  }
 }
 
 /* Center the complete Sign Out control when the primary drawer is expanded. */

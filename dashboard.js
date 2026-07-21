@@ -12155,8 +12155,6 @@
       state.ownerKanbanTypeFilter = stored.type || "All";
       state.ownerKanbanClientFilter = stored.client || "";
       state.ownerKanbanDateFilter = "All";
-      state.ownerKanbanDateStart = stored.dateStart !== undefined ? stored.dateStart : defaultRange.start;
-      state.ownerKanbanDateEnd = stored.dateEnd !== undefined ? stored.dateEnd : defaultRange.end;
       state.ownerKanbanStatusFilter = stored.status || "All";
       state.ownerKanbanSort = stored.sort || "priority";
       state.ownerKanbanActiveOnly = stored.activeOnly !== false;
@@ -12176,8 +12174,6 @@
         type: state.ownerKanbanTypeFilter,
         client: state.ownerKanbanClientFilter,
         date: state.ownerKanbanDateFilter,
-        dateStart: state.ownerKanbanDateStart,
-        dateEnd: state.ownerKanbanDateEnd,
         status: state.ownerKanbanStatusFilter,
         sort: state.ownerKanbanSort,
         activeOnly: state.ownerKanbanActiveOnly,
@@ -12324,7 +12320,6 @@
           <legend>Date range <small>${escapeHtml(ownerKanbanDateRangeLabel())}</small></legend>
           <label>From<input type="date" value="${escapeHtml(state.ownerKanbanDateStart)}" data-owner-kanban-date-range="start"></label>
           <label>To<input type="date" value="${escapeHtml(state.ownerKanbanDateEnd)}" data-owner-kanban-date-range="end"></label>
-          <button type="button" class="secondary-action" data-action="show-all-owner-kanban-dates"${!state.ownerKanbanDateStart && !state.ownerKanbanDateEnd ? " disabled" : ""}>All Dates</button>
         </fieldset>
         <label>Status
           <select data-owner-kanban-filter="status">
@@ -20028,16 +20023,6 @@
         persistOwnerKanbanFilters();
         renderHomeWorkspace(state.data);
         setDashboardState("Owner Kanban filters reset.");
-        return;
-      }
-
-      if (action === "show-all-owner-kanban-dates") {
-        state.ownerKanbanDateStart = "";
-        state.ownerKanbanDateEnd = "";
-        state.ownerKanbanOverdueOnly = false;
-        persistOwnerKanbanFilters();
-        renderHomeWorkspace(state.data);
-        setDashboardState("Owner Kanban is showing all dates.");
         return;
       }
 

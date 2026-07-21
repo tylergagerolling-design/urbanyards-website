@@ -7599,7 +7599,7 @@ body:not(.is-login-screen) .dashboard-nav .dashboard-subnav a {
     transform var(--transition-fast) !important;
 }
 
-body:not(.is-login-screen) .dashboard-nav .dashboard-subnav a::before {
+body:not(.is-login-screen) .dashboard-nav .dashboard-subnav a::after {
   width: 7px;
   min-width: 7px;
   height: 7px;
@@ -7607,6 +7607,7 @@ body:not(.is-login-screen) .dashboard-nav .dashboard-subnav a::before {
   background: transparent;
   box-shadow: none;
   content: "";
+  opacity: 0;
 }
 
 body:not(.is-login-screen) .dashboard-nav .dashboard-subnav a:hover {
@@ -7623,9 +7624,10 @@ body:not(.is-login-screen) .dashboard-nav .dashboard-subnav a.is-active {
   box-shadow: none !important;
 }
 
-body:not(.is-login-screen) .dashboard-nav .dashboard-subnav a.is-active::before {
+body:not(.is-login-screen) .dashboard-nav .dashboard-subnav a.is-active::after {
   background: #3f734d;
   box-shadow: 0 0 0 3px rgba(63, 115, 77, .13);
+  opacity: 1;
 }
 
 .sidebar-bottom {

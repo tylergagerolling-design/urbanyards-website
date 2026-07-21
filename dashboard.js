@@ -12239,17 +12239,6 @@
     </section>`;
   }
 
-  function renderOwnerKanbanMoveSelect(ticket = {}) {
-    const currentColumn = ownerKanbanColumnForTicket(ticket);
-    const disabled = !["ticket", "quote", "job"].includes(ticket.source) || !canManageOwnerWorkflow();
-    return `<label class="owner-kanban-move">
-      <span>Move</span>
-      <select data-owner-kanban-move data-id="${escapeHtml(ticket.id)}" data-ticket-source="${escapeHtml(ticket.source)}"${disabled ? " disabled aria-disabled=\"true\"" : ""}>
-        ${ownerKanbanColumns.map((column) => `<option value="${escapeHtml(column.key)}"${column.key === currentColumn ? " selected" : ""}>${escapeHtml(column.label)}</option>`).join("")}
-      </select>
-    </label>`;
-  }
-
   function ownerKanbanCategory(ticket = {}) {
     const stage = ticketStage(ticket);
     if (["draft", "sales_intake"].includes(stage)) return ["Lead", "lead"];
@@ -12289,7 +12278,6 @@
       </div>
       ${blockers.length ? `<div class="owner-kanban-blockers">${blockers.slice(0, 2).map((item) => `<span>${escapeHtml(item)}</span>`).join("")}</div>` : ""}
       ${saving ? `<div class="owner-kanban-saving" role="status">Saving…</div>` : ""}
-      ${renderOwnerKanbanMoveSelect(ticket)}
     </article>`;
   }
 
@@ -19352,25 +19340,6 @@
         if (filter === "overdueOnly") state.ownerKanbanOverdueOnly = target.checked;
         persistOwnerKanbanFilters();
         renderHomeWorkspace(state.data);
-        return;
-      }
-
-      if (target.matches("[data-owner-kanban-move]")) {
-        const ticketId = target.dataset.id || "";
-        const ticketSource = target.dataset.ticketSource || "ticket";
-        const nextStage = target.value || "";
-        const previousValue = ownerKanbanColumnForTicket(dashboardTickets().find((ticket) => ticket.id === ticketId) || {});
-        try {
-          setDashboardState("Moving ticket...");
-          await moveOwnerKanbanSourceCard(ticketId, ticketSource, nextStage);
-          renderHomeWorkspace(state.data);
-          await refreshDashboard();
-          setDashboardState(`Ticket moved to ${ownerKanbanColumnLabel(nextStage)}.`);
-        } catch (error) {
-          target.value = previousValue;
-          setDashboardState(error.message || "Unable to move ticket.", "error");
-          openTicketDrawer("ticket", ticketId);
-        }
         return;
       }
 

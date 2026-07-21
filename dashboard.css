@@ -15432,32 +15432,6 @@ body:not(.is-login-screen) .owner-kanban-blockers span {
   color: #71511b;
 }
 
-body:not(.is-login-screen) .owner-kanban-move {
-  display: grid;
-  grid-template-columns: auto minmax(0, 1fr);
-  align-items: center;
-  gap: 8px;
-  color: var(--uy-muted);
-  font-size: .72rem;
-  font-weight: 900;
-  letter-spacing: .04em;
-  text-transform: uppercase;
-}
-
-body:not(.is-login-screen) .owner-kanban-move select {
-  min-width: 0;
-  min-height: 34px;
-  border: 1px solid rgba(73, 102, 77, .16);
-  border-radius: 11px;
-  background: rgba(255, 253, 246, .92);
-  color: var(--uy-green);
-  font: inherit;
-  font-size: .78rem;
-  font-weight: 850;
-  letter-spacing: 0;
-  text-transform: none;
-}
-
 body:not(.is-login-screen) .owner-kanban-push-forward {
   width: 100%;
   min-height: 38px;
@@ -15723,22 +15697,6 @@ body:not(.is-login-screen) .owner-kanban-saving {
   color: var(--uy-muted);
   font-size: .68rem;
   font-weight: 850;
-}
-
-body:not(.is-login-screen) .owner-kanban-move {
-  position: absolute;
-  width: 1px;
-  height: 1px;
-  overflow: hidden;
-  clip-path: inset(50%);
-}
-
-body:not(.is-login-screen) .owner-kanban-card:focus-within .owner-kanban-move {
-  position: static;
-  width: auto;
-  height: auto;
-  overflow: visible;
-  clip-path: none;
 }
 
 body:not(.is-login-screen) .owner-kanban-add {

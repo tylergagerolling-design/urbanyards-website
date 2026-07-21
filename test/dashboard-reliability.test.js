@@ -709,4 +709,5 @@ test("dashboard navigation and workspace calls to action have working destinatio
   assert.match(js, /action === "focus-work-queue"[\s\S]*?\[data-work-queue\][\s\S]*?scrollIntoView/);
   assert.doesNotMatch(js, /action: "go-leads",\s*actionLabel: "Open Queue"/);
   assert.doesNotMatch(js, /action: "go-calendar",\s*actionLabel: "Add Visit"/);
+  assert.doesNotMatch(js, /action: "go-calendar",\s*actionLabel: "Open Work"/);
 });

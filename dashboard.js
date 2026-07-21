@@ -12937,7 +12937,7 @@
           label: "Today's visit list",
           value: todayTickets.length,
           detail: "Review assigned work, site notes, service scope, and visit status for today.",
-          action: "go-calendar",
+          action: "focus-work-queue",
           actionLabel: "Open Work"
         })}
         ${renderWorkFieldPacketStep({

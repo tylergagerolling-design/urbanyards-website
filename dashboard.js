@@ -5469,7 +5469,7 @@
 
   function ownerKanbanSourceStatus(columnKey, source) {
     const statuses = source === "job"
-      ? { new: "Kanban New", planned: "Scheduled", in_progress: "In Progress", review: "Review" }
+      ? { new: "New", planned: "Scheduled", in_progress: "Contacted", review: "Invoiced" }
       : { new: "New", planned: "Interested", in_progress: "Won", review: "Review" };
     return statuses[columnKey] || statuses.new;
   }
@@ -10027,7 +10027,8 @@
 
   function jobStage(item) {
     const status = statusText(item.status);
-    if (/kanban new/.test(status)) return "sales_intake";
+    if (status === "new") return "sales_intake";
+    if (status === "contacted") return "in_progress";
     if (/cancel/.test(status)) return "cancelled";
     if (/paid|closed/.test(status)) return "closed";
     if (/invoice sent/.test(status)) return "invoice_sent";
@@ -12240,7 +12241,7 @@
 
   function renderOwnerKanbanMoveSelect(ticket = {}) {
     const currentColumn = ownerKanbanColumnForTicket(ticket);
-    const disabled = ticket.source !== "ticket" || !canManageOwnerWorkflow();
+    const disabled = !["ticket", "quote", "job"].includes(ticket.source) || !canManageOwnerWorkflow();
     return `<label class="owner-kanban-move">
       <span>Move</span>
       <select data-owner-kanban-move data-id="${escapeHtml(ticket.id)}" data-ticket-source="${escapeHtml(ticket.source)}"${disabled ? " disabled aria-disabled=\"true\"" : ""}>
@@ -19356,11 +19357,14 @@
 
       if (target.matches("[data-owner-kanban-move]")) {
         const ticketId = target.dataset.id || "";
+        const ticketSource = target.dataset.ticketSource || "ticket";
         const nextStage = target.value || "";
         const previousValue = ownerKanbanColumnForTicket(dashboardTickets().find((ticket) => ticket.id === ticketId) || {});
         try {
           setDashboardState("Moving ticket...");
-          await moveOwnerKanbanTicket(ticketId, nextStage, { notes: "Moved from Owner Overview Kanban status menu." });
+          await moveOwnerKanbanSourceCard(ticketId, ticketSource, nextStage);
+          renderHomeWorkspace(state.data);
+          await refreshDashboard();
           setDashboardState(`Ticket moved to ${ownerKanbanColumnLabel(nextStage)}.`);
         } catch (error) {
           target.value = previousValue;

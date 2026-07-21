@@ -498,6 +498,8 @@ test("owner overview kanban keeps four freely movable stages and reserves comple
   assert.doesNotMatch(js, /draggable="true" data-owner-kanban-card/);
   assert.match(js, /data-action="clear-owner-kanban-leads"/);
   assert.match(js, /async function moveOwnerKanbanSourceCard[\s\S]*updateSubmission[\s\S]*updateScheduledJob/);
+  assert.match(js, /\{ new: "New", planned: "Scheduled", in_progress: "Contacted", review: "Invoiced" \}/);
+  assert.match(js, /status === "new"[\s\S]*status === "contacted"/);
   assert.match(js, /addEventListener\("pointerup"[\s\S]*moveOwnerKanbanSourceCard[\s\S]*refreshDashboard/);
   assert.match(js, /Clear New Column/);
   assert.match(js, /action === "clear-owner-kanban-leads"[\s\S]*window\.confirm[\s\S]*deleteRow\("quote_submissions"[\s\S]*deleteRow\("scheduled_jobs"[\s\S]*deleteJobTicket[\s\S]*refreshDashboard/);

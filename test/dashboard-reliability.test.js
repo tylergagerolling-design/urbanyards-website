@@ -518,6 +518,24 @@ test("Open Records opens the financial closeout records", () => {
   assert.match(js, /action === "open-financial-records"[\s\S]*setActiveSection\("documents"\)[\s\S]*renderMoneyWorkspace[\s\S]*money-closeout-panel[\s\S]*scrollIntoView/);
 });
 
+test("Leads flyout adds Call Queue without changing existing items", () => {
+  const html = read("dashboard.html");
+  const js = read("dashboard.js");
+  const css = read("dashboard.css");
+
+  assert.match(html, /data-sidebar-subnav="outreach"[\s\S]*>Lead Pipeline<\/span>[\s\S]*#contacts[\s\S]*>Clients<\/span>[\s\S]*#call-queue[\s\S]*>Call Queue<\/span>/);
+  assert.match(html, /id="call-queue" data-section="call-queue"[\s\S]*data-call-queue-workspace/);
+  assert.match(js, /"call-queue": "outreach"/);
+  assert.match(js, /"call-queue": \["outreachProspects", "leadActivity", "tickets", "contacts"\]/);
+  assert.match(js, /function filteredCallQueue[\s\S]*function renderCallQueueWorkspace/);
+  assert.match(js, /data-call-queue-outcome-form[\s\S]*Save Outcome/);
+  assert.match(js, /insertLeadActivity[\s\S]*updateOutreachProspect/);
+  assert.match(js, /call_queue_outcome: outcome[\s\S]*follow_up_time[\s\S]*next_action/);
+  assert.match(js, /create-ticket-from-prospect/);
+  assert.match(css, /call-queue-layout[\s\S]*grid-template-columns: minmax\(260px/);
+  assert.match(css, /@media \(max-width: 820px\)[\s\S]*call-queue-layout[\s\S]*grid-template-columns: 1fr/);
+});
+
 test("ticket drawer workbench layouts wrap without overlapping content", () => {
   const css = read("dashboard.css");
 

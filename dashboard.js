@@ -16,6 +16,16 @@
   const COMMAND_CATEGORIES = ["task", "client", "payment", "deadline", "equipment"];
   const CALL_OUTCOMES = ["not_set", "no_answer", "left_voicemail", "spoke_with_contact", "follow_up_needed", "not_interested", "wrong_number", "bad_number", "follow_up_later"];
   const CALL_PANEL_OUTCOMES = ["no_answer", "left_voicemail", "spoke_with_contact", "follow_up_needed", "not_interested", "wrong_number"];
+  const CALL_QUEUE_OUTCOMES = [
+    ["no_answer", "No Answer"],
+    ["left_voicemail", "Voicemail Left"],
+    ["spoke_with_contact", "Spoke With Contact"],
+    ["follow_up_needed", "Follow-Up Needed"],
+    ["interested", "Interested"],
+    ["quote_requested", "Quote Requested"],
+    ["not_interested", "Not Interested"],
+    ["wrong_number", "Wrong Number"]
+  ];
   const CALL_OUTCOME_LABELS = {
     not_set: "Not set",
     no_answer: "No answer",
@@ -257,6 +267,13 @@
     outreachNeighborhoodFilter: "All",
     outreachVisibleNeedsFilter: "",
     outreachVerifiedFilter: "All",
+    callQueueSearch: "",
+    callQueueStatusFilter: "Active",
+    callQueuePriorityFilter: "All",
+    callQueueSort: "queue",
+    callQueueSelectedId: "",
+    callQueueVisibleCount: 25,
+    callQueueSaving: false,
     equipmentView: "inventory",
     equipmentSearch: "",
     equipmentCategoryFilter: "All",
@@ -414,6 +431,8 @@
     clients: "outreach",
     leads: "outreach",
     sales: "outreach",
+    calls: "call-queue",
+    "call-queue": "call-queue",
     more: "settings",
     docs: "documentation",
     forms: "documentation",
@@ -442,6 +461,7 @@
   const rebuildPrimarySections = new Set(["overview", "tickets", "calendar", "outreach", "documents", "settings"]);
   const supportSectionParents = {
     contacts: "outreach",
+    "call-queue": "outreach",
     documentation: "settings",
     "import-export": "settings",
     "route-planner": "calendar",
@@ -2531,6 +2551,8 @@
   function normalizeLeadActivity(row) {
     const rawOutcome = CALL_OUTCOMES.includes(row.outcome) ? row.outcome : "not_set";
     const outcome = rawOutcome === "bad_number" ? "wrong_number" : rawOutcome === "follow_up_later" ? "follow_up_needed" : rawOutcome;
+    const metadata = row.metadata && typeof row.metadata === "object" ? row.metadata : {};
+    const queueOutcome = CALL_QUEUE_OUTCOMES.some(([value]) => value === metadata.call_queue_outcome) ? metadata.call_queue_outcome : outcome;
     return {
       id: row.id,
       leadId: row.lead_id || "",
@@ -2539,10 +2561,12 @@
       phoneDisplay: phoneInfo(row.phone_number).display,
       type: row.type || "call_attempt",
       outcome,
-      outcomeLabel: CALL_OUTCOME_LABELS[outcome] || outcome,
+      queueOutcome,
+      outcomeLabel: CALL_QUEUE_OUTCOMES.find(([value]) => value === queueOutcome)?.[1] || CALL_OUTCOME_LABELS[outcome] || outcome,
       notes: row.notes || "",
       followUpDateRaw: dateKey(row.follow_up_date),
       followUpDate: formatDate(row.follow_up_date),
+      metadata,
       createdAtRaw: row.created_at || "",
       createdAt: row.created_at ? new Date(row.created_at).toLocaleString("en-US", { dateStyle: "medium", timeStyle: "short" }) : ""
     };
@@ -4690,6 +4714,7 @@
       tickets: ["tickets", "submissions", "jobs"],
       calendar: ["jobs", "tickets"],
       outreach: ["outreachProspects", "tickets", "submissions"],
+      "call-queue": ["outreachProspects", "leadActivity", "tickets", "contacts"],
       contacts: ["contacts", "jobs", "documents", "routeStops", "reminders"],
       documents: ["documents", "tickets", "submissions"],
       settings: [],
@@ -7177,7 +7202,8 @@
       type: payload.type || "call_attempt",
       outcome: payload.outcome || "not_set",
       notes: payload.notes || "",
-      follow_up_date: payload.follow_up_date || null
+      follow_up_date: payload.follow_up_date || null,
+      metadata: payload.metadata && typeof payload.metadata === "object" ? payload.metadata : {}
     };
     if (isDemoMode()) {
       const activity = normalizeLeadActivity({
@@ -13089,6 +13115,149 @@
     };
   }
 
+  function callQueueHistory(item = {}) {
+    return callHistoryFor(item.id).filter((activity) => activity.leadType === "outreach_prospect");
+  }
+
+  function callQueueIsCompleted(item = {}) {
+    if (["Won", "Lost / No Fit"].includes(item.status)) return true;
+    return ["not_interested", "wrong_number"].includes(callQueueHistory(item)[0]?.queueOutcome || "");
+  }
+
+  function callQueueSortValue(item = {}) {
+    const today = todayKey();
+    const followUp = item.nextFollowUpAtRaw || "";
+    if (followUp && followUp < today) return 0;
+    if (followUp === today) return 1;
+    if (item.priority === "High") return 2;
+    if (!item.lastContactedAtRaw && !callQueueHistory(item).length) return 3;
+    return 4;
+  }
+
+  function filteredCallQueue() {
+    const query = state.callQueueSearch.trim().toLowerCase();
+    return (state.data.outreachProspects || []).filter((item) => {
+      const completed = callQueueIsCompleted(item);
+      const statusMatches = state.callQueueStatusFilter === "All"
+        || (state.callQueueStatusFilter === "Active" ? !completed : state.callQueueStatusFilter === "Completed" ? completed : item.status === state.callQueueStatusFilter);
+      const priorityMatches = state.callQueuePriorityFilter === "All" || item.priority === state.callQueuePriorityFilter;
+      const searchMatches = !query || [item.contactName, item.managementCompany, item.propertyName, item.phone, item.email, item.city, item.address]
+        .some((value) => String(value || "").toLowerCase().includes(query));
+      return statusMatches && priorityMatches && searchMatches;
+    }).sort((a, b) => {
+      if (state.callQueueSort === "name") return outreachTitle(a).localeCompare(outreachTitle(b));
+      if (state.callQueueSort === "oldest") return String(a.lastContactedAtRaw || "0000").localeCompare(String(b.lastContactedAtRaw || "0000"));
+      if (state.callQueueSort === "priority") return OUTREACH_PRIORITIES.indexOf(a.priority) - OUTREACH_PRIORITIES.indexOf(b.priority);
+      return callQueueSortValue(a) - callQueueSortValue(b)
+        || String(a.nextFollowUpAtRaw || "9999").localeCompare(String(b.nextFollowUpAtRaw || "9999"))
+        || String(a.lastContactedAtRaw || "0000").localeCompare(String(b.lastContactedAtRaw || "0000"));
+    });
+  }
+
+  function callQueueDuplicateMatches(item = {}) {
+    const phone = phoneInfo(item.phone).e164;
+    const email = String(item.email || "").trim().toLowerCase();
+    const address = String(item.address || "").trim().toLowerCase();
+    return [
+      ...(state.data.contacts || []).filter((contact) => (phone && phoneInfo(contact.phone).e164 === phone) || (email && String(contact.email || "").toLowerCase() === email)),
+      ...(state.data.outreachProspects || []).filter((other) => other.id !== item.id && ((phone && phoneInfo(other.phone).e164 === phone) || (email && String(other.email || "").toLowerCase() === email) || (address && String(other.address || "").toLowerCase() === address)))
+    ].slice(0, 3);
+  }
+
+  function renderCallQueueTimeline(item = {}) {
+    const history = callQueueHistory(item);
+    if (!history.length) return `<div class="call-queue-empty-inline">No previous call activity.</div>`;
+    return `<div class="call-queue-timeline">${history.slice(0, 6).map((activity) => `<article>
+      <strong>${escapeHtml(activity.outcomeLabel)}</strong><span>${escapeHtml(activity.createdAt || "Recent")}</span>
+      ${activity.notes ? `<p>${escapeHtml(activity.notes)}</p>` : ""}
+      ${activity.followUpDateRaw ? `<small>Follow-up ${escapeHtml(activity.followUpDate)}</small>` : ""}
+    </article>`).join("")}</div>`;
+  }
+
+  function renderCallQueueWorkspace() {
+    const target = qs("[data-call-queue-workspace]");
+    if (!target) return;
+    if (!canManageLeadWorkflow()) {
+      target.innerHTML = `<div class="panel call-queue-access-state">${emptyState("Your dashboard role does not have Call Queue access.")}</div>`;
+      return;
+    }
+    if (!state.outreachReady) {
+      target.innerHTML = `<div class="panel call-queue-access-state">${emptyState("Call Queue could not load lead records. Refresh the dashboard to retry.")}</div>`;
+      return;
+    }
+    const queue = filteredCallQueue();
+    if (!queue.some((item) => item.id === state.callQueueSelectedId)) state.callQueueSelectedId = queue[0]?.id || "";
+    const selected = queue.find((item) => item.id === state.callQueueSelectedId) || null;
+    const selectedIndex = selected ? queue.findIndex((item) => item.id === selected.id) : -1;
+    const visible = queue.slice(0, state.callQueueVisibleCount);
+    const history = selected ? callQueueHistory(selected) : [];
+    const phone = phoneInfo(selected?.phone || "");
+    const duplicates = selected ? callQueueDuplicateMatches(selected) : [];
+    const relatedQuotes = selected ? (state.data.submissions || []).filter((quote) => (selected.email && String(quote.email || "").toLowerCase() === selected.email.toLowerCase()) || (phone.valid && phoneInfo(quote.phone).e164 === phone.e164)) : [];
+    target.innerHTML = `<div class="call-queue-workspace" data-call-queue-root>
+      <header class="ticket-hero call-queue-hero">
+        <div><p class="eyebrow">Leads · Call Queue</p><h3>Sales Calling Workspace</h3><p>Work the next outreach call, record the result, and keep follow-ups connected to the existing lead and ticket workflow.</p></div>
+        <div class="call-queue-navigation"><button type="button" data-action="call-queue-previous"${selectedIndex <= 0 ? " disabled" : ""}>Previous</button><strong>${selected ? `${selectedIndex + 1} of ${queue.length}` : `0 of ${queue.length}`}</strong><button type="button" data-action="call-queue-next"${selectedIndex < 0 || selectedIndex >= queue.length - 1 ? " disabled" : ""}>Next</button></div>
+      </header>
+      <div class="call-queue-layout">
+        <aside class="call-queue-panel call-queue-list-panel">
+          <div class="call-queue-panel-head"><div><span>Queue</span><strong>${escapeHtml(String(queue.length))}</strong></div><small>${state.callQueueStatusFilter === "Active" ? "Needs outreach" : "Filtered leads"}</small></div>
+          <div class="call-queue-filters">
+            <input type="search" data-call-queue-search placeholder="Search leads…" value="${escapeHtml(state.callQueueSearch)}" aria-label="Search Call Queue">
+            <select data-call-queue-filter="status" aria-label="Filter call queue by status"><option>Active</option><option>All</option><option>Completed</option>${OUTREACH_STATUSES.map((status) => `<option${state.callQueueStatusFilter === status ? " selected" : ""}>${escapeHtml(status)}</option>`).join("")}</select>
+            <select data-call-queue-filter="priority" aria-label="Filter call queue by priority"><option>All</option>${OUTREACH_PRIORITIES.map((priority) => `<option${state.callQueuePriorityFilter === priority ? " selected" : ""}>${escapeHtml(priority)}</option>`).join("")}</select>
+            <select data-call-queue-filter="sort" aria-label="Sort call queue"><option value="queue"${state.callQueueSort === "queue" ? " selected" : ""}>Queue order</option><option value="priority"${state.callQueueSort === "priority" ? " selected" : ""}>Priority</option><option value="oldest"${state.callQueueSort === "oldest" ? " selected" : ""}>Oldest contact</option><option value="name"${state.callQueueSort === "name" ? " selected" : ""}>Name</option></select>
+          </div>
+          <div class="call-queue-list" role="listbox" aria-label="Leads needing outreach">
+            ${visible.length ? visible.map((item) => {
+              const itemHistory = callQueueHistory(item);
+              return `<button type="button" role="option" aria-selected="${item.id === selected?.id}" class="call-queue-row${item.id === selected?.id ? " is-selected" : ""}" data-action="select-call-queue-lead" data-id="${escapeHtml(item.id)}">
+                <span><strong>${escapeHtml(outreachTitle(item))}</strong><small>${escapeHtml([item.managementCompany, item.propertyName, item.city].filter(Boolean).join(" · ") || "Lead details needed")}</small></span>
+                <span class="call-queue-row-meta"><b>${escapeHtml(item.priority)}</b><small>${escapeHtml(item.nextFollowUpAt || (item.lastContactedAtRaw ? `Last ${item.lastContactedAt}` : "Never contacted"))}</small><em>${itemHistory.length} call${itemHistory.length === 1 ? "" : "s"}</em></span>
+              </button>`;
+            }).join("") : `<div class="call-queue-empty-inline">${state.callQueueSearch ? "No leads match this search." : "No leads currently need calls."}</div>`}
+          </div>
+          ${visible.length < queue.length ? `<button class="call-queue-load-more" type="button" data-action="load-more-call-queue">Load 25 more</button>` : ""}
+        </aside>
+        <main class="call-queue-panel call-queue-lead-panel">
+          ${selected ? `<div class="call-queue-lead-head"><div><p class="eyebrow">Active Lead</p><h3>${escapeHtml(outreachTitle(selected))}</h3><p>${escapeHtml([selected.managementCompany, selected.propertyName].filter(Boolean).join(" · ") || "No company or property set")}</p></div><span class="status">${escapeHtml(selected.status)}</span></div>
+          ${duplicates.length ? `<div class="call-queue-duplicate-warning"><strong>Possible duplicate</strong><span>${duplicates.length} matching contact or lead record${duplicates.length === 1 ? "" : "s"}. Review before creating another record.</span></div>` : ""}
+          <dl class="call-queue-lead-details">
+            <div><dt>Contact</dt><dd>${escapeHtml(selected.contactName || "Not provided")}</dd></div><div><dt>Phone</dt><dd>${escapeHtml(phone.display)}</dd></div>
+            <div><dt>Email</dt><dd>${escapeHtml(selected.email || "Not provided")}</dd></div><div><dt>Address</dt><dd>${escapeHtml([selected.address, selected.city].filter(Boolean).join(", ") || "Not provided")}</dd></div>
+            <div><dt>Source</dt><dd>${escapeHtml(selected.source || "Not provided")}</dd></div><div><dt>Assigned</dt><dd>Unassigned</dd></div>
+            <div><dt>Priority</dt><dd>${escapeHtml(selected.priority)}</dd></div><div><dt>Service</dt><dd>${escapeHtml(selected.serviceInterest)}</dd></div>
+            <div><dt>Follow-up</dt><dd>${escapeHtml(selected.nextFollowUpAt || "Not scheduled")}</dd></div><div><dt>Connected records</dt><dd>${relatedQuotes.length} quote/ticket lead${relatedQuotes.length === 1 ? "" : "s"}</dd></div>
+          </dl>
+          ${selected.notes ? `<section class="call-queue-notes"><h4>Existing Notes</h4><p>${escapeHtml(selected.notes)}</p></section>` : ""}
+          <div class="call-queue-actions">
+            <button type="button" data-action="call-lead" data-id="${escapeHtml(selected.id)}" data-lead-type="outreach_prospect" data-phone="${escapeHtml(phone.e164)}"${phone.valid ? "" : " disabled"}>Call</button>
+            <button type="button" data-action="copy-phone" data-phone="${escapeHtml(phone.e164)}"${phone.valid ? "" : " disabled"}>Copy Phone</button>
+            ${selected.email ? `<a class="button" href="mailto:${escapeHtml(selected.email)}">Email</a>` : `<button type="button" disabled>Email</button>`}
+            <button type="button" data-action="call-queue-add-note" data-id="${escapeHtml(selected.id)}">Add Note</button>
+            <button type="button" data-action="call-queue-follow-up" data-id="${escapeHtml(selected.id)}">Schedule Follow-Up</button>
+            <button type="button" data-action="open-outreach-prospect" data-id="${escapeHtml(selected.id)}">Edit Lead</button>
+            <button type="button" data-action="create-ticket-from-prospect" data-id="${escapeHtml(selected.id)}"${canCreateTicketType("quote") ? "" : " disabled"}>Convert to Ticket</button>
+          </div>
+          <section class="call-queue-history"><div class="call-queue-section-title"><h4>Previous Call History</h4><span>${history.length}</span></div>${renderCallQueueTimeline(selected)}</section>` : `<div class="call-queue-empty-state"><h3>No lead selected</h3><p>Choose a lead from the queue to review contact details and call history.</p></div>`}
+        </main>
+        <aside class="call-queue-panel call-queue-outcome-panel">
+          <div class="call-queue-panel-head"><div><span>Call Outcome</span><strong>${selected ? "Save result" : "Waiting"}</strong></div></div>
+          ${selected ? `<form data-call-queue-outcome-form data-id="${escapeHtml(selected.id)}">
+            <fieldset><legend>Outcome</legend><div class="call-queue-outcomes">${CALL_QUEUE_OUTCOMES.map(([value, label]) => `<label><input type="radio" name="outcome" value="${escapeHtml(value)}" required><span>${escapeHtml(label)}</span></label>`).join("")}</div></fieldset>
+            <label>Call notes<textarea name="notes" rows="4" placeholder="What happened on the call?"></textarea></label>
+            <div class="call-queue-follow-up-grid"><label>Follow-up date<input type="date" name="follow_up_date"></label><label>Time<input type="time" name="follow_up_time"></label></div>
+            <label>Updated status<select name="status">${OUTREACH_STATUSES.map((status) => `<option${selected.status === status ? " selected" : ""}>${escapeHtml(status)}</option>`).join("")}</select></label>
+            <label>Updated priority<select name="priority">${OUTREACH_PRIORITIES.map((priority) => `<option${selected.priority === priority ? " selected" : ""}>${escapeHtml(priority)}</option>`).join("")}</select></label>
+            <label>Next action<input name="next_action" placeholder="Optional next step"></label>
+            <label class="call-queue-auto-next"><input type="checkbox" name="auto_next" checked> Move automatically to the next lead</label>
+            <button type="submit"${state.callQueueSaving ? " disabled" : ""}>${state.callQueueSaving ? "Saving…" : "Save Outcome"}</button>
+          </form>` : `<div class="call-queue-empty-inline">Select a lead before recording an outcome.</div>`}
+        </aside>
+      </div>
+    </div>`;
+  }
+
   function renderLeadNextStepCard({ kicker, value, title, detail, action, actionLabel, extraAttrs = "" }) {
     return `<article class="lead-next-step-card">
       <span class="home-next-step-kicker">${escapeHtml(kicker)}</span>
@@ -18641,6 +18810,8 @@
       safeRender("work workspace", () => renderWorkWorkspace(data));
     } else if (active === "outreach") {
       safeRender("leads workspace", () => renderLeadsWorkspace(data));
+    } else if (active === "call-queue") {
+      safeRender("call queue workspace", () => renderCallQueueWorkspace());
     } else if (active === "documents") {
       safeRender("money workspace", () => renderMoneyWorkspace(data));
     } else if (active === "settings") {
@@ -19259,6 +19430,16 @@
       const target = event.target;
       if (!target) return;
 
+      if (target.matches("[data-call-queue-filter]")) {
+        const filter = target.dataset.callQueueFilter;
+        if (filter === "status") state.callQueueStatusFilter = target.value || "Active";
+        if (filter === "priority") state.callQueuePriorityFilter = target.value || "All";
+        if (filter === "sort") state.callQueueSort = target.value || "queue";
+        state.callQueueVisibleCount = 25;
+        renderCallQueueWorkspace();
+        return;
+      }
+
       if (target.matches("[data-user-avatar-upload]")) {
         const file = target.files && target.files[0];
         if (!file) return;
@@ -19482,6 +19663,14 @@
     });
 
     els.appView.addEventListener("input", (event) => {
+      if (event.target?.matches?.("[data-call-queue-search]")) {
+        state.callQueueSearch = event.target.value || "";
+        state.callQueueVisibleCount = 25;
+        window.clearTimeout(state._callQueueSearchTimer);
+        state._callQueueSearchTimer = window.setTimeout(() => renderCallQueueWorkspace(), 120);
+        return;
+      }
+
       if (event.target?.matches?.("[data-ticket-board-search]")) {
         state.ticketBoardCloseoutOnly = false;
         state.ticketBoardSearch = event.target.value || "";
@@ -20934,6 +21123,47 @@
         setDashboardState("Property CSV import canceled.");
       } else if (action === "open-outreach-prospect" || action === "edit-outreach-prospect") {
         openOutreachDrawer(id);
+      } else if (action === "select-call-queue-lead") {
+        state.callQueueSelectedId = id;
+        renderCallQueueWorkspace();
+      } else if (action === "call-queue-previous" || action === "call-queue-next") {
+        const queue = filteredCallQueue();
+        const currentIndex = queue.findIndex((item) => item.id === state.callQueueSelectedId);
+        const offset = action === "call-queue-previous" ? -1 : 1;
+        const next = queue[currentIndex + offset];
+        if (next) {
+          state.callQueueSelectedId = next.id;
+          renderCallQueueWorkspace();
+        }
+      } else if (action === "load-more-call-queue") {
+        state.callQueueVisibleCount += 25;
+        renderCallQueueWorkspace();
+      } else if (action === "call-queue-add-note") {
+        const prospect = findOutreachProspect(id);
+        if (!prospect) return;
+        const note = window.prompt("Add lead note", "");
+        if (note === null || !note.trim()) return;
+        try {
+          setDashboardState("Saving lead note...");
+          await updateOutreachProspect(id, { notes: [prospect.notes, `${todayKey()}: ${note.trim()}`].filter(Boolean).join("\n\n") });
+          await refreshDashboard();
+          setDashboardState("Lead note saved.");
+        } catch (error) {
+          setDashboardState(error.message || "Unable to save lead note.", "error");
+        }
+      } else if (action === "call-queue-follow-up") {
+        const prospect = findOutreachProspect(id);
+        if (!prospect) return;
+        const followUp = window.prompt("Follow-up date (YYYY-MM-DD)", prospect.nextFollowUpAtRaw || daysFromToday(1));
+        if (followUp === null) return;
+        try {
+          setDashboardState("Scheduling follow-up...");
+          await updateOutreachProspect(id, { next_follow_up_at: followUp || null, status: followUp ? "Follow-Up Needed" : prospect.status });
+          await refreshDashboard();
+          setDashboardState(followUp ? "Follow-up scheduled." : "Follow-up cleared.");
+        } catch (error) {
+          setDashboardState(error.message || "Unable to schedule follow-up.", "error");
+        }
       } else if (action === "create-ticket-from-prospect") {
         if (!canCreateTicketType("quote")) {
           setDashboardState("Your dashboard role cannot create job tickets.", "error");
@@ -21728,7 +21958,81 @@
     });
 
   els.appView.addEventListener("submit", async (event) => {
-      if (event.target.matches("[data-users-invite-form]")) {
+      if (event.target.matches("[data-call-queue-outcome-form]")) {
+        event.preventDefault();
+        const id = event.target.dataset.id || "";
+        const prospect = findOutreachProspect(id);
+        if (!prospect) {
+          setDashboardState("The selected lead is no longer available.", "error");
+          return;
+        }
+        const formData = new FormData(event.target);
+        const outcome = String(formData.get("outcome") || "");
+        const followUpDate = String(formData.get("follow_up_date") || "");
+        const followUpTime = String(formData.get("follow_up_time") || "");
+        const notes = String(formData.get("notes") || "").trim();
+        const nextAction = String(formData.get("next_action") || "").trim();
+        if (!CALL_QUEUE_OUTCOMES.some(([value]) => value === outcome)) {
+          setDashboardState("Choose a call outcome before saving.", "error");
+          return;
+        }
+        if (outcome === "follow_up_needed" && !followUpDate) {
+          setDashboardState("Choose a follow-up date for Follow-Up Needed.", "error");
+          return;
+        }
+        const queue = filteredCallQueue();
+        const currentIndex = queue.findIndex((item) => item.id === id);
+        const nextId = queue[currentIndex + 1]?.id || queue[currentIndex - 1]?.id || "";
+        const outcomeLabel = CALL_QUEUE_OUTCOMES.find(([value]) => value === outcome)?.[1] || outcome;
+        const storedOutcome = ["interested", "quote_requested"].includes(outcome) ? "spoke_with_contact" : outcome;
+        const automaticStatus = {
+          no_answer: ["Prospect", "Researched"].includes(prospect.status) ? "Contacted" : prospect.status,
+          left_voicemail: "Follow-Up Needed",
+          spoke_with_contact: "Contacted",
+          follow_up_needed: "Follow-Up Needed",
+          interested: "Interested",
+          quote_requested: "Quote Needed",
+          not_interested: "Lost / No Fit",
+          wrong_number: "Lost / No Fit"
+        }[outcome];
+        const requestedStatus = String(formData.get("status") || prospect.status);
+        const updatedStatus = requestedStatus !== prospect.status ? requestedStatus : (automaticStatus || prospect.status);
+        const activityNotes = [outcomeLabel, notes, followUpTime ? `Follow-up time: ${followUpTime}` : "", nextAction ? `Next action: ${nextAction}` : ""].filter(Boolean).join("\n");
+        try {
+          state.callQueueSaving = true;
+          renderCallQueueWorkspace();
+          setDashboardState("Saving call outcome...");
+          await insertLeadActivity({
+            lead_id: id,
+            lead_type: "outreach_prospect",
+            phone_number: prospect.phone,
+            type: "call_attempt",
+            outcome: storedOutcome,
+            notes: activityNotes,
+            follow_up_date: followUpDate || null,
+            metadata: {
+              call_queue_outcome: outcome,
+              follow_up_time: followUpTime || null,
+              next_action: nextAction || null
+            }
+          });
+          await updateOutreachProspect(id, {
+            status: updatedStatus,
+            priority: String(formData.get("priority") || prospect.priority),
+            last_contacted_at: new Date().toISOString(),
+            next_follow_up_at: followUpDate || null,
+            notes: [prospect.notes, notes ? `${todayKey()} call: ${notes}` : "", nextAction ? `Next action: ${nextAction}` : ""].filter(Boolean).join("\n\n")
+          });
+          state.callQueueSelectedId = formData.get("auto_next") ? nextId : id;
+          await refreshDashboard();
+          setDashboardState(`${outcomeLabel} saved.${formData.get("auto_next") && nextId ? " Moved to the next lead." : ""}`);
+        } catch (error) {
+          setDashboardState(error.message || "Unable to save call outcome.", "error");
+        } finally {
+          state.callQueueSaving = false;
+          renderCallQueueWorkspace();
+        }
+      } else if (event.target.matches("[data-users-invite-form]")) {
         event.preventDefault();
         const formData = new FormData(event.target);
         try {

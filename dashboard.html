@@ -12,10 +12,10 @@
     <link rel="icon" href="/favicon.ico" sizes="any">
     <link rel="apple-touch-icon" href="/apple-touch-icon.png">
     <link rel="manifest" href="/dashboard.webmanifest">
-  <link rel="stylesheet" href="dashboard.css?v=20260721-financial-records-1">
+  <link rel="stylesheet" href="dashboard.css?v=20260721-call-queue-1">
     <script src="dashboard-config.js?v=20260716-loader-1" defer></script>
     <script src="scripts/budget-calculations.js?v=20260716-loader-1" defer></script>
-  <script src="dashboard.js?v=20260721-financial-records-1" defer></script>
+  <script src="dashboard.js?v=20260721-call-queue-1" defer></script>
   </head>
   <body>
     <main class="dashboard-shell" aria-labelledby="dashboard-title">
@@ -67,7 +67,7 @@
               </div>
               <div class="dashboard-nav-group" data-sidebar-nav-group="outreach" data-sidebar-nav-title="Leads">
                 <div class="dashboard-nav-group-row"><a href="#outreach" data-dashboard-link="outreach"><span class="nav-icon" aria-hidden="true"><svg><use href="images/dashboard-icons/option8-sidebar.svg?v=20260714-reliability-1#uy-icon-leads"></use></svg></span><span class="nav-label">Leads</span></a></div>
-                <div class="dashboard-subnav" data-sidebar-subnav="outreach" data-sidebar-subnav-title="Leads"><a href="#outreach" data-dashboard-link="outreach"><span>Lead Pipeline</span></a><a href="#contacts" data-dashboard-link="contacts"><span>Clients</span></a></div>
+                <div class="dashboard-subnav" data-sidebar-subnav="outreach" data-sidebar-subnav-title="Leads"><a href="#outreach" data-dashboard-link="outreach"><span>Lead Pipeline</span></a><a href="#contacts" data-dashboard-link="contacts"><span>Clients</span></a><a href="#call-queue" data-dashboard-link="call-queue"><span>Call Queue</span></a></div>
               </div>
               <a href="#documents" data-dashboard-link="documents"><span class="nav-icon" aria-hidden="true"><svg><use href="images/dashboard-icons/option8-sidebar.svg?v=20260714-reliability-1#uy-icon-money"></use></svg></span><span class="nav-label">Money</span></a>
               <div class="dashboard-nav-group" data-sidebar-nav-group="settings" data-sidebar-nav-title="Tools">
@@ -140,6 +140,10 @@
 
           <section class="dashboard-section uy-standard-page leads-page" id="outreach" data-section="outreach">
             <div data-leads-workspace></div>
+          </section>
+
+          <section class="dashboard-section uy-standard-page call-queue-page" id="call-queue" data-section="call-queue">
+            <div data-call-queue-workspace></div>
           </section>
 
           <section class="dashboard-section work-page work-hub-page" id="calendar" data-section="calendar">

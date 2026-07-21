@@ -15809,25 +15809,12 @@ body:not(.is-login-screen) .owner-kanban-priority.is-high {
 
 body:not(.is-login-screen) .owner-kanban-card-date {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) auto auto;
+  grid-template-columns: minmax(0, 1fr);
   font-size: .68rem;
 }
 
 body:not(.is-login-screen) .owner-kanban-card.is-overdue .owner-kanban-card-date > span:first-child {
   color: #a14e32;
-  font-weight: 900;
-}
-
-body:not(.is-login-screen) .owner-kanban-assignee {
-  display: inline-grid;
-  place-items: center;
-  width: 24px;
-  height: 24px;
-  border: 1px solid rgba(18, 63, 49, .18);
-  border-radius: 50%;
-  background: #f4f5f1;
-  color: var(--uy-green);
-  font-size: .61rem;
   font-weight: 900;
 }
 

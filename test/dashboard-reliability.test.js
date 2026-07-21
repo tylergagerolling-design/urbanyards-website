@@ -493,6 +493,14 @@ test("dashboard sidebar exposes a secondary drawer for multi-workspace sections"
   assert.match(css, /dashboard-subnav a,[\s\S]*height: 42px[\s\S]*max-height: 42px[\s\S]*overflow: hidden/);
 });
 
+test("owner Kanban cards omit letter-based assignee icons", () => {
+  const js = read("dashboard.js");
+  const css = read("dashboard.css");
+
+  assert.doesNotMatch(js, /ownerKanbanAssigneeInitials|owner-kanban-assignee/);
+  assert.doesNotMatch(css, /\.owner-kanban-assignee/);
+});
+
 test("ticket drawer workbench layouts wrap without overlapping content", () => {
   const css = read("dashboard.css");
 

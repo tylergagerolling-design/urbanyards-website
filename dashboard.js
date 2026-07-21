@@ -12267,12 +12267,6 @@
     return [ticket.sourceLabel || ticketSourceLabel(ticket) || "Internal", "internal"];
   }
 
-  function ownerKanbanAssigneeInitials(ticket = {}) {
-    const label = ticketAssigneeLabel(ticket);
-    if (!label || label === "Unassigned") return "—";
-    return label.split(/\s+/).filter(Boolean).slice(0, 2).map((part) => part[0]).join("").toUpperCase();
-  }
-
   function renderOwnerKanbanCard(ticket = {}) {
     const dateState = ownerKanbanDateState(ticket);
     const blockers = ticket.blockers || [];
@@ -12291,7 +12285,6 @@
       </div>
       <div class="owner-kanban-card-date">
         <span><span aria-hidden="true">▣</span> ${escapeHtml(ticket.dateLabel || "No due date")}</span>
-        <span class="owner-kanban-assignee" title="${escapeHtml(ticketAssigneeLabel(ticket))}">${escapeHtml(ownerKanbanAssigneeInitials(ticket))}</span>
       </div>
       ${blockers.length ? `<div class="owner-kanban-blockers">${blockers.slice(0, 2).map((item) => `<span>${escapeHtml(item)}</span>`).join("")}</div>` : ""}
       ${saving ? `<div class="owner-kanban-saving" role="status">Saving…</div>` : ""}

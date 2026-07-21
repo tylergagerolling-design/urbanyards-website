@@ -313,6 +313,8 @@
     ownerKanbanTypeFilter: "All",
     ownerKanbanClientFilter: "",
     ownerKanbanDateFilter: "All",
+    ownerKanbanDateStart: "",
+    ownerKanbanDateEnd: "",
     ownerKanbanStatusFilter: "All",
     ownerKanbanSort: "priority",
     ownerKanbanActiveOnly: true,
@@ -12141,6 +12143,9 @@
   }
 
   function loadOwnerKanbanFilters() {
+    const defaultRange = ownerKanbanDefaultDateRange();
+    state.ownerKanbanDateStart = defaultRange.start;
+    state.ownerKanbanDateEnd = defaultRange.end;
     try {
       const stored = JSON.parse(localStorage.getItem(OWNER_KANBAN_FILTER_KEY) || "{}");
       if (!stored || typeof stored !== "object") return;
@@ -12149,7 +12154,9 @@
       state.ownerKanbanPriorityFilter = stored.priority || "All";
       state.ownerKanbanTypeFilter = stored.type || "All";
       state.ownerKanbanClientFilter = stored.client || "";
-      state.ownerKanbanDateFilter = stored.date || "All";
+      state.ownerKanbanDateFilter = "All";
+      state.ownerKanbanDateStart = stored.dateStart !== undefined ? stored.dateStart : defaultRange.start;
+      state.ownerKanbanDateEnd = stored.dateEnd !== undefined ? stored.dateEnd : defaultRange.end;
       state.ownerKanbanStatusFilter = stored.status || "All";
       state.ownerKanbanSort = stored.sort || "priority";
       state.ownerKanbanActiveOnly = stored.activeOnly !== false;
@@ -12169,6 +12176,8 @@
         type: state.ownerKanbanTypeFilter,
         client: state.ownerKanbanClientFilter,
         date: state.ownerKanbanDateFilter,
+        dateStart: state.ownerKanbanDateStart,
+        dateEnd: state.ownerKanbanDateEnd,
         status: state.ownerKanbanStatusFilter,
         sort: state.ownerKanbanSort,
         activeOnly: state.ownerKanbanActiveOnly,
@@ -12208,6 +12217,20 @@
     return "upcoming";
   }
 
+  function ownerKanbanDefaultDateRange() {
+    const start = todayKey();
+    return { start, end: addMonthsKey(start, 2) };
+  }
+
+  function ownerKanbanDateRangeLabel() {
+    const start = state.ownerKanbanDateStart;
+    const end = state.ownerKanbanDateEnd;
+    if (!start && !end) return "Showing all dates";
+    if (start && end) return `${formatDate(start)} – ${formatDate(end)}`;
+    if (start) return `From ${formatDate(start)}`;
+    return `Through ${formatDate(end)}`;
+  }
+
   function ownerKanbanTicketMatches(ticket = {}) {
     const stage = ticketStage(ticket);
     if (state.ownerKanbanActiveOnly && !ticketIsOpen(ticket)) return false;
@@ -12217,6 +12240,10 @@
     if (state.ownerKanbanPriorityFilter !== "All" && ticketPriorityLabel(ticket) !== state.ownerKanbanPriorityFilter) return false;
     if (state.ownerKanbanTypeFilter !== "All" && ticket.sourceType !== state.ownerKanbanTypeFilter) return false;
     if (state.ownerKanbanDateFilter !== "All" && ownerKanbanDateState(ticket) !== state.ownerKanbanDateFilter) return false;
+    const ticketDate = dateKey(ticket.dateRaw);
+    if ((state.ownerKanbanDateStart || state.ownerKanbanDateEnd) && !ticketDate) return false;
+    if (state.ownerKanbanDateStart && ticketDate < state.ownerKanbanDateStart) return false;
+    if (state.ownerKanbanDateEnd && ticketDate > state.ownerKanbanDateEnd) return false;
     if (state.ownerKanbanStatusFilter !== "All" && ownerKanbanColumnForTicket(ticket) !== state.ownerKanbanStatusFilter) return false;
     const clientFilter = String(state.ownerKanbanClientFilter || "").trim().toLowerCase();
     if (clientFilter && ![ticket.customer, ticket.property].some((value) => String(value || "").toLowerCase().includes(clientFilter))) return false;
@@ -12293,11 +12320,12 @@
         <label>Category
           <select data-owner-kanban-filter="type">${ownerKanbanOptions(types, state.ownerKanbanTypeFilter, "All types")}</select>
         </label>
-        <label>Due date
-          <select data-owner-kanban-filter="date">
-            ${["All", "overdue", "today", "upcoming", "none"].map((value) => `<option value="${escapeHtml(value)}"${value === state.ownerKanbanDateFilter ? " selected" : ""}>${escapeHtml(value === "All" ? "All dates" : titleCase(value))}</option>`).join("")}
-          </select>
-        </label>
+        <fieldset class="owner-kanban-date-range">
+          <legend>Date range <small>${escapeHtml(ownerKanbanDateRangeLabel())}</small></legend>
+          <label>From<input type="date" value="${escapeHtml(state.ownerKanbanDateStart)}" data-owner-kanban-date-range="start"></label>
+          <label>To<input type="date" value="${escapeHtml(state.ownerKanbanDateEnd)}" data-owner-kanban-date-range="end"></label>
+          <button type="button" class="secondary-action" data-action="show-all-owner-kanban-dates"${!state.ownerKanbanDateStart && !state.ownerKanbanDateEnd ? " disabled" : ""}>All Dates</button>
+        </fieldset>
         <label>Status
           <select data-owner-kanban-filter="status">
             <option value="All">All statuses</option>
@@ -19742,9 +19770,22 @@
         if (filter === "assignee") state.ownerKanbanAssigneeFilter = target.value || "All";
         if (filter === "priority") state.ownerKanbanPriorityFilter = target.value || "All";
         if (filter === "type") state.ownerKanbanTypeFilter = target.value || "All";
-        if (filter === "date") state.ownerKanbanDateFilter = target.value || "All";
         if (filter === "status") state.ownerKanbanStatusFilter = target.value || "All";
         if (filter === "sort") state.ownerKanbanSort = target.value || "priority";
+        persistOwnerKanbanFilters();
+        renderHomeWorkspace(state.data);
+        return;
+      }
+
+      if (target.matches("[data-owner-kanban-date-range]")) {
+        const boundary = target.dataset.ownerKanbanDateRange;
+        if (boundary === "start") state.ownerKanbanDateStart = target.value || "";
+        if (boundary === "end") state.ownerKanbanDateEnd = target.value || "";
+        if (state.ownerKanbanDateStart && state.ownerKanbanDateEnd && state.ownerKanbanDateStart > state.ownerKanbanDateEnd) {
+          if (boundary === "start") state.ownerKanbanDateEnd = state.ownerKanbanDateStart;
+          else state.ownerKanbanDateStart = state.ownerKanbanDateEnd;
+        }
+        state.ownerKanbanOverdueOnly = false;
         persistOwnerKanbanFilters();
         renderHomeWorkspace(state.data);
         return;
@@ -19754,7 +19795,17 @@
         const filter = target.dataset.ownerKanbanToggle;
         if (filter === "activeOnly") state.ownerKanbanActiveOnly = target.checked;
         if (filter === "blockedOnly") state.ownerKanbanBlockedOnly = target.checked;
-        if (filter === "overdueOnly") state.ownerKanbanOverdueOnly = target.checked;
+        if (filter === "overdueOnly") {
+          state.ownerKanbanOverdueOnly = target.checked;
+          if (target.checked) {
+            state.ownerKanbanDateStart = "";
+            state.ownerKanbanDateEnd = daysFromToday(-1);
+          } else {
+            const defaultRange = ownerKanbanDefaultDateRange();
+            state.ownerKanbanDateStart = defaultRange.start;
+            state.ownerKanbanDateEnd = defaultRange.end;
+          }
+        }
         persistOwnerKanbanFilters();
         renderHomeWorkspace(state.data);
         return;
@@ -19966,6 +20017,9 @@
         state.ownerKanbanTypeFilter = "All";
         state.ownerKanbanClientFilter = "";
         state.ownerKanbanDateFilter = "All";
+        const defaultRange = ownerKanbanDefaultDateRange();
+        state.ownerKanbanDateStart = defaultRange.start;
+        state.ownerKanbanDateEnd = defaultRange.end;
         state.ownerKanbanStatusFilter = "All";
         state.ownerKanbanSort = "priority";
         state.ownerKanbanActiveOnly = true;
@@ -19974,6 +20028,16 @@
         persistOwnerKanbanFilters();
         renderHomeWorkspace(state.data);
         setDashboardState("Owner Kanban filters reset.");
+        return;
+      }
+
+      if (action === "show-all-owner-kanban-dates") {
+        state.ownerKanbanDateStart = "";
+        state.ownerKanbanDateEnd = "";
+        state.ownerKanbanOverdueOnly = false;
+        persistOwnerKanbanFilters();
+        renderHomeWorkspace(state.data);
+        setDashboardState("Owner Kanban is showing all dates.");
         return;
       }
 

@@ -7850,6 +7850,70 @@ html body:not(.is-login-screen) .detail-drawer .drawer-panel {
   overflow: hidden !important;
 }
 
+/* Owner Kanban date window. The fieldset reads as one compact range control
+   and collapses cleanly with the existing responsive filter grid. */
+body:not(.is-login-screen) .owner-kanban-date-range {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(130px, 1fr)) auto;
+  grid-column: span 2;
+  align-items: end;
+  gap: 8px;
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+body:not(.is-login-screen) .owner-kanban-date-range legend {
+  grid-column: 1 / -1;
+  width: 100%;
+  margin: 0 0 2px;
+  padding: 0;
+  color: var(--uy-green);
+  font-size: .64rem;
+  font-weight: 900;
+  letter-spacing: .04em;
+  text-transform: uppercase;
+}
+
+body:not(.is-login-screen) .owner-kanban-date-range legend small {
+  margin-left: 6px;
+  color: var(--uy-app-muted);
+  font-size: .68rem;
+  font-weight: 700;
+  letter-spacing: 0;
+  text-transform: none;
+}
+
+body:not(.is-login-screen) .owner-kanban-date-range input[type="date"] {
+  width: 100%;
+  min-height: 38px;
+  padding: 0 9px;
+  border: 1px solid rgba(73, 102, 77, .18);
+  border-radius: 10px;
+  background: rgba(255, 253, 246, .94);
+  color: var(--uy-green);
+  font: inherit;
+  font-size: .78rem;
+  font-weight: 800;
+}
+
+body:not(.is-login-screen) .owner-kanban-date-range button {
+  min-width: 88px;
+}
+
+@media (max-width: 700px) {
+  body:not(.is-login-screen) .owner-kanban-date-range {
+    grid-template-columns: 1fr 1fr;
+    grid-column: 1 / -1;
+  }
+
+  body:not(.is-login-screen) .owner-kanban-date-range button {
+    grid-column: 1 / -1;
+    width: 100%;
+  }
+}
+
 /* Center the complete Sign Out control when the primary drawer is expanded. */
 @media (min-width: 821px) {
   body:not(.is-login-screen) :is(

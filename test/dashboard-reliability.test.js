@@ -579,7 +579,8 @@ test("owner overview kanban keeps four freely movable stages and reserves comple
   assert.match(js, /data-owner-kanban-filter="assignee"/);
   assert.match(js, /data-owner-kanban-filter="priority"/);
   assert.match(js, /data-owner-kanban-filter="type"/);
-  assert.match(js, /data-owner-kanban-filter="date"/);
+  assert.match(js, /data-owner-kanban-date-range="start"/);
+  assert.match(js, /data-owner-kanban-date-range="end"/);
   assert.match(js, /data-owner-kanban-filter="status"/);
   assert.match(js, /data-owner-kanban-filter="sort"/);
   assert.match(js, /owner-kanban-empty[\s\S]*Clear for now/);
@@ -775,4 +776,18 @@ test("Call Queue contains staged Lead Intake without changing Leads navigation",
   assert.match(migration, /alter table public\.outreach_prospects/);
   assert.match(migration, /import_batch_id uuid references public\.import_batches/);
   assert.doesNotMatch(migration, /create table[^;]+lead/i);
+});
+
+test("Owner Kanban defaults to the next two months and supports a custom date range", () => {
+  const js = read("dashboard.js");
+  const css = read("dashboard.css");
+
+  assert.match(js, /function ownerKanbanDefaultDateRange\(\)[\s\S]*start = todayKey\(\)[\s\S]*addMonthsKey\(start, 2\)/);
+  assert.match(js, /data-owner-kanban-date-range="start"/);
+  assert.match(js, /data-owner-kanban-date-range="end"/);
+  assert.match(js, /data-action="show-all-owner-kanban-dates"/);
+  assert.match(js, /if \(state\.ownerKanbanDateStart && ticketDate < state\.ownerKanbanDateStart\) return false/);
+  assert.match(js, /if \(state\.ownerKanbanDateEnd && ticketDate > state\.ownerKanbanDateEnd\) return false/);
+  assert.match(js, /dateStart: state\.ownerKanbanDateStart[\s\S]*dateEnd: state\.ownerKanbanDateEnd/);
+  assert.match(css, /owner-kanban-date-range[\s\S]*grid-template-columns: repeat\(2, minmax\(130px, 1fr\)\) auto/);
 });

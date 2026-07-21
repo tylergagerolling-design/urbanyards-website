@@ -19714,7 +19714,7 @@
         event.stopPropagation();
         return;
       }
-      const target = event.target.closest("[data-action], [data-export]");
+      const target = event.target.closest("[data-action], [data-export], [data-ai-view]");
       if (!target) return;
 
       const action = target.dataset.action;

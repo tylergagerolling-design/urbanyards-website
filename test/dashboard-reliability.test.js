@@ -710,6 +710,8 @@ test("dashboard navigation and workspace calls to action have working destinatio
   assert.doesNotMatch(js, /action: "go-leads",\s*actionLabel: "Open Queue"/);
   assert.doesNotMatch(js, /action: "go-calendar",\s*actionLabel: "Add Visit"/);
   assert.doesNotMatch(js, /action: "go-calendar",\s*actionLabel: "Open Work"/);
+  assert.match(js, /closest\("\[data-action\], \[data-export\], \[data-ai-view\]"\)/);
+  assert.match(js, /target\.matches\("\[data-ai-view\]"\)[\s\S]*?state\.groundskeeperAiView = target\.dataset\.aiView/);
 });
 
 test("production dashboard responses and invite sessions use hardened security defaults", () => {

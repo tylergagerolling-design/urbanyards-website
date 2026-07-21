@@ -280,6 +280,7 @@
     ticketBoardSearch: "",
     ticketBoardStageFilter: "All",
     ticketBoardOwnerFilter: "All",
+    ticketBoardCloseoutOnly: false,
     ownerKanbanSearch: "",
     ownerKanbanAssigneeFilter: "All",
     ownerKanbanPriorityFilter: "All",
@@ -11975,7 +11976,15 @@
     const owner = ticketStageMeta[stage]?.lane || ticket.lane || "";
     const stageMatches = stageFilter === "All" || stage === stageFilter;
     const ownerMatches = ownerFilter === "All" || owner === ownerFilter;
-    if (!stageMatches || !ownerMatches) return false;
+    const closeoutMatches = !state.ticketBoardCloseoutOnly || [
+      "field_work_complete",
+      "completion_review",
+      "invoice_review",
+      "invoice_sent",
+      "partially_paid",
+      "paid"
+    ].includes(stage);
+    if (!stageMatches || !ownerMatches || !closeoutMatches) return false;
     if (!query) return true;
     return [
       ticket.number,
@@ -12013,7 +12022,7 @@
           <h4>Find the right ticket fast</h4>
           <p>Search, narrow by stage, or isolate the owner lane before opening the detailed workflow board.</p>
         </div>
-        <span class="ticket-board-result-count" data-ticket-board-result-count>${escapeHtml(filteredTickets.length)} of ${escapeHtml(tickets.length)} shown</span>
+        <span class="ticket-board-result-count" data-ticket-board-result-count>${state.ticketBoardCloseoutOnly ? "Closeout review · " : ""}${escapeHtml(filteredTickets.length)} of ${escapeHtml(tickets.length)} shown</span>
       </div>
       <div class="ticket-board-search">
         <label for="ticket-board-search">Search tickets</label>
@@ -12624,7 +12633,7 @@
           value: closeoutTickets.length,
           detail: "Completion review, actuals, final invoice, and payment close.",
           tickets: closeoutTickets,
-          action: "go-tickets",
+          action: "review-closeout-tickets",
           actionLabel: "Review Tickets"
         })}
       </div>
@@ -19322,12 +19331,14 @@
       }
 
       if (target.matches("[data-ticket-board-stage-filter]")) {
+        state.ticketBoardCloseoutOnly = false;
         state.ticketBoardStageFilter = target.value || "All";
         renderJobTicketWorkspace(state.data);
         return;
       }
 
       if (target.matches("[data-ticket-board-owner-filter]")) {
+        state.ticketBoardCloseoutOnly = false;
         state.ticketBoardOwnerFilter = target.value || "All";
         renderJobTicketWorkspace(state.data);
         return;
@@ -19472,6 +19483,7 @@
 
     els.appView.addEventListener("input", (event) => {
       if (event.target?.matches?.("[data-ticket-board-search]")) {
+        state.ticketBoardCloseoutOnly = false;
         state.ticketBoardSearch = event.target.value || "";
         window.clearTimeout(state._ticketBoardSearchTimer);
         state._ticketBoardSearchTimer = window.setTimeout(() => renderJobTicketWorkspace(state.data), 120);
@@ -19533,6 +19545,7 @@
         state.ticketBoardSearch = "";
         state.ticketBoardStageFilter = "All";
         state.ticketBoardOwnerFilter = "All";
+        state.ticketBoardCloseoutOnly = false;
         renderJobTicketWorkspace(state.data);
         setDashboardState("Ticket board filters reset.");
         return;
@@ -21095,6 +21108,21 @@
           recordErrors: true
         });
         setDashboardState("");
+      } else if (action === "review-closeout-tickets") {
+        state.ticketBoardSearch = "";
+        state.ticketBoardStageFilter = "All";
+        state.ticketBoardOwnerFilter = "All";
+        state.ticketBoardCloseoutOnly = true;
+        setActiveSection("tickets");
+        replaceDashboardHash("tickets");
+        renderJobTicketWorkspace(state.data);
+        window.requestAnimationFrame(() => {
+          qs(".ticket-board-controls")?.scrollIntoView({
+            behavior: window.matchMedia?.("(prefers-reduced-motion: reduce)")?.matches ? "auto" : "smooth",
+            block: "start"
+          });
+        });
+        setDashboardState("Showing tickets ready for closeout review.");
       } else if (action === "go-tickets") {
         setActiveSection("tickets");
         replaceDashboardHash("tickets");

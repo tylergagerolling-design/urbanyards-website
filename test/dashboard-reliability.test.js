@@ -501,6 +501,15 @@ test("owner Kanban cards omit letter-based assignee icons", () => {
   assert.doesNotMatch(css, /\.owner-kanban-assignee/);
 });
 
+test("closeout Review Tickets opens a focused, visible ticket queue", () => {
+  const js = read("dashboard.js");
+
+  assert.match(js, /label: "Closeout"[\s\S]*action: "review-closeout-tickets"[\s\S]*actionLabel: "Review Tickets"/);
+  assert.match(js, /action === "review-closeout-tickets"[\s\S]*ticketBoardCloseoutOnly = true[\s\S]*renderJobTicketWorkspace[\s\S]*scrollIntoView/);
+  assert.match(js, /ticketBoardCloseoutOnly[\s\S]*field_work_complete[\s\S]*completion_review[\s\S]*invoice_review/);
+  assert.match(js, /reset-ticket-board-filters[\s\S]*ticketBoardCloseoutOnly = false/);
+});
+
 test("ticket drawer workbench layouts wrap without overlapping content", () => {
   const css = read("dashboard.css");
 

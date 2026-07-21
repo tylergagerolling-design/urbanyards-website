@@ -7519,46 +7519,30 @@ body:not(.is-login-screen) .dashboard-nav-group-row > a {
   width: 100%;
 }
 
-body:not(.is-login-screen) .dashboard-nav-group-row > button {
-  position: absolute;
-  right: 2px;
-  bottom: 2px;
-  z-index: 2;
-  display: grid;
-  width: 22px;
-  height: 22px;
-  place-items: center;
-  padding: 0;
-  border: 1px solid rgba(23, 54, 43, .12);
-  border-radius: 8px;
-  background: #f7f8f2;
-  color: #496357;
-  font-size: .78rem;
-  line-height: 1;
-}
-
-body:not(.is-login-screen) .dashboard-nav-group.is-open .dashboard-nav-group-row > button {
-  background: #dce9d2;
-  color: #143829;
-}
-
-body:not(.is-login-screen) .dashboard-nav-group.is-open .dashboard-nav-group-row > button span {
-  transform: rotate(180deg);
-}
-
 body:not(.is-login-screen) .dashboard-subnav {
-  position: absolute;
-  top: 0;
-  left: calc(100% + 12px);
+  position: fixed;
+  top: calc(var(--uy-page-pad, 16px) + 82px);
+  left: calc(var(--uy-page-pad, 16px) + var(--uy-rail-width, 76px) + 12px);
   z-index: 80;
   display: none;
-  width: 224px;
-  gap: 4px;
-  padding: 10px;
+  width: 238px;
+  max-height: calc(100dvh - 120px);
+  gap: 5px;
+  padding: 14px;
+  overflow-y: auto;
   border: 1px solid rgba(23, 54, 43, .12);
-  border-radius: 16px;
+  border-radius: 20px;
   background: rgba(255, 253, 247, .98);
   box-shadow: 0 18px 42px rgba(18, 46, 35, .18);
+}
+
+body:not(.is-login-screen) .dashboard-subnav::before {
+  display: block;
+  margin: 2px 4px 8px;
+  color: #143829;
+  content: attr(data-sidebar-subnav-title);
+  font-size: 1rem;
+  font-weight: 950;
 }
 
 body:not(.is-login-screen) .dashboard-nav-group.is-open .dashboard-subnav {

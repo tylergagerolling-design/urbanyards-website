@@ -467,7 +467,7 @@ test("dashboard route aliases and new reliability diagnostics are wired", () => 
   assert.doesNotMatch(css, /#overview\.job-ticket-page > :not\(\[data-job-ticket-workspace\]\)/);
 });
 
-test("dashboard sidebar exposes accordion subtabs for multi-workspace sections", () => {
+test("dashboard sidebar exposes a secondary drawer for multi-workspace sections", () => {
   const html = read("dashboard.html");
   const js = read("dashboard.js");
   const css = read("dashboard.css");
@@ -475,9 +475,10 @@ test("dashboard sidebar exposes accordion subtabs for multi-workspace sections",
   assert.match(html, /data-sidebar-nav-group="calendar"[\s\S]*Route Planner/);
   assert.match(html, /data-sidebar-nav-group="outreach"[\s\S]*Clients/);
   assert.match(html, /data-sidebar-nav-group="settings"[\s\S]*Equipment[\s\S]*Documentation[\s\S]*Import &amp; Export[\s\S]*Groundskeeper AI/);
-  assert.match(js, /function setSidebarSubnavOpen[\s\S]*aria-expanded/);
-  assert.match(js, /data-sidebar-subnav-toggle[\s\S]*setSidebarSubnavOpen/);
+  assert.doesNotMatch(html, /data-sidebar-subnav-toggle/);
+  assert.match(js, /function setSidebarSubnavOpen[\s\S]*data-sidebar-nav-group[\s\S]*classList\.toggle\("is-open"/);
   assert.match(css, /dashboard-nav-group\.is-open \.dashboard-subnav[\s\S]*display: grid/);
+  assert.match(css, /dashboard-subnav[\s\S]*position: fixed[\s\S]*left: calc\(var\(--uy-page-pad/);
 });
 
 test("ticket drawer workbench layouts wrap without overlapping content", () => {

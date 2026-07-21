@@ -8523,8 +8523,6 @@
     qsa("[data-sidebar-nav-group]").forEach((group) => {
       const isOpen = open && group.dataset.sidebarNavGroup === groupKey;
       group.classList.toggle("is-open", isOpen);
-      const toggle = group.querySelector("[data-sidebar-subnav-toggle]");
-      if (toggle) toggle.setAttribute("aria-expanded", String(isOpen));
     });
   }
 
@@ -18863,14 +18861,6 @@
     });
 
     document.addEventListener("click", async (event) => {
-      const subnavToggle = event.target instanceof Element ? event.target.closest("[data-sidebar-subnav-toggle]") : null;
-      if (subnavToggle) {
-        event.preventDefault();
-        event.stopPropagation();
-        const groupKey = subnavToggle.dataset.sidebarSubnavToggle || "";
-        setSidebarSubnavOpen(groupKey, subnavToggle.getAttribute("aria-expanded") !== "true");
-        return;
-      }
       const link = event.target instanceof Element ? event.target.closest("[data-dashboard-link]") : null;
       if (!link) {
         if (!(event.target instanceof Element) || !event.target.closest(".dashboard-nav")) setSidebarSubnavOpen("", false);

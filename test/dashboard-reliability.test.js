@@ -734,6 +734,7 @@ test("shared detail drawers animate, contain scrolling, and restore focus", () =
   assert.match(js, /function closeSubmissionDrawer[\s\S]*classList\.remove\("is-open"\)[\s\S]*setTimeout\(finishClosingDetailDrawer, DETAIL_DRAWER_SETTLE_MS\)/);
   assert.match(js, /function finishClosingDetailDrawer[\s\S]*focusTarget\.focus\(\{ preventScroll: true \}\)/);
   assert.match(css, /is-detail-drawer-open[\s\S]*overflow: hidden !important/);
+  assert.match(css, /html:has\(body:not\(\.is-login-screen\)\.is-detail-drawer-open\)[\s\S]*overflow-y: hidden !important/);
   assert.match(css, /detail-drawer\.is-open[\s\S]*pointer-events: auto[\s\S]*visibility: visible/);
   assert.match(css, /detail-drawer \.drawer-panel[\s\S]*transform: translate3d\(32px, 0, 0\)/);
   assert.match(css, /overscroll-behavior: contain/);

@@ -2753,6 +2753,7 @@
     els.detailDrawer.hidden = false;
     els.detailDrawer.classList.remove("is-closing");
     els.detailDrawer.setAttribute("aria-hidden", "false");
+    document.documentElement.classList.add("is-detail-drawer-open");
     document.body.classList.add("is-detail-drawer-open");
     requestAnimationFrame(() => {
       els.detailDrawer.classList.add("is-open");
@@ -17240,6 +17241,7 @@
     els.detailDrawer.classList.remove("is-open", "is-closing");
     els.detailDrawer.setAttribute("aria-hidden", "true");
     if (els.detailContent) els.detailContent.innerHTML = "";
+    document.documentElement.classList.remove("is-detail-drawer-open");
     document.body.classList.remove("is-detail-drawer-open");
     const focusTarget = detailDrawerLastFocus;
     detailDrawerLastFocus = null;

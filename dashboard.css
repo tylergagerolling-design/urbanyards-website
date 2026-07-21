@@ -7524,7 +7524,7 @@ body:not(.is-login-screen) .dashboard-subnav {
   top: calc(var(--uy-page-pad, 16px) + 82px);
   left: calc(var(--uy-page-pad, 16px) + var(--uy-rail-width, 76px) + 12px);
   z-index: 80;
-  display: none;
+  display: grid;
   width: 238px;
   max-height: calc(100dvh - 120px);
   gap: 5px;
@@ -7534,6 +7534,16 @@ body:not(.is-login-screen) .dashboard-subnav {
   border-radius: 20px;
   background: rgba(255, 253, 247, .98);
   box-shadow: 0 18px 42px rgba(18, 46, 35, .18);
+  opacity: 0;
+  pointer-events: none;
+  transform: translateX(-14px);
+  visibility: hidden;
+  transition:
+    left var(--transition-drawer),
+    opacity var(--transition-drawer),
+    transform var(--transition-drawer),
+    visibility 0s linear 220ms;
+  will-change: left, opacity, transform;
 }
 
 body:not(.is-login-screen) .dashboard-subnav::before {
@@ -7546,7 +7556,17 @@ body:not(.is-login-screen) .dashboard-subnav::before {
 }
 
 body:not(.is-login-screen) .dashboard-nav-group.is-open .dashboard-subnav {
-  display: grid;
+  opacity: 1;
+  pointer-events: auto;
+  transform: translateX(0);
+  visibility: visible;
+  transition-delay: 0s;
+}
+
+body:not(.is-login-screen) .app-view:has(.dashboard-sidebar:hover) .dashboard-subnav,
+body:not(.is-login-screen) .app-view:has(.dashboard-sidebar:focus-within) .dashboard-subnav,
+body:not(.is-login-screen) .app-view.is-sidebar-open .dashboard-subnav {
+  left: calc(var(--uy-page-pad, 16px) + var(--uy-drawer-width, 292px) + 12px);
 }
 
 body:not(.is-login-screen) .dashboard-nav .dashboard-subnav a {

@@ -477,8 +477,10 @@ test("dashboard sidebar exposes a secondary drawer for multi-workspace sections"
   assert.match(html, /data-sidebar-nav-group="settings"[\s\S]*Equipment[\s\S]*Documentation[\s\S]*Import &amp; Export[\s\S]*Groundskeeper AI/);
   assert.doesNotMatch(html, /data-sidebar-subnav-toggle/);
   assert.match(js, /function setSidebarSubnavOpen[\s\S]*data-sidebar-nav-group[\s\S]*classList\.toggle\("is-open"/);
-  assert.match(css, /dashboard-nav-group\.is-open \.dashboard-subnav[\s\S]*display: grid/);
+  assert.match(css, /dashboard-nav-group\.is-open \.dashboard-subnav[\s\S]*opacity: 1[\s\S]*visibility: visible/);
   assert.match(css, /dashboard-subnav[\s\S]*position: fixed[\s\S]*left: calc\(var\(--uy-page-pad/);
+  assert.match(css, /dashboard-subnav[\s\S]*left var\(--transition-drawer\)[\s\S]*transform var\(--transition-drawer\)/);
+  assert.match(css, /app-view:has\(\.dashboard-sidebar:hover\) \.dashboard-subnav[\s\S]*var\(--uy-drawer-width/);
 });
 
 test("ticket drawer workbench layouts wrap without overlapping content", () => {

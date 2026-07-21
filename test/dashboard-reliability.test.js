@@ -744,3 +744,9 @@ test("shared detail drawers animate, contain scrolling, and restore focus", () =
   assert.match(css, /overscroll-behavior: contain/);
   assert.match(css, /@media \(prefers-reduced-motion: reduce\)/);
 });
+
+test("expanded dashboard drawer centers the complete sign out control", () => {
+  const css = read("dashboard.css");
+
+  assert.match(css, /app-view\.is-sidebar-open \.dashboard-sidebar[\s\S]*\.sign-out[\s\S]*display: flex !important[\s\S]*justify-content: center !important/);
+});

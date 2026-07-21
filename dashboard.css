@@ -7673,6 +7673,22 @@ html body:not(.is-login-screen) .detail-drawer .drawer-panel {
   overflow: hidden !important;
 }
 
+/* Center the complete Sign Out control when the primary drawer is expanded. */
+@media (min-width: 821px) {
+  body:not(.is-login-screen) :is(
+    .dashboard-sidebar:hover,
+    .dashboard-sidebar:focus-within,
+    .app-view.is-sidebar-open .dashboard-sidebar
+  ) .sign-out {
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    gap: 8px !important;
+    grid-template-columns: none !important;
+    text-align: center !important;
+  }
+}
+
 /* Shared detail-drawer motion and scroll contract. This intentionally lives
    after the dashboard-wide overflow rules so every record drawer behaves as
    one fixed surface with one internal scroll area. */

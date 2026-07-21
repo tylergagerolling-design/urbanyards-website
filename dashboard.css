@@ -7657,6 +7657,84 @@ body:not(.is-login-screen) .dashboard-nav .dashboard-subnav a.is-active::after {
   }
 }
 
+/* Keep the shared drawer scroll boundary authoritative over legacy workspace
+   overflow helpers declared earlier in the cascade. */
+html body:not(.is-login-screen).is-detail-drawer-open {
+  overflow: hidden !important;
+}
+
+html body:not(.is-login-screen) .detail-drawer,
+html body:not(.is-login-screen) .detail-drawer .drawer-panel {
+  overflow: hidden !important;
+}
+
+/* Shared detail-drawer motion and scroll contract. This intentionally lives
+   after the dashboard-wide overflow rules so every record drawer behaves as
+   one fixed surface with one internal scroll area. */
+body:not(.is-login-screen).is-detail-drawer-open {
+  overflow: hidden !important;
+}
+
+body:not(.is-login-screen) .detail-drawer {
+  overflow: hidden !important;
+  opacity: 0;
+  pointer-events: none;
+  visibility: hidden;
+  transition:
+    opacity var(--transition-drawer),
+    visibility 0s linear 240ms !important;
+}
+
+body:not(.is-login-screen) .detail-drawer.is-open {
+  opacity: 1;
+  pointer-events: auto;
+  visibility: visible;
+  transition-delay: 0s !important;
+}
+
+body:not(.is-login-screen) .detail-drawer .drawer-panel {
+  overflow: hidden !important;
+  opacity: .96;
+  transform: translate3d(32px, 0, 0);
+  transition:
+    opacity var(--transition-fast),
+    transform var(--transition-drawer) !important;
+  will-change: opacity, transform;
+}
+
+body:not(.is-login-screen) .detail-drawer.is-open .drawer-panel {
+  opacity: 1;
+  transform: translate3d(0, 0, 0);
+}
+
+body:not(.is-login-screen) .detail-drawer [data-detail-content] {
+  overscroll-behavior: contain;
+}
+
+body:not(.is-login-screen) .detail-drawer.is-open [data-detail-content] > * {
+  animation: detail-drawer-content-enter 180ms cubic-bezier(.22, 1, .36, 1) both;
+}
+
+@keyframes detail-drawer-content-enter {
+  from {
+    opacity: 0;
+    transform: translateY(5px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  body:not(.is-login-screen) .detail-drawer,
+  body:not(.is-login-screen) .detail-drawer .drawer-panel,
+  body:not(.is-login-screen) .detail-drawer.is-open [data-detail-content] > * {
+    animation: none !important;
+    transition-duration: .01ms !important;
+  }
+}
+
 /* Leads / Call Queue */
 body:not(.is-login-screen) .call-queue-workspace {
   display: grid;
@@ -20403,4 +20481,14 @@ body:not(.is-login-screen) .field-proof-actions button {
     max-height: 42px !important;
     overflow: hidden !important;
   }
+}
+
+/* Final shared-drawer scroll boundary. */
+html body:not(.is-login-screen).is-detail-drawer-open {
+  overflow: hidden !important;
+}
+
+html body:not(.is-login-screen) .detail-drawer,
+html body:not(.is-login-screen) .detail-drawer .drawer-panel {
+  overflow: hidden !important;
 }

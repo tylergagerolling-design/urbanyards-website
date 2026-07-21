@@ -724,3 +724,18 @@ test("production dashboard responses and invite sessions use hardened security d
   assert.match(callback, /normalizeRole\(firstText\(appMetadata\.role, user\.role\)\)/);
   assert.doesNotMatch(callback, /normalizeRole\(firstText\(userMetadata\.role/);
 });
+
+test("shared detail drawers animate, contain scrolling, and restore focus", () => {
+  const js = read("dashboard.js");
+  const css = read("dashboard.css");
+
+  assert.match(js, /const DETAIL_DRAWER_SETTLE_MS = 240/);
+  assert.match(js, /function openDetailDrawer[\s\S]*detailDrawerLastFocus = document\.activeElement[\s\S]*classList\.add\("is-open"\)/);
+  assert.match(js, /function closeSubmissionDrawer[\s\S]*classList\.remove\("is-open"\)[\s\S]*setTimeout\(finishClosingDetailDrawer, DETAIL_DRAWER_SETTLE_MS\)/);
+  assert.match(js, /function finishClosingDetailDrawer[\s\S]*focusTarget\.focus\(\{ preventScroll: true \}\)/);
+  assert.match(css, /is-detail-drawer-open[\s\S]*overflow: hidden !important/);
+  assert.match(css, /detail-drawer\.is-open[\s\S]*pointer-events: auto[\s\S]*visibility: visible/);
+  assert.match(css, /detail-drawer \.drawer-panel[\s\S]*transform: translate3d\(32px, 0, 0\)/);
+  assert.match(css, /overscroll-behavior: contain/);
+  assert.match(css, /@media \(prefers-reduced-motion: reduce\)/);
+});

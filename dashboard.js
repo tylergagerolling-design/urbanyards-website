@@ -47,6 +47,7 @@
   const GOOGLE_VOICE_CALLS_URL = "https://voice.google.com/u/0/calls";
   const URBAN_YARDS_GOOGLE_VOICE_NUMBER = "(971) 258-1109";
   const SIDEBAR_CLOSE_SETTLE_MS = 280;
+  const DETAIL_DRAWER_SETTLE_MS = 240;
   const USER_AVATAR_MAX_BYTES = 2 * 1024 * 1024;
   const USER_AVATAR_ALLOWED_TYPES = new Set(["image/jpeg", "image/png", "image/webp"]);
   const USER_AVATAR_ALLOWED_EXTENSIONS = new Set(["jpg", "jpeg", "png", "webp"]);
@@ -2738,15 +2739,27 @@
     else if (leadType === "outreach_company") openOutreachCompanyDrawer(leadId);
   }
 
+  let detailDrawerCloseTimer = 0;
+  let detailDrawerLastFocus = null;
+
   function openDetailDrawer() {
     if (!els.detailDrawer) return;
+    const wasOpen = !els.detailDrawer.hidden && els.detailDrawer.classList.contains("is-open");
+    window.clearTimeout(detailDrawerCloseTimer);
+    detailDrawerCloseTimer = 0;
+    if (!wasOpen && document.activeElement instanceof HTMLElement && !els.detailDrawer.contains(document.activeElement)) {
+      detailDrawerLastFocus = document.activeElement;
+    }
     els.detailDrawer.hidden = false;
+    els.detailDrawer.classList.remove("is-closing");
+    els.detailDrawer.setAttribute("aria-hidden", "false");
     document.body.classList.add("is-detail-drawer-open");
     requestAnimationFrame(() => {
+      els.detailDrawer.classList.add("is-open");
       const panel = els.detailDrawer ? els.detailDrawer.querySelector(".drawer-panel") : null;
       if (panel) panel.scrollTop = 0;
       if (els.detailContent) els.detailContent.scrollTop = 0;
-      if (els.closeDetail) els.closeDetail.focus({ preventScroll: true });
+      if (!wasOpen && els.closeDetail) els.closeDetail.focus({ preventScroll: true });
     });
   }
 
@@ -17221,12 +17234,32 @@
     win.print();
   }
 
-  function closeSubmissionDrawer() {
-    state.selectedSubmissionId = "";
-    state.selectedJobId = "";
-    if (els.detailDrawer) els.detailDrawer.hidden = true;
+  function finishClosingDetailDrawer() {
+    if (!els.detailDrawer) return;
+    els.detailDrawer.hidden = true;
+    els.detailDrawer.classList.remove("is-open", "is-closing");
+    els.detailDrawer.setAttribute("aria-hidden", "true");
     if (els.detailContent) els.detailContent.innerHTML = "";
     document.body.classList.remove("is-detail-drawer-open");
+    const focusTarget = detailDrawerLastFocus;
+    detailDrawerLastFocus = null;
+    if (focusTarget && focusTarget.isConnected && typeof focusTarget.focus === "function") {
+      focusTarget.focus({ preventScroll: true });
+    }
+  }
+
+  function closeSubmissionDrawer(options = {}) {
+    state.selectedSubmissionId = "";
+    state.selectedJobId = "";
+    if (!els.detailDrawer || els.detailDrawer.hidden) return;
+    window.clearTimeout(detailDrawerCloseTimer);
+    els.detailDrawer.classList.remove("is-open");
+    els.detailDrawer.classList.add("is-closing");
+    if (options.immediate) {
+      finishClosingDetailDrawer();
+      return;
+    }
+    detailDrawerCloseTimer = window.setTimeout(finishClosingDetailDrawer, DETAIL_DRAWER_SETTLE_MS);
   }
 
   function csvValue(value) {

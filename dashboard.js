@@ -12805,7 +12805,7 @@
           label: "Today",
           value: todayTickets.length,
           detail: "Tickets scheduled for today.",
-          action: "go-calendar",
+          action: "quick-add-job",
           actionLabel: "Add Visit"
         })}
         ${renderWorkPlanTile({
@@ -12826,8 +12826,8 @@
           label: "Upcoming",
           value: upcomingTickets.length,
           detail: "Future scheduled or ready work tickets.",
-          action: "go-work",
-          actionLabel: "Stay in Work"
+          action: "focus-work-queue",
+          actionLabel: "View Queue"
         })}
       </div>
     </section>`;
@@ -12877,7 +12877,7 @@
           value: todayTickets.length,
           detail: "Dated work and visits for the current day.",
           tickets: todayTickets,
-          action: "go-calendar",
+          action: "focus-work-queue",
           actionLabel: "Open Work"
         })}
         ${renderWorkReadinessCard({
@@ -12885,7 +12885,7 @@
           value: activeTickets.length,
           detail: "Jobs already scheduled, started, or paused.",
           tickets: activeTickets,
-          action: "go-work",
+          action: "focus-work-queue",
           actionLabel: "View Queue"
         })}
         ${renderWorkReadinessCard({
@@ -12996,7 +12996,7 @@
         ${renderWorkFieldPacketPanel({ routeStops: routeStopsToday, todayTickets, reviewTickets })}
         ${renderWorkDayPlanPanel(routeStopsToday, todayTickets, upcomingTickets, reviewTickets)}
         <div class="field-grid work-execution-grid">
-          <section class="ticket-lane field-primary-lane">
+          <section class="ticket-lane field-primary-lane" data-work-queue>
             <div class="ticket-lane-heading">
               <div>
                 <h3>Assigned Work Queue</h3>
@@ -13303,7 +13303,7 @@
           label: "Follow Up",
           value: due.length,
           detail: "Prospects due for a call, email, or next-touch note.",
-          action: "go-leads",
+          action: "go-call-queue",
           actionLabel: "Open Queue",
           tone: due.length ? "warning" : ""
         })}
@@ -13369,7 +13369,7 @@
           value: due.length,
           detail: "Prospects with a follow-up date due now or missing the next touch.",
           items: due,
-          action: "go-leads",
+          action: "go-call-queue",
           actionLabel: "Open Queue",
           tone: due.length ? "warning" : ""
         })}
@@ -19016,6 +19016,13 @@
   }
 
   function bindEvents() {
+    window.addEventListener("hashchange", async () => {
+      const hashSection = window.location.hash.replace(/^#/, "");
+      if (!hashSection) return;
+      setActiveSection(dashboardSectionForRole(hashSection));
+      await render();
+    });
+
     els.loginForm?.addEventListener("submit", async (event) => {
       event.preventDefault();
       const formData = new FormData(els.loginForm);
@@ -21359,9 +21366,17 @@
       } else if (action === "go-leads") {
         setActiveSection("outreach");
         replaceDashboardHash("outreach");
+      } else if (action === "go-call-queue") {
+        setActiveSection("call-queue");
+        replaceDashboardHash("call-queue");
       } else if (action === "go-work") {
         setActiveSection("calendar");
         replaceDashboardHash("calendar");
+      } else if (action === "focus-work-queue") {
+        setActiveSection("calendar");
+        replaceDashboardHash("calendar");
+        await render();
+        qs("[data-work-queue]")?.scrollIntoView({ behavior: "smooth", block: "start" });
       } else if (action === "go-money") {
         setActiveSection("documents");
         replaceDashboardHash("documents");

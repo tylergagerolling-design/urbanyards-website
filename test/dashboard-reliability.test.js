@@ -695,3 +695,18 @@ test("optional dashboard module migrations include tables queried by the UI", ()
   assert.match(ticketSql, /budget_in_progress/);
   assert.doesNotMatch(ticketSql, /\b(drop table|truncate table|delete from)\b/i);
 });
+
+test("dashboard navigation and workspace calls to action have working destinations", () => {
+  const js = read("dashboard.js");
+
+  assert.match(js, /window\.addEventListener\("hashchange", async \(\) => \{/);
+  assert.match(js, /setActiveSection\(dashboardSectionForRole\(hashSection\)\)/);
+  assert.match(js, /action: "go-call-queue",\s*actionLabel: "Open Queue"/);
+  assert.match(js, /action === "go-call-queue"[\s\S]*?setActiveSection\("call-queue"\)/);
+  assert.match(js, /action: "quick-add-job",\s*actionLabel: "Add Visit"/);
+  assert.match(js, /action: "focus-work-queue",\s*actionLabel: "View Queue"/);
+  assert.match(js, /data-work-queue/);
+  assert.match(js, /action === "focus-work-queue"[\s\S]*?\[data-work-queue\][\s\S]*?scrollIntoView/);
+  assert.doesNotMatch(js, /action: "go-leads",\s*actionLabel: "Open Queue"/);
+  assert.doesNotMatch(js, /action: "go-calendar",\s*actionLabel: "Add Visit"/);
+});

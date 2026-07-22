@@ -4751,8 +4751,8 @@
   function dashboardInitialModuleKeys(section = state.activeSection) {
     const normalized = normalizeDashboardSection(section);
     const keysBySection = {
-      overview: ["submissions", "jobs", "reminders"],
-      tickets: ["tickets", "submissions", "jobs"],
+      overview: ["submissions", "jobs", "reminders", "notes"],
+      tickets: ["tickets", "submissions", "jobs", "notes"],
       calendar: ["jobs", "tickets"],
       outreach: ["outreachProspects", "tickets", "submissions"],
       "call-queue": ["outreachProspects", "leadActivity", "tickets", "contacts"],

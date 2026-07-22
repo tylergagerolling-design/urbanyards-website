@@ -8140,21 +8140,21 @@ body:not(.is-login-screen) .call-queue-row {
   box-shadow: none;
 }
 
-body:not(.is-login-screen) .call-queue-row:nth-child(odd) {
+body:not(.is-login-screen) .app-view .dashboard-main #call-queue .call-queue-list > .call-queue-row:nth-child(odd) {
   background: rgba(247, 244, 234, .92) !important;
 }
 
-body:not(.is-login-screen) .call-queue-row:nth-child(even) {
+body:not(.is-login-screen) .app-view .dashboard-main #call-queue .call-queue-list > .call-queue-row:nth-child(even) {
   background: rgba(225, 237, 216, .94) !important;
 }
 
-body:not(.is-login-screen) .call-queue-row:hover,
-body:not(.is-login-screen) .call-queue-row:focus-visible {
+body:not(.is-login-screen) .app-view .dashboard-main #call-queue .call-queue-list > .call-queue-row:hover,
+body:not(.is-login-screen) .app-view .dashboard-main #call-queue .call-queue-list > .call-queue-row:focus-visible {
   border-color: rgba(63, 115, 77, .14);
   background: rgba(211, 229, 198, .98) !important;
 }
 
-body:not(.is-login-screen) .call-queue-row.is-selected {
+body:not(.is-login-screen) .app-view .dashboard-main #call-queue .call-queue-list > .call-queue-row.is-selected {
   border-color: rgba(63, 115, 77, .22);
   background: #d5e6c9 !important;
   box-shadow: inset 3px 0 0 #477d54;

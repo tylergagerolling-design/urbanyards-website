@@ -11004,6 +11004,9 @@
     const meta = ticketStageMeta[stage] || ticketStageMeta.sales_intake;
     const status = ticketCommandStatus(ticket, transitions);
     const owner = ticket?.ownerLabel || meta.owner || "Unassigned";
+    const rentDeductionCloseEligible = currentSessionRole() === "owner"
+      && ["field_work_complete", "completion_review", "invoice_review", "invoice_sent", "partially_paid", "paid"].includes(stage)
+      && !/\blandscap(?:e|ing|er|ers)?\b|\blawn\b|\bmow(?:ing)?\b/i.test([ticket?.title, ticket?.requestedService, ticket?.scopeOfWork, ticket?.detail].filter(Boolean).join(" "));
     if (!isCanonical) {
       return `<div class="ticket-next-move-panel is-source-preview">
         <div class="ticket-next-move-main">
@@ -11016,12 +11019,10 @@
           <div><dt>Stage</dt><dd>${escapeHtml(ticketStageLabel(stage))}</dd></div>
           <div><dt>Next</dt><dd>${escapeHtml(ticket?.nextAction || "Open ticket")}</dd></div>
         </dl>
+        ${rentDeductionCloseEligible ? `<button type="button" class="secondary-action ticket-rent-deduction-close" data-action="owner-close-rent-deduction" data-id="${escapeHtml(ticket.id)}" data-ticket-source="${escapeHtml(ticket.source)}">${buttonContent("Close as Rent Deduction", "complete-reminder")}</button>` : ""}
       </div>`;
     }
     const primaryMove = status.move && !(status.blockers || []).length ? status.move : null;
-    const rentDeductionCloseEligible = currentSessionRole() === "owner"
-      && ["field_work_complete", "completion_review", "invoice_review", "invoice_sent", "partially_paid", "paid"].includes(stage)
-      && !/\blandscap(?:e|ing|er|ers)?\b|\blawn\b|\bmow(?:ing)?\b/i.test([ticket?.title, ticket?.requestedService, ticket?.scopeOfWork, ticket?.detail].filter(Boolean).join(" "));
     return `<div class="ticket-next-move-panel is-${escapeHtml(status.state)}">
       <div class="ticket-next-move-main">
         <span>${escapeHtml(owner)}</span>
@@ -21321,7 +21322,8 @@ Requirements:
           setDashboardState("Only the Owner can close a ticket as a rent deduction.", "error");
           return;
         }
-        const ticket = dashboardTickets().find((item) => item.source === "ticket" && String(item.id) === String(id));
+        const ticketSource = target.dataset.ticketSource || "ticket";
+        const ticket = findTicketForDrawer(ticketSource, id) || dashboardTickets().find((item) => String(item.id) === String(id));
         const suggestedAmount = Number(ticket?.proposedPrice) > 0 && Number(ticket?.proposedPrice) <= 350 ? String(ticket.proposedPrice) : "";
         const entered = window.prompt("Rent deduction amount for this ticket (monthly limit: $350):", suggestedAmount);
         if (entered === null) return;
@@ -21334,13 +21336,22 @@ Requirements:
         if (!confirmed) return;
         try {
           setDashboardState("Closing ticket as a rent deduction...");
+          let canonicalTicket = ticket?.source === "ticket" ? ticket : null;
+          if (!canonicalTicket) {
+            canonicalTicket = await ensureJobTicketForSourceRecord(ticketSource, id, {
+              stage: ticketStage(ticket),
+              field_completion_notes: ticket?.fieldCompletionNotes || "Owner confirmed completed rent-deduction work.",
+              next_action: "Close as rent deduction"
+            });
+          }
+          if (!canonicalTicket?.id) throw new Error("The unified ticket could not be created for this completed visit.");
           const result = await dashboardTicketRequest("owner-close-rent-deduction", {
-            id,
+            id: canonicalTicket.id,
             amount,
             notes: `Owner closed ${ticket?.number || "ticket"} as a rent deduction instead of invoicing.`
           });
           await refreshDashboard();
-          openTicketDrawer("ticket", result.ticket?.id || id);
+          openTicketDrawer("ticket", result.ticket?.id || canonicalTicket.id);
           setDashboardState(`Ticket closed as a $${amount.toFixed(2)} rent deduction. $${Number(result.monthlyRemaining || 0).toFixed(2)} remains this month.`);
         } catch (error) {
           setDashboardState(error.message || "Unable to close this ticket as a rent deduction.", "error");

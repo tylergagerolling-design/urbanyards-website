@@ -815,8 +815,9 @@ test("Owner can close completed non-landscaping tickets as monthly rent deductio
   assert.match(js, /data-action="owner-close-rent-deduction"/);
   assert.match(js, /data-ticket-source="\$\{escapeHtml\(ticket\.source\)\}"/);
   assert.match(js, /ensureJobTicketForSourceRecord\(ticketSource, id,[\s\S]*stage: ticketStage\(ticket\)/);
-  assert.match(js, /updateStatus\("scheduled_jobs", id, "Closed"\)/);
+  assert.match(js, /updateStatus\("scheduled_jobs", id, "Completed"\)/);
   assert.match(js, /Rent deduction: \$\{ticket\?\.title/);
+  assert.match(js, /rentDeductionClosedVisitIds/);
   assert.match(js, /data-rent-deduction-amount/);
   assert.doesNotMatch(js, /prompt\("Rent deduction amount/);
   assert.match(backend, /RENT_DEDUCTION_MONTHLY_LIMIT = 350/);

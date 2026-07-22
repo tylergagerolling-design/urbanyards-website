@@ -1,7 +1,7 @@
 (function () {
   "use strict";
 
-  const STATUSES = ["New", "Contacted", "Scheduled", "Completed", "Invoiced", "Closed"];
+  const STATUSES = ["New", "Contacted", "Scheduled", "Completed", "Invoiced"];
   const ROUTE_STATUSES = ["Planned", "In Progress", "Complete"];
   const OUTREACH_STATUSES = ["Prospect", "Researched", "Contacted", "Follow-Up Needed", "Interested", "Quote Needed", "Quoted", "Won", "Lost / No Fit"];
   const OUTREACH_ACTIVE_STATUSES = OUTREACH_STATUSES.filter((status) => !["Won", "Lost / No Fit"].includes(status));
@@ -10410,7 +10410,14 @@
   }
 
   function dashboardTickets(data = state.data) {
-    const jobs = (data.jobs || []).map(buildTicketFromJob);
+    const rentDeductionClosedVisitIds = new Set((data.notes || []).flatMap((note) => {
+      if (!/^Rent deduction:/i.test(String(note?.title || ""))) return [];
+      const sourceId = String(note?.body || "").match(/Source visit:\s*([0-9a-f-]{36})/i)?.[1];
+      return sourceId ? [sourceId] : [];
+    }));
+    const jobs = (data.jobs || [])
+      .filter((job) => !rentDeductionClosedVisitIds.has(String(job.id)))
+      .map(buildTicketFromJob);
     const quotes = (data.submissions || []).map(buildTicketFromQuote);
     const derived = [...jobs, ...quotes];
     const canonical = (data.tickets || []).filter((ticket) => ticket && ticket.id);
@@ -21349,11 +21356,11 @@ Requirements:
             });
           }
           if (!canonicalTicket?.id && ticketSource === "job") {
-            await updateStatus("scheduled_jobs", id, "Closed");
+            await updateStatus("scheduled_jobs", id, "Completed");
             await insertJobNote(
               `Rent deduction: ${ticket?.title || "Completed visit"}`,
               `$${amount.toFixed(2)} rent deduction recorded by the Owner instead of an invoice. Source visit: ${id}.`
-            ).catch(() => null);
+            );
             await refreshDashboard();
             closeSubmissionDrawer();
             setDashboardState(`Visit closed as a $${amount.toFixed(2)} rent deduction.`);

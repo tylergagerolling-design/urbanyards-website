@@ -13438,6 +13438,7 @@ Requirements:
             <button type="button" data-action="call-queue-add-note" data-id="${escapeHtml(selected.id)}">Add Note</button>
             <button type="button" data-action="call-queue-follow-up" data-id="${escapeHtml(selected.id)}">Schedule Follow-Up</button>
             <button type="button" data-action="open-outreach-prospect" data-id="${escapeHtml(selected.id)}">Edit Lead</button>
+            ${canDeleteLeadRecords() ? `<button type="button" class="danger-action" data-action="delete-outreach-prospect" data-id="${escapeHtml(selected.id)}">Delete Lead</button>` : ""}
             <button type="button" data-action="create-ticket-from-prospect" data-id="${escapeHtml(selected.id)}"${canCreateTicketType("quote") ? "" : " disabled"}>Convert to Ticket</button>
           </div>
           <section class="call-queue-history"><div class="call-queue-section-title"><h4>Previous Call History</h4><span>${history.length}</span></div>${renderCallQueueTimeline(selected)}</section>` : `<div class="call-queue-empty-state"><h3>No lead selected</h3><p>Choose a lead from the queue to review contact details and call history.</p></div>`}
@@ -15263,7 +15264,7 @@ Requirements:
       item.managementCompany,
       item.city,
       item.email,
-      normalizePhone(item.phone)?.display
+      phoneInfo(item.phone).display
     ].map(normalizeDedupeKey).filter(Boolean);
     const serviceKey = normalizeDedupeKey(item.serviceInterest || item.service || "");
     return dashboardTickets().filter((ticket) => {

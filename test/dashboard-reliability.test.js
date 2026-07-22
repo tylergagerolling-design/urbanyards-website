@@ -766,6 +766,9 @@ test("Call Queue contains staged Lead Intake without changing Leads navigation",
   assert.match(js, /data-action="lead-intake-copy-prompt"[\s\S]*navigator\.clipboard\.writeText\(LEAD_INTAKE_FORMAT_PROMPT\)/);
   assert.match(js, /function safeExternalWebsiteUrl[\s\S]*\["http:", "https:"\]\.includes\(parsed\.protocol\)/);
   assert.match(js, /call-queue-website-link[\s\S]*target="_blank"[\s\S]*rel="noopener noreferrer"/);
+  assert.doesNotMatch(js, /normalizePhone\(item\.phone\)/);
+  assert.match(js, /phoneInfo\(item\.phone\)\.display/);
+  assert.match(js, /Edit Lead[\s\S]*canDeleteLeadRecords\(\)[\s\S]*data-action="delete-outreach-prospect"[\s\S]*Delete Lead/);
   assert.match(js, /Review Imported Leads/);
   assert.match(js, /Possible Duplicate/);
   assert.match(js, /Add \$\{approvalCount\} Leads to Call Queue/);

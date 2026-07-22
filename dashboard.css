@@ -439,7 +439,7 @@ textarea:focus-visible {
   overflow: hidden;
   background:
     linear-gradient(90deg, rgba(12, 35, 27, 0.66), rgba(12, 35, 27, 0.34) 44%, rgba(247, 245, 236, 0.08)),
-    url("images/dashboard-login-background.png") center / cover no-repeat;
+    url("images/dashboard-login-forest-river.png") center / cover no-repeat;
 }
 
 .login-view::before {
@@ -4155,7 +4155,7 @@ button.profile-mini-item {
     align-items: end;
     background:
       linear-gradient(180deg, rgba(12, 35, 27, 0.18), rgba(12, 35, 27, 0.68)),
-      url("images/dashboard-login-background.png") 58% center / cover no-repeat;
+      url("images/dashboard-login-forest-river.png") 58% center / cover no-repeat;
   }
 
   .login-panel {
@@ -6145,7 +6145,7 @@ body:not(.is-login-screen) #outreach .outreach-archive-panel summary {
   position: relative;
   background:
     linear-gradient(180deg, rgba(255, 252, 239, .78), rgba(238, 244, 229, .92)),
-    url("images/dashboard-login-background.png") center / cover fixed;
+    url("images/dashboard-login-forest-river.png") center / cover fixed;
 }
 
 .app-view::before {
@@ -6274,7 +6274,7 @@ body:not(.is-login-screen) #outreach .outreach-archive-panel summary {
   border: 1px solid rgba(6, 27, 21, .18);
   background:
     linear-gradient(90deg, rgba(6, 27, 21, .92) 0%, rgba(16, 55, 43, .72) 46%, rgba(245, 240, 223, .14) 100%),
-    url("images/dashboard-login-background.png") center / cover;
+    url("images/dashboard-login-forest-river.png") center / cover;
   box-shadow: var(--studio-deep-shadow);
 }
 
@@ -6820,7 +6820,7 @@ body.is-login-screen .pull-refresh {
   background:
     linear-gradient(180deg, rgba(236, 242, 231, 0.82), rgba(19, 63, 49, 0.34)),
     linear-gradient(90deg, rgba(18, 63, 49, 0.34), rgba(246, 241, 225, 0.18)),
-    url("images/dashboard-login-background.png") center / cover no-repeat;
+    url("images/dashboard-login-forest-river.png") center / cover no-repeat;
 }
 
 .login-view::before {
@@ -7037,7 +7037,7 @@ body.is-login-screen .dashboard-shell {
   background:
     linear-gradient(180deg, rgba(255, 252, 241, 0.78), rgba(234, 229, 205, 0.36) 48%, rgba(18, 63, 49, 0.18)),
     linear-gradient(90deg, rgba(255, 252, 241, 0.64), rgba(255, 252, 241, 0.28)),
-    url("images/dashboard-login-background.png") center / cover no-repeat;
+    url("images/dashboard-login-forest-river.png") center / cover no-repeat;
 }
 
 .login-view::before {
@@ -7191,7 +7191,7 @@ body.is-login-screen .dashboard-shell {
     padding: 18px;
     background:
       linear-gradient(180deg, rgba(255, 252, 241, 0.76), rgba(255, 252, 241, 0.2) 50%, rgba(18, 63, 49, 0.32)),
-      url("images/dashboard-login-background.png") center / cover no-repeat;
+      url("images/dashboard-login-forest-river.png") center / cover no-repeat;
   }
 
   .login-panel {

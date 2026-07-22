@@ -515,6 +515,15 @@ test("dashboard body uses the Urban Forest color scheme without recoloring the d
   assert.match(css, /Urban Forest body color hierarchy[\s\S]*border-color: #c9a227 !important/);
 });
 
+test("dashboard and login use the supplied forest river background", () => {
+  const css = read("dashboard.css");
+
+  assert.equal(fs.existsSync(path.join(root, "images", "dashboard-login-forest-river.png")), true);
+  assert.match(css, /\.login-view[\s\S]*url\("images\/dashboard-login-forest-river\.png"\)/);
+  assert.match(css, /\.app-view[\s\S]*url\("images\/dashboard-login-forest-river\.png"\)/);
+  assert.doesNotMatch(css, /dashboard-login-background\.png/);
+});
+
 test("owner Kanban cards omit letter-based assignee icons", () => {
   const js = read("dashboard.js");
   const css = read("dashboard.css");

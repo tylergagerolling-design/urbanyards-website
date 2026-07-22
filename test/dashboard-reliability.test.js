@@ -783,6 +783,8 @@ test("Call Queue contains staged Lead Intake without changing Leads navigation",
   assert.match(css, /lead-intake-card/);
   assert.match(css, /lead-intake-prompt[\s\S]*lead-intake-prompt textarea/);
   assert.match(css, /call-queue-website-link/);
+  assert.match(css, /call-queue-row:nth-child\(odd\)[\s\S]*call-queue-row:nth-child\(even\)/);
+  assert.match(css, /call-queue-row:hover,[\s\S]*call-queue-row:focus-visible/);
   assert.doesNotMatch(css, /lead-intake-recent/);
   assert.match(migration, /alter table public\.outreach_prospects/);
   assert.match(migration, /import_batch_id uuid references public\.import_batches/);

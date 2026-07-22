@@ -8140,9 +8140,18 @@ body:not(.is-login-screen) .call-queue-row {
   box-shadow: none;
 }
 
-body:not(.is-login-screen) .call-queue-row:hover {
+body:not(.is-login-screen) .call-queue-row:nth-child(odd) {
+  background: rgba(247, 244, 234, .72);
+}
+
+body:not(.is-login-screen) .call-queue-row:nth-child(even) {
+  background: rgba(231, 239, 224, .72);
+}
+
+body:not(.is-login-screen) .call-queue-row:hover,
+body:not(.is-login-screen) .call-queue-row:focus-visible {
   border-color: rgba(63, 115, 77, .14);
-  background: rgba(235, 241, 228, .72);
+  background: rgba(220, 233, 211, .92);
 }
 
 body:not(.is-login-screen) .call-queue-row.is-selected {

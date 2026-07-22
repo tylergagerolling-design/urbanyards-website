@@ -7733,6 +7733,23 @@ body:not(.is-login-screen) .lead-intake-prompt textarea {
   font: 500 .78rem/1.5 ui-monospace, SFMono-Regular, Consolas, monospace;
 }
 
+body:not(.is-login-screen) .call-queue-website-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  color: var(--uy-green);
+  font-weight: 900;
+  text-decoration: underline;
+  text-decoration-color: rgba(30, 77, 43, .28);
+  text-underline-offset: 3px;
+}
+
+body:not(.is-login-screen) .call-queue-website-link:hover,
+body:not(.is-login-screen) .call-queue-website-link:focus-visible {
+  color: var(--uy-green-deep);
+  text-decoration-color: currentColor;
+}
+
 body:not(.is-login-screen) .lead-intake-metrics,
 body:not(.is-login-screen) .lead-intake-review-summary {
   display: grid;

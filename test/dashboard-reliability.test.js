@@ -764,6 +764,8 @@ test("Call Queue contains staged Lead Intake without changing Leads navigation",
   assert.match(js, /Lead Intake[\s\S]*Import CSV[\s\S]*Download CSV Template[\s\S]*Review Imports/);
   assert.match(js, /LEAD_INTAKE_FORMAT_PROMPT[\s\S]*business,type,location,phone_number,source/);
   assert.match(js, /data-action="lead-intake-copy-prompt"[\s\S]*navigator\.clipboard\.writeText\(LEAD_INTAKE_FORMAT_PROMPT\)/);
+  assert.match(js, /function safeExternalWebsiteUrl[\s\S]*\["http:", "https:"\]\.includes\(parsed\.protocol\)/);
+  assert.match(js, /call-queue-website-link[\s\S]*target="_blank"[\s\S]*rel="noopener noreferrer"/);
   assert.match(js, /Review Imported Leads/);
   assert.match(js, /Possible Duplicate/);
   assert.match(js, /Add \$\{approvalCount\} Leads to Call Queue/);
@@ -776,6 +778,7 @@ test("Call Queue contains staged Lead Intake without changing Leads navigation",
   assert.match(backend, /canUndoLead/);
   assert.match(css, /lead-intake-card/);
   assert.match(css, /lead-intake-prompt[\s\S]*lead-intake-prompt textarea/);
+  assert.match(css, /call-queue-website-link/);
   assert.match(migration, /alter table public\.outreach_prospects/);
   assert.match(migration, /import_batch_id uuid references public\.import_batches/);
   assert.doesNotMatch(migration, /create table[^;]+lead/i);

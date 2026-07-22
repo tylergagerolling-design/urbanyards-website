@@ -2495,6 +2495,21 @@
     };
   }
 
+  function safeExternalWebsiteUrl(value) {
+    let candidate = String(value || "").trim();
+    if (!candidate) return "";
+    if (!/^[a-z][a-z0-9+.-]*:/i.test(candidate)) {
+      if (!/^(?:www\.)?[a-z0-9-]+(?:\.[a-z0-9-]+)+(?:[/:?#]|$)/i.test(candidate)) return "";
+      candidate = `https://${candidate}`;
+    }
+    try {
+      const parsed = new URL(candidate);
+      return ["http:", "https:"].includes(parsed.protocol) ? parsed.href : "";
+    } catch (error) {
+      return "";
+    }
+  }
+
   function googleVoiceCallUrl(phone) {
     const digits = String(phone || "").replace(/\D/g, "");
     const normalizedDigits = digits.length === 11 && digits.startsWith("1") ? digits.slice(1) : digits;
@@ -3647,6 +3662,7 @@
       propertyType: row.property_type || "Other",
       serviceInterest: row.service_interest || "General Property Care",
       source: row.source || "",
+      website: row.website || row.source_url || "",
       status,
       lastContactedAtRaw: dateKey(row.last_contacted_at),
       lastContactedAt: formatDate(row.last_contacted_at),
@@ -13373,6 +13389,7 @@ Requirements:
     const visible = queue.slice(0, state.callQueueVisibleCount);
     const history = selected ? callQueueHistory(selected) : [];
     const phone = phoneInfo(selected?.phone || "");
+    const websiteUrl = safeExternalWebsiteUrl(selected?.website || selected?.source || "");
     const duplicates = selected ? callQueueDuplicateMatches(selected) : [];
     const relatedQuotes = selected ? (state.data.submissions || []).filter((quote) => (selected.email && String(quote.email || "").toLowerCase() === selected.email.toLowerCase()) || (phone.valid && phoneInfo(quote.phone).e164 === phone.e164)) : [];
     if (!state.leadIntakeLoaded && !state.leadIntakeLoading) queueMicrotask(() => loadLeadIntakeBatches());
@@ -13408,7 +13425,8 @@ Requirements:
           <dl class="call-queue-lead-details">
             <div><dt>Contact</dt><dd>${escapeHtml(selected.contactName || "Not provided")}</dd></div><div><dt>Phone</dt><dd>${escapeHtml(phone.display)}</dd></div>
             <div><dt>Email</dt><dd>${escapeHtml(selected.email || "Not provided")}</dd></div><div><dt>Address</dt><dd>${escapeHtml([selected.address, selected.city].filter(Boolean).join(", ") || "Not provided")}</dd></div>
-            <div><dt>Source</dt><dd>${escapeHtml(selected.source || "Not provided")}</dd></div><div><dt>Assigned</dt><dd>Unassigned</dd></div>
+            <div><dt>Source</dt><dd>${escapeHtml(selected.source || "Not provided")}</dd></div><div><dt>Website</dt><dd>${websiteUrl ? `<a class="call-queue-website-link" href="${escapeHtml(websiteUrl)}" target="_blank" rel="noopener noreferrer">Open website <span aria-hidden="true">↗</span></a>` : "Not provided"}</dd></div>
+            <div><dt>Assigned</dt><dd>Unassigned</dd></div>
             <div><dt>Priority</dt><dd>${escapeHtml(selected.priority)}</dd></div><div><dt>Service</dt><dd>${escapeHtml(selected.serviceInterest)}</dd></div>
             <div><dt>Follow-up</dt><dd>${escapeHtml(selected.nextFollowUpAt || "Not scheduled")}</dd></div><div><dt>Connected records</dt><dd>${relatedQuotes.length} quote/ticket lead${relatedQuotes.length === 1 ? "" : "s"}</dd></div>
           </dl>

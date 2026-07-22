@@ -20356,6 +20356,60 @@ body:not(.is-login-screen) .dashboard-main :is(
   background-color: #ffffff !important;
 }
 
+/* Urban Forest body color hierarchy. Keep this scoped to dashboard-main so
+   neither the primary nor secondary drawer inherits the page palette. */
+body:not(.is-login-screen) .dashboard-main {
+  color: #1f2924 !important;
+}
+
+body:not(.is-login-screen) .dashboard-main :is(
+  h1,
+  h2,
+  h3,
+  h4,
+  h5,
+  h6,
+  .panel-heading strong,
+  .overview-summary-value
+) {
+  color: #1f6b4f !important;
+}
+
+body:not(.is-login-screen) .dashboard-main :is(
+  .eyebrow,
+  [class*="eyebrow"],
+  [class*="kicker"]
+) {
+  padding-left: 8px;
+  border-left: 3px solid #c9a227;
+  color: #9a7916 !important;
+}
+
+body:not(.is-login-screen) .dashboard-main :is(
+  .overview-primary-action,
+  .work-primary-action,
+  .outreach-primary-action,
+  .global-add-control > button,
+  button[type="submit"]
+) {
+  border-color: #1f6b4f !important;
+  background: #1f6b4f !important;
+  color: #ffffff !important;
+}
+
+body:not(.is-login-screen) .dashboard-main :is(
+  .calendar-tabs,
+  .outreach-view-tabs,
+  .equipment-tabs,
+  .documentation-tabs,
+  .import-export-tabs,
+  .training-preview-toggle
+) button:is(.is-active, [aria-selected="true"]) {
+  border-color: #c9a227 !important;
+  box-shadow: inset 0 -3px 0 #c9a227 !important;
+  color: #1f2924 !important;
+}
+
 @media (max-width: 900px) {
   body:not(.is-login-screen) .completed-ticket-card {
     grid-template-columns: 1fr;

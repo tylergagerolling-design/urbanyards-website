@@ -509,6 +509,10 @@ test("dashboard body uses the Urban Forest color scheme without recoloring the d
   assert.match(css, /dashboard-subnav[\s\S]*background:[\s\S]*rgba\(255, 253, 247, \.985\)/);
   assert.match(css, /dashboard-main[\s\S]*background: #f4f1e8 !important/);
   assert.match(css, /Urban Forest exact card surface contract[\s\S]*background-color: #ffffff !important/);
+  assert.match(css, /Urban Forest body color hierarchy[\s\S]*dashboard-main[\s\S]*color: #1f2924 !important/);
+  assert.match(css, /Urban Forest body color hierarchy[\s\S]*h1,[\s\S]*color: #1f6b4f !important/);
+  assert.match(css, /Urban Forest body color hierarchy[\s\S]*\[class\*="eyebrow"\][\s\S]*color: #9a7916 !important/);
+  assert.match(css, /Urban Forest body color hierarchy[\s\S]*border-color: #c9a227 !important/);
 });
 
 test("owner Kanban cards omit letter-based assignee icons", () => {

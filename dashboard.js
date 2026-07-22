@@ -8617,7 +8617,7 @@
       }
     });
     const activeGroup = dashboardPrimarySection(state.activeSection);
-    if (qs(`[data-sidebar-nav-group="${cssEscape(activeGroup)}"]`)) setSidebarSubnavOpen(activeGroup, true);
+    if (els.appView?.classList.contains("is-sidebar-open") && qs(`[data-sidebar-nav-group="${cssEscape(activeGroup)}"]`)) setSidebarSubnavOpen(activeGroup, true);
     else setSidebarSubnavOpen("", false);
     if (state.activeSection === "route-planner" && googleRouteMap && window.google?.maps) {
       setTimeout(() => {
@@ -19248,7 +19248,10 @@ Requirements:
     if (shouldOpen) {
       els.appView.classList.remove("is-sidebar-closing");
       els.appView.classList.add("is-sidebar-open");
+      const activeGroup = dashboardPrimarySection(state.activeSection);
+      if (qs(`[data-sidebar-nav-group="${cssEscape(activeGroup)}"]`)) setSidebarSubnavOpen(activeGroup, true);
     } else {
+      setSidebarSubnavOpen("", false);
       els.appView.classList.remove("is-sidebar-open");
       if (wasOpen) {
         els.appView.classList.add("is-sidebar-closing");

@@ -477,6 +477,8 @@ test("dashboard sidebar exposes a secondary drawer for multi-workspace sections"
   assert.match(html, /data-sidebar-nav-group="settings"[\s\S]*Equipment[\s\S]*Documentation[\s\S]*Import &amp; Export[\s\S]*Groundskeeper AI/);
   assert.doesNotMatch(html, /data-sidebar-subnav-toggle/);
   assert.match(js, /function setSidebarSubnavOpen[\s\S]*data-sidebar-nav-group[\s\S]*classList\.toggle\("is-open"/);
+  assert.match(js, /function setSidebarOpen[\s\S]*if \(shouldOpen\)[\s\S]*setSidebarSubnavOpen\(activeGroup, true\)[\s\S]*else \{[\s\S]*setSidebarSubnavOpen\("", false\)/);
+  assert.match(js, /classList\.contains\("is-sidebar-open"\)[\s\S]*setSidebarSubnavOpen\(activeGroup, true\)[\s\S]*else setSidebarSubnavOpen\("", false\)/);
   assert.match(css, /dashboard-nav-group\.is-open \.dashboard-subnav[\s\S]*opacity: 1[\s\S]*visibility: visible/);
   assert.match(css, /dashboard-subnav[\s\S]*position: fixed[\s\S]*left: calc\(var\(--uy-page-pad/);
   assert.match(css, /dashboard-subnav[\s\S]*left var\(--transition-drawer\)[\s\S]*transform var\(--transition-drawer\)/);

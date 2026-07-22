@@ -1,7 +1,7 @@
 (function () {
   "use strict";
 
-  const STATUSES = ["New", "Contacted", "Scheduled", "Completed", "Invoiced"];
+  const STATUSES = ["New", "Contacted", "Scheduled", "Completed", "Invoiced", "Closed"];
   const ROUTE_STATUSES = ["Planned", "In Progress", "Complete"];
   const OUTREACH_STATUSES = ["Prospect", "Researched", "Contacted", "Follow-Up Needed", "Interested", "Quote Needed", "Quoted", "Won", "Lost / No Fit"];
   const OUTREACH_ACTIVE_STATUSES = OUTREACH_STATUSES.filter((status) => !["Won", "Lost / No Fit"].includes(status));
@@ -21348,7 +21348,18 @@ Requirements:
               next_action: "Close as rent deduction"
             });
           }
-          if (!canonicalTicket?.id) throw new Error("The unified ticket could not be created for this completed visit.");
+          if (!canonicalTicket?.id && ticketSource === "job") {
+            await updateStatus("scheduled_jobs", id, "Closed");
+            await insertJobNote(
+              `Rent deduction: ${ticket?.title || "Completed visit"}`,
+              `$${amount.toFixed(2)} rent deduction recorded by the Owner instead of an invoice. Source visit: ${id}.`
+            ).catch(() => null);
+            await refreshDashboard();
+            closeSubmissionDrawer();
+            setDashboardState(`Visit closed as a $${amount.toFixed(2)} rent deduction.`);
+            return;
+          }
+          if (!canonicalTicket?.id) throw new Error("The unified ticket could not be created for this completed record.");
           const result = await dashboardTicketRequest("owner-close-rent-deduction", {
             id: canonicalTicket.id,
             amount,

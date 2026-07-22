@@ -13260,6 +13260,22 @@
     }
   }
 
+  const LEAD_INTAKE_FORMAT_PROMPT = `Research prospective property-maintenance leads and return only valid CSV text—no introduction, explanation, Markdown, or code fences.
+
+Use this exact header row and column order:
+business,type,location,phone_number,source
+
+Requirements:
+- One business or property per row.
+- business: the organization or property name.
+- type: a short category such as Property Management, Apartment Community, HOA, Commercial Property, or Facility.
+- location: city and state, or the complete street address when available.
+- phone_number: a real, publicly listed US phone number with area code. Do not invent phone numbers. Omit any lead without a usable phone number.
+- source: the website URL or source name where the information was verified.
+- Quote any field containing a comma or quotation mark using standard CSV escaping.
+- Do not add, remove, or rename columns.
+- Remove duplicate businesses and duplicate phone numbers before returning the CSV.`;
+
   function renderLeadIntakeCard() {
     const awaiting = state.leadIntakeBatches.filter((batch) => batch.status === "preview");
     const awaitingCount = awaiting.reduce((total, batch) => total + Number(leadIntakeSummary(batch).approved || 0), 0);
@@ -13278,6 +13294,12 @@
           <input type="file" accept=".csv,text/csv" data-lead-intake-file hidden>
         </div>
       </div>
+      <details class="lead-intake-prompt">
+        <summary>Copy &amp; paste formatting prompt</summary>
+        <p>Paste this into your research tool to receive a CSV that Lead Intake can validate.</p>
+        <textarea rows="10" readonly data-lead-intake-format-prompt aria-label="Lead Intake formatting prompt">${escapeHtml(LEAD_INTAKE_FORMAT_PROMPT)}</textarea>
+        <button type="button" class="secondary-action" data-action="lead-intake-copy-prompt">Copy Prompt</button>
+      </details>
       <div class="lead-intake-metrics" aria-label="Lead Intake status">
         <div><span>Awaiting review</span><strong>${escapeHtml(String(awaitingCount))}</strong></div>
         <div><span>Possible duplicates</span><strong>${escapeHtml(String(duplicateCount))}</strong></div>
@@ -21403,6 +21425,13 @@
           setDashboardState("CSV template downloaded.");
         } catch (error) {
           setDashboardState(error.message || "Template could not be downloaded.", "error");
+        }
+      } else if (action === "lead-intake-copy-prompt") {
+        try {
+          await navigator.clipboard.writeText(LEAD_INTAKE_FORMAT_PROMPT);
+          setDashboardState("Lead Intake formatting prompt copied. Paste it into your research tool.");
+        } catch (error) {
+          setDashboardState("Unable to copy automatically. Select the prompt text and copy it manually.", "error");
         }
       } else if (action === "lead-intake-review-imports") {
         try {

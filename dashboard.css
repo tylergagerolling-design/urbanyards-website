@@ -7356,11 +7356,11 @@ body:not(.is-login-screen) .app-view.is-sidebar-open .dashboard-sidebar {
   max-height: calc(100dvh - (var(--uy-page-pad, 16px) * 2)) !important;
   padding: 0 !important;
   overflow: visible !important;
-  border: 1px solid #12372a !important;
+  border: 1px solid rgba(23, 54, 43, .1) !important;
   border-radius: 24px !important;
-  background: #12372a !important;
+  background: linear-gradient(145deg, rgba(255, 253, 247, .96), rgba(248, 246, 238, .9)) !important;
   box-shadow: var(--uy-app-shadow) !important;
-  color: #ffffff !important;
+  color: #102f25 !important;
   transform: none !important;
 }
 
@@ -7380,7 +7380,7 @@ body:not(.is-login-screen) .dashboard-brand {
   padding: 0 !important;
   border: 0 !important;
   background: transparent !important;
-  color: #ffffff !important;
+  color: #102f25 !important;
   text-decoration: none !important;
 }
 
@@ -7406,7 +7406,7 @@ body:not(.is-login-screen) .sign-out {
 
 body:not(.is-login-screen) .dashboard-brand strong {
   display: none;
-  color: #ffffff !important;
+  color: #102f25 !important;
   font-size: 1.05rem;
   line-height: 1;
   letter-spacing: .12em;
@@ -7416,7 +7416,7 @@ body:not(.is-login-screen) .dashboard-brand strong {
 body:not(.is-login-screen) .dashboard-brand small {
   display: block;
   margin-top: 0;
-  color: rgba(255, 255, 255, .7) !important;
+  color: #72806f !important;
   font-size: .66rem;
   font-weight: 800;
   letter-spacing: .18em;
@@ -7439,7 +7439,7 @@ body:not(.is-login-screen) .dashboard-nav a {
   border: 1px solid transparent !important;
   border-radius: 15px !important;
   background: transparent !important;
-  color: rgba(255, 255, 255, .88) !important;
+  color: #192c24 !important;
   font-size: .92rem !important;
   font-weight: 750 !important;
   text-decoration: none !important;
@@ -7447,17 +7447,17 @@ body:not(.is-login-screen) .dashboard-nav a {
 }
 
 body:not(.is-login-screen) .dashboard-nav a:hover {
-  background: rgba(255, 255, 255, .1) !important;
-  border-color: rgba(255, 255, 255, .12) !important;
+  background: rgba(233, 239, 224, .72) !important;
+  border-color: rgba(23, 54, 43, .08) !important;
   transform: translateY(-1px) !important;
 }
 
 body:not(.is-login-screen) .dashboard-nav a.is-active,
 body:not(.is-login-screen) .dashboard-nav a.is-active:hover {
-  background: #1f6b4f !important;
-  border-color: rgba(255, 255, 255, .14) !important;
-  box-shadow: inset 3px 0 0 #c9a227, 0 10px 22px rgba(0, 0, 0, .14) !important;
-  color: #ffffff !important;
+  background: linear-gradient(135deg, #e6efd9, #d7e5c9) !important;
+  border-color: rgba(23, 54, 43, .08) !important;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, .72), 0 10px 22px rgba(23, 54, 43, .07) !important;
+  color: #143829 !important;
   filter: none !important;
 }
 
@@ -7466,8 +7466,8 @@ body:not(.is-login-screen) .nav-icon {
   place-items: center !important;
   width: 38px !important;
   height: 38px !important;
-  color: #ffffff !important;
-  background: rgba(255, 255, 255, .1) !important;
+  color: #102f25 !important;
+  background: rgba(226, 234, 216, .68) !important;
   border-radius: 13px !important;
   box-shadow: none !important;
   filter: none !important;
@@ -7500,15 +7500,8 @@ body:not(.is-login-screen) .dashboard-nav a.is-active .nav-icon svg,
 body:not(.is-login-screen) .dashboard-nav a:hover .nav-icon,
 body:not(.is-login-screen) .dashboard-nav a:hover .nav-icon img,
 body:not(.is-login-screen) .dashboard-nav a:hover .nav-icon svg {
-  color: #ffffff !important;
+  color: #102f25 !important;
   filter: none !important;
-}
-
-body:not(.is-login-screen) .dashboard-sidebar .nav-icon img,
-body:not(.is-login-screen) .dashboard-sidebar .nav-icon svg,
-body:not(.is-login-screen) .dashboard-sidebar .sidebar-notification-button img,
-body:not(.is-login-screen) .dashboard-sidebar .sign-out .button-icon img {
-  filter: brightness(0) invert(1) !important;
 }
 
 body:not(.is-login-screen) .dashboard-nav-group {
@@ -7536,10 +7529,12 @@ body:not(.is-login-screen) .dashboard-subnav {
   gap: 7px;
   padding: 20px 16px;
   overflow-y: auto;
-  border: 1px solid #12372a;
-  border-left-color: rgba(255, 255, 255, .12);
+  border: 1px solid rgba(23, 54, 43, .12);
+  border-left-color: rgba(23, 54, 43, .16);
   border-radius: 0 28px 28px 0;
-  background: #12372a;
+  background:
+    radial-gradient(circle at 100% 0, rgba(213, 227, 199, .52), transparent 38%),
+    rgba(255, 253, 247, .985);
   box-shadow: 18px 20px 42px rgba(18, 46, 35, .14);
   opacity: 0;
   pointer-events: none;
@@ -7557,8 +7552,8 @@ body:not(.is-login-screen) .dashboard-subnav::before {
   display: block;
   margin: 0 2px 8px;
   padding: 2px 3px 16px;
-  border-bottom: 1px solid rgba(255, 255, 255, .14);
-  color: #ffffff;
+  border-bottom: 1px solid rgba(23, 54, 43, .1);
+  color: #143829;
   content: attr(data-sidebar-subnav-title);
   font-size: 1.05rem;
   font-weight: 950;
@@ -7591,7 +7586,7 @@ body:not(.is-login-screen) .dashboard-nav .dashboard-subnav a {
   padding: 10px 12px !important;
   border: 1px solid transparent !important;
   border-radius: 12px !important;
-  color: rgba(255, 255, 255, .84) !important;
+  color: #3c574b !important;
   font-size: .84rem !important;
   font-weight: 800 !important;
   transition:
@@ -7613,21 +7608,21 @@ body:not(.is-login-screen) .dashboard-nav .dashboard-subnav a::after {
 }
 
 body:not(.is-login-screen) .dashboard-nav .dashboard-subnav a:hover {
-  border-color: rgba(255, 255, 255, .12) !important;
-  background: rgba(255, 255, 255, .1) !important;
-  color: #ffffff !important;
+  border-color: rgba(61, 105, 73, .12) !important;
+  background: rgba(231, 239, 221, .7) !important;
+  color: #173e2e !important;
   transform: none !important;
 }
 
 body:not(.is-login-screen) .dashboard-nav .dashboard-subnav a.is-active {
   border-color: transparent !important;
   background: transparent !important;
-  color: #ffffff !important;
+  color: #143829 !important;
   box-shadow: none !important;
 }
 
 body:not(.is-login-screen) .dashboard-nav .dashboard-subnav a.is-active::after {
-  background: #c9a227;
+  background: #3f734d;
   box-shadow: 0 0 0 3px rgba(63, 115, 77, .13);
   opacity: 1;
 }
@@ -8480,23 +8475,23 @@ body:not(.is-login-screen) .call-queue-empty-state {
 }
 
 .sidebar-profile strong {
-  color: #ffffff;
+  color: #102f25;
   font-size: .96rem;
 }
 
 .sidebar-profile small {
   margin-top: 2px;
-  color: rgba(255, 255, 255, .68);
+  color: #6f776e;
   font-size: .82rem;
 }
 
 body:not(.is-login-screen) .sign-out {
   min-height: 38px !important;
   padding: 8px 12px !important;
-  border: 1px solid rgba(255, 255, 255, .16) !important;
+  border: 1px solid rgba(23, 54, 43, .09) !important;
   border-radius: 14px !important;
-  background: rgba(255, 255, 255, .08) !important;
-  color: #ffffff !important;
+  background: rgba(255, 253, 247, .72) !important;
+  color: #6d746d !important;
   box-shadow: none !important;
 }
 

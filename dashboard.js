@@ -11019,6 +11019,9 @@
       </div>`;
     }
     const primaryMove = status.move && !(status.blockers || []).length ? status.move : null;
+    const rentDeductionCloseEligible = currentSessionRole() === "owner"
+      && ["field_work_complete", "completion_review", "invoice_review", "invoice_sent", "partially_paid", "paid"].includes(stage)
+      && !/\blandscap(?:e|ing|er|ers)?\b|\blawn\b|\bmow(?:ing)?\b/i.test([ticket?.title, ticket?.requestedService, ticket?.scopeOfWork, ticket?.detail].filter(Boolean).join(" "));
     return `<div class="ticket-next-move-panel is-${escapeHtml(status.state)}">
       <div class="ticket-next-move-main">
         <span>${escapeHtml(owner)}</span>
@@ -11036,6 +11039,7 @@
       ${primaryMove ? `<button type="button" class="ticket-next-move-button" data-action="transition-ticket-stage" data-id="${escapeHtml(ticket.id)}" data-stage="${escapeHtml(primaryMove.to)}" data-next-action="${escapeHtml(primaryMove.nextAction)}">
         ${buttonContent(primaryMove.label, "complete-reminder")}
       </button>` : ""}
+      ${rentDeductionCloseEligible ? `<button type="button" class="secondary-action ticket-rent-deduction-close" data-action="owner-close-rent-deduction" data-id="${escapeHtml(ticket.id)}">${buttonContent("Close as Rent Deduction", "complete-reminder")}</button>` : ""}
     </div>`;
   }
 
@@ -21310,6 +21314,36 @@ Requirements:
           setDashboardState(`Ticket moved to ${ticketStageLabel(normalizeTicketStageForDashboard(nextStage))}.`);
         } catch (error) {
           setDashboardState(error.message || "Unable to move ticket.", "error");
+        }
+        return;
+      } else if (action === "owner-close-rent-deduction") {
+        if (currentSessionRole() !== "owner") {
+          setDashboardState("Only the Owner can close a ticket as a rent deduction.", "error");
+          return;
+        }
+        const ticket = dashboardTickets().find((item) => item.source === "ticket" && String(item.id) === String(id));
+        const suggestedAmount = Number(ticket?.proposedPrice) > 0 && Number(ticket?.proposedPrice) <= 350 ? String(ticket.proposedPrice) : "";
+        const entered = window.prompt("Rent deduction amount for this ticket (monthly limit: $350):", suggestedAmount);
+        if (entered === null) return;
+        const amount = Number(String(entered).replace(/[$,\s]/g, ""));
+        if (!Number.isFinite(amount) || amount <= 0 || amount > 350) {
+          setDashboardState("Enter a rent deduction amount between $0.01 and $350.00.", "error");
+          return;
+        }
+        const confirmed = window.confirm(`Close ${ticket?.number || "this ticket"} as a $${amount.toFixed(2)} rent deduction? This bypasses invoice and payment requirements and counts toward the $350 monthly limit.`);
+        if (!confirmed) return;
+        try {
+          setDashboardState("Closing ticket as a rent deduction...");
+          const result = await dashboardTicketRequest("owner-close-rent-deduction", {
+            id,
+            amount,
+            notes: `Owner closed ${ticket?.number || "ticket"} as a rent deduction instead of invoicing.`
+          });
+          await refreshDashboard();
+          openTicketDrawer("ticket", result.ticket?.id || id);
+          setDashboardState(`Ticket closed as a $${amount.toFixed(2)} rent deduction. $${Number(result.monthlyRemaining || 0).toFixed(2)} remains this month.`);
+        } catch (error) {
+          setDashboardState(error.message || "Unable to close this ticket as a rent deduction.", "error");
         }
         return;
       } else if (action === "save-ticket-command") {

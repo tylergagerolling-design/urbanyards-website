@@ -806,3 +806,17 @@ test("Owner Kanban resets to the next two months on refresh and supports a custo
   assert.doesNotMatch(js, /stored\.dateStart|stored\.dateEnd/);
   assert.match(css, /owner-kanban-date-range[\s\S]*grid-template-columns: repeat\(2, minmax\(130px, 1fr\)\)/);
 });
+
+test("Owner can close completed non-landscaping tickets as monthly rent deductions", () => {
+  const js = read("dashboard.js");
+  const backend = read("netlify/functions/dashboard-tickets.js");
+
+  assert.match(js, /currentSessionRole\(\) === "owner"[\s\S]*Close as Rent Deduction/);
+  assert.match(js, /data-action="owner-close-rent-deduction"/);
+  assert.match(js, /monthly limit: \$350/);
+  assert.match(backend, /RENT_DEDUCTION_MONTHLY_LIMIT = 350/);
+  assert.match(backend, /Only the Owner can close a ticket as a rent deduction/);
+  assert.match(backend, /Landscaping work is excluded from rent deductions/);
+  assert.match(backend, /rent_deduction_ticket_closed/);
+  assert.match(backend, /monthlyRemaining/);
+});

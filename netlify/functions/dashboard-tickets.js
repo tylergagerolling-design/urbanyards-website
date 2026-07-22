@@ -313,6 +313,98 @@ function canDeleteTicket(actor) {
   return Boolean(actor && hasPermission(actor.role, "admin:manage"));
 }
 
+const RENT_DEDUCTION_MONTHLY_LIMIT = 350;
+const RENT_DEDUCTION_CLOSE_STAGES = new Set(["field_work_complete", "completion_review", "invoice_review", "invoice_sent", "partially_paid", "paid"]);
+
+function isLandscapingTicket(ticket = {}) {
+  const description = [ticket.title, ticket.requested_service, ticket.service, ticket.scope_of_work, ticket.description]
+    .filter(Boolean).join(" ").toLowerCase();
+  return /\blandscap(?:e|ing|er|ers)?\b|\blawn\b|\bmow(?:ing)?\b/.test(description);
+}
+
+function monthBounds(now = new Date()) {
+  const start = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1));
+  const end = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() + 1, 1));
+  return { start: start.toISOString(), end: end.toISOString() };
+}
+
+async function ownerCloseRentDeduction(id, amount, notes, actor, event) {
+  if (String(actor?.role || "").trim().toLowerCase() !== "owner") {
+    const error = new Error("Only the Owner can close a ticket as a rent deduction.");
+    error.statusCode = 403;
+    throw error;
+  }
+  const ticket = await getTicket(id);
+  if (!ticket?.id) {
+    const error = new Error("Ticket was not found.");
+    error.statusCode = 404;
+    throw error;
+  }
+  if (!RENT_DEDUCTION_CLOSE_STAGES.has(String(ticket.stage || "").toLowerCase())) {
+    const error = new Error("Complete the field work before using rent-deduction closeout.");
+    error.statusCode = 409;
+    throw error;
+  }
+  if (isLandscapingTicket(ticket)) {
+    const error = new Error("Landscaping work is excluded from rent deductions and must use normal invoice closeout.");
+    error.statusCode = 409;
+    throw error;
+  }
+  const deductionAmount = cleanMoney(amount);
+  if (!deductionAmount || deductionAmount <= 0 || deductionAmount > RENT_DEDUCTION_MONTHLY_LIMIT) {
+    const error = new Error("Enter a rent deduction amount between $0.01 and $350.00.");
+    error.statusCode = 400;
+    throw error;
+  }
+  const bounds = monthBounds();
+  const priorEvents = await supabaseAdminRequest(`job_ticket_events?event_type=eq.rent_deduction_ticket_closed&created_at=gte.${encodeURIComponent(bounds.start)}&created_at=lt.${encodeURIComponent(bounds.end)}&select=new_value&limit=1000`, { method: "GET" });
+  const used = (Array.isArray(priorEvents) ? priorEvents : []).reduce((total, row) => {
+    const value = row?.new_value && typeof row.new_value === "object" ? row.new_value : {};
+    return total + (Number(value.rentDeductionAmount) || 0);
+  }, 0);
+  if (Math.round((used + deductionAmount) * 100) > RENT_DEDUCTION_MONTHLY_LIMIT * 100) {
+    const remaining = Math.max(0, RENT_DEDUCTION_MONTHLY_LIMIT - used);
+    const error = new Error(`This would exceed the $350 monthly rent-deduction limit. $${remaining.toFixed(2)} remains this month.`);
+    error.statusCode = 409;
+    throw error;
+  }
+  const updatePayload = {
+    stage: "closed",
+    status: "completed",
+    responsible_role: "owner",
+    next_action: "Closed as rent deduction"
+  };
+  if (actor?.userId) updatePayload.updated_by = actor.userId;
+  const closedTicket = await updateTicket(id, updatePayload);
+  const eventPayload = cleanEventPayload({
+    event_type: "rent_deduction_ticket_closed",
+    from_stage: ticket.stage,
+    to_stage: "closed",
+    notes: cleanText(notes, 2000) || `Closed as a $${deductionAmount.toFixed(2)} rent deduction.`,
+    old_value: { stage: ticket.stage, status: ticket.status },
+    new_value: {
+      stage: "closed",
+      status: "completed",
+      closeoutType: "rent_deduction",
+      rentDeductionAmount: deductionAmount,
+      monthlyLimit: RENT_DEDUCTION_MONTHLY_LIMIT
+    }
+  }, id, actor);
+  await supabaseAdminRequest("job_ticket_events", { method: "POST", headers: { Prefer: "return=minimal" }, body: JSON.stringify(eventPayload) });
+  await writeAuditLog({
+    actor,
+    action: "rent_deduction_ticket_closed",
+    entityType: "job_tickets",
+    entityId: id,
+    oldValue: eventPayload.old_value,
+    newValue: eventPayload.new_value,
+    metadata: { monthly_used: used + deductionAmount, monthly_limit: RENT_DEDUCTION_MONTHLY_LIMIT },
+    event,
+    module: "tickets"
+  });
+  return { ticket: closedTicket, amount: deductionAmount, monthlyUsed: used + deductionAmount, monthlyRemaining: RENT_DEDUCTION_MONTHLY_LIMIT - used - deductionAmount };
+}
+
 async function deleteTicket(id) {
   await supabaseAdminRequest(`job_ticket_events?ticket_id=eq.${encodeURIComponent(id)}`, {
     method: "DELETE",
@@ -454,7 +546,7 @@ exports.handler = async (event) => {
   try {
     body = parseBody(event);
     const action = String(body.action || "").trim().toLowerCase();
-    if (!["list", "events", "create", "update", "delete", "transition", "event"].includes(action)) {
+    if (!["list", "events", "create", "update", "delete", "transition", "owner-close-rent-deduction", "event"].includes(action)) {
       return json(400, { error: "Unsupported ticket action.", requestId });
     }
 
@@ -552,6 +644,13 @@ exports.handler = async (event) => {
       const id = uuidOrNull(body.id || body.ticketId);
       if (!id) return json(400, { error: "A valid ticket id is required.", requestId });
       const result = await transitionTicket(id, body.toStage || body.stage, body, actor, event, requestId);
+      return json(200, { ok: true, ...result, requestId });
+    }
+
+    if (action === "owner-close-rent-deduction") {
+      const id = uuidOrNull(body.id || body.ticketId);
+      if (!id) return json(400, { error: "A valid ticket id is required.", requestId });
+      const result = await ownerCloseRentDeduction(id, body.amount, body.notes, actor, event);
       return json(200, { ok: true, ...result, requestId });
     }
 

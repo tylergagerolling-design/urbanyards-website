@@ -507,7 +507,7 @@ test("dashboard body uses the Urban Forest color scheme without recoloring the d
   assert.match(css, /--uy-ink: #1f2924/);
   assert.match(css, /dashboard-sidebar[\s\S]*background: linear-gradient\(145deg, rgba\(255, 253, 247, \.96\), rgba\(248, 246, 238, \.9\)\) !important/);
   assert.match(css, /dashboard-subnav[\s\S]*background:[\s\S]*rgba\(255, 253, 247, \.985\)/);
-  assert.match(css, /dashboard-main[\s\S]*background: #f4f1e8 !important/);
+  assert.match(css, /dashboard-main[\s\S]*background: rgba\(244, 241, 232, \.9\) !important/);
   assert.match(css, /Urban Forest exact card surface contract[\s\S]*background-color: #ffffff !important/);
   assert.match(css, /Urban Forest body color hierarchy[\s\S]*dashboard-main[\s\S]*color: #1f2924 !important/);
   assert.match(css, /Urban Forest body color hierarchy[\s\S]*h1,[\s\S]*color: #1f6b4f !important/);
@@ -521,6 +521,7 @@ test("dashboard and login use the supplied forest river background", () => {
   assert.equal(fs.existsSync(path.join(root, "images", "dashboard-login-forest-river.png")), true);
   assert.match(css, /\.login-view[\s\S]*url\("images\/dashboard-login-forest-river\.png"\)/);
   assert.match(css, /\.app-view[\s\S]*url\("images\/dashboard-login-forest-river\.png"\)/);
+  assert.match(css, /supplied landscape visible behind the signed-in dashboard[\s\S]*body:not\(\.is-login-screen\)[\s\S]*dashboard-login-forest-river\.png/);
   assert.doesNotMatch(css, /dashboard-login-background\.png/);
 });
 

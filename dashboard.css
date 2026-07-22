@@ -20356,6 +20356,20 @@ body:not(.is-login-screen) .dashboard-main :is(
   background-color: #ffffff !important;
 }
 
+/* Keep the supplied landscape visible behind the signed-in dashboard while
+   preserving the cream page wash and solid white working cards. */
+body:not(.is-login-screen),
+body:not(.is-login-screen) .dashboard-shell {
+  background:
+    linear-gradient(rgba(244, 241, 232, .78), rgba(244, 241, 232, .86)),
+    url("images/dashboard-login-forest-river.png") center / cover fixed no-repeat !important;
+}
+
+body:not(.is-login-screen) .dashboard-main {
+  background: rgba(244, 241, 232, .9) !important;
+  backdrop-filter: blur(3px);
+}
+
 /* Urban Forest body color hierarchy. Keep this scoped to dashboard-main so
    neither the primary nor secondary drawer inherits the page palette. */
 body:not(.is-login-screen) .dashboard-main {

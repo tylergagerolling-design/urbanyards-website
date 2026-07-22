@@ -8141,22 +8141,22 @@ body:not(.is-login-screen) .call-queue-row {
 }
 
 body:not(.is-login-screen) .call-queue-row:nth-child(odd) {
-  background: rgba(247, 244, 234, .72);
+  background: rgba(247, 244, 234, .92) !important;
 }
 
 body:not(.is-login-screen) .call-queue-row:nth-child(even) {
-  background: rgba(231, 239, 224, .72);
+  background: rgba(225, 237, 216, .94) !important;
 }
 
 body:not(.is-login-screen) .call-queue-row:hover,
 body:not(.is-login-screen) .call-queue-row:focus-visible {
   border-color: rgba(63, 115, 77, .14);
-  background: rgba(220, 233, 211, .92);
+  background: rgba(211, 229, 198, .98) !important;
 }
 
 body:not(.is-login-screen) .call-queue-row.is-selected {
   border-color: rgba(63, 115, 77, .22);
-  background: #e5eddd;
+  background: #d5e6c9 !important;
   box-shadow: inset 3px 0 0 #477d54;
 }
 

@@ -13236,7 +13236,7 @@
       <div class="lead-queue-actions">
         ${renderPhoneActions(item.phone, { leadId: item.id, leadType: "outreach_prospect", compact: true, helper: false })}
         ${canCreateTicketType("quote") ? `<button type="button" class="inline-action" data-action="create-ticket-from-prospect" data-id="${escapeHtml(item.id)}">Create Ticket</button>` : ""}
-        <button type="button" class="inline-action" data-action="open-outreach-prospect" data-id="${escapeHtml(item.id)}">Open Lead</button>
+        <button type="button" class="inline-action" data-action="open-call-queue-lead" data-id="${escapeHtml(item.id)}">Open in Call Queue</button>
         ${canDeleteLeadRecords() ? `<button type="button" class="inline-action danger-action" data-action="delete-outreach-prospect" data-id="${escapeHtml(item.id)}">Delete Lead</button>` : ""}
       </div>
     </article>`;
@@ -13694,13 +13694,16 @@ Requirements:
         <div class="ticket-lane-heading">
           <div>
             <p class="eyebrow">Contact Queue</p>
-            <h3>Prospects needing the next touch</h3>
-            <p>Call, email, or open the lead record before it becomes a quote-ready Job Ticket.</p>
+            <h3>All active Call Queue leads</h3>
+            <p>This mirrors the active lead list on the Call Queue page so every prospect is available from one queue.</p>
           </div>
-          <span>${escapeHtml(String(prospectQueue.length))}</span>
+          <div class="lead-contact-queue-heading-actions">
+            <span>${escapeHtml(String(prospectQueue.length))}</span>
+            <button type="button" data-action="go-call-queue">View All Leads</button>
+          </div>
         </div>
         <div class="lead-queue-list">
-          ${prospectQueue.length ? prospectQueue.map((item) => renderLeadQueueItem(item, hot.some((hotItem) => hotItem.id === item.id) ? "hot" : "due")).join("") : emptyState("No prospect follow-ups are due right now.")}
+          ${prospectQueue.length ? prospectQueue.map((item) => renderLeadQueueItem(item, hot.some((hotItem) => hotItem.id === item.id) ? "hot" : due.some((dueItem) => dueItem.id === item.id) ? "due" : "")).join("") : emptyState("No active leads are currently in the Call Queue.")}
         </div>
       </section>
       <aside class="lead-next-step-stack">
@@ -13754,8 +13757,11 @@ Requirements:
     const accountingTickets = dashboardTickets(data).filter((ticket) => ticketIsOpen(ticket) && ticketInStage(ticket, ["needs_budget"]));
     const due = typeof outreachDueProspects === "function" ? outreachDueProspects() : [];
     const hot = typeof outreachHotProspects === "function" ? outreachHotProspects() : [];
-    const activeProspects = (data.outreachProspects || []).filter((item) => !isClosedOutreach(item));
-    const prospectQueue = Array.from(new Map([...due, ...hot, ...activeProspects].map((item) => [String(item.id || outreachTitle(item)), item])).values());
+    const prospectQueue = (data.outreachProspects || [])
+      .filter((item) => !callQueueIsCompleted(item))
+      .sort((a, b) => callQueueSortValue(a) - callQueueSortValue(b)
+        || String(a.nextFollowUpAtRaw || "9999").localeCompare(String(b.nextFollowUpAtRaw || "9999"))
+        || outreachTitle(a).localeCompare(outreachTitle(b)));
     const companies = data.outreachCompanies || [];
     const properties = data.outreachProperties || [];
     target.innerHTML = `
@@ -21926,6 +21932,13 @@ Requirements:
       } else if (action === "go-leads") {
         setActiveSection("outreach");
         replaceDashboardHash("outreach");
+      } else if (action === "open-call-queue-lead") {
+        state.callQueueSearch = "";
+        state.callQueueStatusFilter = "Active";
+        state.callQueuePriorityFilter = "All";
+        state.callQueueSelectedId = id;
+        setActiveSection("call-queue");
+        replaceDashboardHash("call-queue");
       } else if (action === "go-call-queue") {
         setActiveSection("call-queue");
         replaceDashboardHash("call-queue");

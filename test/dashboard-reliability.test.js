@@ -839,3 +839,13 @@ test("Tickets includes a completed archive with owner reopen controls", () => {
   assert.match(js, /stage: "completion_review"/);
   assert.match(css, /\.completed-ticket-card/);
 });
+
+test("Leads contact queue mirrors active Call Queue leads and opens the selected lead", () => {
+  const js = read("dashboard.js");
+
+  assert.match(js, /All active Call Queue leads/);
+  assert.match(js, /\.filter\(\(item\) => !callQueueIsCompleted\(item\)\)/);
+  assert.match(js, /data-action="open-call-queue-lead"/);
+  assert.match(js, /state\.callQueueSelectedId = id[\s\S]*setActiveSection\("call-queue"\)/);
+  assert.match(js, /data-action="go-call-queue">View All Leads/);
+});

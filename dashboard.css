@@ -17851,6 +17851,20 @@ body:not(.is-login-screen) .leads-contact-queue {
   align-content: start;
 }
 
+body:not(.is-login-screen) .lead-contact-queue-heading-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+  justify-content: flex-end;
+}
+
+body:not(.is-login-screen) .lead-contact-queue-heading-actions button {
+  min-height: 38px;
+  padding: 0 13px;
+  border-radius: 10px;
+}
+
 body:not(.is-login-screen) .lead-queue-list {
   display: grid;
   gap: 10px;

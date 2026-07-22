@@ -11007,6 +11007,13 @@
     const rentDeductionCloseEligible = currentSessionRole() === "owner"
       && ["field_work_complete", "completion_review", "invoice_review", "invoice_sent", "partially_paid", "paid"].includes(stage)
       && !/\blandscap(?:e|ing|er|ers)?\b|\blawn\b|\bmow(?:ing)?\b/i.test([ticket?.title, ticket?.requestedService, ticket?.scopeOfWork, ticket?.detail].filter(Boolean).join(" "));
+    const rentDeductionCloseControl = rentDeductionCloseEligible ? `<div class="ticket-rent-deduction-control">
+      <label>Rent deduction amount
+        <span class="ticket-rent-deduction-input"><span aria-hidden="true">$</span><input type="number" min="0.01" max="350" step="0.01" inputmode="decimal" data-rent-deduction-amount aria-label="Rent deduction amount" placeholder="0.00" value="${Number(ticket?.proposedPrice) > 0 && Number(ticket.proposedPrice) <= 350 ? escapeHtml(Number(ticket.proposedPrice).toFixed(2)) : ""}"></span>
+      </label>
+      <small>Closes this ticket without an invoice and counts toward the $350 monthly limit.</small>
+      <button type="button" class="secondary-action ticket-rent-deduction-close" data-action="owner-close-rent-deduction" data-id="${escapeHtml(ticket.id)}"${isCanonical ? "" : ` data-ticket-source="${escapeHtml(ticket.source)}"`}>${buttonContent("Close as Rent Deduction", "complete-reminder")}</button>
+    </div>` : "";
     if (!isCanonical) {
       return `<div class="ticket-next-move-panel is-source-preview">
         <div class="ticket-next-move-main">
@@ -11019,7 +11026,7 @@
           <div><dt>Stage</dt><dd>${escapeHtml(ticketStageLabel(stage))}</dd></div>
           <div><dt>Next</dt><dd>${escapeHtml(ticket?.nextAction || "Open ticket")}</dd></div>
         </dl>
-        ${rentDeductionCloseEligible ? `<button type="button" class="secondary-action ticket-rent-deduction-close" data-action="owner-close-rent-deduction" data-id="${escapeHtml(ticket.id)}" data-ticket-source="${escapeHtml(ticket.source)}">${buttonContent("Close as Rent Deduction", "complete-reminder")}</button>` : ""}
+        ${rentDeductionCloseControl}
       </div>`;
     }
     const primaryMove = status.move && !(status.blockers || []).length ? status.move : null;
@@ -11040,7 +11047,7 @@
       ${primaryMove ? `<button type="button" class="ticket-next-move-button" data-action="transition-ticket-stage" data-id="${escapeHtml(ticket.id)}" data-stage="${escapeHtml(primaryMove.to)}" data-next-action="${escapeHtml(primaryMove.nextAction)}">
         ${buttonContent(primaryMove.label, "complete-reminder")}
       </button>` : ""}
-      ${rentDeductionCloseEligible ? `<button type="button" class="secondary-action ticket-rent-deduction-close" data-action="owner-close-rent-deduction" data-id="${escapeHtml(ticket.id)}">${buttonContent("Close as Rent Deduction", "complete-reminder")}</button>` : ""}
+      ${rentDeductionCloseControl}
     </div>`;
   }
 
@@ -21324,16 +21331,13 @@ Requirements:
         }
         const ticketSource = target.dataset.ticketSource || "ticket";
         const ticket = findTicketForDrawer(ticketSource, id) || dashboardTickets().find((item) => String(item.id) === String(id));
-        const suggestedAmount = Number(ticket?.proposedPrice) > 0 && Number(ticket?.proposedPrice) <= 350 ? String(ticket.proposedPrice) : "";
-        const entered = window.prompt("Rent deduction amount for this ticket (monthly limit: $350):", suggestedAmount);
-        if (entered === null) return;
+        const control = target.closest(".ticket-rent-deduction-control");
+        const entered = control?.querySelector("[data-rent-deduction-amount]")?.value || "";
         const amount = Number(String(entered).replace(/[$,\s]/g, ""));
         if (!Number.isFinite(amount) || amount <= 0 || amount > 350) {
           setDashboardState("Enter a rent deduction amount between $0.01 and $350.00.", "error");
           return;
         }
-        const confirmed = window.confirm(`Close ${ticket?.number || "this ticket"} as a $${amount.toFixed(2)} rent deduction? This bypasses invoice and payment requirements and counts toward the $350 monthly limit.`);
-        if (!confirmed) return;
         try {
           setDashboardState("Closing ticket as a rent deduction...");
           let canonicalTicket = ticket?.source === "ticket" ? ticket : null;

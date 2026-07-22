@@ -20179,6 +20179,62 @@ body:not(.is-login-screen) .ticket-next-move-button {
   box-shadow: 0 12px 24px rgba(18, 63, 49, .16);
 }
 
+body:not(.is-login-screen) .ticket-rent-deduction-control {
+  display: grid;
+  grid-template-columns: minmax(150px, 190px) minmax(0, 1fr);
+  gap: 6px 12px;
+  align-items: end;
+  padding-top: 12px;
+  border-top: 1px solid rgba(18, 63, 49, .12);
+}
+
+body:not(.is-login-screen) .ticket-rent-deduction-control label {
+  display: grid;
+  gap: 6px;
+  color: var(--uy-green);
+  font-size: .78rem;
+  font-weight: 850;
+}
+
+body:not(.is-login-screen) .ticket-rent-deduction-input {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: center;
+  min-height: 42px;
+  padding: 0 10px;
+  border: 1px solid rgba(18, 63, 49, .2);
+  border-radius: 11px;
+  background: #fff;
+}
+
+body:not(.is-login-screen) .ticket-rent-deduction-input input {
+  width: 100%;
+  min-width: 0;
+  border: 0;
+  background: transparent;
+  box-shadow: none;
+}
+
+body:not(.is-login-screen) .ticket-rent-deduction-control small {
+  grid-column: 1 / -1;
+  color: var(--uy-muted);
+  line-height: 1.35;
+}
+
+body:not(.is-login-screen) .ticket-rent-deduction-close {
+  min-height: 42px;
+}
+
+@media (max-width: 620px) {
+  body:not(.is-login-screen) .ticket-rent-deduction-control {
+    grid-template-columns: 1fr;
+  }
+
+  body:not(.is-login-screen) .ticket-rent-deduction-control small {
+    grid-column: auto;
+  }
+}
+
 body:not(.is-login-screen) .ticket-next-move-button:hover {
   transform: translateY(-1px);
   filter: brightness(1.04);

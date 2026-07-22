@@ -307,6 +307,7 @@
     ticketBoardStageFilter: "All",
     ticketBoardOwnerFilter: "All",
     ticketBoardCloseoutOnly: false,
+    ticketBoardMode: "open",
     ownerKanbanSearch: "",
     ownerKanbanAssigneeFilter: "All",
     ownerKanbanPriorityFilter: "All",
@@ -3046,7 +3047,8 @@
       id: row.id,
       title: row.title || "Untitled note",
       body: row.body || "",
-      date: formatDate(row.created_at)
+      date: formatDate(row.created_at),
+      createdAtRaw: row.created_at || ""
     };
   }
 
@@ -10410,14 +10412,39 @@
   }
 
   function dashboardTickets(data = state.data) {
-    const rentDeductionClosedVisitIds = new Set((data.notes || []).flatMap((note) => {
-      if (!/^Rent deduction:/i.test(String(note?.title || ""))) return [];
+    const rentDeductionCloseouts = new Map();
+    const rentDeductionReopens = new Map();
+    (data.notes || []).forEach((note) => {
       const sourceId = String(note?.body || "").match(/Source visit:\s*([0-9a-f-]{36})/i)?.[1];
-      return sourceId ? [sourceId] : [];
-    }));
+      if (!sourceId) return;
+      const createdAt = String(note.createdAtRaw || "");
+      if (/^Rent deduction reopened:/i.test(String(note.title || ""))) {
+        if (createdAt >= String(rentDeductionReopens.get(sourceId) || "")) rentDeductionReopens.set(sourceId, createdAt);
+        return;
+      }
+      if (!/^Rent deduction:/i.test(String(note.title || ""))) return;
+      const amount = Number(String(note.body || "").match(/\$([\d,.]+)/)?.[1]?.replace(/,/g, "")) || 0;
+      const prior = rentDeductionCloseouts.get(sourceId);
+      if (!prior || createdAt >= String(prior.createdAt || "")) rentDeductionCloseouts.set(sourceId, { amount, createdAt });
+    });
     const jobs = (data.jobs || [])
-      .filter((job) => !rentDeductionClosedVisitIds.has(String(job.id)))
-      .map(buildTicketFromJob);
+      .map((job, index) => {
+        const ticket = buildTicketFromJob(job, index);
+        const closeout = rentDeductionCloseouts.get(String(job.id));
+        const reopenedAt = rentDeductionReopens.get(String(job.id));
+        if (!closeout || (reopenedAt && reopenedAt >= closeout.createdAt)) return ticket;
+        return {
+          ...ticket,
+          stage: "closed",
+          stageLabel: ticketStageLabel("closed"),
+          status: "Completed",
+          lane: "complete",
+          ownerLabel: "Owner",
+          nextAction: "Closed as rent deduction",
+          rentDeductionAmount: closeout.amount,
+          closedAt: closeout.createdAt
+        };
+      });
     const quotes = (data.submissions || []).map(buildTicketFromQuote);
     const derived = [...jobs, ...quotes];
     const canonical = (data.tickets || []).filter((ticket) => ticket && ticket.id);
@@ -12801,11 +12828,44 @@
     </section>`;
   }
 
+  function renderCompletedTicketArchive(tickets = []) {
+    const ordered = [...tickets].sort((a, b) => String(b.closedAt || b.dateRaw || "").localeCompare(String(a.closedAt || a.dateRaw || "")));
+    return `<section class="completed-ticket-archive" aria-label="Completed tickets">
+      <div class="ticket-flow-heading">
+        <div>
+          <p class="eyebrow">Ticket History</p>
+          <h3>Completed Tickets</h3>
+          <p>Closed work stays here for reference and can be reopened by the Owner when more work is needed.</p>
+        </div>
+        <span>${escapeHtml(String(ordered.length))} completed</span>
+      </div>
+      <div class="completed-ticket-list">
+        ${ordered.length ? ordered.map((ticket) => `<article class="completed-ticket-card">
+          <div class="completed-ticket-card-main">
+            <span>${escapeHtml(ticket.number || "Completed")}</span>
+            <h4>${escapeHtml(ticket.title || ticket.service || "Completed ticket")}</h4>
+            <p>${escapeHtml([ticket.customerName, ticket.propertyName || ticket.site, ticket.dateLabel || ticket.dateRaw].filter(Boolean).join(" / ") || "Completed work")}</p>
+          </div>
+          <dl>
+            <div><dt>Closed as</dt><dd>${escapeHtml(ticket.rentDeductionAmount ? "Rent deduction" : "Completed")}</dd></div>
+            <div><dt>Amount</dt><dd>${ticket.rentDeductionAmount ? `$${escapeHtml(Number(ticket.rentDeductionAmount).toFixed(2))}` : "—"}</dd></div>
+            <div><dt>Closed</dt><dd>${escapeHtml(ticket.closedAt ? formatDate(ticket.closedAt) : ticket.dateLabel || ticket.dateRaw || "Recorded")}</dd></div>
+          </dl>
+          <div class="completed-ticket-actions">
+            <button type="button" data-action="open-ticket" data-ticket-source="${escapeHtml(ticket.source)}" data-id="${escapeHtml(ticket.id)}">View Ticket</button>
+            ${currentSessionRole() === "owner" ? `<button type="button" class="secondary-action" data-action="reopen-completed-ticket" data-ticket-source="${escapeHtml(ticket.source)}" data-id="${escapeHtml(ticket.id)}">Reopen Ticket</button>` : ""}
+          </div>
+        </article>`).join("") : emptyState("No completed tickets yet.")}
+      </div>
+    </section>`;
+  }
+
   function renderJobTicketWorkspace(data = state.data) {
     const target = qs("[data-job-ticket-workspace]");
     if (!target) return;
     const tickets = dashboardTickets(data);
     const openTickets = tickets.filter(ticketIsOpen);
+    const completedTickets = tickets.filter((ticket) => ticketStage(ticket) === "closed");
     const filteredTickets = openTickets.filter(ticketMatchesBoardFilters);
     const workTickets = filteredTickets.filter((ticket) => ticketInLane(ticket, ["field"]));
     const officeTickets = filteredTickets.filter((ticket) => ticketInLane(ticket, ["sales", "accounting", "review", "money"]));
@@ -12840,6 +12900,11 @@
             ${canCreateTicketType("field") ? `<button type="button" data-action="open-ticket-create" data-ticket-type="field">Schedule Visit</button>` : ""}
           </div>
         </header>
+        <nav class="ticket-history-switcher" aria-label="Ticket views">
+          <button type="button" class="${state.ticketBoardMode === "open" ? "is-active" : ""}" data-action="show-open-tickets" aria-pressed="${state.ticketBoardMode === "open"}">Open Tickets <span>${escapeHtml(String(openTickets.length))}</span></button>
+          <button type="button" class="${state.ticketBoardMode === "completed" ? "is-active" : ""}" data-action="show-completed-tickets" aria-pressed="${state.ticketBoardMode === "completed"}">Completed Tickets <span>${escapeHtml(String(completedTickets.length))}</span></button>
+        </nav>
+        ${state.ticketBoardMode === "completed" ? renderCompletedTicketArchive(completedTickets) : `
         <section class="ticket-metrics" aria-label="Job ticket summary">
           ${renderTicketMetric(openTickets.length, "Open Tickets", "Quotes and work")}
           ${renderTicketMetric(ticketCountBy(openTickets, (ticket) => ticketInLane(ticket, ["field"])), "In Work", "Scheduled or active")}
@@ -12850,6 +12915,7 @@
         ${renderTicketCommandCenter({ filteredTickets, workTickets, officeTickets, readyTickets, reviewTickets })}
         ${renderTicketBoardControls(openTickets, filteredTickets)}
         ${renderTicketWorkflowBoard(openTickets, filteredTickets)}
+        `}
       </div>`;
   }
 
@@ -21276,6 +21342,56 @@ Requirements:
           setDashboardState("");
         } catch (error) {
           setDashboardState(error.message || "Unable to delete guide item.", "error");
+        }
+        return;
+      }
+
+      if (action === "show-open-tickets" || action === "show-completed-tickets") {
+        state.ticketBoardMode = action === "show-completed-tickets" ? "completed" : "open";
+        state.ticketBoardCloseoutOnly = false;
+        renderJobTicketWorkspace(state.data);
+        return;
+      }
+
+      if (action === "reopen-completed-ticket") {
+        if (currentSessionRole() !== "owner") {
+          setDashboardState("Only the Owner can reopen completed tickets.", "error");
+          return;
+        }
+        const ticketSource = target.dataset.ticketSource || "ticket";
+        const ticket = findTicketForDrawer(ticketSource, id) || dashboardTickets().find((item) => String(item.id) === String(id));
+        if (!ticket || ticketStage(ticket) !== "closed") {
+          setDashboardState("This completed ticket could not be found.", "error");
+          return;
+        }
+        try {
+          setDashboardState("Reopening ticket...");
+          if (ticketSource === "ticket") {
+            await updateJobTicket(id, {
+              stage: "completion_review",
+              status: "active",
+              responsible_role: "owner",
+              next_action: "Review reopened ticket"
+            });
+            await insertJobTicketEvent(id, {
+              event_type: "ticket_reopened",
+              from_stage: "closed",
+              to_stage: "completion_review",
+              notes: "Owner reopened the completed ticket."
+            });
+          } else if (ticketSource === "job") {
+            await insertJobNote(
+              `Rent deduction reopened: ${ticket.title || "Completed visit"}`,
+              `Owner reopened this completed rent-deduction visit. Source visit: ${id}.`
+            );
+          } else {
+            throw new Error("This completed record cannot be reopened from Tickets.");
+          }
+          state.ticketBoardMode = "open";
+          await refreshDashboard();
+          setDashboardState(`${ticket.title || "Ticket"} reopened for completion review.`);
+        } catch (error) {
+          setDashboardState(error.message || "Unable to reopen this ticket.", "error");
         }
         return;
       }

@@ -817,7 +817,7 @@ test("Owner can close completed non-landscaping tickets as monthly rent deductio
   assert.match(js, /ensureJobTicketForSourceRecord\(ticketSource, id,[\s\S]*stage: ticketStage\(ticket\)/);
   assert.match(js, /updateStatus\("scheduled_jobs", id, "Completed"\)/);
   assert.match(js, /Rent deduction: \$\{ticket\?\.title/);
-  assert.match(js, /rentDeductionClosedVisitIds/);
+  assert.match(js, /rentDeductionCloseouts/);
   assert.match(js, /tickets: \["tickets", "submissions", "jobs", "notes"\]/);
   assert.match(js, /data-rent-deduction-amount/);
   assert.doesNotMatch(js, /prompt\("Rent deduction amount/);
@@ -826,4 +826,16 @@ test("Owner can close completed non-landscaping tickets as monthly rent deductio
   assert.match(backend, /Landscaping work is excluded from rent deductions/);
   assert.match(backend, /rent_deduction_ticket_closed/);
   assert.match(backend, /monthlyRemaining/);
+});
+
+test("Tickets includes a completed archive with owner reopen controls", () => {
+  const js = read("dashboard.js");
+  const css = read("dashboard.css");
+
+  assert.match(js, /data-action="show-completed-tickets"/);
+  assert.match(js, /function renderCompletedTicketArchive/);
+  assert.match(js, /data-action="reopen-completed-ticket"/);
+  assert.match(js, /Rent deduction reopened:/);
+  assert.match(js, /stage: "completion_review"/);
+  assert.match(css, /\.completed-ticket-card/);
 });

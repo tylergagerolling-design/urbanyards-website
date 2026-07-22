@@ -13299,7 +13299,6 @@ Requirements:
       const summary = leadIntakeSummary(batch);
       return total + Number(summary.definiteDuplicates || 0) + Number(summary.possibleDuplicates || 0);
     }, 0);
-    const recent = state.leadIntakeBatches.slice(0, 3);
     return `<section class="lead-intake-card" aria-labelledby="lead-intake-title">
       <div class="lead-intake-heading">
         <div><p class="eyebrow">Lead Intake</p><h3 id="lead-intake-title">Review prospect lists before they enter the queue</h3><p>Upload LLM research CSVs, validate records, resolve duplicates, and approve only clean prospects.</p></div>
@@ -13321,7 +13320,6 @@ Requirements:
         <div><span>Possible duplicates</span><strong>${escapeHtml(String(duplicateCount))}</strong></div>
         <div><span>Import batches</span><strong>${escapeHtml(String(state.leadIntakeBatches.length))}</strong></div>
       </div>
-      <div class="lead-intake-recent"><strong>Import Batches</strong>${state.leadIntakeLoading ? `<span>Loading…</span>` : recent.length ? recent.map((batch) => `<button type="button" data-action="lead-intake-open-batch" data-id="${escapeHtml(batch.id)}"><span>${escapeHtml(leadIntakeBatchName(batch))}</span><small>${escapeHtml(leadIntakeStatusLabel(batch))} · ${escapeHtml(formatDate(batch.created_at))}</small></button>`).join("") : `<span>${escapeHtml(state.leadIntakeError || "No import batches yet.")}</span>`}</div>
     </section>`;
   }
 

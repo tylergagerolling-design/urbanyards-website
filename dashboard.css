@@ -7671,7 +7671,6 @@ body:not(.is-login-screen) .lead-intake-card {
 
 body:not(.is-login-screen) .lead-intake-heading,
 body:not(.is-login-screen) .lead-intake-actions,
-body:not(.is-login-screen) .lead-intake-recent,
 body:not(.is-login-screen) .lead-intake-review-title,
 body:not(.is-login-screen) .lead-intake-review-controls,
 body:not(.is-login-screen) .lead-intake-pagination {
@@ -7786,28 +7785,6 @@ body:not(.is-login-screen) .lead-intake-review-summary strong {
   font-size: 1.25rem;
 }
 
-body:not(.is-login-screen) .lead-intake-recent {
-  min-width: 0;
-  overflow-x: auto;
-}
-
-body:not(.is-login-screen) .lead-intake-recent > strong {
-  flex: 0 0 auto;
-}
-
-body:not(.is-login-screen) .lead-intake-recent button {
-  display: grid;
-  min-width: 210px;
-  gap: 2px;
-  padding: 9px 12px;
-  border: 1px solid rgba(23, 54, 43, .1);
-  border-radius: 12px;
-  background: rgba(255, 255, 255, .7);
-  color: var(--uy-app-ink);
-  text-align: left;
-}
-
-body:not(.is-login-screen) .lead-intake-recent small,
 body:not(.is-login-screen) .lead-intake-table small {
   display: block;
   margin-top: 3px;

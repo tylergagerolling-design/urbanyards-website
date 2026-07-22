@@ -769,6 +769,7 @@ test("Call Queue contains staged Lead Intake without changing Leads navigation",
   assert.doesNotMatch(js, /normalizePhone\(item\.phone\)/);
   assert.match(js, /phoneInfo\(item\.phone\)\.display/);
   assert.match(js, /Edit Lead[\s\S]*canDeleteLeadRecords\(\)[\s\S]*data-action="delete-outreach-prospect"[\s\S]*Delete Lead/);
+  assert.doesNotMatch(js, /class="lead-intake-recent"|<strong>Import Batches<\/strong>/);
   assert.match(js, /Review Imported Leads/);
   assert.match(js, /Possible Duplicate/);
   assert.match(js, /Add \$\{approvalCount\} Leads to Call Queue/);
@@ -782,6 +783,7 @@ test("Call Queue contains staged Lead Intake without changing Leads navigation",
   assert.match(css, /lead-intake-card/);
   assert.match(css, /lead-intake-prompt[\s\S]*lead-intake-prompt textarea/);
   assert.match(css, /call-queue-website-link/);
+  assert.doesNotMatch(css, /lead-intake-recent/);
   assert.match(migration, /alter table public\.outreach_prospects/);
   assert.match(migration, /import_batch_id uuid references public\.import_batches/);
   assert.doesNotMatch(migration, /create table[^;]+lead/i);

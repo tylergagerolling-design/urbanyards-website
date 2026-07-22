@@ -487,12 +487,26 @@ test("dashboard sidebar exposes a secondary drawer for multi-workspace sections"
   assert.match(css, /dashboard-sidebar:has\(\.dashboard-nav-group\.is-open\)[\s\S]*border-radius: 28px 0 0 28px/);
   assert.match(css, /dashboard-subnav a\.is-active[\s\S]*background: transparent[\s\S]*box-shadow: none/);
   assert.doesNotMatch(css, /dashboard-subnav a\.is-active::before/);
-  assert.match(css, /dashboard-subnav a\.is-active::after[\s\S]*background: #3f734d[\s\S]*opacity: 1/);
+  assert.match(css, /dashboard-subnav a\.is-active::after[\s\S]*background: #c9a227[\s\S]*opacity: 1/);
   assert.match(css, /Stable drawer alignment[\s\S]*grid-template-columns: var\(--uy-sidebar-icon\) minmax\(0, 1fr\) 7px/);
   assert.match(css, /dashboard-subnav a,[\s\S]*grid-template-columns: minmax\(0, 1fr\) 7px[\s\S]*transform: none/);
   assert.match(html, /data-sidebar-subnav="settings"[\s\S]*<span>Import &amp; Export<\/span>/);
   assert.match(css, /Final drawer typography lock[\s\S]*dashboard-subnav a > span[\s\S]*white-space: nowrap/);
   assert.match(css, /dashboard-subnav a,[\s\S]*height: 42px[\s\S]*max-height: 42px[\s\S]*overflow: hidden/);
+});
+
+test("dashboard uses the Urban Forest color scheme", () => {
+  const html = read("dashboard.html");
+  const css = read("dashboard.css");
+
+  assert.match(html, /name="theme-color" content="#12372a"/);
+  assert.match(css, /--uy-green: #1f6b4f/);
+  assert.match(css, /--uy-paper: #f4f1e8/);
+  assert.match(css, /--uy-card: #ffffff/);
+  assert.match(css, /--uy-warm: #c9a227/);
+  assert.match(css, /--uy-ink: #1f2924/);
+  assert.match(css, /dashboard-sidebar[\s\S]*background: #12372a !important/);
+  assert.match(css, /dashboard-main[\s\S]*background: #f4f1e8 !important/);
 });
 
 test("owner Kanban cards omit letter-based assignee icons", () => {

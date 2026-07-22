@@ -1,14 +1,14 @@
 :root {
-  --uy-green: #123f31;
-  --uy-green-2: #1e5a45;
-  --uy-green-3: #e8f0eb;
-  --uy-ink: #13241c;
-  --uy-muted: #65756c;
-  --uy-line: #dfe6df;
-  --uy-paper: #f7f5ec;
-  --uy-surface: #fbfaf5;
+  --uy-green: #1f6b4f;
+  --uy-green-2: #12372a;
+  --uy-green-3: #e6efe9;
+  --uy-ink: #1f2924;
+  --uy-muted: #66736d;
+  --uy-line: #dcded7;
+  --uy-paper: #f4f1e8;
+  --uy-surface: #ffffff;
   --uy-card: #ffffff;
-  --uy-warm: #d9b66f;
+  --uy-warm: #c9a227;
   --uy-danger: #8f2f22;
   --uy-shadow: 0 18px 48px rgba(19, 36, 28, 0.12);
   --uy-soft-shadow: 0 10px 28px rgba(19, 36, 28, 0.08);
@@ -17,22 +17,22 @@
 
   /* Dashboard design system aliases. Keep new dashboard UI work on these tokens. */
   --color-bg: var(--uy-paper);
-  --color-bg-depth: #eef3e7;
+  --color-bg-depth: #ece8dc;
   --color-surface: var(--uy-surface);
   --color-surface-solid: var(--uy-card);
   --color-surface-soft: var(--uy-green-3);
   --color-primary: var(--uy-green);
-  --color-primary-hover: #0c3025;
-  --color-primary-soft: #dcead3;
-  --color-accent: #5f8f46;
-  --color-accent-soft: #e7f0df;
+  --color-primary-hover: #18563f;
+  --color-primary-soft: #dcebe4;
+  --color-accent: #c9a227;
+  --color-accent-soft: #f3e9bd;
   --color-warning: #c57a35;
   --color-danger: var(--uy-danger);
   --color-border: var(--uy-line);
   --color-border-strong: rgba(18, 63, 49, 0.18);
   --color-text: var(--uy-ink);
   --color-muted: var(--uy-muted);
-  --color-inverse: #fffdf4;
+  --color-inverse: #ffffff;
 
   --radius-xs: 6px;
   --radius-sm: 8px;
@@ -82,7 +82,7 @@ html[data-theme="urban-yards"] {
 
 html[data-theme="urban-yards"] body:not(.is-login-screen) {
   --uy-green: var(--color-primary);
-  --uy-green-2: #1e5a45;
+  --uy-green-2: #12372a;
   --uy-paper: var(--color-bg);
   --uy-surface: var(--color-surface);
   --uy-card: var(--color-surface-solid);
@@ -7314,23 +7314,20 @@ body.is-login-screen .app-view {
 
 /* Apple-simple dashboard shell refresh */
 :root {
-  --uy-app-bg: #f7f5ee;
-  --uy-app-panel: rgba(255, 253, 247, .9);
-  --uy-app-panel-solid: #fffdf7;
-  --uy-app-line: rgba(23, 54, 43, .12);
-  --uy-app-soft: #eef4e8;
-  --uy-app-soft-2: #dde8d0;
-  --uy-app-ink: #102f25;
-  --uy-app-muted: #6f776e;
+  --uy-app-bg: #f4f1e8;
+  --uy-app-panel: rgba(255, 255, 255, .92);
+  --uy-app-panel-solid: #ffffff;
+  --uy-app-line: rgba(31, 41, 36, .12);
+  --uy-app-soft: #e6efe9;
+  --uy-app-soft-2: #d7e6de;
+  --uy-app-ink: #1f2924;
+  --uy-app-muted: #66736d;
   --uy-app-shadow: 0 18px 42px rgba(23, 54, 43, .08);
   --uy-app-shadow-soft: 0 10px 26px rgba(23, 54, 43, .055);
 }
 
 body:not(.is-login-screen) {
-  background:
-    radial-gradient(circle at 12% 8%, rgba(226, 235, 215, .85), transparent 28%),
-    radial-gradient(circle at 90% 0%, rgba(222, 199, 142, .18), transparent 24%),
-    var(--uy-app-bg) !important;
+  background: var(--uy-app-bg) !important;
   color: var(--uy-app-ink);
 }
 
@@ -7359,11 +7356,11 @@ body:not(.is-login-screen) .app-view.is-sidebar-open .dashboard-sidebar {
   max-height: calc(100dvh - (var(--uy-page-pad, 16px) * 2)) !important;
   padding: 0 !important;
   overflow: visible !important;
-  border: 1px solid rgba(23, 54, 43, .1) !important;
+  border: 1px solid #12372a !important;
   border-radius: 24px !important;
-  background: linear-gradient(145deg, rgba(255, 253, 247, .96), rgba(248, 246, 238, .9)) !important;
+  background: #12372a !important;
   box-shadow: var(--uy-app-shadow) !important;
-  color: var(--uy-app-ink) !important;
+  color: #ffffff !important;
   transform: none !important;
 }
 
@@ -7383,7 +7380,7 @@ body:not(.is-login-screen) .dashboard-brand {
   padding: 0 !important;
   border: 0 !important;
   background: transparent !important;
-  color: var(--uy-app-ink) !important;
+  color: #ffffff !important;
   text-decoration: none !important;
 }
 
@@ -7409,7 +7406,7 @@ body:not(.is-login-screen) .sign-out {
 
 body:not(.is-login-screen) .dashboard-brand strong {
   display: none;
-  color: var(--uy-app-ink) !important;
+  color: #ffffff !important;
   font-size: 1.05rem;
   line-height: 1;
   letter-spacing: .12em;
@@ -7419,7 +7416,7 @@ body:not(.is-login-screen) .dashboard-brand strong {
 body:not(.is-login-screen) .dashboard-brand small {
   display: block;
   margin-top: 0;
-  color: #72806f !important;
+  color: rgba(255, 255, 255, .7) !important;
   font-size: .66rem;
   font-weight: 800;
   letter-spacing: .18em;
@@ -7442,7 +7439,7 @@ body:not(.is-login-screen) .dashboard-nav a {
   border: 1px solid transparent !important;
   border-radius: 15px !important;
   background: transparent !important;
-  color: #192c24 !important;
+  color: rgba(255, 255, 255, .88) !important;
   font-size: .92rem !important;
   font-weight: 750 !important;
   text-decoration: none !important;
@@ -7450,17 +7447,17 @@ body:not(.is-login-screen) .dashboard-nav a {
 }
 
 body:not(.is-login-screen) .dashboard-nav a:hover {
-  background: rgba(233, 239, 224, .72) !important;
-  border-color: rgba(23, 54, 43, .08) !important;
+  background: rgba(255, 255, 255, .1) !important;
+  border-color: rgba(255, 255, 255, .12) !important;
   transform: translateY(-1px) !important;
 }
 
 body:not(.is-login-screen) .dashboard-nav a.is-active,
 body:not(.is-login-screen) .dashboard-nav a.is-active:hover {
-  background: linear-gradient(135deg, #e6efd9, #d7e5c9) !important;
-  border-color: rgba(23, 54, 43, .08) !important;
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, .72), 0 10px 22px rgba(23, 54, 43, .07) !important;
-  color: #143829 !important;
+  background: #1f6b4f !important;
+  border-color: rgba(255, 255, 255, .14) !important;
+  box-shadow: inset 3px 0 0 #c9a227, 0 10px 22px rgba(0, 0, 0, .14) !important;
+  color: #ffffff !important;
   filter: none !important;
 }
 
@@ -7469,8 +7466,8 @@ body:not(.is-login-screen) .nav-icon {
   place-items: center !important;
   width: 38px !important;
   height: 38px !important;
-  color: var(--uy-app-ink) !important;
-  background: rgba(226, 234, 216, .68) !important;
+  color: #ffffff !important;
+  background: rgba(255, 255, 255, .1) !important;
   border-radius: 13px !important;
   box-shadow: none !important;
   filter: none !important;
@@ -7503,8 +7500,15 @@ body:not(.is-login-screen) .dashboard-nav a.is-active .nav-icon svg,
 body:not(.is-login-screen) .dashboard-nav a:hover .nav-icon,
 body:not(.is-login-screen) .dashboard-nav a:hover .nav-icon img,
 body:not(.is-login-screen) .dashboard-nav a:hover .nav-icon svg {
-  color: var(--uy-app-ink) !important;
+  color: #ffffff !important;
   filter: none !important;
+}
+
+body:not(.is-login-screen) .dashboard-sidebar .nav-icon img,
+body:not(.is-login-screen) .dashboard-sidebar .nav-icon svg,
+body:not(.is-login-screen) .dashboard-sidebar .sidebar-notification-button img,
+body:not(.is-login-screen) .dashboard-sidebar .sign-out .button-icon img {
+  filter: brightness(0) invert(1) !important;
 }
 
 body:not(.is-login-screen) .dashboard-nav-group {
@@ -7532,12 +7536,10 @@ body:not(.is-login-screen) .dashboard-subnav {
   gap: 7px;
   padding: 20px 16px;
   overflow-y: auto;
-  border: 1px solid rgba(23, 54, 43, .12);
-  border-left-color: rgba(23, 54, 43, .16);
+  border: 1px solid #12372a;
+  border-left-color: rgba(255, 255, 255, .12);
   border-radius: 0 28px 28px 0;
-  background:
-    radial-gradient(circle at 100% 0, rgba(213, 227, 199, .52), transparent 38%),
-    rgba(255, 253, 247, .985);
+  background: #12372a;
   box-shadow: 18px 20px 42px rgba(18, 46, 35, .14);
   opacity: 0;
   pointer-events: none;
@@ -7555,8 +7557,8 @@ body:not(.is-login-screen) .dashboard-subnav::before {
   display: block;
   margin: 0 2px 8px;
   padding: 2px 3px 16px;
-  border-bottom: 1px solid rgba(23, 54, 43, .1);
-  color: #143829;
+  border-bottom: 1px solid rgba(255, 255, 255, .14);
+  color: #ffffff;
   content: attr(data-sidebar-subnav-title);
   font-size: 1.05rem;
   font-weight: 950;
@@ -7589,7 +7591,7 @@ body:not(.is-login-screen) .dashboard-nav .dashboard-subnav a {
   padding: 10px 12px !important;
   border: 1px solid transparent !important;
   border-radius: 12px !important;
-  color: #3c574b !important;
+  color: rgba(255, 255, 255, .84) !important;
   font-size: .84rem !important;
   font-weight: 800 !important;
   transition:
@@ -7611,21 +7613,21 @@ body:not(.is-login-screen) .dashboard-nav .dashboard-subnav a::after {
 }
 
 body:not(.is-login-screen) .dashboard-nav .dashboard-subnav a:hover {
-  border-color: rgba(61, 105, 73, .12) !important;
-  background: rgba(231, 239, 221, .7) !important;
-  color: #173e2e !important;
+  border-color: rgba(255, 255, 255, .12) !important;
+  background: rgba(255, 255, 255, .1) !important;
+  color: #ffffff !important;
   transform: none !important;
 }
 
 body:not(.is-login-screen) .dashboard-nav .dashboard-subnav a.is-active {
   border-color: transparent !important;
   background: transparent !important;
-  color: #143829 !important;
+  color: #ffffff !important;
   box-shadow: none !important;
 }
 
 body:not(.is-login-screen) .dashboard-nav .dashboard-subnav a.is-active::after {
-  background: #3f734d;
+  background: #c9a227;
   box-shadow: 0 0 0 3px rgba(63, 115, 77, .13);
   opacity: 1;
 }
@@ -8478,23 +8480,23 @@ body:not(.is-login-screen) .call-queue-empty-state {
 }
 
 .sidebar-profile strong {
-  color: var(--uy-app-ink);
+  color: #ffffff;
   font-size: .96rem;
 }
 
 .sidebar-profile small {
   margin-top: 2px;
-  color: var(--uy-app-muted);
+  color: rgba(255, 255, 255, .68);
   font-size: .82rem;
 }
 
 body:not(.is-login-screen) .sign-out {
   min-height: 38px !important;
   padding: 8px 12px !important;
-  border: 1px solid rgba(23, 54, 43, .09) !important;
+  border: 1px solid rgba(255, 255, 255, .16) !important;
   border-radius: 14px !important;
-  background: rgba(255, 253, 247, .72) !important;
-  color: #6d746d !important;
+  background: rgba(255, 255, 255, .08) !important;
+  color: #ffffff !important;
   box-shadow: none !important;
 }
 
@@ -8510,9 +8512,9 @@ body:not(.is-login-screen) .dashboard-main {
   margin: 0 !important;
   padding: clamp(22px, 2.4vw, 40px) !important;
   overflow: visible !important;
-  border: 1px solid rgba(23, 54, 43, .08) !important;
+  border: 1px solid rgba(31, 41, 36, .08) !important;
   border-radius: 26px !important;
-  background: rgba(255, 253, 247, .72) !important;
+  background: #f4f1e8 !important;
   box-shadow: var(--uy-app-shadow-soft) !important;
 }
 
@@ -14391,15 +14393,15 @@ body:not(.is-login-screen) .uy-standard-page :is(
    Scoped to authenticated dashboard work areas so the login button, sidebar,
    sidebar nav, and mobile nav keep their existing protected styling. */
 body:not(.is-login-screen) {
-  --button-forest-900: #263d2c;
-  --button-forest-800: #344d39;
-  --button-forest-700: #49664d;
-  --button-forest-600: #5f7d62;
-  --button-forest-500: #789179;
-  --button-forest-300: #b9c9b9;
-  --button-forest-200: #d5dfd4;
-  --button-forest-100: #edf2ec;
-  --button-forest-50: #f7f9f6;
+  --button-forest-900: #12372a;
+  --button-forest-800: #18563f;
+  --button-forest-700: #1f6b4f;
+  --button-forest-600: #327c60;
+  --button-forest-500: #57947a;
+  --button-forest-300: #a8c7b8;
+  --button-forest-200: #cee0d7;
+  --button-forest-100: #e6efe9;
+  --button-forest-50: #f4f8f6;
   --button-danger-700: #b42318;
   --button-danger-600: #d92d20;
   --button-danger-100: #fee4e2;

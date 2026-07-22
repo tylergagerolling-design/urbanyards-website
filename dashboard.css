@@ -20348,6 +20348,19 @@ body:not(.is-login-screen) .completed-ticket-actions {
   justify-content: flex-end;
 }
 
+/* Urban Forest exact card surface contract. */
+body:not(.is-login-screen) .dashboard-main :is(
+  article,
+  .panel,
+  .ticket-lane,
+  .ticket-board-controls,
+  .ticket-workflow-board,
+  .call-queue-panel,
+  .completed-ticket-archive
+) {
+  background-color: #ffffff !important;
+}
+
 @media (max-width: 900px) {
   body:not(.is-login-screen) .completed-ticket-card {
     grid-template-columns: 1fr;

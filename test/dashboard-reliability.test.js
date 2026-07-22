@@ -507,6 +507,7 @@ test("dashboard uses the Urban Forest color scheme", () => {
   assert.match(css, /--uy-ink: #1f2924/);
   assert.match(css, /dashboard-sidebar[\s\S]*background: #12372a !important/);
   assert.match(css, /dashboard-main[\s\S]*background: #f4f1e8 !important/);
+  assert.match(css, /Urban Forest exact card surface contract[\s\S]*background-color: #ffffff !important/);
 });
 
 test("owner Kanban cards omit letter-based assignee icons", () => {

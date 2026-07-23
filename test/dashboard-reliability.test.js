@@ -532,6 +532,15 @@ test("dashboard map preview does not stretch Google Maps internal overlays", () 
   assert.doesNotMatch(css, /\.dashboard-map-preview \.gm-style > div(?:\s*>\s*div)?\s*(?:,|\{)/);
 });
 
+test("Work Quick Add Visit stays inside its side card", () => {
+  const css = read("dashboard.css");
+
+  assert.match(css, /field-side-stack \.schedule-create-form[\s\S]*grid-template-columns: repeat\(2, minmax\(0, 1fr\)\)/);
+  assert.match(css, /field-side-stack \.schedule-create-form > \*[\s\S]*min-width: 0[\s\S]*max-width: 100%/);
+  assert.match(css, /field-side-stack \.schedule-create-form > \[name="service"\][\s\S]*grid-column: 1 \/ -1/);
+  assert.match(css, /field-side-stack \.schedule-create-form button\[type="submit"\][\s\S]*width: 100%/);
+});
+
 test("primary workspaces omit navigation cards already represented in the drawers", () => {
   const js = read("dashboard.js");
   const css = read("dashboard.css");

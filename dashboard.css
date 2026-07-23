@@ -17524,6 +17524,39 @@ body:not(.is-login-screen) .field-side-stack {
   display: grid;
   gap: 16px;
   align-content: start;
+  min-width: 0;
+}
+
+body:not(.is-login-screen) .field-side-stack .schedule-create-form {
+  width: 100%;
+  max-width: 100%;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  align-items: stretch;
+  box-sizing: border-box;
+  overflow: hidden;
+}
+
+body:not(.is-login-screen) .field-side-stack .schedule-create-form > * {
+  min-width: 0;
+  max-width: 100%;
+  box-sizing: border-box;
+}
+
+body:not(.is-login-screen) .field-side-stack .schedule-create-form > [name="service"],
+body:not(.is-login-screen) .field-side-stack .schedule-create-form .recurring-toggle,
+body:not(.is-login-screen) .field-side-stack .schedule-create-form button[type="submit"],
+body:not(.is-login-screen) .field-side-stack .schedule-create-form .recurring-controls {
+  grid-column: 1 / -1;
+}
+
+body:not(.is-login-screen) .field-side-stack .schedule-create-form .recurring-toggle,
+body:not(.is-login-screen) .field-side-stack .schedule-create-form button[type="submit"] {
+  justify-self: stretch;
+  width: 100%;
+}
+
+body:not(.is-login-screen) .field-side-stack .schedule-create-form .recurring-controls {
+  grid-template-columns: 1fr;
 }
 
 body:not(.is-login-screen) .ticket-lane,

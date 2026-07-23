@@ -17,7 +17,7 @@ const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3
 const EXPENSE_CATEGORIES = new Set(["Materials","Equipment","Fuel","Vehicle","Insurance","Software","Advertising","Office","Subcontractor","Labor","Permits and Fees","Professional Services","Rent","Utilities","Taxes","Meals","Other"]);
 const DELETABLE_FINANCIAL_ENTITIES = Object.freeze({
   expense: { table: "expenses", select: "id,expense_date,vendor_name,description,total,status,archived_at" },
-  invoice: { table: "invoices", select: "id,invoice_number,issue_date,total,status,archived_at" },
+  invoice: { table: "invoices", select: "id,invoice_number,issue_date,subtotal,tax,discount,deposit,amount_paid,status,archived_at" },
   vendor: { table: "vendors", select: "id,vendor_name,contact_name,status,archived_at" },
   document: { table: "financial_documents", select: "id,title,file_name,document_type,document_date,archived_at" }
 });

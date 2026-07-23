@@ -78,6 +78,7 @@ test("Money records use a recoverable Recently Deleted workflow", () => {
   assert.match(financialApiJs, /"archive-record", "restore-record", "delete-record-permanently"/);
   assert.match(financialApiJs, /requestedAction === "delete-record-permanently"[\s\S]*"admin:manage"/);
   assert.match(financialApiJs, /archived_at=not\.is\.null/);
+  assert.doesNotMatch(financialApiJs, /invoice_number,issue_date,total,status,archived_at/);
 });
 
 test("financial list endpoint enforces pagination, safe sorting, status, and search", () => {

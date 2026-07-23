@@ -14,6 +14,7 @@ const SORTS = new Set([
   "vendor_name.asc", "vendor_name.desc", "updated_at.desc"
 ]);
 const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+const EXPENSE_CATEGORIES = new Set(["Materials","Equipment","Fuel","Vehicle","Insurance","Software","Advertising","Office","Subcontractor","Labor","Permits and Fees","Professional Services","Rent","Utilities","Taxes","Meals","Other"]);
 
 function parseBody(event) {
   try {
@@ -112,6 +113,38 @@ async function handleAction(body, actor = {}) {
       })
     });
   }
+  if (action === "submit-expense") {
+    const ticketId = UUID_PATTERN.test(String(body.ticketId || "")) ? body.ticketId : null;
+    if (ticketId && ["field_worker", "worker"].includes(String(actor.role || ""))) {
+      const tickets = await supabaseAdminRequest(`job_tickets?id=eq.${encodeURIComponent(ticketId)}&select=id,assigned_user_id&limit=1`, { method: "GET" });
+      if (!tickets?.[0] || tickets[0].assigned_user_id !== actor.userId) {
+        const error = new Error("You can only submit expenses for tickets assigned to you.");
+        error.statusCode = 403;
+        throw error;
+      }
+    }
+    const total = Number(body.total);
+    if (!Number.isFinite(total) || total < 0) {
+      const error = new Error("Expense total must be a nonnegative number.");
+      error.statusCode = 400;
+      throw error;
+    }
+    return supabaseAdminRequest("expenses", {
+      method: "POST",
+      headers: { Prefer: "return=representation" },
+      body: JSON.stringify({
+        expense_date: safeDate(body.expenseDate, new Date().toISOString().slice(0, 10)),
+        ticket_id: ticketId,
+        vendor_name: safeText(body.vendorName, 120) || null,
+        category: EXPENSE_CATEGORIES.has(body.category) ? body.category : "Other",
+        description: safeText(body.description, 500) || null,
+        total,
+        status: "Pending Receipt",
+        created_by: actor.userId || null,
+        updated_by: actor.userId || null
+      })
+    });
+  }
   if (action === "invoice-detail") {
     if (!UUID_PATTERN.test(String(body.invoiceId || ""))) {
       const error = new Error("Invoice is required.");
@@ -143,7 +176,12 @@ exports.handler = async (event) => {
   let actor = null;
   try {
     body = parseBody(event);
-    const permission = ["create-invoice"].includes(String(body.action || "")) ? "money:write" : "money:read";
+    const requestedAction = String(body.action || "");
+    const permission = requestedAction === "submit-expense"
+      ? "operations:write"
+      : ["create-invoice"].includes(requestedAction)
+        ? "money:write"
+        : "money:read";
     const auth = await requirePermission(event, permission, { action: body.action });
     actor = auth.actor;
     if (!auth.ok) return json(auth.statusCode, { error: auth.error, requestId });

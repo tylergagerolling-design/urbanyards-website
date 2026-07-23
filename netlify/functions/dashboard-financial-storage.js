@@ -111,7 +111,10 @@ exports.handler = async (event) => {
     body = parseBody(event);
     const action = String(body.action || "");
     const permission = action === "signed-url" ? "money:read" : "money:write";
-    const auth = await requirePermission(event, permission, { action, entityType: "financial_document" });
+    let auth = await requirePermission(event, permission, { action, entityType: "financial_document" });
+    if (!auth.ok && action === "upload-expense-receipt") {
+      auth = await requirePermission(event, "operations:write", { action, entityType: "financial_document" });
+    }
     actor = auth.actor;
     if (!auth.ok) return json(auth.statusCode, { error: auth.error, requestId });
 
@@ -128,6 +131,20 @@ exports.handler = async (event) => {
 
     if (action === "upload-expense-receipt") {
       const expenseId = safeId(body.expenseId, "Expense");
+      if (["field_worker", "worker", "staff"].includes(String(actor.role || ""))) {
+        const expenses = await supabaseAdminRequest(`expenses?id=eq.${encodeURIComponent(expenseId)}&select=id,created_by,ticket_id&limit=1`, { method: "GET" });
+        const expense = expenses?.[0];
+        let assigned = false;
+        if (expense?.ticket_id) {
+          const tickets = await supabaseAdminRequest(`job_tickets?id=eq.${encodeURIComponent(expense.ticket_id)}&select=assigned_user_id&limit=1`, { method: "GET" });
+          assigned = tickets?.[0]?.assigned_user_id === actor.userId;
+        }
+        if (!expense || (expense.created_by !== actor.userId && !assigned)) {
+          const error = new Error("You can only upload receipts for your own or assigned expenses.");
+          error.statusCode = 403;
+          throw error;
+        }
+      }
       const businessId = /^[0-9a-f-]{36}$/i.test(String(body.businessId || "")) ? body.businessId : "default";
       const fileId = crypto.randomUUID();
       const upload = validateUpload(body);
@@ -149,6 +166,22 @@ exports.handler = async (event) => {
           file_name: upload.fileName,
           mime_type: upload.mimeType,
           file_size: upload.buffer.length,
+          uploaded_by: actor.userId || null
+        })
+      });
+      await supabaseAdminRequest("financial_documents", {
+        method: "POST",
+        body: JSON.stringify({
+          business_id: /^[0-9a-f-]{36}$/i.test(businessId) ? businessId : null,
+          document_type: "Receipt",
+          title: upload.fileName,
+          file_bucket: BUCKET,
+          file_path: path,
+          file_name: upload.fileName,
+          mime_type: upload.mimeType,
+          file_size: upload.buffer.length,
+          expense_id: expenseId,
+          document_date: new Date().toISOString().slice(0, 10),
           uploaded_by: actor.userId || null
         })
       });

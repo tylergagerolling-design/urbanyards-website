@@ -13337,11 +13337,13 @@
           </section>
           <aside class="field-side-stack">
             <section class="ticket-lane">
+              <input type="file" data-field-expense-receipt-input accept=".pdf,.jpg,.jpeg,.png,.heic,.heif" hidden>
               <div class="ticket-lane-heading">
                 <div>
                   <h3>Quick Add Visit</h3>
                   <p>Create a scheduled visit without leaving Work.</p>
                 </div>
+                <button type="button" data-action="submit-field-expense">Submit Expense</button>
               </div>
               <form class="schedule-create-form ticket-create-form" data-job-create-form>
                 <input name="visit_date" type="date" required>
@@ -20265,7 +20267,7 @@ Requirements:
       const target = event.target;
       if (!target) return;
 
-      if (target.matches("[data-expense-receipt-input]")) {
+      if (target.matches("[data-expense-receipt-input], [data-field-expense-receipt-input]")) {
         const file = target.files?.[0];
         const expenseId = state.moneyReceiptExpenseId;
         target.value = "";
@@ -20763,6 +20765,33 @@ Requirements:
       if (action === "money-tab") {
         state.moneyView = target.dataset.moneyView || "overview";
         renderMoneyWorkspace();
+        return;
+      }
+
+      if (action === "submit-field-expense") {
+        const total = Number(window.prompt("Expense total", "0") || 0);
+        if (!(total >= 0)) return;
+        const description = window.prompt("What was purchased?") || "";
+        const vendorName = window.prompt("Vendor") || "";
+        const ticketId = window.prompt("Assigned ticket ID (optional)") || "";
+        try {
+          const rows = await dashboardFinancialRequest("submit-expense", {
+            expenseDate: todayKey(),
+            total,
+            description,
+            vendorName,
+            ticketId,
+            category: "Other"
+          });
+          const expense = rows?.[0];
+          if (expense?.id && window.confirm("Expense saved as Pending Receipt. Upload the receipt now?")) {
+            state.moneyReceiptExpenseId = expense.id;
+            qs("[data-field-expense-receipt-input]")?.click();
+          }
+          setDashboardState("Expense submitted.");
+        } catch (error) {
+          setDashboardState(error.message || "Expense could not be submitted.", "error");
+        }
         return;
       }
 

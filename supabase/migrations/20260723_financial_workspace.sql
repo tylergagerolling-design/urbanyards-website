@@ -3,6 +3,15 @@
 
 create extension if not exists pgcrypto;
 
+alter table public.profiles drop constraint if exists profiles_role_check;
+alter table public.profiles add constraint profiles_role_check check (role in (
+  'owner','admin','manager','accountant','sales_outreach','field_worker','worker','staff','viewer','client'
+));
+alter table public.roles drop constraint if exists roles_role_check;
+alter table public.roles add constraint roles_role_check check (role in (
+  'owner','admin','manager','accountant','sales_outreach','field_worker','worker','staff','viewer','client'
+));
+
 create or replace function public.financial_money_role()
 returns boolean
 language sql

@@ -11,6 +11,8 @@ const migration = fs.readFileSync(
 const dashboardJs = fs.readFileSync(path.join(root, "dashboard.js"), "utf8");
 const dashboardCss = fs.readFileSync(path.join(root, "dashboard.css"), "utf8");
 const authJs = fs.readFileSync(path.join(root, "netlify", "functions", "lib", "dashboard-auth.js"), "utf8");
+const financialApiJs = fs.readFileSync(path.join(root, "netlify", "functions", "dashboard-financial.js"), "utf8");
+const financialStorageJs = fs.readFileSync(path.join(root, "netlify", "functions", "dashboard-financial-storage.js"), "utf8");
 const { expensePath } = require("../netlify/functions/dashboard-financial")._internals;
 const storage = require("../netlify/functions/dashboard-financial-storage")._internals;
 
@@ -92,4 +94,12 @@ test("Money permissions and private receipt upload are server enforced", () => {
   assert.equal(upload.ext, "pdf");
   assert.equal(storage.safePath("financial-documents/default/expenses/abc/file.pdf"), "financial-documents/default/expenses/abc/file.pdf");
   assert.throws(() => storage.safePath("../secret.txt"), /Invalid financial document path/);
+});
+
+test("field expense submission and receipt upload are scoped by server-side ownership", () => {
+  assert.match(financialApiJs, /requestedAction === "submit-expense"[\s\S]*operations:write/);
+  assert.match(financialApiJs, /assigned_user_id !== actor\.userId/);
+  assert.match(financialStorageJs, /expense\.created_by !== actor\.userId && !assigned/);
+  assert.match(dashboardJs, /data-action="submit-field-expense"/);
+  assert.match(dashboardJs, /data-field-expense-receipt-input/);
 });

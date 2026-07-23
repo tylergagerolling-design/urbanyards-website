@@ -21561,6 +21561,84 @@ body:not(.is-login-screen) .financial-card-list article > div {
   gap: 0.75rem;
 }
 
+body:not(.is-login-screen) .invoice-grid tbody tr {
+  cursor: pointer;
+}
+
+body:not(.is-login-screen) .invoice-grid tbody tr:hover td,
+body:not(.is-login-screen) .invoice-grid tbody tr:focus td {
+  background: #edf5ed;
+}
+
+body:not(.is-login-screen) .financial-invoice-drawer {
+  display: grid;
+  gap: 1rem;
+  min-width: 0;
+}
+
+body:not(.is-login-screen) .financial-invoice-drawer .drawer-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.75rem;
+}
+
+body:not(.is-login-screen) .financial-invoice-drawer label {
+  display: grid;
+  gap: 0.35rem;
+  min-width: 0;
+  font-weight: 750;
+}
+
+body:not(.is-login-screen) .financial-invoice-drawer input,
+body:not(.is-login-screen) .financial-invoice-drawer select,
+body:not(.is-login-screen) .financial-invoice-drawer textarea {
+  width: 100%;
+}
+
+body:not(.is-login-screen) .invoice-totals {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.65rem;
+  margin: 1rem 0;
+}
+
+body:not(.is-login-screen) .invoice-totals div,
+body:not(.is-login-screen) .invoice-line-list article {
+  display: flex;
+  justify-content: space-between;
+  gap: 0.75rem;
+  padding: 0.75rem;
+  border: 1px solid rgba(31, 107, 79, 0.14);
+  border-radius: 12px;
+  background: #f7faf6;
+}
+
+body:not(.is-login-screen) .invoice-totals div {
+  flex-direction: column;
+}
+
+body:not(.is-login-screen) .invoice-line-list {
+  display: grid;
+  gap: 0.5rem;
+}
+
+@media print {
+  body:not(.is-login-screen) .dashboard-sidebar,
+  body:not(.is-login-screen) .dashboard-topbar,
+  body:not(.is-login-screen) .drawer-close,
+  body:not(.is-login-screen) .financial-invoice-drawer .drawer-actions {
+    display: none !important;
+  }
+  body:not(.is-login-screen) .detail-drawer,
+  body:not(.is-login-screen) .detail-drawer .drawer-panel {
+    position: static !important;
+    width: 100% !important;
+    max-width: none !important;
+    overflow: visible !important;
+    box-shadow: none !important;
+  }
+}
+
 @media (max-width: 980px) {
   body:not(.is-login-screen) .financial-metrics,
   body:not(.is-login-screen) .financial-overview-grid,
@@ -21580,4 +21658,8 @@ body:not(.is-login-screen) .financial-card-list article > div {
     flex-direction: column;
   }
   body:not(.is-login-screen) .money-grid-search input { width: 100%; }
+  body:not(.is-login-screen) .financial-invoice-drawer .drawer-grid,
+  body:not(.is-login-screen) .invoice-totals {
+    grid-template-columns: 1fr;
+  }
 }

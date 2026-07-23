@@ -13,6 +13,7 @@ const SORTS = new Set([
   "expense_date.desc", "expense_date.asc", "total.desc", "total.asc",
   "vendor_name.asc", "vendor_name.desc", "updated_at.desc"
 ]);
+const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
 function parseBody(event) {
   try {
@@ -53,7 +54,7 @@ function expensePath(body) {
   return `expenses?${params}`;
 }
 
-async function handleAction(body) {
+async function handleAction(body, actor = {}) {
   const action = String(body.action || "");
   if (action === "overview") {
     const today = new Date().toISOString().slice(0, 10);
@@ -87,6 +88,46 @@ async function handleAction(body) {
       { method: "GET" }
     );
   }
+  if (action === "create-invoice") {
+    const issued = await supabaseAdminRequest("rpc/next_financial_invoice_number", {
+      method: "POST",
+      body: JSON.stringify({ target_business_id: body.businessId || null })
+    });
+    const invoiceNumber = typeof issued === "string" ? issued : issued?.[0] || issued;
+    return supabaseAdminRequest("invoices", {
+      method: "POST",
+      headers: { Prefer: "return=representation" },
+      body: JSON.stringify({
+        business_id: body.businessId || null,
+        invoice_number: invoiceNumber,
+        status: "Draft",
+        issue_date: safeDate(body.issueDate, new Date().toISOString().slice(0, 10)),
+        due_date: safeDate(body.dueDate, new Date().toISOString().slice(0, 10)),
+        client_id: UUID_PATTERN.test(String(body.clientId || "")) ? body.clientId : null,
+        property_id: UUID_PATTERN.test(String(body.propertyId || "")) ? body.propertyId : null,
+        ticket_id: UUID_PATTERN.test(String(body.ticketId || "")) ? body.ticketId : null,
+        subtotal: Math.max(0, Number(body.subtotal || 0)),
+        created_by: actor.userId || null,
+        updated_by: actor.userId || null
+      })
+    });
+  }
+  if (action === "invoice-detail") {
+    if (!UUID_PATTERN.test(String(body.invoiceId || ""))) {
+      const error = new Error("Invoice is required.");
+      error.statusCode = 400;
+      throw error;
+    }
+    const invoiceId = encodeURIComponent(body.invoiceId);
+    const [invoice, lineItems, payments, attachments, activity] = await Promise.all([
+      supabaseAdminRequest(`invoices?id=eq.${invoiceId}&select=*&limit=1`, { method: "GET" }),
+      supabaseAdminRequest(`invoice_line_items?invoice_id=eq.${invoiceId}&select=*&order=position.asc&limit=200`, { method: "GET" }),
+      supabaseAdminRequest(`invoice_payments?invoice_id=eq.${invoiceId}&select=*&order=payment_date.desc&limit=100`, { method: "GET" }),
+      supabaseAdminRequest(`invoice_attachments?invoice_id=eq.${invoiceId}&select=*&archived_at=is.null&order=created_at.desc&limit=100`, { method: "GET" }),
+      supabaseAdminRequest(`financial_activity?entity_type=eq.invoice&entity_id=eq.${invoiceId}&select=*&order=created_at.desc&limit=100`, { method: "GET" })
+    ]);
+    return { invoice: invoice?.[0] || null, lineItems, payments, attachments, activity };
+  }
   const error = new Error("Unsupported financial action.");
   error.statusCode = 400;
   throw error;
@@ -102,10 +143,11 @@ exports.handler = async (event) => {
   let actor = null;
   try {
     body = parseBody(event);
-    const auth = await requirePermission(event, "money:read", { action: body.action });
+    const permission = ["create-invoice"].includes(String(body.action || "")) ? "money:write" : "money:read";
+    const auth = await requirePermission(event, permission, { action: body.action });
     actor = auth.actor;
     if (!auth.ok) return json(auth.statusCode, { error: auth.error, requestId });
-    const data = await handleAction(body);
+    const data = await handleAction(body, actor);
     return json(200, { ok: true, data, requestId });
   } catch (error) {
     await writeSystemError({ route: "dashboard-financial", error, actor, metadata: { action: body?.action } });

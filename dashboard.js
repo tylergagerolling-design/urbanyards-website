@@ -336,6 +336,7 @@
     moneySaveState: "",
     moneyUndo: null,
     moneyReceiptExpenseId: "",
+    moneyInvoiceDetail: null,
     ticketBoardSearch: "",
     ticketBoardStageFilter: "All",
     ticketBoardOwnerFilter: "All",
@@ -10848,6 +10849,7 @@
         </label>
         <div class="drawer-actions ticket-completion-actions">
           <button type="button" data-action="save-ticket-completion" data-id="${escapeHtml(ticket.id)}">${buttonContent("Save Checklist", "save")}</button>
+          ${canManageMoneyWorkflow() ? `<button type="button" class="secondary-action" data-action="create-financial-invoice-from-ticket" data-id="${escapeHtml(ticket.id)}">${buttonContent("Create Draft Invoice", "create-invoice")}</button>` : ""}
           <button type="button" data-action="owner-finalize-ticket" data-id="${escapeHtml(ticket.id)}"${canClose ? "" : " disabled aria-disabled=\"true\""}>${buttonContent("Save & Close Ticket", "complete-reminder")}</button>
         </div>
         ${canClose ? `<p class="ticket-drawer-note">Closing is available when every line is Complete or N/A.</p>` : `<p class="ticket-drawer-note">You can fill this out now. Save & Close becomes available after the job is marked complete.</p>`}
@@ -14456,11 +14458,102 @@ Requirements:
     </section>`;
   }
 
+  function financialCalculator() {
+    return window.UrbanYardsFinancial || {
+      invoiceSummary: (invoice) => {
+        const total = Number(invoice.subtotal || 0) + Number(invoice.tax || 0) - Number(invoice.discount || 0);
+        return { total, balance: Math.max(0, total - Number(invoice.deposit || 0) - Number(invoice.amount_paid || 0)) };
+      },
+      effectiveInvoiceStatus: (invoice) => invoice.status || "Draft"
+    };
+  }
+
+  function renderInvoiceWorkspace() {
+    const invoices = state.data.financial.invoices || [];
+    return `<section class="invoice-workspace" aria-label="Invoice spreadsheet">
+      <div class="money-grid-toolbar">
+        <div><button type="button" data-action="create-financial-invoice">+ New Invoice</button></div>
+        <p>Open a row to edit line items, payments, Square links, attachments, and notes.</p>
+      </div>
+      <div class="money-grid-shell">
+        <table class="money-grid invoice-grid">
+          <thead><tr><th>Invoice Number</th><th>Client</th><th>Property</th><th>Job / Ticket</th><th>Issue Date</th><th>Due Date</th><th>Subtotal</th><th>Tax</th><th>Discount</th><th>Deposit</th><th>Total</th><th>Amount Paid</th><th>Balance</th><th>Status</th><th>Payment Method</th><th>Square Invoice</th><th>Last Sent</th></tr></thead>
+          <tbody>${invoices.length ? invoices.map((invoice) => {
+            const summary = financialCalculator().invoiceSummary(invoice);
+            const status = financialCalculator().effectiveInvoiceStatus(invoice);
+            return `<tr data-action="open-financial-invoice" data-id="${escapeHtml(invoice.id)}" tabindex="0">
+              <td><strong>${escapeHtml(invoice.invoice_number || "Draft")}</strong></td>
+              <td>${escapeHtml(invoice.client_id || "Not linked")}</td>
+              <td>${escapeHtml(invoice.property_id || "Not linked")}</td>
+              <td>${escapeHtml(invoice.ticket_id || "Not linked")}</td>
+              <td>${escapeHtml(invoice.issue_date || "")}</td>
+              <td>${escapeHtml(invoice.due_date || "")}</td>
+              <td>${moneyCurrency(invoice.subtotal)}</td><td>${moneyCurrency(invoice.tax)}</td><td>${moneyCurrency(invoice.discount)}</td><td>${moneyCurrency(invoice.deposit)}</td>
+              <td class="money-calculated">${moneyCurrency(summary.total)}</td><td>${moneyCurrency(invoice.amount_paid)}</td><td class="money-calculated">${moneyCurrency(summary.balance)}</td>
+              <td><span class="status-badge">${escapeHtml(status)}</span></td>
+              <td>${escapeHtml(invoice.payment_method || "")}</td>
+              <td>${invoice.square_invoice_url ? `<a href="${escapeHtml(invoice.square_invoice_url)}" target="_blank" rel="noopener">Open Square</a>` : "Not linked"}</td>
+              <td>${escapeHtml(invoice.last_sent_at ? formatDate(invoice.last_sent_at) : "")}</td>
+            </tr>`;
+          }).join("") : `<tr><td colspan="17">${emptyState("No invoices are filed yet. Create one manually or from a completed ticket.")}</td></tr>`}</tbody>
+        </table>
+      </div>
+    </section>`;
+  }
+
+  async function openFinancialInvoiceDrawer(id) {
+    if (!els.detailDrawer || !els.detailContent) return;
+    openDetailDrawer();
+    els.detailContent.innerHTML = `<section class="money-module-state" role="status"><strong>Loading invoice…</strong></section>`;
+    try {
+      const detail = await dashboardFinancialRequest("invoice-detail", { invoiceId: id });
+      state.moneyInvoiceDetail = detail;
+      const invoice = detail.invoice || {};
+      const summary = financialCalculator().invoiceSummary(invoice, detail.lineItems || []);
+      els.detailContent.innerHTML = `<div class="financial-invoice-drawer">
+        <header><p class="eyebrow">Invoice Detail</p><h3>${escapeHtml(invoice.invoice_number || "Draft Invoice")}</h3><p>${escapeHtml(financialCalculator().effectiveInvoiceStatus(invoice))}</p></header>
+        <form data-financial-invoice-form data-id="${escapeHtml(invoice.id || id)}" class="drawer-form">
+          <div class="drawer-grid">
+            <label>Client ID<input name="client_id" value="${escapeHtml(invoice.client_id || "")}"></label>
+            <label>Property ID<input name="property_id" value="${escapeHtml(invoice.property_id || "")}"></label>
+            <label>Ticket ID<input name="ticket_id" value="${escapeHtml(invoice.ticket_id || "")}"></label>
+            <label>Issue date<input name="issue_date" type="date" value="${escapeHtml(invoice.issue_date || "")}"></label>
+            <label>Due date<input name="due_date" type="date" value="${escapeHtml(invoice.due_date || "")}"></label>
+            <label>Tax<input name="tax" type="number" min="0" step="0.01" value="${escapeHtml(String(invoice.tax || 0))}"></label>
+            <label>Discount<input name="discount" type="number" min="0" step="0.01" value="${escapeHtml(String(invoice.discount || 0))}"></label>
+            <label>Deposit<input name="deposit" type="number" min="0" step="0.01" value="${escapeHtml(String(invoice.deposit || 0))}"></label>
+            <label>Amount paid<input name="amount_paid" type="number" min="0" step="0.01" value="${escapeHtml(String(invoice.amount_paid || 0))}"></label>
+            <label>Status<select name="status">${expenseSelectOptions(["Draft","Ready","Sent","Viewed","Partially Paid","Paid","Overdue","Voided","Uncollectible"], invoice.status || "Draft")}</select></label>
+            <label class="span-full">Square invoice URL<input name="square_invoice_url" type="url" value="${escapeHtml(invoice.square_invoice_url || "")}"></label>
+            <label class="span-full">Internal notes<textarea name="internal_notes" rows="3">${escapeHtml(invoice.internal_notes || "")}</textarea></label>
+            <label class="span-full">Client-facing notes<textarea name="client_notes" rows="3">${escapeHtml(invoice.client_notes || "")}</textarea></label>
+          </div>
+          <section class="invoice-totals"><div><span>Subtotal</span><strong>${moneyCurrency(summary.subtotal)}</strong></div><div><span>Total</span><strong>${moneyCurrency(summary.total)}</strong></div><div><span>Balance</span><strong>${moneyCurrency(summary.balance)}</strong></div></section>
+          <section><div class="ticket-lane-heading"><div><h4>Line Items</h4></div><button type="button" data-action="add-invoice-line" data-id="${escapeHtml(invoice.id || id)}">Add Line</button></div>
+            <div class="invoice-line-list">${(detail.lineItems || []).length ? detail.lineItems.map((line) => `<article><strong>${escapeHtml(line.description)}</strong><span>${escapeHtml(`${line.quantity} ${line.unit} × ${moneyCurrency(line.unit_price)}`)}</span><b>${moneyCurrency(financialCalculator().lineTotal?.(line) || line.quantity * line.unit_price)}</b></article>`).join("") : emptyState("No line items yet.")}</div>
+          </section>
+          <section><div class="ticket-lane-heading"><div><h4>Payment History</h4></div><button type="button" data-action="record-invoice-payment" data-id="${escapeHtml(invoice.id || id)}">Record Payment</button></div>
+            <div class="invoice-line-list">${(detail.payments || []).length ? detail.payments.map((payment) => `<article><strong>${moneyCurrency(payment.amount)}</strong><span>${escapeHtml(payment.payment_date || "")}</span><b>${escapeHtml(payment.payment_method || "")}</b></article>`).join("") : emptyState("No payments recorded.")}</div>
+          </section>
+          <div class="drawer-actions">
+            <button type="submit">${buttonContent("Save", "save")}</button>
+            <button type="button" data-action="duplicate-financial-invoice" data-id="${escapeHtml(invoice.id || id)}">Duplicate</button>
+            <button type="button" data-action="print-financial-invoice">Print / PDF</button>
+            ${invoice.square_invoice_url ? `<a class="button-link" href="${escapeHtml(invoice.square_invoice_url)}" target="_blank" rel="noopener">Open Square Invoice</a>` : ""}
+          </div>
+        </form>
+      </div>`;
+    } catch (error) {
+      els.detailContent.innerHTML = `<section class="money-module-state is-error"><strong>Invoice could not be opened</strong><p>${escapeHtml(error.message)}</p></section>`;
+    }
+  }
+
   function renderMoneyActiveView() {
     if (state.moneyLoading) return `<section class="money-module-state" role="status"><strong>Loading ${escapeHtml(state.moneyView)}…</strong><p>The rest of the dashboard remains available.</p></section>`;
     if (state.moneyError) return `<section class="money-module-state is-error" role="alert"><strong>Could not load financial records</strong><p>${escapeHtml(state.moneyError)}</p><button type="button" data-action="retry-money-view">Retry</button></section>`;
     if (state.moneyView === "overview") return renderMoneyOverview();
     if (state.moneyView === "expenses") return renderExpenseWorkspace();
+    if (state.moneyView === "invoicing") return renderInvoiceWorkspace();
     if (state.moneyView === "vendors") return renderVendorsWorkspace();
     return `<section class="money-module-state"><strong>${escapeHtml(MONEY_TABS.find((item) => item.key === state.moneyView)?.label || "Money")}</strong><p>This module is being connected to the same financial record foundation.</p></section>`;
   }
@@ -20610,6 +20703,119 @@ Requirements:
         return;
       }
 
+      if (action === "create-financial-invoice") {
+        try {
+          const result = await dashboardFinancialRequest("create-invoice", {
+            issueDate: todayKey(),
+            dueDate: addDaysKey(todayKey(), 30)
+          });
+          const invoice = result?.[0];
+          if (invoice) state.data.financial.invoices.unshift(invoice);
+          renderMoneyWorkspace();
+          if (invoice?.id) await openFinancialInvoiceDrawer(invoice.id);
+          setDashboardState("Draft invoice created.");
+        } catch (error) {
+          setDashboardState(error.message || "Invoice could not be created.", "error");
+        }
+        return;
+      }
+
+      if (action === "create-financial-invoice-from-ticket") {
+        const ticket = findTicketForDrawer("ticket", id);
+        if (!ticket) {
+          setDashboardState("The unified ticket could not be found.", "error");
+          return;
+        }
+        try {
+          const result = await dashboardFinancialRequest("create-invoice", {
+            issueDate: todayKey(),
+            dueDate: addDaysKey(todayKey(), 30),
+            clientId: ticket.clientId,
+            propertyId: ticket.propertyId,
+            ticketId: ticket.id,
+            subtotal: ticket.proposedPrice || ticket.quotedPrice || 0
+          });
+          state.moneyLoadedViews.delete("invoicing");
+          if (result?.[0]?.id) await openFinancialInvoiceDrawer(result[0].id);
+          setDashboardState("Draft invoice created from the ticket. Review it before saving or sending.");
+        } catch (error) {
+          setDashboardState(error.message || "Draft invoice could not be created.", "error");
+        }
+        return;
+      }
+
+      if (action === "open-financial-invoice") {
+        await openFinancialInvoiceDrawer(id);
+        return;
+      }
+
+      if (action === "add-invoice-line") {
+        const description = window.prompt("Line item description");
+        if (!description?.trim()) return;
+        const price = Number(window.prompt("Unit price", "0") || 0);
+        try {
+          await supabaseRestRequest("invoice_line_items", {
+            method: "POST",
+            headers: { Prefer: "return=representation" },
+            body: JSON.stringify({ invoice_id: id, description: description.trim(), item_type: "Service", quantity: 1, unit: "Each", unit_price: price, position: state.moneyInvoiceDetail?.lineItems?.length || 0 })
+          });
+          await openFinancialInvoiceDrawer(id);
+          setDashboardState("Invoice line added.");
+        } catch (error) {
+          setDashboardState(error.message || "Invoice line could not be added.", "error");
+        }
+        return;
+      }
+
+      if (action === "record-invoice-payment") {
+        const amount = Number(window.prompt("Payment amount", "0") || 0);
+        if (!(amount > 0)) return;
+        const paymentMethod = window.prompt("Payment method", "Square Checking") || "Other";
+        try {
+          await supabaseRestRequest("invoice_payments", {
+            method: "POST",
+            body: JSON.stringify({ invoice_id: id, payment_date: todayKey(), amount, payment_method: paymentMethod })
+          });
+          const invoice = state.moneyInvoiceDetail?.invoice || {};
+          await supabaseRestRequest(`invoices?id=eq.${encodeURIComponent(id)}`, {
+            method: "PATCH",
+            body: JSON.stringify({ amount_paid: Number(invoice.amount_paid || 0) + amount })
+          });
+          await openFinancialInvoiceDrawer(id);
+          state.moneyLoadedViews.delete("invoicing");
+          setDashboardState("Payment recorded.");
+        } catch (error) {
+          setDashboardState(error.message || "Payment could not be recorded.", "error");
+        }
+        return;
+      }
+
+      if (action === "print-financial-invoice") {
+        window.print();
+        return;
+      }
+
+      if (action === "duplicate-financial-invoice") {
+        try {
+          const source = state.moneyInvoiceDetail?.invoice || {};
+          const result = await dashboardFinancialRequest("create-invoice", {
+            issueDate: todayKey(),
+            dueDate: addDaysKey(todayKey(), 30),
+            clientId: source.client_id,
+            propertyId: source.property_id,
+            ticketId: source.ticket_id
+          });
+          state.moneyLoadedViews.delete("invoicing");
+          closeSubmissionDrawer();
+          await loadMoneyView("invoicing", { force: true });
+          if (result?.[0]?.id) await openFinancialInvoiceDrawer(result[0].id);
+          setDashboardState("Invoice duplicated as a new draft.");
+        } catch (error) {
+          setDashboardState(error.message || "Invoice could not be duplicated.", "error");
+        }
+        return;
+      }
+
       if (action === "retry-money-view") {
         state.moneyError = "";
         state.moneyLoadedViews.delete(state.moneyView);
@@ -23282,7 +23488,42 @@ Requirements:
     });
 
   els.appView.addEventListener("submit", async (event) => {
-      if (event.target.matches("[data-call-queue-outcome-form]")) {
+      if (event.target.matches("[data-financial-invoice-form]")) {
+        event.preventDefault();
+        const id = event.target.dataset.id;
+        const data = new FormData(event.target);
+        const nullableId = (name) => {
+          const value = String(data.get(name) || "").trim();
+          return value || null;
+        };
+        const payload = {
+          client_id: nullableId("client_id"),
+          property_id: nullableId("property_id"),
+          ticket_id: nullableId("ticket_id"),
+          issue_date: nullableId("issue_date"),
+          due_date: nullableId("due_date"),
+          tax: Number(data.get("tax") || 0),
+          discount: Number(data.get("discount") || 0),
+          deposit: Number(data.get("deposit") || 0),
+          amount_paid: Number(data.get("amount_paid") || 0),
+          status: String(data.get("status") || "Draft"),
+          square_invoice_url: nullableId("square_invoice_url"),
+          internal_notes: nullableId("internal_notes"),
+          client_notes: nullableId("client_notes")
+        };
+        try {
+          await supabaseRestRequest(`invoices?id=eq.${encodeURIComponent(id)}`, {
+            method: "PATCH",
+            headers: { Prefer: "return=representation" },
+            body: JSON.stringify(payload)
+          });
+          state.moneyLoadedViews.delete("invoicing");
+          await openFinancialInvoiceDrawer(id);
+          setDashboardState("Invoice saved.");
+        } catch (error) {
+          setDashboardState(error.message || "Invoice could not be saved.", "error");
+        }
+      } else if (event.target.matches("[data-call-queue-outcome-form]")) {
         event.preventDefault();
         const id = event.target.dataset.id || "";
         const prospect = findOutreachProspect(id);

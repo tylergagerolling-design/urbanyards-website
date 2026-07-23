@@ -15,6 +15,12 @@ const SORTS = new Set([
 ]);
 const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 const EXPENSE_CATEGORIES = new Set(["Materials","Equipment","Fuel","Vehicle","Insurance","Software","Advertising","Office","Subcontractor","Labor","Permits and Fees","Professional Services","Rent","Utilities","Taxes","Meals","Other"]);
+const DELETABLE_FINANCIAL_ENTITIES = Object.freeze({
+  expense: { table: "expenses", select: "id,expense_date,vendor_name,description,total,status,archived_at" },
+  invoice: { table: "invoices", select: "id,invoice_number,issue_date,total,status,archived_at" },
+  vendor: { table: "vendors", select: "id,vendor_name,contact_name,status,archived_at" },
+  document: { table: "financial_documents", select: "id,title,file_name,document_type,document_date,archived_at" }
+});
 
 function parseBody(event) {
   try {
@@ -57,6 +63,58 @@ function expensePath(body) {
 
 async function handleAction(body, actor = {}) {
   const action = String(body.action || "");
+  if (action === "list-deleted") {
+    const entries = await Promise.all(Object.entries(DELETABLE_FINANCIAL_ENTITIES).map(async ([entityType, config]) => {
+      const rows = await supabaseAdminRequest(
+        `${config.table}?select=${config.select}&archived_at=not.is.null&order=archived_at.desc&limit=100`,
+        { method: "GET" }
+      );
+      return (rows || []).map((row) => ({ entityType, ...row }));
+    }));
+    return entries.flat().sort((left, right) => String(right.archived_at || "").localeCompare(String(left.archived_at || "")));
+  }
+  if (["archive-record", "restore-record", "delete-record-permanently"].includes(action)) {
+    const entityType = String(body.entityType || "");
+    const config = DELETABLE_FINANCIAL_ENTITIES[entityType];
+    const id = String(body.id || "");
+    if (!config || !UUID_PATTERN.test(id)) {
+      const error = new Error("A valid financial record is required.");
+      error.statusCode = 400;
+      throw error;
+    }
+    const path = `${config.table}?id=eq.${encodeURIComponent(id)}`;
+    if (action === "delete-record-permanently") {
+      await supabaseAdminRequest(path, { method: "DELETE" });
+      await supabaseAdminRequest("financial_activity", {
+        method: "POST",
+        body: JSON.stringify({
+          entity_type: entityType,
+          entity_id: null,
+          action: "permanently_deleted",
+          details: { deleted_record_id: id },
+          actor_user_id: actor.userId || null
+        })
+      });
+      return { id, entityType, permanentlyDeleted: true };
+    }
+    const archivedAt = action === "archive-record" ? new Date().toISOString() : null;
+    const rows = await supabaseAdminRequest(path, {
+      method: "PATCH",
+      headers: { Prefer: "return=representation" },
+      body: JSON.stringify({ archived_at: archivedAt })
+    });
+    await supabaseAdminRequest("financial_activity", {
+      method: "POST",
+      body: JSON.stringify({
+        entity_type: entityType,
+        entity_id: id,
+        action: action === "archive-record" ? "moved_to_recently_deleted" : "restored",
+        details: {},
+        actor_user_id: actor.userId || null
+      })
+    });
+    return rows?.[0] || { id, entityType, archived_at: archivedAt };
+  }
   if (action === "overview") {
     const today = new Date().toISOString().slice(0, 10);
     const start = safeDate(body.start, `${today.slice(0, 8)}01`);
@@ -179,7 +237,9 @@ exports.handler = async (event) => {
     const requestedAction = String(body.action || "");
     const permission = requestedAction === "submit-expense"
       ? "operations:write"
-      : ["create-invoice"].includes(requestedAction)
+      : requestedAction === "delete-record-permanently"
+        ? "admin:manage"
+      : ["create-invoice", "archive-record", "restore-record"].includes(requestedAction)
         ? "money:write"
         : "money:read";
     const auth = await requirePermission(event, permission, { action: body.action });

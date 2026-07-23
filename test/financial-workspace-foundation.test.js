@@ -68,6 +68,18 @@ test("Money exposes lazy submodules and a controlled editable expense grid", () 
   assert.match(dashboardCss, /\.money-grid-shell[\s\S]*overflow: auto/);
 });
 
+test("Money records use a recoverable Recently Deleted workflow", () => {
+  assert.match(dashboardJs, /label: "Recently Deleted"/);
+  assert.match(dashboardJs, /data-action="archive-money-record"/);
+  assert.match(dashboardJs, /data-action="restore-money-record"/);
+  assert.match(dashboardJs, /data-action="permanently-delete-money-record"/);
+  assert.match(financialApiJs, /DELETABLE_FINANCIAL_ENTITIES/);
+  assert.match(financialApiJs, /action === "list-deleted"/);
+  assert.match(financialApiJs, /"archive-record", "restore-record", "delete-record-permanently"/);
+  assert.match(financialApiJs, /requestedAction === "delete-record-permanently"[\s\S]*"admin:manage"/);
+  assert.match(financialApiJs, /archived_at=not\.is\.null/);
+});
+
 test("financial list endpoint enforces pagination, safe sorting, status, and search", () => {
   const pathValue = expensePath({
     page: 3,

@@ -4484,6 +4484,65 @@ body:not(.is-login-screen) .money-grid select {
   text-overflow: ellipsis;
 }
 
+body:not(.is-login-screen) .money-card-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 0.55rem;
+  flex-wrap: wrap;
+  margin-top: auto;
+}
+
+body:not(.is-login-screen) .money-deleted-list {
+  display: grid;
+  gap: 0.7rem;
+  margin-top: 1rem;
+}
+
+body:not(.is-login-screen) .money-deleted-list article {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  min-width: 0;
+  padding: 0.9rem 1rem;
+  border: 1px solid rgba(31, 107, 79, 0.16);
+  border-radius: 15px;
+  background: #f8faf7;
+}
+
+body:not(.is-login-screen) .money-deleted-copy {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  min-width: 0;
+}
+
+body:not(.is-login-screen) .money-deleted-copy > div {
+  display: grid;
+  gap: 0.2rem;
+  min-width: 0;
+}
+
+body:not(.is-login-screen) .money-deleted-copy :is(strong, small) {
+  overflow-wrap: anywhere;
+}
+
+@media (max-width: 640px) {
+  body:not(.is-login-screen) .money-deleted-list article {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  body:not(.is-login-screen) .money-deleted-list .money-card-actions {
+    justify-content: stretch;
+  }
+
+  body:not(.is-login-screen) .money-deleted-list .money-card-actions button {
+    flex: 1 1 10rem;
+  }
+}
+
 body:not(.is-login-screen) .money-grid :is(th, td):first-child {
   width: 42px;
 }

@@ -189,7 +189,8 @@
     { key: "invoicing", label: "Invoicing" },
     { key: "vendors", label: "Vendors" },
     { key: "documents", label: "Documents" },
-    { key: "reports", label: "Reports" }
+    { key: "reports", label: "Reports" },
+    { key: "deleted", label: "Recently Deleted" }
   ];
   const EXPENSE_CATEGORIES = ["Materials", "Equipment", "Fuel", "Vehicle", "Insurance", "Software", "Advertising", "Office", "Subcontractor", "Labor", "Permits and Fees", "Professional Services", "Rent", "Utilities", "Taxes", "Meals", "Other"];
   const EXPENSE_PAYMENT_METHODS = ["Square Checking", "Business Debit", "Personal Card", "Cash", "ACH", "Check", "Credit Card", "Other"];
@@ -426,6 +427,7 @@
         vendors: [],
         invoices: [],
         documents: [],
+        deleted: [],
         reports: {}
       },
       groundskeeperAi: {
@@ -14234,6 +14236,8 @@ Requirements:
         const range = financialDateRange();
         state.data.financial.overview = await dashboardFinancialRequest("overview", range);
         state.data.financial.invoices = await dashboardFinancialRequest("list-invoices") || [];
+      } else if (view === "deleted") {
+        state.data.financial.deleted = await dashboardFinancialRequest("list-deleted") || [];
       }
       state.moneyLoadedViews.add(view);
     } catch (error) {
@@ -14301,7 +14305,7 @@ Requirements:
       <td><input data-expense-field="notes" value="${escapeHtml(expense.notes)}" placeholder="Notes"></td>
       <td>${escapeHtml(expense.createdBy || "Current user")}</td>
       <td>${escapeHtml(expense.updatedAt ? formatDate(expense.updatedAt) : "Not saved")}</td>
-      <td><button type="button" class="inline-action" data-action="duplicate-expense" data-id="${escapeHtml(expense.id)}">Duplicate</button><button type="button" class="inline-action danger" data-action="void-expense" data-id="${escapeHtml(expense.id)}">Void</button></td>
+      <td><button type="button" class="inline-action" data-action="duplicate-expense" data-id="${escapeHtml(expense.id)}">Duplicate</button><button type="button" class="inline-action danger" data-action="archive-money-record" data-entity-type="expense" data-id="${escapeHtml(expense.id)}">Delete</button></td>
     </tr>`;
   }
 
@@ -14525,7 +14529,7 @@ Requirements:
     const vendors = state.data.financial.vendors || [];
     return `<section class="financial-directory">
       <div class="ticket-lane-heading"><div><p class="eyebrow">Directory</p><h3>Vendors</h3><p>Controlled vendor records for consistent expense entry.</p></div><button type="button" data-action="add-vendor">Add Vendor</button></div>
-      <div class="financial-card-list">${vendors.length ? vendors.map((vendor) => `<article><div><strong>${escapeHtml(vendor.vendor_name)}</strong><span>${escapeHtml(vendor.default_expense_category || "No default category")}</span></div><p>${escapeHtml([vendor.contact_name, vendor.email, vendor.phone].filter(Boolean).join(" · ") || "No contact details")}</p><span class="status-badge">${escapeHtml(vendor.status || "Active")}</span></article>`).join("") : emptyState("No vendors are filed yet.")}</div>
+      <div class="financial-card-list">${vendors.length ? vendors.map((vendor) => `<article><div><strong>${escapeHtml(vendor.vendor_name)}</strong><span>${escapeHtml(vendor.default_expense_category || "No default category")}</span></div><p>${escapeHtml([vendor.contact_name, vendor.email, vendor.phone].filter(Boolean).join(" · ") || "No contact details")}</p><div class="money-card-actions"><span class="status-badge">${escapeHtml(vendor.status || "Active")}</span><button type="button" class="inline-action danger" data-action="archive-money-record" data-entity-type="vendor" data-id="${escapeHtml(vendor.id)}">Delete</button></div></article>`).join("") : emptyState("No vendors are filed yet.")}</div>
     </section>`;
   }
 
@@ -14610,6 +14614,7 @@ Requirements:
             <button type="submit">${buttonContent("Save", "save")}</button>
             <button type="button" data-action="duplicate-financial-invoice" data-id="${escapeHtml(invoice.id || id)}">Duplicate</button>
             <button type="button" data-action="print-financial-invoice">Print / PDF</button>
+            <button type="button" class="danger" data-action="archive-money-record" data-entity-type="invoice" data-id="${escapeHtml(invoice.id || id)}">Delete</button>
             ${invoice.square_invoice_url ? `<a class="button-link" href="${escapeHtml(invoice.square_invoice_url)}" target="_blank" rel="noopener">Open Square Invoice</a>` : ""}
           </div>
         </form>
@@ -14630,7 +14635,7 @@ Requirements:
       const documents = state.data.financial.documents || [];
       return `<section class="financial-directory">
         <div class="ticket-lane-heading"><div><p class="eyebrow">Private Filing</p><h3>Financial Documents</h3><p>Receipts, invoices, insurance, licenses, permits, tax documents, contracts, W-9s, and estimates.</p></div></div>
-        <div class="financial-card-list">${documents.length ? documents.map((document) => `<article><div><strong>${escapeHtml(document.title || document.file_name)}</strong><span>${escapeHtml(document.document_type)}</span></div><p>${escapeHtml([document.document_date, document.file_name].filter(Boolean).join(" · "))}</p><small>${escapeHtml([document.expense_id ? "Expense" : "", document.invoice_id ? "Invoice" : "", document.vendor_id ? "Vendor" : "", document.ticket_id ? "Ticket" : ""].filter(Boolean).join(" / ") || "Missing association")}</small></article>`).join("") : emptyState("No financial documents match this view. Expense receipts appear here after upload.")}</div>
+        <div class="financial-card-list">${documents.length ? documents.map((document) => `<article><div><strong>${escapeHtml(document.title || document.file_name)}</strong><span>${escapeHtml(document.document_type)}</span></div><p>${escapeHtml([document.document_date, document.file_name].filter(Boolean).join(" · "))}</p><small>${escapeHtml([document.expense_id ? "Expense" : "", document.invoice_id ? "Invoice" : "", document.vendor_id ? "Vendor" : "", document.ticket_id ? "Ticket" : ""].filter(Boolean).join(" / ") || "Missing association")}</small><div class="money-card-actions"><button type="button" class="inline-action danger" data-action="archive-money-record" data-entity-type="document" data-id="${escapeHtml(document.id)}">Delete</button></div></article>`).join("") : emptyState("No financial documents match this view. Expense receipts appear here after upload.")}</div>
       </section>`;
     }
     if (state.moneyView === "reports") {
@@ -14652,6 +14657,17 @@ Requirements:
             ["Taxes Collected", moneyCurrency(invoices.reduce((sum, invoice) => sum + Number(invoice.tax || 0), 0)), "Non-voided loaded invoices"]
           ].map(([title, value, detail]) => `<article><p class="eyebrow">${escapeHtml(title)}</p><strong>${escapeHtml(value)}</strong><span>${escapeHtml(detail)}</span></article>`).join("")}
         </div>
+      </section>`;
+    }
+    if (state.moneyView === "deleted") {
+      const deleted = state.data.financial.deleted || [];
+      const recordLabel = (record) => record.vendor_name || record.invoice_number || record.title || record.description || record.file_name || `${record.entityType} record`;
+      return `<section class="financial-directory money-deleted-bin">
+        <div class="ticket-lane-heading"><div><p class="eyebrow">Recovery</p><h3>Recently Deleted</h3><p>Restore a record to its original Money section, or permanently delete it. Permanent deletion cannot be undone.</p></div><span class="status-badge">${deleted.length} item${deleted.length === 1 ? "" : "s"}</span></div>
+        <div class="money-deleted-list">${deleted.length ? deleted.map((record) => `<article>
+          <div class="money-deleted-copy"><span class="status-badge">${escapeHtml(record.entityType)}</span><div><strong>${escapeHtml(recordLabel(record))}</strong><small>Deleted ${escapeHtml(record.archived_at ? formatDate(record.archived_at) : "recently")}</small></div></div>
+          <div class="money-card-actions"><button type="button" data-action="restore-money-record" data-entity-type="${escapeHtml(record.entityType)}" data-id="${escapeHtml(record.id)}">Restore</button><button type="button" class="danger" data-action="permanently-delete-money-record" data-entity-type="${escapeHtml(record.entityType)}" data-id="${escapeHtml(record.id)}">Delete permanently</button></div>
+        </article>`).join("") : emptyState("Recently Deleted is empty.")}</div>
       </section>`;
     }
     return `<section class="money-module-state"><strong>${escapeHtml(MONEY_TABS.find((item) => item.key === state.moneyView)?.label || "Money")}</strong><p>This module is being connected to the same financial record foundation.</p></section>`;
@@ -20765,6 +20781,53 @@ Requirements:
       if (action === "money-tab") {
         state.moneyView = target.dataset.moneyView || "overview";
         renderMoneyWorkspace();
+        return;
+      }
+
+      if (action === "archive-money-record") {
+        const entityType = target.dataset.entityType || "";
+        if (!window.confirm(`Move this ${entityType} to Recently Deleted? You can restore it later.`)) return;
+        try {
+          await dashboardFinancialRequest("archive-record", { entityType, id });
+          const sourceView = { expense: "expenses", invoice: "invoicing", vendor: "vendors", document: "documents" }[entityType];
+          if (sourceView) state.moneyLoadedViews.delete(sourceView);
+          state.moneyLoadedViews.delete("deleted");
+          if (entityType === "invoice") closeSubmissionDrawer();
+          await loadMoneyView(sourceView || state.moneyView, { force: true });
+          setDashboardState(`${entityType.charAt(0).toUpperCase()}${entityType.slice(1)} moved to Recently Deleted.`);
+        } catch (error) {
+          setDashboardState(error.message || "The record could not be deleted.", "error");
+        }
+        return;
+      }
+
+      if (action === "restore-money-record") {
+        const entityType = target.dataset.entityType || "";
+        try {
+          await dashboardFinancialRequest("restore-record", { entityType, id });
+          const sourceView = { expense: "expenses", invoice: "invoicing", vendor: "vendors", document: "documents" }[entityType];
+          if (sourceView) state.moneyLoadedViews.delete(sourceView);
+          state.moneyLoadedViews.delete("deleted");
+          await loadMoneyView("deleted", { force: true });
+          setDashboardState("Financial record restored.");
+        } catch (error) {
+          setDashboardState(error.message || "The record could not be restored.", "error");
+        }
+        return;
+      }
+
+      if (action === "permanently-delete-money-record") {
+        const entityType = target.dataset.entityType || "";
+        const confirmation = window.prompt(`Permanently delete this ${entityType}? This cannot be undone. Type DELETE to continue.`);
+        if (confirmation !== "DELETE") return;
+        try {
+          await dashboardFinancialRequest("delete-record-permanently", { entityType, id });
+          state.moneyLoadedViews.delete("deleted");
+          await loadMoneyView("deleted", { force: true });
+          setDashboardState("Financial record permanently deleted.");
+        } catch (error) {
+          setDashboardState(error.message || "The record could not be permanently deleted.", "error");
+        }
         return;
       }
 

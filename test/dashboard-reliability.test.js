@@ -376,7 +376,7 @@ test("dashboard route aliases and new reliability diagnostics are wired", () => 
   assert.match(js, /window\.google\.maps\.event\.trigger\(view\.map, "resize"\)/);
   assert.match(js, /window\.setTimeout\(triggerResize, 160\)/);
   assert.match(css, /dashboard-map-preview > div[\s\S]*height: 100% !important/);
-  assert.match(css, /dashboard-map-preview \.gm-style > div[\s\S]*height: 100% !important/);
+  assert.match(css, /work-day-map-card \.dashboard-map-preview \.gm-style[\s\S]*height: 100% !important/);
   assert.match(css, /work-day-map-card \.dashboard-map-preview-shell[\s\S]*height: clamp\(184px, 16vw, 246px\)/);
   assert.match(css, /work-day-map-card \.dashboard-map-preview-shell[\s\S]*margin-bottom: 0/);
   assert.match(css, /work-day-map-card \.dashboard-map-preview \.gm-style[\s\S]*height: 100% !important/);
@@ -529,7 +529,7 @@ test("dashboard map preview does not stretch Google Maps internal overlays", () 
   const css = read("dashboard.css");
 
   assert.match(css, /Google Maps owns the layout of its internal panes and controls/);
-  assert.doesNotMatch(css, /\.dashboard-map-preview \.gm-style > div,\s*\.dashboard-map-preview \.gm-style > div > div\s*\{/);
+  assert.doesNotMatch(css, /\.dashboard-map-preview \.gm-style > div(?:\s*>\s*div)?\s*(?:,|\{)/);
 });
 
 test("primary workspaces omit navigation cards already represented in the drawers", () => {

@@ -17070,9 +17070,7 @@ body:not(.is-login-screen) .work-day-map-card .dashboard-map-preview-shell {
 
 body:not(.is-login-screen) .work-day-map-card .dashboard-map-preview,
 body:not(.is-login-screen) .work-day-map-card .dashboard-map-preview > div,
-body:not(.is-login-screen) .work-day-map-card .dashboard-map-preview .gm-style,
-body:not(.is-login-screen) .work-day-map-card .dashboard-map-preview .gm-style > div,
-body:not(.is-login-screen) .work-day-map-card .dashboard-map-preview .gm-style > div > div {
+body:not(.is-login-screen) .work-day-map-card .dashboard-map-preview .gm-style {
   width: 100% !important;
   height: 100% !important;
   min-height: 0;

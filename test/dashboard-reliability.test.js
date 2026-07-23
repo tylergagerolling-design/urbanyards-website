@@ -917,3 +917,20 @@ test("Leads Contact Queue shows ten records until View All Leads is expanded", (
   assert.match(js, /data-action="toggle-leads-contact-queue"[\s\S]*Show First 10[\s\S]*View All Leads/);
   assert.match(js, /action === "toggle-leads-contact-queue"[\s\S]*leadsContactQueueExpanded = !state\.leadsContactQueueExpanded[\s\S]*renderLeadsWorkspace/);
 });
+
+test("dashboard daily workflow prioritizes actions, saved views, and data quality", () => {
+  const html = read("dashboard.html");
+  const js = read("dashboard.js");
+  const css = read("dashboard.css");
+
+  assert.match(html, /data-global-search[\s\S]*Search everything/);
+  assert.match(html, /data-action="toggle-global-add"/);
+  assert.match(js, /function dashboardActionMetrics/);
+  assert.match(js, /Calls Due[\s\S]*Overdue Follow-ups[\s\S]*Needs Approval[\s\S]*Closeout \/ Payment/);
+  assert.match(js, /OWNER_KANBAN_SAVED_VIEWS[\s\S]*Due Today[\s\S]*Overdue[\s\S]*Blocked[\s\S]*Needs Review/);
+  assert.match(js, /action === "apply-owner-kanban-view"/);
+  assert.match(js, /function renderDataQualityPanel/);
+  assert.match(js, /Contacts missing phone or email[\s\S]*Possible duplicate contacts[\s\S]*Tickets missing a property[\s\S]*Jobs missing a date[\s\S]*Closed tickets without documents/);
+  assert.match(js, /function renderActivityTimeline/);
+  assert.match(css, /\.dashboard-data-quality-grid/);
+});

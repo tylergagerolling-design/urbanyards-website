@@ -218,6 +218,12 @@
     { key: "equipment", label: "Equipment Item", action: "quick-add-equipment", icon: "activity-check-circle.svg", permission: "create" }
   ];
   const OWNER_KANBAN_FILTER_KEY = "urbanYardsOwnerKanbanFilters";
+  const OWNER_KANBAN_SAVED_VIEWS = [
+    { key: "today", label: "Due Today" },
+    { key: "overdue", label: "Overdue" },
+    { key: "blocked", label: "Blocked" },
+    { key: "review", label: "Needs Review" }
+  ];
   const FOLLOW_UP_SUGGESTIONS = [
     ["tomorrow", "Tomorrow", 1],
     ["three-days", "3 Days", 3],
@@ -12366,6 +12372,10 @@
           </details>
         </div>
       </div>
+      <div class="owner-kanban-saved-views" aria-label="Saved ticket views">
+        <span>Quick views</span>
+        ${OWNER_KANBAN_SAVED_VIEWS.map((view) => `<button type="button" data-action="apply-owner-kanban-view" data-view="${escapeHtml(view.key)}">${escapeHtml(view.label)}</button>`).join("")}
+      </div>
       <div class="owner-kanban-filters">
         <label class="owner-kanban-search">Search
           <input type="search" placeholder="Search tickets, clients, properties..." value="${escapeHtml(state.ownerKanbanSearch || "")}" data-owner-kanban-search>
@@ -12581,6 +12591,92 @@
     return renderHomeActionQueue(actions);
   }
 
+  function dashboardActionMetrics(data = state.data, tickets = dashboardTickets(data)) {
+    const today = todayKey();
+    const activeLeadStatuses = new Set(["Prospect", "Researched", "Contacted", "Follow-Up Needed", "Interested", "Quote Needed", "Quoted"]);
+    const callsDue = [
+      ...data.outreachProspects.filter((item) => activeLeadStatuses.has(item.status) && item.nextFollowUpAtRaw && item.nextFollowUpAtRaw <= today),
+      ...data.outreachCompanies.filter((item) => activeLeadStatuses.has(item.status) && item.followUpRaw && item.followUpRaw <= today)
+    ].length;
+    const overdueFollowUps = data.reminders.filter((item) => item.status !== "Completed" && item.dueRaw && item.dueRaw < today).length;
+    const awaitingApproval = tickets.filter((ticket) => ticketIsOpen(ticket) && ticketInStage(ticket, ["customer_approval_pending", "needs_owner_approval", "completion_review", "invoice_review"])).length;
+    const paymentsAndCloseout = tickets.filter((ticket) => ticketIsOpen(ticket) && ticketInStage(ticket, ["field_work_complete", "invoice_sent", "partially_paid", "paid"])).length;
+    return { callsDue, overdueFollowUps, awaitingApproval, paymentsAndCloseout };
+  }
+
+  function duplicateContactCount(contacts = []) {
+    const seen = new Set();
+    const duplicates = new Set();
+    contacts.forEach((contact) => {
+      const keys = [
+        safeEmail(contact.email).toLowerCase(),
+        phoneInfo(contact.phone).e164
+      ].filter(Boolean);
+      keys.forEach((key) => {
+        if (seen.has(key)) duplicates.add(key);
+        seen.add(key);
+      });
+    });
+    return duplicates.size;
+  }
+
+  function dashboardDataQualityItems(data = state.data, tickets = dashboardTickets(data)) {
+    const completedTickets = tickets.filter((ticket) => ticketStage(ticket) === "closed");
+    return [
+      {
+        label: "Contacts missing phone or email",
+        value: data.contacts.filter((item) => !phoneInfo(item.phone).valid || !safeEmail(item.email)).length,
+        detail: "Add a reliable way to reach each client.",
+        action: "go-contacts"
+      },
+      {
+        label: "Possible duplicate contacts",
+        value: duplicateContactCount(data.contacts),
+        detail: "Matching phone numbers or email addresses.",
+        action: "go-contacts"
+      },
+      {
+        label: "Tickets missing a property",
+        value: tickets.filter((ticket) => ticketIsOpen(ticket) && !String(ticket.property || ticket.propertyName || ticket.site || "").trim()).length,
+        detail: "Connect the work to a service location.",
+        action: "go-tickets"
+      },
+      {
+        label: "Jobs missing a date",
+        value: data.jobs.filter((job) => isIncompleteJob(job) && !dateKey(job.dateRaw)).length,
+        detail: "Schedule or intentionally defer these jobs.",
+        action: "go-work"
+      },
+      {
+        label: "Closed tickets without documents",
+        value: completedTickets.filter((ticket) => !data.documents.some((doc) => [doc.jobTicketId, doc.ticketId, doc.jobId].filter(Boolean).includes(ticket.id))).length,
+        detail: "Confirm proof, invoice, or rent-deduction records.",
+        action: "show-completed-tickets"
+      }
+    ];
+  }
+
+  function renderDataQualityPanel(data = state.data, tickets = dashboardTickets(data)) {
+    const items = dashboardDataQualityItems(data, tickets);
+    const issueCount = items.reduce((total, item) => total + item.value, 0);
+    return `<section class="dashboard-data-quality" aria-label="Data quality">
+      <div class="ticket-lane-heading">
+        <div>
+          <p class="eyebrow">Data Quality</p>
+          <h3>${issueCount ? `${escapeHtml(String(issueCount))} records need cleanup` : "Records look complete"}</h3>
+          <p>Small fixes that make search, scheduling, communication, and closeout more reliable.</p>
+        </div>
+      </div>
+      <div class="dashboard-data-quality-grid">
+        ${items.map((item) => `<button type="button" data-action="${escapeHtml(item.action)}" class="${item.value ? "has-issues" : "is-clear"}">
+          <strong>${escapeHtml(String(item.value))}</strong>
+          <span>${escapeHtml(item.label)}</span>
+          <small>${escapeHtml(item.value ? item.detail : "Nothing to fix.")}</small>
+        </button>`).join("")}
+      </div>
+    </section>`;
+  }
+
   function renderHomeWorkspace(data = state.data) {
     const target = qs("[data-home-workspace]");
     if (!target) return;
@@ -12615,6 +12711,7 @@
     const moneyTickets = activeTickets.filter((ticket) => ticketInLane(ticket, ["accounting", "money"]));
     const reviewTickets = activeTickets.filter((ticket) => ticketInLane(ticket, ["review"]));
     const actions = todayActionItems(data);
+    const actionMetrics = dashboardActionMetrics(data, tickets);
     const notifications = buildNotifications(data);
     const workflowWarnings = dashboardHealthWarnings({ scope: "critical" });
 
@@ -12632,13 +12729,14 @@
           </div>
         </header>
         <section class="ticket-metrics" aria-label="Home ticket summary">
-          ${renderTicketMetric(activeTickets.length, "Open Tickets", "Across all lanes")}
-          ${renderTicketMetric(todayTickets.length, "Due Today", "Scheduled or dated today")}
-          ${renderTicketMetric(actions.length, "Action Items", "Needs attention now")}
-          ${renderTicketMetric(workflowWarnings.length + notifications.length, "Alerts", "Workflow and notification signals")}
+          ${renderTicketMetric(actionMetrics.callsDue, "Calls Due", "Active leads needing a touch")}
+          ${renderTicketMetric(actionMetrics.overdueFollowUps, "Overdue Follow-ups", "Past their due date")}
+          ${renderTicketMetric(actionMetrics.awaitingApproval, "Needs Approval", "Customer, owner, or closeout review")}
+          ${renderTicketMetric(actionMetrics.paymentsAndCloseout, "Closeout / Payment", "Financial records needing action")}
         </section>
-        ${renderOwnerKanbanBoard(activeTickets)}
         ${renderHomeCommandCenter({ actions, attentionTickets, todayTickets, workTickets, moneyTickets, workflowWarnings, notifications })}
+        ${renderOwnerKanbanBoard(activeTickets)}
+        ${renderDataQualityPanel(data, tickets)}
       </div>`;
   }
 
@@ -19904,6 +20002,32 @@ Requirements:
         return;
       }
 
+      if (action === "apply-owner-kanban-view") {
+        const view = target.dataset.view || "today";
+        state.ownerKanbanSearch = "";
+        state.ownerKanbanAssigneeFilter = "All";
+        state.ownerKanbanPriorityFilter = "All";
+        state.ownerKanbanTypeFilter = "All";
+        state.ownerKanbanClientFilter = "";
+        state.ownerKanbanDateFilter = "All";
+        state.ownerKanbanStatusFilter = view === "review" ? "review" : "All";
+        state.ownerKanbanSort = view === "today" || view === "overdue" ? "due" : "priority";
+        state.ownerKanbanActiveOnly = true;
+        state.ownerKanbanBlockedOnly = view === "blocked";
+        state.ownerKanbanOverdueOnly = view === "overdue";
+        if (view === "today") {
+          state.ownerKanbanDateStart = todayKey();
+          state.ownerKanbanDateEnd = todayKey();
+        } else {
+          state.ownerKanbanDateStart = "";
+          state.ownerKanbanDateEnd = "";
+        }
+        persistOwnerKanbanFilters();
+        renderHomeWorkspace(state.data);
+        setDashboardState(`${OWNER_KANBAN_SAVED_VIEWS.find((item) => item.key === view)?.label || "Saved"} view applied.`);
+        return;
+      }
+
       if (action === "refresh-owner-kanban") {
         await hydrateDashboardSection("overview", {
           force: true,
@@ -21103,6 +21227,10 @@ Requirements:
       if (action === "show-open-tickets" || action === "show-completed-tickets") {
         state.ticketBoardMode = action === "show-completed-tickets" ? "completed" : "open";
         state.ticketBoardCloseoutOnly = false;
+        if (state.activeSection !== "tickets") {
+          setActiveSection("tickets");
+          replaceDashboardHash("tickets");
+        }
         renderJobTicketWorkspace(state.data);
         return;
       }

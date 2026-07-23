@@ -942,4 +942,6 @@ test("dashboard daily workflow prioritizes actions, saved views, and data qualit
   assert.match(js, /Contacts missing phone or email[\s\S]*Possible duplicate contacts[\s\S]*Tickets missing a property[\s\S]*Jobs missing a date[\s\S]*Closed tickets without documents/);
   assert.match(js, /function renderActivityTimeline/);
   assert.match(css, /\.dashboard-data-quality-grid/);
+  assert.match(css, /dashboard-data-quality-grid > button[\s\S]*display: grid !important[\s\S]*grid-template-areas:[\s\S]*"value label"[\s\S]*"detail detail"/);
+  assert.match(css, /dashboard-data-quality-grid > button > span[\s\S]*overflow-wrap: anywhere[\s\S]*white-space: normal/);
 });

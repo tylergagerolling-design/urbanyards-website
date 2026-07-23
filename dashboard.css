@@ -21193,3 +21193,48 @@ html body:not(.is-login-screen) .detail-drawer .drawer-panel {
     grid-template-columns: 1fr;
   }
 }
+
+/* Data-quality cards are buttons, so lock their content layout after the
+   shared button system to prevent labels and helper copy from colliding. */
+body:not(.is-login-screen) .dashboard-data-quality-grid {
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 250px), 1fr));
+}
+
+body:not(.is-login-screen) .dashboard-data-quality-grid > button {
+  display: grid !important;
+  grid-template-columns: auto minmax(0, 1fr);
+  grid-template-areas:
+    "value label"
+    "detail detail";
+  align-content: start;
+  align-items: center;
+  justify-content: stretch;
+  gap: 0.55rem 0.7rem;
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+  min-height: 8.75rem;
+  white-space: normal;
+  overflow: hidden;
+}
+
+body:not(.is-login-screen) .dashboard-data-quality-grid > button > strong {
+  grid-area: value;
+  align-self: start;
+}
+
+body:not(.is-login-screen) .dashboard-data-quality-grid > button > span {
+  grid-area: label;
+  min-width: 0;
+  overflow-wrap: anywhere;
+  white-space: normal;
+  text-wrap: pretty;
+}
+
+body:not(.is-login-screen) .dashboard-data-quality-grid > button > small {
+  grid-area: detail;
+  min-width: 0;
+  overflow-wrap: anywhere;
+  white-space: normal;
+  text-wrap: pretty;
+}

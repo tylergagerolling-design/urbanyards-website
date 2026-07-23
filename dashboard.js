@@ -12577,56 +12577,7 @@
 
   function renderHomeCommandCenter(details = {}) {
     const actions = details.actions || [];
-    const todayTickets = details.todayTickets || [];
-    const attentionTickets = details.attentionTickets || [];
-    const workTickets = details.workTickets || [];
-    const moneyTickets = details.moneyTickets || [];
-    const alertCount = (details.workflowWarnings || []).length + (details.notifications || []).length;
-    const nextSteps = [
-      {
-        kicker: "Today",
-        value: todayTickets.length,
-        title: "Scheduled work",
-        detail: "Open Work for routes, visits, completion notes, photos, and Work updates.",
-        action: "go-work",
-        actionLabel: "Open Work"
-      },
-      {
-        kicker: "Handoffs",
-        value: attentionTickets.length,
-        title: "Needs next action",
-        detail: "Review requests, quotes, approvals, budget prep, closeout, and blockers.",
-        action: "go-tickets",
-        actionLabel: "Open Tickets"
-      },
-      {
-        kicker: "Money",
-        value: moneyTickets.length,
-        title: "Financial review",
-        detail: "Check budget status, quote follow-up, invoices, payments, and closeout items.",
-        action: "go-money",
-        actionLabel: "Open Money"
-      },
-      {
-        kicker: "Signals",
-        value: alertCount,
-        title: "Warnings and setup",
-        detail: "Review dashboard health, tools, documentation, equipment, imports, and AI support.",
-        action: "go-tools",
-        actionLabel: "Open Tools"
-      }
-    ];
-
-    return `<section class="home-command-center" aria-label="Home workspace signals">
-      ${renderHomeActionQueue(actions)}
-      <aside class="home-next-step-stack" aria-label="Where to go next">
-        <div class="home-next-step-heading">
-          <span>Where to go next</span>
-          <strong>${escapeHtml(workTickets.length)} work tickets active</strong>
-        </div>
-        ${nextSteps.map(renderHomeNextStepCard).join("")}
-      </aside>
-    </section>`;
+    return renderHomeActionQueue(actions);
   }
 
   function renderHomeWorkspace(data = state.data) {
@@ -12677,7 +12628,6 @@
           </div>
           <div class="ticket-hero-actions">
             ${canCreateTicketType("quote") ? `<button type="button" data-action="open-ticket-create" data-ticket-type="quote">New Job Ticket</button>` : ""}
-            <button type="button" data-action="go-work">Open Work</button>
           </div>
         </header>
         <section class="ticket-metrics" aria-label="Home ticket summary">
@@ -12687,7 +12637,6 @@
           ${renderTicketMetric(workflowWarnings.length + notifications.length, "Alerts", "Workflow and notification signals")}
         </section>
         ${renderOwnerKanbanBoard(activeTickets)}
-        ${renderHomeFocusPanel({ todayTickets, overdueTickets, leadTickets, workTickets, moneyTickets, reviewTickets, actions })}
         ${renderHomeCommandCenter({ actions, attentionTickets, todayTickets, workTickets, moneyTickets, workflowWarnings, notifications })}
       </div>`;
   }
@@ -12781,8 +12730,7 @@
       ...workTickets,
       ...reviewTickets
     ].slice(0, 5);
-    return `<section class="ticket-command-center" aria-label="Ticket triage center">
-      <section class="ticket-lane ticket-priority-queue">
+    return `<section class="ticket-lane ticket-priority-queue" aria-label="Ticket triage center">
         <div class="ticket-lane-heading">
           <div>
             <p class="eyebrow">Triage</p>
@@ -12794,37 +12742,6 @@
         <div class="ticket-lane-list">
           ${priorityTickets.length ? priorityTickets.map((ticket) => renderTicketCard(ticket, true)).join("") : emptyState("No open tickets match the current filters.")}
         </div>
-      </section>
-      <aside class="ticket-next-step-stack">
-        <div class="home-next-step-heading">
-          <span>Owner Lanes</span>
-          <strong>${escapeHtml(String(filteredTickets.length))} shown</strong>
-        </div>
-        ${renderTicketNextStepCard({
-          kicker: "Leads",
-          value: officeTickets.filter((ticket) => ticketInLane(ticket, ["sales"])).length,
-          title: "Scope and quote work",
-          detail: "Use Leads for intake, follow-up, customer approvals, and quote-ready work.",
-          action: "go-leads",
-          actionLabel: "Open Leads"
-        })}
-        ${renderTicketNextStepCard({
-          kicker: "Work",
-          value: workTickets.length + readyTickets.length,
-          title: "Schedule and complete",
-          detail: "Use Work for assigned jobs, route access, photos, forms, and completion notes.",
-          action: "go-work",
-          actionLabel: "Open Work"
-        })}
-        ${renderTicketNextStepCard({
-          kicker: "Money",
-          value: officeTickets.filter((ticket) => ticketInLane(ticket, ["accounting", "money"])).length + reviewTickets.length,
-          title: "Cost, invoice, collect",
-          detail: "Use Money for cost review, estimates, invoices, payment status, and closeout.",
-          action: "go-money",
-          actionLabel: "Open Money"
-        })}
-      </aside>
     </section>`;
   }
 
@@ -12898,6 +12815,7 @@
           <div class="ticket-hero-actions">
             ${canCreateTicketType("quote") ? `<button type="button" data-action="open-ticket-create" data-ticket-type="quote">New Job Ticket</button>` : ""}
             ${canCreateTicketType("field") ? `<button type="button" data-action="open-ticket-create" data-ticket-type="field">Schedule Visit</button>` : ""}
+            <button type="button" data-action="review-closeout-tickets">Review Closeout</button>
           </div>
         </header>
         <nav class="ticket-history-switcher" aria-label="Ticket views">
@@ -12911,7 +12829,6 @@
           ${renderTicketMetric(ticketCountBy(openTickets, (ticket) => ticketInLane(ticket, ["sales", "accounting"])), "Needs Office", "Scope, quote, cost review")}
           ${renderTicketMetric(ticketCountBy(openTickets, (ticket) => ticketInLane(ticket, ["review", "money"])), "Closeout", "Review, invoice, payment")}
         </section>
-        ${renderTicketHandoffPanel({ leadsTickets, moneyTickets: moneyReviewTickets, workTickets: workQueueTickets, closeoutTickets, blockedTickets })}
         ${renderTicketCommandCenter({ filteredTickets, workTickets, officeTickets, readyTickets, reviewTickets })}
         ${renderTicketBoardControls(openTickets, filteredTickets)}
         ${renderTicketWorkflowBoard(openTickets, filteredTickets)}
@@ -12944,7 +12861,6 @@
         ${routePreviewMapShell("work")}
         <div class="work-day-route-footer">
           <span>${escapeHtml(stops.length ? `${openStops.length} open / ${stops.length} total stops` : "Build the route when work is scheduled.")}</span>
-          <button type="button" data-action="go-route-planner">Open Route</button>
         </div>
       </article>
       <div class="work-plan-tile-grid">
@@ -12961,13 +12877,6 @@
           detail: "Work waiting on photos, forms, actuals, or completion review.",
           action: "go-tickets",
           actionLabel: "Review Tickets"
-        })}
-        ${renderWorkPlanTile({
-          label: "Forms",
-          value: "Docs",
-          detail: "Supporting templates and submitted records live in Tools.",
-          action: "go-tools",
-          actionLabel: "Open Tools"
         })}
         ${renderWorkPlanTile({
           label: "Upcoming",
@@ -13130,7 +13039,6 @@
           </div>
           <div class="ticket-hero-actions">
             ${canCreateTicketType("field") ? `<button type="button" data-action="open-ticket-create" data-ticket-type="field">Add Visit</button>` : ""}
-            <button type="button" data-action="go-route-planner">Open Route</button>
           </div>
         </header>
         <section class="ticket-metrics" aria-label="Work summary">
@@ -13139,8 +13047,6 @@
           ${renderTicketMetric(ticketCountBy(workTickets, (ticket) => ticketInLane(ticket, ["review"])), "Needs Proof", "Photos, actuals, forms")}
           ${renderTicketMetric(upcomingTickets.length, "Upcoming", "Scheduled tickets")}
         </section>
-        ${renderWorkReadinessPanel({ readyTickets, todayTickets, activeTickets, reviewTickets })}
-        ${renderWorkFieldPacketPanel({ routeStops: routeStopsToday, todayTickets, reviewTickets })}
         ${renderWorkDayPlanPanel(routeStopsToday, todayTickets, upcomingTickets, reviewTickets)}
         <div class="field-grid work-execution-grid">
           <section class="ticket-lane field-primary-lane" data-work-queue>
@@ -13191,19 +13097,6 @@
                   <p>Each occurrence is saved as its own visit.</p>
                 </div>
               </form>
-            </section>
-            <section class="ticket-lane">
-              <div class="ticket-lane-heading">
-                <div>
-                  <h3>Support Tools</h3>
-                  <p>Routes, arrival photos, completion photos, forms, and diagnostics stay close to the work queue.</p>
-                </div>
-              </div>
-              <div class="field-proof-actions">
-                <button type="button" data-action="go-route-planner">Open Route Planner</button>
-                <button type="button" data-action="go-documentation">Open Documentation</button>
-                <button type="button" data-action="copy-dashboard-diagnostics">Copy Diagnostics</button>
-              </div>
             </section>
           </aside>
         </div>
@@ -13706,45 +13599,6 @@ Requirements:
           ${prospectQueue.length ? prospectQueue.map((item) => renderLeadQueueItem(item, hot.some((hotItem) => hotItem.id === item.id) ? "hot" : due.some((dueItem) => dueItem.id === item.id) ? "due" : "")).join("") : emptyState("No active leads are currently in the Call Queue.")}
         </div>
       </section>
-      <aside class="lead-next-step-stack">
-        <div class="home-next-step-heading">
-          <span>Lead Handoffs</span>
-          <strong>Keep work moving</strong>
-        </div>
-        ${renderLeadNextStepCard({
-          kicker: "Ticket",
-          value: intakeTickets.length + approvalTickets.length,
-          title: "Create or update Job Tickets",
-          detail: "Use this when a lead has enough scope detail to track as real work.",
-          action: "open-ticket-create",
-          actionLabel: "New Job Ticket",
-          extraAttrs: ' data-ticket-type="quote"'
-        })}
-        ${renderLeadNextStepCard({
-          kicker: "Quote",
-          value: hot.length,
-          title: "Quote-ready conversations",
-          detail: "Interested prospects and approval follow-ups should get a clear quote action.",
-          action: "go-tickets",
-          actionLabel: "Open Tickets"
-        })}
-        ${renderLeadNextStepCard({
-          kicker: "Money",
-          value: accountingTickets.length,
-          title: "Approved work needs cost review",
-          detail: "Once the customer says yes, hand the ticket to Money before scheduling.",
-          action: "go-money",
-          actionLabel: "Open Money"
-        })}
-        ${renderLeadNextStepCard({
-          kicker: "Data",
-          value: `${companies.length}/${properties.length}`,
-          title: "Companies and properties",
-          detail: "Use CSV import for management companies, property locations, and prospect lists.",
-          action: "import-outreach-csv",
-          actionLabel: "Import CSV"
-        })}
-      </aside>
     </section>`;
   }
 
@@ -13785,8 +13639,6 @@ Requirements:
           ${renderTicketMetric(approvalTickets.length + hot.length, "Quote-Ready", "Interested or pending approval")}
           ${renderTicketMetric(accountingTickets.length, "Money Handoff", "Approved work needs cost review")}
         </section>
-        ${renderLeadsRunwayPanel({ due, hot, intakeTickets, approvalTickets, accountingTickets, companies, properties })}
-        ${renderLeadsHandoffPanel({ due, hot, intakeTickets, approvalTickets, accountingTickets })}
         ${renderLeadsCommandCenter({ prospectQueue, due, hot, intakeTickets, approvalTickets, accountingTickets, companies, properties })}
       </div>`;
   }
@@ -13957,44 +13809,6 @@ Requirements:
           ${actionQueue.length ? actionQueue.map((ticket) => renderTicketCard(ticket, true)).join("") : emptyState("No financial review items require attention.")}
         </div>
       </section>
-      <aside class="money-next-step-stack">
-        <div class="home-next-step-heading">
-          <span>Money Handoffs</span>
-          <strong>Protect margin</strong>
-        </div>
-        ${renderMoneyNextStepCard({
-          kicker: "Cost",
-          value: needsBudget.length,
-          title: "Review costs before scheduling",
-          detail: "Approved work should have cost, budget, or margin review before it moves forward.",
-          action: "go-tickets",
-          actionLabel: "Open Tickets"
-        })}
-        ${renderMoneyNextStepCard({
-          kicker: "Invoice",
-          value: ownerApproval.length,
-          title: "Prepare estimate or invoice",
-          detail: "Owner approvals and invoice preparation stay visible before work is scheduled or closed.",
-          action: "quick-add-quote",
-          actionLabel: "Create Estimate"
-        })}
-        ${renderMoneyNextStepCard({
-          kicker: "Collect",
-          value: overdueInvoices.length,
-          title: "Payment follow-up",
-          detail: "Overdue invoices need a clear reminder, Square sync, or payment note.",
-          action: "quick-add-invoice-reminder",
-          actionLabel: "Payment Follow-Up"
-        })}
-        ${renderMoneyNextStepCard({
-          kicker: "Close",
-          value: fieldComplete.length + unpaidInvoices.length,
-          title: "Close the financial record",
-          detail: "Check actuals, documents, invoice status, and payment state before closing tickets.",
-          action: "open-financial-records",
-          actionLabel: "Open Records"
-        })}
-      </aside>
     </section>`;
   }
 
@@ -14110,7 +13924,7 @@ Requirements:
           </div>
           <div class="ticket-hero-actions">
             ${canManageMoneyWorkflow() ? `<button type="button" data-action="quick-add-quote">Create Estimate</button>` : ""}
-            ${canManageMoneyWorkflow() ? `<button type="button" data-action="go-tickets">Review Tickets</button>` : ""}
+            ${canManageMoneyWorkflow() ? `<button type="button" data-action="open-financial-records">Open Records</button>` : ""}
           </div>
         </header>
         <section class="ticket-metrics" aria-label="Money ticket summary">
@@ -14119,9 +13933,7 @@ Requirements:
           ${renderTicketMetric(unpaidInvoices.length, "Open Invoices", "Awaiting payment")}
           ${renderTicketMetric(overdueInvoices.length, "Overdue", "Payment action needed")}
         </section>
-        ${renderMoneyRunwayPanel({ needsBudget, ownerApproval, invoiceTickets, overdueInvoices })}
         ${renderMoneyCommandCenter({ needsBudget, ownerApproval, fieldComplete, invoiceTickets, unpaidInvoices, overdueInvoices })}
-        ${renderMoneyCloseoutPanel({ needsBudget, fieldComplete, invoiceTickets, unpaidInvoices, overdueInvoices })}
         ${renderMoneyBudgetPanel(data, tickets)}
       </div>`;
   }
@@ -14290,75 +14102,6 @@ Requirements:
           ${renderTicketMetric(supportWarnings.length, "Support Warnings", "Setup items for hidden support modules")}
           ${renderTicketMetric(documents.length, "Financial Documents", "Quotes, invoices, and records")}
           ${renderTicketMetric(documentationCount, "Forms and Files", "Templates and submissions")}
-        </section>
-        ${renderToolsRunwayPanel({ criticalWarnings, supportWarnings, documentationCount, equipmentCount, routeStopsToday, aiLiveVersion, usersCount })}
-        ${renderToolsSystemsPanel({ criticalWarnings, supportWarnings, documentationCount, equipmentCount, routeStopsToday, aiLiveVersion, usersCount, documentsCount: documents.length })}
-        <section class="tools-control-grid" aria-label="Dashboard support tools">
-          ${renderToolsCard({
-            label: "Route Planner",
-            detail: "Build the day route, pin stops, and keep route support close to scheduled work.",
-            meta: `${routeStopsToday} stops today`,
-            status: "Route",
-            primary: "Open Route Planner",
-            primaryAction: "go-route-planner"
-          })}
-          ${renderToolsCard({
-            label: "Equipment",
-            detail: "Track owned equipment, maintenance, replacement priorities, and hardware recommendations.",
-            meta: `${equipmentCount} equipment records`,
-            status: "Assets",
-            primary: "Open Equipment",
-            primaryAction: "go-equipment"
-          })}
-          ${renderToolsCard({
-            label: "Documentation",
-            detail: "Manage form templates, submitted paperwork, job photos, and reusable records.",
-            meta: `${documentationCount} files or forms`,
-            status: "Records",
-            primary: "Open Documentation",
-            primaryAction: "go-documentation",
-            secondary: "Refresh Forms",
-            secondaryAction: "refresh-documentation"
-          })}
-          ${renderToolsCard({
-            label: "Groundskeeper AI",
-            detail: "Train and review the public website helper with backend-protected knowledge and rules.",
-            meta: `Live version: ${aiLiveVersion}`,
-            status: "Assistant",
-            primary: "Open AI Studio",
-            primaryAction: "go-groundskeeper-ai",
-            secondary: "Refresh AI",
-            secondaryAction: "refresh-groundskeeper-ai"
-          })}
-          ${renderToolsCard({
-            label: "Import, Export & Backups",
-            detail: "Move records through CSV, Excel, Google Sheets, PDF reports, and full JSON backups.",
-            meta: state.importExportReady ? "Data tools ready" : "Setup may be needed",
-            status: "Data",
-            primary: "Open Data Tools",
-            primaryAction: "go-import-export",
-            secondary: "Full Backup",
-            secondaryAction: "export-full-backup"
-          })}
-          ${renderToolsCard({
-            label: "Users & Access",
-            detail: "Invite users, manage roles, disable access, and keep profile avatars clean.",
-            meta: `${usersCount} dashboard users`,
-            status: "Access",
-            primary: "Manage Access",
-            primaryAction: "focus-users-access"
-          })}
-          ${renderToolsCard({
-            label: "Dashboard Health",
-            detail: "Copy diagnostics, refresh dashboard data, and separate setup warnings from workflow issues.",
-            meta: `${rows.length} diagnostics`,
-            status: criticalWarnings.length ? "Needs Review" : "Healthy",
-            tone: criticalWarnings.length ? "warning" : "healthy",
-            primary: "Copy Diagnostics",
-            primaryAction: "copy-dashboard-diagnostics",
-            secondary: "Refresh Dashboard",
-            secondaryAction: "refresh-dashboard"
-          })}
         </section>
         <section class="tools-admin-grid" aria-label="Admin tools and diagnostics">
           <article class="users-access-panel tools-admin-panel" data-tools-users-access>
@@ -21961,7 +21704,7 @@ Requirements:
         replaceDashboardHash("documents");
         renderMoneyWorkspace(state.data);
         window.requestAnimationFrame(() => {
-          qs(".money-closeout-panel")?.scrollIntoView({
+          qs(".money-action-queue")?.scrollIntoView({
             behavior: window.matchMedia?.("(prefers-reduced-motion: reduce)")?.matches ? "auto" : "smooth",
             block: "start"
           });

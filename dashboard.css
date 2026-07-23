@@ -20427,6 +20427,16 @@ body:not(.is-login-screen) .dashboard-main :is(
   color: #1f2924 !important;
 }
 
+/* Concise workspaces: navigation belongs to the drawers, so the remaining
+   task queues use the full content width instead of reserving a shortcut rail. */
+body:not(.is-login-screen) .dashboard-main :is(
+  .ticket-command-center,
+  .leads-command-center,
+  .money-command-center
+) {
+  grid-template-columns: minmax(0, 1fr) !important;
+}
+
 @media (max-width: 900px) {
   body:not(.is-login-screen) .completed-ticket-card {
     grid-template-columns: 1fr;

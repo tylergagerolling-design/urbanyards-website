@@ -279,7 +279,7 @@ test("dashboard route aliases and new reliability diagnostics are wired", () => 
   assert.match(js, /await ensureBudgetForTicket\(ticket\)/);
   assert.match(js, /await syncBudgetToTicket\(budget\)/);
   assert.match(js, /function canManageWorkWorkflow/);
-  assert.match(js, /field-proof-actions[\s\S]*data-action="go-route-planner"[\s\S]*data-action="go-documentation"[\s\S]*data-action="copy-dashboard-diagnostics"/);
+  assert.doesNotMatch(js, /<h3>Support Tools<\/h3>[\s\S]*data-action="go-route-planner"[\s\S]*data-action="go-documentation"/);
   assert.match(js, /function renderTicketWorkAssignmentBridge/);
   assert.match(js, /async function saveTicketWorkAssignment/);
   assert.match(js, /data-ticket-assignment-form/);
@@ -428,7 +428,7 @@ test("dashboard route aliases and new reliability diagnostics are wired", () => 
   assert.match(workspaceRegistry, /Lead Dashboard/);
   assert.match(js, /Intake Focus/);
   assert.match(js, /data-action="\$\{escapeHtml\(secondaryAction\)\}">/);
-  assert.match(js, /secondaryAction: "refresh-documentation"/);
+  assert.match(js, /action === "refresh-documentation"/);
   assert.doesNotMatch(html, /data-action="go-documents">Open Money<\/button>\s*<\/article>/);
   assert.match(css, /#overview\.home-ticket-page > :not\(\[data-home-workspace\]\)/);
   assert.match(css, /#tickets\.job-ticket-page > :not\(\[data-job-ticket-workspace\]\)/);
@@ -462,7 +462,7 @@ test("dashboard route aliases and new reliability diagnostics are wired", () => 
   assert.match(css, /ticket-board-filter-row[\s\S]*grid-template-columns: repeat\(auto-fit, minmax\(min\(100%, 156px\), 1fr\)\)/);
   assert.match(css, /\.ticket-board-result-count/);
   assert.doesNotMatch(js, /workspace-focus-value/);
-  assert.match(js, /Home workspace signals/);
+  assert.match(js, /function renderHomeCommandCenter[\s\S]*return renderHomeActionQueue\(actions\)/);
   assert.doesNotMatch(js, /Tickets workspace signals/);
   assert.doesNotMatch(css, /#overview\.job-ticket-page > :not\(\[data-job-ticket-workspace\]\)/);
 });
@@ -532,6 +532,26 @@ test("dashboard map preview does not stretch Google Maps internal overlays", () 
   assert.doesNotMatch(css, /\.dashboard-map-preview \.gm-style > div,\s*\.dashboard-map-preview \.gm-style > div > div\s*\{/);
 });
 
+test("primary workspaces omit navigation cards already represented in the drawers", () => {
+  const js = read("dashboard.js");
+  const css = read("dashboard.css");
+  const section = (start, end) => js.slice(js.indexOf(start), js.indexOf(end));
+  const home = section("function renderHomeWorkspace", "function renderTicketNextStepCard");
+  const tickets = section("function renderJobTicketWorkspace", "function renderWorkPlanTile");
+  const work = section("function renderWorkWorkspace", "function renderLeadQueueItem");
+  const leads = section("function renderLeadsWorkspace", "function findTicketForBudget");
+  const money = section("function renderMoneyWorkspace", "function renderToolsRunwayCard");
+  const tools = section("function renderToolsWorkspace", "function renderToolsCard");
+
+  assert.doesNotMatch(home, /renderHomeFocusPanel|data-action="go-work">Open Work/);
+  assert.doesNotMatch(tickets, /renderTicketHandoffPanel/);
+  assert.doesNotMatch(work, /renderWorkReadinessPanel|renderWorkFieldPacketPanel|Support Tools|data-action="go-route-planner">Open Route/);
+  assert.doesNotMatch(leads, /renderLeadsRunwayPanel|renderLeadsHandoffPanel|lead-next-step-stack/);
+  assert.doesNotMatch(money, /renderMoneyRunwayPanel|renderMoneyCloseoutPanel|money-next-step-stack/);
+  assert.doesNotMatch(tools, /renderToolsRunwayPanel|renderToolsSystemsPanel|tools-control-grid/);
+  assert.match(css, /Concise workspaces:[\s\S]*grid-template-columns: minmax\(0, 1fr\) !important/);
+});
+
 test("owner Kanban cards omit letter-based assignee icons", () => {
   const js = read("dashboard.js");
   const css = read("dashboard.css");
@@ -543,7 +563,7 @@ test("owner Kanban cards omit letter-based assignee icons", () => {
 test("closeout Review Tickets opens a focused, visible ticket queue", () => {
   const js = read("dashboard.js");
 
-  assert.match(js, /label: "Closeout"[\s\S]*action: "review-closeout-tickets"[\s\S]*actionLabel: "Review Tickets"/);
+  assert.match(js, /data-action="review-closeout-tickets">Review Closeout/);
   assert.match(js, /action === "review-closeout-tickets"[\s\S]*ticketBoardCloseoutOnly = true[\s\S]*renderJobTicketWorkspace[\s\S]*scrollIntoView/);
   assert.match(js, /ticketBoardCloseoutOnly[\s\S]*field_work_complete[\s\S]*completion_review[\s\S]*invoice_review/);
   assert.match(js, /reset-ticket-board-filters[\s\S]*ticketBoardCloseoutOnly = false/);
@@ -553,8 +573,8 @@ test("Open Records opens the financial closeout records", () => {
   const js = read("dashboard.js");
 
   assert.doesNotMatch(js, /action: "go-documents"/);
-  assert.match(js, /title: "Close the financial record"[\s\S]*action: "open-financial-records"[\s\S]*actionLabel: "Open Records"/);
-  assert.match(js, /action === "open-financial-records"[\s\S]*setActiveSection\("documents"\)[\s\S]*renderMoneyWorkspace[\s\S]*money-closeout-panel[\s\S]*scrollIntoView/);
+  assert.match(js, /data-action="open-financial-records">Open Records/);
+  assert.match(js, /action === "open-financial-records"[\s\S]*setActiveSection\("documents"\)[\s\S]*renderMoneyWorkspace[\s\S]*money-action-queue[\s\S]*scrollIntoView/);
 });
 
 test("Leads flyout adds Call Queue without changing existing items", () => {

@@ -507,7 +507,7 @@ test("dashboard body uses the Urban Forest color scheme without recoloring the d
   assert.match(css, /--uy-ink: #1f2924/);
   assert.match(css, /dashboard-sidebar[\s\S]*background: linear-gradient\(145deg, rgba\(255, 253, 247, \.96\), rgba\(248, 246, 238, \.9\)\) !important/);
   assert.match(css, /dashboard-subnav[\s\S]*background:[\s\S]*rgba\(255, 253, 247, \.985\)/);
-  assert.match(css, /dashboard-main[\s\S]*background: rgba\(244, 241, 232, \.9\) !important/);
+  assert.match(css, /dashboard-main[\s\S]*border-color: transparent !important[\s\S]*background: transparent !important[\s\S]*box-shadow: none !important/);
   assert.match(css, /Urban Forest exact card surface contract[\s\S]*background-color: #ffffff !important/);
   assert.match(css, /Urban Forest body color hierarchy[\s\S]*dashboard-main[\s\S]*color: #1f2924 !important/);
   assert.match(css, /Urban Forest body color hierarchy[\s\S]*h1,[\s\S]*color: #1f6b4f !important/);

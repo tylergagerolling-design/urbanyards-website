@@ -20366,8 +20366,10 @@ body:not(.is-login-screen) .dashboard-shell {
 }
 
 body:not(.is-login-screen) .dashboard-main {
-  background: rgba(244, 241, 232, .9) !important;
-  backdrop-filter: blur(3px);
+  border-color: transparent !important;
+  background: transparent !important;
+  box-shadow: none !important;
+  backdrop-filter: none;
 }
 
 /* Urban Forest body color hierarchy. Keep this scoped to dashboard-main so

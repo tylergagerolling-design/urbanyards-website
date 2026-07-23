@@ -3,6 +3,16 @@
 
 create extension if not exists pgcrypto;
 
+create or replace function public.set_updated_at()
+returns trigger
+language plpgsql
+as $$
+begin
+  new.updated_at = now();
+  return new;
+end;
+$$;
+
 alter table public.profiles drop constraint if exists profiles_role_check;
 alter table public.profiles add constraint profiles_role_check check (role in (
   'owner','admin','manager','accountant','sales_outreach','field_worker','worker','staff','viewer','client'
@@ -62,7 +72,7 @@ create table if not exists public.expenses (
   client_id uuid references public.clients(id) on delete set null,
   property_id uuid references public.properties(id) on delete set null,
   job_id uuid,
-  ticket_id uuid references public.job_tickets(id) on delete set null,
+  ticket_id uuid,
   payment_method text,
   subtotal numeric(14,2),
   tax numeric(14,2),
@@ -123,7 +133,7 @@ alter table public.invoices
   add column if not exists sales_document_id uuid,
   add column if not exists property_id uuid references public.properties(id) on delete set null,
   add column if not exists job_id uuid,
-  add column if not exists ticket_id uuid references public.job_tickets(id) on delete set null,
+  add column if not exists ticket_id uuid,
   add column if not exists issue_date date,
   add column if not exists due_date date,
   add column if not exists subtotal numeric(14,2) not null default 0,
@@ -222,7 +232,7 @@ create table if not exists public.financial_documents (
   client_id uuid references public.clients(id) on delete set null,
   property_id uuid references public.properties(id) on delete set null,
   job_id uuid,
-  ticket_id uuid references public.job_tickets(id) on delete set null,
+  ticket_id uuid,
   document_date date,
   uploaded_by uuid references auth.users(id) on delete set null,
   created_at timestamptz not null default now(),
@@ -401,17 +411,51 @@ create policy "workers submit expenses" on public.expenses
   );
 
 drop policy if exists "workers read own assigned expenses" on public.expenses;
-create policy "workers read own assigned expenses" on public.expenses
-  for select using (
-    public.dashboard_current_role() in ('worker', 'field_worker', 'staff')
-    and (
-      created_by = auth.uid()
-      or exists (
-        select 1 from public.job_tickets jt
-        where jt.id = expenses.ticket_id and jt.assigned_user_id = auth.uid()
+do $$
+begin
+  if to_regclass('public.job_tickets') is not null then
+    execute $policy$
+      create policy "workers read own assigned expenses" on public.expenses
+      for select using (
+        public.dashboard_current_role() in ('worker', 'field_worker', 'staff')
+        and (
+          created_by = auth.uid()
+          or exists (
+            select 1 from public.job_tickets jt
+            where jt.id = expenses.ticket_id and jt.assigned_user_id = auth.uid()
+          )
+        )
       )
-    )
-  );
+    $policy$;
+  else
+    create policy "workers read own assigned expenses" on public.expenses
+      for select using (
+        public.dashboard_current_role() in ('worker', 'field_worker', 'staff')
+        and created_by = auth.uid()
+      );
+  end if;
+end $$;
+
+do $$
+begin
+  if to_regclass('public.job_tickets') is not null then
+    alter table public.expenses
+      drop constraint if exists expenses_ticket_id_fkey;
+    alter table public.expenses
+      add constraint expenses_ticket_id_fkey foreign key (ticket_id)
+      references public.job_tickets(id) on delete set null;
+    alter table public.invoices
+      drop constraint if exists invoices_ticket_id_fkey;
+    alter table public.invoices
+      add constraint invoices_ticket_id_fkey foreign key (ticket_id)
+      references public.job_tickets(id) on delete set null;
+    alter table public.financial_documents
+      drop constraint if exists financial_documents_ticket_id_fkey;
+    alter table public.financial_documents
+      add constraint financial_documents_ticket_id_fkey foreign key (ticket_id)
+      references public.job_tickets(id) on delete set null;
+  end if;
+end $$;
 
 insert into storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
 values (

@@ -20,7 +20,9 @@ test("financial workspace migration is additive and preserves canonical links", 
   assert.match(migration, /create table if not exists public\.expenses/i);
   assert.match(migration, /create table if not exists public\.vendors/i);
   assert.match(migration, /alter table public\.invoices/i);
-  assert.match(migration, /ticket_id uuid references public\.job_tickets/i);
+  assert.match(migration, /ticket_id uuid/);
+  assert.match(migration, /if to_regclass\('public\.job_tickets'\) is not null/i);
+  assert.match(migration, /expenses_ticket_id_fkey foreign key \(ticket_id\)/i);
   assert.match(migration, /client_id uuid references public\.clients/i);
   assert.match(migration, /property_id uuid references public\.properties/i);
   assert.doesNotMatch(migration, /drop table/i);

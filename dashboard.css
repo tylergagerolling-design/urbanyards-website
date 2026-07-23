@@ -3480,12 +3480,13 @@ button:active,
   height: 100% !important;
 }
 
-.dashboard-map-preview .gm-style,
-.dashboard-map-preview .gm-style > div,
-.dashboard-map-preview .gm-style > div > div {
+.dashboard-map-preview .gm-style {
   width: 100% !important;
   height: 100% !important;
 }
+
+/* Google Maps owns the layout of its internal panes and controls. Stretching
+   nested divs turns the scale/control layer into an opaque map-sized block. */
 
 .dashboard-map-preview-message {
   position: absolute;

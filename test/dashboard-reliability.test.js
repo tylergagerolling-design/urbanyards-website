@@ -525,6 +525,13 @@ test("dashboard and login use the supplied forest river background", () => {
   assert.doesNotMatch(css, /dashboard-login-background\.png/);
 });
 
+test("dashboard map preview does not stretch Google Maps internal overlays", () => {
+  const css = read("dashboard.css");
+
+  assert.match(css, /Google Maps owns the layout of its internal panes and controls/);
+  assert.doesNotMatch(css, /\.dashboard-map-preview \.gm-style > div,\s*\.dashboard-map-preview \.gm-style > div > div\s*\{/);
+});
+
 test("owner Kanban cards omit letter-based assignee icons", () => {
   const js = read("dashboard.js");
   const css = read("dashboard.css");

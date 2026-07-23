@@ -20786,7 +20786,6 @@ Requirements:
 
       if (action === "archive-money-record") {
         const entityType = target.dataset.entityType || "";
-        if (!window.confirm(`Move this ${entityType} to Recently Deleted? You can restore it later.`)) return;
         try {
           await dashboardFinancialRequest("archive-record", { entityType, id });
           const sourceView = { expense: "expenses", invoice: "invoicing", vendor: "vendors", document: "documents" }[entityType];

@@ -73,6 +73,7 @@ test("Money records use a recoverable Recently Deleted workflow", () => {
   assert.match(dashboardJs, /data-action="archive-money-record"/);
   assert.match(dashboardJs, /data-action="restore-money-record"/);
   assert.match(dashboardJs, /data-action="permanently-delete-money-record"/);
+  assert.doesNotMatch(dashboardJs, /window\.confirm\(`Move this \$\{entityType\} to Recently Deleted/);
   assert.match(financialApiJs, /DELETABLE_FINANCIAL_ENTITIES/);
   assert.match(financialApiJs, /action === "list-deleted"/);
   assert.match(financialApiJs, /"archive-record", "restore-record", "delete-record-permanently"/);

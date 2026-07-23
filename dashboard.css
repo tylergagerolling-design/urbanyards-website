@@ -21345,3 +21345,239 @@ body:not(.is-login-screen) .ticket-completion-actions {
     grid-column: 1 / -1;
   }
 }
+
+/* Controlled financial workspace */
+body:not(.is-login-screen) .money-tabs {
+  display: flex;
+  gap: 0.4rem;
+  overflow-x: auto;
+  padding: 0.4rem;
+  border: 1px solid rgba(31, 107, 79, 0.18);
+  border-radius: 18px;
+  background: rgba(255, 255, 255, 0.84);
+  scrollbar-width: thin;
+}
+
+body:not(.is-login-screen) .money-tabs button {
+  flex: 0 0 auto;
+  min-height: 42px;
+  padding: 0.65rem 1rem;
+  border: 1px solid transparent;
+  border-radius: 13px;
+  background: transparent;
+  color: #315348;
+  font-weight: 750;
+}
+
+body:not(.is-login-screen) .money-tabs button.is-active {
+  border-color: rgba(31, 107, 79, 0.28);
+  background: #1f6b4f;
+  color: #fff;
+}
+
+body:not(.is-login-screen) .financial-overview,
+body:not(.is-login-screen) .expense-workspace,
+body:not(.is-login-screen) .financial-directory,
+body:not(.is-login-screen) .money-module-state {
+  padding: clamp(1rem, 2vw, 1.5rem);
+  border: 1px solid rgba(31, 107, 79, 0.16);
+  border-radius: 24px;
+  background: rgba(255, 255, 255, 0.92);
+  box-shadow: 0 18px 42px rgba(24, 53, 43, 0.08);
+}
+
+body:not(.is-login-screen) .money-period-controls,
+body:not(.is-login-screen) .money-grid-toolbar,
+body:not(.is-login-screen) .money-bulk-bar,
+body:not(.is-login-screen) .money-grid-footer {
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+  flex-wrap: wrap;
+}
+
+body:not(.is-login-screen) .money-period-controls button,
+body:not(.is-login-screen) .money-grid-toolbar button,
+body:not(.is-login-screen) .money-bulk-bar button,
+body:not(.is-login-screen) .money-grid-footer button {
+  min-height: 38px;
+}
+
+body:not(.is-login-screen) .money-period-controls button.is-active {
+  background: #1f6b4f;
+  color: #fff;
+}
+
+body:not(.is-login-screen) .financial-metrics {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+body:not(.is-login-screen) .financial-overview-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 1rem;
+}
+
+body:not(.is-login-screen) .financial-overview-grid article,
+body:not(.is-login-screen) .financial-card-list article {
+  min-width: 0;
+  padding: 1rem;
+  border: 1px solid rgba(31, 107, 79, 0.14);
+  border-radius: 18px;
+  background: rgba(244, 248, 242, 0.88);
+}
+
+body:not(.is-login-screen) .money-grid-toolbar {
+  justify-content: space-between;
+  margin-bottom: 0.8rem;
+}
+
+body:not(.is-login-screen) .money-grid-toolbar > div {
+  display: flex;
+  gap: 0.45rem;
+}
+
+body:not(.is-login-screen) .money-grid-toolbar label,
+body:not(.is-login-screen) .money-bulk-bar label {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-size: 0.82rem;
+  font-weight: 750;
+}
+
+body:not(.is-login-screen) .money-grid-search input {
+  width: min(260px, 36vw);
+}
+
+body:not(.is-login-screen) .money-save-state {
+  min-width: 4.5rem;
+  color: #607269;
+  font-size: 0.8rem;
+  font-weight: 800;
+  text-transform: capitalize;
+}
+
+body:not(.is-login-screen) .money-save-state.is-saving { color: #8a6813; }
+body:not(.is-login-screen) .money-save-state.is-saved { color: #1f6b4f; }
+body:not(.is-login-screen) .money-save-state.is-error { color: #a53a34; }
+
+body:not(.is-login-screen) .money-bulk-bar {
+  margin-bottom: 0.75rem;
+  padding: 0.65rem 0.8rem;
+  border-radius: 14px;
+  background: #edf5ed;
+}
+
+body:not(.is-login-screen) .money-grid-shell {
+  max-width: 100%;
+  max-height: min(64vh, 720px);
+  overflow: auto;
+  border: 1px solid rgba(31, 107, 79, 0.2);
+  border-radius: 16px;
+  background: #fff;
+}
+
+body:not(.is-login-screen) .money-grid {
+  width: max-content;
+  min-width: 100%;
+  border-collapse: separate;
+  border-spacing: 0;
+  font-size: 0.82rem;
+}
+
+body:not(.is-login-screen) .money-grid th {
+  position: sticky;
+  top: 0;
+  z-index: 4;
+  padding: 0.72rem 0.55rem;
+  border-bottom: 1px solid rgba(31, 107, 79, 0.25);
+  background: #eaf2e8;
+  color: #23483b;
+  text-align: left;
+  white-space: nowrap;
+}
+
+body:not(.is-login-screen) .money-grid td {
+  min-width: 132px;
+  padding: 0.3rem;
+  border-right: 1px solid #e2e9e3;
+  border-bottom: 1px solid #e2e9e3;
+  background: #fff;
+  vertical-align: middle;
+}
+
+body:not(.is-login-screen) .money-grid tbody tr:nth-child(even) td { background: #f8faf7; }
+body:not(.is-login-screen) .money-grid tbody tr.is-selected td { background: #edf5e8; }
+body:not(.is-login-screen) .money-grid th:first-child,
+body:not(.is-login-screen) .money-grid td:first-child {
+  position: sticky;
+  left: 0;
+  z-index: 3;
+  min-width: 42px;
+  width: 42px;
+}
+
+body:not(.is-login-screen) .money-grid th:first-child { z-index: 6; }
+body:not(.is-login-screen) .money-grid input:not([type="checkbox"]),
+body:not(.is-login-screen) .money-grid select {
+  width: 100%;
+  min-width: 124px;
+  min-height: 36px;
+  padding: 0.4rem 0.45rem;
+  border: 1px solid transparent;
+  border-radius: 7px;
+  background: transparent;
+  color: #1f2924;
+}
+
+body:not(.is-login-screen) .money-grid input:focus,
+body:not(.is-login-screen) .money-grid select:focus {
+  border-color: #1f6b4f;
+  outline: 2px solid rgba(31, 107, 79, 0.16);
+  background: #fff;
+}
+
+body:not(.is-login-screen) .money-calculated {
+  color: #1f6b4f;
+  font-weight: 850;
+  white-space: nowrap;
+}
+
+body:not(.is-login-screen) .money-grid-footer {
+  justify-content: flex-end;
+  margin-top: 0.8rem;
+}
+
+body:not(.is-login-screen) .financial-card-list {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.8rem;
+}
+
+body:not(.is-login-screen) .financial-card-list article > div {
+  display: flex;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+
+@media (max-width: 980px) {
+  body:not(.is-login-screen) .financial-metrics,
+  body:not(.is-login-screen) .financial-overview-grid,
+  body:not(.is-login-screen) .financial-card-list {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 640px) {
+  body:not(.is-login-screen) .financial-metrics,
+  body:not(.is-login-screen) .financial-overview-grid,
+  body:not(.is-login-screen) .financial-card-list {
+    grid-template-columns: 1fr;
+  }
+  body:not(.is-login-screen) .money-grid-toolbar {
+    align-items: stretch;
+    flex-direction: column;
+  }
+  body:not(.is-login-screen) .money-grid-search input { width: 100%; }
+}

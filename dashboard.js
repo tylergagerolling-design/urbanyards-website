@@ -183,6 +183,17 @@
     { key: "history", label: "History" },
     { key: "reports", label: "Reports" }
   ];
+  const MONEY_TABS = [
+    { key: "overview", label: "Overview" },
+    { key: "expenses", label: "Expenses" },
+    { key: "invoicing", label: "Invoicing" },
+    { key: "vendors", label: "Vendors" },
+    { key: "documents", label: "Documents" },
+    { key: "reports", label: "Reports" }
+  ];
+  const EXPENSE_CATEGORIES = ["Materials", "Equipment", "Fuel", "Vehicle", "Insurance", "Software", "Advertising", "Office", "Subcontractor", "Labor", "Permits and Fees", "Professional Services", "Rent", "Utilities", "Taxes", "Meals", "Other"];
+  const EXPENSE_PAYMENT_METHODS = ["Square Checking", "Business Debit", "Personal Card", "Cash", "ACH", "Check", "Credit Card", "Other"];
+  const EXPENSE_STATUSES = ["Draft", "Recorded", "Pending Receipt", "Reimbursable", "Reimbursed", "Voided"];
   const DEMO_QUERY_KEYS = ["demo", "test"];
   const DASHBOARD_ICON_PATH = "images/dashboard-icons/";
   const HOME_DASHBOARD_ICON_PATH = "images/home-dashboard/";
@@ -310,6 +321,21 @@
     importExportPendingFile: null,
     importExportPreview: null,
     importExportHistoryLoadedAt: "",
+    moneyView: "overview",
+    moneyLoadedViews: new Set(),
+    moneyLoading: false,
+    moneyError: "",
+    moneySearch: "",
+    moneyExpensePage: 1,
+    moneyExpensePageSize: 50,
+    moneyExpenseSort: "expense_date.desc",
+    moneyExpenseStatus: "All",
+    moneyDateStart: "",
+    moneyDateEnd: "",
+    moneySelectedExpenseIds: new Set(),
+    moneySaveState: "",
+    moneyUndo: null,
+    moneyReceiptExpenseId: "",
     ticketBoardSearch: "",
     ticketBoardStageFilter: "All",
     ticketBoardOwnerFilter: "All",
@@ -393,6 +419,14 @@
       leadActivity: [],
       userProfiles: [],
       auditLogs: [],
+      financial: {
+        overview: null,
+        expenses: [],
+        vendors: [],
+        invoices: [],
+        documents: [],
+        reports: {}
+      },
       groundskeeperAi: {
         settings: [],
         knowledge: [],
@@ -1824,6 +1858,40 @@
     }
 
     return payload.data;
+  }
+
+  async function dashboardFinancialRequest(action, body = {}, options = {}) {
+    if (isDemoMode()) return [];
+    const session = getSession();
+    if (!session?.accessToken) throw new Error("Please sign in again.");
+    const response = await fetch("/.netlify/functions/dashboard-financial", {
+      method: "POST",
+      signal: options.signal,
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${session.accessToken}`
+      },
+      body: JSON.stringify({ action, ...body })
+    });
+    const payload = await response.json().catch(() => ({}));
+    if (!response.ok) throw new Error(payload.error || "Financial records could not be loaded.");
+    return payload.data;
+  }
+
+  async function dashboardFinancialStorageRequest(action, body = {}) {
+    const session = getSession();
+    if (!session?.accessToken) throw new Error("Please sign in again.");
+    const response = await fetch("/.netlify/functions/dashboard-financial-storage", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${session.accessToken}`
+      },
+      body: JSON.stringify({ action, ...body })
+    });
+    const payload = await response.json().catch(() => ({}));
+    if (!response.ok) throw new Error(payload.error || "Financial document request failed.");
+    return payload;
   }
 
   async function loadCurrentUserProfile(session, options = {}) {
@@ -14089,6 +14157,314 @@ Requirements:
     </section>`;
   }
 
+  function moneyCurrency(value) {
+    return new Intl.NumberFormat("en-US", { style: "currency", currency: "USD" }).format(Number(value || 0));
+  }
+
+  function expenseSelectOptions(values, selected, emptyLabel = "") {
+    return `${emptyLabel ? `<option value="">${escapeHtml(emptyLabel)}</option>` : ""}${values.map((value) => `<option value="${escapeHtml(value)}"${value === selected ? " selected" : ""}>${escapeHtml(value)}</option>`).join("")}`;
+  }
+
+  function normalizeExpense(row = {}) {
+    return {
+      id: row.id || "",
+      expenseDate: row.expense_date || todayKey(),
+      vendorId: row.vendor_id || "",
+      vendorName: row.vendor_name || "",
+      category: row.category || "Other",
+      description: row.description || "",
+      clientId: row.client_id || "",
+      propertyId: row.property_id || "",
+      jobId: row.job_id || "",
+      ticketId: row.ticket_id || "",
+      paymentMethod: row.payment_method || "",
+      subtotal: row.subtotal ?? "",
+      tax: row.tax ?? "",
+      total: row.total ?? 0,
+      reimbursable: Boolean(row.reimbursable),
+      status: row.status || "Draft",
+      notes: row.notes || "",
+      createdBy: row.created_by || "",
+      updatedAt: row.updated_at || "",
+      version: Number(row.version || 1)
+    };
+  }
+
+  function financialDateRange() {
+    if (state.moneyDateStart && state.moneyDateEnd) return { start: state.moneyDateStart, end: state.moneyDateEnd };
+    const now = new Date();
+    const start = new Date(now.getFullYear(), now.getMonth(), 1);
+    return { start: toDateInputValue(start), end: toDateInputValue(now) };
+  }
+
+  async function loadMoneyView(view = state.moneyView, { force = false } = {}) {
+    if (state.moneyLoading || (!force && state.moneyLoadedViews.has(view))) return;
+    state.moneyLoading = true;
+    state.moneyError = "";
+    renderMoneyWorkspace();
+    try {
+      if (view === "overview") {
+        const range = financialDateRange();
+        state.data.financial.overview = await dashboardFinancialRequest("overview", range);
+      } else if (view === "expenses") {
+        const rows = await dashboardFinancialRequest("list-expenses", {
+          page: state.moneyExpensePage,
+          pageSize: state.moneyExpensePageSize,
+          search: state.moneySearch,
+          status: state.moneyExpenseStatus,
+          sort: state.moneyExpenseSort
+        });
+        state.data.financial.expenses = (rows || []).map(normalizeExpense);
+        if (!state.moneyLoadedViews.has("vendors")) {
+          const vendors = await dashboardFinancialRequest("list-vendors");
+          state.data.financial.vendors = vendors || [];
+          state.moneyLoadedViews.add("vendors");
+        }
+      } else if (view === "vendors") {
+        state.data.financial.vendors = await dashboardFinancialRequest("list-vendors") || [];
+      } else if (view === "invoicing") {
+        state.data.financial.invoices = await dashboardFinancialRequest("list-invoices") || [];
+      } else if (view === "documents") {
+        state.data.financial.documents = await dashboardFinancialRequest("list-documents") || [];
+      }
+      state.moneyLoadedViews.add(view);
+    } catch (error) {
+      state.moneyError = error.message || "Financial records could not be loaded.";
+    } finally {
+      state.moneyLoading = false;
+      renderMoneyWorkspace();
+    }
+  }
+
+  function renderMoneyTabs() {
+    return `<nav class="money-tabs" role="tablist" aria-label="Money workspace views">
+      ${MONEY_TABS.map((tab) => `<button type="button" role="tab" data-action="money-tab" data-money-view="${escapeHtml(tab.key)}" aria-selected="${state.moneyView === tab.key ? "true" : "false"}" class="${state.moneyView === tab.key ? "is-active" : ""}">${escapeHtml(tab.label)}</button>`).join("")}
+    </nav>`;
+  }
+
+  function renderMoneyOverview() {
+    const overview = state.data.financial.overview || {};
+    const revenue = Number(overview.revenue || 0);
+    const expenses = Number(overview.expenses || 0);
+    const profit = revenue - expenses;
+    return `<section class="financial-overview" aria-label="Financial overview">
+      <div class="money-period-controls">
+        <button type="button" class="is-active" data-action="money-period" data-period="month">This month</button>
+        <button type="button" data-action="money-period" data-period="previous">Previous month</button>
+        <button type="button" data-action="money-period" data-period="quarter">Quarter</button>
+        <button type="button" data-action="money-period" data-period="ytd">Year to date</button>
+        <button type="button" data-action="money-period" data-period="custom">Custom range</button>
+      </div>
+      <section class="ticket-metrics financial-metrics">
+        ${renderTicketMetric(moneyCurrency(revenue), "Revenue", "Selected period")}
+        ${renderTicketMetric(moneyCurrency(expenses), "Expenses", "Selected period")}
+        ${renderTicketMetric(moneyCurrency(overview.outstanding), "Outstanding", "Open invoice balance")}
+        ${renderTicketMetric(moneyCurrency(overview.overdue), "Overdue", "Past due balance")}
+        ${renderTicketMetric(moneyCurrency(profit), "Gross Profit", "Revenue minus recorded expenses")}
+        ${renderTicketMetric(String(overview.missing_receipts || 0), "Missing Receipts", "Expenses needing proof")}
+      </section>
+      <div class="financial-overview-grid">
+        <article><p class="eyebrow">Revenue vs. Expenses</p><h4>${moneyCurrency(revenue)} / ${moneyCurrency(expenses)}</h4><p>${profit >= 0 ? "Positive" : "Negative"} operating spread for the selected period.</p></article>
+        <article><p class="eyebrow">Invoice Aging</p><h4>${moneyCurrency(overview.overdue)}</h4><p>Overdue balance requiring collection follow-up.</p></article>
+        <article><p class="eyebrow">Job Profitability</p><h4>Linked records</h4><p>Profitability will use ticket-linked expenses and invoice lines rather than copied totals.</p></article>
+      </div>
+    </section>`;
+  }
+
+  function renderExpenseRow(expense) {
+    const vendors = state.data.financial.vendors || [];
+    const selected = state.moneySelectedExpenseIds.has(expense.id);
+    return `<tr data-expense-row="${escapeHtml(expense.id)}"${selected ? " class=\"is-selected\"" : ""}>
+      <td class="money-select-cell"><input type="checkbox" data-expense-select value="${escapeHtml(expense.id)}"${selected ? " checked" : ""} aria-label="Select expense"></td>
+      <td class="money-frozen-cell"><input type="date" data-expense-field="expense_date" value="${escapeHtml(expense.expenseDate)}"></td>
+      <td><select data-expense-field="vendor_id"><option value="">Choose vendor</option>${vendors.map((vendor) => `<option value="${escapeHtml(vendor.id)}"${vendor.id === expense.vendorId ? " selected" : ""}>${escapeHtml(vendor.vendor_name)}</option>`).join("")}</select></td>
+      <td><select data-expense-field="category">${expenseSelectOptions(EXPENSE_CATEGORIES, expense.category)}</select></td>
+      <td><input data-expense-field="description" value="${escapeHtml(expense.description)}" placeholder="Expense description"></td>
+      <td><input data-expense-field="client_id" value="${escapeHtml(expense.clientId)}" placeholder="Client ID"></td>
+      <td><input data-expense-field="property_id" value="${escapeHtml(expense.propertyId)}" placeholder="Property ID"></td>
+      <td><input data-expense-field="ticket_id" value="${escapeHtml(expense.ticketId)}" placeholder="Ticket ID"></td>
+      <td><select data-expense-field="payment_method">${expenseSelectOptions(EXPENSE_PAYMENT_METHODS, expense.paymentMethod, "Choose method")}</select></td>
+      <td><input type="number" min="0" step="0.01" data-expense-field="subtotal" value="${escapeHtml(String(expense.subtotal))}"></td>
+      <td><input type="number" min="0" step="0.01" data-expense-field="tax" value="${escapeHtml(String(expense.tax))}"></td>
+      <td class="money-calculated">${escapeHtml(moneyCurrency(expense.total))}</td>
+      <td><button type="button" class="inline-action" data-action="expense-receipt" data-id="${escapeHtml(expense.id)}">Receipt</button></td>
+      <td><input type="checkbox" data-expense-field="reimbursable"${expense.reimbursable ? " checked" : ""} aria-label="Reimbursable"></td>
+      <td><select data-expense-field="status">${expenseSelectOptions(EXPENSE_STATUSES, expense.status)}</select></td>
+      <td><input data-expense-field="notes" value="${escapeHtml(expense.notes)}" placeholder="Notes"></td>
+      <td>${escapeHtml(expense.createdBy || "Current user")}</td>
+      <td>${escapeHtml(expense.updatedAt ? formatDate(expense.updatedAt) : "Not saved")}</td>
+      <td><button type="button" class="inline-action" data-action="duplicate-expense" data-id="${escapeHtml(expense.id)}">Duplicate</button><button type="button" class="inline-action danger" data-action="void-expense" data-id="${escapeHtml(expense.id)}">Void</button></td>
+    </tr>`;
+  }
+
+  function renderExpenseWorkspace() {
+    const rows = state.data.financial.expenses || [];
+    return `<section class="expense-workspace" aria-label="Expense spreadsheet">
+      <input type="file" data-expense-receipt-input accept=".pdf,.jpg,.jpeg,.png,.heic,.heif,.docx,.xlsx,.csv" hidden>
+      <div class="money-grid-toolbar">
+        <div>
+          <button type="button" data-action="add-expense-row">+ Add Row</button>
+          <button type="button" data-action="paste-expenses">Paste Rows</button>
+          <button type="button" data-action="undo-expense-edit"${state.moneyUndo ? "" : " disabled"}>Undo</button>
+        </div>
+        <label class="money-grid-search">Search <input type="search" data-money-search value="${escapeHtml(state.moneySearch)}" placeholder="Vendor, description, notes"></label>
+        <label>Status <select data-money-status>${expenseSelectOptions(["All", ...EXPENSE_STATUSES], state.moneyExpenseStatus)}</select></label>
+        <span class="money-save-state ${state.moneySaveState ? `is-${escapeHtml(state.moneySaveState)}` : ""}" role="status">${escapeHtml(state.moneySaveState || "Ready")}</span>
+      </div>
+      <div class="money-bulk-bar"${state.moneySelectedExpenseIds.size ? "" : " hidden"}>
+        <strong>${state.moneySelectedExpenseIds.size} selected</strong>
+        <label>Category <select data-money-bulk-field="category">${expenseSelectOptions(EXPENSE_CATEGORIES, "", "Choose")}</select></label>
+        <label>Status <select data-money-bulk-field="status">${expenseSelectOptions(EXPENSE_STATUSES, "", "Choose")}</select></label>
+        <label>Payment <select data-money-bulk-field="payment_method">${expenseSelectOptions(EXPENSE_PAYMENT_METHODS, "", "Choose")}</select></label>
+        <button type="button" data-action="apply-expense-bulk">Apply</button>
+      </div>
+      <div class="money-grid-shell" tabindex="0">
+        <table class="money-grid" data-expense-grid>
+          <thead><tr>
+            <th><input type="checkbox" data-expense-select-all aria-label="Select all expenses"></th>
+            <th>Date</th><th>Vendor</th><th>Category</th><th>Description</th><th>Client</th><th>Property</th><th>Job / Ticket</th>
+            <th>Payment Method</th><th>Subtotal</th><th>Tax</th><th>Total</th><th>Receipt</th><th>Reimbursable</th>
+            <th>Status</th><th>Notes</th><th>Created By</th><th>Last Updated</th><th>Actions</th>
+          </tr></thead>
+          <tbody>${rows.length ? rows.map(renderExpenseRow).join("") : `<tr><td colspan="19">${emptyState("No expenses match this view. Add a row or paste spreadsheet data to begin.")}</td></tr>`}</tbody>
+        </table>
+      </div>
+      <footer class="money-grid-footer">
+        <button type="button" data-action="money-expense-page" data-direction="-1"${state.moneyExpensePage <= 1 ? " disabled" : ""}>Previous</button>
+        <span>Page ${state.moneyExpensePage} · up to ${state.moneyExpensePageSize} rows</span>
+        <button type="button" data-action="money-expense-page" data-direction="1"${rows.length < state.moneyExpensePageSize ? " disabled" : ""}>Next</button>
+      </footer>
+    </section>`;
+  }
+
+  function expenseRowPayload(row) {
+    const value = (field) => row.querySelector(`[data-expense-field="${field}"]`);
+    const subtotalText = value("subtotal")?.value?.trim() || "";
+    const taxText = value("tax")?.value?.trim() || "";
+    const subtotal = subtotalText === "" ? null : Number(subtotalText);
+    const tax = taxText === "" ? null : Number(taxText);
+    const displayedExpense = state.data.financial.expenses.find((item) => item.id === row.dataset.expenseRow);
+    const total = subtotal === null || tax === null ? Number(displayedExpense?.total || 0) : Math.round((subtotal + tax) * 100) / 100;
+    if (![subtotal, tax, total].filter((item) => item !== null).every(Number.isFinite)) {
+      throw new Error("Expense amounts must be valid numbers.");
+    }
+    return {
+      expense_date: value("expense_date")?.value || todayKey(),
+      vendor_id: value("vendor_id")?.value || null,
+      category: value("category")?.value || "Other",
+      description: value("description")?.value?.trim() || null,
+      client_id: value("client_id")?.value?.trim() || null,
+      property_id: value("property_id")?.value?.trim() || null,
+      ticket_id: value("ticket_id")?.value?.trim() || null,
+      payment_method: value("payment_method")?.value || null,
+      subtotal,
+      tax,
+      total,
+      reimbursable: Boolean(value("reimbursable")?.checked),
+      status: value("status")?.value || "Draft",
+      notes: value("notes")?.value?.trim() || null
+    };
+  }
+
+  async function saveExpenseRow(row) {
+    const id = row?.dataset.expenseRow;
+    if (!id) return;
+    const current = state.data.financial.expenses.find((item) => item.id === id);
+    const payload = expenseRowPayload(row);
+    state.moneyUndo = current ? { id, previous: current } : null;
+    state.moneySaveState = "saving";
+    const saveState = qs("[data-money-workspace] .money-save-state");
+    if (saveState) {
+      saveState.textContent = "saving";
+      saveState.className = "money-save-state is-saving";
+    }
+    try {
+      const result = await supabaseRestRequest(`expenses?id=eq.${encodeURIComponent(id)}`, {
+        method: "PATCH",
+        headers: { Prefer: "return=representation" },
+        body: JSON.stringify({ ...payload, version: Number(current?.version || 1) + 1 })
+      });
+      const saved = normalizeExpense(result?.[0] || { id, ...payload });
+      state.data.financial.expenses = state.data.financial.expenses.map((item) => item.id === id ? saved : item);
+      state.moneySaveState = "saved";
+      if (saveState) {
+        saveState.textContent = "saved";
+        saveState.className = "money-save-state is-saved";
+      }
+    } catch (error) {
+      state.moneySaveState = "error";
+      setDashboardState(error.message || "Expense save failed. Your previous value is still on the server.", "error");
+      renderMoneyWorkspace();
+    }
+  }
+
+  async function createExpense(payload = {}) {
+    const session = getSession() || {};
+    const rows = await supabaseRestRequest("expenses", {
+      method: "POST",
+      headers: { Prefer: "return=representation" },
+      body: JSON.stringify({
+        expense_date: payload.expense_date || todayKey(),
+        category: payload.category || "Other",
+        description: payload.description || null,
+        vendor_name: payload.vendor_name || null,
+        payment_method: payload.payment_method || null,
+        subtotal: payload.subtotal ?? null,
+        tax: payload.tax ?? null,
+        total: Number(payload.total || 0),
+        status: payload.status || "Draft",
+        notes: payload.notes || null,
+        created_by: session.userId || null,
+        updated_by: session.userId || null
+      })
+    });
+    return normalizeExpense(rows?.[0] || payload);
+  }
+
+  async function pasteExpenseRows(text) {
+    const lines = String(text || "").split(/\r?\n/).filter((line) => line.trim()).slice(0, 100);
+    if (!lines.length) throw new Error("Clipboard does not contain spreadsheet rows.");
+    const parsed = lines.map((line) => {
+      const cells = line.split("\t");
+      const subtotal = cells[4] === "" ? null : Number(cells[4] || 0);
+      const tax = cells[5] === "" ? null : Number(cells[5] || 0);
+      const explicitTotal = cells[6] === "" || cells[6] === undefined ? null : Number(cells[6]);
+      return {
+        expense_date: /^\d{4}-\d{2}-\d{2}$/.test(cells[0] || "") ? cells[0] : todayKey(),
+        vendor_name: (cells[1] || "").trim() || null,
+        category: EXPENSE_CATEGORIES.includes(cells[2]) ? cells[2] : "Other",
+        description: (cells[3] || "").trim() || null,
+        subtotal: Number.isFinite(subtotal) ? subtotal : null,
+        tax: Number.isFinite(tax) ? tax : null,
+        total: Number.isFinite(explicitTotal) ? explicitTotal : Math.round((Number(subtotal || 0) + Number(tax || 0)) * 100) / 100,
+        payment_method: EXPENSE_PAYMENT_METHODS.includes(cells[7]) ? cells[7] : null,
+        status: EXPENSE_STATUSES.includes(cells[8]) ? cells[8] : "Draft",
+        notes: (cells[9] || "").trim() || null
+      };
+    });
+    const created = [];
+    for (const payload of parsed) created.push(await createExpense(payload));
+    state.data.financial.expenses = [...created.reverse(), ...state.data.financial.expenses].slice(0, state.moneyExpensePageSize);
+    return created.length;
+  }
+
+  function renderVendorsWorkspace() {
+    const vendors = state.data.financial.vendors || [];
+    return `<section class="financial-directory">
+      <div class="ticket-lane-heading"><div><p class="eyebrow">Directory</p><h3>Vendors</h3><p>Controlled vendor records for consistent expense entry.</p></div><button type="button" data-action="add-vendor">Add Vendor</button></div>
+      <div class="financial-card-list">${vendors.length ? vendors.map((vendor) => `<article><div><strong>${escapeHtml(vendor.vendor_name)}</strong><span>${escapeHtml(vendor.default_expense_category || "No default category")}</span></div><p>${escapeHtml([vendor.contact_name, vendor.email, vendor.phone].filter(Boolean).join(" · ") || "No contact details")}</p><span class="status-badge">${escapeHtml(vendor.status || "Active")}</span></article>`).join("") : emptyState("No vendors are filed yet.")}</div>
+    </section>`;
+  }
+
+  function renderMoneyActiveView() {
+    if (state.moneyLoading) return `<section class="money-module-state" role="status"><strong>Loading ${escapeHtml(state.moneyView)}…</strong><p>The rest of the dashboard remains available.</p></section>`;
+    if (state.moneyError) return `<section class="money-module-state is-error" role="alert"><strong>Could not load financial records</strong><p>${escapeHtml(state.moneyError)}</p><button type="button" data-action="retry-money-view">Retry</button></section>`;
+    if (state.moneyView === "overview") return renderMoneyOverview();
+    if (state.moneyView === "expenses") return renderExpenseWorkspace();
+    if (state.moneyView === "vendors") return renderVendorsWorkspace();
+    return `<section class="money-module-state"><strong>${escapeHtml(MONEY_TABS.find((item) => item.key === state.moneyView)?.label || "Money")}</strong><p>This module is being connected to the same financial record foundation.</p></section>`;
+  }
+
   function renderMoneyWorkspace(data = state.data) {
     const target = qs("[data-money-workspace]");
     if (!target) return;
@@ -14132,15 +14508,13 @@ Requirements:
             ${canManageMoneyWorkflow() ? `<button type="button" data-action="open-financial-records">Open Records</button>` : ""}
           </div>
         </header>
-        <section class="ticket-metrics" aria-label="Money ticket summary">
-          ${renderTicketMetric(needsBudget.length, "Cost Review", "Tickets needing cost review")}
-          ${renderTicketMetric(ownerApproval.length, "Owner Approval", "Cost and invoice prep")}
-          ${renderTicketMetric(unpaidInvoices.length, "Open Invoices", "Awaiting payment")}
-          ${renderTicketMetric(overdueInvoices.length, "Overdue", "Payment action needed")}
-        </section>
-        ${renderMoneyCommandCenter({ needsBudget, ownerApproval, fieldComplete, invoiceTickets, unpaidInvoices, overdueInvoices })}
-        ${renderMoneyBudgetPanel(data, tickets)}
+        ${renderMoneyTabs()}
+        ${renderMoneyActiveView()}
+        ${state.moneyView === "overview" ? `${renderMoneyCommandCenter({ needsBudget, ownerApproval, fieldComplete, invoiceTickets, unpaidInvoices, overdueInvoices })}${renderMoneyBudgetPanel(data, tickets)}` : ""}
       </div>`;
+    if (!state.moneyLoadedViews.has(state.moneyView) && !state.moneyLoading && !state.moneyError) {
+      queueMicrotask(() => void loadMoneyView(state.moneyView));
+    }
   }
 
   function renderToolsRunwayCard({ label, value, detail, tone = "", action, actionLabel }) {
@@ -19701,6 +20075,56 @@ Requirements:
       const target = event.target;
       if (!target) return;
 
+      if (target.matches("[data-expense-receipt-input]")) {
+        const file = target.files?.[0];
+        const expenseId = state.moneyReceiptExpenseId;
+        target.value = "";
+        if (!file || !expenseId) return;
+        try {
+          setDashboardState("Uploading receipt…");
+          await dashboardFinancialStorageRequest("upload-expense-receipt", {
+            expenseId,
+            fileName: file.name,
+            mimeType: file.type || "application/octet-stream",
+            size: file.size,
+            contentBase64: await readFileAsBase64(file)
+          });
+          state.moneyReceiptExpenseId = "";
+          setDashboardState("Receipt securely uploaded.");
+        } catch (error) {
+          state.moneyReceiptExpenseId = "";
+          setDashboardState(error.message || "Receipt upload failed.", "error");
+        }
+        return;
+      }
+
+      if (target.matches("[data-expense-field]")) {
+        await saveExpenseRow(target.closest("[data-expense-row]"));
+        return;
+      }
+
+      if (target.matches("[data-expense-select]")) {
+        if (target.checked) state.moneySelectedExpenseIds.add(target.value);
+        else state.moneySelectedExpenseIds.delete(target.value);
+        renderMoneyWorkspace();
+        return;
+      }
+
+      if (target.matches("[data-expense-select-all]")) {
+        state.moneySelectedExpenseIds.clear();
+        if (target.checked) state.data.financial.expenses.forEach((item) => state.moneySelectedExpenseIds.add(item.id));
+        renderMoneyWorkspace();
+        return;
+      }
+
+      if (target.matches("[data-money-status]")) {
+        state.moneyExpenseStatus = target.value || "All";
+        state.moneyExpensePage = 1;
+        state.moneyLoadedViews.delete("expenses");
+        await loadMoneyView("expenses", { force: true });
+        return;
+      }
+
       if (target.matches("[data-completion-na]")) {
         const item = target.closest("[data-completion-item]");
         const complete = item?.querySelector("[data-completion-complete]");
@@ -20021,6 +20445,26 @@ Requirements:
     });
 
     els.appView.addEventListener("input", (event) => {
+      if (event.target?.matches?.("[data-money-search]")) {
+        state.moneySearch = event.target.value || "";
+        state.moneyExpensePage = 1;
+        window.clearTimeout(state._moneySearchTimer);
+        state._moneySearchTimer = window.setTimeout(() => {
+          state.moneyLoadedViews.delete("expenses");
+          void loadMoneyView("expenses", { force: true });
+        }, 300);
+        return;
+      }
+
+      if (event.target?.matches?.("[data-expense-field='subtotal'], [data-expense-field='tax']")) {
+        const row = event.target.closest("[data-expense-row]");
+        const subtotal = Number(row?.querySelector("[data-expense-field='subtotal']")?.value || 0);
+        const tax = Number(row?.querySelector("[data-expense-field='tax']")?.value || 0);
+        const calculated = row?.querySelector(".money-calculated");
+        if (calculated) calculated.textContent = moneyCurrency(subtotal + tax);
+        return;
+      }
+
       if (event.target?.matches?.("[data-call-queue-search]")) {
         state.callQueueSearch = event.target.value || "";
         state.callQueueVisibleCount = 25;
@@ -20066,6 +20510,32 @@ Requirements:
       form._duplicateTimer = window.setTimeout(() => renderDuplicateWarning(form), 250);
     });
 
+    els.appView.addEventListener("keydown", (event) => {
+      const cell = event.target?.matches?.("[data-expense-field]") ? event.target : null;
+      if (!cell || !["Enter", "ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight"].includes(event.key)) return;
+      if ((event.key === "ArrowLeft" || event.key === "ArrowRight") && cell.matches("input:not([type='date']):not([type='number'])")) return;
+      const row = cell.closest("[data-expense-row]");
+      const grid = cell.closest("[data-expense-grid]");
+      if (!row || !grid) return;
+      const field = cell.dataset.expenseField;
+      const rows = Array.from(grid.querySelectorAll("[data-expense-row]"));
+      const rowIndex = rows.indexOf(row);
+      let next = null;
+      if (event.key === "Enter" || event.key === "ArrowDown") next = rows[rowIndex + 1]?.querySelector(`[data-expense-field="${field}"]`);
+      if (event.key === "ArrowUp") next = rows[rowIndex - 1]?.querySelector(`[data-expense-field="${field}"]`);
+      if (event.key === "ArrowLeft" || event.key === "ArrowRight") {
+        const cells = Array.from(row.querySelectorAll("[data-expense-field]"));
+        const index = cells.indexOf(cell);
+        next = cells[index + (event.key === "ArrowRight" ? 1 : -1)];
+      }
+      if (next) {
+        event.preventDefault();
+        cell.dispatchEvent(new Event("change", { bubbles: true }));
+        next.focus();
+        next.select?.();
+      }
+    });
+
     els.appView.addEventListener("click", async (event) => {
       if (Date.now() < Number(state.ownerKanbanSuppressClickUntil || 0) && event.target?.closest?.("[data-owner-kanban-card]")) {
         event.preventDefault();
@@ -20082,6 +20552,210 @@ Requirements:
 
       if (target.dataset.export) {
         exportData(target.dataset.export);
+        return;
+      }
+
+      if (action === "money-tab") {
+        state.moneyView = target.dataset.moneyView || "overview";
+        renderMoneyWorkspace();
+        return;
+      }
+
+      if (action === "money-period") {
+        const period = target.dataset.period || "month";
+        const now = new Date();
+        let start = new Date(now.getFullYear(), now.getMonth(), 1);
+        let end = now;
+        if (period === "previous") {
+          start = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+          end = new Date(now.getFullYear(), now.getMonth(), 0);
+        } else if (period === "quarter") {
+          start = new Date(now.getFullYear(), Math.floor(now.getMonth() / 3) * 3, 1);
+        } else if (period === "ytd") {
+          start = new Date(now.getFullYear(), 0, 1);
+        } else if (period === "custom") {
+          const customStart = window.prompt("Start date (YYYY-MM-DD)", state.moneyDateStart || toDateInputValue(start));
+          if (!customStart) return;
+          const customEnd = window.prompt("End date (YYYY-MM-DD)", state.moneyDateEnd || toDateInputValue(end));
+          if (!customEnd) return;
+          state.moneyDateStart = customStart;
+          state.moneyDateEnd = customEnd;
+          state.moneyLoadedViews.delete("overview");
+          await loadMoneyView("overview", { force: true });
+          return;
+        }
+        state.moneyDateStart = toDateInputValue(start);
+        state.moneyDateEnd = toDateInputValue(end);
+        state.moneyLoadedViews.delete("overview");
+        await loadMoneyView("overview", { force: true });
+        return;
+      }
+
+      if (action === "add-vendor") {
+        const vendorName = window.prompt("Vendor name");
+        if (!vendorName?.trim()) return;
+        try {
+          const rows = await supabaseRestRequest("vendors", {
+            method: "POST",
+            headers: { Prefer: "return=representation" },
+            body: JSON.stringify({ vendor_name: vendorName.trim(), status: "Active" })
+          });
+          if (rows?.[0]) state.data.financial.vendors.push(rows[0]);
+          state.data.financial.vendors.sort((a, b) => String(a.vendor_name).localeCompare(String(b.vendor_name)));
+          renderMoneyWorkspace();
+          setDashboardState("Vendor added.");
+        } catch (error) {
+          setDashboardState(error.message || "Vendor could not be added.", "error");
+        }
+        return;
+      }
+
+      if (action === "retry-money-view") {
+        state.moneyError = "";
+        state.moneyLoadedViews.delete(state.moneyView);
+        await loadMoneyView(state.moneyView, { force: true });
+        return;
+      }
+
+      if (action === "add-expense-row") {
+        try {
+          state.moneySaveState = "saving";
+          const created = await createExpense();
+          state.data.financial.expenses.unshift(created);
+          state.moneySaveState = "saved";
+          renderMoneyWorkspace();
+        } catch (error) {
+          state.moneySaveState = "error";
+          setDashboardState(error.message || "Expense row could not be added.", "error");
+          renderMoneyWorkspace();
+        }
+        return;
+      }
+
+      if (action === "paste-expenses") {
+        try {
+          const text = await navigator.clipboard.readText();
+          state.moneySaveState = "saving";
+          const count = await pasteExpenseRows(text);
+          state.moneySaveState = "saved";
+          renderMoneyWorkspace();
+          setDashboardState(`${count} expense row${count === 1 ? "" : "s"} added from the clipboard.`);
+        } catch (error) {
+          state.moneySaveState = "error";
+          setDashboardState(error.message || "Spreadsheet rows could not be pasted.", "error");
+          renderMoneyWorkspace();
+        }
+        return;
+      }
+
+      if (action === "expense-receipt") {
+        state.moneyReceiptExpenseId = id;
+        qs("[data-expense-receipt-input]")?.click();
+        return;
+      }
+
+      if (action === "duplicate-expense") {
+        const source = state.data.financial.expenses.find((item) => item.id === id);
+        if (!source) return;
+        try {
+          const created = await createExpense({
+            expense_date: source.expenseDate,
+            vendor_name: source.vendorName,
+            category: source.category,
+            description: source.description,
+            payment_method: source.paymentMethod,
+            subtotal: source.subtotal === "" ? null : source.subtotal,
+            tax: source.tax === "" ? null : source.tax,
+            total: source.total,
+            status: "Draft",
+            notes: source.notes
+          });
+          state.data.financial.expenses.unshift(created);
+          renderMoneyWorkspace();
+          setDashboardState("Expense duplicated as a draft.");
+        } catch (error) {
+          setDashboardState(error.message || "Expense could not be duplicated.", "error");
+        }
+        return;
+      }
+
+      if (action === "void-expense") {
+        if (!window.confirm("Void this expense? The financial record will remain in the activity history.")) return;
+        try {
+          await supabaseRestRequest(`expenses?id=eq.${encodeURIComponent(id)}`, {
+            method: "PATCH",
+            headers: { Prefer: "return=representation" },
+            body: JSON.stringify({ status: "Voided" })
+          });
+          state.data.financial.expenses = state.data.financial.expenses.map((item) => item.id === id ? { ...item, status: "Voided" } : item);
+          renderMoneyWorkspace();
+          setDashboardState("Expense voided.");
+        } catch (error) {
+          setDashboardState(error.message || "Expense could not be voided.", "error");
+        }
+        return;
+      }
+
+      if (action === "apply-expense-bulk") {
+        const toolbar = target.closest(".money-bulk-bar");
+        const updates = {};
+        toolbar?.querySelectorAll("[data-money-bulk-field]").forEach((input) => {
+          if (input.value) updates[input.dataset.moneyBulkField] = input.value;
+        });
+        if (!Object.keys(updates).length) {
+          setDashboardState("Choose a bulk value first.", "error");
+          return;
+        }
+        try {
+          for (const expenseId of state.moneySelectedExpenseIds) {
+            await supabaseRestRequest(`expenses?id=eq.${encodeURIComponent(expenseId)}`, {
+              method: "PATCH",
+              body: JSON.stringify(updates)
+            });
+          }
+          state.moneySelectedExpenseIds.clear();
+          state.moneyLoadedViews.delete("expenses");
+          await loadMoneyView("expenses", { force: true });
+          setDashboardState("Selected expenses updated.");
+        } catch (error) {
+          setDashboardState(error.message || "Bulk update failed.", "error");
+        }
+        return;
+      }
+
+      if (action === "money-expense-page") {
+        state.moneyExpensePage = Math.max(1, state.moneyExpensePage + Number(target.dataset.direction || 0));
+        state.moneyLoadedViews.delete("expenses");
+        await loadMoneyView("expenses", { force: true });
+        return;
+      }
+
+      if (action === "undo-expense-edit" && state.moneyUndo) {
+        const { id: undoId, previous } = state.moneyUndo;
+        try {
+          await supabaseRestRequest(`expenses?id=eq.${encodeURIComponent(undoId)}`, {
+            method: "PATCH",
+            body: JSON.stringify({
+              expense_date: previous.expenseDate,
+              vendor_id: previous.vendorId || null,
+              category: previous.category,
+              description: previous.description || null,
+              payment_method: previous.paymentMethod || null,
+              subtotal: previous.subtotal === "" ? null : previous.subtotal,
+              tax: previous.tax === "" ? null : previous.tax,
+              total: previous.total,
+              reimbursable: previous.reimbursable,
+              status: previous.status,
+              notes: previous.notes || null
+            })
+          });
+          state.moneyUndo = null;
+          state.moneyLoadedViews.delete("expenses");
+          await loadMoneyView("expenses", { force: true });
+          setDashboardState("Most recent expense edit undone.");
+        } catch (error) {
+          setDashboardState(error.message || "Expense edit could not be undone.", "error");
+        }
         return;
       }
 

@@ -8,6 +8,11 @@ const migration = fs.readFileSync(
   path.join(root, "supabase", "migrations", "20260723_financial_workspace.sql"),
   "utf8"
 );
+const dashboardJs = fs.readFileSync(path.join(root, "dashboard.js"), "utf8");
+const dashboardCss = fs.readFileSync(path.join(root, "dashboard.css"), "utf8");
+const authJs = fs.readFileSync(path.join(root, "netlify", "functions", "lib", "dashboard-auth.js"), "utf8");
+const { expensePath } = require("../netlify/functions/dashboard-financial")._internals;
+const storage = require("../netlify/functions/dashboard-financial-storage")._internals;
 
 test("financial workspace migration is additive and preserves canonical links", () => {
   assert.match(migration, /create table if not exists public\.expenses/i);
@@ -45,4 +50,46 @@ test("financial overview aggregates without loading complete spreadsheets", () =
   assert.match(migration, /'outstanding'/i);
   assert.match(migration, /'overdue'/i);
   assert.match(migration, /'missing_receipts'/i);
+});
+
+test("Money exposes lazy submodules and a controlled editable expense grid", () => {
+  for (const label of ["Overview", "Expenses", "Invoicing", "Vendors", "Documents", "Reports"]) {
+    assert.match(dashboardJs, new RegExp(`label: "${label}"`));
+  }
+  assert.match(dashboardJs, /data-expense-grid/);
+  assert.match(dashboardJs, /data-expense-field/);
+  assert.match(dashboardJs, /pasteExpenseRows/);
+  assert.match(dashboardJs, /moneyExpensePageSize: 50/);
+  assert.match(dashboardCss, /\.money-grid th[\s\S]*position: sticky/);
+  assert.match(dashboardCss, /\.money-grid-shell[\s\S]*overflow: auto/);
+});
+
+test("financial list endpoint enforces pagination, safe sorting, status, and search", () => {
+  const pathValue = expensePath({
+    page: 3,
+    pageSize: 999,
+    sort: "total.desc",
+    status: "Recorded",
+    search: "fuel,test"
+  });
+  assert.match(pathValue, /^expenses\?/);
+  assert.match(pathValue, /limit=100/);
+  assert.match(pathValue, /offset=200/);
+  assert.match(pathValue, /order=total.desc/);
+  assert.match(pathValue, /status=eq.Recorded/);
+  assert.doesNotMatch(pathValue, /fuel%2Ctest/);
+});
+
+test("Money permissions and private receipt upload are server enforced", () => {
+  assert.match(authJs, /money:read/);
+  assert.match(authJs, /money:write/);
+  assert.match(authJs, /expense_attachments/);
+  const upload = storage.validateUpload({
+    fileName: "receipt.pdf",
+    mimeType: "application/pdf",
+    contentBase64: Buffer.from("%PDF sample").toString("base64")
+  });
+  assert.equal(upload.ext, "pdf");
+  assert.equal(storage.safePath("financial-documents/default/expenses/abc/file.pdf"), "financial-documents/default/expenses/abc/file.pdf");
+  assert.throws(() => storage.safePath("../secret.txt"), /Invalid financial document path/);
 });

@@ -4370,6 +4370,169 @@ button.profile-mini-item {
   }
 }
 
+/* Dashboard containment contract.
+   Wide workspaces scroll inside their own surface; they must never enlarge the
+   page canvas or push controls and text beyond the visible dashboard. */
+body:not(.is-login-screen) {
+  overflow-x: hidden;
+}
+
+body:not(.is-login-screen) :is(
+  .dashboard-shell,
+  .app-view,
+  .dashboard-main,
+  .dashboard-section,
+  .uy-page-stack,
+  .uy-standard-page,
+  .money-page,
+  [data-money-workspace],
+  .financial-overview,
+  .expense-workspace,
+  .invoice-workspace,
+  .financial-directory,
+  .financial-reports,
+  .money-module-state
+) {
+  min-width: 0;
+  max-width: 100%;
+}
+
+body:not(.is-login-screen) .dashboard-main,
+body:not(.is-login-screen) .dashboard-section.is-active {
+  overflow-x: clip;
+}
+
+body:not(.is-login-screen) :is(
+  .panel,
+  article,
+  .ticket-card,
+  .call-queue-row,
+  .completed-ticket-card,
+  .financial-card-list article,
+  .financial-report-grid article
+) > * {
+  min-width: 0;
+  max-width: 100%;
+}
+
+body:not(.is-login-screen) :is(
+  .panel,
+  article,
+  .ticket-card,
+  .call-queue-row,
+  .completed-ticket-card,
+  .financial-card-list,
+  .financial-report-grid
+) :is(p, dd, strong, small, span, a) {
+  overflow-wrap: anywhere;
+}
+
+body:not(.is-login-screen) .invoice-workspace {
+  padding: clamp(1rem, 2vw, 1.5rem);
+  border: 1px solid rgba(31, 107, 79, 0.16);
+  border-radius: 24px;
+  background: rgba(255, 255, 255, 0.92);
+  box-shadow: 0 18px 42px rgba(24, 53, 43, 0.08);
+}
+
+body:not(.is-login-screen) .money-grid-toolbar > div {
+  min-width: 0;
+  flex-wrap: wrap;
+}
+
+body:not(.is-login-screen) .money-grid-toolbar > p {
+  min-width: 0;
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+
+body:not(.is-login-screen) .money-grid-shell {
+  width: 100%;
+  min-width: 0;
+  overflow-x: auto;
+  overflow-y: auto;
+  overscroll-behavior-inline: contain;
+  scrollbar-gutter: stable;
+}
+
+body:not(.is-login-screen) .money-grid {
+  width: 2440px;
+  min-width: 100%;
+  table-layout: fixed;
+}
+
+body:not(.is-login-screen) .invoice-grid {
+  width: 2280px;
+}
+
+body:not(.is-login-screen) .money-grid th,
+body:not(.is-login-screen) .money-grid td {
+  min-width: 0;
+  max-width: none;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+body:not(.is-login-screen) .money-grid td {
+  white-space: nowrap;
+}
+
+body:not(.is-login-screen) .money-grid input:not([type="checkbox"]),
+body:not(.is-login-screen) .money-grid select {
+  min-width: 0;
+  max-width: 100%;
+  text-overflow: ellipsis;
+}
+
+body:not(.is-login-screen) .money-grid :is(th, td):first-child {
+  width: 42px;
+}
+
+body:not(.is-login-screen) .money-grid :is(th, td):nth-child(2) { width: 132px; }
+body:not(.is-login-screen) .money-grid :is(th, td):nth-child(3) { width: 178px; }
+body:not(.is-login-screen) .money-grid :is(th, td):nth-child(4) { width: 158px; }
+body:not(.is-login-screen) .money-grid :is(th, td):nth-child(5) { width: 220px; }
+body:not(.is-login-screen) .money-grid :is(th, td):nth-child(6),
+body:not(.is-login-screen) .money-grid :is(th, td):nth-child(7),
+body:not(.is-login-screen) .money-grid :is(th, td):nth-child(8) { width: 180px; }
+body:not(.is-login-screen) .money-grid :is(th, td):nth-child(9) { width: 164px; }
+body:not(.is-login-screen) .money-grid :is(th, td):nth-child(10),
+body:not(.is-login-screen) .money-grid :is(th, td):nth-child(11),
+body:not(.is-login-screen) .money-grid :is(th, td):nth-child(12) { width: 118px; }
+body:not(.is-login-screen) .money-grid :is(th, td):nth-child(13) { width: 112px; }
+body:not(.is-login-screen) .money-grid :is(th, td):nth-child(14) { width: 126px; }
+body:not(.is-login-screen) .money-grid :is(th, td):nth-child(15) { width: 138px; }
+body:not(.is-login-screen) .money-grid :is(th, td):nth-child(16) { width: 220px; }
+body:not(.is-login-screen) .money-grid :is(th, td):nth-child(17),
+body:not(.is-login-screen) .money-grid :is(th, td):nth-child(18) { width: 160px; }
+body:not(.is-login-screen) .money-grid :is(th, td):nth-child(19) { width: 170px; }
+
+body:not(.is-login-screen) .invoice-grid :is(th, td):first-child { width: 150px; }
+body:not(.is-login-screen) .invoice-grid :is(th, td):nth-child(2),
+body:not(.is-login-screen) .invoice-grid :is(th, td):nth-child(3),
+body:not(.is-login-screen) .invoice-grid :is(th, td):nth-child(4) { width: 180px; }
+body:not(.is-login-screen) .invoice-grid :is(th, td):nth-child(5),
+body:not(.is-login-screen) .invoice-grid :is(th, td):nth-child(6) { width: 126px; }
+body:not(.is-login-screen) .invoice-grid :is(th, td):nth-child(n+7):nth-child(-n+13) { width: 118px; }
+body:not(.is-login-screen) .invoice-grid :is(th, td):nth-child(14) { width: 132px; }
+body:not(.is-login-screen) .invoice-grid :is(th, td):nth-child(15),
+body:not(.is-login-screen) .invoice-grid :is(th, td):nth-child(16) { width: 160px; }
+body:not(.is-login-screen) .invoice-grid :is(th, td):nth-child(17) { width: 140px; }
+
+@media (max-width: 640px) {
+  body:not(.is-login-screen) .money-tabs,
+  body:not(.is-login-screen) .money-period-controls {
+    max-width: 100%;
+    overflow-x: auto;
+    flex-wrap: nowrap;
+    overscroll-behavior-inline: contain;
+  }
+
+  body:not(.is-login-screen) .money-grid-shell {
+    max-height: 60vh;
+  }
+}
+
 /* 2M finish pass 7: dashboard shell and navigation */
 .dashboard-shell {
   background:
@@ -21686,4 +21849,68 @@ body:not(.is-login-screen) .invoice-line-list {
   body:not(.is-login-screen) .invoice-totals {
     grid-template-columns: 1fr;
   }
+}
+
+/* Cascade-end enforcement: broad legacy rules above cannot reopen the page
+   canvas or replace the spreadsheet's internal scroll boundary. */
+body:not(.is-login-screen) {
+  overflow-x: hidden;
+}
+
+body:not(.is-login-screen) :is(
+  .dashboard-shell,
+  .app-view,
+  .dashboard-main,
+  .dashboard-section,
+  .uy-standard-page,
+  .money-page,
+  [data-money-workspace],
+  .expense-workspace,
+  .invoice-workspace,
+  .money-grid-shell
+) {
+  min-width: 0;
+  max-width: 100%;
+}
+
+body:not(.is-login-screen) .dashboard-main,
+body:not(.is-login-screen) .dashboard-section.is-active {
+  overflow-x: clip;
+}
+
+body:not(.is-login-screen) .money-grid-shell {
+  width: 100%;
+  min-width: 0;
+  overflow-x: auto;
+  overflow-y: auto;
+  overscroll-behavior-inline: contain;
+  scrollbar-gutter: stable;
+}
+
+body:not(.is-login-screen) .money-grid {
+  width: 2440px;
+  min-width: 100%;
+  table-layout: fixed;
+}
+
+body:not(.is-login-screen) .invoice-grid {
+  width: 2280px;
+}
+
+body:not(.is-login-screen) .money-grid th,
+body:not(.is-login-screen) .money-grid td {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+body:not(.is-login-screen) .money-grid td {
+  white-space: nowrap;
+}
+
+body:not(.is-login-screen) .money-grid input:not([type="checkbox"]),
+body:not(.is-login-screen) .money-grid select {
+  min-width: 0;
+  max-width: 100%;
+  text-overflow: ellipsis;
 }

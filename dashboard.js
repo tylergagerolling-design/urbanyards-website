@@ -14228,6 +14228,10 @@ Requirements:
         state.data.financial.invoices = await dashboardFinancialRequest("list-invoices") || [];
       } else if (view === "documents") {
         state.data.financial.documents = await dashboardFinancialRequest("list-documents") || [];
+      } else if (view === "reports") {
+        const range = financialDateRange();
+        state.data.financial.overview = await dashboardFinancialRequest("overview", range);
+        state.data.financial.invoices = await dashboardFinancialRequest("list-invoices") || [];
       }
       state.moneyLoadedViews.add(view);
     } catch (error) {
@@ -14303,10 +14307,13 @@ Requirements:
     const rows = state.data.financial.expenses || [];
     return `<section class="expense-workspace" aria-label="Expense spreadsheet">
       <input type="file" data-expense-receipt-input accept=".pdf,.jpg,.jpeg,.png,.heic,.heif,.docx,.xlsx,.csv" hidden>
+      <input type="file" data-expense-import-input accept=".csv,text/csv" hidden>
       <div class="money-grid-toolbar">
         <div>
           <button type="button" data-action="add-expense-row">+ Add Row</button>
           <button type="button" data-action="paste-expenses">Paste Rows</button>
+          <button type="button" data-action="choose-expense-import">Import CSV</button>
+          <button type="button" data-action="export-expenses">Export View</button>
           <button type="button" data-action="undo-expense-edit"${state.moneyUndo ? "" : " disabled"}>Undo</button>
         </div>
         <label class="money-grid-search">Search <input type="search" data-money-search value="${escapeHtml(state.moneySearch)}" placeholder="Vendor, description, notes"></label>
@@ -14450,6 +14457,68 @@ Requirements:
     return created.length;
   }
 
+  async function importExpenseCsv(file) {
+    if (!file || !/\.csv$/i.test(file.name)) throw new Error("Expense import currently accepts CSV files.");
+    const rows = parseCsv(await file.text());
+    if (rows.length < 2) throw new Error("The CSV needs a header row and at least one expense.");
+    const headers = new Map(rows[0].map((header, index) => [normalizeCsvHeader(header), index]));
+    const cell = (row, names) => csvCell(row, headers, names);
+    const parsed = rows.slice(1).map((row, index) => {
+      const subtotalText = cell(row, ["subtotal"]);
+      const taxText = cell(row, ["tax"]);
+      const totalText = cell(row, ["total", "amount"]);
+      const subtotal = subtotalText === "" ? null : Number(subtotalText.replace(/[$,]/g, ""));
+      const tax = taxText === "" ? null : Number(taxText.replace(/[$,]/g, ""));
+      const total = totalText === "" ? Number(subtotal || 0) + Number(tax || 0) : Number(totalText.replace(/[$,]/g, ""));
+      const expenseDate = cell(row, ["date", "expense_date", "expense date"]);
+      const vendorName = cell(row, ["vendor", "vendor_name", "vendor name"]);
+      const description = cell(row, ["description", "memo"]);
+      const errors = [];
+      if (!/^\d{4}-\d{2}-\d{2}$/.test(expenseDate)) errors.push("Date must be YYYY-MM-DD");
+      if (!Number.isFinite(total)) errors.push("Total must be numeric");
+      const duplicate = state.data.financial.expenses.some((expense) => expense.expenseDate === expenseDate && expense.vendorName.toLowerCase() === vendorName.toLowerCase() && Number(expense.total) === total && expense.description === description);
+      return {
+        rowNumber: index + 2,
+        disposition: errors.length ? "Invalid" : duplicate ? "Duplicate" : "New",
+        errors,
+        payload: {
+          expense_date: expenseDate,
+          vendor_name: vendorName || null,
+          category: EXPENSE_CATEGORIES.includes(cell(row, ["category"])) ? cell(row, ["category"]) : "Other",
+          description: description || null,
+          subtotal,
+          tax,
+          total: Math.round(total * 100) / 100,
+          payment_method: EXPENSE_PAYMENT_METHODS.includes(cell(row, ["payment_method", "payment method"])) ? cell(row, ["payment_method", "payment method"]) : null,
+          status: EXPENSE_STATUSES.includes(cell(row, ["status"])) ? cell(row, ["status"]) : "Draft",
+          notes: cell(row, ["notes", "note"]) || null
+        }
+      };
+    });
+    const newRows = parsed.filter((row) => row.disposition === "New");
+    const duplicates = parsed.filter((row) => row.disposition === "Duplicate").length;
+    const invalid = parsed.filter((row) => row.disposition === "Invalid").length;
+    if (!window.confirm(`Import ${newRows.length} new expenses? ${duplicates} possible duplicate${duplicates === 1 ? "" : "s"} and ${invalid} invalid row${invalid === 1 ? "" : "s"} will remain flagged and will not be imported.`)) return 0;
+    const batchRows = await supabaseRestRequest("financial_import_batches", {
+      method: "POST",
+      headers: { Prefer: "return=representation" },
+      body: JSON.stringify({ import_type: "Expenses", file_name: file.name, status: invalid ? "Partial" : "Completed", totals: { total: parsed.length, new: newRows.length, duplicate: duplicates, invalid } })
+    });
+    const batchId = batchRows?.[0]?.id;
+    const created = [];
+    for (const row of newRows) created.push(await createExpense(row.payload));
+    if (batchId) {
+      for (const row of parsed) {
+        await supabaseRestRequest("financial_import_batch_rows", {
+          method: "POST",
+          body: JSON.stringify({ batch_id: batchId, row_number: row.rowNumber, disposition: row.disposition, source_data: row.payload, normalized_data: row.payload, validation_errors: row.errors })
+        });
+      }
+    }
+    state.data.financial.expenses = [...created.reverse(), ...state.data.financial.expenses].slice(0, state.moneyExpensePageSize);
+    return created.length;
+  }
+
   function renderVendorsWorkspace() {
     const vendors = state.data.financial.vendors || [];
     return `<section class="financial-directory">
@@ -14555,6 +14624,34 @@ Requirements:
     if (state.moneyView === "expenses") return renderExpenseWorkspace();
     if (state.moneyView === "invoicing") return renderInvoiceWorkspace();
     if (state.moneyView === "vendors") return renderVendorsWorkspace();
+    if (state.moneyView === "documents") {
+      const documents = state.data.financial.documents || [];
+      return `<section class="financial-directory">
+        <div class="ticket-lane-heading"><div><p class="eyebrow">Private Filing</p><h3>Financial Documents</h3><p>Receipts, invoices, insurance, licenses, permits, tax documents, contracts, W-9s, and estimates.</p></div></div>
+        <div class="financial-card-list">${documents.length ? documents.map((document) => `<article><div><strong>${escapeHtml(document.title || document.file_name)}</strong><span>${escapeHtml(document.document_type)}</span></div><p>${escapeHtml([document.document_date, document.file_name].filter(Boolean).join(" · "))}</p><small>${escapeHtml([document.expense_id ? "Expense" : "", document.invoice_id ? "Invoice" : "", document.vendor_id ? "Vendor" : "", document.ticket_id ? "Ticket" : ""].filter(Boolean).join(" / ") || "Missing association")}</small></article>`).join("") : emptyState("No financial documents match this view. Expense receipts appear here after upload.")}</div>
+      </section>`;
+    }
+    if (state.moneyView === "reports") {
+      const overview = state.data.financial.overview || {};
+      const invoices = state.data.financial.invoices || [];
+      const paid = invoices.filter((invoice) => financialCalculator().effectiveInvoiceStatus(invoice) === "Paid").length;
+      const unpaid = invoices.filter((invoice) => !["Paid", "Voided", "Uncollectible"].includes(financialCalculator().effectiveInvoiceStatus(invoice))).length;
+      return `<section class="financial-reports">
+        <div class="ticket-lane-heading"><div><p class="eyebrow">Operational Reports</p><h3>Live financial summaries</h3><p>Operational reports are not a substitute for professional tax or accounting advice.</p></div><div><button type="button" data-action="export-financial-report" data-format="csv">Export CSV</button><button type="button" data-action="print-financial-report">Print / PDF</button></div></div>
+        <div class="financial-report-grid">
+          ${[
+            ["Profit and Loss", moneyCurrency(Number(overview.revenue || 0) - Number(overview.expenses || 0)), "Revenue minus recorded expenses"],
+            ["Revenue", moneyCurrency(overview.revenue), "Selected date range"],
+            ["Expenses", moneyCurrency(overview.expenses), "Selected date range"],
+            ["Outstanding Invoices", moneyCurrency(overview.outstanding), `${unpaid} unpaid records`],
+            ["Invoice Aging", moneyCurrency(overview.overdue), "Past-due open balance"],
+            ["Paid Invoices", String(paid), "Current loaded invoice period"],
+            ["Missing Receipts", String(overview.missing_receipts || 0), "Expenses lacking attachments"],
+            ["Taxes Collected", moneyCurrency(invoices.reduce((sum, invoice) => sum + Number(invoice.tax || 0), 0)), "Non-voided loaded invoices"]
+          ].map(([title, value, detail]) => `<article><p class="eyebrow">${escapeHtml(title)}</p><strong>${escapeHtml(value)}</strong><span>${escapeHtml(detail)}</span></article>`).join("")}
+        </div>
+      </section>`;
+    }
     return `<section class="money-module-state"><strong>${escapeHtml(MONEY_TABS.find((item) => item.key === state.moneyView)?.label || "Money")}</strong><p>This module is being connected to the same financial record foundation.</p></section>`;
   }
 
@@ -20191,6 +20288,21 @@ Requirements:
         return;
       }
 
+      if (target.matches("[data-expense-import-input]")) {
+        const file = target.files?.[0];
+        target.value = "";
+        if (!file) return;
+        try {
+          setDashboardState("Validating expense import…");
+          const count = await importExpenseCsv(file);
+          renderMoneyWorkspace();
+          setDashboardState(`${count} expense row${count === 1 ? "" : "s"} imported.`);
+        } catch (error) {
+          setDashboardState(error.message || "Expense import failed.", "error");
+        }
+        return;
+      }
+
       if (target.matches("[data-expense-field]")) {
         await saveExpenseRow(target.closest("[data-expense-row]"));
         return;
@@ -20795,6 +20907,26 @@ Requirements:
         return;
       }
 
+      if (action === "export-financial-report") {
+        const overview = state.data.financial.overview || {};
+        downloadCsv("urban-yards-financial-report.csv", [
+          ["Operational Report", "Value"],
+          ["Revenue", overview.revenue || 0],
+          ["Expenses", overview.expenses || 0],
+          ["Gross Profit", Number(overview.revenue || 0) - Number(overview.expenses || 0)],
+          ["Outstanding Invoices", overview.outstanding || 0],
+          ["Overdue Invoices", overview.overdue || 0],
+          ["Missing Receipts", overview.missing_receipts || 0]
+        ]);
+        setDashboardState("Financial report exported.");
+        return;
+      }
+
+      if (action === "print-financial-report") {
+        window.print();
+        return;
+      }
+
       if (action === "duplicate-financial-invoice") {
         try {
           const source = state.moneyInvoiceDetail?.invoice || {};
@@ -20851,6 +20983,20 @@ Requirements:
           setDashboardState(error.message || "Spreadsheet rows could not be pasted.", "error");
           renderMoneyWorkspace();
         }
+        return;
+      }
+
+      if (action === "choose-expense-import") {
+        qs("[data-expense-import-input]")?.click();
+        return;
+      }
+
+      if (action === "export-expenses") {
+        downloadCsv("urban-yards-expenses.csv", [
+          ["Date","Vendor","Category","Description","Payment Method","Subtotal","Tax","Total","Reimbursable","Status","Notes"],
+          ...state.data.financial.expenses.map((expense) => [expense.expenseDate, expense.vendorName, expense.category, expense.description, expense.paymentMethod, expense.subtotal, expense.tax, expense.total, expense.reimbursable ? "Yes" : "No", expense.status, expense.notes])
+        ]);
+        setDashboardState("Current expense view exported.");
         return;
       }
 

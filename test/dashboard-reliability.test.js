@@ -906,5 +906,14 @@ test("Leads contact queue mirrors active Call Queue leads and opens the selected
   assert.match(js, /\.filter\(\(item\) => !callQueueIsCompleted\(item\)\)/);
   assert.match(js, /data-action="open-call-queue-lead"/);
   assert.match(js, /state\.callQueueSelectedId = id[\s\S]*setActiveSection\("call-queue"\)/);
-  assert.match(js, /data-action="go-call-queue">View All Leads/);
+  assert.match(js, /data-action="toggle-leads-contact-queue"[\s\S]*View All Leads/);
+});
+
+test("Leads Contact Queue shows ten records until View All Leads is expanded", () => {
+  const js = read("dashboard.js");
+
+  assert.match(js, /leadsContactQueueExpanded: false/);
+  assert.match(js, /visibleProspects = state\.leadsContactQueueExpanded \? prospectQueue : prospectQueue\.slice\(0, 10\)/);
+  assert.match(js, /data-action="toggle-leads-contact-queue"[\s\S]*Show First 10[\s\S]*View All Leads/);
+  assert.match(js, /action === "toggle-leads-contact-queue"[\s\S]*leadsContactQueueExpanded = !state\.leadsContactQueueExpanded[\s\S]*renderLeadsWorkspace/);
 });

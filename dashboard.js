@@ -273,6 +273,7 @@
     callQueuePriorityFilter: "All",
     callQueueSort: "queue",
     callQueueSelectedId: "",
+    leadsContactQueueExpanded: false,
     callQueueVisibleCount: 25,
     callQueueSaving: false,
     leadIntakeBatches: [],
@@ -13582,6 +13583,7 @@ Requirements:
   }
 
   function renderLeadsCommandCenter({ prospectQueue, due, hot, intakeTickets, approvalTickets, accountingTickets, companies, properties }) {
+    const visibleProspects = state.leadsContactQueueExpanded ? prospectQueue : prospectQueue.slice(0, 10);
     return `<section class="leads-command-center" aria-label="Leads command center">
       <section class="ticket-lane leads-contact-queue">
         <div class="ticket-lane-heading">
@@ -13592,11 +13594,11 @@ Requirements:
           </div>
           <div class="lead-contact-queue-heading-actions">
             <span>${escapeHtml(String(prospectQueue.length))}</span>
-            <button type="button" data-action="go-call-queue">View All Leads</button>
+            ${prospectQueue.length > 10 ? `<button type="button" data-action="toggle-leads-contact-queue" aria-expanded="${state.leadsContactQueueExpanded}">${state.leadsContactQueueExpanded ? "Show First 10" : "View All Leads"}</button>` : ""}
           </div>
         </div>
         <div class="lead-queue-list">
-          ${prospectQueue.length ? prospectQueue.map((item) => renderLeadQueueItem(item, hot.some((hotItem) => hotItem.id === item.id) ? "hot" : due.some((dueItem) => dueItem.id === item.id) ? "due" : "")).join("") : emptyState("No active leads are currently in the Call Queue.")}
+          ${visibleProspects.length ? visibleProspects.map((item) => renderLeadQueueItem(item, hot.some((hotItem) => hotItem.id === item.id) ? "hot" : due.some((dueItem) => dueItem.id === item.id) ? "due" : "")).join("") : emptyState("No active leads are currently in the Call Queue.")}
         </div>
       </section>
     </section>`;
@@ -21685,6 +21687,9 @@ Requirements:
         state.callQueueSelectedId = id;
         setActiveSection("call-queue");
         replaceDashboardHash("call-queue");
+      } else if (action === "toggle-leads-contact-queue") {
+        state.leadsContactQueueExpanded = !state.leadsContactQueueExpanded;
+        renderLeadsWorkspace(state.data);
       } else if (action === "go-call-queue") {
         setActiveSection("call-queue");
         replaceDashboardHash("call-queue");

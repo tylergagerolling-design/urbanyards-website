@@ -21238,3 +21238,110 @@ body:not(.is-login-screen) .dashboard-data-quality-grid > button > small {
   white-space: normal;
   text-wrap: pretty;
 }
+
+/* Unified ticket completion checklist */
+body:not(.is-login-screen) .ticket-completion-checklist {
+  border-color: rgba(31, 107, 79, 0.3);
+  background:
+    radial-gradient(circle at 96% 0%, rgba(201, 162, 39, 0.12), transparent 34%),
+    rgba(255, 255, 255, 0.92);
+}
+
+body:not(.is-login-screen) .ticket-completion-checklist > .ticket-drawer-card-heading > strong {
+  flex: 0 0 auto;
+  padding: 0.55rem 0.7rem;
+  border-radius: 999px;
+  background: #e6efe9;
+  color: #1f6b4f;
+}
+
+body:not(.is-login-screen) .ticket-completion-checklist form,
+body:not(.is-login-screen) .ticket-completion-list {
+  display: grid;
+  gap: 0.75rem;
+  min-width: 0;
+}
+
+body:not(.is-login-screen) .ticket-completion-list {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+body:not(.is-login-screen) .ticket-completion-item {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto auto;
+  align-items: center;
+  gap: 0.6rem;
+  min-width: 0;
+  padding: 0.9rem;
+  border: 1px solid rgba(31, 107, 79, 0.14);
+  border-radius: 0.9rem;
+  background: rgba(244, 241, 232, 0.65);
+}
+
+body:not(.is-login-screen) .ticket-completion-item.is-resolved {
+  border-color: rgba(31, 107, 79, 0.36);
+  background: rgba(230, 239, 233, 0.78);
+}
+
+body:not(.is-login-screen) .ticket-completion-item > div {
+  display: grid;
+  gap: 0.2rem;
+  min-width: 0;
+}
+
+body:not(.is-login-screen) .ticket-completion-item > div strong,
+body:not(.is-login-screen) .ticket-completion-item > div small {
+  min-width: 0;
+  overflow-wrap: anywhere;
+  white-space: normal;
+}
+
+body:not(.is-login-screen) .ticket-completion-item > label {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  white-space: nowrap;
+  font-size: 0.78rem;
+  font-weight: 800;
+}
+
+body:not(.is-login-screen) .ticket-completion-item > textarea,
+body:not(.is-login-screen) .ticket-completion-item > select {
+  grid-column: 1 / -1;
+  width: 100%;
+  max-width: 100%;
+  box-sizing: border-box;
+}
+
+body:not(.is-login-screen) .ticket-completion-closeout-note {
+  display: grid;
+  gap: 0.4rem;
+  min-width: 0;
+  font-weight: 800;
+}
+
+body:not(.is-login-screen) .ticket-completion-closeout-note textarea {
+  width: 100%;
+  max-width: 100%;
+  box-sizing: border-box;
+}
+
+body:not(.is-login-screen) .ticket-completion-actions {
+  justify-content: flex-end;
+}
+
+@media (max-width: 900px) {
+  body:not(.is-login-screen) .ticket-completion-list {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 560px) {
+  body:not(.is-login-screen) .ticket-completion-item {
+    grid-template-columns: minmax(0, 1fr) auto;
+  }
+
+  body:not(.is-login-screen) .ticket-completion-item > div {
+    grid-column: 1 / -1;
+  }
+}

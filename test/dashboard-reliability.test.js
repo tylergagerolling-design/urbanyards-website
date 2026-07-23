@@ -945,3 +945,20 @@ test("dashboard daily workflow prioritizes actions, saved views, and data qualit
   assert.match(css, /dashboard-data-quality-grid > button[\s\S]*display: grid !important[\s\S]*grid-template-areas:[\s\S]*"value label"[\s\S]*"detail detail"/);
   assert.match(css, /dashboard-data-quality-grid > button > span[\s\S]*overflow-wrap: anywhere[\s\S]*white-space: normal/);
 });
+
+test("unified tickets provide one validated completion checklist with N/A exceptions", () => {
+  const js = read("dashboard.js");
+  const css = read("dashboard.css");
+  const backend = read("netlify/functions/dashboard-tickets.js");
+
+  assert.match(js, /ticketCompletionChecklistItems[\s\S]*Arrival photos[\s\S]*Completion photos[\s\S]*Required forms and documents[\s\S]*Actual costs[\s\S]*Final invoice[\s\S]*Payment/);
+  assert.match(js, /data-completion-complete[\s\S]*data-completion-na/);
+  assert.match(js, /data-action="save-ticket-completion"/);
+  assert.match(js, /data-action="owner-finalize-ticket"/);
+  assert.match(js, /Resolve every completion item first/);
+  assert.match(backend, /OWNER_FINALIZE_REQUIREMENTS/);
+  assert.match(backend, /owner-finalize-ticket/);
+  assert.match(backend, /Add a closeout note explaining why the N\/A items do not apply/);
+  assert.match(backend, /ticket_completed_from_checklist/);
+  assert.match(css, /\.ticket-completion-list[\s\S]*repeat\(2, minmax\(0, 1fr\)\)/);
+});

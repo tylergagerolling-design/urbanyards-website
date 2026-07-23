@@ -5359,6 +5359,7 @@
       ["draft_invoice_exists", "draftInvoiceExists"],
       ["deposit_required", "depositRequired"],
       ["deposit_paid", "depositPaid"],
+      ["required_documents_present", "requiredDocumentsPresent"],
       ["before_photos_uploaded", "beforePhotosUploaded"],
       ["after_photos_uploaded", "afterPhotosUploaded"],
       ["arrival_photos_uploaded", "arrivalPhotosUploaded"],
@@ -10323,6 +10324,9 @@
       draftInvoiceExists: Boolean(row.draft_invoice_exists || row.draftInvoiceExists),
       depositRequired: Boolean(row.deposit_required || row.depositRequired),
       depositPaid: Boolean(row.deposit_paid || row.depositPaid),
+      requiredDocumentsPresent: row.required_documents_present === null || row.requiredDocumentsPresent === null
+        ? null
+        : Boolean(row.required_documents_present ?? row.requiredDocumentsPresent),
       beforePhotosUploaded: Boolean(row.before_photos_uploaded || row.beforePhotosUploaded || row.arrival_photos_uploaded || row.arrivalPhotosUploaded),
       afterPhotosUploaded: Boolean(row.after_photos_uploaded || row.afterPhotosUploaded || row.completion_photos_uploaded || row.completionPhotosUploaded),
       fieldCompletionNotes: row.field_completion_notes || row.fieldCompletionNotes || "",
@@ -10706,6 +10710,105 @@
         ${blockers.map((item) => `<li><span aria-hidden="true"></span>${escapeHtml(item)}</li>`).join("")}
       </ul>` : `<p class="ticket-drawer-note">No blockers are known for this stage. This ticket can move to the next owner when the working details are saved.</p>`}
     </section>`;
+  }
+
+  const ticketCompletionChecklistItems = [
+    { key: "beforePhotosUploaded", label: "Arrival photos", detail: "Proof of the site before work begins." },
+    { key: "afterPhotosUploaded", label: "Completion photos", detail: "Proof of the finished work." },
+    { key: "fieldCompletionNotes", label: "Completion notes", detail: "What was completed, changed, or left for later." },
+    { key: "requiredDocumentsPresent", label: "Required forms and documents", detail: "Assigned forms, approvals, and supporting records." },
+    { key: "actualsRecorded", label: "Actual costs", detail: "Final labor, materials, and other job costs." },
+    { key: "invoiceFinalized", label: "Final invoice", detail: "Reviewed invoice, or N/A for non-invoiced work." },
+    { key: "paymentStatus", label: "Payment", detail: "Paid, or N/A when payment does not apply." }
+  ];
+
+  function ticketCompletionChecklistEvent(ticket) {
+    return ticketHistoryFor(ticket).find((event) => ["ticket_completion_checklist_saved", "ticket_completed_from_checklist"].includes(event.eventType)) || null;
+  }
+
+  function ticketCompletionChecklistState(ticket) {
+    const event = ticketCompletionChecklistEvent(ticket);
+    const completed = Array.isArray(event?.newValue?.completed) ? event.newValue.completed : [];
+    const notApplicable = event?.newValue?.notApplicable && typeof event.newValue.notApplicable === "object" ? event.newValue.notApplicable : {};
+    return { completed, notApplicable, notes: event?.notes || "" };
+  }
+
+  function ticketCompletionItemComplete(ticket, key, savedCompleted = []) {
+    if (key === "actualsRecorded") return savedCompleted.includes(key);
+    return ticketHasRequirementValue(ticket, key);
+  }
+
+  function renderTicketCompletionChecklist(ticket) {
+    if (ticket?.source !== "ticket") return "";
+    const stage = ticketStage(ticket);
+    const canClose = currentSessionRole() === "owner" && ["field_work_complete", "completion_review", "invoice_review", "invoice_sent", "partially_paid", "paid"].includes(stage);
+    const { completed, notApplicable, notes } = ticketCompletionChecklistState(ticket);
+    const resolved = ticketCompletionChecklistItems.filter((item) => ticketCompletionItemComplete(ticket, item.key, completed) || notApplicable[item.key]).length;
+    return `<section class="ticket-drawer-card ticket-completion-checklist" aria-label="Unified completion checklist">
+      <div class="ticket-drawer-card-heading">
+        <div>
+          <p class="eyebrow">One-Step Closeout</p>
+          <h4>Completion checklist</h4>
+          <span>Add the final information here. Mark N/A when a requirement genuinely does not apply.</span>
+        </div>
+        <strong>${escapeHtml(`${resolved}/${ticketCompletionChecklistItems.length}`)}</strong>
+      </div>
+      <form data-ticket-completion-form data-ticket-id="${escapeHtml(ticket.id)}">
+        <div class="ticket-completion-list">
+          ${ticketCompletionChecklistItems.map((item) => {
+            const isComplete = ticketCompletionItemComplete(ticket, item.key, completed);
+            const naReason = notApplicable[item.key] || "";
+            return `<article class="ticket-completion-item ${isComplete || naReason ? "is-resolved" : ""}" data-completion-item="${escapeHtml(item.key)}">
+              <div>
+                <strong>${escapeHtml(item.label)}</strong>
+                <small>${escapeHtml(item.detail)}</small>
+              </div>
+              <label><input type="checkbox" value="${escapeHtml(item.key)}" data-completion-complete${isComplete ? " checked" : ""}${naReason ? " disabled" : ""}> Complete</label>
+              <label><input type="checkbox" value="${escapeHtml(item.key)}" data-completion-na${naReason ? " checked" : ""}> N/A</label>
+              ${item.key === "fieldCompletionNotes" ? `<textarea data-completion-notes rows="2" placeholder="Completion notes...">${escapeHtml(ticket.fieldCompletionNotes || "")}</textarea>` : ""}
+              ${item.key === "paymentStatus" ? `<select data-completion-payment aria-label="Payment status">
+                <option value="">Choose payment status</option>
+                <option value="unpaid"${statusText(ticket.paymentStatus) === "unpaid" ? " selected" : ""}>Unpaid</option>
+                <option value="partially_paid"${statusText(ticket.paymentStatus) === "partially_paid" ? " selected" : ""}>Partially paid</option>
+                <option value="paid"${statusText(ticket.paymentStatus) === "paid" ? " selected" : ""}>Paid</option>
+              </select>` : ""}
+            </article>`;
+          }).join("")}
+        </div>
+        <label class="ticket-completion-closeout-note">Closeout note
+          <textarea data-completion-closeout-note rows="3" placeholder="Required when anything is marked N/A. Explain the exception once here.">${escapeHtml(notes)}</textarea>
+        </label>
+        <div class="drawer-actions ticket-completion-actions">
+          <button type="button" data-action="save-ticket-completion" data-id="${escapeHtml(ticket.id)}">${buttonContent("Save Checklist", "save")}</button>
+          <button type="button" data-action="owner-finalize-ticket" data-id="${escapeHtml(ticket.id)}"${canClose ? "" : " disabled aria-disabled=\"true\""}>${buttonContent("Save & Close Ticket", "complete-reminder")}</button>
+        </div>
+        ${canClose ? `<p class="ticket-drawer-note">Closing is available when every line is Complete or N/A.</p>` : `<p class="ticket-drawer-note">You can fill this out now. Save & Close becomes available after the job is marked complete.</p>`}
+      </form>
+    </section>`;
+  }
+
+  function ticketCompletionFormPayload(form) {
+    const completed = qsa("[data-completion-complete]:checked", form).map((input) => input.value);
+    const naFields = qsa("[data-completion-na]:checked", form).map((input) => input.value);
+    const notes = form.querySelector("[data-completion-closeout-note]")?.value?.trim() || "";
+    const notApplicable = Object.fromEntries(naFields.map((field) => [field, notes || "Marked N/A by the Owner."]));
+    const fieldCompletionNotes = form.querySelector("[data-completion-notes]")?.value?.trim() || "";
+    const paymentStatus = form.querySelector("[data-completion-payment]")?.value || "";
+    if (fieldCompletionNotes && !completed.includes("fieldCompletionNotes")) completed.push("fieldCompletionNotes");
+    if (paymentStatus === "paid" && !completed.includes("paymentStatus")) completed.push("paymentStatus");
+    return {
+      completed,
+      notApplicable,
+      notes,
+      ticket: {
+        before_photos_uploaded: completed.includes("beforePhotosUploaded"),
+        after_photos_uploaded: completed.includes("afterPhotosUploaded"),
+        field_completion_notes: fieldCompletionNotes,
+        required_documents_present: completed.includes("requiredDocumentsPresent"),
+        invoice_finalized: completed.includes("invoiceFinalized"),
+        payment_status: paymentStatus
+      }
+    };
   }
 
   function ticketFieldText(value, fallback = "Not set") {
@@ -11319,6 +11422,7 @@
   function renderTicketDetailCommandCenter(ticket) {
     const isCanonical = ticket?.source === "ticket";
     const transitions = ticketTransitionOptions(ticket || {});
+    const useUnifiedCloseout = isCanonical && ["field_work_complete", "completion_review", "invoice_review", "invoice_sent", "partially_paid", "paid"].includes(ticketStage(ticket));
     return `<section class="ticket-drawer-card ticket-command-card" data-ticket-command-panel data-ticket-id="${escapeHtml(ticket?.id || "")}">
       <div class="ticket-drawer-card-heading">
         <div>
@@ -11333,7 +11437,7 @@
       <label class="ticket-command-field">Internal note
         <textarea data-ticket-transition-notes rows="3" placeholder="Optional note for the ticket history...">${escapeHtml(ticket?.internalNotes || "")}</textarea>
       </label>
-      ${isCanonical ? `<div class="ticket-transition-grid">
+      ${isCanonical ? `${useUnifiedCloseout ? `<p class="ticket-drawer-note">Use the Completion checklist below to finish this ticket. No stage-by-stage closeout handoffs are required.</p>` : `<div class="ticket-transition-grid">
         ${transitions.length ? transitions.map((item) => {
           const missing = item.missing || [];
           const disabled = missing.length ? " disabled aria-disabled=\"true\"" : "";
@@ -11342,7 +11446,7 @@
             <small>${escapeHtml(missing.length ? `Missing: ${missing.join(", ")}` : item.detail)}</small>
           </button>`;
         }).join("") : `<p class="ticket-drawer-note">No more workflow moves are available from ${escapeHtml(ticket.stageLabel || "this stage")}.</p>`}
-      </div>
+      </div>`}
       ${renderTicketBudgetBridge(ticket)}
       <div class="drawer-actions ticket-command-actions">
         <button type="button" data-action="save-ticket-command" data-id="${escapeHtml(ticket.id)}">${buttonContent("Save Ticket Note", "save")}</button>
@@ -11861,6 +11965,7 @@
           </div>
         </section>
         ${renderTicketWorkbench(ticket)}
+        ${renderTicketCompletionChecklist(ticket)}
         ${renderTicketWorkAssignmentBridge(ticket, sourceItem)}
         ${renderTicketSiteProofBridge(ticket, sourceItem)}
         ${renderTicketInvoiceBridge(ticket)}
@@ -19596,6 +19701,25 @@ Requirements:
       const target = event.target;
       if (!target) return;
 
+      if (target.matches("[data-completion-na]")) {
+        const item = target.closest("[data-completion-item]");
+        const complete = item?.querySelector("[data-completion-complete]");
+        if (complete) {
+          if (target.checked) complete.checked = false;
+          complete.disabled = target.checked;
+        }
+        item?.classList.toggle("is-resolved", target.checked || Boolean(complete?.checked));
+        return;
+      }
+
+      if (target.matches("[data-completion-complete]")) {
+        const item = target.closest("[data-completion-item]");
+        const notApplicable = item?.querySelector("[data-completion-na]");
+        if (target.checked && notApplicable) notApplicable.checked = false;
+        item?.classList.toggle("is-resolved", target.checked || Boolean(notApplicable?.checked));
+        return;
+      }
+
       if (target.matches("[data-call-queue-filter]")) {
         const filter = target.dataset.callQueueFilter;
         if (filter === "status") state.callQueueStatusFilter = target.value || "Active";
@@ -21309,6 +21433,65 @@ Requirements:
           setDashboardState("Ticket updated.");
         } catch (error) {
           setDashboardState(error.message || "Unable to move ticket forward.", "error");
+        }
+        return;
+      } else if (action === "save-ticket-completion") {
+        const form = target.closest("[data-ticket-completion-form]");
+        if (!form) return;
+        const payload = ticketCompletionFormPayload(form);
+        if (Object.keys(payload.notApplicable).length && !payload.notes) {
+          setDashboardState("Add a closeout note explaining why the N/A items do not apply.", "error");
+          form.querySelector("[data-completion-closeout-note]")?.focus();
+          return;
+        }
+        try {
+          setDashboardState("Saving completion checklist...");
+          const ticket = await updateJobTicket(id, payload.ticket);
+          await insertJobTicketEvent(id, {
+            event_type: "ticket_completion_checklist_saved",
+            notes: payload.notes || "Unified completion checklist saved.",
+            new_value: { completed: payload.completed, notApplicable: payload.notApplicable }
+          });
+          await refreshDashboard();
+          openTicketDrawer("ticket", ticket?.id || id);
+          setDashboardState("Completion checklist saved.");
+        } catch (error) {
+          setDashboardState(error.message || "Unable to save the completion checklist.", "error");
+        }
+        return;
+      } else if (action === "owner-finalize-ticket") {
+        if (currentSessionRole() !== "owner") {
+          setDashboardState("Only the Owner can close a ticket from the unified checklist.", "error");
+          return;
+        }
+        const form = target.closest("[data-ticket-completion-form]");
+        if (!form) return;
+        const payload = ticketCompletionFormPayload(form);
+        const unresolved = ticketCompletionChecklistItems.filter((item) => !payload.completed.includes(item.key) && !payload.notApplicable[item.key]);
+        if (unresolved.length) {
+          setDashboardState(`Resolve every completion item first: ${unresolved.map((item) => item.label).join(", ")}.`, "error");
+          return;
+        }
+        if (Object.keys(payload.notApplicable).length && !payload.notes) {
+          setDashboardState("Add a closeout note explaining why the N/A items do not apply.", "error");
+          form.querySelector("[data-completion-closeout-note]")?.focus();
+          return;
+        }
+        const confirmed = window.confirm(`Close this ticket? ${payload.completed.length} item${payload.completed.length === 1 ? "" : "s"} are complete and ${Object.keys(payload.notApplicable).length} marked N/A. This moves it to Completed Tickets.`);
+        if (!confirmed) return;
+        try {
+          target.disabled = true;
+          setDashboardState("Validating and closing ticket...");
+          const result = isDemoMode()
+            ? { ticket: await updateJobTicket(id, { ...payload.ticket, stage: "closed", status: "completed", next_action: "Completed from unified checklist" }) }
+            : await dashboardTicketRequest("owner-finalize-ticket", { id, ...payload });
+          state.ticketBoardMode = "completed";
+          await refreshDashboard();
+          openTicketDrawer("ticket", result.ticket?.id || id);
+          setDashboardState("Ticket completed from the unified checklist.");
+        } catch (error) {
+          target.disabled = false;
+          setDashboardState(error.message || "Unable to complete this ticket.", "error");
         }
         return;
       } else if (action === "transition-ticket-stage") {

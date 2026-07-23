@@ -161,6 +161,7 @@ function cleanTicketPayload(input = {}, actor = null, { partial = false } = {}) 
     ["draft_invoice_exists", "draftInvoiceExists"],
     ["deposit_required", "depositRequired"],
     ["deposit_paid", "depositPaid"],
+    ["required_documents_present", "requiredDocumentsPresent"],
     ["before_photos_uploaded", "beforePhotosUploaded"],
     ["after_photos_uploaded", "afterPhotosUploaded"],
     ["arrival_photos_uploaded", "arrivalPhotosUploaded"],
@@ -315,6 +316,90 @@ function canDeleteTicket(actor) {
 
 const RENT_DEDUCTION_MONTHLY_LIMIT = 350;
 const RENT_DEDUCTION_CLOSE_STAGES = new Set(["field_work_complete", "completion_review", "invoice_review", "invoice_sent", "partially_paid", "paid"]);
+const OWNER_FINALIZE_STAGES = new Set(["field_work_complete", "completion_review", "invoice_review", "invoice_sent", "partially_paid", "paid"]);
+const OWNER_FINALIZE_REQUIREMENTS = Object.freeze([
+  ["beforePhotosUploaded", "Arrival photos"],
+  ["afterPhotosUploaded", "Completion photos"],
+  ["fieldCompletionNotes", "Completion notes"],
+  ["requiredDocumentsPresent", "Required forms and documents"],
+  ["actualsRecorded", "Actual costs"],
+  ["invoiceFinalized", "Final invoice"],
+  ["paymentStatus", "Payment"]
+]);
+
+function cleanCompletionExceptions(value) {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return {};
+  return Object.fromEntries(Object.entries(value)
+    .filter(([key, reason]) => OWNER_FINALIZE_REQUIREMENTS.some(([field]) => field === key) && cleanText(reason, 500))
+    .map(([key, reason]) => [key, cleanText(reason, 500)]));
+}
+
+function ownerFinalizeValue(ticket, field, completed = []) {
+  if (field === "paymentStatus") return String(ticket.payment_status || ticket.paymentStatus || "").toLowerCase() === "paid";
+  if (field === "actualsRecorded") return completed.includes(field);
+  const snake = field.replace(/[A-Z]/g, (letter) => `_${letter.toLowerCase()}`);
+  return Boolean(ticket[field] ?? ticket[snake]);
+}
+
+async function ownerFinalizeTicket(id, body, actor) {
+  if (String(actor?.role || "").trim().toLowerCase() !== "owner") {
+    const error = new Error("Only the Owner can complete a ticket from the unified checklist.");
+    error.statusCode = 403;
+    throw error;
+  }
+  const existing = await getTicket(id);
+  if (!existing?.id) {
+    const error = new Error("Ticket was not found.");
+    error.statusCode = 404;
+    throw error;
+  }
+  if (!OWNER_FINALIZE_STAGES.has(String(existing.stage || "").toLowerCase())) {
+    const error = new Error("Mark the field work complete before using the final completion checklist.");
+    error.statusCode = 409;
+    throw error;
+  }
+  const updates = cleanTicketPayload(body.ticket || body.payload || {}, actor, { partial: true });
+  const merged = { ...existing, ...updates };
+  const completed = Array.isArray(body.completed) ? body.completed.map((item) => cleanText(item, 80)).filter(Boolean) : [];
+  const notApplicable = cleanCompletionExceptions(body.notApplicable);
+  if (Object.keys(notApplicable).length && !cleanText(body.notes, 2000)) {
+    const error = new Error("Add a closeout note explaining why the N/A items do not apply.");
+    error.statusCode = 400;
+    throw error;
+  }
+  const missing = OWNER_FINALIZE_REQUIREMENTS
+    .filter(([field]) => !ownerFinalizeValue(merged, field, completed) && !notApplicable[field])
+    .map(([, label]) => label);
+  if (missing.length) {
+    const error = new Error(`Resolve every completion item before closing: ${missing.join(", ")}.`);
+    error.statusCode = 409;
+    throw error;
+  }
+  const updatePayload = {
+    ...updates,
+    stage: "closed",
+    status: "completed",
+    responsible_role: "owner",
+    next_action: "Completed from unified checklist"
+  };
+  if (actor?.userId) updatePayload.updated_by = actor.userId;
+  const ticket = await updateTicket(id, updatePayload);
+  await supabaseAdminRequest("job_ticket_events", {
+    method: "POST",
+    headers: { Prefer: "return=minimal" },
+    body: JSON.stringify(cleanEventPayload({
+      event_type: "ticket_completed_from_checklist",
+      from_stage: existing.stage,
+      to_stage: "closed",
+      notes: cleanText(body.notes, 2000) || "Owner completed every unified closeout requirement.",
+      old_value: { stage: existing.stage },
+      new_value: { stage: "closed", completed, notApplicable }
+    }, id, actor))
+  }).catch((error) => {
+    if (!tableMissing(error)) throw error;
+  });
+  return { ticket, completed, notApplicable };
+}
 
 function isLandscapingTicket(ticket = {}) {
   const description = [ticket.title, ticket.requested_service, ticket.service, ticket.scope_of_work, ticket.description]
@@ -546,7 +631,7 @@ exports.handler = async (event) => {
   try {
     body = parseBody(event);
     const action = String(body.action || "").trim().toLowerCase();
-    if (!["list", "events", "create", "update", "delete", "transition", "owner-close-rent-deduction", "event"].includes(action)) {
+    if (!["list", "events", "create", "update", "delete", "transition", "owner-close-rent-deduction", "owner-finalize-ticket", "event"].includes(action)) {
       return json(400, { error: "Unsupported ticket action.", requestId });
     }
 
@@ -654,6 +739,13 @@ exports.handler = async (event) => {
       return json(200, { ok: true, ...result, requestId });
     }
 
+    if (action === "owner-finalize-ticket") {
+      const id = uuidOrNull(body.id || body.ticketId);
+      if (!id) return json(400, { error: "A valid ticket id is required.", requestId });
+      const result = await ownerFinalizeTicket(id, body, actor);
+      return json(200, { ok: true, ...result, requestId });
+    }
+
     const ticketId = uuidOrNull(body.ticketId || body.id);
     if (!ticketId) return json(400, { error: "A valid ticket id is required.", requestId });
     const eventPayload = cleanEventPayload(body.event || body.payload || {}, ticketId, actor);
@@ -692,5 +784,6 @@ module.exports._internals = {
   statusForStage,
   ticketForWorkflow,
   transitionTicket,
+  ownerFinalizeTicket,
   uuidOrNull
 };

@@ -3,6 +3,7 @@ const assert = require("node:assert/strict");
 
 const quoteHandler = require("../api/quote");
 const assistantHandler = require("../api/assistant");
+const groundskeeperHandler = require("../api/groundskeeper-ai");
 const healthHandler = require("../api/health");
 const retentionHandler = require("../api/retention-cleanup");
 const { sendWebhook } = require("../api/lib/integrations");
@@ -81,6 +82,28 @@ test("quote endpoint rejects unsupported methods", async () => {
   await quoteHandler(request("GET"), res);
   assert.equal(res.statusCode, 405);
   assert.equal(res.headers.Allow, "POST");
+});
+
+test("dashboard Gemini consultation route rejects unauthenticated requests", async () => {
+  const res = mockResponse();
+  await groundskeeperHandler(request("POST", {
+    mode: "dashboard",
+    message: "Consult Gemini about this budget.",
+    consultation: { manual: true }
+  }), res);
+  assert.equal(res.statusCode, 401);
+  assert.match(res.payload.error, /unauthorized|sign in|authentication/i);
+});
+
+test("Groundskeeper rejects oversized consultation requests before provider calls", async () => {
+  const res = mockResponse();
+  await groundskeeperHandler(request("POST", {
+    mode: "public",
+    message: "x".repeat(1500),
+    consultation: { manual: true }
+  }), res);
+  assert.equal(res.statusCode, 400);
+  assert.match(res.payload.error, /under 1400/i);
 });
 
 test("dashboard invite callback URL uses configured production site URL", () => {

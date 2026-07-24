@@ -429,6 +429,9 @@
     copilotConversationMemories: [],
     copilotPendingMemory: null,
     copilotPendingTransition: null,
+    copilotConsultationRequest: null,
+    copilotConsultationSettings: null,
+    copilotConsultationSettingsOpen: false,
     copilotFilters: {},
     copilotHighlightIds: [],
     data: {
@@ -2571,7 +2574,7 @@
     };
   }
 
-  async function groundskeeperChat(message, operation = "") {
+  async function groundskeeperChat(message, operation = "", consultation = null) {
     const session = getSession();
     if (!session || !session.accessToken) throw new Error("Please sign in again.");
     const response = await fetch("/.netlify/functions/groundskeeper-ai", {
@@ -2585,6 +2588,7 @@
         message,
         page: "Urban Yards Owner Dashboard",
         history: state.groundskeeperMessages.slice(-10),
+        consultation: consultation || state.copilotConsultationRequest || undefined,
         context: {
           operation,
           ...groundskeeperOperationsContext()
@@ -2710,7 +2714,35 @@
     const recommendationId = state.groundskeeperLastMeta?.requestId;
     const recommendationType = state.groundskeeperLastMeta?.intent?.primaryIntent || "assistant_response";
     if (!recommendationId) return "";
-    return `<div class="copilot-outcome" aria-label="Rate this Groundskeeper recommendation"><span>Was this useful?</span><button type="button" data-action="copilot-rate-outcome" data-id="${escapeHtml(recommendationId)}" data-kind="${escapeHtml(recommendationType)}" data-rating="5">Yes</button><button type="button" data-action="copilot-rate-outcome" data-id="${escapeHtml(recommendationId)}" data-kind="${escapeHtml(recommendationType)}" data-rating="1">No</button></div>`;
+    return `${copilotConsultationHtml(state.groundskeeperLastMeta?.consultation)}<div class="copilot-outcome" aria-label="Rate this Groundskeeper recommendation"><span>Was this useful?</span><button type="button" data-action="copilot-rate-outcome" data-id="${escapeHtml(recommendationId)}" data-kind="${escapeHtml(recommendationType)}" data-rating="5">Yes</button><button type="button" data-action="copilot-rate-outcome" data-id="${escapeHtml(recommendationId)}" data-kind="${escapeHtml(recommendationType)}" data-rating="1">No</button></div>`;
+  }
+
+  function copilotConsultationHtml(meta) {
+    if (!meta || meta.status === "skipped") return "";
+    const label = meta.status === "completed" ? "Gemini consultation used" : meta.status === "rate_limited" ? "Gemini consultation limit reached" : "Gemini consultation unavailable";
+    return `<details class="copilot-consultation-detail"><summary>${escapeHtml(label)}</summary><dl>
+      <div><dt>Purpose</dt><dd>${escapeHtml(String(meta.reason || "").replace(/_/g, " "))}</dd></div>
+      <div><dt>Provider</dt><dd>Gemini</dd></div>
+      <div><dt>Model</dt><dd>${escapeHtml(meta.model || "Configured Gemini model")}</dd></div>
+      <div><dt>Status</dt><dd>${escapeHtml(meta.status || "unknown")}</dd></div>
+      ${meta.durationMs ? `<div><dt>Duration</dt><dd>${escapeHtml(String(meta.durationMs))} ms</dd></div>` : ""}
+      <div><dt>Disagreement</dt><dd>${meta.disagreementDetected ? "Detected and surfaced" : "None detected"}</dd></div>
+    </dl></details>`;
+  }
+
+  function copilotConsultationSettingsHtml() {
+    if (!state.copilotConsultationSettingsOpen) return "";
+    const settings = state.copilotConsultationSettings || {};
+    return `<form class="copilot-consultation-settings" data-copilot-consultation-settings>
+      <strong>AI consultation settings</strong>
+      <label><span>Mode</span><select name="mode"><option value="off"${settings.mode === "off" ? " selected" : ""}>Off</option><option value="auto"${!settings.mode || settings.mode === "auto" ? " selected" : ""}>Auto</option><option value="always_review"${settings.mode === "always_review" ? " selected" : ""}>Always Review</option></select></label>
+      <label><input type="checkbox" name="enabled"${settings.enabled !== false ? " checked" : ""}> Enable Gemini consultation</label>
+      <label><input type="checkbox" name="emergencyStop"${settings.emergencyStop ? " checked" : ""}> Emergency stop</label>
+      <label><span>Daily limit</span><input type="number" name="dailyLimit" min="1" max="1000" value="${escapeHtml(settings.dailyLimit || 80)}"></label>
+      <button type="submit">Save settings</button>
+      <small>${settings.configured ? `Configured · ${escapeHtml(settings.model || "")}` : "Gemini's server credential is not configured."}</small>
+      ${settings.usageSummary ? `<small>Usage: ${escapeHtml(settings.usageSummary.completed || 0)} completed · ${escapeHtml(settings.usageSummary.failed || 0)} failed · ${escapeHtml(settings.usageSummary.rateLimited || 0)} rate limited</small>` : ""}
+    </form>`;
   }
 
   async function saveCopilotMemory(memoryType) {
@@ -2797,7 +2829,7 @@
               ${message.extraHtml || ""}
             </article>
           `).join("") : `<article class="copilot-message is-assistant"><p>I can search the whole dashboard, open records, explain exactly what a ticket still needs, and prepare visits for your approval. Try “Find Kennedy tickets” or “What can I complete today?”</p></article>`}
-          ${state.copilotLoading ? `<article class="copilot-message is-assistant is-loading"><p>Checking your dashboard…</p></article>` : ""}
+          ${state.copilotLoading ? `<article class="copilot-message is-assistant is-loading"><p>${state.copilotConsultationRequest ? "Consulting Gemini for a second opinion…" : "Checking your dashboard…"}</p></article>` : ""}
         </div>
         <form data-dashboard-copilot-form>
           <label class="sr-only" for="groundskeeper-copilot-message">Message Groundskeeper AI</label>
@@ -2809,6 +2841,12 @@
           <button type="button" data-action="copilot-shortcut" data-copilot-section="outreach"><span aria-hidden="true">♙</span><strong>Leads</strong></button>
           <button type="button" data-action="copilot-shortcut" data-copilot-section="reports"><span aria-hidden="true">▥</span><strong>Reports</strong></button>
         </nav>
+        <div class="copilot-consult-controls">
+          <button type="button" data-action="copilot-consult-gemini">Consult Gemini</button>
+          <button type="button" data-action="copilot-double-check">Double-check answer</button>
+          <button type="button" data-action="copilot-consultation-settings">AI consultation settings</button>
+        </div>
+        ${copilotConsultationSettingsHtml()}
         <small class="dashboard-copilot-trust">Changes are made only after you approve a preview.</small>
       </section>`;
     const messages = shell.querySelector("[data-copilot-messages]");
@@ -2920,16 +2958,24 @@
     };
   }
 
-  async function handleDashboardCopilotMessage(message) {
+  async function handleDashboardCopilotMessage(message, consultationRequest = null) {
     const lower = normalizeLookup(message);
     copilotPush("user", message);
     state.copilotLoading = true;
+    state.copilotConsultationRequest = consultationRequest;
     renderDashboardCopilot();
     try {
       await ensureGlobalSearchFinancialData();
       let reply;
-      if (isCopilotUICommand(message)) {
-        const answer = await groundskeeperChat(message, `command:${normalizeDashboardSection(state.activeSection)}`);
+      if (consultationRequest) {
+        const answer = await groundskeeperChat(message, `consultation:${normalizeDashboardSection(state.activeSection)}`, consultationRequest);
+        const sources = copilotCitationRows(state.groundskeeperLastMeta?.citations || []);
+        reply = {
+          content: answer,
+          html: `${sources.length ? `<details class="copilot-sources"><summary>How I got this · ${sources.length} source${sources.length === 1 ? "" : "s"}</summary>${copilotRecordButtons(sources)}</details>` : ""}${copilotOutcomeHtml()}`
+        };
+      } else if (isCopilotUICommand(message)) {
+        const answer = await groundskeeperChat(message, `command:${normalizeDashboardSection(state.activeSection)}`, consultationRequest);
         const actions = state.groundskeeperLastMeta?.uiActions || [];
         const statuses = await executeDashboardUIActions(actions);
         const sources = copilotCitationRows(state.groundskeeperLastMeta?.citations || []);
@@ -2956,7 +3002,7 @@
         state.copilotLastResults = rows;
         reply = { content: rows.length ? `I found ${rows.length} matching records for “${query}”.` : `I couldn't find a dashboard record matching “${query}”. Try a client, property, ticket number, phone, email, or vendor.`, html: copilotRecordButtons(rows) };
       } else {
-        const answer = await groundskeeperChat(message, `copilot:${normalizeDashboardSection(state.activeSection)}`);
+        const answer = await groundskeeperChat(message, `copilot:${normalizeDashboardSection(state.activeSection)}`, consultationRequest);
         const sources = copilotCitationRows(state.groundskeeperLastMeta?.citations || []);
         reply = {
           content: answer,
@@ -2968,6 +3014,7 @@
       copilotPush("assistant", error.message || "I couldn't finish that dashboard check.");
     } finally {
       state.copilotLoading = false;
+      state.copilotConsultationRequest = null;
       renderDashboardCopilot();
     }
   }
@@ -20846,6 +20893,33 @@ Requirements:
         await render();
         return;
       }
+      if (action === "copilot-consult-gemini" || action === "copilot-double-check") {
+        const textarea = qs("[data-dashboard-copilot-form] textarea");
+        const typed = String(textarea?.value || "").trim();
+        const previous = [...state.copilotMessages].reverse().find((message) => message.role === "user")?.content || "";
+        const question = typed || previous;
+        if (!question) {
+          copilotPush("assistant", "Enter a question first, then choose Consult Gemini.");
+          renderDashboardCopilot();
+          return;
+        }
+        if (textarea) textarea.value = "";
+        await handleDashboardCopilotMessage(question, action === "copilot-double-check" ? { doubleCheck: true } : { manual: true });
+        return;
+      }
+      if (action === "copilot-consultation-settings") {
+        try {
+          if (!state.copilotConsultationSettings) {
+            const result = await groundskeeperRequest("consultation-settings-get");
+            state.copilotConsultationSettings = result.settings || {};
+          }
+          state.copilotConsultationSettingsOpen = !state.copilotConsultationSettingsOpen;
+        } catch (error) {
+          copilotPush("assistant", error.message || "I couldn't load AI consultation settings.");
+        }
+        renderDashboardCopilot();
+        return;
+      }
       if (action === "copilot-cancel-schedule") {
         state.copilotScheduleDraft = null;
         copilotPush("assistant", "The visit preview was cancelled. Nothing was added.");
@@ -25713,6 +25787,25 @@ Requirements:
         } catch (error) {
           setDashboardState(error.message || "Unable to save AI entry.", "error");
         }
+      } else if (event.target.matches("[data-copilot-consultation-settings]")) {
+        event.preventDefault();
+        const formData = new FormData(event.target);
+        try {
+          const result = await groundskeeperRequest("consultation-settings-update", {
+            settings: {
+              mode: String(formData.get("mode") || "auto"),
+              enabled: formData.get("enabled") === "on",
+              emergencyStop: formData.get("emergencyStop") === "on",
+              dailyLimit: Number(formData.get("dailyLimit") || 80)
+            }
+          });
+          state.copilotConsultationSettings = result.settings || {};
+          state.copilotConsultationSettingsOpen = false;
+          copilotPush("assistant", "AI consultation settings saved.");
+        } catch (error) {
+          copilotPush("assistant", error.message || "I couldn't save AI consultation settings.");
+        }
+        renderDashboardCopilot();
       } else if (event.target.matches("[data-dashboard-copilot-form]")) {
         event.preventDefault();
         const message = String(new FormData(event.target).get("message") || "").trim();

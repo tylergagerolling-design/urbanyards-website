@@ -14,6 +14,10 @@ const {
 const { orchestrateDashboardRequest } = require("../src/assistant/orchestrator");
 const { composeDeterministicReply } = require("../src/assistant/response-composer");
 const { MEMORY_TYPES, normalizeMemory, sanitizeScope } = require("../src/assistant/memory-service");
+const { consultationDecision, normalizeMode } = require("../src/assistant/consultation/policy");
+const { sanitizeConsultationContext } = require("../src/assistant/consultation/context-sanitizer");
+const { createGeminiProvider } = require("../src/assistant/consultation/gemini-provider");
+const { disagreementDetected, synthesisInstruction } = require("../src/assistant/consultation/synthesizer");
 
 const BUSINESS_CONTEXT = `
 You are The Groundskeeper, the shared AI assistant for Urban Yards Groundskeeping.
@@ -448,6 +452,69 @@ async function publishTrainingRules() {
   };
 }
 
+function settingMap(rows = []) {
+  return Object.fromEntries(asArray(rows).map((row) => [String(row.setting_key || ""), row.value]));
+}
+
+function booleanSetting(value, fallback) {
+  if (value === undefined || value === null || value === "") return fallback;
+  return ["true", "1", "yes", "on", true, 1].includes(value);
+}
+
+function numberSetting(value, fallback, min, max) {
+  const number = Number(value);
+  return Number.isFinite(number) ? Math.max(min, Math.min(max, number)) : fallback;
+}
+
+function consultationSettings(rows = []) {
+  const values = settingMap(rows);
+  return {
+    enabled: booleanSetting(values.gemini_enabled, true),
+    mode: normalizeMode(values.gemini_consultation_mode || "auto"),
+    dailyLimit: numberSetting(values.gemini_daily_limit, Number(process.env.GEMINI_DAILY_LIMIT || 80), 1, 1000),
+    perUserDailyLimit: numberSetting(values.gemini_per_user_daily_limit, Number(process.env.GEMINI_PER_USER_DAILY_LIMIT || 30), 1, 250),
+    maxContextChars: numberSetting(values.gemini_max_context_chars, Number(process.env.GEMINI_MAX_CONTEXT_CHARS || 12000), 2000, 40000),
+    maxOutputTokens: numberSetting(values.gemini_max_output_tokens, Number(process.env.GEMINI_MAX_OUTPUT_TOKENS || 1200), 256, 4096),
+    timeoutMs: numberSetting(values.gemini_timeout_ms, Number(process.env.GEMINI_TIMEOUT_MS || 12000), 2000, 30000),
+    emergencyStop: booleanSetting(values.gemini_emergency_stop, String(process.env.GEMINI_EMERGENCY_STOP || "").toLowerCase() === "true"),
+    model: process.env.GEMINI_MODEL || "gemini-2.5-flash",
+    configured: Boolean(process.env.GEMINI_API_KEY)
+  };
+}
+
+async function saveConsultationSettings(values = {}) {
+  const allowed = {
+    gemini_enabled: String(Boolean(values.enabled)),
+    gemini_consultation_mode: normalizeMode(values.mode),
+    gemini_daily_limit: String(numberSetting(values.dailyLimit, 80, 1, 1000)),
+    gemini_per_user_daily_limit: String(numberSetting(values.perUserDailyLimit, 30, 1, 250)),
+    gemini_max_context_chars: String(numberSetting(values.maxContextChars, 12000, 2000, 40000)),
+    gemini_max_output_tokens: String(numberSetting(values.maxOutputTokens, 1200, 256, 4096)),
+    gemini_timeout_ms: String(numberSetting(values.timeoutMs, 12000, 2000, 30000)),
+    gemini_emergency_stop: String(Boolean(values.emergencyStop))
+  };
+  const now = new Date().toISOString();
+  await Promise.all(Object.entries(allowed).map(([setting_key, value]) => supabaseAdminRequest("ai_settings?on_conflict=setting_key", {
+    method: "POST",
+    headers: { Prefer: "resolution=merge-duplicates,return=minimal" },
+    body: JSON.stringify({ setting_key, label: setting_key.replace(/_/g, " "), value, visibility: "internal", status: "published", updated_at: now })
+  })));
+  return consultationSettings(Object.entries(allowed).map(([setting_key, value]) => ({ setting_key, value })));
+}
+
+function consultationUsageSummary(rows = []) {
+  return asArray(rows).reduce((summary, row) => {
+    const metadata = row.metadata || {};
+    summary.attempts += 1;
+    if (metadata.status === "completed") summary.completed += 1;
+    if (metadata.status === "failed") summary.failed += 1;
+    if (metadata.status === "rate_limited") summary.rateLimited += 1;
+    summary.inputTokens += Number(metadata.usage?.inputTokens || 0);
+    summary.outputTokens += Number(metadata.usage?.outputTokens || 0);
+    return summary;
+  }, { attempts: 0, completed: 0, failed: 0, rateLimited: 0, inputTokens: 0, outputTokens: 0 });
+}
+
 async function listAssistantMemories() {
   return asArray(await tableRows("assistant_memories", "select=*&order=is_active.desc,updated_at.desc&limit=500"));
 }
@@ -533,6 +600,14 @@ async function adminAction(req, res, id, action, payload) {
   if (action === "memory-update") return res.status(200).json({ memory: await patchAssistantMemory(payload.id, payload.values || {}), requestId: id });
   if (action === "memory-delete") return res.status(200).json({ deleted: await deleteAssistantMemory(payload.id), requestId: id });
   if (action === "outcome-record") return res.status(200).json({ outcome: await recordAssistantOutcome(payload.outcome || {}, adminActor), requestId: id });
+  if (action === "consultation-settings-get") {
+    const [settingsRows, usageRows] = await Promise.all([
+      tableRows("ai_settings"),
+      tableRows("audit_logs", "select=metadata,created_at&action=eq.ai_consultation&order=created_at.desc&limit=500")
+    ]);
+    return res.status(200).json({ settings: { ...consultationSettings(settingsRows), usageSummary: consultationUsageSummary(usageRows) }, requestId: id });
+  }
+  if (action === "consultation-settings-update") return res.status(200).json({ settings: await saveConsultationSettings(payload.settings || {}), requestId: id });
   if (action === "publish") {
     const now = new Date().toISOString();
     await supabaseAdminRequest("ai_settings?on_conflict=setting_key", {
@@ -578,7 +653,9 @@ function isAdminAction(action) {
       "memory-upsert",
       "memory-update",
       "memory-delete",
-      "outcome-record"
+      "outcome-record",
+      "consultation-settings-get",
+      "consultation-settings-update"
     ].includes(action);
 }
 
@@ -591,7 +668,7 @@ async function handler(req, res) {
   }
   if (!allowedOrigin(req)) return res.status(403).json({ error: "Origin not allowed", requestId: id });
 
-  const { action = "chat", mode: rawMode = "public", message = "", history = [], page = "", lead = {}, context = {}, payload = {} } = req.body || {};
+  const { action = "chat", mode: rawMode = "public", message = "", history = [], page = "", lead = {}, context = {}, payload = {}, consultation = {} } = req.body || {};
   const mode = sanitizeMode(rawMode);
 
   const adminRequested = isAdminAction(action);
@@ -700,24 +777,87 @@ async function handler(req, res) {
 
   try {
     const modelStartedAt = Date.now();
-    const response = await fetch("https://api.openai.com/v1/chat/completions", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${process.env.OPENAI_API_KEY}`
-      },
-      body: JSON.stringify({
-        model: process.env.OPENAI_MODEL || "gpt-4.1-mini",
-        messages,
-        temperature: mode === "dashboard" ? 0.55 : 0.45,
-        max_tokens: mode === "dashboard" ? 900 : 360
-      }),
-      signal: AbortSignal.timeout(12000)
-    });
-    if (!response.ok) throw new Error(`OpenAI request failed (${response.status})`);
-    const data = await response.json();
-    const modelReply = data?.choices?.[0]?.message?.content?.trim() || "I can help with Urban Yards services, property care, and quote questions.";
-    const reply = composeDeterministicReply(orchestration?.toolResults) || modelReply;
+    const modelReply = await openAiChat(messages, { mode, maxTokens: mode === "dashboard" ? 900 : 360, temperature: mode === "dashboard" ? 0.55 : 0.45 });
+    const primaryReply = composeDeterministicReply(orchestration?.toolResults) || modelReply;
+    let reply = primaryReply;
+    let consultationMeta = null;
+    if (mode === "dashboard") {
+      const settings = consultationSettings(aiKnowledge.settings);
+      const decision = consultationDecision({
+        message: userMessage,
+        mode: settings.mode,
+        enabled: settings.enabled,
+        emergencyStop: settings.emergencyStop,
+        manual: consultation?.manual === true,
+        doubleCheck: consultation?.doubleCheck === true
+      });
+      consultationMeta = { used: false, status: "skipped", reason: decision.reason, provider: "gemini", model: settings.model };
+      if (decision.consult) {
+        const userKey = dashboardActor?.userId || dashboardActor?.email || clientIp(req);
+        const perUser = rateLimit(`gemini-user-daily:${userKey}`, settings.perUserDailyLimit, 24 * 60 * 60 * 1000);
+        const globalGemini = rateLimit("gemini-global-daily", settings.dailyLimit, 24 * 60 * 60 * 1000);
+        if (!perUser.allowed || !globalGemini.allowed) {
+          consultationMeta = { ...consultationMeta, status: "rate_limited", reason: "usage_limit" };
+        } else {
+          const sanitized = sanitizeConsultationContext({
+            message: userMessage,
+            context,
+            primaryConclusion: primaryReply,
+            purpose: decision.reason,
+            maxChars: settings.maxContextChars
+          });
+          const provider = createGeminiProvider({ model: settings.model });
+          const startedAt = new Date().toISOString();
+          try {
+            const reviewed = await provider.consult({
+              sanitizedContext: sanitized.serialized,
+              timeoutMs: settings.timeoutMs,
+              maxOutputTokens: settings.maxOutputTokens
+            });
+            const disagreed = disagreementDetected(primaryReply, reviewed.consultation);
+            reply = await openAiChat([
+              { role: "system", content: "You are the Urban Yards Groundskeeper. Synthesize one user-facing answer from a primary draft and one advisory review. Do not expose hidden reasoning." },
+              { role: "user", content: synthesisInstruction({ userQuestion: userMessage, primaryAnswer: primaryReply, consultation: reviewed.consultation }) }
+            ], { mode: "dashboard", maxTokens: 900, temperature: 0.3 });
+            consultationMeta = {
+              used: true,
+              status: "completed",
+              reason: decision.reason,
+              provider: reviewed.provider,
+              model: reviewed.model,
+              durationMs: reviewed.durationMs,
+              usage: reviewed.usage,
+              contextCategories: sanitized.contextCategories,
+              disagreementDetected: disagreed,
+              resultUsed: true,
+              startedAt,
+              completedAt: new Date().toISOString()
+            };
+          } catch (error) {
+            consultationMeta = {
+              used: false,
+              status: "failed",
+              reason: decision.reason,
+              provider: "gemini",
+              model: settings.model,
+              errorCategory: error.category || "unavailable",
+              contextCategories: sanitized.contextCategories,
+              startedAt,
+              completedAt: new Date().toISOString()
+            };
+            reply = `${primaryReply}\n\nGemini’s second-opinion service was unavailable, so the Groundskeeper completed this response without it.`;
+          }
+        }
+      }
+      await writeAuditLog({
+        actor: dashboardActor,
+        action: "ai_consultation",
+        entityType: "ai_session",
+        entityId: id,
+        metadata: consultationMeta,
+        module: "groundskeeper"
+      });
+    }
     if (orchestration?.diagnostics) {
       orchestration.diagnostics.modelResponseMs = Date.now() - modelStartedAt;
       orchestration.diagnostics.totalMs = orchestration.diagnostics.totalOrchestrationMs + orchestration.diagnostics.modelResponseMs;
@@ -746,6 +886,7 @@ async function handler(req, res) {
         uiActions: orchestration.uiActions,
         memoryPreview: orchestration.memoryPreview,
         transitionPreview: orchestration.transitionPreview,
+        consultation: consultationMeta,
         diagnostics: process.env.NODE_ENV === "production" ? undefined : orchestration.diagnostics
       } : {})
     });

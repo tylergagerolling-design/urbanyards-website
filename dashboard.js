@@ -14305,7 +14305,7 @@ Requirements:
       <td><input data-expense-field="notes" value="${escapeHtml(expense.notes)}" placeholder="Notes"></td>
       <td>${escapeHtml(expense.createdBy || "Current user")}</td>
       <td>${escapeHtml(expense.updatedAt ? formatDate(expense.updatedAt) : "Not saved")}</td>
-      <td><button type="button" class="inline-action" data-action="duplicate-expense" data-id="${escapeHtml(expense.id)}">Duplicate</button><button type="button" class="inline-action danger" data-action="archive-money-record" data-entity-type="expense" data-id="${escapeHtml(expense.id)}">Delete</button></td>
+      <td><button type="button" class="inline-action danger" data-action="archive-money-record" data-entity-type="expense" data-id="${escapeHtml(expense.id)}">Delete</button></td>
     </tr>`;
   }
 
@@ -21094,31 +21094,6 @@ Requirements:
       if (action === "expense-receipt") {
         state.moneyReceiptExpenseId = id;
         qs("[data-expense-receipt-input]")?.click();
-        return;
-      }
-
-      if (action === "duplicate-expense") {
-        const source = state.data.financial.expenses.find((item) => item.id === id);
-        if (!source) return;
-        try {
-          const created = await createExpense({
-            expense_date: source.expenseDate,
-            vendor_name: source.vendorName,
-            category: source.category,
-            description: source.description,
-            payment_method: source.paymentMethod,
-            subtotal: source.subtotal === "" ? null : source.subtotal,
-            tax: source.tax === "" ? null : source.tax,
-            total: source.total,
-            status: "Draft",
-            notes: source.notes
-          });
-          state.data.financial.expenses.unshift(created);
-          renderMoneyWorkspace();
-          setDashboardState("Expense duplicated as a draft.");
-        } catch (error) {
-          setDashboardState(error.message || "Expense could not be duplicated.", "error");
-        }
         return;
       }
 

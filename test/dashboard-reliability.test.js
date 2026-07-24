@@ -991,3 +991,52 @@ test("ticket creation is guided, searchable, templated, and safely autosaved", (
   assert.match(css, /\.ticket-wizard-actions[\s\S]*position: sticky/);
   assert.match(css, /\.ticket-create-wizard \[aria-invalid="true"\]/);
 });
+
+test("global search groups every operational and financial record family", () => {
+  const js = read("dashboard.js");
+
+  for (const label of ["Leads", "Contacts", "Properties", "Tickets", "Invoices", "Expenses", "Vendors", "Documents"]) {
+    assert.match(js, new RegExp(`label: "${label}"`));
+  }
+  assert.match(js, /ensureGlobalSearchFinancialData/);
+  assert.match(js, /\["expenses", "invoicing", "vendors", "documents"\]/);
+  assert.match(js, /data-global-search-result/);
+});
+
+test("detail drawers expose breadcrumbs and a reliable Back control", () => {
+  const js = read("dashboard.js");
+  const css = read("dashboard.css");
+
+  assert.match(js, /function renderDetailDrawerBreadcrumbs/);
+  assert.match(js, /Money → \$\{MONEY_TABS/);
+  assert.match(js, /Leads → Call Queue/);
+  assert.match(js, /data-action="close-drawer"[\s\S]*← Back/);
+  assert.match(css, /\.drawer-breadcrumbs[\s\S]*position: sticky/);
+});
+
+test("Home provides a larger urgency-ordered My Work Today queue", () => {
+  const js = read("dashboard.js");
+
+  assert.match(js, /My Work Today/);
+  assert.match(js, /Calls, visits, blocked tickets, approvals, missing proof, overdue invoices, and follow-ups/);
+  assert.match(js, /\.sort\(\(a, b\) => \(a\.urgency - b\.urgency\)/);
+  assert.match(js, /\.slice\(0, 16\)/);
+});
+
+test("ticket closeout uses a completion review and reversible actions offer Undo", () => {
+  const js = read("dashboard.js");
+  const css = read("dashboard.css");
+
+  assert.match(js, /function renderTicketCompletionReview/);
+  assert.match(js, /Final Review[\s\S]*Ready to close\?/);
+  assert.match(js, /N\/A decisions[\s\S]*Costs[\s\S]*Payment[\s\S]*Documents[\s\S]*Remaining blockers/);
+  assert.match(js, /target\.dataset\.confirmClose !== "true"/);
+  assert.match(js, /function showDashboardUndo/);
+  assert.match(js, /data-action="dashboard-undo"/);
+  assert.match(js, /8000/);
+  assert.match(js, /moved to Recently Deleted[\s\S]*restore-record/);
+  assert.match(js, /Ticket completion undone/);
+  assert.match(js, /Ticket stage change undone/);
+  assert.match(css, /\.ticket-completion-review-grid/);
+  assert.match(css, /\[data-dashboard-state\]\[data-tone="undo"\]/);
+});

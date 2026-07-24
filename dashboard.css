@@ -20869,6 +20869,109 @@ body:not(.is-login-screen) .ticket-handoff-actions button small {
   }
 }
 
+.drawer-breadcrumbs {
+  position: sticky;
+  top: 0;
+  z-index: 8;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+  margin: -4px 0 12px;
+  padding: 9px 10px;
+  border: 1px solid rgba(31, 107, 79, 0.14);
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.96);
+  box-shadow: 0 6px 20px rgba(18, 55, 42, 0.07);
+}
+
+.drawer-breadcrumbs button {
+  flex: 0 0 auto;
+  padding: 7px 9px;
+}
+
+.drawer-breadcrumbs span {
+  min-width: 0;
+  overflow: hidden;
+  color: #52665c;
+  font-size: 0.78rem;
+  font-weight: 750;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.my-work-today .ticket-lane-list {
+  max-height: min(720px, 65vh);
+  overflow-y: auto;
+}
+
+.ticket-completion-review {
+  padding: 16px;
+  border: 2px solid rgba(31, 107, 79, 0.24);
+  border-radius: 18px;
+  background: rgba(244, 241, 232, 0.9);
+}
+
+.ticket-completion-review-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.ticket-completion-review-grid > div {
+  min-width: 0;
+  padding: 12px;
+  border-radius: 12px;
+  background: #fff;
+}
+
+.ticket-completion-review-grid span,
+.ticket-completion-review-grid strong,
+.ticket-completion-review-grid small {
+  display: block;
+  overflow-wrap: anywhere;
+}
+
+.ticket-completion-review-grid span {
+  color: #607168;
+  font-size: 0.7rem;
+  font-weight: 800;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+}
+
+.ticket-completion-review-grid strong {
+  margin: 4px 0;
+  color: #174d38;
+  font-size: 1.15rem;
+}
+
+.ticket-completion-review-grid .has-blockers {
+  border: 1px solid rgba(179, 58, 46, 0.34);
+  background: #fff5f3;
+}
+
+[data-dashboard-state][data-tone="undo"] {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+[data-dashboard-state][data-tone="undo"] button {
+  flex: 0 0 auto;
+  padding: 7px 12px;
+  border-color: currentColor;
+  color: inherit;
+  background: rgba(255, 255, 255, 0.75);
+}
+
+@media (max-width: 560px) {
+  .ticket-completion-review-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
 body:not(.is-login-screen) .ticket-requirement-list {
   display: grid;
   gap: 8px;

@@ -346,6 +346,8 @@
     moneySelectedExpenseIds: new Set(),
     moneySaveState: "",
     moneyUndo: null,
+    undoAction: null,
+    undoTimer: 0,
     moneyReceiptExpenseId: "",
     moneyInvoiceDetail: null,
     ticketBoardSearch: "",
@@ -981,7 +983,7 @@
           }))
       },
       {
-        label: "Prospects",
+        label: "Leads",
         rows: data.outreachProspects
           .filter((item) => recordMatchesGlobalQuery([item.propertyName, item.managementCompany, item.contactName, item.email, item.phone, item.address, item.city, item.notes], search))
           .slice(0, 5)
@@ -992,6 +994,67 @@
             id: item.id,
             phone: item.phone,
             leadType: "outreach_prospect"
+          }))
+      },
+      {
+        label: "Tickets",
+        rows: dashboardTickets(data)
+          .filter((item) => recordMatchesGlobalQuery([item.number, item.title, item.customer, item.property, item.stageLabel, item.nextAction], search))
+          .slice(0, 6)
+          .map((item) => ({
+            title: [item.number, item.title].filter(Boolean).join(" — "),
+            detail: [item.customer, item.property, item.stageLabel].filter(Boolean).join(" / "),
+            action: "open-ticket",
+            id: item.id,
+            ticketSource: item.source
+          }))
+      },
+      {
+        label: "Invoices",
+        rows: (data.financial?.invoices || [])
+          .filter((item) => recordMatchesGlobalQuery([item.invoice_number, item.client_id, item.property_id, item.ticket_id, item.status, item.internal_notes], search))
+          .slice(0, 5)
+          .map((item) => ({
+            title: item.invoice_number || "Draft invoice",
+            detail: [financialRecordName("client", item.client_id), item.status, moneyCurrency(item.total)].filter(Boolean).join(" / "),
+            action: "open-financial-invoice",
+            id: item.id
+          }))
+      },
+      {
+        label: "Expenses",
+        rows: (data.financial?.expenses || [])
+          .filter((item) => recordMatchesGlobalQuery([item.vendorName, item.description, item.category, item.notes, item.total], search))
+          .slice(0, 5)
+          .map((item) => ({
+            title: item.description || item.vendorName || "Expense",
+            detail: [item.vendorName, item.category, moneyCurrency(item.total)].filter(Boolean).join(" / "),
+            action: "open-money-expense",
+            id: item.id
+          }))
+      },
+      {
+        label: "Vendors",
+        rows: (data.financial?.vendors || [])
+          .filter((item) => recordMatchesGlobalQuery([item.vendor_name, item.contact_name, item.email, item.phone, item.default_expense_category], search))
+          .slice(0, 5)
+          .map((item) => ({
+            title: item.vendor_name || "Vendor",
+            detail: [item.contact_name, item.default_expense_category].filter(Boolean).join(" / "),
+            action: "open-money-vendor",
+            id: item.id
+          }))
+      },
+      {
+        label: "Documents",
+        rows: [...(data.documents || []), ...(data.financial?.documents || [])]
+          .filter((item) => recordMatchesGlobalQuery([item.title, item.file_name, item.number, item.type, item.document_type, item.status], search))
+          .slice(0, 5)
+          .map((item) => ({
+            title: item.title || item.file_name || item.number || "Document",
+            detail: [item.document_type || item.type, item.status, item.document_date].filter(Boolean).join(" / "),
+            action: item.document_type ? "open-money-document" : "open-document",
+            id: item.id
           }))
       },
       {
@@ -1026,6 +1089,12 @@
     return groups.flatMap((group) => group.rows.map((row) => ({ ...row, group: group.label })));
   }
 
+  async function ensureGlobalSearchFinancialData() {
+    for (const view of ["expenses", "invoicing", "vendors", "documents"]) {
+      if (!state.moneyLoadedViews.has(view)) await loadMoneyView(view);
+    }
+  }
+
   function renderGlobalSearchPanel() {
     if (!els.globalSearchPanel) return;
     const query = String(state.search || "").trim();
@@ -1056,7 +1125,7 @@
           const phone = phoneInfo(row.phone);
           return `
             <div class="global-search-result-row${isActive ? " is-active" : ""}">
-              ${row.action ? `<button class="global-search-result" type="button" data-global-search-result data-action="${escapeHtml(row.action)}" data-id="${escapeHtml(row.id)}">
+              ${row.action ? `<button class="global-search-result" type="button" data-global-search-result data-action="${escapeHtml(row.action)}" data-id="${escapeHtml(row.id)}"${row.ticketSource ? ` data-ticket-source="${escapeHtml(row.ticketSource)}"` : ""}>
                 <span><strong>${escapeHtml(row.title)}</strong><small>${escapeHtml(row.detail || row.group || "")}</small></span>
               </button>` : `<div class="global-search-result"><span><strong>${escapeHtml(row.title)}</strong><small>${escapeHtml(row.detail || "")}</small></span></div>`}
               ${phone.valid ? `<button class="inline-action" type="button" data-action="call-lead" data-id="${escapeHtml(row.id)}" data-lead-type="${escapeHtml(row.leadType || "lead")}" data-phone="${escapeHtml(phone.e164)}">Call</button>` : ""}
@@ -1249,7 +1318,7 @@
 
     return items
       .sort((a, b) => (a.urgency - b.urgency) || String(a.title).localeCompare(String(b.title)))
-      .slice(0, 8);
+      .slice(0, 16);
   }
 
   function renderTodayActionButton(item) {
@@ -1454,6 +1523,19 @@
     els.dashboardState.hidden = !message;
     els.dashboardState.textContent = message || "";
     els.dashboardState.dataset.tone = tone || "";
+  }
+
+  function showDashboardUndo(message, undo) {
+    window.clearTimeout(state.undoTimer);
+    state.undoAction = typeof undo === "function" ? undo : null;
+    if (!els.dashboardState) return;
+    els.dashboardState.hidden = false;
+    els.dashboardState.dataset.tone = "undo";
+    els.dashboardState.innerHTML = `<span>${escapeHtml(message)}</span>${state.undoAction ? `<button type="button" data-action="dashboard-undo">Undo</button>` : ""}`;
+    state.undoTimer = window.setTimeout(() => {
+      state.undoAction = null;
+      setDashboardState("");
+    }, 8000);
   }
 
   function getOwnerEmail() {
@@ -2856,6 +2938,32 @@
   let detailDrawerCloseTimer = 0;
   let detailDrawerLastFocus = null;
 
+  function detailDrawerSectionLabel() {
+    return ({
+      overview: "Home",
+      tickets: "Tickets",
+      work: "Work",
+      calendar: "Work",
+      outreach: "Leads",
+      "call-queue": "Leads → Call Queue",
+      contacts: "Leads → Contacts",
+      documents: `Money → ${MONEY_TABS.find((item) => item.key === state.moneyView)?.label || "Overview"}`,
+      equipment: "Tools → Equipment",
+      settings: "Tools → Settings"
+    })[state.activeSection] || "Dashboard";
+  }
+
+  function renderDetailDrawerBreadcrumbs() {
+    if (!els.detailContent || els.detailContent.querySelector("[data-drawer-breadcrumbs]")) return;
+    const heading = els.detailContent.querySelector("h3")?.textContent?.trim() || "";
+    const breadcrumbs = document.createElement("nav");
+    breadcrumbs.className = "drawer-breadcrumbs";
+    breadcrumbs.dataset.drawerBreadcrumbs = "";
+    breadcrumbs.setAttribute("aria-label", "Current location");
+    breadcrumbs.innerHTML = `<button type="button" data-action="close-drawer" aria-label="Back to ${escapeHtml(detailDrawerSectionLabel())}">← Back</button><span>${escapeHtml(detailDrawerSectionLabel())}${heading ? ` → ${escapeHtml(heading)}` : ""}</span>`;
+    els.detailContent.prepend(breadcrumbs);
+  }
+
   function openDetailDrawer() {
     if (!els.detailDrawer) return;
     const wasOpen = !els.detailDrawer.hidden && els.detailDrawer.classList.contains("is-open");
@@ -2871,6 +2979,7 @@
     document.documentElement.style.setProperty("overflow-y", "hidden", "important");
     document.body.classList.add("is-detail-drawer-open");
     requestAnimationFrame(() => {
+      renderDetailDrawerBreadcrumbs();
       els.detailDrawer.classList.add("is-open");
       const panel = els.detailDrawer ? els.detailDrawer.querySelector(".drawer-panel") : null;
       if (panel) panel.scrollTop = 0;
@@ -10893,6 +11002,30 @@
     };
   }
 
+  function renderTicketCompletionReview(form, ticket, payload) {
+    const existing = form.querySelector("[data-ticket-completion-review]");
+    if (existing) existing.remove();
+    const completedLabels = ticketCompletionChecklistItems.filter((item) => payload.completed.includes(item.key)).map((item) => item.label);
+    const naLabels = ticketCompletionChecklistItems.filter((item) => payload.notApplicable[item.key]).map((item) => item.label);
+    const blockers = ticketCompletionChecklistItems.filter((item) => !payload.completed.includes(item.key) && !payload.notApplicable[item.key]).map((item) => item.label);
+    const documents = (state.data.documents || []).filter((item) => [item.jobTicketId, item.ticketId, item.jobId].filter(Boolean).includes(ticket.id));
+    const review = document.createElement("section");
+    review.className = "ticket-completion-review";
+    review.dataset.ticketCompletionReview = "";
+    review.innerHTML = `
+      <div class="ticket-drawer-card-heading"><div><p class="eyebrow">Final Review</p><h4>Ready to close?</h4><span>Confirm the complete record before closing this ticket.</span></div></div>
+      <div class="ticket-completion-review-grid">
+        <div><span>Completed</span><strong>${completedLabels.length}/${ticketCompletionChecklistItems.length}</strong><small>${escapeHtml(completedLabels.join(", ") || "None")}</small></div>
+        <div><span>N/A decisions</span><strong>${naLabels.length}</strong><small>${escapeHtml(naLabels.join(", ") || "None")}</small></div>
+        <div><span>Costs</span><strong>${escapeHtml(ticketMoneyText(ticket.actualTotalCost || ticket.estimatedTotalCost))}</strong><small>Recorded or estimated job cost</small></div>
+        <div><span>Payment</span><strong>${escapeHtml(ticketFieldText(payload.ticket.payment_status || ticket.paymentStatus, "Not recorded"))}</strong><small>Invoice: ${escapeHtml(ticket.invoiceFinalized || payload.ticket.invoice_finalized ? "Finalized" : "N/A or pending")}</small></div>
+        <div><span>Documents</span><strong>${documents.length}</strong><small>${escapeHtml(documents.map((item) => item.title || item.number || item.type).filter(Boolean).slice(0, 3).join(", ") || "No linked documents")}</small></div>
+        <div class="${blockers.length ? "has-blockers" : "is-clear"}"><span>Remaining blockers</span><strong>${blockers.length}</strong><small>${escapeHtml(blockers.join(", ") || "None — ready to close")}</small></div>
+      </div>`;
+    form.querySelector(".ticket-completion-actions")?.before(review);
+    review.scrollIntoView({ behavior: "smooth", block: "nearest" });
+  }
+
   function ticketFieldText(value, fallback = "Not set") {
     const text = String(value ?? "").trim();
     return text || fallback;
@@ -12717,11 +12850,12 @@
   }
 
   function renderHomeActionQueue(items) {
-    return `<section class="ticket-lane home-ticket-action-lane">
+    return `<section class="ticket-lane home-ticket-action-lane my-work-today" aria-label="My Work Today">
       <div class="ticket-lane-heading">
         <div>
-          <h3>Today&apos;s Action Queue</h3>
-          <p>Website requests, missed visits, follow-ups, invoices, imports, and ticket blockers that need attention.</p>
+          <p class="eyebrow">Personalized Queue</p>
+          <h3>My Work Today</h3>
+          <p>Calls, visits, blocked tickets, approvals, missing proof, overdue invoices, and follow-ups—ordered by urgency.</p>
         </div>
         <span>${escapeHtml(items.length)}</span>
       </div>
@@ -14750,6 +14884,7 @@ Requirements:
           </div>
         </form>
       </div>`;
+      renderDetailDrawerBreadcrumbs();
     } catch (error) {
       els.detailContent.innerHTML = `<section class="money-module-state is-error"><strong>Invoice could not be opened</strong><p>${escapeHtml(error.message)}</p></section>`;
     }
@@ -20142,6 +20277,7 @@ Requirements:
         if (els.clientSearch && els.clientSearch.value !== state.search) els.clientSearch.value = state.search;
         if (els.overviewSearch && els.overviewSearch.value !== state.search) els.overviewSearch.value = state.search;
         if (els.workSearch && els.workSearch.value !== state.search) els.workSearch.value = state.search;
+        if (state.globalSearchOpen) await ensureGlobalSearchFinancialData();
         await render();
       });
       els.globalSearch.addEventListener("keydown", (event) => {
@@ -20955,6 +21091,20 @@ Requirements:
         return;
       }
 
+      if (action === "dashboard-undo") {
+        const undo = state.undoAction;
+        state.undoAction = null;
+        window.clearTimeout(state.undoTimer);
+        if (!undo) return;
+        try {
+          setDashboardState("Undoing…");
+          await undo();
+        } catch (error) {
+          setDashboardState(error.message || "That action could not be undone.", "error");
+        }
+        return;
+      }
+
       if (action === "ticket-wizard-next" || action === "ticket-wizard-back") {
         const form = target.closest("[data-ticket-create-form]");
         if (!form) return;
@@ -20972,6 +21122,18 @@ Requirements:
       if (action === "money-display") {
         state.moneyDisplay = target.dataset.display === "spreadsheet" ? "spreadsheet" : "cards";
         renderMoneyWorkspace();
+        return;
+      }
+
+      if (["open-money-expense", "open-money-vendor", "open-money-document"].includes(action)) {
+        state.moneyView = action === "open-money-expense" ? "expenses" : action === "open-money-vendor" ? "vendors" : "documents";
+        state.moneyDisplay = action === "open-money-expense" ? "spreadsheet" : state.moneyDisplay;
+        state.moneySearch = action === "open-money-expense"
+          ? (state.data.financial?.expenses || []).find((item) => item.id === id)?.description || ""
+          : "";
+        setActiveSection("documents");
+        replaceDashboardHash("documents");
+        await render();
         return;
       }
 
@@ -21000,7 +21162,13 @@ Requirements:
           state.moneyLoadedViews.delete("deleted");
           if (entityType === "invoice") closeSubmissionDrawer();
           await loadMoneyView(sourceView || state.moneyView, { force: true });
-          setDashboardState(`${entityType.charAt(0).toUpperCase()}${entityType.slice(1)} moved to Recently Deleted.`);
+          showDashboardUndo(`${entityType.charAt(0).toUpperCase()}${entityType.slice(1)} moved to Recently Deleted.`, async () => {
+            await dashboardFinancialRequest("restore-record", { entityType, id });
+            if (sourceView) state.moneyLoadedViews.delete(sourceView);
+            state.moneyLoadedViews.delete("deleted");
+            await loadMoneyView(sourceView || state.moneyView, { force: true });
+            setDashboardState("Financial record restored.");
+          });
         } catch (error) {
           setDashboardState(error.message || "The record could not be deleted.", "error");
         }
@@ -22787,8 +22955,14 @@ Requirements:
           form.querySelector("[data-completion-closeout-note]")?.focus();
           return;
         }
-        const confirmed = window.confirm(`Close this ticket? ${payload.completed.length} item${payload.completed.length === 1 ? "" : "s"} are complete and ${Object.keys(payload.notApplicable).length} marked N/A. This moves it to Completed Tickets.`);
-        if (!confirmed) return;
+        const currentTicket = dashboardTickets().find((item) => item.source === "ticket" && item.id === id) || findTicketForDrawer("ticket", id);
+        if (target.dataset.confirmClose !== "true") {
+          renderTicketCompletionReview(form, currentTicket || { id }, payload);
+          target.dataset.confirmClose = "true";
+          target.textContent = "Confirm Close Ticket";
+          setDashboardState("Review the completion summary, then confirm close.");
+          return;
+        }
         try {
           target.disabled = true;
           setDashboardState("Validating and closing ticket...");
@@ -22798,7 +22972,24 @@ Requirements:
           state.ticketBoardMode = "completed";
           await refreshDashboard();
           openTicketDrawer("ticket", result.ticket?.id || id);
-          setDashboardState("Ticket completed from the unified checklist.");
+          showDashboardUndo("Ticket completed from the unified checklist.", async () => {
+            await updateJobTicket(result.ticket?.id || id, {
+              stage: "completion_review",
+              status: "active",
+              responsible_role: "owner",
+              next_action: "Review reopened ticket"
+            });
+            await insertJobTicketEvent(result.ticket?.id || id, {
+              event_type: "ticket_reopened",
+              from_stage: "closed",
+              to_stage: "completion_review",
+              notes: "Owner undid ticket completion."
+            });
+            state.ticketBoardMode = "open";
+            await refreshDashboard();
+            openTicketDrawer("ticket", result.ticket?.id || id);
+            setDashboardState("Ticket completion undone.");
+          });
         } catch (error) {
           target.disabled = false;
           setDashboardState(error.message || "Unable to complete this ticket.", "error");
@@ -22806,6 +22997,8 @@ Requirements:
         return;
       } else if (action === "transition-ticket-stage") {
         const nextStage = target.dataset.stage;
+        const previousTicket = dashboardTickets().find((item) => item.source === "ticket" && item.id === id);
+        const previousStage = previousTicket ? ticketStage(previousTicket) : "";
         const panel = target.closest("[data-ticket-command-panel]");
         const noteInput = panel?.querySelector("[data-ticket-transition-notes]");
         const nextActionInput = panel?.querySelector("[data-ticket-next-action-input]");
@@ -22817,7 +23010,21 @@ Requirements:
           });
           await refreshDashboard();
           openTicketDrawer("ticket", ticket?.id || id);
-          setDashboardState(`Ticket moved to ${ticketStageLabel(normalizeTicketStageForDashboard(nextStage))}.`);
+          showDashboardUndo(`Ticket moved to ${ticketStageLabel(normalizeTicketStageForDashboard(nextStage))}.`, previousStage ? async () => {
+            await updateJobTicket(ticket?.id || id, {
+              stage: previousStage,
+              next_action: previousTicket?.nextAction || ticketNextAction(previousStage)
+            });
+            await insertJobTicketEvent(ticket?.id || id, {
+              event_type: "ticket_stage_undo",
+              from_stage: nextStage,
+              to_stage: previousStage,
+              notes: "Most recent stage change was undone."
+            });
+            await refreshDashboard();
+            openTicketDrawer("ticket", ticket?.id || id);
+            setDashboardState("Ticket stage change undone.");
+          } : null);
         } catch (error) {
           setDashboardState(error.message || "Unable to move ticket.", "error");
         }

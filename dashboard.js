@@ -2717,10 +2717,7 @@
   }
 
   function copilotOutcomeHtml() {
-    const recommendationId = state.groundskeeperLastMeta?.requestId;
-    const recommendationType = state.groundskeeperLastMeta?.intent?.primaryIntent || "assistant_response";
-    if (!recommendationId) return "";
-    return `${copilotConsultationHtml(state.groundskeeperLastMeta?.consultation)}<div class="copilot-outcome" aria-label="Rate this Groundskeeper recommendation"><span>Was this useful?</span><button type="button" data-action="copilot-rate-outcome" data-id="${escapeHtml(recommendationId)}" data-kind="${escapeHtml(recommendationType)}" data-rating="5">Yes</button><button type="button" data-action="copilot-rate-outcome" data-id="${escapeHtml(recommendationId)}" data-kind="${escapeHtml(recommendationType)}" data-rating="1">No</button></div>`;
+    return copilotConsultationHtml(state.groundskeeperLastMeta?.consultation);
   }
 
   function copilotConsultationHtml(meta) {

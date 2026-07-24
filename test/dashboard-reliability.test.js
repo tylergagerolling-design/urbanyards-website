@@ -1075,7 +1075,8 @@ test("Groundskeeper AI exposes the selected owner operations suite with review s
   assert.match(js, /Nothing above has been applied/);
   assert.match(api, /Never claim that you changed a record/);
   assert.match(api, /Never invent weather or forecast conditions/);
-  assert.match(api, /mode === "dashboard" \? 14000 : 2000/);
+  assert.match(api, /orchestrateDashboardRequest/);
+  assert.match(api, /orchestration\.modelContext/);
   assert.match(css, /\.groundskeeper-operation-grid[\s\S]*repeat\(3, minmax\(0, 1fr\)\)/);
 });
 

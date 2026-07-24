@@ -421,6 +421,7 @@
     copilotMessages: [],
     copilotLastResults: [],
     copilotScheduleDraft: null,
+    groundskeeperLastMeta: null,
     data: {
       submissions: [],
       contacts: [],
@@ -2465,6 +2466,9 @@
       blockers: item.blockers,
       estimatedCost: item.estimatedTotalCost,
       actualCost: item.actualTotalCost,
+      proposedPrice: item.proposedPrice,
+      expectedRevenue: item.expectedRevenue,
+      finalRevenue: item.finalRevenue,
       payment: item.paymentStatus,
       invoiceFinalized: item.invoiceFinalized,
       arrivalPhotos: item.beforePhotosUploaded,
@@ -2473,6 +2477,26 @@
     return {
       generatedAt: new Date().toISOString(),
       activeSection: state.activeSection,
+      pageContext: {
+        currentRoute: window.location.hash || `#${state.activeSection}`,
+        activeTab: state.activeSection,
+        selectedRecordType: qs("[data-detail-content] [data-ticket-id]") ? "ticket" : (state.selectedJobId ? "job" : ""),
+        selectedRecordId: qs("[data-detail-content] [data-ticket-id]")?.dataset.ticketId || state.selectedJobId || "",
+        visibleRecordIds: Array.from(qsa(`[data-section="${normalizeDashboardSection(state.activeSection)}"] [data-id]`)).slice(0, 30).map((element) => element.dataset.id).filter(Boolean),
+        visibleFilters: {
+          search: state.search,
+          ticketStage: state.ticketBoardStageFilter,
+          ownerKanbanStatus: state.ownerKanbanStatusFilter,
+          moneyView: state.moneyView
+        },
+        timezone: Intl.DateTimeFormat().resolvedOptions().timeZone || "America/Los_Angeles",
+        currentDate: todayKey()
+      },
+      recentEntities: state.copilotLastResults.slice(0, 8).map((item) => ({
+        recordType: String(item.group || "record").replace(/s$/i, "").toLowerCase(),
+        recordId: item.id,
+        title: item.title
+      })),
       policy: "Recommend and draft only. Never mutate records, send messages, finalize prices, move stages, create invoices, or close tickets without explicit owner confirmation in the dashboard.",
       summary: {
         actionMetrics: dashboardActionMetrics(data, tickets),
@@ -2531,6 +2555,7 @@
     });
     const result = await response.json().catch(() => ({}));
     if (!response.ok) throw new Error(result.error || "The Groundskeeper is unavailable.");
+    state.groundskeeperLastMeta = result;
     return result.reply;
   }
 
@@ -2541,6 +2566,26 @@
         <b>Open</b>
       </button>
     `).join("");
+  }
+
+  function copilotCitationRows(citations = []) {
+    const actionByType = {
+      ticket: "open-ticket",
+      job: "edit-job",
+      lead: "open-outreach-prospect",
+      property: "open-outreach-property",
+      invoice: "open-financial-invoice",
+      expense: "open-money-expense",
+      document: "open-document"
+    };
+    return citations.map((citation) => ({
+      title: citation.displayId || citation.title || "Source record",
+      detail: citation.title && citation.title !== citation.displayId ? citation.title : "Groundskeeper source",
+      group: "Source",
+      action: actionByType[citation.recordType] || "",
+      id: citation.recordId,
+      ticketSource: citation.recordType === "ticket" ? "ticket" : ""
+    })).filter((row) => row.action && row.id);
   }
 
   function copilotPush(role, content, extraHtml = "") {
@@ -2731,7 +2776,11 @@
         reply = { content: rows.length ? `I found ${rows.length} matching records for “${query}”.` : `I couldn't find a dashboard record matching “${query}”. Try a client, property, ticket number, phone, email, or vendor.`, html: copilotRecordButtons(rows) };
       } else {
         const answer = await groundskeeperChat(`${message}\n\nAnswer conversationally. If the owner is asking to find, open, complete, or schedule a record, explain that the dashboard helper can do that when they use the record name or date.`, `copilot:${normalizeDashboardSection(state.activeSection)}`);
-        reply = { content: answer, html: "" };
+        const sources = copilotCitationRows(state.groundskeeperLastMeta?.citations || []);
+        reply = {
+          content: answer,
+          html: sources.length ? `<details class="copilot-sources"><summary>How I got this · ${sources.length} source${sources.length === 1 ? "" : "s"}</summary>${copilotRecordButtons(sources)}</details>` : ""
+        };
       }
       copilotPush("assistant", reply.content, reply.html);
     } catch (error) {

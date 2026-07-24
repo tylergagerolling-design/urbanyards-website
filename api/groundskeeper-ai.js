@@ -4,11 +4,14 @@ const {
 } = require("./lib/security");
 const {
   getFeatureFlag,
+  hasPermission,
+  requirePermission,
   supabaseAdminRequest,
   verifyOwner,
   writeAuditLog,
   writeSystemError
 } = require("../netlify/functions/lib/dashboard-auth");
+const { orchestrateDashboardRequest } = require("../src/assistant/orchestrator");
 
 const BUSINESS_CONTEXT = `
 You are The Groundskeeper, the shared AI assistant for Urban Yards Groundskeeping.
@@ -543,7 +546,12 @@ async function handler(req, res) {
   const userMessage = text(message, 1400);
   if (!userMessage) return res.status(400).json({ error: "Message is required", requestId: id });
   if (String(message || "").length > 1400) return res.status(400).json({ error: "Please keep messages under 1400 characters.", requestId: id });
-  if (mode === "dashboard" && !(await requireAdmin(req))) return res.status(401).json({ error: "Unauthorized", requestId: id });
+  let dashboardActor = null;
+  if (mode === "dashboard") {
+    const permission = await requirePermission(req, "admin:manage", { entityType: "ai_session", action: "groundskeeper_orchestration" });
+    if (!permission.ok) return res.status(permission.statusCode || 401).json({ error: permission.error || "Unauthorized", requestId: id });
+    dashboardActor = permission.actor;
+  }
   if (!shouldUseExternalAi()) return res.status(503).json({ error: UNAVAILABLE_REPLY, requestId: id });
 
   let aiKnowledge = { settings: [], knowledge: [], faqs: [], rules: [], savedAnswers: [] };
@@ -554,17 +562,47 @@ async function handler(req, res) {
   }
 
   const siteContext = buildSiteContext(userMessage, page);
+  let orchestration = null;
+  if (mode === "dashboard") {
+    try {
+      orchestration = await orchestrateDashboardRequest({
+        message: userMessage,
+        context,
+        actor: dashboardActor,
+        hasPermission,
+        recentEntities: asArray(context?.recentEntities)
+      });
+    } catch (error) {
+      console.warn(JSON.stringify({ event: "groundskeeper_orchestration_recovery", requestId: id, message: error.message }));
+      orchestration = {
+        routing: { primaryIntent: "ambiguous", intents: ["ambiguous"], entities: [], requiresWritePreview: false },
+        citations: [],
+        verification: {
+          factualClaimsVerified: false,
+          calculationsVerified: false,
+          permissionsVerified: true,
+          citationsComplete: true,
+          partialResultsDetected: true,
+          unresolvedIssues: [`The structured dashboard check could not finish: ${error.message}`],
+          safeToReturn: true
+        },
+        diagnostics: { toolFailures: 1, totalOrchestrationMs: 0 },
+        modelContext: "The structured dashboard check failed. Explain that the result is partial and offer a safe retry. Do not invent records."
+      };
+    }
+  }
   const messages = [
     { role: "system", content: BUSINESS_CONTEXT },
     { role: "system", content: siteContext },
     { role: "system", content: buildDynamicContext(aiKnowledge, mode) },
     { role: "system", content: leadContextText(page, lead) },
-    { role: "system", content: `Optional dashboard/page context: ${JSON.stringify(context || {}).slice(0, mode === "dashboard" ? 14000 : 2000)}` },
+    { role: "system", content: mode === "dashboard" ? orchestration.modelContext : `Optional page context: ${JSON.stringify(context || {}).slice(0, 2000)}` },
     ...cleanMessages(history),
     { role: "user", content: userMessage }
   ];
 
   try {
+    const modelStartedAt = Date.now();
     const response = await fetch("https://api.openai.com/v1/chat/completions", {
       method: "POST",
       headers: {
@@ -582,14 +620,34 @@ async function handler(req, res) {
     if (!response.ok) throw new Error(`OpenAI request failed (${response.status})`);
     const data = await response.json();
     const reply = data?.choices?.[0]?.message?.content?.trim() || "I can help with Urban Yards services, property care, and quote questions.";
+    if (orchestration?.diagnostics) {
+      orchestration.diagnostics.modelResponseMs = Date.now() - modelStartedAt;
+      orchestration.diagnostics.totalMs = orchestration.diagnostics.totalOrchestrationMs + orchestration.diagnostics.modelResponseMs;
+    }
     await logConversation({ mode, page, question: userMessage, answer: reply, lead, requestId: id });
     await writeAuditLog({
       action: "ai_helper_used",
       entityType: "ai_session",
-      metadata: { mode, page: String(page || "").slice(0, 120), requestId: id }
+      metadata: {
+        mode,
+        page: String(page || "").slice(0, 120),
+        requestId: id,
+        intent: orchestration?.routing?.primaryIntent || "",
+        tools: orchestration?.toolResults?.map((result) => result.name) || [],
+        diagnostics: orchestration?.diagnostics || {}
+      }
     });
     console.log(JSON.stringify({ event: "groundskeeper_reply", requestId: id, mode }));
-    return res.status(200).json({ reply, requestId: id });
+    return res.status(200).json({
+      reply,
+      requestId: id,
+      ...(orchestration ? {
+        intent: orchestration.routing,
+        citations: orchestration.citations,
+        verification: orchestration.verification,
+        diagnostics: process.env.NODE_ENV === "production" ? undefined : orchestration.diagnostics
+      } : {})
+    });
   } catch (error) {
     console.error(JSON.stringify({ event: "groundskeeper_error", requestId: id, message: error.message }));
     await writeSystemError({ route: "groundskeeper-ai", error, metadata: { mode, action, requestId: id } });

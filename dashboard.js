@@ -2616,7 +2616,8 @@
   }
 
   async function executeDashboardUIActions(actions = []) {
-    const approved = actions.filter(validDashboardUIAction).slice(0, 8);
+    const order = { apply_filters: 0, navigate: 1, switch_tab: 2, open_record: 3, highlight_records: 4, scroll_to: 5 };
+    const approved = actions.filter(validDashboardUIAction).slice(0, 8).sort((left, right) => (order[left.type] ?? 9) - (order[right.type] ?? 9));
     const status = [];
     for (const action of approved) {
       if (action.type === "navigate") {

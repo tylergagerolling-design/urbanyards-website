@@ -804,6 +804,11 @@ async function handler(req, res) {
             context,
             primaryConclusion: primaryReply,
             purpose: decision.reason,
+            groundedContext: {
+              toolResults: orchestration?.toolResults || [],
+              memories: orchestration?.relevantMemory || [],
+              citations: orchestration?.citations || []
+            },
             maxChars: settings.maxContextChars
           });
           const provider = createGeminiProvider({ model: settings.model });

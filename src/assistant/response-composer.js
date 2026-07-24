@@ -25,4 +25,32 @@ function composeModelContext({ routing, pageContext, resolvedEntity, toolResults
   ].join("\n");
 }
 
-module.exports = { composeModelContext };
+function composeDeterministicReply(toolResults = []) {
+  const successful = new Map(toolResults.filter((result) => result.ok).map((result) => [result.name, result.output]));
+  const unpaid = successful.get("find_unpaid_invoices");
+  if (unpaid?.calculation) {
+    const count = unpaid.records?.length || 0;
+    const total = Number(unpaid.calculation.totalOutstanding || 0).toLocaleString("en-US", {
+      style: "currency",
+      currency: unpaid.calculation.currency || "USD"
+    });
+    return count
+      ? `I found ${count} unpaid invoice${count === 1 ? "" : "s"} with a verified outstanding balance of ${total}. Open “How I got this” to review the source records.`
+      : "I found no unpaid invoices in the records currently available to Groundskeeper. The verified outstanding balance is $0.00.";
+  }
+  const uninvoiced = successful.get("find_completed_uninvoiced_work");
+  if (uninvoiced?.calculation) {
+    const count = uninvoiced.records?.length || 0;
+    const total = Number(uninvoiced.calculation.totalValue || 0).toLocaleString("en-US", {
+      style: "currency",
+      currency: uninvoiced.calculation.currency || "USD"
+    });
+    const missing = Number(uninvoiced.calculation.missingValueCount || 0);
+    return count
+      ? `I found ${count} completed uninvoiced ticket${count === 1 ? "" : "s"} with ${total} in known value.${missing ? ` ${missing} ticket${missing === 1 ? " is" : "s are"} missing a value, so this total is partial.` : ""} Open “How I got this” to review the source records.`
+      : "I found no completed uninvoiced tickets in the records currently available to Groundskeeper.";
+  }
+  return "";
+}
+
+module.exports = { composeDeterministicReply, composeModelContext };

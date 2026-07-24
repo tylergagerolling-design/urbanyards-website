@@ -12,6 +12,7 @@ const {
   writeSystemError
 } = require("../netlify/functions/lib/dashboard-auth");
 const { orchestrateDashboardRequest } = require("../src/assistant/orchestrator");
+const { composeDeterministicReply } = require("../src/assistant/response-composer");
 
 const BUSINESS_CONTEXT = `
 You are The Groundskeeper, the shared AI assistant for Urban Yards Groundskeeping.
@@ -619,7 +620,8 @@ async function handler(req, res) {
     });
     if (!response.ok) throw new Error(`OpenAI request failed (${response.status})`);
     const data = await response.json();
-    const reply = data?.choices?.[0]?.message?.content?.trim() || "I can help with Urban Yards services, property care, and quote questions.";
+    const modelReply = data?.choices?.[0]?.message?.content?.trim() || "I can help with Urban Yards services, property care, and quote questions.";
+    const reply = composeDeterministicReply(orchestration?.toolResults) || modelReply;
     if (orchestration?.diagnostics) {
       orchestration.diagnostics.modelResponseMs = Date.now() - modelStartedAt;
       orchestration.diagnostics.totalMs = orchestration.diagnostics.totalOrchestrationMs + orchestration.diagnostics.modelResponseMs;

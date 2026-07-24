@@ -7,6 +7,7 @@ const { createPermissionGuard } = require("../src/assistant/permission-guard");
 const { resolveRecord } = require("../src/assistant/record-resolver");
 const { createToolRegistry } = require("../src/assistant/tool-registry");
 const { orchestrateDashboardRequest } = require("../src/assistant/orchestrator");
+const { composeDeterministicReply } = require("../src/assistant/response-composer");
 
 const snapshot = {
   priorityActions: [{ id: "t1", type: "ticket", title: "Kennedy visit", detail: "Due today" }],
@@ -168,6 +169,7 @@ test("unpaid invoice totals are calculated in code and cited", async () => {
   assert.equal(tool.output.calculation.totalOutstanding, 125);
   assert.equal(tool.output.citations[0].recordId, "i1");
   assert.equal(result.routing.requiresWritePreview, false);
+  assert.match(composeDeterministicReply(result.toolResults), /1 unpaid invoice.*\$125\.00/);
 });
 
 test("completed uninvoiced work totals known values and labels missing values", async () => {
@@ -187,4 +189,5 @@ test("completed uninvoiced work totals known values and labels missing values", 
   assert.equal(tool.output.calculation.totalValue, 350);
   assert.equal(tool.output.calculation.missingValueCount, 1);
   assert.equal(tool.output.partial, true);
+  assert.match(composeDeterministicReply(result.toolResults), /2 completed uninvoiced tickets.*\$350\.00.*1 ticket is missing a value/);
 });

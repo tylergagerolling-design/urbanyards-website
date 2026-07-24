@@ -30,6 +30,7 @@ test("overdue logic does not overwrite paid or voided invoices", () => {
   assert.equal(financial.effectiveInvoiceStatus({ status: "Sent", due_date: "2026-07-01", subtotal: 100 }, today), "Overdue");
   assert.equal(financial.effectiveInvoiceStatus({ status: "Paid", due_date: "2026-07-01", subtotal: 100 }, today), "Paid");
   assert.equal(financial.effectiveInvoiceStatus({ status: "Voided", due_date: "2026-07-01", subtotal: 100 }, today), "Voided");
+  assert.equal(financial.effectiveInvoiceStatus({ status: "Draft", subtotal: 0, tax: 0 }), "Draft");
 });
 
 test("job profitability uses linked actual cost categories", () => {

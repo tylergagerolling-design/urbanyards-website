@@ -37,10 +37,11 @@
   function effectiveInvoiceStatus(invoice = {}, today = new Date()) {
     const status = String(invoice.status || "Draft");
     if (["Paid", "Voided", "Uncollectible"].includes(status)) return status;
+    const summary = invoiceSummary(invoice);
     const dueDate = invoice.dueDate ?? invoice.due_date;
-    if (dueDate && String(dueDate).slice(0, 10) < today.toISOString().slice(0, 10) && invoiceSummary(invoice).balance > 0) return "Overdue";
-    if (invoiceSummary(invoice).balance <= 0) return "Paid";
-    if (invoiceSummary(invoice).amountPaid > 0 || invoiceSummary(invoice).deposit > 0) return "Partially Paid";
+    if (dueDate && String(dueDate).slice(0, 10) < today.toISOString().slice(0, 10) && summary.balance > 0) return "Overdue";
+    if (summary.total > 0 && summary.balance <= 0) return "Paid";
+    if (summary.amountPaid > 0 || summary.deposit > 0) return "Partially Paid";
     return status;
   }
 

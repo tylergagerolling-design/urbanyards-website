@@ -206,3 +206,19 @@ test("orchestrator includes bounded conversation memory without saving it", asyn
   assert.equal(result.relevantMemory[0].memoryType, "conversation");
   assert.match(result.modelContext, /Focus on overdue documentation/);
 });
+
+test("deterministic assistant replies contain clean punctuation", () => {
+  const transition = composeDeterministicReply([{
+    name: "transition_ticket_stage",
+    ok: true,
+    output: { preview: { ticketNumber: "JOB-1", currentStageLabel: "Lead", newStageLabel: "Scope" } }
+  }]);
+  const invoice = composeDeterministicReply([{
+    name: "find_unpaid_invoices",
+    ok: true,
+    output: { records: [{ id: "i1" }], calculation: { totalOutstanding: 25, currency: "USD" } }
+  }]);
+  assert.match(transition, /Lead → Scope/);
+  assert.match(invoice, /“How I got this”/);
+  assert.doesNotMatch(`${transition}\n${invoice}`, /â|Ã|Â/);
+});

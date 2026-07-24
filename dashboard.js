@@ -21003,24 +21003,6 @@ Requirements:
         }
         return;
       }
-      if (action === "copilot-rate-outcome") {
-        try {
-          const rating = Number(copilotTarget.dataset.rating || 0);
-          await groundskeeperRequest("outcome-record", {
-            outcome: {
-              recommendationId: copilotTarget.dataset.id,
-              recommendationType: copilotTarget.dataset.kind || "assistant_response",
-              accepted: rating >= 4,
-              completed: false,
-              userRating: rating
-            }
-          });
-          copilotTarget.closest(".copilot-outcome").innerHTML = "<span>Thanks. I’ll use that outcome as evidence, not as an automatic rule.</span>";
-        } catch (error) {
-          setDashboardState(error.message || "Unable to save assistant feedback.", "error");
-        }
-        return;
-      }
       if (["refresh-ai-memory", "edit-ai-memory", "toggle-ai-memory", "scope-ai-memory", "view-ai-memory-source", "delete-ai-memory"].includes(action)) {
         const id = copilotTarget.dataset.id || "";
         const memory = state.assistantMemories.find((item) => item.id === id);

@@ -22572,7 +22572,8 @@ body:not(.is-login-screen) .money-grid select {
 .dashboard-copilot {
   position: fixed;
   right: 22px;
-  bottom: 22px;
+  top: 18px;
+  bottom: auto;
   z-index: 1180;
   display: grid;
   justify-items: end;
@@ -22756,7 +22757,7 @@ body:not(.is-login-screen) .money-grid select {
 .dashboard-copilot-trust { padding: 0 14px 12px; color: #63756b; text-align: center; }
 
 @media (max-width: 700px) {
-  .dashboard-copilot { right: 12px; bottom: 76px; }
-  .dashboard-copilot-panel { height: min(650px, calc(100vh - 100px)); }
+  .dashboard-copilot { right: 12px; top: 12px; bottom: auto; }
+  .dashboard-copilot-panel { height: min(650px, calc(100vh - 76px)); }
   .dashboard-copilot.is-open .dashboard-copilot-launcher { display: none; }
 }

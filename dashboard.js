@@ -19305,26 +19305,8 @@ Requirements:
   }
 
   function renderContextualGroundskeeperTools(section = state.activeSection) {
-    const active = normalizeDashboardSection(section);
-    if (active === "groundskeeper-ai") return;
-    const page = qs(`[data-section="${active}"]`);
-    const tools = groundskeeperToolsForPage(active);
-    if (!page || !tools.length) return;
-    page.querySelector("[data-contextual-ai-tools]")?.remove();
-    const workspaceSelector = {
-      overview: "[data-home-workspace]",
-      tickets: "[data-job-ticket-workspace]",
-      calendar: "[data-work-workspace]",
-      outreach: "[data-leads-workspace]",
-      documents: "[data-money-workspace]",
-      settings: "[data-tools-workspace]"
-    }[active];
-    const host = workspaceSelector ? page.querySelector(workspaceSelector) : page;
-    const panel = document.createElement("section");
-    panel.className = "contextual-ai-tools";
-    panel.dataset.contextualAiTools = "";
-    panel.innerHTML = `<div><p class="eyebrow">Groundskeeper AI</p><strong>Helpful on this page</strong></div><div>${tools.map((tool) => `<button type="button" data-action="open-contextual-ai" data-operation="${escapeHtml(tool.key)}"><span>AI</span>${escapeHtml(tool.title)}</button>`).join("")}</div>`;
-    host.prepend(panel);
+    // The persistent conversational copilot is now the single AI entry point.
+    document.querySelectorAll("[data-contextual-ai-tools]").forEach((panel) => panel.remove());
   }
 
   function renderContextualAiDrawer(operationKey = state.groundskeeperOperationKey) {

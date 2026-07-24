@@ -416,6 +416,11 @@
     avatarUploadTargetId: "",
     preferredCallMethod: localStorage.getItem(CALL_METHOD_KEY) || "browser_tel",
     groundskeeperMessages: [],
+    copilotOpen: false,
+    copilotLoading: false,
+    copilotMessages: [],
+    copilotLastResults: [],
+    copilotScheduleDraft: null,
     data: {
       submissions: [],
       contacts: [],
@@ -2527,6 +2532,205 @@
     const result = await response.json().catch(() => ({}));
     if (!response.ok) throw new Error(result.error || "The Groundskeeper is unavailable.");
     return result.reply;
+  }
+
+  function copilotRecordButtons(rows = []) {
+    return rows.slice(0, 8).map((row) => `
+      <button class="copilot-record" type="button" data-action="${escapeHtml(row.action)}" data-id="${escapeHtml(row.id)}"${row.ticketSource ? ` data-ticket-source="${escapeHtml(row.ticketSource)}"` : ""}>
+        <span><strong>${escapeHtml(row.title)}</strong><small>${escapeHtml([row.group, row.detail].filter(Boolean).join(" · "))}</small></span>
+        <b>Open</b>
+      </button>
+    `).join("");
+  }
+
+  function copilotPush(role, content, extraHtml = "") {
+    state.copilotMessages.push({ role, content, extraHtml });
+    state.copilotMessages = state.copilotMessages.slice(-24);
+  }
+
+  function renderDashboardCopilot() {
+    let shell = qs("[data-dashboard-copilot]");
+    if (!shell) {
+      shell = document.createElement("aside");
+      shell.dataset.dashboardCopilot = "";
+      (els.appView || document.body).append(shell);
+    }
+    shell.className = `dashboard-copilot${state.copilotOpen ? " is-open" : ""}`;
+    shell.innerHTML = `
+      <button class="dashboard-copilot-launcher" type="button" data-action="toggle-dashboard-copilot" aria-expanded="${state.copilotOpen ? "true" : "false"}">
+        <span aria-hidden="true">AI</span><strong>Ask Groundskeeper</strong>
+      </button>
+      <section class="dashboard-copilot-panel" aria-label="Groundskeeper dashboard assistant" ${state.copilotOpen ? "" : "hidden"}>
+        <header>
+          <div><p class="eyebrow">Groundskeeper</p><h3>Dashboard helper</h3></div>
+          <button type="button" data-action="toggle-dashboard-copilot" aria-label="Close Groundskeeper">×</button>
+        </header>
+        <div class="dashboard-copilot-suggestions">
+          <button type="button" data-action="copilot-prompt" data-prompt="What needs my attention today?">My work today</button>
+          <button type="button" data-action="copilot-prompt" data-prompt="Which tickets are blocked from completion?">Completion blockers</button>
+          <button type="button" data-action="copilot-prompt" data-prompt="Show upcoming Kennedy visits">Find records</button>
+          <button type="button" data-action="copilot-prompt" data-prompt="Help me schedule a visit">Schedule a visit</button>
+        </div>
+        <div class="dashboard-copilot-messages" data-copilot-messages aria-live="polite">
+          ${state.copilotMessages.length ? state.copilotMessages.map((message) => `
+            <article class="copilot-message is-${escapeHtml(message.role)}">
+              <p>${escapeHtml(message.content).replace(/\n/g, "<br>")}</p>
+              ${message.extraHtml || ""}
+            </article>
+          `).join("") : `<article class="copilot-message is-assistant"><p>I can search the whole dashboard, open records, explain exactly what a ticket still needs, and prepare visits for your approval. Try “Find Kennedy tickets” or “What can I complete today?”</p></article>`}
+          ${state.copilotLoading ? `<article class="copilot-message is-assistant is-loading"><p>Checking your dashboard…</p></article>` : ""}
+        </div>
+        <form data-dashboard-copilot-form>
+          <textarea name="message" rows="2" maxlength="700" placeholder="Ask about a ticket, lead, invoice, expense, document, or schedule…" required></textarea>
+          <button type="submit"${state.copilotLoading ? " disabled" : ""}>Send</button>
+        </form>
+        <small class="dashboard-copilot-trust">Records are only changed after you approve a preview.</small>
+      </section>`;
+    const messages = shell.querySelector("[data-copilot-messages]");
+    if (messages) messages.scrollTop = messages.scrollHeight;
+  }
+
+  function copilotTicketRows(tickets) {
+    return tickets.map((ticket) => ({
+      title: [ticket.number, ticket.title].filter(Boolean).join(" — "),
+      detail: [ticket.customer, ticket.property, ticket.stageLabel].filter(Boolean).join(" / "),
+      group: "Ticket",
+      action: "open-ticket",
+      id: ticket.id,
+      ticketSource: ticket.source
+    }));
+  }
+
+  function copilotTicketAudit(ticket) {
+    const stage = ticketStage(ticket);
+    const transitions = ticketTransitionOptions(ticket);
+    const next = transitions[0];
+    const missing = next?.missing || ticketMissingRequirementsForStage(ticket, stage);
+    const scheduledFuture = dateKey(ticket.dateRaw) > todayKey();
+    const timing = scheduledFuture && ["scheduled", "in_progress"].includes(stage)
+      ? "This is future scheduled work, so proof is expected later—not an overdue blocker."
+      : "";
+    return {
+      content: `${ticket.number || "Ticket"} — ${ticket.title || "Untitled ticket"}\nCurrent stage: ${ticket.stageLabel || ticketStageLabel(stage)}\n${missing.length ? `Needed before ${next ? ticketStageLabel(next.to) : "the next step"}: ${missing.join(", ")}.` : "No required information is missing for its next workflow step."}${timing ? `\n${timing}` : ""}`,
+      html: copilotRecordButtons(copilotTicketRows([ticket]))
+    };
+  }
+
+  function copilotFindTicket(message) {
+    const normalized = normalizeLookup(message);
+    const tickets = dashboardTickets(state.data);
+    const lastTicket = state.copilotLastResults.find((row) => row.group === "Ticket");
+    if (/\b(it|this|that|second|first)\b/.test(normalized) && lastTicket) {
+      const index = /\bsecond\b/.test(normalized) ? 1 : 0;
+      const row = state.copilotLastResults.filter((item) => item.group === "Ticket")[index] || lastTicket;
+      return tickets.find((ticket) => String(ticket.id) === String(row.id));
+    }
+    const scored = tickets.map((ticket) => {
+      const text = normalizeLookup([ticket.number, ticket.title, ticket.customer, ticket.property].filter(Boolean).join(" "));
+      const tokens = normalized.split(" ").filter((token) => token.length > 2 && !["what", "which", "ticket", "needs", "missing", "complete", "completion", "open", "show", "find"].includes(token));
+      return { ticket, score: tokens.filter((token) => text.includes(token)).length };
+    }).sort((a, b) => b.score - a.score);
+    return scored[0]?.score ? scored[0].ticket : null;
+  }
+
+  function copilotSearchQuery(message) {
+    return String(message || "")
+      .replace(/\b(find|search|show|open|pull up|look for|all|records?|tickets?|leads?|clients?|properties|invoices?|expenses?|vendors?|documents?|jobs?|upcoming)\b/gi, " ")
+      .replace(/\s+/g, " ")
+      .trim();
+  }
+
+  function copilotSearchRows(message) {
+    const query = copilotSearchQuery(message);
+    const ignored = new Set(["visit", "visits", "work", "item", "items", "record", "records"]);
+    const candidates = [query, ...query.split(/\s+/).filter((word) => word.length > 2 && !ignored.has(normalizeLookup(word)))];
+    const seen = new Set();
+    const rows = [];
+    candidates.forEach((candidate) => {
+      globalSearchFlatResults(groupedGlobalSearchResults(candidate)).forEach((row) => {
+        const key = `${row.action}:${row.id}`;
+        if (!seen.has(key)) {
+          seen.add(key);
+          rows.push(row);
+        }
+      });
+    });
+    return { query, rows: rows.slice(0, 10) };
+  }
+
+  function copilotAttentionSummary() {
+    const items = todayActionItems(state.data).slice(0, 8);
+    if (!items.length) return { content: "Nothing urgent is currently queued. I found no overdue calls, due visits, completion reviews, or payment actions.", html: "" };
+    return {
+      content: `Here are the ${items.length} highest-priority items I found, ordered by urgency. Open a record to work it.`,
+      html: items.map((item) => {
+        const ticket = dashboardTickets(state.data).find((entry) => String(entry.id) === String(item.id));
+        return ticket ? copilotRecordButtons(copilotTicketRows([ticket])) : `<div class="copilot-attention"><strong>${escapeHtml(item.title || item.status || "Action")}</strong><span>${escapeHtml(item.detail || item.nextAction || "")}</span></div>`;
+      }).join("")
+    };
+  }
+
+  function copilotSchedulePreview(message) {
+    const iso = message.match(/\b(20\d{2}-\d{2}-\d{2})\b/)?.[1];
+    const slash = message.match(/\b(\d{1,2})\/(\d{1,2})(?:\/(20\d{2}))?\b/);
+    let date = iso || "";
+    if (!date && slash) {
+      const year = slash[3] || new Date().getFullYear();
+      date = `${year}-${String(slash[1]).padStart(2, "0")}-${String(slash[2]).padStart(2, "0")}`;
+    }
+    const siteMatch = message.match(/(?:at|for)\s+(.+?)(?:\s+on\s+|\s+(?:20\d{2}-|\d{1,2}\/\d{1,2})|$)/i);
+    const serviceMatch = message.match(/(?:schedule|add|create)\s+(?:a\s+)?(.+?)(?:\s+(?:at|for|on)\s+)/i);
+    const draft = {
+      visit_date: date,
+      visit_window: message.match(/\b(\d{1,2}(?::\d{2})?\s*(?:am|pm)(?:\s*-\s*\d{1,2}(?::\d{2})?\s*(?:am|pm))?)\b/i)?.[1] || "",
+      site_name: siteMatch?.[1]?.trim() || "",
+      city: "",
+      service: serviceMatch?.[1]?.trim() || "Scheduled visit"
+    };
+    state.copilotScheduleDraft = draft;
+    const complete = draft.visit_date && draft.site_name;
+    return {
+      content: complete ? "I prepared this visit. Review it before adding it to Work." : "I can prepare that. Add the site and date in your message—for example: “Schedule walkthrough at Kennedy Apartments on 2026-08-14 at 10am.”",
+      html: complete ? `<div class="copilot-schedule-preview"><span><b>Date</b>${escapeHtml(formatDate(draft.visit_date))}</span><span><b>Time</b>${escapeHtml(draft.visit_window || "Not set")}</span><span><b>Site</b>${escapeHtml(draft.site_name)}</span><span><b>Work</b>${escapeHtml(draft.service)}</span><div><button type="button" data-action="copilot-apply-schedule">Add to Work</button><button type="button" data-action="copilot-cancel-schedule">Cancel</button></div></div>` : ""
+    };
+  }
+
+  async function handleDashboardCopilotMessage(message) {
+    const lower = normalizeLookup(message);
+    copilotPush("user", message);
+    state.copilotLoading = true;
+    renderDashboardCopilot();
+    try {
+      await ensureGlobalSearchFinancialData();
+      let reply;
+      if (/\b(schedule|add visit|create visit)\b/.test(lower)) {
+        reply = copilotSchedulePreview(message);
+      } else if (/\b(missing|complete|completion|close|blocked|can this close)\b/.test(lower)) {
+        const ticket = copilotFindTicket(message);
+        if (ticket) reply = copilotTicketAudit(ticket);
+        else {
+          const blocked = dashboardTickets(state.data).filter(ticketIsOpen).filter((item) => ticketTransitionOptions(item).some((move) => move.missing?.length)).slice(0, 8);
+          const rows = copilotTicketRows(blocked);
+          state.copilotLastResults = rows;
+          reply = { content: blocked.length ? `I found ${blocked.length} tickets with required information missing before their next step. Future scheduled proof is treated as expected work, not overdue.` : "No open tickets are currently blocked by required information.", html: copilotRecordButtons(rows) };
+        }
+      } else if (/\b(today|attention|urgent|priority|my work)\b/.test(lower)) {
+        reply = copilotAttentionSummary();
+      } else if (/\b(find|search|show|open|pull up|look for)\b/.test(lower)) {
+        const { query, rows } = copilotSearchRows(message);
+        state.copilotLastResults = rows;
+        reply = { content: rows.length ? `I found ${rows.length} matching records for “${query}”.` : `I couldn't find a dashboard record matching “${query}”. Try a client, property, ticket number, phone, email, or vendor.`, html: copilotRecordButtons(rows) };
+      } else {
+        const answer = await groundskeeperChat(`${message}\n\nAnswer conversationally. If the owner is asking to find, open, complete, or schedule a record, explain that the dashboard helper can do that when they use the record name or date.`, `copilot:${normalizeDashboardSection(state.activeSection)}`);
+        reply = { content: answer, html: "" };
+      }
+      copilotPush("assistant", reply.content, reply.html);
+    } catch (error) {
+      copilotPush("assistant", error.message || "I couldn't finish that dashboard check.");
+    } finally {
+      state.copilotLoading = false;
+      renderDashboardCopilot();
+    }
   }
 
   async function groundskeeperTrainingChat(message) {
@@ -20118,6 +20322,7 @@ Requirements:
       safeRender("import/export", () => renderImportExport(data));
     }
     safeRender("contextual Groundskeeper tools", () => renderContextualGroundskeeperTools(active));
+    safeRender("dashboard Groundskeeper", () => renderDashboardCopilot());
     safeRender("avatar fallbacks", () => bindAvatarFallbacks());
     if (els.todayChip) els.todayChip.textContent = new Date().toLocaleDateString("en-US", { weekday: "long", month: "short", day: "numeric" });
     setActiveSection(state.activeSection, { hydrate: false });
@@ -20333,6 +20538,46 @@ Requirements:
     });
 
     document.addEventListener("click", async (event) => {
+      const copilotTarget = event.target instanceof Element ? event.target.closest("[data-action]") : null;
+      const action = copilotTarget?.dataset.action || "";
+      if (action === "toggle-dashboard-copilot") {
+        state.copilotOpen = !state.copilotOpen;
+        renderDashboardCopilot();
+        if (state.copilotOpen) qs("[data-dashboard-copilot-form] textarea")?.focus();
+        return;
+      }
+      if (action === "copilot-prompt") {
+        state.copilotOpen = true;
+        await handleDashboardCopilotMessage(copilotTarget.dataset.prompt || "");
+        return;
+      }
+      if (action === "copilot-cancel-schedule") {
+        state.copilotScheduleDraft = null;
+        copilotPush("assistant", "The visit preview was cancelled. Nothing was added.");
+        renderDashboardCopilot();
+        return;
+      }
+      if (action === "copilot-apply-schedule") {
+        const draft = state.copilotScheduleDraft;
+        if (!draft?.visit_date || !draft?.site_name) return;
+        try {
+          state.copilotLoading = true;
+          renderDashboardCopilot();
+          const formData = new FormData();
+          Object.entries(draft).forEach(([key, value]) => formData.set(key, value || ""));
+          const payloads = scheduledJobPayloads(formData, { ...draft, status: "Scheduled" });
+          await insertScheduledJobs(payloads);
+          state.copilotScheduleDraft = null;
+          await refreshDashboard({ section: "calendar", quiet: true });
+          copilotPush("assistant", `Added ${draft.service} at ${draft.site_name} on ${formatDate(draft.visit_date)}${draft.visit_window ? `, ${draft.visit_window}` : ""}.`, `<button class="copilot-record" type="button" data-dashboard-link="calendar"><span><strong>Open Work</strong><small>View the scheduled visit</small></span><b>Open</b></button>`);
+        } catch (error) {
+          copilotPush("assistant", error.message || "I couldn't add that visit.");
+        } finally {
+          state.copilotLoading = false;
+          renderDashboardCopilot();
+        }
+        return;
+      }
       const link = event.target instanceof Element ? event.target.closest("[data-dashboard-link]") : null;
       if (!link) {
         if (!(event.target instanceof Element) || !event.target.closest(".dashboard-nav")) setSidebarSubnavOpen("", false);
@@ -25013,6 +25258,12 @@ Requirements:
         } catch (error) {
           setDashboardState(error.message || "Unable to save AI entry.", "error");
         }
+      } else if (event.target.matches("[data-dashboard-copilot-form]")) {
+        event.preventDefault();
+        const message = String(new FormData(event.target).get("message") || "").trim();
+        if (!message || state.copilotLoading) return;
+        event.target.reset();
+        await handleDashboardCopilotMessage(message);
       } else if (event.target.matches("[data-groundskeeper-chat-form]")) {
         event.preventDefault();
         const formData = new FormData(event.target);

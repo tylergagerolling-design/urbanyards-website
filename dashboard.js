@@ -2725,6 +2725,7 @@
       <div><dt>Provider</dt><dd>Gemini</dd></div>
       <div><dt>Model</dt><dd>${escapeHtml(meta.model || "Configured Gemini model")}</dd></div>
       <div><dt>Status</dt><dd>${escapeHtml(meta.status || "unknown")}</dd></div>
+      ${meta.errorCategory ? `<div><dt>Admin detail</dt><dd>${escapeHtml(String(meta.errorCategory).replace(/_/g, " "))}</dd></div>` : ""}
       ${meta.durationMs ? `<div><dt>Duration</dt><dd>${escapeHtml(String(meta.durationMs))} ms</dd></div>` : ""}
       <div><dt>Disagreement</dt><dd>${meta.disagreementDetected ? "Detected and surfaced" : "None detected"}</dd></div>
     </dl></details>`;

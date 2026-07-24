@@ -1078,3 +1078,22 @@ test("Groundskeeper AI exposes the selected owner operations suite with review s
   assert.match(api, /mode === "dashboard" \? 14000 : 2000/);
   assert.match(css, /\.groundskeeper-operation-grid[\s\S]*repeat\(3, minmax\(0, 1fr\)\)/);
 });
+
+test("each dashboard page exposes only its relevant contextual Groundskeeper tools", () => {
+  const js = read("dashboard.js");
+  const css = read("dashboard.css");
+
+  assert.match(js, /GROUNDSKEEPER_PAGE_TOOLS[\s\S]*overview: \["daily-briefing", "next-actions", "anomalies"\]/);
+  assert.match(js, /tickets: \["ticket-completeness", "closeout", "next-actions"\]/);
+  assert.match(js, /calendar: \["schedule", "weather", "ticket-completeness"\]/);
+  assert.match(js, /outreach: \["lead-priority", "call-brief", "communication"\]/);
+  assert.match(js, /"call-queue": \["call-brief", "call-outcome", "lead-priority"\]/);
+  assert.match(js, /documents: \["profitability", "invoice-ready", "expense-category"\]/);
+  assert.match(js, /function renderContextualGroundskeeperTools/);
+  assert.match(js, /data-action="open-contextual-ai"/);
+  assert.match(js, /function renderContextualAiDrawer/);
+  assert.match(js, /data-action="run-contextual-ai"/);
+  assert.match(js, /safeRender\("contextual Groundskeeper tools"/);
+  assert.match(css, /\.contextual-ai-tools[\s\S]*linear-gradient/);
+  assert.match(css, /\.contextual-ai-page-tools[\s\S]*repeat\(3, minmax\(0, 1fr\)\)/);
+});

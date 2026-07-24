@@ -20744,6 +20744,110 @@ body:not(.is-login-screen) .dashboard-main :is(
   }
 }
 
+.contextual-ai-tools {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  margin: 0 0 16px;
+  padding: 12px 14px;
+  border: 1px solid rgba(31, 107, 79, 0.18);
+  border-radius: 16px;
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.94), rgba(230, 239, 233, 0.9));
+  box-shadow: 0 8px 24px rgba(18, 55, 42, 0.07);
+}
+
+.contextual-ai-tools > div:first-child {
+  flex: 0 0 auto;
+}
+
+.contextual-ai-tools p {
+  margin: 0;
+}
+
+.contextual-ai-tools > div:last-child {
+  display: flex;
+  justify-content: flex-end;
+  flex-wrap: wrap;
+  gap: 8px;
+  min-width: 0;
+}
+
+.contextual-ai-tools button {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  min-width: 0;
+  padding: 8px 10px;
+  border: 1px solid rgba(31, 107, 79, 0.17);
+  border-radius: 10px;
+  color: #174d38;
+  background: rgba(255, 255, 255, 0.84);
+  font-size: 0.78rem;
+  font-weight: 800;
+  overflow-wrap: anywhere;
+}
+
+.contextual-ai-tools button span {
+  flex: 0 0 auto;
+  display: inline-grid;
+  width: 24px;
+  height: 24px;
+  place-items: center;
+  border-radius: 7px;
+  color: #fff;
+  background: #1f6b4f;
+  font-size: 0.66rem;
+}
+
+.contextual-ai-drawer {
+  display: grid;
+  gap: 16px;
+}
+
+.contextual-ai-drawer textarea {
+  width: 100%;
+  resize: vertical;
+}
+
+.contextual-ai-page-tools {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.contextual-ai-page-tools button {
+  min-width: 0;
+  padding: 10px;
+  overflow-wrap: anywhere;
+}
+
+.contextual-ai-page-tools button.is-active {
+  color: #fff;
+  background: #1f6b4f;
+}
+
+.contextual-ai-drawer > [data-action="run-contextual-ai"] {
+  justify-self: start;
+}
+
+@media (max-width: 760px) {
+  .contextual-ai-tools {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .contextual-ai-tools > div:last-child {
+    justify-content: flex-start;
+  }
+}
+
+@media (max-width: 520px) {
+  .contextual-ai-page-tools {
+    grid-template-columns: 1fr;
+  }
+}
+
 body:not(.is-login-screen) .ticket-next-move-button:hover {
   transform: translateY(-1px);
   filter: brightness(1.04);

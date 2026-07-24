@@ -18864,6 +18864,20 @@ Requirements:
     { key: "anomalies", group: "Insights", title: "Anomaly and duplicate detection", detail: "Find unusual costs, duplicates, conflicts, and stuck records.", prompt: "Inspect the dashboard snapshot for likely duplicates, inconsistent totals, unusual costs, scheduling conflicts, missing links, and tickets stuck too long. Separate confirmed problems from possible issues." },
     { key: "communication", group: "Clients", title: "Client communication drafts", detail: "Draft confirmations, follow-ups, updates, or reminders.", prompt: "Draft the requested client communication using only supplied record facts. Keep it concise, professional, and owner-operated. Clearly label it as a draft and do not send it.", needsQuestion: true, placeholder: "Example: Draft a schedule-change message for Smith Property…" }
   ];
+  const GROUNDSKEEPER_PAGE_TOOLS = {
+    overview: ["daily-briefing", "next-actions", "anomalies"],
+    tickets: ["ticket-completeness", "closeout", "next-actions"],
+    calendar: ["schedule", "weather", "ticket-completeness"],
+    "route-planner": ["schedule", "weather", "property-history"],
+    outreach: ["lead-priority", "call-brief", "communication"],
+    "call-queue": ["call-brief", "call-outcome", "lead-priority"],
+    contacts: ["property-history", "communication", "dashboard-search"],
+    documents: ["profitability", "invoice-ready", "expense-category"],
+    equipment: ["anomalies", "expense-category", "schedule"],
+    documentation: ["ticket-completeness", "closeout", "dashboard-search"],
+    "import-export": ["anomalies", "dashboard-search", "ticket-completeness"],
+    settings: ["anomalies", "daily-briefing", "dashboard-search"]
+  };
 
   const AI_SECTIONS = [
     { id: "operations", icon: "OP", title: "Operations Copilot", table: "", type: "", description: "Review daily work, tickets, leads, estimates, schedules, closeout, Money, and client communication with live dashboard context." },
@@ -19078,6 +19092,49 @@ Requirements:
             : emptyState("Choose a tool and run a review. Results will appear here without changing dashboard records.")}
         </section>
       </section>`;
+  }
+
+  function groundskeeperToolsForPage(section = state.activeSection) {
+    return (GROUNDSKEEPER_PAGE_TOOLS[normalizeDashboardSection(section)] || [])
+      .map((key) => GROUNDSKEEPER_OPERATIONS.find((item) => item.key === key))
+      .filter(Boolean);
+  }
+
+  function renderContextualGroundskeeperTools(section = state.activeSection) {
+    const active = normalizeDashboardSection(section);
+    if (active === "groundskeeper-ai") return;
+    const page = qs(`[data-section="${active}"]`);
+    const tools = groundskeeperToolsForPage(active);
+    if (!page || !tools.length) return;
+    page.querySelector("[data-contextual-ai-tools]")?.remove();
+    const panel = document.createElement("section");
+    panel.className = "contextual-ai-tools";
+    panel.dataset.contextualAiTools = "";
+    panel.innerHTML = `<div><p class="eyebrow">Groundskeeper AI</p><strong>Helpful on this page</strong></div><div>${tools.map((tool) => `<button type="button" data-action="open-contextual-ai" data-operation="${escapeHtml(tool.key)}"><span>AI</span>${escapeHtml(tool.title)}</button>`).join("")}</div>`;
+    page.prepend(panel);
+  }
+
+  function renderContextualAiDrawer(operationKey = state.groundskeeperOperationKey) {
+    const operation = GROUNDSKEEPER_OPERATIONS.find((item) => item.key === operationKey) || GROUNDSKEEPER_OPERATIONS[0];
+    state.groundskeeperOperationKey = operation.key;
+    openDetailDrawer();
+    els.detailContent.innerHTML = `<div class="drawer-content contextual-ai-drawer">
+      <p class="eyebrow">Groundskeeper AI · ${escapeHtml(detailDrawerSectionLabel())}</p>
+      <div class="ticket-drawer-heading"><div><h3>${escapeHtml(operation.title)}</h3><p>${escapeHtml(operation.detail)}</p></div><span class="ai-review-badge">Review before applying</span></div>
+      <div class="contextual-ai-page-tools">${groundskeeperToolsForPage().map((tool) => `<button type="button" data-action="switch-contextual-ai" data-operation="${escapeHtml(tool.key)}" class="${tool.key === operation.key ? "is-active" : ""}">${escapeHtml(tool.title)}</button>`).join("")}</div>
+      ${operation.needsQuestion ? `<label>Details or question<textarea rows="5" maxlength="800" data-contextual-ai-question placeholder="${escapeHtml(operation.placeholder || "Add details…")}"></textarea></label>` : ""}
+      <button type="button" data-action="run-contextual-ai" data-operation="${escapeHtml(operation.key)}"${state.groundskeeperOperationLoading ? " disabled" : ""}>${state.groundskeeperOperationLoading ? "Reviewing…" : "Run AI Review"}</button>
+      <section class="groundskeeper-operation-result" aria-live="polite">
+        ${state.groundskeeperOperationResult ? `<div class="groundskeeper-operation-output">${escapeHtml(state.groundskeeperOperationResult).replace(/\n/g, "<br>")}</div><p class="ai-review-note">Nothing above has been applied. Review the source records before taking action.</p>` : emptyState("Run this page-specific review. No dashboard records will be changed.")}
+      </section>
+    </div>`;
+    renderDetailDrawerBreadcrumbs();
+  }
+
+  async function runGroundskeeperOperation(operation, question = "") {
+    await ensureGlobalSearchFinancialData();
+    const message = `${operation.prompt}${question ? `\n\nOwner input:\n${question}` : ""}\n\nReturn a concise, structured answer with headings and specific record names or numbers when available. Recommendations only; do not claim any dashboard change was made.`;
+    return groundskeeperChat(message, `${operation.key}:${normalizeDashboardSection(state.activeSection)}`);
   }
 
   function renderKnowledgeWorkspace(ai, section) {
@@ -20051,6 +20108,7 @@ Requirements:
     } else if (active === "import-export") {
       safeRender("import/export", () => renderImportExport(data));
     }
+    safeRender("contextual Groundskeeper tools", () => renderContextualGroundskeeperTools(active));
     safeRender("avatar fallbacks", () => bindAvatarFallbacks());
     if (els.todayChip) els.todayChip.textContent = new Date().toLocaleDateString("en-US", { weekday: "long", month: "short", day: "numeric" });
     setActiveSection(state.activeSection, { hydrate: false });
@@ -22543,6 +22601,38 @@ Requirements:
         return;
       }
 
+      if (action === "open-contextual-ai" || action === "switch-contextual-ai") {
+        state.groundskeeperOperationResult = "";
+        state.groundskeeperOperationLoading = false;
+        renderContextualAiDrawer(target.dataset.operation);
+        return;
+      }
+
+      if (action === "run-contextual-ai") {
+        const operation = GROUNDSKEEPER_OPERATIONS.find((item) => item.key === target.dataset.operation);
+        if (!operation) return;
+        const question = qs("[data-contextual-ai-question]")?.value?.trim() || "";
+        if (operation.needsQuestion && !question) {
+          setDashboardState("Add the details or question Groundskeeper should review.", "error");
+          qs("[data-contextual-ai-question]")?.focus();
+          return;
+        }
+        try {
+          state.groundskeeperOperationLoading = true;
+          renderContextualAiDrawer(operation.key);
+          setDashboardState(`${operation.title} is reviewing this page…`);
+          state.groundskeeperOperationResult = await runGroundskeeperOperation(operation, question);
+          setDashboardState(`${operation.title} review is ready.`);
+        } catch (error) {
+          state.groundskeeperOperationResult = error.message || "Groundskeeper could not complete this review.";
+          setDashboardState(state.groundskeeperOperationResult, "error");
+        } finally {
+          state.groundskeeperOperationLoading = false;
+          renderContextualAiDrawer(operation.key);
+        }
+        return;
+      }
+
       if (action === "select-ai-operation") {
         state.groundskeeperOperationKey = target.dataset.operation || GROUNDSKEEPER_OPERATIONS[0].key;
         state.groundskeeperOperationResult = "";
@@ -22564,9 +22654,7 @@ Requirements:
           state.groundskeeperOperationResult = "";
           renderOperationsWorkspace();
           setDashboardState(`${operation.title} is reviewing the dashboard snapshot…`);
-          await ensureGlobalSearchFinancialData();
-          const message = `${operation.prompt}${question ? `\n\nOwner input:\n${question}` : ""}\n\nReturn a concise, structured answer with headings and specific record names or numbers when available. Recommendations only; do not claim any dashboard change was made.`;
-          state.groundskeeperOperationResult = await groundskeeperChat(message, operation.key);
+          state.groundskeeperOperationResult = await runGroundskeeperOperation(operation, question);
           setDashboardState(`${operation.title} review is ready.`);
         } catch (error) {
           state.groundskeeperOperationResult = error.message || "Groundskeeper could not complete this review.";

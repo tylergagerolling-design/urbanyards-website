@@ -12,11 +12,11 @@
     <link rel="icon" href="/favicon.ico" sizes="any">
     <link rel="apple-touch-icon" href="/apple-touch-icon.png">
     <link rel="manifest" href="/dashboard.webmanifest">
-  <link rel="stylesheet" href="dashboard.css?v=20260724-ai-phase1">
+  <link rel="stylesheet" href="dashboard.css?v=20260724-copilot-memory">
     <script src="dashboard-config.js?v=20260716-loader-1" defer></script>
     <script src="scripts/budget-calculations.js?v=20260716-loader-1" defer></script>
     <script src="scripts/financial-calculations.js?v=20260723-invoice-status-1" defer></script>
-  <script src="dashboard.js?v=20260724-ai-phase1b" defer></script>
+  <script src="dashboard.js?v=20260724-copilot-memory" defer></script>
   </head>
   <body>
     <main class="dashboard-shell" aria-labelledby="dashboard-title">
@@ -73,7 +73,7 @@
               <a href="#documents" data-dashboard-link="documents"><span class="nav-icon" aria-hidden="true"><svg><use href="images/dashboard-icons/option8-sidebar.svg?v=20260714-reliability-1#uy-icon-money"></use></svg></span><span class="nav-label">Money</span></a>
               <div class="dashboard-nav-group" data-sidebar-nav-group="settings" data-sidebar-nav-title="Tools">
                 <div class="dashboard-nav-group-row"><a href="#settings" data-dashboard-link="settings"><span class="nav-icon" aria-hidden="true"><svg><use href="images/dashboard-icons/option8-sidebar.svg?v=20260714-reliability-1#uy-icon-tools"></use></svg></span><span class="nav-label">Tools</span></a></div>
-                <div class="dashboard-subnav" data-sidebar-subnav="settings" data-sidebar-subnav-title="Tools"><a href="#settings" data-dashboard-link="settings"><span>Tools Home</span></a><a href="#equipment" data-dashboard-link="equipment"><span>Equipment</span></a><a href="#documentation" data-dashboard-link="documentation"><span>Documentation</span></a><a href="#import-export" data-dashboard-link="import-export"><span>Import &amp; Export</span></a><a href="#groundskeeper-ai" data-dashboard-link="groundskeeper-ai"><span>Groundskeeper AI</span></a></div>
+                <div class="dashboard-subnav" data-sidebar-subnav="settings" data-sidebar-subnav-title="Tools"><a href="#settings" data-dashboard-link="settings"><span>Tools Home</span></a><a href="#equipment" data-dashboard-link="equipment"><span>Equipment</span></a><a href="#documentation" data-dashboard-link="documentation"><span>Documentation</span></a><a href="#import-export" data-dashboard-link="import-export"><span>Import &amp; Export</span></a><a href="#groundskeeper-ai" data-dashboard-link="groundskeeper-ai"><span>Groundskeeper AI</span></a><a href="#ai-memory" data-dashboard-link="ai-memory"><span>AI Memory</span></a></div>
               </div>
             </nav>
             <div class="sidebar-bottom">
@@ -484,6 +484,9 @@
               <input data-import-backup type="file" accept="application/json" hidden>
               <input data-user-avatar-upload type="file" accept=".jpg,.jpeg,.png,.webp,image/jpeg,image/png,image/webp" hidden>
             </div>
+          </section>
+          <section class="dashboard-section uy-standard-page" id="ai-memory" data-section="ai-memory">
+            <div data-ai-memory-workspace></div>
           </section>
         </div>
 

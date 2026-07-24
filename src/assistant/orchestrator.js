@@ -7,6 +7,8 @@ const { resolveRecord } = require("./record-resolver");
 const { composeModelContext } = require("./response-composer");
 const { createToolRegistry } = require("./tool-registry");
 const { verifyAssistantResult } = require("./verification-service");
+const { correctionPreview, relevantMemories, toModelMemory } = require("./memory-service");
+const { planUIActions } = require("./ui-action-planner");
 
 function queryFromMessage(message) {
   return String(message || "")
@@ -26,7 +28,7 @@ function toolsForRouting(routing, resolvedEntity) {
   return calls.filter((call, index, items) => items.findIndex((candidate) => candidate.name === call.name && JSON.stringify(candidate.input) === JSON.stringify(call.input)) === index);
 }
 
-async function orchestrateDashboardRequest({ message, context = {}, actor, hasPermission, recentEntities = [] }) {
+async function orchestrateDashboardRequest({ message, context = {}, actor, hasPermission, recentEntities = [], memories = [] }) {
   const startedAt = Date.now();
   const routed = routeIntent(message);
   const routing = { ...routed, message: String(message || "") };
@@ -62,6 +64,19 @@ async function orchestrateDashboardRequest({ message, context = {}, actor, hasPe
     intent: routing.primaryIntent,
     requiresWritePreview: routing.requiresWritePreview
   });
+  const memoryPreview = correctionPreview(message, pageContext);
+  const conversationMemories = (context.conversationMemories || []).slice(-20).map((memory, index) => ({
+    id: memory.id || `conversation-${index}`,
+    memory_type: "conversation",
+    statement: String(memory.statement || "").slice(0, 2000),
+    scope: memory.scope || { userId: actor?.userId },
+    source: memory.source || "user_correction",
+    confidence: memory.confidence || "medium",
+    expires_at: memory.expiresAt,
+    is_active: memory.isActive !== false
+  })).filter((memory) => memory.statement);
+  const relevantMemory = relevantMemories([...memories, ...conversationMemories], { actor, pageContext, resolvedEntity }).map(toModelMemory);
+  const uiActions = planUIActions({ message, routing, resolvedEntity, citations });
   const diagnostics = {
     intentRoutingMs: toolStartedAt - startedAt,
     recordResolutionMs: 0,
@@ -80,7 +95,10 @@ async function orchestrateDashboardRequest({ message, context = {}, actor, hasPe
     verification,
     diagnostics,
     registeredTools: registry.definitions(),
-    modelContext: composeModelContext({ routing, pageContext, resolvedEntity, toolResults, verification })
+    memoryPreview,
+    relevantMemory,
+    uiActions,
+    modelContext: composeModelContext({ routing, pageContext, resolvedEntity, toolResults, verification, memories: relevantMemory, uiActions, memoryPreview })
   };
 }
 

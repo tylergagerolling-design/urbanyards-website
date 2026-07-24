@@ -422,6 +422,14 @@
     copilotLastResults: [],
     copilotScheduleDraft: null,
     groundskeeperLastMeta: null,
+    assistantMemories: [],
+    assistantMemoriesLoading: false,
+    assistantMemoriesLoaded: false,
+    assistantMemoriesError: "",
+    copilotConversationMemories: [],
+    copilotPendingMemory: null,
+    copilotFilters: {},
+    copilotHighlightIds: [],
     data: {
       submissions: [],
       contacts: [],
@@ -519,6 +527,8 @@
     equipment: "equipment",
     "groundskeeper-ai": "groundskeeper-ai",
     ai: "groundskeeper-ai",
+    "ai-memory": "ai-memory",
+    memory: "ai-memory",
     tools: "settings",
     "route-planner": "route-planner",
     route: "route-planner",
@@ -543,7 +553,8 @@
     "import-export": "settings",
     "route-planner": "calendar",
     equipment: "settings",
-    "groundskeeper-ai": "settings"
+    "groundskeeper-ai": "settings",
+    "ai-memory": "settings"
   };
   const dashboardRoutableSections = new Set([
     ...rebuildPrimarySections,
@@ -2482,12 +2493,15 @@
         activeTab: state.activeSection,
         selectedRecordType: qs("[data-detail-content] [data-ticket-id]") ? "ticket" : (state.selectedJobId ? "job" : ""),
         selectedRecordId: qs("[data-detail-content] [data-ticket-id]")?.dataset.ticketId || state.selectedJobId || "",
+        currentPage: normalizeDashboardSection(state.activeSection),
+        openPanel: els.detailDrawer?.classList.contains("is-open") ? "detail" : "",
         visibleRecordIds: Array.from(qsa(`[data-section="${normalizeDashboardSection(state.activeSection)}"] [data-id]`)).slice(0, 30).map((element) => element.dataset.id).filter(Boolean),
         visibleFilters: {
           search: state.search,
           ticketStage: state.ticketBoardStageFilter,
           ownerKanbanStatus: state.ownerKanbanStatusFilter,
-          moneyView: state.moneyView
+          moneyView: state.moneyView,
+          ...state.copilotFilters
         },
         timezone: Intl.DateTimeFormat().resolvedOptions().timeZone || "America/Los_Angeles",
         currentDate: todayKey()
@@ -2497,6 +2511,7 @@
         recordId: item.id,
         title: item.title
       })),
+      conversationMemories: state.copilotConversationMemories.slice(-12),
       policy: "Recommend and draft only. Never mutate records, send messages, finalize prices, move stages, create invoices, or close tickets without explicit owner confirmation in the dashboard.",
       summary: {
         actionMetrics: dashboardActionMetrics(data, tickets),
@@ -2557,6 +2572,120 @@
     if (!response.ok) throw new Error(result.error || "The Groundskeeper is unavailable.");
     state.groundskeeperLastMeta = result;
     return result.reply;
+  }
+
+  const COPILOT_UI_ROUTES = new Set(["overview", "tickets", "calendar", "route-planner", "outreach", "call-queue", "documents", "contacts", "equipment", "documentation", "import-export", "groundskeeper-ai", "ai-memory", "settings"]);
+  const COPILOT_UI_RECORD_TYPES = new Set(["ticket", "job", "client", "contact", "property", "lead", "invoice", "expense", "document"]);
+
+  function validDashboardUIAction(action) {
+    if (!action || typeof action !== "object") return false;
+    if (action.type === "navigate") return COPILOT_UI_ROUTES.has(action.route);
+    if (action.type === "open_record") return COPILOT_UI_RECORD_TYPES.has(action.recordType) && Boolean(action.recordId) && ["page", "side_panel", "modal"].includes(action.presentation);
+    if (action.type === "apply_filters") return COPILOT_UI_ROUTES.has(action.page) && action.filters && typeof action.filters === "object" && !Array.isArray(action.filters);
+    if (action.type === "highlight_records") return Array.isArray(action.recordIds) && action.recordIds.length <= 50;
+    if (action.type === "scroll_to") return /^[a-zA-Z0-9_-]{1,100}$/.test(action.targetId || "");
+    if (action.type === "switch_tab") return /^[a-zA-Z0-9_-]{1,100}$/.test(action.tabId || "");
+    return false;
+  }
+
+  async function openRecordFromCopilot(action) {
+    const id = String(action.recordId || "");
+    const destinationByType = { ticket: "tickets", job: "calendar", client: "contacts", contact: "contacts", property: "outreach", lead: "outreach", invoice: "documents", expense: "documents", document: "documents" };
+    const destination = destinationByType[action.recordType];
+    if (action.recordType === "invoice") {
+      state.moneyView = "invoicing";
+      await loadMoneyView("invoicing");
+    }
+    setActiveSection(destination);
+    replaceDashboardHash(destination);
+    await render();
+    if (action.recordType === "ticket") openTicketDrawer("ticket", id);
+    else if (action.recordType === "job") openJobDrawer(id);
+    else if (action.recordType === "client" || action.recordType === "contact") openContactDrawer(id);
+    else if (action.recordType === "property") openOutreachPropertyDrawer(id);
+    else if (action.recordType === "lead") openOutreachDrawer(id);
+    else if (action.recordType === "invoice") await openFinancialInvoiceDrawer(id);
+    else if (action.recordType === "document") openDocumentDrawer(id);
+  }
+
+  function applyCopilotHighlights() {
+    qsa(".is-copilot-highlighted").forEach((element) => element.classList.remove("is-copilot-highlighted"));
+    state.copilotHighlightIds.forEach((id) => {
+      qsa(`[data-id="${cssEscape(id)}"]`).forEach((element) => element.classList.add("is-copilot-highlighted"));
+    });
+  }
+
+  async function executeDashboardUIActions(actions = []) {
+    const approved = actions.filter(validDashboardUIAction).slice(0, 8);
+    const status = [];
+    for (const action of approved) {
+      if (action.type === "navigate") {
+        setActiveSection(action.route);
+        replaceDashboardHash(action.route);
+        await render();
+        status.push(`Opened ${dashboardSectionLabel(action.route)}.`);
+      } else if (action.type === "open_record") {
+        await openRecordFromCopilot(action);
+        status.push("Opened the matching record in a side panel.");
+      } else if (action.type === "apply_filters") {
+        state.copilotFilters = { ...state.copilotFilters, ...action.filters };
+        if (action.filters.moneyView) {
+          state.moneyView = action.filters.moneyView;
+          await loadMoneyView(state.moneyView);
+        }
+        await render();
+        status.push(`Applied ${Object.keys(action.filters).join(" and ")} filters.`);
+      } else if (action.type === "highlight_records") {
+        state.copilotHighlightIds = action.recordIds.map(String);
+        applyCopilotHighlights();
+        status.push(`Highlighted ${state.copilotHighlightIds.length} matching record${state.copilotHighlightIds.length === 1 ? "" : "s"}.`);
+      } else if (action.type === "scroll_to") {
+        document.getElementById(action.targetId)?.scrollIntoView({ behavior: "smooth", block: "start" });
+        status.push("Moved to the requested section.");
+      } else if (action.type === "switch_tab") {
+        document.querySelector(`[data-tab="${cssEscape(action.tabId)}"]`)?.click();
+        status.push("Switched the requested tab.");
+      }
+    }
+    return status;
+  }
+
+  function isCopilotUICommand(message) {
+    return /\b(open|show|pull up|take me|go to|filter|highlight|switch|view)\b/i.test(message);
+  }
+
+  function copilotMemoryPreviewHtml(preview) {
+    if (!preview?.statement) return "";
+    state.copilotPendingMemory = preview;
+    return `<section class="copilot-memory-preview">
+      <p><strong>I recognized a correction.</strong> I can use it once, attach it to this record, or save it as an approved business rule.</p>
+      <blockquote>${escapeHtml(preview.statement)}</blockquote>
+      <div><button type="button" data-action="copilot-memory-use-once">Use once</button><button type="button" data-action="copilot-memory-save-record">Save for this record</button><button type="button" data-action="copilot-memory-save-rule">Save as business rule</button><button type="button" data-action="copilot-memory-cancel">Cancel</button></div>
+    </section>`;
+  }
+
+  function copilotOutcomeHtml() {
+    const recommendationId = state.groundskeeperLastMeta?.requestId;
+    const recommendationType = state.groundskeeperLastMeta?.intent?.primaryIntent || "assistant_response";
+    if (!recommendationId) return "";
+    return `<div class="copilot-outcome" aria-label="Rate this Groundskeeper recommendation"><span>Was this useful?</span><button type="button" data-action="copilot-rate-outcome" data-id="${escapeHtml(recommendationId)}" data-kind="${escapeHtml(recommendationType)}" data-rating="5">Yes</button><button type="button" data-action="copilot-rate-outcome" data-id="${escapeHtml(recommendationId)}" data-kind="${escapeHtml(recommendationType)}" data-rating="1">No</button></div>`;
+  }
+
+  async function saveCopilotMemory(memoryType) {
+    const preview = state.copilotPendingMemory;
+    if (!preview) return null;
+    const result = await groundskeeperRequest("memory-upsert", {
+      memory: {
+        memoryType,
+        statement: preview.statement,
+        scope: memoryType === "record" ? preview.scope : {},
+        source: "user_correction",
+        confidence: preview.confidence || "high"
+      }
+    });
+    state.copilotPendingMemory = null;
+    state.assistantMemoriesLoaded = false;
+    return result.memory;
   }
 
   function copilotRecordButtons(rows = []) {
@@ -2757,7 +2886,17 @@
     try {
       await ensureGlobalSearchFinancialData();
       let reply;
-      if (/\b(schedule|add visit|create visit)\b/.test(lower)) {
+      if (isCopilotUICommand(message)) {
+        const answer = await groundskeeperChat(message, `command:${normalizeDashboardSection(state.activeSection)}`);
+        const actions = state.groundskeeperLastMeta?.uiActions || [];
+        const statuses = await executeDashboardUIActions(actions);
+        const sources = copilotCitationRows(state.groundskeeperLastMeta?.citations || []);
+        const movement = actions.length ? `<div class="copilot-action-plan"><strong>I’m going to:</strong><ol>${actions.map((action) => `<li>${escapeHtml(action.type.replace(/_/g, " "))}</li>`).join("")}</ol></div>` : "";
+        reply = {
+          content: statuses.length ? statuses.join(" ") : answer,
+          html: `${movement}${copilotMemoryPreviewHtml(state.groundskeeperLastMeta?.memoryPreview)}${sources.length ? `<details class="copilot-sources"><summary>How I got this · ${sources.length} source${sources.length === 1 ? "" : "s"}</summary>${copilotRecordButtons(sources)}</details>` : ""}${copilotOutcomeHtml()}`
+        };
+      } else if (/\b(schedule|add visit|create visit)\b/.test(lower)) {
         reply = copilotSchedulePreview(message);
       } else if (/\b(missing|complete|completion|close|blocked|can this close)\b/.test(lower)) {
         const ticket = copilotFindTicket(message);
@@ -2779,7 +2918,7 @@
         const sources = copilotCitationRows(state.groundskeeperLastMeta?.citations || []);
         reply = {
           content: answer,
-          html: sources.length ? `<details class="copilot-sources"><summary>How I got this · ${sources.length} source${sources.length === 1 ? "" : "s"}</summary>${copilotRecordButtons(sources)}</details>` : ""
+          html: `${copilotMemoryPreviewHtml(state.groundskeeperLastMeta?.memoryPreview)}${sources.length ? `<details class="copilot-sources"><summary>How I got this · ${sources.length} source${sources.length === 1 ? "" : "s"}</summary>${copilotRecordButtons(sources)}</details>` : ""}${copilotOutcomeHtml()}`
         };
       }
       copilotPush("assistant", reply.content, reply.html);
@@ -5285,6 +5424,7 @@
       equipment: ["equipmentItems", "equipmentMaintenance", "hardwareGuide"],
       documentation: ["documentation"],
       "groundskeeper-ai": ["groundskeeperAi"],
+      "ai-memory": [],
       "import-export": ["importExport"]
     };
     return Array.from(new Set(keysBySection[normalized] || keysBySection.overview));
@@ -20325,6 +20465,61 @@ Requirements:
     await refreshConnectedOperationsData(`Approval marked ${status.toLowerCase()}.`);
   }
 
+  async function loadAssistantMemories() {
+    state.assistantMemoriesLoading = true;
+    state.assistantMemoriesError = "";
+    try {
+      const result = await groundskeeperRequest("memory-list");
+      state.assistantMemories = result.memories || [];
+      state.assistantMemoriesLoaded = true;
+    } catch (error) {
+      state.assistantMemoriesError = error.message || "AI Memory could not load.";
+      state.assistantMemories = [];
+    } finally {
+      state.assistantMemoriesLoading = false;
+    }
+  }
+
+  function assistantMemoryScopeLabel(memory) {
+    const scope = memory.scope || {};
+    const entries = Object.entries(scope);
+    return entries.length ? entries.map(([key, value]) => `${key.replace(/Id$/, "")}: ${value}`).join(" · ") : "Company-wide";
+  }
+
+  function renderAiMemoryWorkspace() {
+    const target = qs("[data-ai-memory-workspace]");
+    if (!target) return;
+    const groups = [
+      ["business_rule", "Business rules"],
+      ["record", "Client, property, and record memories"],
+      ["user_preference", "User preferences"],
+      ["outcome", "Learned recommendations"],
+      ["conversation", "Conversation memory"]
+    ];
+    target.innerHTML = `<section class="ai-memory-workspace">
+      <div class="ticket-lane-heading"><div><p class="eyebrow">Groundskeeper AI</p><h2>AI Memory</h2><p>Review exactly what Groundskeeper can remember. Permanent memories are saved only after approval.</p></div><button type="button" data-action="refresh-ai-memory">Refresh</button></div>
+      <form class="ai-memory-form" data-ai-memory-form>
+        <label>Memory type<select name="memory_type"><option value="business_rule">Business rule</option><option value="record">Record memory</option><option value="user_preference">User preference</option><option value="outcome">Outcome</option><option value="conversation">Conversation</option></select></label>
+        <label class="span-full">Statement<textarea name="statement" rows="3" maxlength="2000" required placeholder="Write one clear fact, rule, preference, or outcome."></textarea></label>
+        <label>Scope<select name="scope_key"><option value="">Company-wide</option><option value="clientId">Client</option><option value="propertyId">Property</option><option value="ticketId">Ticket</option><option value="serviceType">Service type</option><option value="userId">User</option></select></label>
+        <label>Scope ID or value<input name="scope_value" maxlength="160" placeholder="Optional record ID or service type"></label>
+        <label>Confidence<select name="confidence"><option>high</option><option selected>medium</option><option>low</option></select></label>
+        <button type="submit">Save approved memory</button>
+      </form>
+      ${state.assistantMemoriesError ? `<div class="dashboard-state is-error"><strong>Memory storage needs setup.</strong><span>${escapeHtml(state.assistantMemoriesError)}</span><small>Run the 20260724 Groundskeeper memory migration in Supabase, then refresh.</small></div>` : ""}
+      ${state.assistantMemoriesLoading ? `<div class="loading-state">Loading AI memory…</div>` : groups.map(([type, label]) => {
+        const items = state.assistantMemories.filter((memory) => memory.memory_type === type);
+        return `<section class="ai-memory-group"><div class="ticket-lane-heading"><div><h3>${escapeHtml(label)}</h3><p>${items.length} saved</p></div></div><div class="ai-memory-list">${items.length ? items.map((memory) => `
+          <article class="ai-memory-card${memory.is_active ? "" : " is-disabled"}">
+            <div><span class="status-badge">${escapeHtml(memory.confidence || "medium")}</span><span class="status-badge">${memory.is_active ? "Active" : "Disabled"}</span></div>
+            <p>${escapeHtml(memory.statement)}</p>
+            <small>${escapeHtml(assistantMemoryScopeLabel(memory))} · ${escapeHtml(memory.source || "record")} · Last used ${escapeHtml(memory.last_used_at ? formatDateTime(memory.last_used_at) : "never")}</small>
+            <div class="memory-actions"><button type="button" data-action="edit-ai-memory" data-id="${escapeHtml(memory.id)}">Edit</button><button type="button" data-action="toggle-ai-memory" data-id="${escapeHtml(memory.id)}" data-active="${memory.is_active ? "true" : "false"}">${memory.is_active ? "Disable" : "Enable"}</button><button type="button" data-action="scope-ai-memory" data-id="${escapeHtml(memory.id)}">Change scope</button><button type="button" data-action="view-ai-memory-source" data-id="${escapeHtml(memory.id)}">View source</button><button type="button" class="danger-action" data-action="delete-ai-memory" data-id="${escapeHtml(memory.id)}">Delete</button></div>
+          </article>`).join("") : emptyState("No memories in this group.")}</div></section>`;
+      }).join("")}
+    </section>`;
+  }
+
   async function render() {
     const data = state.data;
     safeRender("notifications", () => renderNotifications(data));
@@ -20358,6 +20553,9 @@ Requirements:
       safeRender("route planner", () => renderRoutePlanner(data));
     } else if (active === "groundskeeper-ai") {
       safeRender("Groundskeeper AI", () => renderGroundskeeperAi(data));
+    } else if (active === "ai-memory") {
+      if (!state.assistantMemoriesLoading && !state.assistantMemoriesLoaded && !state.assistantMemoriesError) await loadAssistantMemories();
+      safeRender("AI Memory", () => renderAiMemoryWorkspace());
     } else if (active === "import-export") {
       safeRender("import/export", () => renderImportExport(data));
     }
@@ -20630,6 +20828,84 @@ Requirements:
         } finally {
           state.copilotLoading = false;
           renderDashboardCopilot();
+        }
+        return;
+      }
+      if (action === "copilot-memory-use-once") {
+        if (state.copilotPendingMemory) {
+          state.copilotConversationMemories.push({ ...state.copilotPendingMemory, memoryType: "conversation", createdAt: new Date().toISOString() });
+          state.copilotPendingMemory = null;
+          copilotPush("assistant", "I’ll use that correction for this conversation only. It was not saved permanently.");
+          renderDashboardCopilot();
+        }
+        return;
+      }
+      if (action === "copilot-memory-save-record" || action === "copilot-memory-save-rule") {
+        try {
+          const memoryType = action === "copilot-memory-save-record" ? "record" : "business_rule";
+          await saveCopilotMemory(memoryType);
+          copilotPush("assistant", memoryType === "record" ? "Saved that correction as an approved record memory." : "Saved that correction as an approved business rule.");
+        } catch (error) {
+          copilotPush("assistant", error.message || "I couldn't save that memory.");
+        }
+        renderDashboardCopilot();
+        return;
+      }
+      if (action === "copilot-memory-cancel") {
+        state.copilotPendingMemory = null;
+        copilotPush("assistant", "Correction cancelled. Nothing was remembered or changed.");
+        renderDashboardCopilot();
+        return;
+      }
+      if (action === "copilot-rate-outcome") {
+        try {
+          const rating = Number(copilotTarget.dataset.rating || 0);
+          await groundskeeperRequest("outcome-record", {
+            outcome: {
+              recommendationId: copilotTarget.dataset.id,
+              recommendationType: copilotTarget.dataset.kind || "assistant_response",
+              accepted: rating >= 4,
+              completed: false,
+              userRating: rating
+            }
+          });
+          copilotTarget.closest(".copilot-outcome").innerHTML = "<span>Thanks. I’ll use that outcome as evidence, not as an automatic rule.</span>";
+        } catch (error) {
+          setDashboardState(error.message || "Unable to save assistant feedback.", "error");
+        }
+        return;
+      }
+      if (["refresh-ai-memory", "edit-ai-memory", "toggle-ai-memory", "scope-ai-memory", "view-ai-memory-source", "delete-ai-memory"].includes(action)) {
+        const id = copilotTarget.dataset.id || "";
+        const memory = state.assistantMemories.find((item) => item.id === id);
+        try {
+          if (action === "refresh-ai-memory") {
+            state.assistantMemoriesLoaded = false;
+            await loadAssistantMemories();
+          } else if (action === "edit-ai-memory" && memory) {
+            const statement = window.prompt("Edit memory", memory.statement);
+            if (statement?.trim()) await groundskeeperRequest("memory-update", { id, values: { statement: statement.trim() } });
+          } else if (action === "toggle-ai-memory" && memory) {
+            await groundskeeperRequest("memory-update", { id, values: { isActive: !memory.is_active } });
+          } else if (action === "scope-ai-memory" && memory) {
+            const scopeKey = window.prompt("Scope key: clientId, propertyId, ticketId, serviceType, userId, or blank for company-wide", Object.keys(memory.scope || {})[0] || "");
+            if (scopeKey !== null) {
+              const scopeValue = scopeKey ? window.prompt("Scope value", Object.values(memory.scope || {})[0] || "") : "";
+              if (scopeValue !== null) await groundskeeperRequest("memory-update", { id, values: { scope: scopeKey && scopeValue ? { [scopeKey]: scopeValue } : {} } });
+            }
+          } else if (action === "view-ai-memory-source" && memory) {
+            setDashboardState(`Source: ${memory.source || "record"} · Approved by: ${memory.approved_by || "not recorded"} · Created: ${formatDateTime(memory.created_at)}`);
+          } else if (action === "delete-ai-memory" && memory) {
+            if (!window.confirm(`Permanently delete this AI memory?\n\n${memory.statement}`)) return;
+            await groundskeeperRequest("memory-delete", { id });
+          }
+          if (action !== "view-ai-memory-source") {
+            state.assistantMemoriesLoaded = false;
+            await loadAssistantMemories();
+            renderAiMemoryWorkspace();
+          }
+        } catch (error) {
+          setDashboardState(error.message || "Unable to update AI Memory.", "error");
         }
         return;
       }
@@ -24677,7 +24953,35 @@ Requirements:
     });
 
   els.appView.addEventListener("submit", async (event) => {
-      if (event.target.matches("[data-financial-invoice-form]")) {
+      if (event.target.matches("[data-ai-memory-form]")) {
+        event.preventDefault();
+        const data = new FormData(event.target);
+        const scopeKey = String(data.get("scope_key") || "");
+        const scopeValue = String(data.get("scope_value") || "").trim();
+        if (scopeKey && !scopeValue) {
+          setDashboardState("Add a scope ID or value, or choose Company-wide.", "error");
+          return;
+        }
+        try {
+          setDashboardState("Saving approved AI memory...");
+          await groundskeeperRequest("memory-upsert", {
+            memory: {
+              memoryType: String(data.get("memory_type") || "business_rule"),
+              statement: String(data.get("statement") || "").trim(),
+              scope: scopeKey && scopeValue ? { [scopeKey]: scopeValue } : {},
+              source: String(data.get("memory_type")) === "outcome" ? "outcome" : "approved_rule",
+              confidence: String(data.get("confidence") || "medium")
+            }
+          });
+          event.target.reset();
+          state.assistantMemoriesLoaded = false;
+          await loadAssistantMemories();
+          renderAiMemoryWorkspace();
+          setDashboardState("Approved memory saved.");
+        } catch (error) {
+          setDashboardState(error.message || "Unable to save AI memory.", "error");
+        }
+      } else if (event.target.matches("[data-financial-invoice-form]")) {
         event.preventDefault();
         const id = event.target.dataset.id;
         const data = new FormData(event.target);

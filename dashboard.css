@@ -22978,6 +22978,51 @@ body:not(.is-login-screen) .money-grid select {
   border-radius: 4px;
 }
 
+.copilot-action-plan,
+.copilot-memory-preview {
+  margin-top: 10px;
+  padding: 12px;
+  border: 1px solid rgba(31,107,79,.24);
+  border-radius: 14px;
+  background: rgba(244,241,232,.86);
+}
+
+.copilot-action-plan ol { margin: 7px 0 0 20px; }
+.copilot-memory-preview blockquote { margin: 9px 0; padding-left: 10px; border-left: 3px solid #c9a227; color: #1f2924; }
+.copilot-memory-preview > div,
+.memory-actions,
+.copilot-outcome { display: flex; flex-wrap: wrap; gap: 7px; }
+.copilot-outcome { align-items: center; margin-top: 9px; color: #52675d; font-size: 12px; }
+.copilot-outcome button { min-height: 30px; padding: 4px 10px; }
+
+.is-copilot-highlighted {
+  position: relative;
+  outline: 3px solid #c9a227 !important;
+  outline-offset: 3px;
+  box-shadow: 0 0 0 7px rgba(201,162,39,.2) !important;
+}
+
+.ai-memory-workspace { display: grid; gap: 20px; }
+.ai-memory-form {
+  display: grid;
+  grid-template-columns: repeat(3,minmax(0,1fr));
+  gap: 12px;
+  padding: 18px;
+  border: 1px solid rgba(31,107,79,.2);
+  border-radius: 22px;
+  background: rgba(255,255,255,.94);
+  box-shadow: 0 16px 40px rgba(18,55,42,.1);
+}
+.ai-memory-form label { display: grid; gap: 6px; min-width: 0; }
+.ai-memory-form .span-full { grid-column: 1 / -1; }
+.ai-memory-group,
+.ai-memory-card { padding: 18px; border: 1px solid rgba(31,107,79,.18); border-radius: 20px; background: rgba(255,255,255,.94); }
+.ai-memory-list { display: grid; gap: 10px; }
+.ai-memory-card { display: grid; gap: 10px; padding: 14px; }
+.ai-memory-card.is-disabled { opacity: .62; }
+.ai-memory-card p,
+.ai-memory-card small { margin: 0; overflow-wrap: anywhere; }
+
 .dashboard-copilot-panel > form {
   margin: 4px 18px 0;
   padding: 5px;
@@ -23050,6 +23095,9 @@ body:not(.is-login-screen) .money-grid select {
 .dashboard-copilot-trust { padding: 0 16px 12px; color: #63756b; }
 
 @media (max-width: 700px) {
+  .ai-memory-form { grid-template-columns: 1fr; }
+  .ai-memory-form .span-full { grid-column: auto; }
+
   .dashboard-copilot {
     inset: 10px 10px auto auto;
   }

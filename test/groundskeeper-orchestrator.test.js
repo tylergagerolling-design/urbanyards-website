@@ -191,3 +191,18 @@ test("completed uninvoiced work totals known values and labels missing values", 
   assert.equal(tool.output.partial, true);
   assert.match(composeDeterministicReply(result.toolResults), /2 completed uninvoiced tickets.*\$350\.00.*1 ticket is missing a value/);
 });
+
+test("orchestrator includes bounded conversation memory without saving it", async () => {
+  const result = await orchestrateDashboardRequest({
+    message: "What did I ask you to focus on?",
+    context: {
+      ...snapshot,
+      conversationMemories: [{ statement: "Focus on overdue documentation.", confidence: "high" }]
+    },
+    actor: owner,
+    hasPermission
+  });
+  assert.equal(result.relevantMemory.length, 1);
+  assert.equal(result.relevantMemory[0].memoryType, "conversation");
+  assert.match(result.modelContext, /Focus on overdue documentation/);
+});

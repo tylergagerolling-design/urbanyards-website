@@ -13,6 +13,7 @@ const {
 } = require("../netlify/functions/lib/dashboard-auth");
 const { orchestrateDashboardRequest } = require("../src/assistant/orchestrator");
 const { composeDeterministicReply } = require("../src/assistant/response-composer");
+const { MEMORY_TYPES, normalizeMemory, sanitizeScope } = require("../src/assistant/memory-service");
 
 const BUSINESS_CONTEXT = `
 You are The Groundskeeper, the shared AI assistant for Urban Yards Groundskeeping.
@@ -447,8 +448,72 @@ async function publishTrainingRules() {
   };
 }
 
+async function listAssistantMemories() {
+  return asArray(await tableRows("assistant_memories", "select=*&order=is_active.desc,updated_at.desc&limit=500"));
+}
+
+async function upsertAssistantMemory(record, actor) {
+  const body = normalizeMemory(record, actor);
+  const path = body.id ? "assistant_memories?on_conflict=id" : "assistant_memories";
+  const result = await supabaseAdminRequest(path, {
+    method: "POST",
+    headers: { Prefer: "resolution=merge-duplicates,return=representation" },
+    body: JSON.stringify(body)
+  });
+  return Array.isArray(result) ? result[0] : result;
+}
+
+async function patchAssistantMemory(id, values = {}) {
+  if (!id) throw new Error("Memory id is required.");
+  const allowed = {};
+  if (typeof values.statement === "string") allowed.statement = text(values.statement, 2000);
+  if (typeof values.isActive === "boolean") allowed.is_active = values.isActive;
+  if (values.memoryType && MEMORY_TYPES.has(values.memoryType)) allowed.memory_type = String(values.memoryType);
+  if (values.scope && typeof values.scope === "object") allowed.scope = sanitizeScope(values.scope);
+  allowed.updated_at = new Date().toISOString();
+  const result = await supabaseAdminRequest(`assistant_memories?id=eq.${encodeURIComponent(id)}`, {
+    method: "PATCH",
+    headers: { Prefer: "return=representation" },
+    body: JSON.stringify(allowed)
+  });
+  return Array.isArray(result) ? result[0] : result;
+}
+
+async function deleteAssistantMemory(id) {
+  if (!id) throw new Error("Memory id is required.");
+  await supabaseAdminRequest(`assistant_memories?id=eq.${encodeURIComponent(id)}`, {
+    method: "DELETE",
+    headers: { Prefer: "return=minimal" }
+  });
+  return true;
+}
+
+async function recordAssistantOutcome(payload = {}, actor = {}) {
+  const body = {
+    recommendation_id: text(payload.recommendationId, 160),
+    recommendation_type: text(payload.recommendationType, 120),
+    accepted: Boolean(payload.accepted),
+    completed: Boolean(payload.completed),
+    result: text(payload.result, 2000) || null,
+    financial_impact: Number.isFinite(Number(payload.financialImpact)) ? Number(payload.financialImpact) : null,
+    time_saved_minutes: Number.isFinite(Number(payload.timeSavedMinutes)) ? Math.max(0, Number(payload.timeSavedMinutes)) : null,
+    user_rating: Number.isFinite(Number(payload.userRating)) ? Math.min(5, Math.max(1, Number(payload.userRating))) : null,
+    user_correction: text(payload.userCorrection, 2000) || null,
+    created_by: text(actor.userId || actor.email, 160)
+  };
+  if (!body.recommendation_id || !body.recommendation_type) throw new Error("Recommendation id and type are required.");
+  const result = await supabaseAdminRequest("assistant_outcomes", {
+    method: "POST",
+    headers: { Prefer: "return=representation" },
+    body: JSON.stringify(body)
+  });
+  return Array.isArray(result) ? result[0] : result;
+}
+
 async function adminAction(req, res, id, action, payload) {
-  if (!(await requireAdmin(req))) return res.status(401).json({ error: "Unauthorized", requestId: id });
+  const adminPermission = await requirePermission(req, "admin:manage", { entityType: "assistant_memory", action });
+  if (!adminPermission.ok) return res.status(adminPermission.statusCode || 401).json({ error: adminPermission.error || "Unauthorized", requestId: id });
+  const adminActor = adminPermission.actor;
   if (action === "training-chat" || action === "preview-helper") {
     const limit = rateLimit(`groundskeeper-admin:${action}:${clientIp(req)}`, 30, 10 * 60 * 1000);
     if (!limit.allowed) {
@@ -463,6 +528,11 @@ async function adminAction(req, res, id, action, payload) {
   if (action === "approve-training-rule") return res.status(200).json({ record: await patchTrainingRule(payload.id, { status: "approved", archived_at: null }), requestId: id });
   if (action === "archive-training-rule") return res.status(200).json({ record: await patchTrainingRule(payload.id, { status: "archived", archived_at: new Date().toISOString() }), requestId: id });
   if (action === "publish-training") return res.status(200).json({ ...(await publishTrainingRules()), requestId: id });
+  if (action === "memory-list") return res.status(200).json({ memories: await listAssistantMemories(), requestId: id });
+  if (action === "memory-upsert") return res.status(200).json({ memory: await upsertAssistantMemory(payload.memory || {}, adminActor), requestId: id });
+  if (action === "memory-update") return res.status(200).json({ memory: await patchAssistantMemory(payload.id, payload.values || {}), requestId: id });
+  if (action === "memory-delete") return res.status(200).json({ deleted: await deleteAssistantMemory(payload.id), requestId: id });
+  if (action === "outcome-record") return res.status(200).json({ outcome: await recordAssistantOutcome(payload.outcome || {}, adminActor), requestId: id });
   if (action === "publish") {
     const now = new Date().toISOString();
     await supabaseAdminRequest("ai_settings?on_conflict=setting_key", {
@@ -503,7 +573,12 @@ function isAdminAction(action) {
       "upsert-training-rule",
       "approve-training-rule",
       "archive-training-rule",
-      "publish-training"
+      "publish-training",
+      "memory-list",
+      "memory-upsert",
+      "memory-update",
+      "memory-delete",
+      "outcome-record"
     ].includes(action);
 }
 
@@ -566,12 +641,14 @@ async function handler(req, res) {
   let orchestration = null;
   if (mode === "dashboard") {
     try {
+      const availableMemories = await listAssistantMemories().catch(() => []);
       orchestration = await orchestrateDashboardRequest({
         message: userMessage,
         context,
         actor: dashboardActor,
         hasPermission,
-        recentEntities: asArray(context?.recentEntities)
+        recentEntities: asArray(context?.recentEntities),
+        memories: availableMemories
       });
     } catch (error) {
       console.warn(JSON.stringify({ event: "groundskeeper_orchestration_recovery", requestId: id, message: error.message }));
@@ -647,6 +724,8 @@ async function handler(req, res) {
         intent: orchestration.routing,
         citations: orchestration.citations,
         verification: orchestration.verification,
+        uiActions: orchestration.uiActions,
+        memoryPreview: orchestration.memoryPreview,
         diagnostics: process.env.NODE_ENV === "production" ? undefined : orchestration.diagnostics
       } : {})
     });

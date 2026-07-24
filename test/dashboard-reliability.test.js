@@ -33,6 +33,16 @@ function withEnv(patch, callback) {
   }
 }
 
+test("dashboard notifications provide a direct Google Voice voicemail shortcut", () => {
+  const html = read("dashboard.html");
+  const css = read("dashboard.css");
+  assert.match(html, /class="sidebar-voicemail-link"/);
+  assert.match(html, /href="https:\/\/voice\.google\.com\/"/);
+  assert.match(html, />\s*Check Voicemail\s*</);
+  assert.match(html, /target="_blank" rel="noopener noreferrer"/);
+  assert.match(css, /\.sidebar-voicemail-link/);
+});
+
 test("dashboard public config builder validates production deploy requirements", () => {
   assert.equal(validHttpsUrl("https://example.com"), true);
   assert.equal(validHttpsUrl("http://example.com"), false);

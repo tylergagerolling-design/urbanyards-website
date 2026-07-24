@@ -136,6 +136,8 @@ function createGeminiProvider({ apiKey = process.env.GEMINI_API_KEY, model = pro
         if (response.status === 429) throw new ConsultationError("rate_limited", "Gemini consultation is temporarily rate limited.", 429);
         if (response.status === 401 || response.status === 403) throw new ConsultationError("invalid_key", "Gemini consultation is not configured correctly.", 503);
         if (response.status === 400) throw new ConsultationError("invalid_request", "Gemini consultation configuration was rejected.", 503);
+        if (response.status === 404) throw new ConsultationError("model_unavailable", "The configured Gemini model is unavailable.", 503);
+        if (response.status >= 500) throw new ConsultationError("provider_unavailable", "Gemini consultation is temporarily unavailable.", 503);
         if (!response.ok) throw new ConsultationError("provider_error", "Gemini consultation was unavailable.");
         const data = await response.json();
         const finishReason = data.candidates?.[0]?.finishReason || "";

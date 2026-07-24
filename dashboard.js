@@ -20817,8 +20817,18 @@ Requirements:
 
       if (action === "permanently-delete-money-record") {
         const entityType = target.dataset.entityType || "";
-        const confirmation = window.prompt(`Permanently delete this ${entityType}? This cannot be undone. Type DELETE to continue.`);
-        if (confirmation !== "DELETE") return;
+        if (target.dataset.confirmed !== "true") {
+          target.dataset.confirmed = "true";
+          target.textContent = "Confirm delete";
+          target.setAttribute("aria-label", `Confirm permanent deletion of this ${entityType}`);
+          window.setTimeout(() => {
+            if (!target.isConnected || target.dataset.confirmed !== "true") return;
+            target.dataset.confirmed = "false";
+            target.textContent = "Delete permanently";
+            target.removeAttribute("aria-label");
+          }, 6000);
+          return;
+        }
         try {
           await dashboardFinancialRequest("delete-record-permanently", { entityType, id });
           state.moneyLoadedViews.delete("deleted");

@@ -2,7 +2,7 @@
 
 const CONSULTATION_MODES = new Set(["off", "auto", "always_review"]);
 const TRIVIAL = /\b(hello|hi|thanks|thank you|open|go to|navigate|show page|which tab|where is|sign out)\b/i;
-const MATERIAL = /\b(financial|budget|profit|margin|cost|estimate|calculate|compare|options|plan|risk|review|recommend|strategy|debug|complex|multi(?:ple)?|client (?:email|message|communication)|large summary|double[- ]check|second opinion|consult gemini)\b/i;
+const MATERIAL = /\b(financial|budget|profit|margin|cost|estimate|calculate|compare|options|plan|risk|review|recommend|strategy|debug|complex|multi(?:ple)?|client (?:email|message|communication)|large summary|double[- ]check|second opinion|consult gemini|plant identification|plant health|irrigation|drainage|unusual site|safety|hazard|licens|customer dispute|low confidence)\b/i;
 
 function normalizeMode(value) {
   const mode = String(value || "").trim().toLowerCase().replace(/\s+/g, "_");

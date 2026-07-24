@@ -1,0 +1,10 @@
+[
+  { "question": "Why is the lawn tearing when we mow after several rainy Portland days?", "expectedIds": ["regional.pnw.wet-turf-001", "general.mowing.quality-001"], "requiresSafety": false },
+  { "question": "Can you identify this unknown plant from one blurry photo?", "expectedIds": ["general.plants.identification-uncertain-001"], "requiresSafety": true },
+  { "question": "An irrigation zone will not shut off and water is near electrical equipment.", "expectedIds": ["general.irrigation.troubleshoot-001"], "requiresSafety": true },
+  { "question": "What should we inspect before recommending a solution for standing water?", "expectedIds": ["general.drainage.standing-water-001"], "requiresSafety": false },
+  { "question": "Calculate mulch for a bed when I provide square feet and depth.", "expectedIds": ["general.mulch.depth-001", "company.estimating.assumptions-001"], "requiresSafety": false },
+  { "question": "A large limb is hanging over a walkway near power lines.", "expectedIds": ["safety.tree-risk.observation-001"], "requiresSafety": true },
+  { "question": "Are we licensed to perform this backflow and electrical repair in Portland?", "expectedIds": ["safety.licensing.boundaries-001"], "requiresSafety": true },
+  { "question": "What proof and checklist are required to close a landscaping ticket?", "expectedIds": ["company.quality.closeout-001", "company.documentation.field-001"], "requiresSafety": false }
+]

@@ -8,6 +8,7 @@ const {
   assessTicketReadiness, completedWorkLearning, documentInsights, leadInsights,
   proactiveRisks, relationshipMap, scheduleInsights
 } = require("./intelligence-service");
+const { retrieveLandscapingKnowledge } = require("./landscaping-knowledge");
 
 function timeout(promise, timeoutMs, toolName) {
   let timer;
@@ -205,6 +206,7 @@ function createToolRegistry({ permissionGuard }) {
   register({ name: "learn_from_completed_work", description: "Compare completed-job estimated and actual costs to support better future estimates.", requiredPermission: "tickets:read", inputSchema: {}, outputSchema: { records: "array", calculation: "object", citations: "array" }, execute: completedWorkLearning });
   register({ name: "analyze_lead_next_actions", description: "Rank active leads using follow-up timing and record completeness, then recommend the next touch.", requiredPermission: "leads:read", inputSchema: {}, outputSchema: { records: "array", recommendation: "string", citations: "array" }, execute: leadInsights });
   register({ name: "detect_operational_risks", description: "Proactively identify blocked tickets, unpaid invoices, and documents needing review.", requiredPermission: "dashboard:read", inputSchema: {}, outputSchema: { records: "array", calculation: "object" }, execute: proactiveRisks });
+  register({ name: "retrieve_landscaping_knowledge", description: "Retrieve ranked approved landscaping, regional, company, and safety records.", requiredPermission: "dashboard:read", inputSchema: { query: "string", region: "string", season: "string", propertyType: "string", jobType: "string" }, outputSchema: { records: "array", citations: "array", contextBoundaries: "object" }, execute: retrieveLandscapingKnowledge });
   register({
     name: "transition_ticket_stage",
     description: "Validate and preview one legal ticket stage transition. Execution requires explicit button approval.",

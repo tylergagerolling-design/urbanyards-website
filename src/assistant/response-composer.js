@@ -20,6 +20,9 @@ function composeModelContext({ routing, pageContext, resolvedEntity, toolResults
     "Scheduling analysis must distinguish stored schedule facts from unavailable live travel, weather, and worker-availability data.",
     "Document analysis may use stored metadata and supplied extracted text only. Never claim to have read file contents that were not provided.",
     "Learning means comparing approved history and using scoped memories; never silently train on private records or create a permanent rule without approval.",
+    "Landscaping knowledge records are separated into general, regional, approved Urban Yards company, and safety/licensing layers. Never describe one layer as another.",
+    "For landscaping field guidance, organize relevant answers as Situation, Likely cause, Immediate action, Recommended procedure, Tools and materials, Safety, Quality check, Escalation, Documentation, and optional customer recommendation.",
+    "Distinguish confirmed facts, likely or possible diagnoses, customer preferences, company policy, general best practice, legal/licensing requirements, and recommendations requiring an on-site inspection.",
     JSON.stringify({ routing, pageContext, memories, uiActions, memoryPreview, resolvedEntity: resolvedEntity ? {
       entityType: resolvedEntity.recordType,
       recordId: resolvedEntity.recordId,

@@ -1,0 +1,21 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Urban Yards Entity Memory",
+  "type": "object",
+  "required": ["source", "observedAt", "authorId", "entityType", "entityId", "memoryKind", "confidence", "visibility", "statement"],
+  "properties": {
+    "source": { "enum": ["user", "field_observation", "customer", "record", "approved_ai_draft", "import"] },
+    "observedAt": { "type": "string", "format": "date-time" },
+    "authorId": { "type": "string" },
+    "entityType": { "enum": ["customer", "contact", "property", "plant_inventory", "equipment", "employee", "vendor", "estimate", "job", "service_visit", "irrigation_zone", "site_hazard", "client_preference", "recommendation", "incident", "material", "lesson_learned"] },
+    "entityId": { "type": "string" },
+    "memoryKind": { "enum": ["fact", "preference", "observation", "recommendation"] },
+    "statement": { "type": "string", "maxLength": 2000 },
+    "confidence": { "enum": ["low", "medium", "high"] },
+    "visibility": { "enum": ["owner", "management", "assigned_field_staff"] },
+    "expiresAt": { "type": ["string", "null"], "format": "date-time" },
+    "reviewAt": { "type": ["string", "null"], "format": "date-time" },
+    "confirmed": { "type": "boolean" }
+  },
+  "additionalProperties": false
+}

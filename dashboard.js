@@ -468,6 +468,7 @@
         rules: [],
         savedAnswers: [],
         trainingRules: [],
+        landscapingKnowledge: [],
         versions: [],
         logs: [],
         feedback: [],
@@ -5689,6 +5690,7 @@
         rules: snapshot.rules || [],
         savedAnswers: snapshot.savedAnswers || [],
         trainingRules: snapshot.trainingRules || [],
+        landscapingKnowledge: snapshot.landscapingKnowledge || [],
         versions: snapshot.versions || [],
         logs: snapshot.logs || [],
         feedback: snapshot.feedback || [],
@@ -19358,6 +19360,7 @@ Requirements:
   const AI_SECTIONS = [
     { id: "operations", icon: "OP", title: "Operations Copilot", table: "", type: "", description: "Review daily work, tickets, leads, estimates, schedules, closeout, Money, and client communication with live dashboard context." },
     { id: "training", icon: "TR", title: "AI Helper Training", table: "ai_training_rules", type: "trainingRules", description: "Train, test, approve, and publish how the public website helper responds to visitors." },
+    { id: "landscaping", icon: "LK", title: "Landscaping Knowledge", table: "", type: "landscapingKnowledge", description: "Versioned general, Pacific Northwest, Urban Yards, and safety knowledge used by the dashboard assistant." },
     { id: "assistant", icon: "AI", title: "Dashboard Assistant", table: "", type: "", description: "Ask for follow-up drafts, lead summaries, copy ideas, or outreach planning. Dashboard mode can use internal AI knowledge." },
     { id: "settings", icon: "BF", title: "Business Facts", table: "ai_settings", type: "settings", description: "Settings, service area, contact info, tone, quote process, and payment process." },
     { id: "knowledge", icon: "SK", title: "Services & Knowledge", table: "ai_knowledge", type: "knowledge", description: "Published and draft knowledge entries for services, site content, and business context." },
@@ -19373,6 +19376,7 @@ Requirements:
 
   function aiItemsForSection(ai, section) {
     if (section.id === "training") return ai.trainingRules || [];
+    if (section.id === "landscaping") return ai.landscapingKnowledge || [];
     if (section.id === "logs") return ai.logs || [];
     if (section.id === "settings") return ai.settings || [];
     if (section.id === "knowledge") return ai.knowledge || [];
@@ -19664,6 +19668,30 @@ Requirements:
     const section = aiSectionById(state.groundskeeperAiView);
     if (section.id === "operations") renderOperationsWorkspace();
     else if (section.id === "training") renderTrainingWorkspace(ai);
+    else if (section.id === "landscaping") {
+      const items = filteredAiItems(ai, section);
+      const outdated = items.filter((item) => {
+        const reviewed = Date.parse(item.lastReviewedDate || "");
+        return reviewed && Date.now() > reviewed + Number(item.reviewFrequencyDays || 180) * 86400000;
+      });
+      els.aiMain.innerHTML = `<section class="panel ai-command-panel">
+        <div class="ai-workspace-heading">
+          <div><p class="eyebrow">Owner Knowledge Management</p><h3>Landscaping Intelligence Library</h3><p>Approved records are retrieved lazily by layer. Property memory and ticket context remain separate.</p></div>
+          <button type="button" data-action="export-landscaping-knowledge"><span class="button-icon" aria-hidden="true">↓</span><span>Export Catalog</span></button>
+        </div>
+        <div class="ticket-metrics">
+          <article><span>Approved records</span><strong>${escapeHtml(items.length)}</strong></article>
+          <article><span>Needs review</span><strong>${escapeHtml(outdated.length)}</strong></article>
+          <article><span>Knowledge layers</span><strong>${escapeHtml(new Set(items.map((item) => item.layer)).size)}</strong></article>
+        </div>
+        <div class="ai-entry-table-heading"><h4>Version-controlled records</h4><span>${escapeHtml(items.length)} shown</span></div>
+        <div class="ai-entry-list">${items.length ? items.map((item) => `<article class="ai-entry-row">
+          <div><strong>${escapeHtml(item.title)}</strong><p>${escapeHtml(item.id)}</p><small>${escapeHtml(`${item.layer} / ${item.category} / v${item.version} / ${item.confidenceLevel} confidence`)}</small></div>
+          <div class="ai-entry-actions"><span class="training-status-badge is-approved">${escapeHtml(item.status)}</span><button class="inline-action" type="button" data-action="draft-landscaping-update" data-id="${escapeHtml(item.id)}">Draft Update</button></div>
+        </article>`).join("") : emptyState(state.groundskeeperAiSearch ? "No landscaping records match that search." : "No landscaping records are available.")}</div>
+        <p class="training-version-note">Draft Update opens the approval-controlled knowledge editor. Neither AI model can silently rewrite approved policy.</p>
+      </section>`;
+    }
     else if (section.id === "assistant") renderAssistantWorkspace();
     else if (section.id === "logs") renderLogWorkspace(ai);
     else renderKnowledgeWorkspace(ai, section);
@@ -23304,6 +23332,29 @@ Requirements:
           setDashboardState("Approved AI training rules are now live on the website helper.");
         } catch (error) {
           setDashboardState(error.message || "Unable to push AI training live.", "error");
+        }
+        return;
+      }
+
+      if (action === "export-landscaping-knowledge") {
+        downloadJson(`urban-yards-landscaping-knowledge-${todayKey()}.json`, state.data.groundskeeperAi?.landscapingKnowledge || []);
+        setDashboardState("Landscaping knowledge catalog exported.");
+        return;
+      }
+
+      if (action === "draft-landscaping-update") {
+        const record = (state.data.groundskeeperAi?.landscapingKnowledge || []).find((item) => item.id === id);
+        if (record) {
+          const section = aiSectionById("knowledge");
+          fillAiEditor(section, null, {
+            table: "ai_knowledge",
+            title: `${record.title} update`,
+            category: `Landscaping / ${record.layer} / ${record.category}`,
+            visibility: "internal",
+            status: "draft",
+            content: `${record.summary || ""}\n\nSource record: ${record.id} v${record.version}. Review and approve before publishing.`
+          });
+          setDashboardState("Draft created from the approved record. Review before saving.");
         }
         return;
       }

@@ -18,6 +18,7 @@ const { consultationDecision, normalizeMode } = require("../src/assistant/consul
 const { sanitizeConsultationContext } = require("../src/assistant/consultation/context-sanitizer");
 const { createGeminiProvider } = require("../src/assistant/consultation/gemini-provider");
 const { disagreementDetected, synthesisInstruction } = require("../src/assistant/consultation/synthesizer");
+const { landscapingKnowledgeCatalog } = require("../src/assistant/landscaping-knowledge");
 
 const BUSINESS_CONTEXT = `
 You are The Groundskeeper, the shared AI assistant for Urban Yards Groundskeeping.
@@ -201,7 +202,7 @@ async function adminSnapshot() {
     tableRows("ai_training_rules", "select=*&order=priority.asc,updated_at.desc"),
     tableRows("ai_helper_versions", "select=*&order=published_at.desc&limit=25")
   ]);
-  return { settings, knowledge, faqs, rules, savedAnswers, logs, feedback, trainingRules, versions, fallback: publicKnowledgeSnapshot() };
+  return { settings, knowledge, faqs, rules, savedAnswers, logs, feedback, trainingRules, versions, landscapingKnowledge: landscapingKnowledgeCatalog(), fallback: publicKnowledgeSnapshot() };
 }
 
 function buildDynamicContext(ai, mode) {

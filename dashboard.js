@@ -2623,7 +2623,7 @@
         setActiveSection(action.route);
         replaceDashboardHash(action.route);
         await render();
-        status.push(`Opened ${dashboardSectionLabel(action.route)}.`);
+        status.push(`Opened ${detailDrawerSectionLabel()}.`);
       } else if (action.type === "open_record") {
         await openRecordFromCopilot(action);
         status.push("Opened the matching record in a side panel.");

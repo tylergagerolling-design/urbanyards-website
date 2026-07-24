@@ -118,6 +118,7 @@ test("dashboard uses a controlled action bus and inspectable memory page", () =>
   const html = fs.readFileSync(path.join(__dirname, "../dashboard.html"), "utf8");
   assert.match(dashboard, /function validDashboardUIAction/);
   assert.match(dashboard, /function executeDashboardUIActions/);
+  assert.doesNotMatch(dashboard, /dashboardSectionLabel\(/);
   assert.match(dashboard, /data-ai-memory-form/);
   assert.match(dashboard, /copilot-rate-outcome/);
   assert.match(html, /data-dashboard-link="ai-memory"/);

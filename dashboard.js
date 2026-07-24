@@ -317,8 +317,11 @@
     equipmentStatusFilter: "All",
     equipmentConditionFilter: "All",
     equipmentPriorityFilter: "All",
-    groundskeeperAiView: "training",
+    groundskeeperAiView: "operations",
     groundskeeperAiSearch: "",
+    groundskeeperOperationKey: "daily-briefing",
+    groundskeeperOperationResult: "",
+    groundskeeperOperationLoading: false,
     documentationView: DOCUMENTATION_DEFAULT_VIEW,
     documentationSearch: "",
     documentationTypeFilter: "All",
@@ -2441,7 +2444,67 @@
     }
   }
 
-  async function groundskeeperChat(message) {
+  function groundskeeperOperationsContext() {
+    const data = state.data;
+    const tickets = dashboardTickets(data);
+    const compactTicket = (item) => ({
+      id: item.id,
+      number: item.number,
+      title: item.title,
+      client: item.customer,
+      property: item.property,
+      stage: item.stageLabel,
+      owner: item.ownerLabel,
+      nextAction: item.nextAction,
+      date: item.dateRaw,
+      blockers: item.blockers,
+      estimatedCost: item.estimatedTotalCost,
+      actualCost: item.actualTotalCost,
+      payment: item.paymentStatus,
+      invoiceFinalized: item.invoiceFinalized,
+      arrivalPhotos: item.beforePhotosUploaded,
+      completionPhotos: item.afterPhotosUploaded
+    });
+    return {
+      generatedAt: new Date().toISOString(),
+      activeSection: state.activeSection,
+      policy: "Recommend and draft only. Never mutate records, send messages, finalize prices, move stages, create invoices, or close tickets without explicit owner confirmation in the dashboard.",
+      summary: {
+        actionMetrics: dashboardActionMetrics(data, tickets),
+        activeTickets: tickets.filter(ticketIsOpen).length,
+        activeLeads: (data.outreachProspects || []).filter((item) => OUTREACH_ACTIVE_STATUSES.includes(item.status)).length,
+        scheduledJobs: (data.jobs || []).filter(isIncompleteJob).length,
+        expensesLoaded: data.financial?.expenses?.length || 0,
+        invoicesLoaded: data.financial?.invoices?.length || 0
+      },
+      priorityActions: todayActionItems(data).slice(0, 16),
+      tickets: tickets.filter(ticketIsOpen).slice(0, 24).map(compactTicket),
+      leads: (data.outreachProspects || []).filter((item) => OUTREACH_ACTIVE_STATUSES.includes(item.status)).slice(0, 20).map((item) => ({
+        id: item.id, name: item.contactName, property: item.propertyName, company: item.managementCompany, city: item.city,
+        service: item.serviceInterest, status: item.status, priority: item.priority, followUp: item.nextFollowUpAtRaw, notes: item.notes
+      })),
+      jobs: (data.jobs || []).filter(isIncompleteJob).slice(0, 20).map((item) => ({
+        id: item.id, site: item.site, city: item.city, service: item.service, date: item.dateRaw, window: item.window, status: item.status
+      })),
+      properties: (data.outreachProperties || []).slice(0, 16).map((item) => ({
+        id: item.id, name: item.propertyName, company: item.company, address: item.address, city: item.city, needs: item.visibleNeeds, notes: item.notes
+      })),
+      invoices: (data.financial?.invoices || []).slice(0, 20).map((item) => ({
+        id: item.id, number: item.invoice_number, client: financialRecordName("client", item.client_id), ticket: financialRecordName("ticket", item.ticket_id),
+        issueDate: item.issue_date, dueDate: item.due_date, total: item.total, balance: item.balance, status: item.status
+      })),
+      expenses: (data.financial?.expenses || []).slice(0, 20).map((item) => ({
+        id: item.id, date: item.expenseDate, vendor: item.vendorName, category: item.category, description: item.description,
+        total: item.total, ticket: financialRecordName("ticket", item.ticketId), receipt: item.receiptPath ? "present" : "missing"
+      })),
+      documents: [...(data.documents || []), ...(data.financial?.documents || [])].slice(0, 20).map((item) => ({
+        id: item.id, title: item.title || item.file_name || item.number, type: item.document_type || item.type, status: item.status,
+        ticketId: item.ticket_id || item.ticketId || item.jobTicketId
+      }))
+    };
+  }
+
+  async function groundskeeperChat(message, operation = "") {
     const session = getSession();
     if (!session || !session.accessToken) throw new Error("Please sign in again.");
     const response = await fetch("/.netlify/functions/groundskeeper-ai", {
@@ -2456,10 +2519,8 @@
         page: "Urban Yards Owner Dashboard",
         history: state.groundskeeperMessages.slice(-10),
         context: {
-          activeSection: state.activeSection,
-          openQuotes: state.data.submissions.filter((item) => item.status !== "Completed").length,
-          dueFollowUps: state.data.reminders.filter((item) => item.dueRaw && item.dueRaw <= todayKey() && item.status !== "Done").length,
-          activeOutreachProspects: state.data.outreachProspects.filter((item) => OUTREACH_ACTIVE_STATUSES.includes(item.status)).length
+          operation,
+          ...groundskeeperOperationsContext()
         }
       })
     });
@@ -18783,7 +18844,29 @@ Requirements:
     `).join("")}${hiddenLogCount > 0 ? `<div class="groundskeeper-ai-more">Showing ${visibleLogs.length} of ${logs.length} recent questions.</div>` : ""}`;
   }
 
+  const GROUNDSKEEPER_OPERATIONS = [
+    { key: "daily-briefing", group: "Today", title: "Daily operations briefing", detail: "Calls, visits, approvals, proof, invoices, and urgent work.", prompt: "Create my concise daily operations briefing. Order the work by urgency, explain why each item matters, and finish with the best first three actions." },
+    { key: "next-actions", group: "Today", title: "Smart next actions", detail: "Recommend the next move for active records.", prompt: "Recommend the most useful next action for each high-priority lead and ticket in the context. Explain each recommendation briefly and identify the responsible workspace." },
+    { key: "ticket-completeness", group: "Tickets", title: "Ticket completeness checker", detail: "Find missing fields, proof, costs, or closeout requirements.", prompt: "Audit the active tickets for completeness. Group missing information by ticket and stage, distinguish true blockers from optional improvements, and do not mark anything complete." },
+    { key: "dashboard-search", group: "Find", title: "Natural-language dashboard search", detail: "Ask a plain-language question about dashboard records.", prompt: "Use only the supplied dashboard context to answer the user's dashboard search question. State when the available snapshot is insufficient and never invent a matching record.", needsQuestion: true, placeholder: "Example: Which Kennedy tickets still need completion photos?" },
+    { key: "lead-priority", group: "Leads", title: "Lead prioritization", detail: "Rank prospects by urgency, fit, location, and value signals.", prompt: "Rank the active leads that deserve attention first. Use follow-up date, priority, service fit, property context, and contact history signals. Explain the ranking without inventing revenue." },
+    { key: "call-brief", group: "Leads", title: "Call preparation brief", detail: "Prepare talking points and questions for a prospect.", prompt: "Prepare concise call briefs for the highest-priority leads. Include known context, the goal of the call, useful questions, likely objections, and the recommended outcome. Do not claim facts not present." },
+    { key: "call-outcome", group: "Leads", title: "Call outcome assistant", detail: "Turn rough notes into status, follow-up, and next action.", prompt: "Convert the user's rough call notes into a structured outcome with summary, recommended lead status, follow-up timing, next action, and a polished internal note. Return a draft only.", needsQuestion: true, placeholder: "Paste rough call notes here…" },
+    { key: "scope-builder", group: "Planning", title: "Scope-of-work generator", detail: "Draft a structured scope from ticket or walkthrough notes.", prompt: "Draft a practical scope of work from the supplied ticket context and the user's notes. Include included work, exclusions, assumptions, access, proof, and questions still needing answers. This is a draft for review.", needsQuestion: true, placeholder: "Optional: identify the ticket and add walkthrough details…" },
+    { key: "estimate-prep", group: "Planning", title: "Estimate preparation", detail: "Suggest labor, materials, equipment, and missing questions.", prompt: "Prepare an estimate worksheet for the relevant ticket. Suggest labor categories, materials, equipment, risk allowances, and unanswered questions. Do not provide final pricing or promises." },
+    { key: "profitability", group: "Money", title: "Profitability insights", detail: "Explain margin strengths, risks, and cost drivers.", prompt: "Review the supplied financial and ticket signals for profitability. Explain likely cost drivers, weak or strong margin signals, missing actuals, and the records that need review. Do not invent amounts." },
+    { key: "schedule", group: "Planning", title: "Schedule optimizer", detail: "Recommend visit order and scheduling improvements.", prompt: "Recommend a practical schedule and work order using dates, urgency, location text, and ticket readiness. Flag conflicts and missing information. Do not change the calendar." },
+    { key: "weather", group: "Planning", title: "Weather-aware planning", detail: "Identify weather-sensitive work and a forecast checklist.", prompt: "Identify upcoming work that is weather-sensitive and create a planning checklist. If live forecast data is not present in the context, say so explicitly and recommend what must be checked before rescheduling. Never invent weather." },
+    { key: "property-history", group: "Properties", title: "Property history summary", detail: "Summarize visits, issues, preferences, and costs.", prompt: "Create concise property history summaries using only the supplied contacts, properties, jobs, tickets, expenses, and documents. Highlight recurring needs, open issues, and missing history." },
+    { key: "closeout", group: "Tickets", title: "Closeout assistant", detail: "Review proof, N/A decisions, costs, documents, and blockers.", prompt: "Prepare a ticket closeout review. Show completed evidence, missing proof, N/A decisions, actual costs, invoice and payment state, linked documents, and remaining blockers. Recommend; do not close anything." },
+    { key: "invoice-ready", group: "Money", title: "Invoice readiness checker", detail: "Find missing billing details and approvals.", prompt: "Determine which tickets appear ready to invoice and which are not. For each one, list missing client details, scope, line items, proof, actuals, approvals, or documents. Do not create or send invoices." },
+    { key: "expense-category", group: "Money", title: "Expense categorization", detail: "Suggest vendor, category, ticket, and receipt details.", prompt: "Categorize the user's expense or receipt notes. Suggest vendor, expense category, likely property or ticket link, reimbursable status, and missing receipt information. Return a draft only.", needsQuestion: true, placeholder: "Paste receipt text or describe the purchase…" },
+    { key: "anomalies", group: "Insights", title: "Anomaly and duplicate detection", detail: "Find unusual costs, duplicates, conflicts, and stuck records.", prompt: "Inspect the dashboard snapshot for likely duplicates, inconsistent totals, unusual costs, scheduling conflicts, missing links, and tickets stuck too long. Separate confirmed problems from possible issues." },
+    { key: "communication", group: "Clients", title: "Client communication drafts", detail: "Draft confirmations, follow-ups, updates, or reminders.", prompt: "Draft the requested client communication using only supplied record facts. Keep it concise, professional, and owner-operated. Clearly label it as a draft and do not send it.", needsQuestion: true, placeholder: "Example: Draft a schedule-change message for Smith Property…" }
+  ];
+
   const AI_SECTIONS = [
+    { id: "operations", icon: "OP", title: "Operations Copilot", table: "", type: "", description: "Review daily work, tickets, leads, estimates, schedules, closeout, Money, and client communication with live dashboard context." },
     { id: "training", icon: "TR", title: "AI Helper Training", table: "ai_training_rules", type: "trainingRules", description: "Train, test, approve, and publish how the public website helper responds to visitors." },
     { id: "assistant", icon: "AI", title: "Dashboard Assistant", table: "", type: "", description: "Ask for follow-up drafts, lead summaries, copy ideas, or outreach planning. Dashboard mode can use internal AI knowledge." },
     { id: "settings", icon: "BF", title: "Business Facts", table: "ai_settings", type: "settings", description: "Settings, service area, contact info, tone, quote process, and payment process." },
@@ -18849,7 +18932,7 @@ Requirements:
   function renderAiNav(ai) {
     if (!els.aiNav) return;
     els.aiNav.innerHTML = AI_SECTIONS.map((section) => {
-      const count = section.id === "assistant" ? state.groundskeeperMessages.length : aiItemsForSection(ai, section).length;
+      const count = section.id === "operations" ? GROUNDSKEEPER_OPERATIONS.length : section.id === "assistant" ? state.groundskeeperMessages.length : aiItemsForSection(ai, section).length;
       const active = state.groundskeeperAiView === section.id ? " is-active" : "";
       return `<button type="button" class="ai-nav-item${active}" data-ai-view="${escapeHtml(section.id)}">
         <span class="ai-nav-icon">${escapeHtml(section.icon)}</span>
@@ -18968,6 +19051,35 @@ Requirements:
     renderGroundskeeperChat();
   }
 
+  function renderOperationsWorkspace() {
+    if (!els.aiMain) return;
+    const selected = GROUNDSKEEPER_OPERATIONS.find((item) => item.key === state.groundskeeperOperationKey) || GROUNDSKEEPER_OPERATIONS[0];
+    const groups = [...new Set(GROUNDSKEEPER_OPERATIONS.map((item) => item.group))];
+    els.aiMain.innerHTML = `
+      <section class="groundskeeper-operations">
+        <div class="ai-workspace-heading">
+          <div><p class="eyebrow">Owner Operations</p><h3>Groundskeeper Operations Copilot</h3><p>Choose a focused review. Groundskeeper uses a bounded dashboard snapshot and prepares recommendations or drafts for you to approve.</p></div>
+          <span class="ai-review-badge">Review before applying</span>
+        </div>
+        <div class="groundskeeper-operation-groups">
+          ${groups.map((group) => `<section><h4>${escapeHtml(group)}</h4><div class="groundskeeper-operation-grid">
+            ${GROUNDSKEEPER_OPERATIONS.filter((item) => item.group === group).map((item) => `<button type="button" class="groundskeeper-operation-card${selected.key === item.key ? " is-active" : ""}" data-action="select-ai-operation" data-operation="${escapeHtml(item.key)}"><strong>${escapeHtml(item.title)}</strong><span>${escapeHtml(item.detail)}</span></button>`).join("")}
+          </div></section>`).join("")}
+        </div>
+        <section class="groundskeeper-operation-runner">
+          <div><p class="eyebrow">${escapeHtml(selected.group)}</p><h3>${escapeHtml(selected.title)}</h3><p>${escapeHtml(selected.detail)}</p></div>
+          ${selected.needsQuestion ? `<label>Details or question<textarea rows="4" maxlength="800" data-ai-operation-question placeholder="${escapeHtml(selected.placeholder || "Add the details Groundskeeper should review…")}"></textarea></label>` : ""}
+          <button type="button" data-action="run-ai-operation" data-operation="${escapeHtml(selected.key)}"${state.groundskeeperOperationLoading ? " disabled" : ""}>${state.groundskeeperOperationLoading ? "Reviewing…" : "Run Review"}</button>
+        </section>
+        <section class="groundskeeper-operation-result" aria-live="polite">
+          <div class="ticket-lane-heading"><div><p class="eyebrow">AI Review</p><h3>Recommendation</h3></div></div>
+          ${state.groundskeeperOperationResult
+            ? `<div class="groundskeeper-operation-output">${escapeHtml(state.groundskeeperOperationResult).replace(/\n/g, "<br>")}</div><p class="ai-review-note">Nothing above has been applied. Review the source records before taking action.</p>`
+            : emptyState("Choose a tool and run a review. Results will appear here without changing dashboard records.")}
+        </section>
+      </section>`;
+  }
+
   function renderKnowledgeWorkspace(ai, section) {
     if (!els.aiMain) return;
     const items = filteredAiItems(ai, section);
@@ -19026,7 +19138,8 @@ Requirements:
   function renderAiWorkspace(ai) {
     renderAiNav(ai);
     const section = aiSectionById(state.groundskeeperAiView);
-    if (section.id === "training") renderTrainingWorkspace(ai);
+    if (section.id === "operations") renderOperationsWorkspace();
+    else if (section.id === "training") renderTrainingWorkspace(ai);
     else if (section.id === "assistant") renderAssistantWorkspace();
     else if (section.id === "logs") renderLogWorkspace(ai);
     else renderKnowledgeWorkspace(ai, section);
@@ -22427,6 +22540,41 @@ Requirements:
       if (target.matches("[data-ai-view]")) {
         state.groundskeeperAiView = target.dataset.aiView || "assistant";
         await render();
+        return;
+      }
+
+      if (action === "select-ai-operation") {
+        state.groundskeeperOperationKey = target.dataset.operation || GROUNDSKEEPER_OPERATIONS[0].key;
+        state.groundskeeperOperationResult = "";
+        renderOperationsWorkspace();
+        return;
+      }
+
+      if (action === "run-ai-operation") {
+        const operation = GROUNDSKEEPER_OPERATIONS.find((item) => item.key === (target.dataset.operation || state.groundskeeperOperationKey));
+        if (!operation) return;
+        const question = qs("[data-ai-operation-question]")?.value?.trim() || "";
+        if (operation.needsQuestion && !question) {
+          setDashboardState("Add the details or question Groundskeeper should review.", "error");
+          qs("[data-ai-operation-question]")?.focus();
+          return;
+        }
+        try {
+          state.groundskeeperOperationLoading = true;
+          state.groundskeeperOperationResult = "";
+          renderOperationsWorkspace();
+          setDashboardState(`${operation.title} is reviewing the dashboard snapshot…`);
+          await ensureGlobalSearchFinancialData();
+          const message = `${operation.prompt}${question ? `\n\nOwner input:\n${question}` : ""}\n\nReturn a concise, structured answer with headings and specific record names or numbers when available. Recommendations only; do not claim any dashboard change was made.`;
+          state.groundskeeperOperationResult = await groundskeeperChat(message, operation.key);
+          setDashboardState(`${operation.title} review is ready.`);
+        } catch (error) {
+          state.groundskeeperOperationResult = error.message || "Groundskeeper could not complete this review.";
+          setDashboardState(state.groundskeeperOperationResult, "error");
+        } finally {
+          state.groundskeeperOperationLoading = false;
+          renderOperationsWorkspace();
+        }
         return;
       }
 

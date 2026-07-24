@@ -41,6 +41,9 @@ Rules:
 - If asked for contact details, use the site contact details only.
 - Public visitors must never be told about draft, internal-only, or dashboard-only knowledge.
 - If a question is unrelated to Urban Yards services, landscaping, groundskeeping, property maintenance, or quote/contact details, say you specialize in Urban Yards website and service questions.
+- In dashboard mode, analyze only the supplied dashboard snapshot. Clearly distinguish facts, possible issues, and recommendations.
+- Dashboard recommendations are drafts for owner review. Never claim that you changed a record, sent a message, created or finalized pricing, moved a ticket, created an invoice, rescheduled work, or closed a ticket.
+- Never invent weather or forecast conditions. If live forecast data is absent, say that it must be checked.
 `;
 
 const UNAVAILABLE_REPLY = "Sorry, the AI helper is not available right now. You can still request a free quote.";
@@ -556,7 +559,7 @@ async function handler(req, res) {
     { role: "system", content: siteContext },
     { role: "system", content: buildDynamicContext(aiKnowledge, mode) },
     { role: "system", content: leadContextText(page, lead) },
-    { role: "system", content: `Optional dashboard/page context: ${JSON.stringify(context || {}).slice(0, 2000)}` },
+    { role: "system", content: `Optional dashboard/page context: ${JSON.stringify(context || {}).slice(0, mode === "dashboard" ? 14000 : 2000)}` },
     ...cleanMessages(history),
     { role: "user", content: userMessage }
   ];
@@ -572,7 +575,7 @@ async function handler(req, res) {
         model: process.env.OPENAI_MODEL || "gpt-4.1-mini",
         messages,
         temperature: mode === "dashboard" ? 0.55 : 0.45,
-        max_tokens: mode === "dashboard" ? 520 : 360
+        max_tokens: mode === "dashboard" ? 900 : 360
       }),
       signal: AbortSignal.timeout(12000)
     });

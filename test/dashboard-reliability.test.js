@@ -1040,3 +1040,41 @@ test("ticket closeout uses a completion review and reversible actions offer Undo
   assert.match(css, /\.ticket-completion-review-grid/);
   assert.match(css, /\[data-dashboard-state\]\[data-tone="undo"\]/);
 });
+
+test("Groundskeeper AI exposes the selected owner operations suite with review safeguards", () => {
+  const js = read("dashboard.js");
+  const css = read("dashboard.css");
+  const api = read("api/groundskeeper-ai.js");
+
+  for (const title of [
+    "Daily operations briefing",
+    "Smart next actions",
+    "Ticket completeness checker",
+    "Natural-language dashboard search",
+    "Lead prioritization",
+    "Call preparation brief",
+    "Call outcome assistant",
+    "Scope-of-work generator",
+    "Estimate preparation",
+    "Profitability insights",
+    "Schedule optimizer",
+    "Weather-aware planning",
+    "Property history summary",
+    "Closeout assistant",
+    "Invoice readiness checker",
+    "Expense categorization",
+    "Anomaly and duplicate detection",
+    "Client communication drafts"
+  ]) {
+    assert.match(js, new RegExp(title.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")));
+  }
+  assert.match(js, /function groundskeeperOperationsContext/);
+  assert.match(js, /Recommend and draft only\. Never mutate records/);
+  assert.match(js, /function renderOperationsWorkspace/);
+  assert.match(js, /data-action="run-ai-operation"/);
+  assert.match(js, /Nothing above has been applied/);
+  assert.match(api, /Never claim that you changed a record/);
+  assert.match(api, /Never invent weather or forecast conditions/);
+  assert.match(api, /mode === "dashboard" \? 14000 : 2000/);
+  assert.match(css, /\.groundskeeper-operation-grid[\s\S]*repeat\(3, minmax\(0, 1fr\)\)/);
+});

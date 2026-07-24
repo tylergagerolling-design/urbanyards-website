@@ -1077,6 +1077,7 @@ test("Groundskeeper AI exposes the selected owner operations suite with review s
   assert.match(api, /Never invent weather or forecast conditions/);
   assert.match(api, /orchestrateDashboardRequest/);
   assert.match(api, /orchestration\.modelContext/);
+  assert.doesNotMatch(js, /groundskeeperChat\(`\$\{message\}\\n\\nAnswer conversationally/);
   assert.match(css, /\.groundskeeper-operation-grid[\s\S]*repeat\(3, minmax\(0, 1fr\)\)/);
 });
 

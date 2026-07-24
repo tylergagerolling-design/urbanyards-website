@@ -2775,7 +2775,7 @@
         state.copilotLastResults = rows;
         reply = { content: rows.length ? `I found ${rows.length} matching records for “${query}”.` : `I couldn't find a dashboard record matching “${query}”. Try a client, property, ticket number, phone, email, or vendor.`, html: copilotRecordButtons(rows) };
       } else {
-        const answer = await groundskeeperChat(`${message}\n\nAnswer conversationally. If the owner is asking to find, open, complete, or schedule a record, explain that the dashboard helper can do that when they use the record name or date.`, `copilot:${normalizeDashboardSection(state.activeSection)}`);
+        const answer = await groundskeeperChat(message, `copilot:${normalizeDashboardSection(state.activeSection)}`);
         const sources = copilotCitationRows(state.groundskeeperLastMeta?.citations || []);
         reply = {
           content: answer,

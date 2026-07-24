@@ -140,8 +140,7 @@ test("server route remains authenticated and frontend contains no Gemini secret"
   assert.match(api, /rateLimit\(`gemini-user-daily/);
   assert.match(api, /consultationMeta/);
   assert.doesNotMatch(dashboard, /GEMINI_API_KEY|generativelanguage\.googleapis\.com|x-goog-api-key/);
-  assert.match(dashboard, /Consult Gemini/);
-  assert.match(dashboard, /Double-check answer/);
+  assert.doesNotMatch(dashboard, /data-action="copilot-consult-gemini"|data-action="copilot-double-check"|data-action="copilot-consultation-settings"/);
 });
 
 test("provider errors preserve the primary Groundskeeper fallback path", () => {

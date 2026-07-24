@@ -430,8 +430,6 @@
     copilotPendingMemory: null,
     copilotPendingTransition: null,
     copilotConsultationRequest: null,
-    copilotConsultationSettings: null,
-    copilotConsultationSettingsOpen: false,
     copilotFilters: {},
     copilotHighlightIds: [],
     data: {
@@ -2731,21 +2729,6 @@
     </dl></details>`;
   }
 
-  function copilotConsultationSettingsHtml() {
-    if (!state.copilotConsultationSettingsOpen) return "";
-    const settings = state.copilotConsultationSettings || {};
-    return `<form class="copilot-consultation-settings" data-copilot-consultation-settings>
-      <strong>AI consultation settings</strong>
-      <label><span>Mode</span><select name="mode"><option value="off"${settings.mode === "off" ? " selected" : ""}>Off</option><option value="auto"${!settings.mode || settings.mode === "auto" ? " selected" : ""}>Auto</option><option value="always_review"${settings.mode === "always_review" ? " selected" : ""}>Always Review</option></select></label>
-      <label><input type="checkbox" name="enabled"${settings.enabled !== false ? " checked" : ""}> Enable Gemini consultation</label>
-      <label><input type="checkbox" name="emergencyStop"${settings.emergencyStop ? " checked" : ""}> Emergency stop</label>
-      <label><span>Daily limit</span><input type="number" name="dailyLimit" min="1" max="1000" value="${escapeHtml(settings.dailyLimit || 80)}"></label>
-      <button type="submit">Save settings</button>
-      <small>${settings.configured ? `Configured · ${escapeHtml(settings.model || "")}` : "Gemini's server credential is not configured."}</small>
-      ${settings.usageSummary ? `<small>Usage: ${escapeHtml(settings.usageSummary.completed || 0)} completed · ${escapeHtml(settings.usageSummary.failed || 0)} failed · ${escapeHtml(settings.usageSummary.rateLimited || 0)} rate limited</small>` : ""}
-    </form>`;
-  }
-
   async function saveCopilotMemory(memoryType) {
     const preview = state.copilotPendingMemory;
     if (!preview) return null;
@@ -2842,12 +2825,6 @@
           <button type="button" data-action="copilot-shortcut" data-copilot-section="outreach"><span aria-hidden="true">♙</span><strong>Leads</strong></button>
           <button type="button" data-action="copilot-shortcut" data-copilot-section="reports"><span aria-hidden="true">▥</span><strong>Reports</strong></button>
         </nav>
-        <div class="copilot-consult-controls">
-          <button type="button" data-action="copilot-consult-gemini">Consult Gemini</button>
-          <button type="button" data-action="copilot-double-check">Double-check answer</button>
-          <button type="button" data-action="copilot-consultation-settings">AI consultation settings</button>
-        </div>
-        ${copilotConsultationSettingsHtml()}
         <small class="dashboard-copilot-trust">Changes are made only after you approve a preview.</small>
       </section>`;
     const messages = shell.querySelector("[data-copilot-messages]");
@@ -20894,33 +20871,6 @@ Requirements:
         await render();
         return;
       }
-      if (action === "copilot-consult-gemini" || action === "copilot-double-check") {
-        const textarea = qs("[data-dashboard-copilot-form] textarea");
-        const typed = String(textarea?.value || "").trim();
-        const previous = [...state.copilotMessages].reverse().find((message) => message.role === "user")?.content || "";
-        const question = typed || previous;
-        if (!question) {
-          copilotPush("assistant", "Enter a question first, then choose Consult Gemini.");
-          renderDashboardCopilot();
-          return;
-        }
-        if (textarea) textarea.value = "";
-        await handleDashboardCopilotMessage(question, action === "copilot-double-check" ? { doubleCheck: true } : { manual: true });
-        return;
-      }
-      if (action === "copilot-consultation-settings") {
-        try {
-          if (!state.copilotConsultationSettings) {
-            const result = await groundskeeperRequest("consultation-settings-get");
-            state.copilotConsultationSettings = result.settings || {};
-          }
-          state.copilotConsultationSettingsOpen = !state.copilotConsultationSettingsOpen;
-        } catch (error) {
-          copilotPush("assistant", error.message || "I couldn't load AI consultation settings.");
-        }
-        renderDashboardCopilot();
-        return;
-      }
       if (action === "copilot-cancel-schedule") {
         state.copilotScheduleDraft = null;
         copilotPush("assistant", "The visit preview was cancelled. Nothing was added.");
@@ -25788,25 +25738,6 @@ Requirements:
         } catch (error) {
           setDashboardState(error.message || "Unable to save AI entry.", "error");
         }
-      } else if (event.target.matches("[data-copilot-consultation-settings]")) {
-        event.preventDefault();
-        const formData = new FormData(event.target);
-        try {
-          const result = await groundskeeperRequest("consultation-settings-update", {
-            settings: {
-              mode: String(formData.get("mode") || "auto"),
-              enabled: formData.get("enabled") === "on",
-              emergencyStop: formData.get("emergencyStop") === "on",
-              dailyLimit: Number(formData.get("dailyLimit") || 80)
-            }
-          });
-          state.copilotConsultationSettings = result.settings || {};
-          state.copilotConsultationSettingsOpen = false;
-          copilotPush("assistant", "AI consultation settings saved.");
-        } catch (error) {
-          copilotPush("assistant", error.message || "I couldn't save AI consultation settings.");
-        }
-        renderDashboardCopilot();
       } else if (event.target.matches("[data-dashboard-copilot-form]")) {
         event.preventDefault();
         const message = String(new FormData(event.target).get("message") || "").trim();

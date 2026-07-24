@@ -22755,19 +22755,12 @@ body:not(.is-login-screen) .money-grid select {
 
 .dashboard-copilot-panel form button { min-height: 44px; border-radius: 11px; background: #1f6b4f; color: #fff; }
 .dashboard-copilot-trust { padding: 0 14px 12px; color: #63756b; text-align: center; }
-.copilot-consult-controls { display: flex; flex-wrap: wrap; gap: 6px; padding: 0 12px 10px; }
-.copilot-consult-controls button { min-height: 32px; padding: 6px 9px; border: 1px solid rgba(31,107,79,.22); border-radius: 999px; background: rgba(244,241,232,.92); color: #1f6b4f; font-size: 11px; }
 .copilot-consultation-detail { margin-top: 9px; padding: 9px; border: 1px solid rgba(31,107,79,.18); border-radius: 11px; background: #f4f7f1; }
 .copilot-consultation-detail summary { cursor: pointer; color: #1f6b4f; font-size: 12px; font-weight: 800; }
 .copilot-consultation-detail dl { display: grid; gap: 4px; margin: 8px 0 0; }
 .copilot-consultation-detail dl > div { display: grid; grid-template-columns: 85px minmax(0,1fr); gap: 8px; }
 .copilot-consultation-detail dt { color: #63756b; font-size: 11px; font-weight: 800; }
 .copilot-consultation-detail dd { min-width: 0; margin: 0; overflow-wrap: anywhere; }
-.copilot-consultation-settings { margin: 0 12px 10px; padding: 11px; border: 1px solid rgba(31,107,79,.2); border-radius: 13px; background: #fff; display: grid; gap: 8px; }
-.copilot-consultation-settings label { display: grid; grid-template-columns: auto minmax(0,1fr); align-items: center; gap: 8px; font-size: 12px; }
-.copilot-consultation-settings select,
-.copilot-consultation-settings input[type="number"] { min-width: 0; width: 100%; }
-.copilot-consultation-settings small { color: #63756b; overflow-wrap: anywhere; }
 
 @media (max-width: 700px) {
   .dashboard-copilot { right: 12px; top: 12px; bottom: auto; }

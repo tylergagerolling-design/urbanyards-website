@@ -2546,7 +2546,14 @@
         invoicesLoaded: data.financial?.invoices?.length || 0
       },
       priorityActions: todayActionItems(data).slice(0, 16),
-      tickets: tickets.filter(ticketIsOpen).slice(0, 24).map(compactTicket),
+      tickets: [
+        ...tickets.filter(ticketIsOpen).slice(0, 24),
+        ...tickets.filter((ticket) => !ticketIsOpen(ticket)).slice(0, 16)
+      ].map(compactTicket),
+      clients: (data.contacts || []).slice(0, 20).map((item) => ({
+        id: item.id, name: item.name || item.contactName, company: item.company || item.companyName,
+        property: item.property || item.propertyName, status: item.status, type: item.type || item.contactType
+      })),
       leads: (data.outreachProspects || []).filter((item) => OUTREACH_ACTIVE_STATUSES.includes(item.status)).slice(0, 20).map((item) => ({
         id: item.id, name: item.contactName, property: item.propertyName, company: item.managementCompany, city: item.city,
         service: item.serviceInterest, status: item.status, priority: item.priority, followUp: item.nextFollowUpAtRaw, notes: item.notes

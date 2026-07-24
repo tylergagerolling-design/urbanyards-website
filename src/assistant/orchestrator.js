@@ -30,6 +30,17 @@ function toolsForRouting(routing, resolvedEntity) {
   if (/\b(unpaid|outstanding|receivable)\b/i.test(routing.message) && /\binvoices?\b/i.test(routing.message)) calls.push({ name: "find_unpaid_invoices", input: {} });
   if (/\b(completed|finished)\b/i.test(routing.message) && /\b(uninvoiced|not (?:yet )?(?:been )?invoiced|without an invoice)\b/i.test(routing.message)) calls.push({ name: "find_completed_uninvoiced_work", input: {} });
   if (resolvedEntity?.recordType === "ticket") calls.push({ name: "get_ticket_details", input: { recordId: resolvedEntity.recordId } });
+  if (resolvedEntity?.record && /\b(related|relationship|history|everything about|connected)\b/i.test(routing.message)) {
+    calls.push({ name: "map_record_relationships", input: { recordType: resolvedEntity.recordType, record: resolvedEntity.record } });
+  }
+  if (resolvedEntity?.recordType === "ticket" && /\b(ready|readiness|complete|completion|missing|close|closeout)\b/i.test(routing.message)) {
+    calls.push({ name: "assess_ticket_readiness", input: { ticket: resolvedEntity.record } });
+  }
+  if (/\b(schedule|scheduling|calendar|conflict|availability|route|weather)\b/i.test(routing.message)) calls.push({ name: "analyze_schedule", input: {} });
+  if (/\b(document|documents|form|forms|proof|receipt|contract|attachment)\b/i.test(routing.message)) calls.push({ name: "analyze_documents", input: { record: resolvedEntity?.record || null } });
+  if (/\b(learn|estimate|estimated|actual|variance|future price|future quote)\b/i.test(routing.message) && /\b(job|jobs|work|cost|pricing|estimate|quote)\b/i.test(routing.message)) calls.push({ name: "learn_from_completed_work", input: {} });
+  if (/\b(lead|leads|prospect|follow.?up|next touch|conversion)\b/i.test(routing.message) && /\b(next|priority|recommend|overdue|insight|analy|who)\b/i.test(routing.message)) calls.push({ name: "analyze_lead_next_actions", input: {} });
+  if (/\b(proactive|risk|risks|what needs attention|falling through|missing across|operations check)\b/i.test(routing.message)) calls.push({ name: "detect_operational_risks", input: {} });
   const transitionStage = requestedTicketStage(routing.message);
   if (transitionStage && resolvedEntity?.recordType === "ticket") {
     calls.push({ name: "transition_ticket_stage", input: { ticketId: resolvedEntity.recordId, newStage: transitionStage } });
@@ -45,6 +56,7 @@ async function orchestrateDashboardRequest({ message, context = {}, actor, hasPe
   const snapshot = {
     priorityActions: context.priorityActions || [],
     tickets: context.tickets || [],
+    clients: context.clients || [],
     leads: context.leads || [],
     jobs: context.jobs || [],
     properties: context.properties || [],

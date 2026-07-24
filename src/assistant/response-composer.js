@@ -16,6 +16,10 @@ function composeModelContext({ routing, pageContext, resolvedEntity, toolResults
     "Memories are scoped, inspectable business context. Never treat a memory as a new permanent rule unless it was explicitly approved.",
     "UI actions below are validated navigation requests. Describe what opened or filtered, but never claim that a database record changed.",
     "Cite records by their provided displayId/title. Label facts, calculations, inferences, recommendations, assumptions, missing information, and partial results.",
+    "When intelligence tools provide evidence, confidence, relationships, conflicts, recommendations, or missingInformation, explain those fields clearly and keep conclusions tied to their cited records.",
+    "Scheduling analysis must distinguish stored schedule facts from unavailable live travel, weather, and worker-availability data.",
+    "Document analysis may use stored metadata and supplied extracted text only. Never claim to have read file contents that were not provided.",
+    "Learning means comparing approved history and using scoped memories; never silently train on private records or create a permanent rule without approval.",
     JSON.stringify({ routing, pageContext, memories, uiActions, memoryPreview, resolvedEntity: resolvedEntity ? {
       entityType: resolvedEntity.recordType,
       recordId: resolvedEntity.recordId,

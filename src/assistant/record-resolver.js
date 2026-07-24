@@ -15,6 +15,7 @@ function recordText(record = {}) {
 function flattenSnapshot(snapshot = {}) {
   const groups = [
     ["ticket", snapshot.tickets],
+    ["client", snapshot.clients],
     ["lead", snapshot.leads],
     ["job", snapshot.jobs],
     ["property", snapshot.properties],

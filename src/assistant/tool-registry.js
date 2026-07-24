@@ -4,6 +4,10 @@ const { flattenSnapshot, normalize } = require("./record-resolver");
 const { recordReference } = require("./types");
 const { TICKET_STAGE_LABELS } = require("../features/tickets/types/ticket-stage");
 const { transitionTicketStage } = require("../features/tickets/services/ticket-workflow-service");
+const {
+  assessTicketReadiness, completedWorkLearning, documentInsights, leadInsights,
+  proactiveRisks, relationshipMap, scheduleInsights
+} = require("./intelligence-service");
 
 function timeout(promise, timeoutMs, toolName) {
   let timer;
@@ -21,7 +25,7 @@ function timeout(promise, timeoutMs, toolName) {
 
 function routeFor(recordType) {
   return ({
-    ticket: "#tickets", job: "#calendar", lead: "#outreach", property: "#contacts",
+    ticket: "#tickets", job: "#calendar", lead: "#outreach", client: "#contacts", property: "#contacts",
     invoice: "#documents", expense: "#documents", document: "#documentation"
   })[recordType] || "#overview";
 }
@@ -194,6 +198,13 @@ function createToolRegistry({ permissionGuard }) {
   register({ name: "get_ticket_details", description: "Get one resolved ticket from the permitted context.", requiredPermission: "tickets:read", inputSchema: { recordId: "string" }, outputSchema: { records: "array", citations: "array" }, execute: getTicketDetails });
   register({ name: "find_unpaid_invoices", description: "Find unpaid invoices and calculate their known outstanding balance.", requiredPermission: "invoices:read", inputSchema: {}, outputSchema: { records: "array", calculation: "object", citations: "array" }, execute: findUnpaidInvoices });
   register({ name: "find_completed_uninvoiced_work", description: "Find completed work without a finalized invoice and total known value.", requiredPermission: "tickets:read", inputSchema: {}, outputSchema: { records: "array", calculation: "object", citations: "array" }, execute: findCompletedUninvoicedWork });
+  register({ name: "map_record_relationships", description: "Map authorized records related to the selected client, property, lead, ticket, invoice, expense, or document.", requiredPermission: "dashboard:read", inputSchema: { recordType: "string", record: "object" }, outputSchema: { records: "array", calculation: "object", citations: "array" }, execute: relationshipMap });
+  register({ name: "assess_ticket_readiness", description: "Check every tracked ticket requirement and explain what is complete, missing, or marked N/A.", requiredPermission: "tickets:read", inputSchema: { ticket: "object" }, outputSchema: { records: "array", calculation: "object", evidence: "array", missingInformation: "array", citations: "array" }, execute: assessTicketReadiness });
+  register({ name: "analyze_schedule", description: "Review authorized scheduled work for time conflicts and missing assignments without inventing travel or weather.", requiredPermission: "tickets:read", inputSchema: {}, outputSchema: { records: "array", conflicts: "array", calculation: "object", citations: "array" }, execute: scheduleInsights });
+  register({ name: "analyze_documents", description: "Review related document metadata and extracted content availability, identifying incomplete records.", requiredPermission: "dashboard:read", inputSchema: { record: "object" }, outputSchema: { records: "array", missingInformation: "array", citations: "array" }, execute: documentInsights });
+  register({ name: "learn_from_completed_work", description: "Compare completed-job estimated and actual costs to support better future estimates.", requiredPermission: "tickets:read", inputSchema: {}, outputSchema: { records: "array", calculation: "object", citations: "array" }, execute: completedWorkLearning });
+  register({ name: "analyze_lead_next_actions", description: "Rank active leads using follow-up timing and record completeness, then recommend the next touch.", requiredPermission: "leads:read", inputSchema: {}, outputSchema: { records: "array", recommendation: "string", citations: "array" }, execute: leadInsights });
+  register({ name: "detect_operational_risks", description: "Proactively identify blocked tickets, unpaid invoices, and documents needing review.", requiredPermission: "dashboard:read", inputSchema: {}, outputSchema: { records: "array", calculation: "object" }, execute: proactiveRisks });
   register({
     name: "transition_ticket_stage",
     description: "Validate and preview one legal ticket stage transition. Execution requires explicit button approval.",

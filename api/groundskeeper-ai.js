@@ -477,7 +477,7 @@ function consultationSettings(rows = []) {
     maxOutputTokens: numberSetting(values.gemini_max_output_tokens, Number(process.env.GEMINI_MAX_OUTPUT_TOKENS || 1200), 256, 4096),
     timeoutMs: numberSetting(values.gemini_timeout_ms, Number(process.env.GEMINI_TIMEOUT_MS || 12000), 2000, 30000),
     emergencyStop: booleanSetting(values.gemini_emergency_stop, String(process.env.GEMINI_EMERGENCY_STOP || "").toLowerCase() === "true"),
-    model: process.env.GEMINI_MODEL || "gemini-2.5-flash",
+    model: process.env.GEMINI_MODEL || "gemini-flash-latest",
     configured: Boolean(process.env.GEMINI_API_KEY)
   };
 }

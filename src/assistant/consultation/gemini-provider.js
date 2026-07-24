@@ -87,7 +87,7 @@ function usageMetadata(data = {}) {
   };
 }
 
-function createGeminiProvider({ apiKey = process.env.GEMINI_API_KEY, model = process.env.GEMINI_MODEL || "gemini-2.5-flash", fetchImpl = global.fetch } = {}) {
+function createGeminiProvider({ apiKey = process.env.GEMINI_API_KEY, model = process.env.GEMINI_MODEL || "gemini-flash-latest", fetchImpl = global.fetch } = {}) {
   return {
     name: "gemini",
     model,

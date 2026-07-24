@@ -104,23 +104,38 @@ function createGeminiProvider({ apiKey = process.env.GEMINI_API_KEY, model = pro
       signal?.addEventListener?.("abort", onAbort, { once: true });
       const startedAt = Date.now();
       try {
-        const response = await fetchImpl(`https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent`, {
+        const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent`;
+        const baseRequest = {
+          systemInstruction: { parts: [{ text: GEMINI_SYSTEM_INSTRUCTION }] },
+          contents: [{ role: "user", parts: [{ text: String(sanitizedContext || "") }] }],
+          generationConfig: {
+            responseMimeType: "application/json",
+            responseJsonSchema: RESPONSE_SCHEMA,
+            maxOutputTokens: Math.max(256, Math.min(4096, Number(maxOutputTokens) || 1200)),
+            temperature: 0.2
+          }
+        };
+        const requestOptions = (body) => ({
           method: "POST",
           headers: { "Content-Type": "application/json", "x-goog-api-key": apiKey },
-          body: JSON.stringify({
+          body: JSON.stringify(body),
+          signal: controller.signal
+        });
+        let response = await fetchImpl(endpoint, requestOptions(baseRequest));
+        if (response.status === 400) {
+          response = await fetchImpl(endpoint, requestOptions({
             systemInstruction: { parts: [{ text: GEMINI_SYSTEM_INSTRUCTION }] },
-            contents: [{ role: "user", parts: [{ text: String(sanitizedContext || "") }] }],
+            contents: [{ role: "user", parts: [{ text: `Return only one JSON object with keys summary, findings, risks, missingInformation, recommendation, and shouldEscalate. Each finding must contain finding, evidence, and confidence.\n\n${String(sanitizedContext || "")}` }] }],
             generationConfig: {
               responseMimeType: "application/json",
-              responseJsonSchema: RESPONSE_SCHEMA,
               maxOutputTokens: Math.max(256, Math.min(4096, Number(maxOutputTokens) || 1200)),
               temperature: 0.2
             }
-          }),
-          signal: controller.signal
-        });
+          }));
+        }
         if (response.status === 429) throw new ConsultationError("rate_limited", "Gemini consultation is temporarily rate limited.", 429);
         if (response.status === 401 || response.status === 403) throw new ConsultationError("invalid_key", "Gemini consultation is not configured correctly.", 503);
+        if (response.status === 400) throw new ConsultationError("invalid_request", "Gemini consultation configuration was rejected.", 503);
         if (!response.ok) throw new ConsultationError("provider_error", "Gemini consultation was unavailable.");
         const data = await response.json();
         const finishReason = data.candidates?.[0]?.finishReason || "";

@@ -55,6 +55,20 @@ test("successful Gemini consultation is structured and returns bounded usage met
   assert.equal(JSON.parse(request.options.body).generationConfig.responseMimeType, "application/json");
 });
 
+test("Gemini performs at most one schema fallback retry", async () => {
+  let calls = 0;
+  const provider = createGeminiProvider({
+    apiKey: "test-secret",
+    fetchImpl: async () => {
+      calls += 1;
+      return calls === 1 ? { ok: false, status: 400 } : geminiResponse();
+    }
+  });
+  const result = await provider.consult({ sanitizedContext: "{}" });
+  assert.equal(result.consultation.summary, structured.summary);
+  assert.equal(calls, 2);
+});
+
 test("Gemini invalid key, rate limit, empty result, and safety block are normalized", async () => {
   for (const [status, category] of [[401, "invalid_key"], [429, "rate_limited"]]) {
     const provider = createGeminiProvider({ apiKey: "x", fetchImpl: async () => ({ ok: false, status }) });

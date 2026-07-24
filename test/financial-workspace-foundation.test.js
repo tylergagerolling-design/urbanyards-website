@@ -13,7 +13,7 @@ const dashboardCss = fs.readFileSync(path.join(root, "dashboard.css"), "utf8");
 const authJs = fs.readFileSync(path.join(root, "netlify", "functions", "lib", "dashboard-auth.js"), "utf8");
 const financialApiJs = fs.readFileSync(path.join(root, "netlify", "functions", "dashboard-financial.js"), "utf8");
 const financialStorageJs = fs.readFileSync(path.join(root, "netlify", "functions", "dashboard-financial-storage.js"), "utf8");
-const { expensePath } = require("../netlify/functions/dashboard-financial")._internals;
+const { createInvoiceNumber, expensePath } = require("../netlify/functions/dashboard-financial")._internals;
 const storage = require("../netlify/functions/dashboard-financial-storage")._internals;
 
 test("financial workspace migration is additive and preserves canonical links", () => {
@@ -99,6 +99,15 @@ test("financial list endpoint enforces pagination, safe sorting, status, and sea
   assert.match(pathValue, /order=total.desc/);
   assert.match(pathValue, /status=eq.Recorded/);
   assert.doesNotMatch(pathValue, /fuel%2Ctest/);
+});
+
+test("authorized invoice creation does not recheck the browser role inside a service-role RPC", () => {
+  assert.equal(
+    createInvoiceNumber(new Date("2026-07-23T12:34:56.000Z"), "a1b2"),
+    "INV-20260723-123456-A1B2"
+  );
+  assert.doesNotMatch(financialApiJs, /rpc\/next_financial_invoice_number/);
+  assert.match(financialApiJs, /const invoiceNumber = createInvoiceNumber\(\)/);
 });
 
 test("Money permissions and private receipt upload are server enforced", () => {

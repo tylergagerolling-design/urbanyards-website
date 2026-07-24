@@ -7,6 +7,7 @@ const {
   supabaseAdminRequest,
   writeSystemError
 } = require("./lib/dashboard-auth");
+const crypto = require("node:crypto");
 
 const MAX_PAGE_SIZE = 100;
 const SORTS = new Set([
@@ -39,6 +40,11 @@ function safeDate(value, fallback) {
 
 function safeText(value, max = 100) {
   return String(value || "").trim().replace(/[%_,()]/g, " ").slice(0, max);
+}
+
+function createInvoiceNumber(now = new Date(), suffix = crypto.randomUUID().slice(0, 4)) {
+  const stamp = now.toISOString().replace(/\D/g, "").slice(0, 14);
+  return `INV-${stamp.slice(0, 8)}-${stamp.slice(8)}-${String(suffix).replace(/[^a-z0-9]/gi, "").slice(0, 4).toUpperCase()}`;
 }
 
 function expensePath(body) {
@@ -148,11 +154,7 @@ async function handleAction(body, actor = {}) {
     );
   }
   if (action === "create-invoice") {
-    const issued = await supabaseAdminRequest("rpc/next_financial_invoice_number", {
-      method: "POST",
-      body: JSON.stringify({ target_business_id: body.businessId || null })
-    });
-    const invoiceNumber = typeof issued === "string" ? issued : issued?.[0] || issued;
+    const invoiceNumber = createInvoiceNumber();
     return supabaseAdminRequest("invoices", {
       method: "POST",
       headers: { Prefer: "return=representation" },
@@ -254,4 +256,4 @@ exports.handler = async (event) => {
   }
 };
 
-exports._internals = { expensePath, safeDate, safeText };
+exports._internals = { createInvoiceNumber, expensePath, safeDate, safeText };

@@ -428,6 +428,7 @@
     assistantMemoriesError: "",
     copilotConversationMemories: [],
     copilotPendingMemory: null,
+    copilotPendingTransition: null,
     copilotFilters: {},
     copilotHighlightIds: [],
     data: {
@@ -2470,7 +2471,7 @@
       title: item.title,
       client: item.customer,
       property: item.property,
-      stage: item.stageLabel,
+      stage: item.stage,
       owner: item.ownerLabel,
       nextAction: item.nextAction,
       date: item.dateRaw,
@@ -2483,7 +2484,29 @@
       payment: item.paymentStatus,
       invoiceFinalized: item.invoiceFinalized,
       arrivalPhotos: item.beforePhotosUploaded,
-      completionPhotos: item.afterPhotosUploaded
+      completionPhotos: item.afterPhotosUploaded,
+      source: item.source,
+      customerId: item.customerId,
+      propertyId: item.propertyId,
+      primaryContact: item.primaryContact,
+      requestedService: item.requestedService,
+      scopeOfWork: item.scopeOfWork,
+      customerApprovalRecorded: item.customerApprovalRecorded,
+      costReviewComplete: item.costReviewComplete,
+      budgetComplete: item.budgetComplete,
+      scopeComplete: item.scopeComplete,
+      ownerApprovalRecorded: item.ownerApprovalRecorded,
+      draftInvoiceExists: item.draftInvoiceExists,
+      depositRequired: item.depositRequired,
+      depositPaid: item.depositPaid,
+      requiredDocumentsPresent: item.requiredDocumentsPresent,
+      scheduledDate: item.dateRaw,
+      assignedUserId: item.assignedUserId,
+      beforePhotosUploaded: item.beforePhotosUploaded,
+      afterPhotosUploaded: item.afterPhotosUploaded,
+      fieldCompletionNotes: item.fieldCompletionNotes,
+      invoiceFinalized: item.invoiceFinalized,
+      paymentStatus: item.paymentStatus
     });
     return {
       generatedAt: new Date().toISOString(),
@@ -2662,6 +2685,24 @@
       <p><strong>I recognized a correction.</strong> I can use it once, attach it to this record, or save it as an approved business rule.</p>
       <blockquote>${escapeHtml(preview.statement)}</blockquote>
       <div><button type="button" data-action="copilot-memory-use-once">Use once</button><button type="button" data-action="copilot-memory-save-record">Save for this record</button><button type="button" data-action="copilot-memory-save-rule">Save as business rule</button><button type="button" data-action="copilot-memory-cancel">Cancel</button></div>
+    </section>`;
+  }
+
+  function copilotTransitionPreviewHtml(preview) {
+    if (!preview?.ticketId || !preview?.currentStage || !preview?.newStage) return "";
+    state.copilotPendingTransition = {
+      ...preview,
+      approvalRequestId: state.groundskeeperLastMeta?.requestId || ""
+    };
+    return `<section class="copilot-memory-preview copilot-transition-preview" aria-label="Ticket stage change approval">
+      <p><strong>Review this ticket change</strong></p>
+      <dl>
+        <div><dt>Ticket</dt><dd>${escapeHtml(preview.ticketNumber || preview.ticketTitle || "Ticket")}</dd></div>
+        <div><dt>Current stage</dt><dd>${escapeHtml(preview.currentStageLabel || preview.currentStage)}</dd></div>
+        <div><dt>New stage</dt><dd>${escapeHtml(preview.newStageLabel || preview.newStage)}</dd></div>
+      </dl>
+      <p class="copilot-preview-warning">Nothing changes until you approve.</p>
+      <div><button type="button" data-action="copilot-transition-approve">Approve stage change</button><button type="button" data-action="copilot-transition-cancel">Cancel</button></div>
     </section>`;
   }
 
@@ -2895,7 +2936,7 @@
         const movement = actions.length ? `<div class="copilot-action-plan"><strong>I’m going to:</strong><ol>${actions.map((action) => `<li>${escapeHtml(action.type.replace(/_/g, " "))}</li>`).join("")}</ol></div>` : "";
         reply = {
           content: statuses.length ? statuses.join(" ") : answer,
-          html: `${movement}${copilotMemoryPreviewHtml(state.groundskeeperLastMeta?.memoryPreview)}${sources.length ? `<details class="copilot-sources"><summary>How I got this · ${sources.length} source${sources.length === 1 ? "" : "s"}</summary>${copilotRecordButtons(sources)}</details>` : ""}${copilotOutcomeHtml()}`
+          html: `${movement}${copilotMemoryPreviewHtml(state.groundskeeperLastMeta?.memoryPreview)}${copilotTransitionPreviewHtml(state.groundskeeperLastMeta?.transitionPreview)}${sources.length ? `<details class="copilot-sources"><summary>How I got this · ${sources.length} source${sources.length === 1 ? "" : "s"}</summary>${copilotRecordButtons(sources)}</details>` : ""}${copilotOutcomeHtml()}`
         };
       } else if (/\b(schedule|add visit|create visit)\b/.test(lower)) {
         reply = copilotSchedulePreview(message);
@@ -2919,7 +2960,7 @@
         const sources = copilotCitationRows(state.groundskeeperLastMeta?.citations || []);
         reply = {
           content: answer,
-          html: `${copilotMemoryPreviewHtml(state.groundskeeperLastMeta?.memoryPreview)}${sources.length ? `<details class="copilot-sources"><summary>How I got this · ${sources.length} source${sources.length === 1 ? "" : "s"}</summary>${copilotRecordButtons(sources)}</details>` : ""}${copilotOutcomeHtml()}`
+          html: `${copilotMemoryPreviewHtml(state.groundskeeperLastMeta?.memoryPreview)}${copilotTransitionPreviewHtml(state.groundskeeperLastMeta?.transitionPreview)}${sources.length ? `<details class="copilot-sources"><summary>How I got this · ${sources.length} source${sources.length === 1 ? "" : "s"}</summary>${copilotRecordButtons(sources)}</details>` : ""}${copilotOutcomeHtml()}`
         };
       }
       copilotPush("assistant", reply.content, reply.html);
@@ -20856,6 +20897,53 @@ Requirements:
         state.copilotPendingMemory = null;
         copilotPush("assistant", "Correction cancelled. Nothing was remembered or changed.");
         renderDashboardCopilot();
+        return;
+      }
+      if (action === "copilot-transition-approve") {
+        const preview = state.copilotPendingTransition;
+        if (!preview) return;
+        try {
+          state.copilotLoading = true;
+          renderDashboardCopilot();
+          const result = await dashboardTicketRequest("transition", {
+            id: preview.ticketId,
+            toStage: preview.newStage,
+            notes: "AI-initiated ticket stage transition approved by the owner.",
+            aiInitiated: true,
+            ownerApproved: true,
+            approvalRequestId: preview.approvalRequestId
+          });
+          state.copilotPendingTransition = null;
+          await refreshDashboard({ quiet: true });
+          const updatedStage = result?.ticket?.stage || result?.stage || preview.newStage;
+          copilotPush("assistant", `${preview.ticketNumber || preview.ticketTitle || "The ticket"} changed from ${preview.currentStageLabel || preview.currentStage} to ${ticketStageLabel(updatedStage)}. The approved change was recorded in the audit history.`);
+        } catch (error) {
+          copilotPush("assistant", `${error.message || "I couldn't complete that stage change."} No success was recorded; refresh the ticket before trying again.`);
+        } finally {
+          state.copilotLoading = false;
+          renderDashboardCopilot();
+        }
+        return;
+      }
+      if (action === "copilot-transition-cancel") {
+        const preview = state.copilotPendingTransition;
+        if (!preview) return;
+        try {
+          state.copilotLoading = true;
+          renderDashboardCopilot();
+          await dashboardTicketRequest("ai-transition-cancel", {
+            id: preview.ticketId,
+            toStage: preview.newStage,
+            approvalRequestId: preview.approvalRequestId
+          });
+          state.copilotPendingTransition = null;
+          copilotPush("assistant", `Cancelled the proposed change for ${preview.ticketNumber || preview.ticketTitle || "the ticket"}. Its stage was not changed.`);
+        } catch (error) {
+          copilotPush("assistant", error.message || "I couldn't record the cancellation. The ticket stage was not changed.");
+        } finally {
+          state.copilotLoading = false;
+          renderDashboardCopilot();
+        }
         return;
       }
       if (action === "copilot-rate-outcome") {

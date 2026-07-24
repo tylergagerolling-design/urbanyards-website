@@ -650,6 +650,25 @@ async function handler(req, res) {
         recentEntities: asArray(context?.recentEntities),
         memories: availableMemories
       });
+      if (["invalid", "permission_denied"].includes(orchestration.transitionAttempt?.outcome)) {
+        await writeAuditLog({
+          actor: dashboardActor,
+          action: orchestration.transitionAttempt.outcome === "permission_denied" ? "ai_ticket_transition_permission_denied" : "ai_ticket_transition_invalid",
+          entityType: "job_tickets",
+          entityId: orchestration.transitionAttempt.ticketId || null,
+          oldValue: { stage: orchestration.transitionAttempt.currentStage || null },
+          newValue: { stage: orchestration.transitionAttempt.requestedStage || null },
+          metadata: {
+            ai_initiated: true,
+            owner_approved: false,
+            outcome: orchestration.transitionAttempt.outcome,
+            reason: orchestration.transitionAttempt.error,
+            code: orchestration.transitionAttempt.code,
+            request_id: id
+          },
+          module: "tickets"
+        });
+      }
     } catch (error) {
       console.warn(JSON.stringify({ event: "groundskeeper_orchestration_recovery", requestId: id, message: error.message }));
       orchestration = {
@@ -726,6 +745,7 @@ async function handler(req, res) {
         verification: orchestration.verification,
         uiActions: orchestration.uiActions,
         memoryPreview: orchestration.memoryPreview,
+        transitionPreview: orchestration.transitionPreview,
         diagnostics: process.env.NODE_ENV === "production" ? undefined : orchestration.diagnostics
       } : {})
     });

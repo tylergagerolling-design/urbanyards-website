@@ -568,7 +568,9 @@ async function transitionTicket(id, toStage, options, actor, event, requestId) {
       stage: result.data.stage,
       status: updatePayload.status,
       nextAction: updatePayload.next_action,
-      sourceStatus: options.source_status || options.sourceStatus || null
+      sourceStatus: options.source_status || options.sourceStatus || null,
+      aiInitiated: options.aiInitiated === true,
+      ownerApproved: options.ownerApproved === true
     }
   }, id, actor);
   const rows = await supabaseAdminRequest("job_ticket_events", {
@@ -585,7 +587,13 @@ async function transitionTicket(id, toStage, options, actor, event, requestId) {
     entityId: id,
     oldValue: eventPayload.old_value,
     newValue: eventPayload.new_value,
-    metadata: { from_stage: eventPayload.from_stage, to_stage: eventPayload.to_stage },
+    metadata: {
+      from_stage: eventPayload.from_stage,
+      to_stage: eventPayload.to_stage,
+      ai_initiated: options.aiInitiated === true,
+      owner_approved: options.ownerApproved === true,
+      approval_request_id: cleanText(options.approvalRequestId, 160)
+    },
     event,
     module: "tickets"
   });
@@ -631,7 +639,7 @@ exports.handler = async (event) => {
   try {
     body = parseBody(event);
     const action = String(body.action || "").trim().toLowerCase();
-    if (!["list", "events", "create", "update", "delete", "transition", "owner-close-rent-deduction", "owner-finalize-ticket", "event"].includes(action)) {
+    if (!["list", "events", "create", "update", "delete", "transition", "ai-transition-cancel", "owner-close-rent-deduction", "owner-finalize-ticket", "event"].includes(action)) {
       return json(400, { error: "Unsupported ticket action.", requestId });
     }
 
@@ -730,6 +738,31 @@ exports.handler = async (event) => {
       if (!id) return json(400, { error: "A valid ticket id is required.", requestId });
       const result = await transitionTicket(id, body.toStage || body.stage, body, actor, event, requestId);
       return json(200, { ok: true, ...result, requestId });
+    }
+
+    if (action === "ai-transition-cancel") {
+      const id = uuidOrNull(body.id || body.ticketId);
+      if (!id) return json(400, { error: "A valid ticket id is required.", requestId });
+      const current = await getTicket(id);
+      if (!current?.id) return json(404, { error: "Ticket was not found.", requestId });
+      const requestedStage = cleanText(body.toStage || body.stage, 80);
+      await writeAuditLog({
+        actor,
+        action: "ai_ticket_transition_cancelled",
+        entityType: "job_tickets",
+        entityId: id,
+        oldValue: { stage: current.stage },
+        newValue: { stage: requestedStage },
+        metadata: {
+          ai_initiated: true,
+          owner_approved: false,
+          outcome: "cancelled",
+          approval_request_id: cleanText(body.approvalRequestId, 160)
+        },
+        event,
+        module: "tickets"
+      });
+      return json(200, { ok: true, cancelled: true, ticketId: id, currentStage: current.stage, requestedStage, requestId });
     }
 
     if (action === "owner-close-rent-deduction") {

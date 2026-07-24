@@ -2,6 +2,8 @@
 
 const { flattenSnapshot, normalize } = require("./record-resolver");
 const { recordReference } = require("./types");
+const { TICKET_STAGE_LABELS } = require("../features/tickets/types/ticket-stage");
+const { transitionTicketStage } = require("../features/tickets/services/ticket-workflow-service");
 
 function timeout(promise, timeoutMs, toolName) {
   let timer;
@@ -129,6 +131,57 @@ function findCompletedUninvoicedWork({ snapshot, limit = 20 }) {
   };
 }
 
+function resolveTicketStage(value) {
+  const normalized = normalize(value).replace(/\s+/g, "_");
+  if (Object.prototype.hasOwnProperty.call(TICKET_STAGE_LABELS, normalized)) return normalized;
+  const labelMatch = Object.entries(TICKET_STAGE_LABELS).find(([, label]) => normalize(label) === normalize(value));
+  return labelMatch?.[0] || "";
+}
+
+function previewTicketStageTransition({ ticketId, newStage, snapshot, actor }) {
+  const ticket = (snapshot.tickets || []).find((item) => String(item.id) === String(ticketId));
+  if (!ticket) {
+    const error = new Error("The requested ticket was not found in the permitted dashboard records.");
+    error.code = "TICKET_NOT_FOUND";
+    throw error;
+  }
+  if (ticket.source !== "ticket" || !/^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(String(ticket.id || ""))) {
+    const error = new Error("Only canonical job tickets can be moved by Groundskeeper AI.");
+    error.code = "TICKET_NOT_CANONICAL";
+    throw error;
+  }
+  const target = resolveTicketStage(newStage);
+  if (!target) {
+    const error = new Error("The requested ticket stage is not supported.");
+    error.code = "TICKET_STAGE_INVALID";
+    throw error;
+  }
+  const result = transitionTicketStage({ user: actor, ticket, toStage: target, correlationId: "assistant-preview" });
+  if (!result.success) {
+    const error = new Error(result.error || "That ticket stage transition is not allowed.");
+    error.code = result.errorCode || "TICKET_STAGE_TRANSITION_INVALID";
+    error.context = result.context || {};
+    throw error;
+  }
+  return {
+    summary: `${ticket.number || ticket.title || "Ticket"} can move from ${TICKET_STAGE_LABELS[ticket.stage] || ticket.stage} to ${TICKET_STAGE_LABELS[target] || target} after explicit approval.`,
+    preview: {
+      action: "transition_ticket_stage",
+      ticketId: ticket.id,
+      ticketNumber: ticket.number || "",
+      ticketTitle: ticket.title || "",
+      currentStage: ticket.stage,
+      currentStageLabel: TICKET_STAGE_LABELS[ticket.stage] || ticket.stage,
+      newStage: target,
+      newStageLabel: TICKET_STAGE_LABELS[target] || target,
+      auditEvent: result.context.auditEvent
+    },
+    records: [{ ...toReference("ticket", ticket), stage: ticket.stage }],
+    citations: [toReference("ticket", ticket)],
+    partial: false
+  };
+}
+
 function createToolRegistry({ permissionGuard }) {
   const definitions = new Map();
   const register = (tool) => {
@@ -141,6 +194,17 @@ function createToolRegistry({ permissionGuard }) {
   register({ name: "get_ticket_details", description: "Get one resolved ticket from the permitted context.", requiredPermission: "tickets:read", inputSchema: { recordId: "string" }, outputSchema: { records: "array", citations: "array" }, execute: getTicketDetails });
   register({ name: "find_unpaid_invoices", description: "Find unpaid invoices and calculate their known outstanding balance.", requiredPermission: "invoices:read", inputSchema: {}, outputSchema: { records: "array", calculation: "object", citations: "array" }, execute: findUnpaidInvoices });
   register({ name: "find_completed_uninvoiced_work", description: "Find completed work without a finalized invoice and total known value.", requiredPermission: "tickets:read", inputSchema: {}, outputSchema: { records: "array", calculation: "object", citations: "array" }, execute: findCompletedUninvoicedWork });
+  register({
+    name: "transition_ticket_stage",
+    description: "Validate and preview one legal ticket stage transition. Execution requires explicit button approval.",
+    requiredPermission: "tickets:read",
+    classification: "write",
+    requiresConfirmation: true,
+    inputSchema: { ticketId: "string", newStage: "string" },
+    outputSchema: { preview: "object", records: "array", citations: "array" },
+    preview: previewTicketStageTransition,
+    execute: previewTicketStageTransition
+  });
   return {
     definitions: () => [...definitions.values()].map(({ execute, ...definition }) => definition),
     async execute(name, input, runtime) {
@@ -153,12 +217,16 @@ function createToolRegistry({ permissionGuard }) {
       const startedAt = Date.now();
       try {
         permissionGuard.assert(runtime.actor, tool.requiredPermission);
-        if (tool.classification !== "read" || tool.requiresConfirmation) {
-          const error = new Error(`${name} must produce an approval preview before it can change records.`);
-          error.code = "CONFIRMATION_REQUIRED";
-          throw error;
+        if (tool.classification !== "read") {
+          if (!tool.requiresConfirmation || typeof tool.preview !== "function") {
+            const error = new Error(`${name} is not permitted to change records without a registered approval preview.`);
+            error.code = "CONFIRMATION_REQUIRED";
+            throw error;
+          }
+          const output = await timeout(tool.preview({ ...input, snapshot: runtime.snapshot, pageContext: runtime.pageContext, actor: runtime.actor }), tool.timeoutMs, name);
+          return { name, ok: true, output, previewOnly: true, requiresConfirmation: true, latencyMs: Date.now() - startedAt };
         }
-        const output = await timeout(tool.execute({ ...input, snapshot: runtime.snapshot, pageContext: runtime.pageContext }), tool.timeoutMs, name);
+        const output = await timeout(tool.execute({ ...input, snapshot: runtime.snapshot, pageContext: runtime.pageContext, actor: runtime.actor }), tool.timeoutMs, name);
         return { name, ok: true, output, latencyMs: Date.now() - startedAt };
       } catch (error) {
         return {
@@ -173,4 +241,4 @@ function createToolRegistry({ permissionGuard }) {
   };
 }
 
-module.exports = { createToolRegistry, findCompletedUninvoicedWork, findUnpaidInvoices, getAttentionItems, getTicketDetails, searchRecords };
+module.exports = { createToolRegistry, findCompletedUninvoicedWork, findUnpaidInvoices, getAttentionItems, getTicketDetails, previewTicketStageTransition, resolveTicketStage, searchRecords };

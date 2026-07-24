@@ -17,6 +17,11 @@ function queryFromMessage(message) {
     .trim();
 }
 
+function requestedTicketStage(message) {
+  const match = String(message || "").match(/\b(?:move|transition|advance|push)\b[\s\S]*?\bto\s+([a-z][a-z _-]{1,60})\s*[.!?]?$/i);
+  return match?.[1]?.trim() || "";
+}
+
 function toolsForRouting(routing, resolvedEntity) {
   const calls = [];
   if (routing.intents.includes("record_search")) calls.push({ name: "search_records", input: { query: queryFromMessage(routing.message) } });
@@ -25,6 +30,10 @@ function toolsForRouting(routing, resolvedEntity) {
   if (/\b(unpaid|outstanding|receivable)\b/i.test(routing.message) && /\binvoices?\b/i.test(routing.message)) calls.push({ name: "find_unpaid_invoices", input: {} });
   if (/\b(completed|finished)\b/i.test(routing.message) && /\b(uninvoiced|not (?:yet )?(?:been )?invoiced|without an invoice)\b/i.test(routing.message)) calls.push({ name: "find_completed_uninvoiced_work", input: {} });
   if (resolvedEntity?.recordType === "ticket") calls.push({ name: "get_ticket_details", input: { recordId: resolvedEntity.recordId } });
+  const transitionStage = requestedTicketStage(routing.message);
+  if (transitionStage && resolvedEntity?.recordType === "ticket") {
+    calls.push({ name: "transition_ticket_stage", input: { ticketId: resolvedEntity.recordId, newStage: transitionStage } });
+  }
   return calls.filter((call, index, items) => items.findIndex((candidate) => candidate.name === call.name && JSON.stringify(candidate.input) === JSON.stringify(call.input)) === index);
 }
 
@@ -77,6 +86,16 @@ async function orchestrateDashboardRequest({ message, context = {}, actor, hasPe
   })).filter((memory) => memory.statement);
   const relevantMemory = relevantMemories([...memories, ...conversationMemories], { actor, pageContext, resolvedEntity }).map(toModelMemory);
   const uiActions = planUIActions({ message, routing, resolvedEntity, citations });
+  const transitionResult = toolResults.find((result) => result.name === "transition_ticket_stage") || null;
+  const transitionPreview = transitionResult?.ok ? transitionResult.output?.preview || null : null;
+  const transitionAttempt = transitionResult ? {
+    ticketId: resolvedEntity?.recordId || "",
+    currentStage: (snapshot.tickets || []).find((ticket) => String(ticket.id) === String(resolvedEntity?.recordId || ""))?.stage || "",
+    requestedStage: requestedTicketStage(message),
+    outcome: transitionResult.ok ? "preview_ready" : (transitionResult.code === "TICKET_STAGE_TRANSITION_DENIED" || transitionResult.code === "PERMISSION_DENIED" ? "permission_denied" : "invalid"),
+    error: transitionResult.ok ? "" : transitionResult.error,
+    code: transitionResult.ok ? "" : transitionResult.code
+  } : null;
   const diagnostics = {
     intentRoutingMs: toolStartedAt - startedAt,
     recordResolutionMs: 0,
@@ -96,10 +115,12 @@ async function orchestrateDashboardRequest({ message, context = {}, actor, hasPe
     diagnostics,
     registeredTools: registry.definitions(),
     memoryPreview,
+    transitionPreview,
+    transitionAttempt,
     relevantMemory,
     uiActions,
     modelContext: composeModelContext({ routing, pageContext, resolvedEntity, toolResults, verification, memories: relevantMemory, uiActions, memoryPreview })
   };
 }
 
-module.exports = { orchestrateDashboardRequest, toolsForRouting };
+module.exports = { orchestrateDashboardRequest, requestedTicketStage, toolsForRouting };

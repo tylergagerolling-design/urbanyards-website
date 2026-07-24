@@ -29,6 +29,14 @@ function composeModelContext({ routing, pageContext, resolvedEntity, toolResults
 
 function composeDeterministicReply(toolResults = []) {
   const successful = new Map(toolResults.filter((result) => result.ok).map((result) => [result.name, result.output]));
+  const transitionResult = toolResults.find((result) => result.name === "transition_ticket_stage");
+  if (transitionResult?.ok && transitionResult.output?.preview) {
+    const preview = transitionResult.output.preview;
+    return `I prepared a stage-change preview for ${preview.ticketNumber || preview.ticketTitle || "this ticket"}: ${preview.currentStageLabel} → ${preview.newStageLabel}. Nothing has changed yet. Use the Approve or Cancel button below.`;
+  }
+  if (transitionResult && !transitionResult.ok) {
+    return `I blocked that stage change. ${transitionResult.error || "The requested transition is not legal from the ticket’s current stage."} Nothing was changed.`;
+  }
   const unpaid = successful.get("find_unpaid_invoices");
   if (unpaid?.calculation) {
     const count = unpaid.records?.length || 0;

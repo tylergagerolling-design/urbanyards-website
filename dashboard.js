@@ -2558,18 +2558,21 @@
     shell.className = `dashboard-copilot${state.copilotOpen ? " is-open" : ""}`;
     shell.innerHTML = `
       <button class="dashboard-copilot-launcher" type="button" data-action="toggle-dashboard-copilot" aria-expanded="${state.copilotOpen ? "true" : "false"}">
-        <span aria-hidden="true">AI</span><strong>Ask Groundskeeper</strong>
+        <img src="images/groundskeeper-ai/raccoon-mascot.webp" alt="" aria-hidden="true">
+        <span class="sr-only">Ask Groundskeeper AI</span>
       </button>
       <section class="dashboard-copilot-panel" aria-label="Groundskeeper dashboard assistant" ${state.copilotOpen ? "" : "hidden"}>
-        <header>
-          <div><p class="eyebrow">Groundskeeper</p><h3>Dashboard helper</h3></div>
-          <button type="button" data-action="toggle-dashboard-copilot" aria-label="Close Groundskeeper">×</button>
+        <header class="copilot-landscape">
+          <span class="copilot-mountain is-back" aria-hidden="true"></span>
+          <span class="copilot-mountain is-front" aria-hidden="true"></span>
+          <span class="copilot-birds" aria-hidden="true">⌁⌁</span>
+          <span class="copilot-tree-line" aria-hidden="true"></span>
+          <button type="button" data-action="toggle-dashboard-copilot" aria-label="Close Groundskeeper AI">×</button>
         </header>
-        <div class="dashboard-copilot-suggestions">
-          <button type="button" data-action="copilot-prompt" data-prompt="What needs my attention today?">My work today</button>
-          <button type="button" data-action="copilot-prompt" data-prompt="Which tickets are blocked from completion?">Completion blockers</button>
-          <button type="button" data-action="copilot-prompt" data-prompt="Show upcoming Kennedy visits">Find records</button>
-          <button type="button" data-action="copilot-prompt" data-prompt="Help me schedule a visit">Schedule a visit</button>
+        <div class="copilot-identity">
+          <span class="copilot-avatar"><img src="images/groundskeeper-ai/raccoon-mascot.webp" alt="Groundskeeper AI raccoon mascot"></span>
+          <h3>Groundskeeper AI</h3>
+          <p>Your smart helper for jobs, clients, and everything in between.</p>
         </div>
         <div class="dashboard-copilot-messages" data-copilot-messages aria-live="polite">
           ${state.copilotMessages.length ? state.copilotMessages.map((message) => `
@@ -2581,10 +2584,16 @@
           ${state.copilotLoading ? `<article class="copilot-message is-assistant is-loading"><p>Checking your dashboard…</p></article>` : ""}
         </div>
         <form data-dashboard-copilot-form>
-          <textarea name="message" rows="2" maxlength="700" placeholder="Ask about a ticket, lead, invoice, expense, document, or schedule…" required></textarea>
-          <button type="submit"${state.copilotLoading ? " disabled" : ""}>Send</button>
+          <label class="sr-only" for="groundskeeper-copilot-message">Message Groundskeeper AI</label>
+          <textarea id="groundskeeper-copilot-message" name="message" rows="1" maxlength="700" placeholder="How can I help you today?" required></textarea>
+          <button type="submit" aria-label="Send message"${state.copilotLoading ? " disabled" : ""}><span aria-hidden="true">➤</span></button>
         </form>
-        <small class="dashboard-copilot-trust">Records are only changed after you approve a preview.</small>
+        <nav class="copilot-shortcuts" aria-label="Groundskeeper shortcuts">
+          <button type="button" data-action="copilot-shortcut" data-copilot-section="tickets"><span aria-hidden="true">✓</span><strong>Tickets</strong></button>
+          <button type="button" data-action="copilot-shortcut" data-copilot-section="outreach"><span aria-hidden="true">♙</span><strong>Leads</strong></button>
+          <button type="button" data-action="copilot-shortcut" data-copilot-section="reports"><span aria-hidden="true">▥</span><strong>Reports</strong></button>
+        </nav>
+        <small class="dashboard-copilot-trust">Changes are made only after you approve a preview.</small>
       </section>`;
     const messages = shell.querySelector("[data-copilot-messages]");
     if (messages) messages.scrollTop = messages.scrollHeight;
@@ -20526,11 +20535,26 @@ Requirements:
         state.copilotOpen = !state.copilotOpen;
         renderDashboardCopilot();
         if (state.copilotOpen) qs("[data-dashboard-copilot-form] textarea")?.focus();
+        else qs(".dashboard-copilot-launcher")?.focus();
         return;
       }
       if (action === "copilot-prompt") {
         state.copilotOpen = true;
         await handleDashboardCopilotMessage(copilotTarget.dataset.prompt || "");
+        return;
+      }
+      if (action === "copilot-shortcut") {
+        const section = copilotTarget.dataset.copilotSection || "overview";
+        if (section === "reports") {
+          state.moneyView = "reports";
+          await loadMoneyView("reports");
+          setActiveSection("documents");
+          replaceDashboardHash("documents");
+        } else {
+          setActiveSection(section);
+          replaceDashboardHash(section);
+        }
+        await render();
         return;
       }
       if (action === "copilot-cancel-schedule") {
@@ -20570,6 +20594,13 @@ Requirements:
       setActiveSection(nextSection);
       replaceDashboardHash(nextSection);
       await render();
+    });
+
+    document.addEventListener("keydown", (event) => {
+      if (event.key !== "Escape" || !state.copilotOpen) return;
+      state.copilotOpen = false;
+      renderDashboardCopilot();
+      qs(".dashboard-copilot-launcher")?.focus();
     });
 
     if (els.sidebarClose) {

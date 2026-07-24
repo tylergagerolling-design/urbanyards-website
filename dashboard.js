@@ -222,12 +222,21 @@
     "auditLogs"
   ];
   const GLOBAL_ADD_ITEMS = [
-    { key: "prospect", label: "Prospect", action: "new-outreach-prospect", icon: "outreach-send.svg", permission: "create" },
-    { key: "contact", label: "Contact", action: "quick-add-client", icon: "new-lead-user.svg", permission: "create" },
-    { key: "property", label: "Property", action: "quick-add-property", icon: "properties-building.svg", permission: "create" },
-    { key: "job", label: "Job", action: "quick-add-job", icon: "calendar.svg", permission: "create" },
-    { key: "follow-up", label: "Follow-up", action: "quick-add-follow-up", icon: "upcoming-clock.svg", permission: "create" },
-    { key: "equipment", label: "Equipment Item", action: "quick-add-equipment", icon: "activity-check-circle.svg", permission: "create" }
+    { key: "lead", label: "Lead", action: "new-outreach-prospect", icon: "outreach-send.svg", permission: "create" },
+    { key: "ticket", label: "Ticket", action: "quick-add-quote", icon: "task-list.svg", permission: "create" },
+    { key: "visit", label: "Visit", action: "quick-add-job", icon: "jobs-calendar.svg", permission: "create" },
+    { key: "expense", label: "Expense", action: "quick-add-expense", icon: "waiting-payment.svg", permission: "create" },
+    { key: "invoice", label: "Invoice", action: "create-financial-invoice", icon: "invoice.svg", permission: "create" },
+    { key: "vendor", label: "Vendor", action: "quick-add-vendor", icon: "properties-building.svg", permission: "create" },
+    { key: "note", label: "Note", action: "quick-add-operation", icon: "activity-check.svg", permission: "create" }
+  ];
+  const TICKET_DRAFT_KEY = "urbanYardsTicketCreateDraft";
+  const TICKET_TEMPLATES = [
+    { key: "", label: "Start blank", service: "", notes: "" },
+    { key: "groundskeeping", label: "Routine groundskeeping", service: "Routine groundskeeping", notes: "Inspect grounds, complete recurring care, photograph arrival and completion, and note exceptions." },
+    { key: "cleanup", label: "Property cleanup", service: "Property cleanup", notes: "Confirm cleanup area, haul-away needs, access, arrival condition, and completion proof." },
+    { key: "walkthrough", label: "Property walkthrough", service: "Walkthrough & Email", notes: "Walk the property, photograph findings, and send the property contact a concise condition summary." },
+    { key: "landscaping", label: "Landscaping project", service: "Landscaping", notes: "Confirm scope, materials, measurements, budget approval, schedule, site proof, actuals, and invoice requirements." }
   ];
   const OWNER_KANBAN_FILTER_KEY = "urbanYardsOwnerKanbanFilters";
   const OWNER_KANBAN_SAVED_VIEWS = [
@@ -327,6 +336,7 @@
     moneyLoading: false,
     moneyError: "",
     moneySearch: "",
+    moneyDisplay: "cards",
     moneyExpensePage: 1,
     moneyExpensePageSize: 50,
     moneyExpenseSort: "expense_date.desc",
@@ -10772,7 +10782,7 @@
     const transitionBlockers = ticketTransitionOptions(ticket || {})
       .flatMap((item) => item.missing || []);
     const blockers = ticket.blockers?.length ? ticket.blockers : [...new Set(transitionBlockers)];
-    return `<section class="ticket-drawer-card">
+    return `<section class="ticket-drawer-card" id="ticket-next-requirements">
       <div class="ticket-drawer-card-heading">
         <h4>Next requirements</h4>
         <span>${escapeHtml(ticket.nextAction || "Open ticket")}</span>
@@ -10815,7 +10825,7 @@
     const canClose = currentSessionRole() === "owner" && ["field_work_complete", "completion_review", "invoice_review", "invoice_sent", "partially_paid", "paid"].includes(stage);
     const { completed, notApplicable, notes } = ticketCompletionChecklistState(ticket);
     const resolved = ticketCompletionChecklistItems.filter((item) => ticketCompletionItemComplete(ticket, item.key, completed) || notApplicable[item.key]).length;
-    return `<section class="ticket-drawer-card ticket-completion-checklist" aria-label="Unified completion checklist">
+    return `<section class="ticket-drawer-card ticket-completion-checklist" id="ticket-closeout" aria-label="Unified completion checklist">
       <div class="ticket-drawer-card-heading">
         <div>
           <p class="eyebrow">One-Step Closeout</p>
@@ -11011,7 +11021,7 @@
       }
     ];
 
-    return `<section class="ticket-workbench" data-ticket-workbench>
+    return `<section class="ticket-workbench" id="ticket-workbench" data-ticket-workbench>
       <div class="ticket-workbench-heading">
         <div>
           <p class="eyebrow">Ticket Workbench</p>
@@ -11721,17 +11731,27 @@
       setDashboardState("Your dashboard role cannot create that type of ticket.", "error");
       return;
     }
+    let savedDraft = {};
+    try {
+      savedDraft = JSON.parse(localStorage.getItem(TICKET_DRAFT_KEY) || "{}");
+    } catch (_error) {
+      savedDraft = {};
+    }
     const values = {
-      customerName: prefill.customerName || "",
-      email: prefill.email || "",
-      phone: prefill.phone || "",
-      city: prefill.city || "",
-      propertyType: prefill.propertyType || "",
-      service: prefill.service || "",
-      visitDate: prefill.visitDate || todayKey(),
-      visitWindow: prefill.visitWindow || "",
-      notes: prefill.notes || ""
+      customerName: prefill.customerName || savedDraft.customer_name || "",
+      email: prefill.email || savedDraft.email || "",
+      phone: prefill.phone || savedDraft.phone || "",
+      city: prefill.city || savedDraft.city || "",
+      propertyType: prefill.propertyType || savedDraft.property_type || "",
+      service: prefill.service || savedDraft.service || "",
+      visitDate: prefill.visitDate || savedDraft.visit_date || todayKey(),
+      visitWindow: prefill.visitWindow || savedDraft.visit_window || "9 AM - 11 AM",
+      notes: prefill.notes || savedDraft.notes || ""
     };
+    const contacts = state.data.contacts || [];
+    const properties = state.data.outreachProperties || [];
+    const contactOptions = contacts.map((contact) => `<option value="${escapeHtml(contact.id)}" data-name="${escapeHtml(contact.name)}" data-email="${escapeHtml(contact.email === "No email" ? "" : contact.email)}" data-phone="${escapeHtml(contact.phone === "No phone" ? "" : contact.phone)}" data-property="${escapeHtml(contact.property || contact.address || "")}">${escapeHtml([contact.name, contact.company].filter(Boolean).join(" — "))}</option>`).join("");
+    const propertyOptions = properties.map((property) => `<option value="${escapeHtml(property.id)}" data-name="${escapeHtml(property.propertyName || property.address || "")}" data-city="${escapeHtml([property.address, property.city].filter(Boolean).join(", "))}" data-type="${escapeHtml(property.propertyType || "")}">${escapeHtml([property.propertyName, property.company, property.city].filter(Boolean).join(" — "))}</option>`).join("");
     openDetailDrawer();
     els.detailContent.innerHTML = `
       <div class="drawer-content ticket-detail-drawer">
@@ -11739,78 +11759,115 @@
         <div class="ticket-drawer-heading">
           <div>
             <h3>Create ticket</h3>
-            <p>Start with a lead intake ticket, or create a scheduled work visit when the job is already ready.</p>
+            <p>Three short steps. Your draft saves automatically until the ticket is created.</p>
           </div>
         </div>
-        <form class="drawer-form drawer-ticket-create-form ${safeType === "field" ? "is-field-ticket" : ""}" data-ticket-create-form>
-          <label>Ticket type
-            <select name="ticket_type" data-ticket-type-select>
-              <option value="quote"${safeType === "quote" ? " selected" : ""}>Lead intake / quote request</option>
-              <option value="field"${safeType === "field" ? " selected" : ""}>Scheduled work visit</option>
-            </select>
-          </label>
-          <section class="ticket-create-guidance span-full" aria-live="polite">
-            <article class="ticket-create-guidance-card ticket-create-guidance-card--quote">
-              <div>
-                <p class="eyebrow">Lead Intake Path</p>
-                <h4>Capture the request, then move it through quote and approval.</h4>
-                <p>Use this for new website requests, call-ins, property manager leads, and prospects that still need scope, pricing, or customer approval.</p>
-              </div>
-              <ol>
-                <li><strong>Lead</strong><span>Contact, service, property, and next follow-up.</span></li>
-                <li><strong>Quote</strong><span>Scope, estimate, photos, and customer approval.</span></li>
-                <li><strong>Money</strong><span>Cost review and invoice preparation before scheduling.</span></li>
-              </ol>
-            </article>
-            <article class="ticket-create-guidance-card ticket-create-guidance-card--field">
-              <div>
-                <p class="eyebrow">Scheduled Work Path</p>
-                <h4>Create a visit that is ready for the Work queue.</h4>
-                <p>Use this when the job is already approved or you are adding a planned visit directly to the schedule.</p>
-              </div>
-              <ol>
-                <li><strong>Schedule</strong><span>Date, window, site, and service.</span></li>
-                <li><strong>Complete</strong><span>Arrival photos, completion photos, forms, and notes.</span></li>
-                <li><strong>Closeout</strong><span>Review actuals, documents, invoice, and payment.</span></li>
-              </ol>
-            </article>
-          </section>
-          <label>Customer or site
-            <input name="customer_name" placeholder="Client, property, or site name" value="${escapeHtml(values.customerName)}" required>
-          </label>
-          <label>Email
-            <input name="email" type="email" placeholder="team@example.com" value="${escapeHtml(values.email)}">
-          </label>
-          <label>Phone
-            <input name="phone" inputmode="tel" placeholder="(971) 258-1109" value="${escapeHtml(values.phone)}">
-          </label>
-          <label>Property / area
-            <input name="city" placeholder="Property, city, or neighborhood" autocomplete="street-address" data-address-autocomplete value="${escapeHtml(values.city)}">
-          </label>
-          <label>Property type
-            <input name="property_type" placeholder="Home, apartment, HOA, property management..." value="${escapeHtml(values.propertyType)}">
-          </label>
-          <label class="span-full">Service / request
-            <input name="service" placeholder="Mowing, cleanup, mulch refresh, walkthrough..." value="${escapeHtml(values.service)}" required>
-          </label>
-          <div class="ticket-create-schedule span-full">
-            <label>Visit date
-              <input name="visit_date" type="date" value="${escapeHtml(values.visitDate)}"${safeType === "field" ? " required" : ""}>
-            </label>
-            <label>Visit window
-              <input name="visit_window" placeholder="9 AM - 11 AM" value="${escapeHtml(values.visitWindow)}">
-            </label>
+        <form class="drawer-form drawer-ticket-create-form ticket-create-wizard ${safeType === "field" ? "is-field-ticket" : ""}" data-ticket-create-form data-ticket-wizard-step="1" novalidate>
+          <div class="ticket-wizard-progress span-full" aria-label="Ticket setup progress">
+            <span class="is-active">1. Client</span><span>2. Work</span><span>3. Review</span>
           </div>
-          <label class="span-full">Notes
-            <textarea name="notes" rows="5" placeholder="Scope notes, access details, customer request, or internal context...">${escapeHtml(values.notes)}</textarea>
-          </label>
-          <div class="drawer-actions span-full">
-            <button type="submit">${buttonContent("Create Ticket", "quick-add-job")}</button>
+          <fieldset class="ticket-wizard-panel span-full" data-wizard-panel="1">
+            <legend>Who and where?</legend>
+            <label class="span-full">Find an existing client
+              <select data-ticket-client-select><option value="">New or unlinked client</option>${contactOptions}</select>
+            </label>
+            <label>Customer or site
+              <input name="customer_name" placeholder="Client, property, or site name" value="${escapeHtml(values.customerName)}" required>
+              <small class="field-error">Add a customer or site.</small>
+            </label>
+            <label>Email<input name="email" type="email" placeholder="team@example.com" value="${escapeHtml(values.email)}"></label>
+            <label>Phone<input name="phone" inputmode="tel" placeholder="(971) 258-1109" value="${escapeHtml(values.phone)}"></label>
+            <label class="span-full">Find an existing property
+              <select data-ticket-property-select><option value="">New or unlinked property</option>${propertyOptions}</select>
+            </label>
+            <label>Property / area<input name="city" placeholder="Property, city, or neighborhood" autocomplete="street-address" value="${escapeHtml(values.city)}"></label>
+            <label>Property type<input name="property_type" placeholder="Home, apartment, HOA..." value="${escapeHtml(values.propertyType)}"></label>
+          </fieldset>
+          <fieldset class="ticket-wizard-panel span-full" data-wizard-panel="2" hidden>
+            <legend>What needs to happen?</legend>
+            <label>Ticket type
+              <select name="ticket_type" data-ticket-type-select>
+                <option value="quote"${safeType === "quote" ? " selected" : ""}>Needs scope / quote</option>
+                <option value="field"${safeType === "field" ? " selected" : ""}>Approved scheduled visit</option>
+              </select>
+            </label>
+            <label>Use a template
+              <select data-ticket-template>${TICKET_TEMPLATES.map((template) => `<option value="${escapeHtml(template.key)}">${escapeHtml(template.label)}</option>`).join("")}</select>
+            </label>
+            <label class="span-full">Service / request
+              <input name="service" placeholder="Mowing, cleanup, walkthrough..." value="${escapeHtml(values.service)}" required>
+              <small class="field-error">Add the service or request.</small>
+            </label>
+            <div class="ticket-create-schedule span-full">
+              <label>Visit date<input name="visit_date" type="date" value="${escapeHtml(values.visitDate)}"${safeType === "field" ? " required" : ""}></label>
+              <label>Visit window<input name="visit_window" placeholder="9 AM - 11 AM" value="${escapeHtml(values.visitWindow)}"></label>
+            </div>
+            <label class="span-full">Scope and notes<textarea name="notes" rows="5" placeholder="Scope, access, customer request, materials, or internal context...">${escapeHtml(values.notes)}</textarea></label>
+          </fieldset>
+          <fieldset class="ticket-wizard-panel span-full" data-wizard-panel="3" hidden>
+            <legend>Review</legend>
+            <div class="ticket-wizard-review" data-ticket-wizard-review></div>
+            <p class="ticket-drawer-note">After creation, the unified ticket shows the single next action, stage-specific work, proof, Money, history, and the closeout checklist with N/A choices.</p>
+          </fieldset>
+          <div class="ticket-autosave-state span-full" data-ticket-autosave-state role="status">${Object.keys(savedDraft).length ? "Draft restored" : "Draft saves automatically"}</div>
+          <div class="drawer-actions span-full ticket-wizard-actions">
+            <button type="button" class="secondary-action" data-action="ticket-wizard-back" hidden>Back</button>
+            <button type="button" data-action="ticket-wizard-next">Save &amp; Continue</button>
+            <button type="submit" data-ticket-wizard-submit hidden>${buttonContent("Create Ticket", "quick-add-job")}</button>
             <button type="button" data-action="close-drawer">${buttonContent("Cancel", "close")}</button>
           </div>
         </form>
       </div>
     `;
+  }
+
+  function ticketWizardStep(form) {
+    return Math.max(1, Math.min(3, Number(form?.dataset.ticketWizardStep || 1)));
+  }
+
+  function ticketWizardValidate(form, step) {
+    const requiredNames = step === 1 ? ["customer_name"] : step === 2 ? ["service"] : [];
+    let valid = true;
+    requiredNames.forEach((name) => {
+      const input = form.elements[name];
+      const missing = !String(input?.value || "").trim();
+      input?.toggleAttribute("aria-invalid", missing);
+      valid = valid && !missing;
+    });
+    if (!valid) form.querySelector('[aria-invalid="true"]')?.focus();
+    return valid;
+  }
+
+  function renderTicketWizardStep(form, nextStep) {
+    const step = Math.max(1, Math.min(3, nextStep));
+    form.dataset.ticketWizardStep = String(step);
+    qsa("[data-wizard-panel]", form).forEach((panel) => { panel.hidden = Number(panel.dataset.wizardPanel) !== step; });
+    qsa(".ticket-wizard-progress span", form).forEach((item, index) => item.classList.toggle("is-active", index + 1 <= step));
+    const back = form.querySelector('[data-action="ticket-wizard-back"]');
+    const next = form.querySelector('[data-action="ticket-wizard-next"]');
+    const submit = form.querySelector("[data-ticket-wizard-submit]");
+    if (back) back.hidden = step === 1;
+    if (next) next.hidden = step === 3;
+    if (submit) submit.hidden = step !== 3;
+    if (step === 3) {
+      const data = new FormData(form);
+      const type = data.get("ticket_type") === "field" ? "Scheduled visit" : "Needs scope / quote";
+      const review = form.querySelector("[data-ticket-wizard-review]");
+      if (review) review.innerHTML = `
+        <div><span>Client / site</span><strong>${escapeHtml(data.get("customer_name") || "Not set")}</strong></div>
+        <div><span>Property</span><strong>${escapeHtml(data.get("city") || "Not linked")}</strong></div>
+        <div><span>Path</span><strong>${escapeHtml(type)}</strong></div>
+        <div><span>Service</span><strong>${escapeHtml(data.get("service") || "Not set")}</strong></div>
+        <div><span>Visit</span><strong>${escapeHtml([data.get("visit_date"), data.get("visit_window")].filter(Boolean).join(" / ") || "Schedule later")}</strong></div>`;
+    }
+    form.querySelector(`[data-wizard-panel="${step}"] input, [data-wizard-panel="${step}"] select`)?.focus();
+  }
+
+  function saveTicketWizardDraft(form) {
+    const draft = Object.fromEntries(new FormData(form).entries());
+    localStorage.setItem(TICKET_DRAFT_KEY, JSON.stringify(draft));
+    const stateLabel = form.querySelector("[data-ticket-autosave-state]");
+    if (stateLabel) stateLabel.textContent = "Draft saved";
   }
 
   function renderTicketSourceActions(ticket) {
@@ -11886,7 +11943,7 @@
   function renderTicketHistory(ticket) {
     if (!ticket || ticket.source !== "ticket") return "";
     const history = ticketHistoryFor(ticket).slice(0, 8);
-    return `<section class="ticket-drawer-card ticket-history-card">
+    return `<section class="ticket-drawer-card ticket-history-card" id="ticket-history">
       <div class="ticket-drawer-card-heading">
         <h4>Ticket history</h4>
         <span>${history.length ? `${history.length} recent` : "No events yet"}</span>
@@ -12017,6 +12074,17 @@
         </div>
       </div>
         ${renderTicketDrawerActionStrip(ticket)}
+        <nav class="ticket-workspace-nav" aria-label="Ticket workspace sections">
+          <a href="#ticket-next-action">Overview</a>
+          <a href="#ticket-workbench">Work</a>
+          <a href="#ticket-closeout">Proof &amp; closeout</a>
+          <a href="#ticket-workbench">Money</a>
+          <a href="#ticket-history">History</a>
+        </nav>
+        <section class="ticket-next-action-card" id="ticket-next-action">
+          <div><p class="eyebrow">Next Action</p><h4>${escapeHtml(ticket.nextAction || "Review this ticket")}</h4><span>${escapeHtml(ticket.ownerLabel || "Unassigned")} owns this step.</span></div>
+          <strong>${escapeHtml(ticket.stageLabel)}</strong>
+        </section>
         <section class="ticket-drawer-operating-grid" aria-label="Ticket operating controls">
           ${renderTicketDrawerCockpit(ticket)}
           ${renderTicketDetailCommandCenter(ticket)}
@@ -14309,7 +14377,7 @@ Requirements:
     </tr>`;
   }
 
-  function renderExpenseWorkspace() {
+  function renderExpenseSpreadsheet() {
     const rows = state.data.financial.expenses || [];
     return `<section class="expense-workspace" aria-label="Expense spreadsheet">
       <input type="file" data-expense-receipt-input accept=".pdf,.jpg,.jpeg,.png,.heic,.heif,.docx,.xlsx,.csv" hidden>
@@ -14349,6 +14417,41 @@ Requirements:
         <span>Page ${state.moneyExpensePage} · up to ${state.moneyExpensePageSize} rows</span>
         <button type="button" data-action="money-expense-page" data-direction="1"${rows.length < state.moneyExpensePageSize ? " disabled" : ""}>Next</button>
       </footer>
+    </section>`;
+  }
+
+  function financialRecordName(type, id) {
+    if (!id) return "";
+    if (type === "client") {
+      const contact = (state.data.contacts || []).find((item) => item.id === id);
+      return contact?.name || contact?.company || id;
+    }
+    if (type === "property") {
+      const property = (state.data.outreachProperties || []).find((item) => item.id === id);
+      return property?.propertyName || property?.address || id;
+    }
+    const ticket = dashboardTickets(state.data).find((item) => item.id === id || item.sourceId === id);
+    return ticket?.number || ticket?.title || id;
+  }
+
+  function renderMoneyDisplayToggle() {
+    return `<div class="money-display-toggle" role="group" aria-label="Record display">
+      <button type="button" data-action="money-display" data-display="cards" class="${state.moneyDisplay === "cards" ? "is-active" : ""}">Simple view</button>
+      <button type="button" data-action="money-display" data-display="spreadsheet" class="${state.moneyDisplay === "spreadsheet" ? "is-active" : ""}">Spreadsheet view</button>
+    </div>`;
+  }
+
+  function renderExpenseWorkspace() {
+    if (state.moneyDisplay === "spreadsheet") return `${renderMoneyDisplayToggle()}${renderExpenseSpreadsheet()}`;
+    const rows = state.data.financial.expenses || [];
+    return `<section class="financial-directory money-simple-workspace" aria-label="Expenses">
+      <div class="ticket-lane-heading"><div><p class="eyebrow">Expenses</p><h3>Recorded costs</h3><p>Scan the essentials here. Open Spreadsheet view only when you need bulk editing.</p></div><div class="money-heading-actions"><button type="button" data-action="add-expense-row">+ New Expense</button>${renderMoneyDisplayToggle()}</div></div>
+      <div class="financial-card-list">${rows.length ? rows.map((expense) => `<article>
+        <div><strong>${escapeHtml(expense.description || expense.vendorName || "Untitled expense")}</strong><span>${escapeHtml([expense.expenseDate, expense.category].filter(Boolean).join(" · "))}</span></div>
+        <p>${escapeHtml(expense.vendorName || "No vendor")} · ${moneyCurrency(expense.total)}</p>
+        <small>${escapeHtml([financialRecordName("client", expense.clientId), financialRecordName("property", expense.propertyId), financialRecordName("ticket", expense.ticketId)].filter(Boolean).join(" / ") || "Not linked to a client, property, or ticket")}</small>
+        <div class="money-card-actions"><span class="status-badge">${escapeHtml(expense.status || "Draft")}</span><button type="button" data-action="money-display" data-display="spreadsheet">Edit</button><button type="button" class="inline-action danger" data-action="archive-money-record" data-entity-type="expense" data-id="${escapeHtml(expense.id)}">Delete</button></div>
+      </article>`).join("") : emptyState("No expenses are filed yet.")}</div>
     </section>`;
   }
 
@@ -14543,7 +14646,7 @@ Requirements:
     };
   }
 
-  function renderInvoiceWorkspace() {
+  function renderInvoiceSpreadsheet() {
     const invoices = state.data.financial.invoices || [];
     return `<section class="invoice-workspace" aria-label="Invoice spreadsheet">
       <div class="money-grid-toolbar">
@@ -14576,6 +14679,34 @@ Requirements:
     </section>`;
   }
 
+  function renderInvoiceWorkspace() {
+    if (state.moneyDisplay === "spreadsheet") return `${renderMoneyDisplayToggle()}${renderInvoiceSpreadsheet()}`;
+    const invoices = state.data.financial.invoices || [];
+    return `<section class="financial-directory money-simple-workspace" aria-label="Invoices">
+      <div class="ticket-lane-heading"><div><p class="eyebrow">Invoices</p><h3>Billing records</h3><p>Open a card to edit details, lines, payments, and Square links.</p></div><div class="money-heading-actions"><button type="button" data-action="create-financial-invoice">+ New Invoice</button>${renderMoneyDisplayToggle()}</div></div>
+      <div class="financial-card-list">${invoices.length ? invoices.map((invoice) => {
+        const summary = financialCalculator().invoiceSummary(invoice);
+        const status = financialCalculator().effectiveInvoiceStatus(invoice);
+        return `<article class="is-clickable" data-action="open-financial-invoice" data-id="${escapeHtml(invoice.id)}" tabindex="0">
+          <div><strong>${escapeHtml(invoice.invoice_number || "Draft invoice")}</strong><span>${escapeHtml([invoice.issue_date, invoice.due_date ? `Due ${invoice.due_date}` : ""].filter(Boolean).join(" · "))}</span></div>
+          <p>${escapeHtml(financialRecordName("client", invoice.client_id) || "Client not linked")} · ${moneyCurrency(summary.total)}</p>
+          <small>${escapeHtml([financialRecordName("property", invoice.property_id), financialRecordName("ticket", invoice.ticket_id)].filter(Boolean).join(" / ") || "No property or ticket linked")}</small>
+          <div class="money-card-actions"><span class="status-badge">${escapeHtml(status)}</span><strong>${moneyCurrency(summary.balance)} due</strong></div>
+        </article>`;
+      }).join("") : emptyState("No invoices are filed yet. Create one manually or from a completed ticket.")}</div>
+    </section>`;
+  }
+
+  function financialLinkOptions(type, selectedId) {
+    const records = type === "client"
+      ? (state.data.contacts || []).map((item) => ({ id: item.id, label: item.name || item.company }))
+      : type === "property"
+        ? (state.data.outreachProperties || []).map((item) => ({ id: item.id, label: item.propertyName || item.address }))
+        : dashboardTickets(state.data).map((item) => ({ id: item.id, label: [item.number, item.title].filter(Boolean).join(" — ") }));
+    const selectedExists = records.some((item) => item.id === selectedId);
+    return `<option value="">Not linked</option>${!selectedExists && selectedId ? `<option value="${escapeHtml(selectedId)}" selected>${escapeHtml(selectedId)}</option>` : ""}${records.map((item) => `<option value="${escapeHtml(item.id)}"${item.id === selectedId ? " selected" : ""}>${escapeHtml(item.label || item.id)}</option>`).join("")}`;
+  }
+
   async function openFinancialInvoiceDrawer(id) {
     if (!els.detailDrawer || !els.detailContent) return;
     openDetailDrawer();
@@ -14589,9 +14720,9 @@ Requirements:
         <header><p class="eyebrow">Invoice Detail</p><h3>${escapeHtml(invoice.invoice_number || "Draft Invoice")}</h3><p>${escapeHtml(financialCalculator().effectiveInvoiceStatus(invoice))}</p></header>
         <form data-financial-invoice-form data-id="${escapeHtml(invoice.id || id)}" class="drawer-form">
           <div class="drawer-grid">
-            <label>Client ID<input name="client_id" value="${escapeHtml(invoice.client_id || "")}"></label>
-            <label>Property ID<input name="property_id" value="${escapeHtml(invoice.property_id || "")}"></label>
-            <label>Ticket ID<input name="ticket_id" value="${escapeHtml(invoice.ticket_id || "")}"></label>
+            <label>Client<select name="client_id">${financialLinkOptions("client", invoice.client_id)}</select></label>
+            <label>Property<select name="property_id">${financialLinkOptions("property", invoice.property_id)}</select></label>
+            <label>Ticket<select name="ticket_id">${financialLinkOptions("ticket", invoice.ticket_id)}</select></label>
             <label>Issue date<input name="issue_date" type="date" value="${escapeHtml(invoice.issue_date || "")}"></label>
             <label>Due date<input name="due_date" type="date" value="${escapeHtml(invoice.due_date || "")}"></label>
             <label>Tax<input name="tax" type="number" min="0" step="0.01" value="${escapeHtml(String(invoice.tax || 0))}"></label>
@@ -20283,6 +20414,42 @@ Requirements:
       const target = event.target;
       if (!target) return;
 
+      if (target.matches("[data-ticket-client-select]")) {
+        const option = target.selectedOptions?.[0];
+        const form = target.closest("[data-ticket-create-form]");
+        if (form && option?.value) {
+          form.elements.customer_name.value = option.dataset.name || "";
+          form.elements.email.value = option.dataset.email || "";
+          form.elements.phone.value = option.dataset.phone || "";
+          if (!form.elements.city.value) form.elements.city.value = option.dataset.property || "";
+          saveTicketWizardDraft(form);
+        }
+        return;
+      }
+
+      if (target.matches("[data-ticket-property-select]")) {
+        const option = target.selectedOptions?.[0];
+        const form = target.closest("[data-ticket-create-form]");
+        if (form && option?.value) {
+          if (!form.elements.customer_name.value) form.elements.customer_name.value = option.dataset.name || "";
+          form.elements.city.value = option.dataset.city || option.dataset.name || "";
+          form.elements.property_type.value = option.dataset.type || form.elements.property_type.value;
+          saveTicketWizardDraft(form);
+        }
+        return;
+      }
+
+      if (target.matches("[data-ticket-template]")) {
+        const form = target.closest("[data-ticket-create-form]");
+        const template = TICKET_TEMPLATES.find((item) => item.key === target.value);
+        if (form && template) {
+          form.elements.service.value = template.service;
+          form.elements.notes.value = template.notes;
+          saveTicketWizardDraft(form);
+        }
+        return;
+      }
+
       if (target.matches("[data-expense-receipt-input], [data-field-expense-receipt-input]")) {
         const file = target.files?.[0];
         const expenseId = state.moneyReceiptExpenseId;
@@ -20668,6 +20835,16 @@ Requirements:
     });
 
     els.appView.addEventListener("input", (event) => {
+      const ticketCreateForm = event.target?.closest?.("[data-ticket-create-form]");
+      if (ticketCreateForm) {
+        event.target.removeAttribute?.("aria-invalid");
+        window.clearTimeout(ticketCreateForm._draftTimer);
+        const stateLabel = ticketCreateForm.querySelector("[data-ticket-autosave-state]");
+        if (stateLabel) stateLabel.textContent = "Saving draft…";
+        ticketCreateForm._draftTimer = window.setTimeout(() => saveTicketWizardDraft(ticketCreateForm), 250);
+        return;
+      }
+
       if (event.target?.matches?.("[data-money-search]")) {
         state.moneySearch = event.target.value || "";
         state.moneyExpensePage = 1;
@@ -20775,6 +20952,36 @@ Requirements:
 
       if (target.dataset.export) {
         exportData(target.dataset.export);
+        return;
+      }
+
+      if (action === "ticket-wizard-next" || action === "ticket-wizard-back") {
+        const form = target.closest("[data-ticket-create-form]");
+        if (!form) return;
+        const step = ticketWizardStep(form);
+        if (action === "ticket-wizard-next" && !ticketWizardValidate(form, step)) {
+          setDashboardState("Complete the highlighted field before continuing.", "error");
+          return;
+        }
+        saveTicketWizardDraft(form);
+        renderTicketWizardStep(form, step + (action === "ticket-wizard-next" ? 1 : -1));
+        setDashboardState("");
+        return;
+      }
+
+      if (action === "money-display") {
+        state.moneyDisplay = target.dataset.display === "spreadsheet" ? "spreadsheet" : "cards";
+        renderMoneyWorkspace();
+        return;
+      }
+
+      if (action === "quick-add-expense" || action === "quick-add-vendor") {
+        state.moneyView = action === "quick-add-expense" ? "expenses" : "vendors";
+        setActiveSection("documents");
+        replaceDashboardHash("documents");
+        await render();
+        if (action === "quick-add-expense") qs('[data-action="add-expense-row"]')?.click();
+        else qs('[data-action="add-vendor"]')?.click();
         return;
       }
 
@@ -21062,6 +21269,7 @@ Requirements:
           const created = await createExpense();
           state.data.financial.expenses.unshift(created);
           state.moneySaveState = "saved";
+          state.moneyDisplay = "spreadsheet";
           renderMoneyWorkspace();
         } catch (error) {
           state.moneySaveState = "error";
@@ -24010,6 +24218,7 @@ Requirements:
             else if (quote?.id) openTicketDrawer("quote", quote.id);
             setDashboardState("Intake ticket created.");
           }
+          localStorage.removeItem(TICKET_DRAFT_KEY);
         } catch (error) {
           setDashboardState(error.message || "Unable to create ticket.", "error");
         }

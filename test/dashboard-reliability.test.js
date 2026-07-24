@@ -972,3 +972,22 @@ test("unified tickets provide one validated completion checklist with N/A except
   assert.match(backend, /ticket_completed_from_checklist/);
   assert.match(css, /\.ticket-completion-list[\s\S]*repeat\(2, minmax\(0, 1fr\)\)/);
 });
+
+test("ticket creation is guided, searchable, templated, and safely autosaved", () => {
+  const js = read("dashboard.js");
+  const css = read("dashboard.css");
+
+  for (const label of ["Lead", "Ticket", "Visit", "Expense", "Invoice", "Vendor", "Note"]) {
+    assert.match(js, new RegExp(`label: "${label}"`));
+  }
+  assert.match(js, /data-ticket-wizard-step="1"/);
+  assert.match(js, /data-ticket-client-select/);
+  assert.match(js, /data-ticket-property-select/);
+  assert.match(js, /TICKET_TEMPLATES[\s\S]*Routine groundskeeping[\s\S]*Property cleanup[\s\S]*Property walkthrough[\s\S]*Landscaping project/);
+  assert.match(js, /data-action="ticket-wizard-next"[\s\S]*Save &amp; Continue/);
+  assert.match(js, /localStorage\.setItem\(TICKET_DRAFT_KEY/);
+  assert.match(js, /localStorage\.removeItem\(TICKET_DRAFT_KEY\)/);
+  assert.match(js, /ticket-next-action-card[\s\S]*Next Action/);
+  assert.match(css, /\.ticket-wizard-actions[\s\S]*position: sticky/);
+  assert.match(css, /\.ticket-create-wizard \[aria-invalid="true"\]/);
+});

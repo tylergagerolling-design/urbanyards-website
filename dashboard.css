@@ -22007,3 +22007,230 @@ body:not(.is-login-screen) .money-grid select {
   max-width: 100%;
   text-overflow: ellipsis;
 }
+/* Streamlined ticket creation and record workspaces */
+.ticket-create-wizard {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+}
+
+.ticket-wizard-progress {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+}
+
+.ticket-wizard-progress span {
+  padding: 9px 12px;
+  border-radius: 999px;
+  background: rgba(31, 107, 79, 0.08);
+  color: var(--muted, #607168);
+  font-size: 0.78rem;
+  font-weight: 800;
+  text-align: center;
+}
+
+.ticket-wizard-progress span.is-active {
+  background: #1f6b4f;
+  color: #fff;
+}
+
+.ticket-wizard-panel {
+  min-width: 0;
+  margin: 0;
+  padding: 18px;
+  border: 1px solid rgba(31, 107, 79, 0.18);
+  border-radius: 18px;
+  background: rgba(255, 255, 255, 0.76);
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.ticket-wizard-panel[hidden] {
+  display: none;
+}
+
+.ticket-wizard-panel legend {
+  padding: 0 8px;
+  color: #174d38;
+  font-size: 1rem;
+  font-weight: 900;
+}
+
+.ticket-create-wizard label {
+  min-width: 0;
+}
+
+.ticket-create-wizard input,
+.ticket-create-wizard select,
+.ticket-create-wizard textarea {
+  width: 100%;
+  min-width: 0;
+}
+
+.ticket-create-wizard [aria-invalid="true"] {
+  border-color: #b33a2e;
+  box-shadow: 0 0 0 3px rgba(179, 58, 46, 0.12);
+}
+
+.field-error {
+  display: none;
+  margin-top: 5px;
+  color: #9e3027;
+  font-size: 0.75rem;
+  font-weight: 700;
+}
+
+[aria-invalid="true"] + .field-error {
+  display: block;
+}
+
+.ticket-wizard-review {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.ticket-wizard-review div {
+  padding: 12px;
+  border-radius: 12px;
+  background: rgba(31, 107, 79, 0.07);
+}
+
+.ticket-wizard-review span,
+.ticket-wizard-review strong {
+  display: block;
+  overflow-wrap: anywhere;
+}
+
+.ticket-wizard-review span {
+  color: #617269;
+  font-size: 0.72rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+.ticket-autosave-state {
+  color: #607168;
+  font-size: 0.78rem;
+}
+
+.ticket-wizard-actions {
+  position: sticky;
+  bottom: 0;
+  z-index: 3;
+  padding: 12px;
+  border: 1px solid rgba(31, 107, 79, 0.14);
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.96);
+  box-shadow: 0 -12px 28px rgba(18, 55, 42, 0.08);
+}
+
+.ticket-workspace-nav {
+  position: sticky;
+  top: 0;
+  z-index: 4;
+  display: flex;
+  gap: 6px;
+  overflow-x: auto;
+  padding: 8px;
+  border: 1px solid rgba(31, 107, 79, 0.15);
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.96);
+}
+
+.ticket-workspace-nav a {
+  flex: 0 0 auto;
+  padding: 8px 10px;
+  border-radius: 9px;
+  color: #174d38;
+  font-size: 0.78rem;
+  font-weight: 800;
+  text-decoration: none;
+}
+
+.ticket-workspace-nav a:hover {
+  background: rgba(31, 107, 79, 0.1);
+}
+
+.ticket-next-action-card {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 18px;
+  border-radius: 18px;
+  color: #fff;
+  background: linear-gradient(135deg, #174d38, #1f6b4f);
+}
+
+.ticket-next-action-card h4,
+.ticket-next-action-card p {
+  margin: 0;
+  color: inherit;
+}
+
+.ticket-next-action-card span {
+  color: rgba(255, 255, 255, 0.78);
+}
+
+.ticket-next-action-card > strong {
+  flex: 0 0 auto;
+  padding: 7px 10px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.14);
+}
+
+.money-display-toggle,
+.money-heading-actions {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.money-display-toggle {
+  padding: 4px;
+  border-radius: 12px;
+  background: rgba(31, 107, 79, 0.08);
+}
+
+.money-display-toggle button {
+  padding: 7px 10px;
+  border: 0;
+  box-shadow: none;
+  background: transparent;
+}
+
+.money-display-toggle button.is-active {
+  color: #fff;
+  background: #1f6b4f;
+}
+
+.money-simple-workspace .financial-card-list article {
+  min-width: 0;
+}
+
+.money-simple-workspace .financial-card-list article > * {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.money-simple-workspace .financial-card-list article.is-clickable {
+  cursor: pointer;
+}
+
+@media (max-width: 720px) {
+  .ticket-create-wizard,
+  .ticket-wizard-panel,
+  .ticket-wizard-review {
+    grid-template-columns: 1fr;
+  }
+
+  .ticket-next-action-card,
+  .money-simple-workspace .ticket-lane-heading {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+}

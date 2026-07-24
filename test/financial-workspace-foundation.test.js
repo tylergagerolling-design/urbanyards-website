@@ -68,6 +68,18 @@ test("Money exposes lazy submodules and a controlled editable expense grid", () 
   assert.match(dashboardCss, /\.money-grid-shell[\s\S]*overflow: auto/);
 });
 
+test("Money defaults to concise cards while retaining its spreadsheet editor", () => {
+  assert.match(dashboardJs, /moneyDisplay: "cards"/);
+  assert.match(dashboardJs, /Simple view[\s\S]*Spreadsheet view/);
+  assert.match(dashboardJs, /function renderExpenseSpreadsheet/);
+  assert.match(dashboardJs, /function renderInvoiceSpreadsheet/);
+  assert.match(dashboardJs, /function financialLinkOptions/);
+  assert.match(dashboardJs, /<label>Client<select name="client_id"/);
+  assert.match(dashboardJs, /<label>Property<select name="property_id"/);
+  assert.match(dashboardJs, /<label>Ticket<select name="ticket_id"/);
+  assert.match(dashboardCss, /\.money-simple-workspace \.financial-card-list article > \*[\s\S]*overflow-wrap: anywhere/);
+});
+
 test("Money records use a recoverable Recently Deleted workflow", () => {
   assert.match(dashboardJs, /label: "Recently Deleted"/);
   assert.match(dashboardJs, /data-action="archive-money-record"/);

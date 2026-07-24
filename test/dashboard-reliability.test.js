@@ -1090,6 +1090,10 @@ test("each dashboard page exposes only its relevant contextual Groundskeeper too
   assert.match(js, /"call-queue": \["call-brief", "call-outcome", "lead-priority"\]/);
   assert.match(js, /documents: \["profitability", "invoice-ready", "expense-category"\]/);
   assert.match(js, /function renderContextualGroundskeeperTools/);
+  assert.match(js, /overview: "\[data-home-workspace\]"/);
+  assert.match(js, /tickets: "\[data-job-ticket-workspace\]"/);
+  assert.match(js, /documents: "\[data-money-workspace\]"/);
+  assert.match(js, /host\.prepend\(panel\)/);
   assert.match(js, /data-action="open-contextual-ai"/);
   assert.match(js, /function renderContextualAiDrawer/);
   assert.match(js, /data-action="run-contextual-ai"/);

@@ -6589,9 +6589,17 @@
   async function saveTicketWorkAssignment(form) {
     if (!canManageWorkWorkflow()) throw new Error("Your dashboard role cannot assign work visits.");
     const ticketId = form.dataset.ticketId || "";
+    const ticketSource = form.dataset.ticketSource || "ticket";
     const jobId = form.dataset.jobId || "";
-    const ticket = dashboardTickets().find((item) => item.source === "ticket" && item.id === ticketId);
-    if (!ticket) throw new Error("Open a unified Job Ticket before assigning work.");
+    let ticket = dashboardTickets().find((item) => item.source === ticketSource && item.id === ticketId);
+    if (!ticket) throw new Error("The ticket record could not be found.");
+    if (ticket.source !== "ticket") {
+      ticket = await ensureJobTicketForSource(ticket.source, ticket.id, {
+        stage: "ready_to_schedule",
+        next_action: ticketNextAction("ready_to_schedule")
+      });
+    }
+    if (!ticket?.id) throw new Error("Unable to create the unified Job Ticket before assigning work.");
     const formData = new FormData(form);
     const visitDate = String(formData.get("visit_date") || "").trim();
     const visitWindow = String(formData.get("visit_window") || "").trim();
@@ -12014,7 +12022,7 @@
           <span>${escapeHtml(linkedJob?.id ? "Linked to a scheduled visit." : "Create the scheduled visit and assign the work owner.")}</span>
         </div>
       </div>
-      <form class="ticket-work-assignment-form" data-ticket-assignment-form data-ticket-id="${escapeHtml(ticket.id || "")}" data-job-id="${escapeHtml(linkedJob?.id || "")}">
+      <form class="ticket-work-assignment-form" data-ticket-assignment-form data-ticket-id="${escapeHtml(ticket.id || "")}" data-ticket-source="${escapeHtml(ticket.source || ticket.sourceType || "ticket")}" data-job-id="${escapeHtml(linkedJob?.id || "")}">
         <label>Visit date
           <input name="visit_date" type="date" value="${escapeHtml(visitDate)}" required>
         </label>

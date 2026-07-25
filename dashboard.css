@@ -23415,13 +23415,6 @@ body:not(.is-login-screen) :is(.toolbar, .calendar-tabs, .operations-filter-pill
   min-width: max-content;
 }
 
-@media (min-width: 701px) {
-  body:not(.is-login-screen) .dashboard-copilot {
-    top: auto;
-    bottom: 22px;
-  }
-}
-
 @media (max-width: 760px) {
   body:not(.is-login-screen) :is(
     .ticket-lane-heading,

@@ -16,6 +16,16 @@
   const COMMAND_CATEGORIES = ["task", "client", "payment", "deadline", "equipment"];
   const CALL_OUTCOMES = ["not_set", "no_answer", "left_voicemail", "spoke_with_contact", "follow_up_needed", "not_interested", "wrong_number", "bad_number", "follow_up_later"];
   const CALL_PANEL_OUTCOMES = ["no_answer", "left_voicemail", "spoke_with_contact", "follow_up_needed", "not_interested", "wrong_number"];
+  const CALL_QUEUE_OUTCOMES = [
+    ["no_answer", "No Answer"],
+    ["left_voicemail", "Voicemail Left"],
+    ["spoke_with_contact", "Spoke With Contact"],
+    ["follow_up_needed", "Follow-Up Needed"],
+    ["interested", "Interested"],
+    ["quote_requested", "Quote Requested"],
+    ["not_interested", "Not Interested"],
+    ["wrong_number", "Wrong Number"]
+  ];
   const CALL_OUTCOME_LABELS = {
     not_set: "Not set",
     no_answer: "No answer",
@@ -37,6 +47,7 @@
   const GOOGLE_VOICE_CALLS_URL = "https://voice.google.com/u/0/calls";
   const URBAN_YARDS_GOOGLE_VOICE_NUMBER = "(971) 258-1109";
   const SIDEBAR_CLOSE_SETTLE_MS = 280;
+  const DETAIL_DRAWER_SETTLE_MS = 240;
   const USER_AVATAR_MAX_BYTES = 2 * 1024 * 1024;
   const USER_AVATAR_ALLOWED_TYPES = new Set(["image/jpeg", "image/png", "image/webp"]);
   const USER_AVATAR_ALLOWED_EXTENSIONS = new Set(["jpg", "jpeg", "png", "webp"]);
@@ -172,6 +183,18 @@
     { key: "history", label: "History" },
     { key: "reports", label: "Reports" }
   ];
+  const MONEY_TABS = [
+    { key: "overview", label: "Overview" },
+    { key: "expenses", label: "Expenses" },
+    { key: "invoicing", label: "Invoicing" },
+    { key: "vendors", label: "Vendors" },
+    { key: "documents", label: "Documents" },
+    { key: "reports", label: "Reports" },
+    { key: "deleted", label: "Recently Deleted" }
+  ];
+  const EXPENSE_CATEGORIES = ["Materials", "Equipment", "Fuel", "Vehicle", "Insurance", "Software", "Advertising", "Office", "Subcontractor", "Labor", "Permits and Fees", "Professional Services", "Rent", "Utilities", "Taxes", "Meals", "Other"];
+  const EXPENSE_PAYMENT_METHODS = ["Square Checking", "Business Debit", "Personal Card", "Cash", "ACH", "Check", "Credit Card", "Other"];
+  const EXPENSE_STATUSES = ["Draft", "Recorded", "Pending Receipt", "Reimbursable", "Reimbursed", "Voided"];
   const DEMO_QUERY_KEYS = ["demo", "test"];
   const DASHBOARD_ICON_PATH = "images/dashboard-icons/";
   const HOME_DASHBOARD_ICON_PATH = "images/home-dashboard/";
@@ -199,14 +222,29 @@
     "auditLogs"
   ];
   const GLOBAL_ADD_ITEMS = [
-    { key: "prospect", label: "Prospect", action: "new-outreach-prospect", icon: "outreach-send.svg", permission: "create" },
-    { key: "contact", label: "Contact", action: "quick-add-client", icon: "new-lead-user.svg", permission: "create" },
-    { key: "property", label: "Property", action: "quick-add-property", icon: "properties-building.svg", permission: "create" },
-    { key: "job", label: "Job", action: "quick-add-job", icon: "calendar.svg", permission: "create" },
-    { key: "follow-up", label: "Follow-up", action: "quick-add-follow-up", icon: "upcoming-clock.svg", permission: "create" },
-    { key: "equipment", label: "Equipment Item", action: "quick-add-equipment", icon: "activity-check-circle.svg", permission: "create" }
+    { key: "lead", label: "Lead", action: "new-outreach-prospect", icon: "outreach-send.svg", permission: "create" },
+    { key: "ticket", label: "Ticket", action: "quick-add-quote", icon: "task-list.svg", permission: "create" },
+    { key: "visit", label: "Visit", action: "quick-add-job", icon: "jobs-calendar.svg", permission: "create" },
+    { key: "expense", label: "Expense", action: "quick-add-expense", icon: "waiting-payment.svg", permission: "create" },
+    { key: "invoice", label: "Invoice", action: "create-financial-invoice", icon: "invoice.svg", permission: "create" },
+    { key: "vendor", label: "Vendor", action: "quick-add-vendor", icon: "properties-building.svg", permission: "create" },
+    { key: "note", label: "Note", action: "quick-add-operation", icon: "activity-check.svg", permission: "create" }
+  ];
+  const TICKET_DRAFT_KEY = "urbanYardsTicketCreateDraft";
+  const TICKET_TEMPLATES = [
+    { key: "", label: "Start blank", service: "", notes: "" },
+    { key: "groundskeeping", label: "Routine groundskeeping", service: "Routine groundskeeping", notes: "Inspect grounds, complete recurring care, photograph arrival and completion, and note exceptions." },
+    { key: "cleanup", label: "Property cleanup", service: "Property cleanup", notes: "Confirm cleanup area, haul-away needs, access, arrival condition, and completion proof." },
+    { key: "walkthrough", label: "Property walkthrough", service: "Walkthrough & Email", notes: "Walk the property, photograph findings, and send the property contact a concise condition summary." },
+    { key: "landscaping", label: "Landscaping project", service: "Landscaping", notes: "Confirm scope, materials, measurements, budget approval, schedule, site proof, actuals, and invoice requirements." }
   ];
   const OWNER_KANBAN_FILTER_KEY = "urbanYardsOwnerKanbanFilters";
+  const OWNER_KANBAN_SAVED_VIEWS = [
+    { key: "today", label: "Due Today" },
+    { key: "overdue", label: "Overdue" },
+    { key: "blocked", label: "Blocked" },
+    { key: "review", label: "Needs Review" }
+  ];
   const FOLLOW_UP_SUGGESTIONS = [
     ["tomorrow", "Tomorrow", 1],
     ["three-days", "3 Days", 3],
@@ -257,14 +295,33 @@
     outreachNeighborhoodFilter: "All",
     outreachVisibleNeedsFilter: "",
     outreachVerifiedFilter: "All",
+    callQueueSearch: "",
+    callQueueStatusFilter: "Active",
+    callQueuePriorityFilter: "All",
+    callQueueSort: "queue",
+    callQueueSelectedId: "",
+    leadsContactQueueExpanded: false,
+    callQueueVisibleCount: 25,
+    callQueueSaving: false,
+    leadIntakeBatches: [],
+    leadIntakeLoaded: false,
+    leadIntakeLoading: false,
+    leadIntakeSelectedBatch: null,
+    leadIntakeRows: [],
+    leadIntakePage: 1,
+    leadIntakeSearch: "",
+    leadIntakeStatusFilter: "All",
     equipmentView: "inventory",
     equipmentSearch: "",
     equipmentCategoryFilter: "All",
     equipmentStatusFilter: "All",
     equipmentConditionFilter: "All",
     equipmentPriorityFilter: "All",
-    groundskeeperAiView: "training",
+    groundskeeperAiView: "operations",
     groundskeeperAiSearch: "",
+    groundskeeperOperationKey: "daily-briefing",
+    groundskeeperOperationResult: "",
+    groundskeeperOperationLoading: false,
     documentationView: DOCUMENTATION_DEFAULT_VIEW,
     documentationSearch: "",
     documentationTypeFilter: "All",
@@ -277,15 +334,38 @@
     importExportPendingFile: null,
     importExportPreview: null,
     importExportHistoryLoadedAt: "",
+    moneyView: "overview",
+    moneyLoadedViews: new Set(),
+    moneyLoading: false,
+    moneyError: "",
+    moneySearch: "",
+    moneyDisplay: "cards",
+    moneyExpensePage: 1,
+    moneyExpensePageSize: 50,
+    moneyExpenseSort: "expense_date.desc",
+    moneyExpenseStatus: "All",
+    moneyDateStart: "",
+    moneyDateEnd: "",
+    moneySelectedExpenseIds: new Set(),
+    moneySaveState: "",
+    moneyUndo: null,
+    undoAction: null,
+    undoTimer: 0,
+    moneyReceiptExpenseId: "",
+    moneyInvoiceDetail: null,
     ticketBoardSearch: "",
     ticketBoardStageFilter: "All",
     ticketBoardOwnerFilter: "All",
+    ticketBoardCloseoutOnly: false,
+    ticketBoardMode: "open",
     ownerKanbanSearch: "",
     ownerKanbanAssigneeFilter: "All",
     ownerKanbanPriorityFilter: "All",
     ownerKanbanTypeFilter: "All",
     ownerKanbanClientFilter: "",
     ownerKanbanDateFilter: "All",
+    ownerKanbanDateStart: "",
+    ownerKanbanDateEnd: "",
     ownerKanbanStatusFilter: "All",
     ownerKanbanSort: "priority",
     ownerKanbanActiveOnly: true,
@@ -336,6 +416,22 @@
     avatarUploadTargetId: "",
     preferredCallMethod: localStorage.getItem(CALL_METHOD_KEY) || "browser_tel",
     groundskeeperMessages: [],
+    copilotOpen: false,
+    copilotLoading: false,
+    copilotMessages: [],
+    copilotLastResults: [],
+    copilotScheduleDraft: null,
+    groundskeeperLastMeta: null,
+    assistantMemories: [],
+    assistantMemoriesLoading: false,
+    assistantMemoriesLoaded: false,
+    assistantMemoriesError: "",
+    copilotConversationMemories: [],
+    copilotPendingMemory: null,
+    copilotPendingTransition: null,
+    copilotConsultationRequest: null,
+    copilotFilters: {},
+    copilotHighlightIds: [],
     data: {
       submissions: [],
       contacts: [],
@@ -356,6 +452,15 @@
       leadActivity: [],
       userProfiles: [],
       auditLogs: [],
+      financial: {
+        overview: null,
+        expenses: [],
+        vendors: [],
+        invoices: [],
+        documents: [],
+        deleted: [],
+        reports: {}
+      },
       groundskeeperAi: {
         settings: [],
         knowledge: [],
@@ -363,6 +468,7 @@
         rules: [],
         savedAnswers: [],
         trainingRules: [],
+        landscapingKnowledge: [],
         versions: [],
         logs: [],
         feedback: [],
@@ -413,6 +519,8 @@
     clients: "outreach",
     leads: "outreach",
     sales: "outreach",
+    calls: "call-queue",
+    "call-queue": "call-queue",
     more: "settings",
     docs: "documentation",
     forms: "documentation",
@@ -422,6 +530,8 @@
     equipment: "equipment",
     "groundskeeper-ai": "groundskeeper-ai",
     ai: "groundskeeper-ai",
+    "ai-memory": "ai-memory",
+    memory: "ai-memory",
     tools: "settings",
     "route-planner": "route-planner",
     route: "route-planner",
@@ -441,11 +551,13 @@
   const rebuildPrimarySections = new Set(["overview", "tickets", "calendar", "outreach", "documents", "settings"]);
   const supportSectionParents = {
     contacts: "outreach",
+    "call-queue": "outreach",
     documentation: "settings",
     "import-export": "settings",
     "route-planner": "calendar",
     equipment: "settings",
-    "groundskeeper-ai": "settings"
+    "groundskeeper-ai": "settings",
+    "ai-memory": "settings"
   };
   const dashboardRoutableSections = new Set([
     ...rebuildPrimarySections,
@@ -894,7 +1006,7 @@
           }))
       },
       {
-        label: "Prospects",
+        label: "Leads",
         rows: data.outreachProspects
           .filter((item) => recordMatchesGlobalQuery([item.propertyName, item.managementCompany, item.contactName, item.email, item.phone, item.address, item.city, item.notes], search))
           .slice(0, 5)
@@ -905,6 +1017,67 @@
             id: item.id,
             phone: item.phone,
             leadType: "outreach_prospect"
+          }))
+      },
+      {
+        label: "Tickets",
+        rows: dashboardTickets(data)
+          .filter((item) => recordMatchesGlobalQuery([item.number, item.title, item.customer, item.property, item.stageLabel, item.nextAction], search))
+          .slice(0, 6)
+          .map((item) => ({
+            title: [item.number, item.title].filter(Boolean).join(" — "),
+            detail: [item.customer, item.property, item.stageLabel].filter(Boolean).join(" / "),
+            action: "open-ticket",
+            id: item.id,
+            ticketSource: item.source
+          }))
+      },
+      {
+        label: "Invoices",
+        rows: (data.financial?.invoices || [])
+          .filter((item) => recordMatchesGlobalQuery([item.invoice_number, item.client_id, item.property_id, item.ticket_id, item.status, item.internal_notes], search))
+          .slice(0, 5)
+          .map((item) => ({
+            title: item.invoice_number || "Draft invoice",
+            detail: [financialRecordName("client", item.client_id), item.status, moneyCurrency(item.total)].filter(Boolean).join(" / "),
+            action: "open-financial-invoice",
+            id: item.id
+          }))
+      },
+      {
+        label: "Expenses",
+        rows: (data.financial?.expenses || [])
+          .filter((item) => recordMatchesGlobalQuery([item.vendorName, item.description, item.category, item.notes, item.total], search))
+          .slice(0, 5)
+          .map((item) => ({
+            title: item.description || item.vendorName || "Expense",
+            detail: [item.vendorName, item.category, moneyCurrency(item.total)].filter(Boolean).join(" / "),
+            action: "open-money-expense",
+            id: item.id
+          }))
+      },
+      {
+        label: "Vendors",
+        rows: (data.financial?.vendors || [])
+          .filter((item) => recordMatchesGlobalQuery([item.vendor_name, item.contact_name, item.email, item.phone, item.default_expense_category], search))
+          .slice(0, 5)
+          .map((item) => ({
+            title: item.vendor_name || "Vendor",
+            detail: [item.contact_name, item.default_expense_category].filter(Boolean).join(" / "),
+            action: "open-money-vendor",
+            id: item.id
+          }))
+      },
+      {
+        label: "Documents",
+        rows: [...(data.documents || []), ...(data.financial?.documents || [])]
+          .filter((item) => recordMatchesGlobalQuery([item.title, item.file_name, item.number, item.type, item.document_type, item.status], search))
+          .slice(0, 5)
+          .map((item) => ({
+            title: item.title || item.file_name || item.number || "Document",
+            detail: [item.document_type || item.type, item.status, item.document_date].filter(Boolean).join(" / "),
+            action: item.document_type ? "open-money-document" : "open-document",
+            id: item.id
           }))
       },
       {
@@ -939,6 +1112,12 @@
     return groups.flatMap((group) => group.rows.map((row) => ({ ...row, group: group.label })));
   }
 
+  async function ensureGlobalSearchFinancialData() {
+    for (const view of ["expenses", "invoicing", "vendors", "documents"]) {
+      if (!state.moneyLoadedViews.has(view)) await loadMoneyView(view);
+    }
+  }
+
   function renderGlobalSearchPanel() {
     if (!els.globalSearchPanel) return;
     const query = String(state.search || "").trim();
@@ -969,7 +1148,7 @@
           const phone = phoneInfo(row.phone);
           return `
             <div class="global-search-result-row${isActive ? " is-active" : ""}">
-              ${row.action ? `<button class="global-search-result" type="button" data-global-search-result data-action="${escapeHtml(row.action)}" data-id="${escapeHtml(row.id)}">
+              ${row.action ? `<button class="global-search-result" type="button" data-global-search-result data-action="${escapeHtml(row.action)}" data-id="${escapeHtml(row.id)}"${row.ticketSource ? ` data-ticket-source="${escapeHtml(row.ticketSource)}"` : ""}>
                 <span><strong>${escapeHtml(row.title)}</strong><small>${escapeHtml(row.detail || row.group || "")}</small></span>
               </button>` : `<div class="global-search-result"><span><strong>${escapeHtml(row.title)}</strong><small>${escapeHtml(row.detail || "")}</small></span></div>`}
               ${phone.valid ? `<button class="inline-action" type="button" data-action="call-lead" data-id="${escapeHtml(row.id)}" data-lead-type="${escapeHtml(row.leadType || "lead")}" data-phone="${escapeHtml(phone.e164)}">Call</button>` : ""}
@@ -1162,7 +1341,7 @@
 
     return items
       .sort((a, b) => (a.urgency - b.urgency) || String(a.title).localeCompare(String(b.title)))
-      .slice(0, 8);
+      .slice(0, 16);
   }
 
   function renderTodayActionButton(item) {
@@ -1367,6 +1546,19 @@
     els.dashboardState.hidden = !message;
     els.dashboardState.textContent = message || "";
     els.dashboardState.dataset.tone = tone || "";
+  }
+
+  function showDashboardUndo(message, undo) {
+    window.clearTimeout(state.undoTimer);
+    state.undoAction = typeof undo === "function" ? undo : null;
+    if (!els.dashboardState) return;
+    els.dashboardState.hidden = false;
+    els.dashboardState.dataset.tone = "undo";
+    els.dashboardState.innerHTML = `<span>${escapeHtml(message)}</span>${state.undoAction ? `<button type="button" data-action="dashboard-undo">Undo</button>` : ""}`;
+    state.undoTimer = window.setTimeout(() => {
+      state.undoAction = null;
+      setDashboardState("");
+    }, 8000);
   }
 
   function getOwnerEmail() {
@@ -1784,6 +1976,40 @@
     }
 
     return payload.data;
+  }
+
+  async function dashboardFinancialRequest(action, body = {}, options = {}) {
+    if (isDemoMode()) return [];
+    const session = getSession();
+    if (!session?.accessToken) throw new Error("Please sign in again.");
+    const response = await fetch("/.netlify/functions/dashboard-financial", {
+      method: "POST",
+      signal: options.signal,
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${session.accessToken}`
+      },
+      body: JSON.stringify({ action, ...body })
+    });
+    const payload = await response.json().catch(() => ({}));
+    if (!response.ok) throw new Error(payload.error || "Financial records could not be loaded.");
+    return payload.data;
+  }
+
+  async function dashboardFinancialStorageRequest(action, body = {}) {
+    const session = getSession();
+    if (!session?.accessToken) throw new Error("Please sign in again.");
+    const response = await fetch("/.netlify/functions/dashboard-financial-storage", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${session.accessToken}`
+      },
+      body: JSON.stringify({ action, ...body })
+    });
+    const payload = await response.json().catch(() => ({}));
+    if (!response.ok) throw new Error(payload.error || "Financial document request failed.");
+    return payload;
   }
 
   async function loadCurrentUserProfile(session, options = {}) {
@@ -2238,7 +2464,123 @@
     }
   }
 
-  async function groundskeeperChat(message) {
+  function groundskeeperOperationsContext() {
+    const data = state.data;
+    const tickets = dashboardTickets(data);
+    const compactTicket = (item) => ({
+      id: item.id,
+      number: item.number,
+      title: item.title,
+      client: item.customer,
+      property: item.property,
+      stage: item.stage,
+      owner: item.ownerLabel,
+      nextAction: item.nextAction,
+      date: item.dateRaw,
+      blockers: item.blockers,
+      estimatedCost: item.estimatedTotalCost,
+      actualCost: item.actualTotalCost,
+      proposedPrice: item.proposedPrice,
+      expectedRevenue: item.expectedRevenue,
+      finalRevenue: item.finalRevenue,
+      payment: item.paymentStatus,
+      invoiceFinalized: item.invoiceFinalized,
+      arrivalPhotos: item.beforePhotosUploaded,
+      completionPhotos: item.afterPhotosUploaded,
+      source: item.source,
+      customerId: item.customerId,
+      propertyId: item.propertyId,
+      primaryContact: item.primaryContact,
+      requestedService: item.requestedService,
+      scopeOfWork: item.scopeOfWork,
+      customerApprovalRecorded: item.customerApprovalRecorded,
+      costReviewComplete: item.costReviewComplete,
+      budgetComplete: item.budgetComplete,
+      scopeComplete: item.scopeComplete,
+      ownerApprovalRecorded: item.ownerApprovalRecorded,
+      draftInvoiceExists: item.draftInvoiceExists,
+      depositRequired: item.depositRequired,
+      depositPaid: item.depositPaid,
+      requiredDocumentsPresent: item.requiredDocumentsPresent,
+      scheduledDate: item.dateRaw,
+      assignedUserId: item.assignedUserId,
+      beforePhotosUploaded: item.beforePhotosUploaded,
+      afterPhotosUploaded: item.afterPhotosUploaded,
+      fieldCompletionNotes: item.fieldCompletionNotes,
+      invoiceFinalized: item.invoiceFinalized,
+      paymentStatus: item.paymentStatus
+    });
+    return {
+      generatedAt: new Date().toISOString(),
+      activeSection: state.activeSection,
+      pageContext: {
+        currentRoute: window.location.hash || `#${state.activeSection}`,
+        activeTab: state.activeSection,
+        selectedRecordType: qs("[data-detail-content] [data-ticket-id]") ? "ticket" : (state.selectedJobId ? "job" : ""),
+        selectedRecordId: qs("[data-detail-content] [data-ticket-id]")?.dataset.ticketId || state.selectedJobId || "",
+        currentPage: normalizeDashboardSection(state.activeSection),
+        openPanel: els.detailDrawer?.classList.contains("is-open") ? "detail" : "",
+        visibleRecordIds: Array.from(qsa(`[data-section="${normalizeDashboardSection(state.activeSection)}"] [data-id]`)).slice(0, 30).map((element) => element.dataset.id).filter(Boolean),
+        visibleFilters: {
+          search: state.search,
+          ticketStage: state.ticketBoardStageFilter,
+          ownerKanbanStatus: state.ownerKanbanStatusFilter,
+          moneyView: state.moneyView,
+          ...state.copilotFilters
+        },
+        timezone: Intl.DateTimeFormat().resolvedOptions().timeZone || "America/Los_Angeles",
+        currentDate: todayKey()
+      },
+      recentEntities: state.copilotLastResults.slice(0, 8).map((item) => ({
+        recordType: String(item.group || "record").replace(/s$/i, "").toLowerCase(),
+        recordId: item.id,
+        title: item.title
+      })),
+      conversationMemories: state.copilotConversationMemories.slice(-12),
+      policy: "Recommend and draft only. Never mutate records, send messages, finalize prices, move stages, create invoices, or close tickets without explicit owner confirmation in the dashboard.",
+      summary: {
+        actionMetrics: dashboardActionMetrics(data, tickets),
+        activeTickets: tickets.filter(ticketIsOpen).length,
+        activeLeads: (data.outreachProspects || []).filter((item) => OUTREACH_ACTIVE_STATUSES.includes(item.status)).length,
+        scheduledJobs: (data.jobs || []).filter(isIncompleteJob).length,
+        expensesLoaded: data.financial?.expenses?.length || 0,
+        invoicesLoaded: data.financial?.invoices?.length || 0
+      },
+      priorityActions: todayActionItems(data).slice(0, 16),
+      tickets: [
+        ...tickets.filter(ticketIsOpen).slice(0, 24),
+        ...tickets.filter((ticket) => !ticketIsOpen(ticket)).slice(0, 16)
+      ].map(compactTicket),
+      clients: (data.contacts || []).slice(0, 20).map((item) => ({
+        id: item.id, name: item.name || item.contactName, company: item.company || item.companyName,
+        property: item.property || item.propertyName, status: item.status, type: item.type || item.contactType
+      })),
+      leads: (data.outreachProspects || []).filter((item) => OUTREACH_ACTIVE_STATUSES.includes(item.status)).slice(0, 20).map((item) => ({
+        id: item.id, name: item.contactName, property: item.propertyName, company: item.managementCompany, city: item.city,
+        service: item.serviceInterest, status: item.status, priority: item.priority, followUp: item.nextFollowUpAtRaw, notes: item.notes
+      })),
+      jobs: (data.jobs || []).filter(isIncompleteJob).slice(0, 20).map((item) => ({
+        id: item.id, site: item.site, city: item.city, service: item.service, date: item.dateRaw, window: item.window, status: item.status
+      })),
+      properties: (data.outreachProperties || []).slice(0, 16).map((item) => ({
+        id: item.id, name: item.propertyName, company: item.company, address: item.address, city: item.city, needs: item.visibleNeeds, notes: item.notes
+      })),
+      invoices: (data.financial?.invoices || []).slice(0, 20).map((item) => ({
+        id: item.id, number: item.invoice_number, client: financialRecordName("client", item.client_id), ticket: financialRecordName("ticket", item.ticket_id),
+        issueDate: item.issue_date, dueDate: item.due_date, total: item.total, balance: item.balance, status: item.status
+      })),
+      expenses: (data.financial?.expenses || []).slice(0, 20).map((item) => ({
+        id: item.id, date: item.expenseDate, vendor: item.vendorName, category: item.category, description: item.description,
+        total: item.total, ticket: financialRecordName("ticket", item.ticketId), receipt: item.receiptPath ? "present" : "missing"
+      })),
+      documents: [...(data.documents || []), ...(data.financial?.documents || [])].slice(0, 20).map((item) => ({
+        id: item.id, title: item.title || item.file_name || item.number, type: item.document_type || item.type, status: item.status,
+        ticketId: item.ticket_id || item.ticketId || item.jobTicketId
+      }))
+    };
+  }
+
+  async function groundskeeperChat(message, operation = "", consultation = null) {
     const session = getSession();
     if (!session || !session.accessToken) throw new Error("Please sign in again.");
     const response = await fetch("/.netlify/functions/groundskeeper-ai", {
@@ -2252,17 +2594,412 @@
         message,
         page: "Urban Yards Owner Dashboard",
         history: state.groundskeeperMessages.slice(-10),
+        consultation: consultation || state.copilotConsultationRequest || undefined,
         context: {
-          activeSection: state.activeSection,
-          openQuotes: state.data.submissions.filter((item) => item.status !== "Completed").length,
-          dueFollowUps: state.data.reminders.filter((item) => item.dueRaw && item.dueRaw <= todayKey() && item.status !== "Done").length,
-          activeOutreachProspects: state.data.outreachProspects.filter((item) => OUTREACH_ACTIVE_STATUSES.includes(item.status)).length
+          operation,
+          ...groundskeeperOperationsContext()
         }
       })
     });
     const result = await response.json().catch(() => ({}));
     if (!response.ok) throw new Error(result.error || "The Groundskeeper is unavailable.");
+    state.groundskeeperLastMeta = result;
     return result.reply;
+  }
+
+  const COPILOT_UI_ROUTES = new Set(["overview", "tickets", "calendar", "route-planner", "outreach", "call-queue", "documents", "contacts", "equipment", "documentation", "import-export", "groundskeeper-ai", "ai-memory", "settings"]);
+  const COPILOT_UI_RECORD_TYPES = new Set(["ticket", "job", "client", "contact", "property", "lead", "invoice", "expense", "document"]);
+
+  function validDashboardUIAction(action) {
+    if (!action || typeof action !== "object") return false;
+    if (action.type === "navigate") return COPILOT_UI_ROUTES.has(action.route);
+    if (action.type === "open_record") return COPILOT_UI_RECORD_TYPES.has(action.recordType) && Boolean(action.recordId) && ["page", "side_panel", "modal"].includes(action.presentation);
+    if (action.type === "apply_filters") return COPILOT_UI_ROUTES.has(action.page) && action.filters && typeof action.filters === "object" && !Array.isArray(action.filters);
+    if (action.type === "highlight_records") return Array.isArray(action.recordIds) && action.recordIds.length <= 50;
+    if (action.type === "scroll_to") return /^[a-zA-Z0-9_-]{1,100}$/.test(action.targetId || "");
+    if (action.type === "switch_tab") return /^[a-zA-Z0-9_-]{1,100}$/.test(action.tabId || "");
+    return false;
+  }
+
+  async function openRecordFromCopilot(action) {
+    const id = String(action.recordId || "");
+    const destinationByType = { ticket: "tickets", job: "calendar", client: "contacts", contact: "contacts", property: "outreach", lead: "outreach", invoice: "documents", expense: "documents", document: "documents" };
+    const destination = destinationByType[action.recordType];
+    if (action.recordType === "invoice") {
+      state.moneyView = "invoicing";
+      await loadMoneyView("invoicing");
+    }
+    setActiveSection(destination);
+    replaceDashboardHash(destination);
+    await render();
+    if (action.recordType === "ticket") openTicketDrawer("ticket", id);
+    else if (action.recordType === "job") openJobDrawer(id);
+    else if (action.recordType === "client" || action.recordType === "contact") openContactDrawer(id);
+    else if (action.recordType === "property") openOutreachPropertyDrawer(id);
+    else if (action.recordType === "lead") openOutreachDrawer(id);
+    else if (action.recordType === "invoice") await openFinancialInvoiceDrawer(id);
+    else if (action.recordType === "document") openDocumentDrawer(id);
+  }
+
+  function applyCopilotHighlights() {
+    qsa(".is-copilot-highlighted").forEach((element) => element.classList.remove("is-copilot-highlighted"));
+    state.copilotHighlightIds.forEach((id) => {
+      qsa(`[data-id="${cssEscape(id)}"]`).forEach((element) => element.classList.add("is-copilot-highlighted"));
+    });
+  }
+
+  async function executeDashboardUIActions(actions = []) {
+    const order = { apply_filters: 0, navigate: 1, switch_tab: 2, open_record: 3, highlight_records: 4, scroll_to: 5 };
+    const approved = actions.filter(validDashboardUIAction).slice(0, 8).sort((left, right) => (order[left.type] ?? 9) - (order[right.type] ?? 9));
+    const status = [];
+    for (const action of approved) {
+      if (action.type === "navigate") {
+        setActiveSection(action.route);
+        replaceDashboardHash(action.route);
+        await render();
+        status.push(`Opened ${detailDrawerSectionLabel()}.`);
+      } else if (action.type === "open_record") {
+        await openRecordFromCopilot(action);
+        status.push("Opened the matching record in a side panel.");
+      } else if (action.type === "apply_filters") {
+        state.copilotFilters = { ...state.copilotFilters, ...action.filters };
+        if (action.filters.moneyView) {
+          state.moneyView = action.filters.moneyView;
+          await loadMoneyView(state.moneyView);
+        }
+        await render();
+        status.push(`Applied ${Object.keys(action.filters).join(" and ")} filters.`);
+      } else if (action.type === "highlight_records") {
+        state.copilotHighlightIds = action.recordIds.map(String);
+        applyCopilotHighlights();
+        status.push(`Highlighted ${state.copilotHighlightIds.length} matching record${state.copilotHighlightIds.length === 1 ? "" : "s"}.`);
+      } else if (action.type === "scroll_to") {
+        document.getElementById(action.targetId)?.scrollIntoView({ behavior: "smooth", block: "start" });
+        status.push("Moved to the requested section.");
+      } else if (action.type === "switch_tab") {
+        document.querySelector(`[data-tab="${cssEscape(action.tabId)}"]`)?.click();
+        status.push("Switched the requested tab.");
+      }
+    }
+    return status;
+  }
+
+  function isCopilotUICommand(message) {
+    return /\b(open|show|pull up|take me|go to|filter|highlight|switch|view)\b/i.test(message);
+  }
+
+  function copilotMemoryPreviewHtml(preview) {
+    if (!preview?.statement) return "";
+    state.copilotPendingMemory = preview;
+    return `<section class="copilot-memory-preview">
+      <p><strong>I recognized a correction.</strong> I can use it once, attach it to this record, or save it as an approved business rule.</p>
+      <blockquote>${escapeHtml(preview.statement)}</blockquote>
+      <div><button type="button" data-action="copilot-memory-use-once">Use once</button><button type="button" data-action="copilot-memory-save-record">Save for this record</button><button type="button" data-action="copilot-memory-save-rule">Save as business rule</button><button type="button" data-action="copilot-memory-cancel">Cancel</button></div>
+    </section>`;
+  }
+
+  function copilotTransitionPreviewHtml(preview) {
+    if (!preview?.ticketId || !preview?.currentStage || !preview?.newStage) return "";
+    state.copilotPendingTransition = {
+      ...preview,
+      approvalRequestId: state.groundskeeperLastMeta?.requestId || ""
+    };
+    return `<section class="copilot-memory-preview copilot-transition-preview" aria-label="Ticket stage change approval">
+      <p><strong>Review this ticket change</strong></p>
+      <dl>
+        <div><dt>Ticket</dt><dd>${escapeHtml(preview.ticketNumber || preview.ticketTitle || "Ticket")}</dd></div>
+        <div><dt>Current stage</dt><dd>${escapeHtml(preview.currentStageLabel || preview.currentStage)}</dd></div>
+        <div><dt>New stage</dt><dd>${escapeHtml(preview.newStageLabel || preview.newStage)}</dd></div>
+      </dl>
+      <p class="copilot-preview-warning">Nothing changes until you approve.</p>
+      <div><button type="button" data-action="copilot-transition-approve">Approve stage change</button><button type="button" data-action="copilot-transition-cancel">Cancel</button></div>
+    </section>`;
+  }
+
+  function copilotOutcomeHtml() {
+    return copilotConsultationHtml(state.groundskeeperLastMeta?.consultation);
+  }
+
+  function copilotConsultationHtml(meta) {
+    if (!meta || meta.status === "skipped") return "";
+    const label = meta.status === "completed" ? "Gemini consultation used" : meta.status === "rate_limited" ? "Gemini consultation limit reached" : "Gemini consultation unavailable";
+    return `<details class="copilot-consultation-detail"><summary>${escapeHtml(label)}</summary><dl>
+      <div><dt>Purpose</dt><dd>${escapeHtml(String(meta.reason || "").replace(/_/g, " "))}</dd></div>
+      <div><dt>Provider</dt><dd>Gemini</dd></div>
+      <div><dt>Model</dt><dd>${escapeHtml(meta.model || "Configured Gemini model")}</dd></div>
+      <div><dt>Status</dt><dd>${escapeHtml(meta.status || "unknown")}</dd></div>
+      ${meta.errorCategory ? `<div><dt>Admin detail</dt><dd>${escapeHtml(String(meta.errorCategory).replace(/_/g, " "))}</dd></div>` : ""}
+      ${meta.durationMs ? `<div><dt>Duration</dt><dd>${escapeHtml(String(meta.durationMs))} ms</dd></div>` : ""}
+      <div><dt>Disagreement</dt><dd>${meta.disagreementDetected ? "Detected and surfaced" : "None detected"}</dd></div>
+    </dl></details>`;
+  }
+
+  async function saveCopilotMemory(memoryType) {
+    const preview = state.copilotPendingMemory;
+    if (!preview) return null;
+    const result = await groundskeeperRequest("memory-upsert", {
+      memory: {
+        memoryType,
+        statement: preview.statement,
+        scope: memoryType === "record" ? preview.scope : {},
+        source: "user_correction",
+        confidence: preview.confidence || "high"
+      }
+    });
+    state.copilotPendingMemory = null;
+    state.assistantMemoriesLoaded = false;
+    return result.memory;
+  }
+
+  function copilotRecordButtons(rows = []) {
+    return rows.slice(0, 8).map((row) => `
+      <button class="copilot-record" type="button" data-action="${escapeHtml(row.action)}" data-id="${escapeHtml(row.id)}"${row.ticketSource ? ` data-ticket-source="${escapeHtml(row.ticketSource)}"` : ""}>
+        <span><strong>${escapeHtml(row.title)}</strong><small>${escapeHtml([row.group, row.detail].filter(Boolean).join(" · "))}</small></span>
+        <b>Open</b>
+      </button>
+    `).join("");
+  }
+
+  function copilotCitationRows(citations = []) {
+    const actionByType = {
+      ticket: "open-ticket",
+      job: "edit-job",
+      lead: "open-outreach-prospect",
+      property: "open-outreach-property",
+      invoice: "open-financial-invoice",
+      expense: "open-money-expense",
+      document: "open-document"
+    };
+    return citations.map((citation) => ({
+      title: citation.displayId || citation.title || "Source record",
+      detail: citation.title && citation.title !== citation.displayId ? citation.title : "Groundskeeper source",
+      group: "Source",
+      action: actionByType[citation.recordType] || "",
+      id: citation.recordId,
+      ticketSource: citation.recordType === "ticket" ? "ticket" : ""
+    })).filter((row) => row.action && row.id);
+  }
+
+  function copilotPush(role, content, extraHtml = "") {
+    state.copilotMessages.push({ role, content, extraHtml });
+    state.copilotMessages = state.copilotMessages.slice(-24);
+  }
+
+  function renderDashboardCopilot() {
+    let shell = qs("[data-dashboard-copilot]");
+    if (!shell) {
+      shell = document.createElement("aside");
+      shell.dataset.dashboardCopilot = "";
+      (els.appView || document.body).append(shell);
+    }
+    shell.className = `dashboard-copilot${state.copilotOpen ? " is-open" : ""}`;
+    shell.innerHTML = `
+      <button class="dashboard-copilot-launcher" type="button" data-action="toggle-dashboard-copilot" aria-expanded="${state.copilotOpen ? "true" : "false"}">
+        <img src="images/groundskeeper-ai/raccoon-mascot.webp" alt="" aria-hidden="true">
+        <span class="sr-only">Ask Groundskeeper AI</span>
+      </button>
+      <section class="dashboard-copilot-panel" aria-label="Groundskeeper dashboard assistant" ${state.copilotOpen ? "" : "hidden"}>
+        <header class="copilot-landscape">
+          <span class="copilot-mountain is-back" aria-hidden="true"></span>
+          <span class="copilot-mountain is-front" aria-hidden="true"></span>
+          <span class="copilot-birds" aria-hidden="true">⌁⌁</span>
+          <span class="copilot-tree-line" aria-hidden="true"></span>
+          <button type="button" data-action="toggle-dashboard-copilot" aria-label="Close Groundskeeper AI">×</button>
+        </header>
+        <div class="copilot-identity">
+          <span class="copilot-avatar"><img src="images/groundskeeper-ai/raccoon-mascot.webp" alt="Groundskeeper AI raccoon mascot"></span>
+          <h3>Groundskeeper AI</h3>
+          <p>Your smart helper for jobs, clients, and everything in between.</p>
+        </div>
+        <div class="dashboard-copilot-messages" data-copilot-messages aria-live="polite">
+          ${state.copilotMessages.length ? state.copilotMessages.map((message) => `
+            <article class="copilot-message is-${escapeHtml(message.role)}">
+              <p>${escapeHtml(message.content).replace(/\n/g, "<br>")}</p>
+              ${message.extraHtml || ""}
+            </article>
+          `).join("") : `<article class="copilot-message is-assistant"><p>I can search the whole dashboard, open records, explain exactly what a ticket still needs, and prepare visits for your approval. Try “Find Kennedy tickets” or “What can I complete today?”</p></article>`}
+          ${state.copilotLoading ? `<article class="copilot-message is-assistant is-loading"><p>${state.copilotConsultationRequest ? "Consulting Gemini for a second opinion…" : "Checking your dashboard…"}</p></article>` : ""}
+        </div>
+        <form data-dashboard-copilot-form>
+          <label class="sr-only" for="groundskeeper-copilot-message">Message Groundskeeper AI</label>
+          <textarea id="groundskeeper-copilot-message" name="message" rows="1" maxlength="700" placeholder="How can I help you today?" required></textarea>
+          <button type="submit" aria-label="Send message"${state.copilotLoading ? " disabled" : ""}><span aria-hidden="true">➤</span></button>
+        </form>
+        <nav class="copilot-shortcuts" aria-label="Groundskeeper shortcuts">
+          <button type="button" data-action="copilot-shortcut" data-copilot-section="tickets"><span aria-hidden="true">✓</span><strong>Tickets</strong></button>
+          <button type="button" data-action="copilot-shortcut" data-copilot-section="outreach"><span aria-hidden="true">♙</span><strong>Leads</strong></button>
+          <button type="button" data-action="copilot-shortcut" data-copilot-section="reports"><span aria-hidden="true">▥</span><strong>Reports</strong></button>
+        </nav>
+        <small class="dashboard-copilot-trust">Changes are made only after you approve a preview.</small>
+      </section>`;
+    const messages = shell.querySelector("[data-copilot-messages]");
+    if (messages) messages.scrollTop = messages.scrollHeight;
+  }
+
+  function copilotTicketRows(tickets) {
+    return tickets.map((ticket) => ({
+      title: [ticket.number, ticket.title].filter(Boolean).join(" — "),
+      detail: [ticket.customer, ticket.property, ticket.stageLabel].filter(Boolean).join(" / "),
+      group: "Ticket",
+      action: "open-ticket",
+      id: ticket.id,
+      ticketSource: ticket.source
+    }));
+  }
+
+  function copilotTicketAudit(ticket) {
+    const stage = ticketStage(ticket);
+    const transitions = ticketTransitionOptions(ticket);
+    const next = transitions[0];
+    const missing = next?.missing || ticketMissingRequirementsForStage(ticket, stage);
+    const scheduledFuture = dateKey(ticket.dateRaw) > todayKey();
+    const timing = scheduledFuture && ["scheduled", "in_progress"].includes(stage)
+      ? "This is future scheduled work, so proof is expected later—not an overdue blocker."
+      : "";
+    return {
+      content: `${ticket.number || "Ticket"} — ${ticket.title || "Untitled ticket"}\nCurrent stage: ${ticket.stageLabel || ticketStageLabel(stage)}\n${missing.length ? `Needed before ${next ? ticketStageLabel(next.to) : "the next step"}: ${missing.join(", ")}.` : "No required information is missing for its next workflow step."}${timing ? `\n${timing}` : ""}`,
+      html: copilotRecordButtons(copilotTicketRows([ticket]))
+    };
+  }
+
+  function copilotFindTicket(message) {
+    const normalized = normalizeLookup(message);
+    const tickets = dashboardTickets(state.data);
+    const lastTicket = state.copilotLastResults.find((row) => row.group === "Ticket");
+    if (/\b(it|this|that|second|first)\b/.test(normalized) && lastTicket) {
+      const index = /\bsecond\b/.test(normalized) ? 1 : 0;
+      const row = state.copilotLastResults.filter((item) => item.group === "Ticket")[index] || lastTicket;
+      return tickets.find((ticket) => String(ticket.id) === String(row.id));
+    }
+    const scored = tickets.map((ticket) => {
+      const text = normalizeLookup([ticket.number, ticket.title, ticket.customer, ticket.property].filter(Boolean).join(" "));
+      const tokens = normalized.split(" ").filter((token) => token.length > 2 && !["what", "which", "ticket", "needs", "missing", "complete", "completion", "open", "show", "find"].includes(token));
+      return { ticket, score: tokens.filter((token) => text.includes(token)).length };
+    }).sort((a, b) => b.score - a.score);
+    return scored[0]?.score ? scored[0].ticket : null;
+  }
+
+  function copilotSearchQuery(message) {
+    return String(message || "")
+      .replace(/\b(find|search|show|open|pull up|look for|all|records?|tickets?|leads?|clients?|properties|invoices?|expenses?|vendors?|documents?|jobs?|upcoming)\b/gi, " ")
+      .replace(/\s+/g, " ")
+      .trim();
+  }
+
+  function copilotSearchRows(message) {
+    const query = copilotSearchQuery(message);
+    const ignored = new Set(["visit", "visits", "work", "item", "items", "record", "records"]);
+    const candidates = [query, ...query.split(/\s+/).filter((word) => word.length > 2 && !ignored.has(normalizeLookup(word)))];
+    const seen = new Set();
+    const rows = [];
+    candidates.forEach((candidate) => {
+      globalSearchFlatResults(groupedGlobalSearchResults(candidate)).forEach((row) => {
+        const key = `${row.action}:${row.id}`;
+        if (!seen.has(key)) {
+          seen.add(key);
+          rows.push(row);
+        }
+      });
+    });
+    return { query, rows: rows.slice(0, 10) };
+  }
+
+  function copilotAttentionSummary() {
+    const items = todayActionItems(state.data).slice(0, 8);
+    if (!items.length) return { content: "Nothing urgent is currently queued. I found no overdue calls, due visits, completion reviews, or payment actions.", html: "" };
+    return {
+      content: `Here are the ${items.length} highest-priority items I found, ordered by urgency. Open a record to work it.`,
+      html: items.map((item) => {
+        const ticket = dashboardTickets(state.data).find((entry) => String(entry.id) === String(item.id));
+        return ticket ? copilotRecordButtons(copilotTicketRows([ticket])) : `<div class="copilot-attention"><strong>${escapeHtml(item.title || item.status || "Action")}</strong><span>${escapeHtml(item.detail || item.nextAction || "")}</span></div>`;
+      }).join("")
+    };
+  }
+
+  function copilotSchedulePreview(message) {
+    const iso = message.match(/\b(20\d{2}-\d{2}-\d{2})\b/)?.[1];
+    const slash = message.match(/\b(\d{1,2})\/(\d{1,2})(?:\/(20\d{2}))?\b/);
+    let date = iso || "";
+    if (!date && slash) {
+      const year = slash[3] || new Date().getFullYear();
+      date = `${year}-${String(slash[1]).padStart(2, "0")}-${String(slash[2]).padStart(2, "0")}`;
+    }
+    const siteMatch = message.match(/(?:at|for)\s+(.+?)(?:\s+on\s+|\s+(?:20\d{2}-|\d{1,2}\/\d{1,2})|$)/i);
+    const serviceMatch = message.match(/(?:schedule|add|create)\s+(?:a\s+)?(.+?)(?:\s+(?:at|for|on)\s+)/i);
+    const draft = {
+      visit_date: date,
+      visit_window: message.match(/\b(\d{1,2}(?::\d{2})?\s*(?:am|pm)(?:\s*-\s*\d{1,2}(?::\d{2})?\s*(?:am|pm))?)\b/i)?.[1] || "",
+      site_name: siteMatch?.[1]?.trim() || "",
+      city: "",
+      service: serviceMatch?.[1]?.trim() || "Scheduled visit"
+    };
+    state.copilotScheduleDraft = draft;
+    const complete = draft.visit_date && draft.site_name;
+    return {
+      content: complete ? "I prepared this visit. Review it before adding it to Work." : "I can prepare that. Add the site and date in your message—for example: “Schedule walkthrough at Kennedy Apartments on 2026-08-14 at 10am.”",
+      html: complete ? `<div class="copilot-schedule-preview"><span><b>Date</b>${escapeHtml(formatDate(draft.visit_date))}</span><span><b>Time</b>${escapeHtml(draft.visit_window || "Not set")}</span><span><b>Site</b>${escapeHtml(draft.site_name)}</span><span><b>Work</b>${escapeHtml(draft.service)}</span><div><button type="button" data-action="copilot-apply-schedule">Add to Work</button><button type="button" data-action="copilot-cancel-schedule">Cancel</button></div></div>` : ""
+    };
+  }
+
+  async function handleDashboardCopilotMessage(message, consultationRequest = null) {
+    const lower = normalizeLookup(message);
+    copilotPush("user", message);
+    state.copilotLoading = true;
+    state.copilotConsultationRequest = consultationRequest;
+    renderDashboardCopilot();
+    try {
+      await ensureGlobalSearchFinancialData();
+      let reply;
+      if (consultationRequest) {
+        const answer = await groundskeeperChat(message, `consultation:${normalizeDashboardSection(state.activeSection)}`, consultationRequest);
+        const sources = copilotCitationRows(state.groundskeeperLastMeta?.citations || []);
+        reply = {
+          content: answer,
+          html: `${sources.length ? `<details class="copilot-sources"><summary>How I got this · ${sources.length} source${sources.length === 1 ? "" : "s"}</summary>${copilotRecordButtons(sources)}</details>` : ""}${copilotOutcomeHtml()}`
+        };
+      } else if (isCopilotUICommand(message)) {
+        const answer = await groundskeeperChat(message, `command:${normalizeDashboardSection(state.activeSection)}`, consultationRequest);
+        const actions = state.groundskeeperLastMeta?.uiActions || [];
+        const statuses = await executeDashboardUIActions(actions);
+        const sources = copilotCitationRows(state.groundskeeperLastMeta?.citations || []);
+        const movement = actions.length ? `<div class="copilot-action-plan"><strong>I’m going to:</strong><ol>${actions.map((action) => `<li>${escapeHtml(action.type.replace(/_/g, " "))}</li>`).join("")}</ol></div>` : "";
+        reply = {
+          content: statuses.length ? statuses.join(" ") : answer,
+          html: `${movement}${copilotMemoryPreviewHtml(state.groundskeeperLastMeta?.memoryPreview)}${copilotTransitionPreviewHtml(state.groundskeeperLastMeta?.transitionPreview)}${sources.length ? `<details class="copilot-sources"><summary>How I got this · ${sources.length} source${sources.length === 1 ? "" : "s"}</summary>${copilotRecordButtons(sources)}</details>` : ""}${copilotOutcomeHtml()}`
+        };
+      } else if (/\b(schedule|add visit|create visit)\b/.test(lower)) {
+        reply = copilotSchedulePreview(message);
+      } else if (/\b(missing|complete|completion|close|blocked|can this close)\b/.test(lower)) {
+        const ticket = copilotFindTicket(message);
+        if (ticket) reply = copilotTicketAudit(ticket);
+        else {
+          const blocked = dashboardTickets(state.data).filter(ticketIsOpen).filter((item) => ticketTransitionOptions(item).some((move) => move.missing?.length)).slice(0, 8);
+          const rows = copilotTicketRows(blocked);
+          state.copilotLastResults = rows;
+          reply = { content: blocked.length ? `I found ${blocked.length} tickets with required information missing before their next step. Future scheduled proof is treated as expected work, not overdue.` : "No open tickets are currently blocked by required information.", html: copilotRecordButtons(rows) };
+        }
+      } else if (/\b(today|attention|urgent|priority|my work)\b/.test(lower)) {
+        reply = copilotAttentionSummary();
+      } else if (/\b(find|search|show|open|pull up|look for)\b/.test(lower)) {
+        const { query, rows } = copilotSearchRows(message);
+        state.copilotLastResults = rows;
+        reply = { content: rows.length ? `I found ${rows.length} matching records for “${query}”.` : `I couldn't find a dashboard record matching “${query}”. Try a client, property, ticket number, phone, email, or vendor.`, html: copilotRecordButtons(rows) };
+      } else {
+        const answer = await groundskeeperChat(message, `copilot:${normalizeDashboardSection(state.activeSection)}`, consultationRequest);
+        const sources = copilotCitationRows(state.groundskeeperLastMeta?.citations || []);
+        reply = {
+          content: answer,
+          html: `${copilotMemoryPreviewHtml(state.groundskeeperLastMeta?.memoryPreview)}${copilotTransitionPreviewHtml(state.groundskeeperLastMeta?.transitionPreview)}${sources.length ? `<details class="copilot-sources"><summary>How I got this · ${sources.length} source${sources.length === 1 ? "" : "s"}</summary>${copilotRecordButtons(sources)}</details>` : ""}${copilotOutcomeHtml()}`
+        };
+      }
+      copilotPush("assistant", reply.content, reply.html);
+    } catch (error) {
+      copilotPush("assistant", error.message || "I couldn't finish that dashboard check.");
+    } finally {
+      state.copilotLoading = false;
+      state.copilotConsultationRequest = null;
+      renderDashboardCopilot();
+    }
   }
 
   async function groundskeeperTrainingChat(message) {
@@ -2463,6 +3200,21 @@
     };
   }
 
+  function safeExternalWebsiteUrl(value) {
+    let candidate = String(value || "").trim();
+    if (!candidate) return "";
+    if (!/^[a-z][a-z0-9+.-]*:/i.test(candidate)) {
+      if (!/^(?:www\.)?[a-z0-9-]+(?:\.[a-z0-9-]+)+(?:[/:?#]|$)/i.test(candidate)) return "";
+      candidate = `https://${candidate}`;
+    }
+    try {
+      const parsed = new URL(candidate);
+      return ["http:", "https:"].includes(parsed.protocol) ? parsed.href : "";
+    } catch (error) {
+      return "";
+    }
+  }
+
   function googleVoiceCallUrl(phone) {
     const digits = String(phone || "").replace(/\D/g, "");
     const normalizedDigits = digits.length === 11 && digits.startsWith("1") ? digits.slice(1) : digits;
@@ -2530,6 +3282,8 @@
   function normalizeLeadActivity(row) {
     const rawOutcome = CALL_OUTCOMES.includes(row.outcome) ? row.outcome : "not_set";
     const outcome = rawOutcome === "bad_number" ? "wrong_number" : rawOutcome === "follow_up_later" ? "follow_up_needed" : rawOutcome;
+    const metadata = row.metadata && typeof row.metadata === "object" ? row.metadata : {};
+    const queueOutcome = CALL_QUEUE_OUTCOMES.some(([value]) => value === metadata.call_queue_outcome) ? metadata.call_queue_outcome : outcome;
     return {
       id: row.id,
       leadId: row.lead_id || "",
@@ -2538,10 +3292,12 @@
       phoneDisplay: phoneInfo(row.phone_number).display,
       type: row.type || "call_attempt",
       outcome,
-      outcomeLabel: CALL_OUTCOME_LABELS[outcome] || outcome,
+      queueOutcome,
+      outcomeLabel: CALL_QUEUE_OUTCOMES.find(([value]) => value === queueOutcome)?.[1] || CALL_OUTCOME_LABELS[outcome] || outcome,
       notes: row.notes || "",
       followUpDateRaw: dateKey(row.follow_up_date),
       followUpDate: formatDate(row.follow_up_date),
+      metadata,
       createdAtRaw: row.created_at || "",
       createdAt: row.created_at ? new Date(row.created_at).toLocaleString("en-US", { dateStyle: "medium", timeStyle: "short" }) : ""
     };
@@ -2713,15 +3469,56 @@
     else if (leadType === "outreach_company") openOutreachCompanyDrawer(leadId);
   }
 
+  let detailDrawerCloseTimer = 0;
+  let detailDrawerLastFocus = null;
+
+  function detailDrawerSectionLabel() {
+    return ({
+      overview: "Home",
+      tickets: "Tickets",
+      work: "Work",
+      calendar: "Work",
+      outreach: "Leads",
+      "call-queue": "Leads → Call Queue",
+      contacts: "Leads → Contacts",
+      documents: `Money → ${MONEY_TABS.find((item) => item.key === state.moneyView)?.label || "Overview"}`,
+      equipment: "Tools → Equipment",
+      settings: "Tools → Settings"
+    })[state.activeSection] || "Dashboard";
+  }
+
+  function renderDetailDrawerBreadcrumbs() {
+    if (!els.detailContent || els.detailContent.querySelector("[data-drawer-breadcrumbs]")) return;
+    const heading = els.detailContent.querySelector("h3")?.textContent?.trim() || "";
+    const breadcrumbs = document.createElement("nav");
+    breadcrumbs.className = "drawer-breadcrumbs";
+    breadcrumbs.dataset.drawerBreadcrumbs = "";
+    breadcrumbs.setAttribute("aria-label", "Current location");
+    breadcrumbs.innerHTML = `<button type="button" data-action="close-drawer" aria-label="Back to ${escapeHtml(detailDrawerSectionLabel())}">← Back</button><span>${escapeHtml(detailDrawerSectionLabel())}${heading ? ` → ${escapeHtml(heading)}` : ""}</span>`;
+    els.detailContent.prepend(breadcrumbs);
+  }
+
   function openDetailDrawer() {
     if (!els.detailDrawer) return;
+    const wasOpen = !els.detailDrawer.hidden && els.detailDrawer.classList.contains("is-open");
+    window.clearTimeout(detailDrawerCloseTimer);
+    detailDrawerCloseTimer = 0;
+    if (!wasOpen && document.activeElement instanceof HTMLElement && !els.detailDrawer.contains(document.activeElement)) {
+      detailDrawerLastFocus = document.activeElement;
+    }
     els.detailDrawer.hidden = false;
+    els.detailDrawer.classList.remove("is-closing");
+    els.detailDrawer.setAttribute("aria-hidden", "false");
+    document.documentElement.classList.add("is-detail-drawer-open");
+    document.documentElement.style.setProperty("overflow-y", "hidden", "important");
     document.body.classList.add("is-detail-drawer-open");
     requestAnimationFrame(() => {
+      renderDetailDrawerBreadcrumbs();
+      els.detailDrawer.classList.add("is-open");
       const panel = els.detailDrawer ? els.detailDrawer.querySelector(".drawer-panel") : null;
       if (panel) panel.scrollTop = 0;
       if (els.detailContent) els.detailContent.scrollTop = 0;
-      if (els.closeDetail) els.closeDetail.focus({ preventScroll: true });
+      if (!wasOpen && els.closeDetail) els.closeDetail.focus({ preventScroll: true });
     });
   }
 
@@ -2981,7 +3778,8 @@
       id: row.id,
       title: row.title || "Untitled note",
       body: row.body || "",
-      date: formatDate(row.created_at)
+      date: formatDate(row.created_at),
+      createdAtRaw: row.created_at || ""
     };
   }
 
@@ -3597,6 +4395,7 @@
       propertyType: row.property_type || "Other",
       serviceInterest: row.service_interest || "General Property Care",
       source: row.source || "",
+      website: row.website || row.source_url || "",
       status,
       lastContactedAtRaw: dateKey(row.last_contacted_at),
       lastContactedAt: formatDate(row.last_contacted_at),
@@ -4685,10 +5484,11 @@
   function dashboardInitialModuleKeys(section = state.activeSection) {
     const normalized = normalizeDashboardSection(section);
     const keysBySection = {
-      overview: ["submissions", "jobs", "reminders"],
-      tickets: ["tickets", "submissions", "jobs"],
+      overview: ["submissions", "jobs", "reminders", "notes"],
+      tickets: ["tickets", "submissions", "jobs", "notes"],
       calendar: ["jobs", "tickets"],
       outreach: ["outreachProspects", "tickets", "submissions"],
+      "call-queue": ["outreachProspects", "leadActivity", "tickets", "contacts"],
       contacts: ["contacts", "jobs", "documents", "routeStops", "reminders"],
       documents: ["documents", "tickets", "submissions"],
       settings: [],
@@ -4696,6 +5496,7 @@
       equipment: ["equipmentItems", "equipmentMaintenance", "hardwareGuide"],
       documentation: ["documentation"],
       "groundskeeper-ai": ["groundskeeperAi"],
+      "ai-memory": [],
       "import-export": ["importExport"]
     };
     return Array.from(new Set(keysBySection[normalized] || keysBySection.overview));
@@ -4886,6 +5687,7 @@
         rules: snapshot.rules || [],
         savedAnswers: snapshot.savedAnswers || [],
         trainingRules: snapshot.trainingRules || [],
+        landscapingKnowledge: snapshot.landscapingKnowledge || [],
         versions: snapshot.versions || [],
         logs: snapshot.logs || [],
         feedback: snapshot.feedback || [],
@@ -5283,6 +6085,7 @@
       ["draft_invoice_exists", "draftInvoiceExists"],
       ["deposit_required", "depositRequired"],
       ["deposit_paid", "depositPaid"],
+      ["required_documents_present", "requiredDocumentsPresent"],
       ["before_photos_uploaded", "beforePhotosUploaded"],
       ["after_photos_uploaded", "afterPhotosUploaded"],
       ["arrival_photos_uploaded", "arrivalPhotosUploaded"],
@@ -5382,6 +6185,17 @@
     return ticket;
   }
 
+  async function deleteJobTicket(id) {
+    if (!id) return false;
+    if (isDemoMode()) {
+      state.data.tickets = state.data.tickets.filter((ticket) => String(ticket.id) !== String(id));
+      return true;
+    }
+    await dashboardTicketRequest("delete", { id });
+    state.data.tickets = state.data.tickets.filter((ticket) => String(ticket.id) !== String(id));
+    return true;
+  }
+
   async function transitionJobTicketStage(id, toStage, input = {}) {
     if (!id || !toStage) return null;
     const nextStage = normalizeTicketStageForDashboard(toStage);
@@ -5412,13 +6226,9 @@
     const ticket = dashboardTickets().find((item) => item.source === "ticket" && item.id === ticketId);
     if (!ticket) throw new Error("Only unified Job Tickets can be moved on the Owner Kanban board.");
     if (!canManageOwnerWorkflow()) throw new Error("Your dashboard role cannot move tickets on the owner board.");
-    const nextStage = normalizeTicketStageForDashboard(ownerKanbanTargetStage(toStage));
     const fromStage = ticketStage(ticket);
+    const nextStage = normalizeTicketStageForDashboard(ownerKanbanTargetStage(toStage));
     if (fromStage === nextStage) return ticket;
-    const missing = ticketMissingRequirementsForStage(ticket, nextStage);
-    if (missing.length) {
-      throw new Error(`Before moving to ${ticketStageLabel(nextStage)}, add: ${missing.join(", ")}.`);
-    }
 
     const previousTickets = state.data.tickets.slice();
     state.ownerKanbanMovingId = ticketId;
@@ -5436,9 +6246,16 @@
     }
 
     try {
-      const updated = await transitionJobTicketStage(ticketId, nextStage, {
-        notes: options.notes || `Moved from ${ticketStageLabel(fromStage)} to ${ticketStageLabel(nextStage)} from Owner Overview Kanban.`,
-        nextAction: ticketNextAction(nextStage)
+      const updated = await updateJobTicket(ticketId, {
+        stage: nextStage,
+        status: ticketRecordStatusForStage(nextStage),
+        next_action: ticketNextAction(nextStage)
+      });
+      await insertJobTicketEvent(ticketId, {
+        eventType: "ticket_stage_changed",
+        fromStage,
+        toStage: nextStage,
+        notes: options.notes || `Moved from ${ticketStageLabel(fromStage)} to ${ticketStageLabel(nextStage)} from Owner Overview Kanban.`
       });
       state.ownerKanbanMovingId = "";
       renderHomeWorkspace(state.data);
@@ -5451,6 +6268,39 @@
       renderJobTicketWorkspace(state.data);
       throw error;
     }
+  }
+
+  function ownerKanbanSourceStatus(columnKey, source) {
+    const statuses = source === "job"
+      ? { new: "New", planned: "Scheduled", in_progress: "Contacted", review: "Invoiced" }
+      : { new: "New", planned: "Interested", in_progress: "Won", review: "Review" };
+    return statuses[columnKey] || statuses.new;
+  }
+
+  async function moveOwnerKanbanSourceCard(ticketId, ticketSource, columnKey) {
+    if (ticketSource === "ticket") {
+      return moveOwnerKanbanTicket(ticketId, columnKey, { notes: "Moved freely on the Owner Overview Kanban." });
+    }
+    if (ticketSource === "quote") {
+      const item = findSubmission(ticketId);
+      if (!item) throw new Error("This lead could not be found.");
+      return updateSubmission(ticketId, {
+        status: ownerKanbanSourceStatus(columnKey, "quote"),
+        follow_up: item.followUp === "Not set" ? "" : item.followUp,
+        notes: item.notes || ""
+      });
+    }
+    if (ticketSource === "job") {
+      const item = state.data.jobs.find((job) => String(job.id) === String(ticketId));
+      if (!item) throw new Error("This scheduled job could not be found.");
+      const updated = await updateScheduledJob(ticketId, {
+        status: ownerKanbanSourceStatus(columnKey, "job")
+      });
+      const index = state.data.jobs.findIndex((job) => String(job.id) === String(ticketId));
+      if (index >= 0 && updated) state.data.jobs[index] = updated;
+      return updated;
+    }
+    throw new Error("This card type cannot be moved on the Kanban board.");
   }
 
   async function insertJobTicketEvent(ticketId, input = {}) {
@@ -5739,9 +6589,17 @@
   async function saveTicketWorkAssignment(form) {
     if (!canManageWorkWorkflow()) throw new Error("Your dashboard role cannot assign work visits.");
     const ticketId = form.dataset.ticketId || "";
+    const ticketSource = form.dataset.ticketSource || "ticket";
     const jobId = form.dataset.jobId || "";
-    const ticket = dashboardTickets().find((item) => item.source === "ticket" && item.id === ticketId);
-    if (!ticket) throw new Error("Open a unified Job Ticket before assigning work.");
+    let ticket = dashboardTickets().find((item) => item.source === ticketSource && item.id === ticketId);
+    if (!ticket) throw new Error("The ticket record could not be found.");
+    if (ticket.source !== "ticket") {
+      ticket = await ensureJobTicketForSource(ticket.source, ticket.id, {
+        stage: "ready_to_schedule",
+        next_action: ticketNextAction("ready_to_schedule")
+      });
+    }
+    if (!ticket?.id) throw new Error("Unable to create the unified Job Ticket before assigning work.");
     const formData = new FormData(form);
     const visitDate = String(formData.get("visit_date") || "").trim();
     const visitWindow = String(formData.get("visit_window") || "").trim();
@@ -7129,7 +7987,8 @@
       type: payload.type || "call_attempt",
       outcome: payload.outcome || "not_set",
       notes: payload.notes || "",
-      follow_up_date: payload.follow_up_date || null
+      follow_up_date: payload.follow_up_date || null,
+      metadata: payload.metadata && typeof payload.metadata === "object" ? payload.metadata : {}
     };
     if (isDemoMode()) {
       const activity = normalizeLeadActivity({
@@ -8462,10 +9321,21 @@
         node.setAttribute("tabindex", "-1");
       }
     });
+    qsa("[data-sidebar-nav-group]").forEach((group) => {
+      const links = qsa("[data-dashboard-link]", group);
+      group.hidden = links.length > 0 && links.every((link) => link.hidden);
+    });
   }
 
   function replaceDashboardHash(section) {
     history.replaceState(null, "", `#${dashboardSectionForRole(section)}`);
+  }
+
+  function setSidebarSubnavOpen(groupKey, open) {
+    qsa("[data-sidebar-nav-group]").forEach((group) => {
+      const isOpen = open && group.dataset.sidebarNavGroup === groupKey;
+      group.classList.toggle("is-open", isOpen);
+    });
   }
 
   function setActiveSection(section, options = {}) {
@@ -8477,7 +9347,10 @@
       node.classList.toggle("is-active", node.dataset.section === state.activeSection);
     });
     qsa("[data-dashboard-link]").forEach((node) => {
-      const isActive = dashboardPrimarySection(node.dataset.dashboardLink) === dashboardPrimarySection(state.activeSection);
+      const isSubnavLink = Boolean(node.closest("[data-sidebar-subnav]"));
+      const isActive = isSubnavLink
+        ? normalizeDashboardSection(node.dataset.dashboardLink) === state.activeSection
+        : dashboardPrimarySection(node.dataset.dashboardLink) === dashboardPrimarySection(state.activeSection);
       node.classList.toggle("is-active", isActive);
       if (isActive) {
         node.setAttribute("aria-current", "page");
@@ -8485,6 +9358,9 @@
         node.removeAttribute("aria-current");
       }
     });
+    const activeGroup = dashboardPrimarySection(state.activeSection);
+    if (els.appView?.classList.contains("is-sidebar-open") && qs(`[data-sidebar-nav-group="${cssEscape(activeGroup)}"]`)) setSidebarSubnavOpen(activeGroup, true);
+    else setSidebarSubnavOpen("", false);
     if (state.activeSection === "route-planner" && googleRouteMap && window.google?.maps) {
       setTimeout(() => {
         window.google.maps.event.trigger(googleRouteMap, "resize");
@@ -8932,7 +9808,7 @@
         return;
       }
       const script = document.createElement("script");
-      script.src = `https://maps.googleapis.com/maps/api/js?key=${encodeURIComponent(key)}&v=weekly&libraries=places`;
+      script.src = `https://maps.googleapis.com/maps/api/js?key=${encodeURIComponent(key)}&v=weekly&libraries=places&loading=async`;
       script.async = true;
       script.defer = true;
       script.dataset.googleMapsRoute = "true";
@@ -9980,6 +10856,8 @@
 
   function jobStage(item) {
     const status = statusText(item.status);
+    if (status === "new") return "sales_intake";
+    if (status === "contacted") return "in_progress";
     if (/cancel/.test(status)) return "cancelled";
     if (/paid|closed/.test(status)) return "closed";
     if (/invoice sent/.test(status)) return "invoice_sent";
@@ -10180,6 +11058,9 @@
       draftInvoiceExists: Boolean(row.draft_invoice_exists || row.draftInvoiceExists),
       depositRequired: Boolean(row.deposit_required || row.depositRequired),
       depositPaid: Boolean(row.deposit_paid || row.depositPaid),
+      requiredDocumentsPresent: row.required_documents_present === null || row.requiredDocumentsPresent === null
+        ? null
+        : Boolean(row.required_documents_present ?? row.requiredDocumentsPresent),
       beforePhotosUploaded: Boolean(row.before_photos_uploaded || row.beforePhotosUploaded || row.arrival_photos_uploaded || row.arrivalPhotosUploaded),
       afterPhotosUploaded: Boolean(row.after_photos_uploaded || row.afterPhotosUploaded || row.completion_photos_uploaded || row.completionPhotosUploaded),
       fieldCompletionNotes: row.field_completion_notes || row.fieldCompletionNotes || "",
@@ -10276,7 +11157,39 @@
   }
 
   function dashboardTickets(data = state.data) {
-    const jobs = (data.jobs || []).map(buildTicketFromJob);
+    const rentDeductionCloseouts = new Map();
+    const rentDeductionReopens = new Map();
+    (data.notes || []).forEach((note) => {
+      const sourceId = String(note?.body || "").match(/Source visit:\s*([0-9a-f-]{36})/i)?.[1];
+      if (!sourceId) return;
+      const createdAt = String(note.createdAtRaw || "");
+      if (/^Rent deduction reopened:/i.test(String(note.title || ""))) {
+        if (createdAt >= String(rentDeductionReopens.get(sourceId) || "")) rentDeductionReopens.set(sourceId, createdAt);
+        return;
+      }
+      if (!/^Rent deduction:/i.test(String(note.title || ""))) return;
+      const amount = Number(String(note.body || "").match(/\$([\d,.]+)/)?.[1]?.replace(/,/g, "")) || 0;
+      const prior = rentDeductionCloseouts.get(sourceId);
+      if (!prior || createdAt >= String(prior.createdAt || "")) rentDeductionCloseouts.set(sourceId, { amount, createdAt });
+    });
+    const jobs = (data.jobs || [])
+      .map((job, index) => {
+        const ticket = buildTicketFromJob(job, index);
+        const closeout = rentDeductionCloseouts.get(String(job.id));
+        const reopenedAt = rentDeductionReopens.get(String(job.id));
+        if (!closeout || (reopenedAt && reopenedAt >= closeout.createdAt)) return ticket;
+        return {
+          ...ticket,
+          stage: "closed",
+          stageLabel: ticketStageLabel("closed"),
+          status: "Completed",
+          lane: "complete",
+          ownerLabel: "Owner",
+          nextAction: "Closed as rent deduction",
+          rentDeductionAmount: closeout.amount,
+          closedAt: closeout.createdAt
+        };
+      });
     const quotes = (data.submissions || []).map(buildTicketFromQuote);
     const derived = [...jobs, ...quotes];
     const canonical = (data.tickets || []).filter((ticket) => ticket && ticket.id);
@@ -10522,7 +11435,7 @@
     const transitionBlockers = ticketTransitionOptions(ticket || {})
       .flatMap((item) => item.missing || []);
     const blockers = ticket.blockers?.length ? ticket.blockers : [...new Set(transitionBlockers)];
-    return `<section class="ticket-drawer-card">
+    return `<section class="ticket-drawer-card" id="ticket-next-requirements">
       <div class="ticket-drawer-card-heading">
         <h4>Next requirements</h4>
         <span>${escapeHtml(ticket.nextAction || "Open ticket")}</span>
@@ -10531,6 +11444,130 @@
         ${blockers.map((item) => `<li><span aria-hidden="true"></span>${escapeHtml(item)}</li>`).join("")}
       </ul>` : `<p class="ticket-drawer-note">No blockers are known for this stage. This ticket can move to the next owner when the working details are saved.</p>`}
     </section>`;
+  }
+
+  const ticketCompletionChecklistItems = [
+    { key: "beforePhotosUploaded", label: "Arrival photos", detail: "Proof of the site before work begins." },
+    { key: "afterPhotosUploaded", label: "Completion photos", detail: "Proof of the finished work." },
+    { key: "fieldCompletionNotes", label: "Completion notes", detail: "What was completed, changed, or left for later." },
+    { key: "requiredDocumentsPresent", label: "Required forms and documents", detail: "Assigned forms, approvals, and supporting records." },
+    { key: "actualsRecorded", label: "Actual costs", detail: "Final labor, materials, and other job costs." },
+    { key: "invoiceFinalized", label: "Final invoice", detail: "Reviewed invoice, or N/A for non-invoiced work." },
+    { key: "paymentStatus", label: "Payment", detail: "Paid, or N/A when payment does not apply." }
+  ];
+
+  function ticketCompletionChecklistEvent(ticket) {
+    return ticketHistoryFor(ticket).find((event) => ["ticket_completion_checklist_saved", "ticket_completed_from_checklist"].includes(event.eventType)) || null;
+  }
+
+  function ticketCompletionChecklistState(ticket) {
+    const event = ticketCompletionChecklistEvent(ticket);
+    const completed = Array.isArray(event?.newValue?.completed) ? event.newValue.completed : [];
+    const notApplicable = event?.newValue?.notApplicable && typeof event.newValue.notApplicable === "object" ? event.newValue.notApplicable : {};
+    return { completed, notApplicable, notes: event?.notes || "" };
+  }
+
+  function ticketCompletionItemComplete(ticket, key, savedCompleted = []) {
+    if (key === "actualsRecorded") return savedCompleted.includes(key);
+    return ticketHasRequirementValue(ticket, key);
+  }
+
+  function renderTicketCompletionChecklist(ticket) {
+    if (ticket?.source !== "ticket") return "";
+    const stage = ticketStage(ticket);
+    const canClose = currentSessionRole() === "owner" && ["field_work_complete", "completion_review", "invoice_review", "invoice_sent", "partially_paid", "paid"].includes(stage);
+    const { completed, notApplicable, notes } = ticketCompletionChecklistState(ticket);
+    const resolved = ticketCompletionChecklistItems.filter((item) => ticketCompletionItemComplete(ticket, item.key, completed) || notApplicable[item.key]).length;
+    return `<section class="ticket-drawer-card ticket-completion-checklist" id="ticket-closeout" aria-label="Unified completion checklist">
+      <div class="ticket-drawer-card-heading">
+        <div>
+          <p class="eyebrow">One-Step Closeout</p>
+          <h4>Completion checklist</h4>
+          <span>Add the final information here. Mark N/A when a requirement genuinely does not apply.</span>
+        </div>
+        <strong>${escapeHtml(`${resolved}/${ticketCompletionChecklistItems.length}`)}</strong>
+      </div>
+      <form data-ticket-completion-form data-ticket-id="${escapeHtml(ticket.id)}">
+        <div class="ticket-completion-list">
+          ${ticketCompletionChecklistItems.map((item) => {
+            const isComplete = ticketCompletionItemComplete(ticket, item.key, completed);
+            const naReason = notApplicable[item.key] || "";
+            return `<article class="ticket-completion-item ${isComplete || naReason ? "is-resolved" : ""}" data-completion-item="${escapeHtml(item.key)}">
+              <div>
+                <strong>${escapeHtml(item.label)}</strong>
+                <small>${escapeHtml(item.detail)}</small>
+              </div>
+              <label><input type="checkbox" value="${escapeHtml(item.key)}" data-completion-complete${isComplete ? " checked" : ""}${naReason ? " disabled" : ""}> Complete</label>
+              <label><input type="checkbox" value="${escapeHtml(item.key)}" data-completion-na${naReason ? " checked" : ""}> N/A</label>
+              ${item.key === "fieldCompletionNotes" ? `<textarea data-completion-notes rows="2" placeholder="Completion notes...">${escapeHtml(ticket.fieldCompletionNotes || "")}</textarea>` : ""}
+              ${item.key === "paymentStatus" ? `<select data-completion-payment aria-label="Payment status">
+                <option value="">Choose payment status</option>
+                <option value="unpaid"${statusText(ticket.paymentStatus) === "unpaid" ? " selected" : ""}>Unpaid</option>
+                <option value="partially_paid"${statusText(ticket.paymentStatus) === "partially_paid" ? " selected" : ""}>Partially paid</option>
+                <option value="paid"${statusText(ticket.paymentStatus) === "paid" ? " selected" : ""}>Paid</option>
+              </select>` : ""}
+            </article>`;
+          }).join("")}
+        </div>
+        <label class="ticket-completion-closeout-note">Closeout note
+          <textarea data-completion-closeout-note rows="3" placeholder="Required when anything is marked N/A. Explain the exception once here.">${escapeHtml(notes)}</textarea>
+        </label>
+        <div class="drawer-actions ticket-completion-actions">
+          <button type="button" data-action="save-ticket-completion" data-id="${escapeHtml(ticket.id)}">${buttonContent("Save Checklist", "save")}</button>
+          ${canManageMoneyWorkflow() ? `<button type="button" class="secondary-action" data-action="create-financial-invoice-from-ticket" data-id="${escapeHtml(ticket.id)}">${buttonContent("Create Draft Invoice", "create-invoice")}</button>` : ""}
+          <button type="button" data-action="owner-finalize-ticket" data-id="${escapeHtml(ticket.id)}"${canClose ? "" : " disabled aria-disabled=\"true\""}>${buttonContent("Save & Close Ticket", "complete-reminder")}</button>
+        </div>
+        ${canClose ? `<p class="ticket-drawer-note">Closing is available when every line is Complete or N/A.</p>` : `<p class="ticket-drawer-note">You can fill this out now. Save & Close becomes available after the job is marked complete.</p>`}
+      </form>
+    </section>`;
+  }
+
+  function ticketCompletionFormPayload(form) {
+    const completed = qsa("[data-completion-complete]:checked", form).map((input) => input.value);
+    const naFields = qsa("[data-completion-na]:checked", form).map((input) => input.value);
+    const notes = form.querySelector("[data-completion-closeout-note]")?.value?.trim() || "";
+    const notApplicable = Object.fromEntries(naFields.map((field) => [field, notes || "Marked N/A by the Owner."]));
+    const fieldCompletionNotes = form.querySelector("[data-completion-notes]")?.value?.trim() || "";
+    const paymentStatus = form.querySelector("[data-completion-payment]")?.value || "";
+    if (fieldCompletionNotes && !completed.includes("fieldCompletionNotes")) completed.push("fieldCompletionNotes");
+    if (paymentStatus === "paid" && !completed.includes("paymentStatus")) completed.push("paymentStatus");
+    return {
+      completed,
+      notApplicable,
+      notes,
+      ticket: {
+        before_photos_uploaded: completed.includes("beforePhotosUploaded"),
+        after_photos_uploaded: completed.includes("afterPhotosUploaded"),
+        field_completion_notes: fieldCompletionNotes,
+        required_documents_present: completed.includes("requiredDocumentsPresent"),
+        invoice_finalized: completed.includes("invoiceFinalized"),
+        payment_status: paymentStatus
+      }
+    };
+  }
+
+  function renderTicketCompletionReview(form, ticket, payload) {
+    const existing = form.querySelector("[data-ticket-completion-review]");
+    if (existing) existing.remove();
+    const completedLabels = ticketCompletionChecklistItems.filter((item) => payload.completed.includes(item.key)).map((item) => item.label);
+    const naLabels = ticketCompletionChecklistItems.filter((item) => payload.notApplicable[item.key]).map((item) => item.label);
+    const blockers = ticketCompletionChecklistItems.filter((item) => !payload.completed.includes(item.key) && !payload.notApplicable[item.key]).map((item) => item.label);
+    const documents = (state.data.documents || []).filter((item) => [item.jobTicketId, item.ticketId, item.jobId].filter(Boolean).includes(ticket.id));
+    const review = document.createElement("section");
+    review.className = "ticket-completion-review";
+    review.dataset.ticketCompletionReview = "";
+    review.innerHTML = `
+      <div class="ticket-drawer-card-heading"><div><p class="eyebrow">Final Review</p><h4>Ready to close?</h4><span>Confirm the complete record before closing this ticket.</span></div></div>
+      <div class="ticket-completion-review-grid">
+        <div><span>Completed</span><strong>${completedLabels.length}/${ticketCompletionChecklistItems.length}</strong><small>${escapeHtml(completedLabels.join(", ") || "None")}</small></div>
+        <div><span>N/A decisions</span><strong>${naLabels.length}</strong><small>${escapeHtml(naLabels.join(", ") || "None")}</small></div>
+        <div><span>Costs</span><strong>${escapeHtml(ticketMoneyText(ticket.actualTotalCost || ticket.estimatedTotalCost))}</strong><small>Recorded or estimated job cost</small></div>
+        <div><span>Payment</span><strong>${escapeHtml(ticketFieldText(payload.ticket.payment_status || ticket.paymentStatus, "Not recorded"))}</strong><small>Invoice: ${escapeHtml(ticket.invoiceFinalized || payload.ticket.invoice_finalized ? "Finalized" : "N/A or pending")}</small></div>
+        <div><span>Documents</span><strong>${documents.length}</strong><small>${escapeHtml(documents.map((item) => item.title || item.number || item.type).filter(Boolean).slice(0, 3).join(", ") || "No linked documents")}</small></div>
+        <div class="${blockers.length ? "has-blockers" : "is-clear"}"><span>Remaining blockers</span><strong>${blockers.length}</strong><small>${escapeHtml(blockers.join(", ") || "None — ready to close")}</small></div>
+      </div>`;
+    form.querySelector(".ticket-completion-actions")?.before(review);
+    review.scrollIntoView({ behavior: "smooth", block: "nearest" });
   }
 
   function ticketFieldText(value, fallback = "Not set") {
@@ -10661,7 +11698,7 @@
       }
     ];
 
-    return `<section class="ticket-workbench" data-ticket-workbench>
+    return `<section class="ticket-workbench" id="ticket-workbench" data-ticket-workbench>
       <div class="ticket-workbench-heading">
         <div>
           <p class="eyebrow">Ticket Workbench</p>
@@ -10870,6 +11907,16 @@
     const meta = ticketStageMeta[stage] || ticketStageMeta.sales_intake;
     const status = ticketCommandStatus(ticket, transitions);
     const owner = ticket?.ownerLabel || meta.owner || "Unassigned";
+    const rentDeductionCloseEligible = currentSessionRole() === "owner"
+      && ["field_work_complete", "completion_review", "invoice_review", "invoice_sent", "partially_paid", "paid"].includes(stage)
+      && !/\blandscap(?:e|ing|er|ers)?\b|\blawn\b|\bmow(?:ing)?\b/i.test([ticket?.title, ticket?.requestedService, ticket?.scopeOfWork, ticket?.detail].filter(Boolean).join(" "));
+    const rentDeductionCloseControl = rentDeductionCloseEligible ? `<div class="ticket-rent-deduction-control">
+      <label>Rent deduction amount
+        <span class="ticket-rent-deduction-input"><span aria-hidden="true">$</span><input type="number" min="0.01" max="350" step="0.01" inputmode="decimal" data-rent-deduction-amount aria-label="Rent deduction amount" placeholder="0.00" value="${Number(ticket?.proposedPrice) > 0 && Number(ticket.proposedPrice) <= 350 ? escapeHtml(Number(ticket.proposedPrice).toFixed(2)) : ""}"></span>
+      </label>
+      <small>Closes this ticket without an invoice and counts toward the $350 monthly limit.</small>
+      <button type="button" class="secondary-action ticket-rent-deduction-close" data-action="owner-close-rent-deduction" data-id="${escapeHtml(ticket.id)}"${isCanonical ? "" : ` data-ticket-source="${escapeHtml(ticket.source)}"`}>${buttonContent("Close as Rent Deduction", "complete-reminder")}</button>
+    </div>` : "";
     if (!isCanonical) {
       return `<div class="ticket-next-move-panel is-source-preview">
         <div class="ticket-next-move-main">
@@ -10882,9 +11929,12 @@
           <div><dt>Stage</dt><dd>${escapeHtml(ticketStageLabel(stage))}</dd></div>
           <div><dt>Next</dt><dd>${escapeHtml(ticket?.nextAction || "Open ticket")}</dd></div>
         </dl>
+        ${rentDeductionCloseControl}
       </div>`;
     }
-    const primaryMove = status.move && !(status.blockers || []).length ? status.move : null;
+    const ownerCanOverride = currentSessionRole() === "owner";
+    const primaryMove = status.move && (!(status.blockers || []).length || ownerCanOverride) ? status.move : null;
+    const primaryIsOverride = Boolean(primaryMove && (status.blockers || []).length && ownerCanOverride);
     return `<div class="ticket-next-move-panel is-${escapeHtml(status.state)}">
       <div class="ticket-next-move-main">
         <span>${escapeHtml(owner)}</span>
@@ -10899,9 +11949,11 @@
       ${(status.blockers || []).length ? `<ul class="ticket-next-move-blockers">
         ${status.blockers.map((item) => `<li>${escapeHtml(item)}</li>`).join("")}
       </ul>` : ""}
-      ${primaryMove ? `<button type="button" class="ticket-next-move-button" data-action="transition-ticket-stage" data-id="${escapeHtml(ticket.id)}" data-stage="${escapeHtml(primaryMove.to)}" data-next-action="${escapeHtml(primaryMove.nextAction)}">
-        ${buttonContent(primaryMove.label, "complete-reminder")}
-      </button>` : ""}
+      ${primaryMove ? (primaryIsOverride
+        ? `<button type="button" class="ticket-next-move-button is-owner-override" data-action="owner-force-ticket-stage" data-id="${escapeHtml(ticket.id)}" data-stage="${escapeHtml(primaryMove.to)}" data-next-action="${escapeHtml(primaryMove.nextAction)}">${buttonContent(`Owner Override: ${primaryMove.label}`, "complete-reminder")}</button>`
+        : `<button type="button" class="ticket-next-move-button" data-action="transition-ticket-stage" data-id="${escapeHtml(ticket.id)}" data-stage="${escapeHtml(primaryMove.to)}" data-next-action="${escapeHtml(primaryMove.nextAction)}">${buttonContent(primaryMove.label, "complete-reminder")}</button>`
+      ) : ""}
+      ${rentDeductionCloseControl}
     </div>`;
   }
 
@@ -10973,7 +12025,7 @@
           <span>${escapeHtml(linkedJob?.id ? "Linked to a scheduled visit." : "Create the scheduled visit and assign the work owner.")}</span>
         </div>
       </div>
-      <form class="ticket-work-assignment-form" data-ticket-assignment-form data-ticket-id="${escapeHtml(ticket.id || "")}" data-job-id="${escapeHtml(linkedJob?.id || "")}">
+      <form class="ticket-work-assignment-form" data-ticket-assignment-form data-ticket-id="${escapeHtml(ticket.id || "")}" data-ticket-source="${escapeHtml(ticket.source || ticket.sourceType || "ticket")}" data-job-id="${escapeHtml(linkedJob?.id || "")}">
         <label>Visit date
           <input name="visit_date" type="date" value="${escapeHtml(visitDate)}" required>
         </label>
@@ -11129,83 +12181,11 @@
     </section>`;
   }
 
-  const unifiedTicketChecklist = [
-    { key: "scope_complete", prop: "scopeComplete", label: "Request and scope are complete", detail: "Customer, property, service, and scope are in this ticket." },
-    { key: "customer_approval_recorded", prop: "customerApprovalRecorded", label: "Customer approved the work", detail: "Approval is recorded before internal review." },
-    { key: "cost_review_complete", prop: "costReviewComplete", fallback: "budgetComplete", label: "Cost review is complete", detail: "Revenue, costs, and margin have been checked." },
-    { key: "owner_approval_recorded", prop: "ownerApprovalRecorded", label: "Owner approved the job", detail: "The owner has approved the job to proceed." },
-    { key: "draft_invoice_exists", prop: "draftInvoiceExists", invoice: true, label: "Invoice is created and connected", detail: "The ticket must have its invoice before scheduling." },
-    { key: "before_photos_uploaded", prop: "beforePhotosUploaded", label: "Arrival proof is attached", detail: "Arrival photos or equivalent site proof are connected." },
-    { key: "after_photos_uploaded", prop: "afterPhotosUploaded", label: "Completion proof is attached", detail: "Completion photos and notes are connected." },
-    { key: "invoice_finalized", prop: "invoiceFinalized", invoice: true, label: "Invoice is finalized", detail: "Final amount and invoice status have been reviewed." },
-    { key: "payment_paid", prop: "paymentStatus", payment: true, label: "Payment is complete", detail: "Payment is recorded before the ticket is closed." }
-  ];
-
-  function unifiedChecklistComplete(ticket, item, invoice) {
-    if (item.payment) return statusText(ticket.paymentStatus || invoice?.paymentStatus) === "paid";
-    if (item.invoice && item.key === "draft_invoice_exists") return Boolean(ticket.draftInvoiceExists || ticket.invoiceId || invoice?.id);
-    return Boolean(ticket[item.prop] || (item.fallback && ticket[item.fallback]));
-  }
-
-  function renderUnifiedTicketBox(ticket, sourceItem = null) {
-    const isCanonical = ticket?.source === "ticket";
-    const invoice = findInvoiceForTicket(ticket);
-    const canOverride = isCanonical && canManageOwnerWorkflow();
-    const completed = unifiedTicketChecklist.filter((item) => unifiedChecklistComplete(ticket, item, invoice)).length;
-    const invoiceConnected = Boolean(invoice?.id || ticket.invoiceId);
-    return `<section class="unified-ticket-box" data-unified-ticket-box data-ticket-id="${escapeHtml(ticket.id || "")}">
-      <header class="unified-ticket-box-head">
-        <div>
-          <p class="eyebrow">One ticket · beginning to end</p>
-          <h4>Everything for this job lives here</h4>
-          <p>Follow the checklist in order. The owner can override a checkpoint when real-world work requires it; every save is recorded.</p>
-        </div>
-        <strong>${escapeHtml(String(completed))}/${escapeHtml(String(unifiedTicketChecklist.length))} complete</strong>
-      </header>
-      <div class="unified-ticket-summary">
-        <div><span>Owner</span><strong>${escapeHtml(ticket.ownerLabel || "Unassigned")}</strong></div>
-        <div><span>Next action</span><strong>${escapeHtml(ticket.nextAction || "Review checklist")}</strong></div>
-        <div><span>Job date</span><strong>${escapeHtml(ticket.dateLabel || "Not scheduled")}</strong></div>
-        <div><span>Invoice</span><strong class="${invoiceConnected ? "is-connected" : "is-missing"}">${escapeHtml(invoiceConnected ? (invoice?.number || "Connected") : "Required")}</strong></div>
-        <div class="span-full"><span>Job information</span><strong>${escapeHtml(ticket.detail || ticket.scopeOfWork || "Add the complete job details here.")}</strong></div>
-      </div>
-      ${isCanonical ? `<form class="unified-ticket-checklist" data-unified-ticket-checklist data-ticket-id="${escapeHtml(ticket.id)}">
-        <div class="unified-ticket-checklist-head">
-          <div><h5>Owner checklist</h5><p>Complete from top to bottom. Invoice creation is a required checkpoint.</p></div>
-          ${canOverride ? `<span>Manual override enabled</span>` : `<span>View only</span>`}
-        </div>
-        ${unifiedTicketChecklist.map((item, index) => {
-          const checked = unifiedChecklistComplete(ticket, item, invoice);
-          const locked = !canOverride || item.payment;
-          return `<label class="unified-ticket-check ${checked ? "is-complete" : ""}">
-            <b>${escapeHtml(String(index + 1).padStart(2, "0"))}</b>
-            <input type="checkbox" name="${escapeHtml(item.key)}"${checked ? " checked" : ""}${locked ? " disabled" : ""}>
-            <span><strong>${escapeHtml(item.label)}</strong><small>${escapeHtml(item.detail)}</small></span>
-            <em>${escapeHtml(checked ? "Done" : "Needed")}</em>
-          </label>`;
-        }).join("")}
-        <label class="ticket-command-field">Next action
-          <input name="next_action" value="${escapeHtml(ticket.nextAction || "")}" placeholder="One clear next action">
-        </label>
-        <label class="ticket-command-field">Ticket note
-          <textarea name="internal_notes" rows="3" placeholder="Add one shared note for everyone...">${escapeHtml(ticket.internalNotes || "")}</textarea>
-        </label>
-        <div class="unified-ticket-actions">
-          ${canOverride ? `<button type="submit">${buttonContent("Save Checklist & Overrides", "save")}</button>` : ""}
-          ${!invoiceConnected && canManageMoneyWorkflow() ? `<button type="button" data-action="create-ticket-invoice" data-id="${escapeHtml(ticket.id)}">${buttonContent("Create & Connect Invoice", "create-invoice")}</button>` : ""}
-          ${invoiceConnected ? `<button type="button" data-action="open-document" data-id="${escapeHtml(invoice?.id || ticket.invoiceId)}">${buttonContent("Open Connected Invoice", "open-document")}</button>` : ""}
-        </div>
-      </form>` : `<p class="ticket-drawer-note">Create the unified ticket to use the single checklist and invoice connection.</p>`}
-      ${renderTicketDetailCommandCenter(ticket)}
-      ${renderTicketWorkAssignmentBridge(ticket, sourceItem)}
-      ${renderTicketSiteProofBridge(ticket, sourceItem)}
-      ${renderTicketInvoiceBridge(ticket)}
-    </section>`;
-  }
-
   function renderTicketDetailCommandCenter(ticket) {
     const isCanonical = ticket?.source === "ticket";
     const transitions = ticketTransitionOptions(ticket || {});
+    const useUnifiedCloseout = isCanonical && ["field_work_complete", "completion_review", "invoice_review", "invoice_sent", "partially_paid", "paid"].includes(ticketStage(ticket));
+    const ownerCanUnifyAndOverride = !isCanonical && currentSessionRole() === "owner" && transitions.length;
     return `<section class="ticket-drawer-card ticket-command-card" data-ticket-command-panel data-ticket-id="${escapeHtml(ticket?.id || "")}">
       <div class="ticket-drawer-card-heading">
         <div>
@@ -11220,20 +12200,22 @@
       <label class="ticket-command-field">Internal note
         <textarea data-ticket-transition-notes rows="3" placeholder="Optional note for the ticket history...">${escapeHtml(ticket?.internalNotes || "")}</textarea>
       </label>
-      ${isCanonical ? `<div class="ticket-transition-grid">
+      ${isCanonical ? `${useUnifiedCloseout ? `<p class="ticket-drawer-note">Use the Completion checklist below to finish this ticket. No stage-by-stage closeout handoffs are required.</p>` : `<div class="ticket-transition-grid">
         ${transitions.length ? transitions.map((item) => {
           const missing = item.missing || [];
-          const disabled = missing.length ? " disabled aria-disabled=\"true\"" : "";
-          return `<button type="button" data-action="transition-ticket-stage" data-id="${escapeHtml(ticket.id)}" data-stage="${escapeHtml(item.to)}" data-next-action="${escapeHtml(item.nextAction)}"${disabled}>
-            <strong>${escapeHtml(item.label)}</strong>
-            <small>${escapeHtml(missing.length ? `Missing: ${missing.join(", ")}` : item.detail)}</small>
-          </button>`;
+          const ownerOverride = missing.length && currentSessionRole() === "owner";
+          const disabled = missing.length && !ownerOverride ? " disabled aria-disabled=\"true\"" : "";
+          return ownerOverride
+            ? `<button type="button" class="is-owner-override" data-action="owner-force-ticket-stage" data-id="${escapeHtml(ticket.id)}" data-stage="${escapeHtml(item.to)}" data-next-action="${escapeHtml(item.nextAction)}"><strong>${escapeHtml(`Owner Override: ${item.label}`)}</strong><small>${escapeHtml(`Bypass missing: ${missing.join(", ")}`)}</small></button>`
+            : `<button type="button" data-action="transition-ticket-stage" data-id="${escapeHtml(ticket.id)}" data-stage="${escapeHtml(item.to)}" data-next-action="${escapeHtml(item.nextAction)}"${disabled}><strong>${escapeHtml(item.label)}</strong><small>${escapeHtml(missing.length ? `Missing: ${missing.join(", ")}` : item.detail)}</small></button>`;
         }).join("") : `<p class="ticket-drawer-note">No more workflow moves are available from ${escapeHtml(ticket.stageLabel || "this stage")}.</p>`}
-      </div>
+      </div>`}
       ${renderTicketBudgetBridge(ticket)}
       <div class="drawer-actions ticket-command-actions">
         <button type="button" data-action="save-ticket-command" data-id="${escapeHtml(ticket.id)}">${buttonContent("Save Ticket Note", "save")}</button>
-      </div>` : `<p class="ticket-drawer-note">This is still a source record preview. Open or create the unified ticket to use lifecycle controls.</p>`}
+      </div>` : `${ownerCanUnifyAndOverride ? `<div class="ticket-transition-grid">
+        ${transitions.map((item) => `<button type="button" class="is-owner-override" data-action="owner-force-source-ticket-stage" data-ticket-source="${escapeHtml(ticket.sourceType || ticket.source || "")}" data-id="${escapeHtml(ticket.sourceId || ticket.id || "")}" data-stage="${escapeHtml(item.to)}" data-next-action="${escapeHtml(item.nextAction)}"><strong>${escapeHtml(`Owner Override: ${item.label}`)}</strong><small>Create the unified ticket and bypass missing requirements.</small></button>`).join("")}
+      </div>` : ""}<p class="ticket-drawer-note">This is still a source record preview. Open or create the unified ticket to use lifecycle controls.</p>`}
     </section>`;
   }
 
@@ -11432,17 +12414,27 @@
       setDashboardState("Your dashboard role cannot create that type of ticket.", "error");
       return;
     }
+    let savedDraft = {};
+    try {
+      savedDraft = JSON.parse(localStorage.getItem(TICKET_DRAFT_KEY) || "{}");
+    } catch (_error) {
+      savedDraft = {};
+    }
     const values = {
-      customerName: prefill.customerName || "",
-      email: prefill.email || "",
-      phone: prefill.phone || "",
-      city: prefill.city || "",
-      propertyType: prefill.propertyType || "",
-      service: prefill.service || "",
-      visitDate: prefill.visitDate || todayKey(),
-      visitWindow: prefill.visitWindow || "",
-      notes: prefill.notes || ""
+      customerName: prefill.customerName || savedDraft.customer_name || "",
+      email: prefill.email || savedDraft.email || "",
+      phone: prefill.phone || savedDraft.phone || "",
+      city: prefill.city || savedDraft.city || "",
+      propertyType: prefill.propertyType || savedDraft.property_type || "",
+      service: prefill.service || savedDraft.service || "",
+      visitDate: prefill.visitDate || savedDraft.visit_date || todayKey(),
+      visitWindow: prefill.visitWindow || savedDraft.visit_window || "9 AM - 11 AM",
+      notes: prefill.notes || savedDraft.notes || ""
     };
+    const contacts = state.data.contacts || [];
+    const properties = state.data.outreachProperties || [];
+    const contactOptions = contacts.map((contact) => `<option value="${escapeHtml(contact.id)}" data-name="${escapeHtml(contact.name)}" data-email="${escapeHtml(contact.email === "No email" ? "" : contact.email)}" data-phone="${escapeHtml(contact.phone === "No phone" ? "" : contact.phone)}" data-property="${escapeHtml(contact.property || contact.address || "")}">${escapeHtml([contact.name, contact.company].filter(Boolean).join(" — "))}</option>`).join("");
+    const propertyOptions = properties.map((property) => `<option value="${escapeHtml(property.id)}" data-name="${escapeHtml(property.propertyName || property.address || "")}" data-city="${escapeHtml([property.address, property.city].filter(Boolean).join(", "))}" data-type="${escapeHtml(property.propertyType || "")}">${escapeHtml([property.propertyName, property.company, property.city].filter(Boolean).join(" — "))}</option>`).join("");
     openDetailDrawer();
     els.detailContent.innerHTML = `
       <div class="drawer-content ticket-detail-drawer">
@@ -11450,78 +12442,115 @@
         <div class="ticket-drawer-heading">
           <div>
             <h3>Create ticket</h3>
-            <p>Start with a lead intake ticket, or create a scheduled work visit when the job is already ready.</p>
+            <p>Three short steps. Your draft saves automatically until the ticket is created.</p>
           </div>
         </div>
-        <form class="drawer-form drawer-ticket-create-form ${safeType === "field" ? "is-field-ticket" : ""}" data-ticket-create-form>
-          <label>Ticket type
-            <select name="ticket_type" data-ticket-type-select>
-              <option value="quote"${safeType === "quote" ? " selected" : ""}>Lead intake / quote request</option>
-              <option value="field"${safeType === "field" ? " selected" : ""}>Scheduled work visit</option>
-            </select>
-          </label>
-          <section class="ticket-create-guidance span-full" aria-live="polite">
-            <article class="ticket-create-guidance-card ticket-create-guidance-card--quote">
-              <div>
-                <p class="eyebrow">Lead Intake Path</p>
-                <h4>Capture the request, then move it through quote and approval.</h4>
-                <p>Use this for new website requests, call-ins, property manager leads, and prospects that still need scope, pricing, or customer approval.</p>
-              </div>
-              <ol>
-                <li><strong>Lead</strong><span>Contact, service, property, and next follow-up.</span></li>
-                <li><strong>Quote</strong><span>Scope, estimate, photos, and customer approval.</span></li>
-                <li><strong>Money</strong><span>Cost review and invoice preparation before scheduling.</span></li>
-              </ol>
-            </article>
-            <article class="ticket-create-guidance-card ticket-create-guidance-card--field">
-              <div>
-                <p class="eyebrow">Scheduled Work Path</p>
-                <h4>Create a visit that is ready for the Work queue.</h4>
-                <p>Use this when the job is already approved or you are adding a planned visit directly to the schedule.</p>
-              </div>
-              <ol>
-                <li><strong>Schedule</strong><span>Date, window, site, and service.</span></li>
-                <li><strong>Complete</strong><span>Arrival photos, completion photos, forms, and notes.</span></li>
-                <li><strong>Closeout</strong><span>Review actuals, documents, invoice, and payment.</span></li>
-              </ol>
-            </article>
-          </section>
-          <label>Customer or site
-            <input name="customer_name" placeholder="Client, property, or site name" value="${escapeHtml(values.customerName)}" required>
-          </label>
-          <label>Email
-            <input name="email" type="email" placeholder="team@example.com" value="${escapeHtml(values.email)}">
-          </label>
-          <label>Phone
-            <input name="phone" inputmode="tel" placeholder="(971) 258-1109" value="${escapeHtml(values.phone)}">
-          </label>
-          <label>Property / area
-            <input name="city" placeholder="Property, city, or neighborhood" autocomplete="street-address" data-address-autocomplete value="${escapeHtml(values.city)}">
-          </label>
-          <label>Property type
-            <input name="property_type" placeholder="Home, apartment, HOA, property management..." value="${escapeHtml(values.propertyType)}">
-          </label>
-          <label class="span-full">Service / request
-            <input name="service" placeholder="Mowing, cleanup, mulch refresh, walkthrough..." value="${escapeHtml(values.service)}" required>
-          </label>
-          <div class="ticket-create-schedule span-full">
-            <label>Visit date
-              <input name="visit_date" type="date" value="${escapeHtml(values.visitDate)}"${safeType === "field" ? " required" : ""}>
-            </label>
-            <label>Visit window
-              <input name="visit_window" placeholder="9 AM - 11 AM" value="${escapeHtml(values.visitWindow)}">
-            </label>
+        <form class="drawer-form drawer-ticket-create-form ticket-create-wizard ${safeType === "field" ? "is-field-ticket" : ""}" data-ticket-create-form data-ticket-wizard-step="1" novalidate>
+          <div class="ticket-wizard-progress span-full" aria-label="Ticket setup progress">
+            <span class="is-active">1. Client</span><span>2. Work</span><span>3. Review</span>
           </div>
-          <label class="span-full">Notes
-            <textarea name="notes" rows="5" placeholder="Scope notes, access details, customer request, or internal context...">${escapeHtml(values.notes)}</textarea>
-          </label>
-          <div class="drawer-actions span-full">
-            <button type="submit">${buttonContent("Create Ticket", "quick-add-job")}</button>
+          <fieldset class="ticket-wizard-panel span-full" data-wizard-panel="1">
+            <legend>Who and where?</legend>
+            <label class="span-full">Find an existing client
+              <select data-ticket-client-select><option value="">New or unlinked client</option>${contactOptions}</select>
+            </label>
+            <label>Customer or site
+              <input name="customer_name" placeholder="Client, property, or site name" value="${escapeHtml(values.customerName)}" required>
+              <small class="field-error">Add a customer or site.</small>
+            </label>
+            <label>Email<input name="email" type="email" placeholder="team@example.com" value="${escapeHtml(values.email)}"></label>
+            <label>Phone<input name="phone" inputmode="tel" placeholder="(971) 258-1109" value="${escapeHtml(values.phone)}"></label>
+            <label class="span-full">Find an existing property
+              <select data-ticket-property-select><option value="">New or unlinked property</option>${propertyOptions}</select>
+            </label>
+            <label>Property / area<input name="city" placeholder="Property, city, or neighborhood" autocomplete="street-address" value="${escapeHtml(values.city)}"></label>
+            <label>Property type<input name="property_type" placeholder="Home, apartment, HOA..." value="${escapeHtml(values.propertyType)}"></label>
+          </fieldset>
+          <fieldset class="ticket-wizard-panel span-full" data-wizard-panel="2" hidden>
+            <legend>What needs to happen?</legend>
+            <label>Ticket type
+              <select name="ticket_type" data-ticket-type-select>
+                <option value="quote"${safeType === "quote" ? " selected" : ""}>Needs scope / quote</option>
+                <option value="field"${safeType === "field" ? " selected" : ""}>Approved scheduled visit</option>
+              </select>
+            </label>
+            <label>Use a template
+              <select data-ticket-template>${TICKET_TEMPLATES.map((template) => `<option value="${escapeHtml(template.key)}">${escapeHtml(template.label)}</option>`).join("")}</select>
+            </label>
+            <label class="span-full">Service / request
+              <input name="service" placeholder="Mowing, cleanup, walkthrough..." value="${escapeHtml(values.service)}" required>
+              <small class="field-error">Add the service or request.</small>
+            </label>
+            <div class="ticket-create-schedule span-full">
+              <label>Visit date<input name="visit_date" type="date" value="${escapeHtml(values.visitDate)}"${safeType === "field" ? " required" : ""}></label>
+              <label>Visit window<input name="visit_window" placeholder="9 AM - 11 AM" value="${escapeHtml(values.visitWindow)}"></label>
+            </div>
+            <label class="span-full">Scope and notes<textarea name="notes" rows="5" placeholder="Scope, access, customer request, materials, or internal context...">${escapeHtml(values.notes)}</textarea></label>
+          </fieldset>
+          <fieldset class="ticket-wizard-panel span-full" data-wizard-panel="3" hidden>
+            <legend>Review</legend>
+            <div class="ticket-wizard-review" data-ticket-wizard-review></div>
+            <p class="ticket-drawer-note">After creation, the unified ticket shows the single next action, stage-specific work, proof, Money, history, and the closeout checklist with N/A choices.</p>
+          </fieldset>
+          <div class="ticket-autosave-state span-full" data-ticket-autosave-state role="status">${Object.keys(savedDraft).length ? "Draft restored" : "Draft saves automatically"}</div>
+          <div class="drawer-actions span-full ticket-wizard-actions">
+            <button type="button" class="secondary-action" data-action="ticket-wizard-back" hidden>Back</button>
+            <button type="button" data-action="ticket-wizard-next">Save &amp; Continue</button>
+            <button type="submit" data-ticket-wizard-submit hidden>${buttonContent("Create Ticket", "quick-add-job")}</button>
             <button type="button" data-action="close-drawer">${buttonContent("Cancel", "close")}</button>
           </div>
         </form>
       </div>
     `;
+  }
+
+  function ticketWizardStep(form) {
+    return Math.max(1, Math.min(3, Number(form?.dataset.ticketWizardStep || 1)));
+  }
+
+  function ticketWizardValidate(form, step) {
+    const requiredNames = step === 1 ? ["customer_name"] : step === 2 ? ["service"] : [];
+    let valid = true;
+    requiredNames.forEach((name) => {
+      const input = form.elements[name];
+      const missing = !String(input?.value || "").trim();
+      input?.toggleAttribute("aria-invalid", missing);
+      valid = valid && !missing;
+    });
+    if (!valid) form.querySelector('[aria-invalid="true"]')?.focus();
+    return valid;
+  }
+
+  function renderTicketWizardStep(form, nextStep) {
+    const step = Math.max(1, Math.min(3, nextStep));
+    form.dataset.ticketWizardStep = String(step);
+    qsa("[data-wizard-panel]", form).forEach((panel) => { panel.hidden = Number(panel.dataset.wizardPanel) !== step; });
+    qsa(".ticket-wizard-progress span", form).forEach((item, index) => item.classList.toggle("is-active", index + 1 <= step));
+    const back = form.querySelector('[data-action="ticket-wizard-back"]');
+    const next = form.querySelector('[data-action="ticket-wizard-next"]');
+    const submit = form.querySelector("[data-ticket-wizard-submit]");
+    if (back) back.hidden = step === 1;
+    if (next) next.hidden = step === 3;
+    if (submit) submit.hidden = step !== 3;
+    if (step === 3) {
+      const data = new FormData(form);
+      const type = data.get("ticket_type") === "field" ? "Scheduled visit" : "Needs scope / quote";
+      const review = form.querySelector("[data-ticket-wizard-review]");
+      if (review) review.innerHTML = `
+        <div><span>Client / site</span><strong>${escapeHtml(data.get("customer_name") || "Not set")}</strong></div>
+        <div><span>Property</span><strong>${escapeHtml(data.get("city") || "Not linked")}</strong></div>
+        <div><span>Path</span><strong>${escapeHtml(type)}</strong></div>
+        <div><span>Service</span><strong>${escapeHtml(data.get("service") || "Not set")}</strong></div>
+        <div><span>Visit</span><strong>${escapeHtml([data.get("visit_date"), data.get("visit_window")].filter(Boolean).join(" / ") || "Schedule later")}</strong></div>`;
+    }
+    form.querySelector(`[data-wizard-panel="${step}"] input, [data-wizard-panel="${step}"] select`)?.focus();
+  }
+
+  function saveTicketWizardDraft(form) {
+    const draft = Object.fromEntries(new FormData(form).entries());
+    localStorage.setItem(TICKET_DRAFT_KEY, JSON.stringify(draft));
+    const stateLabel = form.querySelector("[data-ticket-autosave-state]");
+    if (stateLabel) stateLabel.textContent = "Draft saved";
   }
 
   function renderTicketSourceActions(ticket) {
@@ -11597,7 +12626,7 @@
   function renderTicketHistory(ticket) {
     if (!ticket || ticket.source !== "ticket") return "";
     const history = ticketHistoryFor(ticket).slice(0, 8);
-    return `<section class="ticket-drawer-card ticket-history-card">
+    return `<section class="ticket-drawer-card ticket-history-card" id="ticket-history">
       <div class="ticket-drawer-card-heading">
         <h4>Ticket history</h4>
         <span>${history.length ? `${history.length} recent` : "No events yet"}</span>
@@ -11727,7 +12756,43 @@
           <span class="ticket-stage">${escapeHtml(ticket.stageLabel)}</span>
         </div>
       </div>
-        ${renderUnifiedTicketBox(ticket, sourceItem)}
+        ${renderTicketDrawerActionStrip(ticket)}
+        <nav class="ticket-workspace-nav" aria-label="Ticket workspace sections">
+          <a href="#ticket-next-action">Overview</a>
+          <a href="#ticket-workbench">Work</a>
+          <a href="#ticket-closeout">Proof &amp; closeout</a>
+          <a href="#ticket-workbench">Money</a>
+          <a href="#ticket-history">History</a>
+        </nav>
+        <section class="ticket-next-action-card" id="ticket-next-action">
+          <div><p class="eyebrow">Next Action</p><h4>${escapeHtml(ticket.nextAction || "Review this ticket")}</h4><span>${escapeHtml(ticket.ownerLabel || "Unassigned")} owns this step.</span></div>
+          <strong>${escapeHtml(ticket.stageLabel)}</strong>
+        </section>
+        <section class="ticket-drawer-operating-grid" aria-label="Ticket operating controls">
+          ${renderTicketDrawerCockpit(ticket)}
+          ${renderTicketDetailCommandCenter(ticket)}
+        </section>
+        <section class="ticket-drawer-card ticket-essentials-card">
+          <div class="ticket-drawer-card-heading">
+            <div>
+              <h4>Ticket essentials</h4>
+              <span>Current owner, source, date, and working detail.</span>
+            </div>
+          </div>
+          <div class="drawer-grid ticket-drawer-grid">
+            <div class="drawer-field"><span>Current owner</span>${escapeHtml(ticket.ownerLabel || "Unassigned")}</div>
+            <div class="drawer-field"><span>Next action</span>${escapeHtml(ticket.nextAction || "Open ticket")}</div>
+            <div class="drawer-field"><span>Source</span>${escapeHtml(ticket.sourceLabel || ticketSourceLabel(ticket))}</div>
+            <div class="drawer-field"><span>Date</span>${escapeHtml(ticket.dateLabel || "No date")}</div>
+            <div class="drawer-field span-full"><span>Details</span>${escapeHtml(ticket.detail || "No details yet.")}</div>
+          </div>
+        </section>
+        ${renderTicketWorkbench(ticket)}
+        ${renderTicketCompletionChecklist(ticket)}
+        ${renderTicketWorkAssignmentBridge(ticket, sourceItem)}
+        ${renderTicketSiteProofBridge(ticket, sourceItem)}
+        ${renderTicketInvoiceBridge(ticket)}
+        ${renderTicketHandoffActions(ticket)}
         ${renderTicketRequirements(ticket)}
         ${renderTicketHistory(ticket)}
         ${renderTicketSourceActions(ticket)}
@@ -11959,7 +13024,15 @@
     const owner = ticketStageMeta[stage]?.lane || ticket.lane || "";
     const stageMatches = stageFilter === "All" || stage === stageFilter;
     const ownerMatches = ownerFilter === "All" || owner === ownerFilter;
-    if (!stageMatches || !ownerMatches) return false;
+    const closeoutMatches = !state.ticketBoardCloseoutOnly || [
+      "field_work_complete",
+      "completion_review",
+      "invoice_review",
+      "invoice_sent",
+      "partially_paid",
+      "paid"
+    ].includes(stage);
+    if (!stageMatches || !ownerMatches || !closeoutMatches) return false;
     if (!query) return true;
     return [
       ticket.number,
@@ -11997,7 +13070,7 @@
           <h4>Find the right ticket fast</h4>
           <p>Search, narrow by stage, or isolate the owner lane before opening the detailed workflow board.</p>
         </div>
-        <span class="ticket-board-result-count" data-ticket-board-result-count>${escapeHtml(filteredTickets.length)} of ${escapeHtml(tickets.length)} shown</span>
+        <span class="ticket-board-result-count" data-ticket-board-result-count>${state.ticketBoardCloseoutOnly ? "Closeout review · " : ""}${escapeHtml(filteredTickets.length)} of ${escapeHtml(tickets.length)} shown</span>
       </div>
       <div class="ticket-board-search">
         <label for="ticket-board-search">Search tickets</label>
@@ -12025,8 +13098,7 @@
     { key: "new", label: "New", detail: "New requests and intake", targetStage: "sales_intake" },
     { key: "planned", label: "Planned", detail: "Quoted, approved, or scheduled", targetStage: "scope_in_progress" },
     { key: "in_progress", label: "In Progress", detail: "Active work and preparation", targetStage: "in_progress" },
-    { key: "review", label: "Review", detail: "Approval and closeout checks", targetStage: "completion_review" },
-    { key: "completed", label: "Completed", detail: "Invoiced, paid, or closed", targetStage: "field_work_complete" }
+    { key: "review", label: "Review", detail: "Approval and closeout checks", targetStage: "completion_review" }
   ];
 
   const ownerKanbanStageMap = {
@@ -12062,7 +13134,15 @@
     return ownerKanbanColumns.find((column) => column.key === value)?.label || ticketStageLabel(value);
   }
 
+  function ownerKanbanNextColumn(ticket = {}) {
+    const currentIndex = ownerKanbanColumns.findIndex((column) => column.key === ownerKanbanColumnForTicket(ticket));
+    return currentIndex >= 0 ? ownerKanbanColumns[currentIndex + 1] || null : null;
+  }
+
   function loadOwnerKanbanFilters() {
+    const defaultRange = ownerKanbanDefaultDateRange();
+    state.ownerKanbanDateStart = defaultRange.start;
+    state.ownerKanbanDateEnd = defaultRange.end;
     try {
       const stored = JSON.parse(localStorage.getItem(OWNER_KANBAN_FILTER_KEY) || "{}");
       if (!stored || typeof stored !== "object") return;
@@ -12071,7 +13151,7 @@
       state.ownerKanbanPriorityFilter = stored.priority || "All";
       state.ownerKanbanTypeFilter = stored.type || "All";
       state.ownerKanbanClientFilter = stored.client || "";
-      state.ownerKanbanDateFilter = stored.date || "All";
+      state.ownerKanbanDateFilter = "All";
       state.ownerKanbanStatusFilter = stored.status || "All";
       state.ownerKanbanSort = stored.sort || "priority";
       state.ownerKanbanActiveOnly = stored.activeOnly !== false;
@@ -12130,6 +13210,20 @@
     return "upcoming";
   }
 
+  function ownerKanbanDefaultDateRange() {
+    const start = todayKey();
+    return { start, end: addMonthsKey(start, 2) };
+  }
+
+  function ownerKanbanDateRangeLabel() {
+    const start = state.ownerKanbanDateStart;
+    const end = state.ownerKanbanDateEnd;
+    if (!start && !end) return "Showing all dates";
+    if (start && end) return `${formatDate(start)} – ${formatDate(end)}`;
+    if (start) return `From ${formatDate(start)}`;
+    return `Through ${formatDate(end)}`;
+  }
+
   function ownerKanbanTicketMatches(ticket = {}) {
     const stage = ticketStage(ticket);
     if (state.ownerKanbanActiveOnly && !ticketIsOpen(ticket)) return false;
@@ -12139,6 +13233,10 @@
     if (state.ownerKanbanPriorityFilter !== "All" && ticketPriorityLabel(ticket) !== state.ownerKanbanPriorityFilter) return false;
     if (state.ownerKanbanTypeFilter !== "All" && ticket.sourceType !== state.ownerKanbanTypeFilter) return false;
     if (state.ownerKanbanDateFilter !== "All" && ownerKanbanDateState(ticket) !== state.ownerKanbanDateFilter) return false;
+    const ticketDate = dateKey(ticket.dateRaw);
+    if ((state.ownerKanbanDateStart || state.ownerKanbanDateEnd) && !ticketDate) return false;
+    if (state.ownerKanbanDateStart && ticketDate < state.ownerKanbanDateStart) return false;
+    if (state.ownerKanbanDateEnd && ticketDate > state.ownerKanbanDateEnd) return false;
     if (state.ownerKanbanStatusFilter !== "All" && ownerKanbanColumnForTicket(ticket) !== state.ownerKanbanStatusFilter) return false;
     const clientFilter = String(state.ownerKanbanClientFilter || "").trim().toLowerCase();
     if (clientFilter && ![ticket.customer, ticket.property].some((value) => String(value || "").toLowerCase().includes(clientFilter))) return false;
@@ -12180,16 +13278,18 @@
     const assignees = tickets.map(ticketAssigneeLabel);
     const priorities = tickets.map(ticketPriorityLabel);
     const types = tickets.map((ticket) => ticket.sourceType || ticket.source || "ticket");
+    const clearableLeads = tickets.filter((ticket) => ["ticket", "quote", "job"].includes(ticket.source) && ownerKanbanColumnForTicket(ticket) === "new");
     return `<section class="owner-kanban-toolbar" aria-label="Owner Kanban filters">
       <div class="owner-kanban-toolbar-head">
         <div>
           <p class="eyebrow">Owner Overview</p>
           <h3>Kanban Board</h3>
-          <p>Drag and drop tickets to update status.</p>
+          <p>Drag any ticket between board stages. Complete tickets through the normal workflow.</p>
         </div>
         <div class="owner-kanban-toolbar-actions">
           <span>${escapeHtml(filteredTickets.length)} of ${escapeHtml(tickets.length)} shown</span>
           <button type="button" data-action="refresh-owner-kanban">Refresh</button>
+          ${canManageOwnerWorkflow() ? `<button type="button" class="owner-kanban-clear-leads" data-action="clear-owner-kanban-leads" data-count="${escapeHtml(clearableLeads.length)}"${clearableLeads.length ? "" : " disabled"}>Clear New Column (${escapeHtml(clearableLeads.length)})</button>` : ""}
           <details class="owner-kanban-view-settings">
             <summary>View Settings</summary>
             <div>
@@ -12198,8 +13298,11 @@
               <label><input type="checkbox" data-owner-kanban-toggle="overdueOnly"${state.ownerKanbanOverdueOnly ? " checked" : ""}> Overdue only</label>
             </div>
           </details>
-          ${canCreateTicketType("quote") ? `<button type="button" data-action="open-ticket-create" data-ticket-type="quote">+ New Ticket</button>` : ""}
         </div>
+      </div>
+      <div class="owner-kanban-saved-views" aria-label="Saved ticket views">
+        <span>Quick views</span>
+        ${OWNER_KANBAN_SAVED_VIEWS.map((view) => `<button type="button" data-action="apply-owner-kanban-view" data-view="${escapeHtml(view.key)}">${escapeHtml(view.label)}</button>`).join("")}
       </div>
       <div class="owner-kanban-filters">
         <label class="owner-kanban-search">Search
@@ -12214,11 +13317,11 @@
         <label>Category
           <select data-owner-kanban-filter="type">${ownerKanbanOptions(types, state.ownerKanbanTypeFilter, "All types")}</select>
         </label>
-        <label>Due date
-          <select data-owner-kanban-filter="date">
-            ${["All", "overdue", "today", "upcoming", "none"].map((value) => `<option value="${escapeHtml(value)}"${value === state.ownerKanbanDateFilter ? " selected" : ""}>${escapeHtml(value === "All" ? "All dates" : titleCase(value))}</option>`).join("")}
-          </select>
-        </label>
+        <fieldset class="owner-kanban-date-range">
+          <legend>Date range <small>${escapeHtml(ownerKanbanDateRangeLabel())}</small></legend>
+          <label>From<input type="date" value="${escapeHtml(state.ownerKanbanDateStart)}" data-owner-kanban-date-range="start"></label>
+          <label>To<input type="date" value="${escapeHtml(state.ownerKanbanDateEnd)}" data-owner-kanban-date-range="end"></label>
+        </fieldset>
         <label>Status
           <select data-owner-kanban-filter="status">
             <option value="All">All statuses</option>
@@ -12235,17 +13338,6 @@
     </section>`;
   }
 
-  function renderOwnerKanbanMoveSelect(ticket = {}) {
-    const currentColumn = ownerKanbanColumnForTicket(ticket);
-    const disabled = ticket.source !== "ticket" || !canManageOwnerWorkflow();
-    return `<label class="owner-kanban-move">
-      <span>Move</span>
-      <select data-owner-kanban-move data-id="${escapeHtml(ticket.id)}" data-ticket-source="${escapeHtml(ticket.source)}"${disabled ? " disabled aria-disabled=\"true\"" : ""}>
-        ${ownerKanbanColumns.map((column) => `<option value="${escapeHtml(column.key)}"${column.key === currentColumn ? " selected" : ""}>${escapeHtml(column.label)}</option>`).join("")}
-      </select>
-    </label>`;
-  }
-
   function ownerKanbanCategory(ticket = {}) {
     const stage = ticketStage(ticket);
     if (["draft", "sales_intake"].includes(stage)) return ["Lead", "lead"];
@@ -12257,21 +13349,12 @@
     return [ticket.sourceLabel || ticketSourceLabel(ticket) || "Internal", "internal"];
   }
 
-  function ownerKanbanAssigneeInitials(ticket = {}) {
-    const label = ticketAssigneeLabel(ticket);
-    if (!label || label === "Unassigned") return "—";
-    return label.split(/\s+/).filter(Boolean).slice(0, 2).map((part) => part[0]).join("").toUpperCase();
-  }
-
   function renderOwnerKanbanCard(ticket = {}) {
     const dateState = ownerKanbanDateState(ticket);
     const blockers = ticket.blockers || [];
     const isCanonical = ticket.source === "ticket";
-    const dragAttrs = isCanonical && canManageOwnerWorkflow()
-      ? `draggable="true" data-owner-kanban-card data-ticket-source="ticket" data-id="${escapeHtml(ticket.id)}"`
-      : `data-owner-kanban-card data-ticket-source="${escapeHtml(ticket.source)}" data-id="${escapeHtml(ticket.id)}"`;
+    const dragAttrs = `data-owner-kanban-card data-ticket-source="${escapeHtml(ticket.source)}" data-id="${escapeHtml(ticket.id)}"`;
     const [categoryLabel, categoryTone] = ownerKanbanCategory(ticket);
-    const completed = ownerKanbanColumnForTicket(ticket) === "completed";
     const saving = state.ownerKanbanMovingId === ticket.id;
     return `<article class="owner-kanban-card ${dateState === "overdue" ? "is-overdue" : ""} ${blockers.length ? "is-blocked" : ""} ${saving ? "is-saving" : ""}" tabindex="0" ${dragAttrs} aria-busy="${saving ? "true" : "false"}">
       <button type="button" class="owner-kanban-card-open" data-action="open-ticket" data-ticket-source="${escapeHtml(ticket.source)}" data-id="${escapeHtml(ticket.id)}">
@@ -12284,22 +13367,20 @@
       </div>
       <div class="owner-kanban-card-date">
         <span><span aria-hidden="true">▣</span> ${escapeHtml(ticket.dateLabel || "No due date")}</span>
-        <span class="owner-kanban-assignee" title="${escapeHtml(ticketAssigneeLabel(ticket))}">${escapeHtml(ownerKanbanAssigneeInitials(ticket))}</span>
-        ${completed ? `<span class="owner-kanban-complete" aria-label="Completed">✓</span>` : ""}
       </div>
       ${blockers.length ? `<div class="owner-kanban-blockers">${blockers.slice(0, 2).map((item) => `<span>${escapeHtml(item)}</span>`).join("")}</div>` : ""}
       ${saving ? `<div class="owner-kanban-saving" role="status">Saving…</div>` : ""}
-      ${renderOwnerKanbanMoveSelect(ticket)}
     </article>`;
   }
 
   function renderOwnerKanbanBoard(tickets = []) {
-    const filteredTickets = tickets.filter(ownerKanbanTicketMatches);
+    const boardTickets = tickets.filter((ticket) => ownerKanbanColumns.some((column) => column.key === ownerKanbanColumnForTicket(ticket)));
+    const filteredTickets = boardTickets.filter(ownerKanbanTicketMatches);
     return `<section class="owner-kanban-board" aria-label="Owner ticket Kanban board" data-owner-kanban-board>
-      ${renderOwnerKanbanToolbar(tickets, filteredTickets)}
+      ${renderOwnerKanbanToolbar(boardTickets, filteredTickets)}
       <div class="owner-kanban-scroll" role="list" aria-label="Ticket workflow columns">
         ${ownerKanbanColumns.map((column) => {
-          const totalTickets = tickets.filter((ticket) => ownerKanbanColumnForTicket(ticket) === column.key);
+          const totalTickets = boardTickets.filter((ticket) => ownerKanbanColumnForTicket(ticket) === column.key);
           const shownTickets = sortOwnerKanbanTickets(filteredTickets.filter((ticket) => ownerKanbanColumnForTicket(ticket) === column.key));
           return `<section class="owner-kanban-column owner-kanban-column--${escapeHtml(column.key)}" data-owner-kanban-column="${escapeHtml(column.key)}" aria-label="${escapeHtml(column.label)} column">
             <div class="owner-kanban-column-head">
@@ -12312,7 +13393,6 @@
             <div class="owner-kanban-column-list">
               ${shownTickets.length ? shownTickets.map(renderOwnerKanbanCard).join("") : `<p class="owner-kanban-empty"><strong>Clear for now</strong><span>Drop a ticket here or add a new one.</span></p>`}
             </div>
-            ${canCreateTicketType("quote") ? `<button class="owner-kanban-add" type="button" data-action="open-ticket-create" data-ticket-type="quote">+ Add Ticket</button>` : ""}
           </section>`;
         }).join("")}
       </div>
@@ -12320,11 +13400,12 @@
   }
 
   function renderHomeActionQueue(items) {
-    return `<section class="ticket-lane home-ticket-action-lane">
+    return `<section class="ticket-lane home-ticket-action-lane my-work-today" aria-label="My Work Today">
       <div class="ticket-lane-heading">
         <div>
-          <h3>Today&apos;s Action Queue</h3>
-          <p>Website requests, missed visits, follow-ups, invoices, imports, and ticket blockers that need attention.</p>
+          <p class="eyebrow">Personalized Queue</p>
+          <h3>My Work Today</h3>
+          <p>Calls, visits, blocked tickets, approvals, missing proof, overdue invoices, and follow-ups—ordered by urgency.</p>
         </div>
         <span>${escapeHtml(items.length)}</span>
       </div>
@@ -12436,55 +13517,92 @@
 
   function renderHomeCommandCenter(details = {}) {
     const actions = details.actions || [];
-    const todayTickets = details.todayTickets || [];
-    const attentionTickets = details.attentionTickets || [];
-    const workTickets = details.workTickets || [];
-    const moneyTickets = details.moneyTickets || [];
-    const alertCount = (details.workflowWarnings || []).length + (details.notifications || []).length;
-    const nextSteps = [
+    return renderHomeActionQueue(actions);
+  }
+
+  function dashboardActionMetrics(data = state.data, tickets = dashboardTickets(data)) {
+    const today = todayKey();
+    const activeLeadStatuses = new Set(["Prospect", "Researched", "Contacted", "Follow-Up Needed", "Interested", "Quote Needed", "Quoted"]);
+    const callsDue = [
+      ...data.outreachProspects.filter((item) => activeLeadStatuses.has(item.status) && item.nextFollowUpAtRaw && item.nextFollowUpAtRaw <= today),
+      ...data.outreachCompanies.filter((item) => activeLeadStatuses.has(item.status) && item.followUpRaw && item.followUpRaw <= today)
+    ].length;
+    const overdueFollowUps = data.reminders.filter((item) => item.status !== "Completed" && item.dueRaw && item.dueRaw < today).length;
+    const awaitingApproval = tickets.filter((ticket) => ticketIsOpen(ticket) && ticketInStage(ticket, ["customer_approval_pending", "needs_owner_approval", "completion_review", "invoice_review"])).length;
+    const paymentsAndCloseout = tickets.filter((ticket) => ticketIsOpen(ticket) && ticketInStage(ticket, ["field_work_complete", "invoice_sent", "partially_paid", "paid"])).length;
+    return { callsDue, overdueFollowUps, awaitingApproval, paymentsAndCloseout };
+  }
+
+  function duplicateContactCount(contacts = []) {
+    const seen = new Set();
+    const duplicates = new Set();
+    contacts.forEach((contact) => {
+      const keys = [
+        safeEmail(contact.email).toLowerCase(),
+        phoneInfo(contact.phone).e164
+      ].filter(Boolean);
+      keys.forEach((key) => {
+        if (seen.has(key)) duplicates.add(key);
+        seen.add(key);
+      });
+    });
+    return duplicates.size;
+  }
+
+  function dashboardDataQualityItems(data = state.data, tickets = dashboardTickets(data)) {
+    const completedTickets = tickets.filter((ticket) => ticketStage(ticket) === "closed");
+    return [
       {
-        kicker: "Today",
-        value: todayTickets.length,
-        title: "Scheduled work",
-        detail: "Open Work for routes, visits, completion notes, photos, and Work updates.",
-        action: "go-work",
-        actionLabel: "Open Work"
+        label: "Contacts missing phone or email",
+        value: data.contacts.filter((item) => !phoneInfo(item.phone).valid || !safeEmail(item.email)).length,
+        detail: "Add a reliable way to reach each client.",
+        action: "go-contacts"
       },
       {
-        kicker: "Handoffs",
-        value: attentionTickets.length,
-        title: "Needs next action",
-        detail: "Review requests, quotes, approvals, budget prep, closeout, and blockers.",
-        action: "go-tickets",
-        actionLabel: "Open Tickets"
+        label: "Possible duplicate contacts",
+        value: duplicateContactCount(data.contacts),
+        detail: "Matching phone numbers or email addresses.",
+        action: "go-contacts"
       },
       {
-        kicker: "Money",
-        value: moneyTickets.length,
-        title: "Financial review",
-        detail: "Check budget status, quote follow-up, invoices, payments, and closeout items.",
-        action: "go-money",
-        actionLabel: "Open Money"
+        label: "Tickets missing a property",
+        value: tickets.filter((ticket) => ticketIsOpen(ticket) && !String(ticket.property || ticket.propertyName || ticket.site || "").trim()).length,
+        detail: "Connect the work to a service location.",
+        action: "go-tickets"
       },
       {
-        kicker: "Signals",
-        value: alertCount,
-        title: "Warnings and setup",
-        detail: "Review dashboard health, tools, documentation, equipment, imports, and AI support.",
-        action: "go-tools",
-        actionLabel: "Open Tools"
+        label: "Jobs missing a date",
+        value: data.jobs.filter((job) => isIncompleteJob(job) && !dateKey(job.dateRaw)).length,
+        detail: "Schedule or intentionally defer these jobs.",
+        action: "go-work"
+      },
+      {
+        label: "Closed tickets without documents",
+        value: completedTickets.filter((ticket) => !data.documents.some((doc) => [doc.jobTicketId, doc.ticketId, doc.jobId].filter(Boolean).includes(ticket.id))).length,
+        detail: "Confirm proof, invoice, or rent-deduction records.",
+        action: "show-completed-tickets"
       }
     ];
+  }
 
-    return `<section class="home-command-center" aria-label="Home workspace signals">
-      ${renderHomeActionQueue(actions)}
-      <aside class="home-next-step-stack" aria-label="Where to go next">
-        <div class="home-next-step-heading">
-          <span>Where to go next</span>
-          <strong>${escapeHtml(workTickets.length)} work tickets active</strong>
+  function renderDataQualityPanel(data = state.data, tickets = dashboardTickets(data)) {
+    const items = dashboardDataQualityItems(data, tickets);
+    const issueCount = items.reduce((total, item) => total + item.value, 0);
+    return `<section class="dashboard-data-quality" aria-label="Data quality">
+      <div class="ticket-lane-heading">
+        <div>
+          <p class="eyebrow">Data Quality</p>
+          <h3>${issueCount ? `${escapeHtml(String(issueCount))} records need cleanup` : "Records look complete"}</h3>
+          <p>Small fixes that make search, scheduling, communication, and closeout more reliable.</p>
         </div>
-        ${nextSteps.map(renderHomeNextStepCard).join("")}
-      </aside>
+      </div>
+      <div class="dashboard-data-quality-grid">
+        ${items.map((item) => `<button type="button" data-action="${escapeHtml(item.action)}" class="${item.value ? "has-issues" : "is-clear"}">
+          <strong>${escapeHtml(String(item.value))}</strong>
+          <span>${escapeHtml(item.label)}</span>
+          <small>${escapeHtml(item.value ? item.detail : "Nothing to fix.")}</small>
+        </button>`).join("")}
+      </div>
     </section>`;
   }
 
@@ -12522,6 +13640,7 @@
     const moneyTickets = activeTickets.filter((ticket) => ticketInLane(ticket, ["accounting", "money"]));
     const reviewTickets = activeTickets.filter((ticket) => ticketInLane(ticket, ["review"]));
     const actions = todayActionItems(data);
+    const actionMetrics = dashboardActionMetrics(data, tickets);
     const notifications = buildNotifications(data);
     const workflowWarnings = dashboardHealthWarnings({ scope: "critical" });
 
@@ -12536,18 +13655,17 @@
           </div>
           <div class="ticket-hero-actions">
             ${canCreateTicketType("quote") ? `<button type="button" data-action="open-ticket-create" data-ticket-type="quote">New Job Ticket</button>` : ""}
-            <button type="button" data-action="go-work">Open Work</button>
           </div>
         </header>
         <section class="ticket-metrics" aria-label="Home ticket summary">
-          ${renderTicketMetric(activeTickets.length, "Open Tickets", "Across all lanes")}
-          ${renderTicketMetric(todayTickets.length, "Due Today", "Scheduled or dated today")}
-          ${renderTicketMetric(actions.length, "Action Items", "Needs attention now")}
-          ${renderTicketMetric(workflowWarnings.length + notifications.length, "Alerts", "Workflow and notification signals")}
+          ${renderTicketMetric(actionMetrics.callsDue, "Calls Due", "Active leads needing a touch")}
+          ${renderTicketMetric(actionMetrics.overdueFollowUps, "Overdue Follow-ups", "Past their due date")}
+          ${renderTicketMetric(actionMetrics.awaitingApproval, "Needs Approval", "Customer, owner, or closeout review")}
+          ${renderTicketMetric(actionMetrics.paymentsAndCloseout, "Closeout / Payment", "Financial records needing action")}
         </section>
-        ${renderOwnerKanbanBoard(activeTickets)}
-        ${renderHomeFocusPanel({ todayTickets, overdueTickets, leadTickets, workTickets, moneyTickets, reviewTickets, actions })}
         ${renderHomeCommandCenter({ actions, attentionTickets, todayTickets, workTickets, moneyTickets, workflowWarnings, notifications })}
+        ${renderOwnerKanbanBoard(activeTickets)}
+        ${renderDataQualityPanel(data, tickets)}
       </div>`;
   }
 
@@ -12626,7 +13744,7 @@
           value: closeoutTickets.length,
           detail: "Completion review, actuals, final invoice, and payment close.",
           tickets: closeoutTickets,
-          action: "go-tickets",
+          action: "review-closeout-tickets",
           actionLabel: "Review Tickets"
         })}
       </div>
@@ -12640,8 +13758,7 @@
       ...workTickets,
       ...reviewTickets
     ].slice(0, 5);
-    return `<section class="ticket-command-center" aria-label="Ticket triage center">
-      <section class="ticket-lane ticket-priority-queue">
+    return `<section class="ticket-lane ticket-priority-queue" aria-label="Ticket triage center">
         <div class="ticket-lane-heading">
           <div>
             <p class="eyebrow">Triage</p>
@@ -12653,37 +13770,38 @@
         <div class="ticket-lane-list">
           ${priorityTickets.length ? priorityTickets.map((ticket) => renderTicketCard(ticket, true)).join("") : emptyState("No open tickets match the current filters.")}
         </div>
-      </section>
-      <aside class="ticket-next-step-stack">
-        <div class="home-next-step-heading">
-          <span>Owner Lanes</span>
-          <strong>${escapeHtml(String(filteredTickets.length))} shown</strong>
+    </section>`;
+  }
+
+  function renderCompletedTicketArchive(tickets = []) {
+    const ordered = [...tickets].sort((a, b) => String(b.closedAt || b.dateRaw || "").localeCompare(String(a.closedAt || a.dateRaw || "")));
+    return `<section class="completed-ticket-archive" aria-label="Completed tickets">
+      <div class="ticket-flow-heading">
+        <div>
+          <p class="eyebrow">Ticket History</p>
+          <h3>Completed Tickets</h3>
+          <p>Closed work stays here for reference and can be reopened by the Owner when more work is needed.</p>
         </div>
-        ${renderTicketNextStepCard({
-          kicker: "Leads",
-          value: officeTickets.filter((ticket) => ticketInLane(ticket, ["sales"])).length,
-          title: "Scope and quote work",
-          detail: "Use Leads for intake, follow-up, customer approvals, and quote-ready work.",
-          action: "go-leads",
-          actionLabel: "Open Leads"
-        })}
-        ${renderTicketNextStepCard({
-          kicker: "Work",
-          value: workTickets.length + readyTickets.length,
-          title: "Schedule and complete",
-          detail: "Use Work for assigned jobs, route access, photos, forms, and completion notes.",
-          action: "go-work",
-          actionLabel: "Open Work"
-        })}
-        ${renderTicketNextStepCard({
-          kicker: "Money",
-          value: officeTickets.filter((ticket) => ticketInLane(ticket, ["accounting", "money"])).length + reviewTickets.length,
-          title: "Cost, invoice, collect",
-          detail: "Use Money for cost review, estimates, invoices, payment status, and closeout.",
-          action: "go-money",
-          actionLabel: "Open Money"
-        })}
-      </aside>
+        <span>${escapeHtml(String(ordered.length))} completed</span>
+      </div>
+      <div class="completed-ticket-list">
+        ${ordered.length ? ordered.map((ticket) => `<article class="completed-ticket-card">
+          <div class="completed-ticket-card-main">
+            <span>${escapeHtml(ticket.number || "Completed")}</span>
+            <h4>${escapeHtml(ticket.title || ticket.service || "Completed ticket")}</h4>
+            <p>${escapeHtml([ticket.customerName, ticket.propertyName || ticket.site, ticket.dateLabel || ticket.dateRaw].filter(Boolean).join(" / ") || "Completed work")}</p>
+          </div>
+          <dl>
+            <div><dt>Closed as</dt><dd>${escapeHtml(ticket.rentDeductionAmount ? "Rent deduction" : "Completed")}</dd></div>
+            <div><dt>Amount</dt><dd>${ticket.rentDeductionAmount ? `$${escapeHtml(Number(ticket.rentDeductionAmount).toFixed(2))}` : "—"}</dd></div>
+            <div><dt>Closed</dt><dd>${escapeHtml(ticket.closedAt ? formatDate(ticket.closedAt) : ticket.dateLabel || ticket.dateRaw || "Recorded")}</dd></div>
+          </dl>
+          <div class="completed-ticket-actions">
+            <button type="button" data-action="open-ticket" data-ticket-source="${escapeHtml(ticket.source)}" data-id="${escapeHtml(ticket.id)}">View Ticket</button>
+            ${currentSessionRole() === "owner" ? `<button type="button" class="secondary-action" data-action="reopen-completed-ticket" data-ticket-source="${escapeHtml(ticket.source)}" data-id="${escapeHtml(ticket.id)}">Reopen Ticket</button>` : ""}
+          </div>
+        </article>`).join("") : emptyState("No completed tickets yet.")}
+      </div>
     </section>`;
   }
 
@@ -12692,6 +13810,7 @@
     if (!target) return;
     const tickets = dashboardTickets(data);
     const openTickets = tickets.filter(ticketIsOpen);
+    const completedTickets = tickets.filter((ticket) => ticketStage(ticket) === "closed");
     const filteredTickets = openTickets.filter(ticketMatchesBoardFilters);
     const workTickets = filteredTickets.filter((ticket) => ticketInLane(ticket, ["field"]));
     const officeTickets = filteredTickets.filter((ticket) => ticketInLane(ticket, ["sales", "accounting", "review", "money"]));
@@ -12724,18 +13843,24 @@
           <div class="ticket-hero-actions">
             ${canCreateTicketType("quote") ? `<button type="button" data-action="open-ticket-create" data-ticket-type="quote">New Job Ticket</button>` : ""}
             ${canCreateTicketType("field") ? `<button type="button" data-action="open-ticket-create" data-ticket-type="field">Schedule Visit</button>` : ""}
+            <button type="button" data-action="review-closeout-tickets">Review Closeout</button>
           </div>
         </header>
+        <nav class="ticket-history-switcher" aria-label="Ticket views">
+          <button type="button" class="${state.ticketBoardMode === "open" ? "is-active" : ""}" data-action="show-open-tickets" aria-pressed="${state.ticketBoardMode === "open"}">Open Tickets <span>${escapeHtml(String(openTickets.length))}</span></button>
+          <button type="button" class="${state.ticketBoardMode === "completed" ? "is-active" : ""}" data-action="show-completed-tickets" aria-pressed="${state.ticketBoardMode === "completed"}">Completed Tickets <span>${escapeHtml(String(completedTickets.length))}</span></button>
+        </nav>
+        ${state.ticketBoardMode === "completed" ? renderCompletedTicketArchive(completedTickets) : `
         <section class="ticket-metrics" aria-label="Job ticket summary">
           ${renderTicketMetric(openTickets.length, "Open Tickets", "Quotes and work")}
           ${renderTicketMetric(ticketCountBy(openTickets, (ticket) => ticketInLane(ticket, ["field"])), "In Work", "Scheduled or active")}
           ${renderTicketMetric(ticketCountBy(openTickets, (ticket) => ticketInLane(ticket, ["sales", "accounting"])), "Needs Office", "Scope, quote, cost review")}
           ${renderTicketMetric(ticketCountBy(openTickets, (ticket) => ticketInLane(ticket, ["review", "money"])), "Closeout", "Review, invoice, payment")}
         </section>
-        ${renderTicketHandoffPanel({ leadsTickets, moneyTickets: moneyReviewTickets, workTickets: workQueueTickets, closeoutTickets, blockedTickets })}
         ${renderTicketCommandCenter({ filteredTickets, workTickets, officeTickets, readyTickets, reviewTickets })}
         ${renderTicketBoardControls(openTickets, filteredTickets)}
         ${renderTicketWorkflowBoard(openTickets, filteredTickets)}
+        `}
       </div>`;
   }
 
@@ -12764,7 +13889,6 @@
         ${routePreviewMapShell("work")}
         <div class="work-day-route-footer">
           <span>${escapeHtml(stops.length ? `${openStops.length} open / ${stops.length} total stops` : "Build the route when work is scheduled.")}</span>
-          <button type="button" data-action="go-route-planner">Open Route</button>
         </div>
       </article>
       <div class="work-plan-tile-grid">
@@ -12772,7 +13896,7 @@
           label: "Today",
           value: todayTickets.length,
           detail: "Tickets scheduled for today.",
-          action: "go-calendar",
+          action: "quick-add-job",
           actionLabel: "Add Visit"
         })}
         ${renderWorkPlanTile({
@@ -12783,18 +13907,11 @@
           actionLabel: "Review Tickets"
         })}
         ${renderWorkPlanTile({
-          label: "Forms",
-          value: "Docs",
-          detail: "Supporting templates and submitted records live in Tools.",
-          action: "go-tools",
-          actionLabel: "Open Tools"
-        })}
-        ${renderWorkPlanTile({
           label: "Upcoming",
           value: upcomingTickets.length,
           detail: "Future scheduled or ready work tickets.",
-          action: "go-work",
-          actionLabel: "Stay in Work"
+          action: "focus-work-queue",
+          actionLabel: "View Queue"
         })}
       </div>
     </section>`;
@@ -12844,7 +13961,7 @@
           value: todayTickets.length,
           detail: "Dated work and visits for the current day.",
           tickets: todayTickets,
-          action: "go-calendar",
+          action: "focus-work-queue",
           actionLabel: "Open Work"
         })}
         ${renderWorkReadinessCard({
@@ -12852,7 +13969,7 @@
           value: activeTickets.length,
           detail: "Jobs already scheduled, started, or paused.",
           tickets: activeTickets,
-          action: "go-work",
+          action: "focus-work-queue",
           actionLabel: "View Queue"
         })}
         ${renderWorkReadinessCard({
@@ -12904,7 +14021,7 @@
           label: "Today's visit list",
           value: todayTickets.length,
           detail: "Review assigned work, site notes, service scope, and visit status for today.",
-          action: "go-calendar",
+          action: "focus-work-queue",
           actionLabel: "Open Work"
         })}
         ${renderWorkFieldPacketStep({
@@ -12950,7 +14067,6 @@
           </div>
           <div class="ticket-hero-actions">
             ${canCreateTicketType("field") ? `<button type="button" data-action="open-ticket-create" data-ticket-type="field">Add Visit</button>` : ""}
-            <button type="button" data-action="go-route-planner">Open Route</button>
           </div>
         </header>
         <section class="ticket-metrics" aria-label="Work summary">
@@ -12959,11 +14075,9 @@
           ${renderTicketMetric(ticketCountBy(workTickets, (ticket) => ticketInLane(ticket, ["review"])), "Needs Proof", "Photos, actuals, forms")}
           ${renderTicketMetric(upcomingTickets.length, "Upcoming", "Scheduled tickets")}
         </section>
-        ${renderWorkReadinessPanel({ readyTickets, todayTickets, activeTickets, reviewTickets })}
-        ${renderWorkFieldPacketPanel({ routeStops: routeStopsToday, todayTickets, reviewTickets })}
         ${renderWorkDayPlanPanel(routeStopsToday, todayTickets, upcomingTickets, reviewTickets)}
         <div class="field-grid work-execution-grid">
-          <section class="ticket-lane field-primary-lane">
+          <section class="ticket-lane field-primary-lane" data-work-queue>
             <div class="ticket-lane-heading">
               <div>
                 <h3>Assigned Work Queue</h3>
@@ -12977,11 +14091,13 @@
           </section>
           <aside class="field-side-stack">
             <section class="ticket-lane">
+              <input type="file" data-field-expense-receipt-input accept=".pdf,.jpg,.jpeg,.png,.heic,.heif" hidden>
               <div class="ticket-lane-heading">
                 <div>
                   <h3>Quick Add Visit</h3>
                   <p>Create a scheduled visit without leaving Work.</p>
                 </div>
+                <button type="button" data-action="submit-field-expense">Submit Expense</button>
               </div>
               <form class="schedule-create-form ticket-create-form" data-job-create-form>
                 <input name="visit_date" type="date" required>
@@ -13011,19 +14127,6 @@
                   <p>Each occurrence is saved as its own visit.</p>
                 </div>
               </form>
-            </section>
-            <section class="ticket-lane">
-              <div class="ticket-lane-heading">
-                <div>
-                  <h3>Support Tools</h3>
-                  <p>Routes, arrival photos, completion photos, forms, and diagnostics stay close to the work queue.</p>
-                </div>
-              </div>
-              <div class="field-proof-actions">
-                <button type="button" data-action="go-route-planner">Open Route Planner</button>
-                <button type="button" data-action="go-documentation">Open Documentation</button>
-                <button type="button" data-action="copy-dashboard-diagnostics">Copy Diagnostics</button>
-              </div>
             </section>
           </aside>
         </div>
@@ -13056,7 +14159,7 @@
       <div class="lead-queue-actions">
         ${renderPhoneActions(item.phone, { leadId: item.id, leadType: "outreach_prospect", compact: true, helper: false })}
         ${canCreateTicketType("quote") ? `<button type="button" class="inline-action" data-action="create-ticket-from-prospect" data-id="${escapeHtml(item.id)}">Create Ticket</button>` : ""}
-        <button type="button" class="inline-action" data-action="open-outreach-prospect" data-id="${escapeHtml(item.id)}">Open Lead</button>
+        <button type="button" class="inline-action" data-action="open-call-queue-lead" data-id="${escapeHtml(item.id)}">Open in Call Queue</button>
         ${canDeleteLeadRecords() ? `<button type="button" class="inline-action danger-action" data-action="delete-outreach-prospect" data-id="${escapeHtml(item.id)}">Delete Lead</button>` : ""}
       </div>
     </article>`;
@@ -13080,6 +14183,287 @@
       service: item.serviceInterest || item.service || "Property care walkthrough",
       notes
     };
+  }
+
+  function callQueueHistory(item = {}) {
+    return callHistoryFor(item.id).filter((activity) => activity.leadType === "outreach_prospect");
+  }
+
+  function callQueueIsCompleted(item = {}) {
+    if (["Won", "Lost / No Fit"].includes(item.status)) return true;
+    return ["not_interested", "wrong_number"].includes(callQueueHistory(item)[0]?.queueOutcome || "");
+  }
+
+  function callQueueSortValue(item = {}) {
+    const today = todayKey();
+    const followUp = item.nextFollowUpAtRaw || "";
+    if (followUp && followUp < today) return 0;
+    if (followUp === today) return 1;
+    if (item.priority === "High") return 2;
+    if (!item.lastContactedAtRaw && !callQueueHistory(item).length) return 3;
+    return 4;
+  }
+
+  function filteredCallQueue() {
+    const query = state.callQueueSearch.trim().toLowerCase();
+    return (state.data.outreachProspects || []).filter((item) => {
+      const completed = callQueueIsCompleted(item);
+      const statusMatches = state.callQueueStatusFilter === "All"
+        || (state.callQueueStatusFilter === "Active" ? !completed : state.callQueueStatusFilter === "Completed" ? completed : item.status === state.callQueueStatusFilter);
+      const priorityMatches = state.callQueuePriorityFilter === "All" || item.priority === state.callQueuePriorityFilter;
+      const searchMatches = !query || [item.contactName, item.managementCompany, item.propertyName, item.phone, item.email, item.city, item.address]
+        .some((value) => String(value || "").toLowerCase().includes(query));
+      return statusMatches && priorityMatches && searchMatches;
+    }).sort((a, b) => {
+      if (state.callQueueSort === "name") return outreachTitle(a).localeCompare(outreachTitle(b));
+      if (state.callQueueSort === "oldest") return String(a.lastContactedAtRaw || "0000").localeCompare(String(b.lastContactedAtRaw || "0000"));
+      if (state.callQueueSort === "priority") return OUTREACH_PRIORITIES.indexOf(a.priority) - OUTREACH_PRIORITIES.indexOf(b.priority);
+      return callQueueSortValue(a) - callQueueSortValue(b)
+        || String(a.nextFollowUpAtRaw || "9999").localeCompare(String(b.nextFollowUpAtRaw || "9999"))
+        || String(a.lastContactedAtRaw || "0000").localeCompare(String(b.lastContactedAtRaw || "0000"));
+    });
+  }
+
+  function callQueueDuplicateMatches(item = {}) {
+    const phone = phoneInfo(item.phone).e164;
+    const email = String(item.email || "").trim().toLowerCase();
+    const address = String(item.address || "").trim().toLowerCase();
+    return [
+      ...(state.data.contacts || []).filter((contact) => (phone && phoneInfo(contact.phone).e164 === phone) || (email && String(contact.email || "").toLowerCase() === email)),
+      ...(state.data.outreachProspects || []).filter((other) => other.id !== item.id && ((phone && phoneInfo(other.phone).e164 === phone) || (email && String(other.email || "").toLowerCase() === email) || (address && String(other.address || "").toLowerCase() === address)))
+    ].slice(0, 3);
+  }
+
+  function renderCallQueueTimeline(item = {}) {
+    const history = callQueueHistory(item);
+    if (!history.length) return `<div class="call-queue-empty-inline">No previous call activity.</div>`;
+    return `<div class="call-queue-timeline">${history.slice(0, 6).map((activity) => `<article>
+      <strong>${escapeHtml(activity.outcomeLabel)}</strong><span>${escapeHtml(activity.createdAt || "Recent")}</span>
+      ${activity.notes ? `<p>${escapeHtml(activity.notes)}</p>` : ""}
+      ${activity.followUpDateRaw ? `<small>Follow-up ${escapeHtml(activity.followUpDate)}</small>` : ""}
+    </article>`).join("")}</div>`;
+  }
+
+  function leadIntakeSummary(batch = {}) {
+    return batch.metadata?.summary || {
+      total: Number(batch.total_rows || 0),
+      unique: Math.max(0, Number(batch.total_rows || 0) - Number(batch.duplicate_count || 0) - Number(batch.rejected_count || 0)),
+      definiteDuplicates: Number(batch.duplicate_count || 0),
+      possibleDuplicates: 0,
+      invalid: Number(batch.rejected_count || 0),
+      approved: Number(batch.created_count || 0)
+    };
+  }
+
+  function leadIntakeBatchName(batch = {}) {
+    return batch.metadata?.name || batch.source_name || batch.file_name || "Lead Intake batch";
+  }
+
+  function leadIntakeStatusLabel(batch = {}) {
+    if (batch.rollback_status) return batch.rollback_status === "rolled_back" ? "Undone" : "Undo Needs Review";
+    if (batch.metadata?.stage === "cancelled" || batch.status === "archived") return "Cancelled";
+    if (batch.status === "preview") return "Awaiting Review";
+    if (["complete", "completed_with_warnings"].includes(batch.status)) return "Approved";
+    if (batch.status === "failed") return "Failed";
+    return "Processing";
+  }
+
+  async function loadLeadIntakeBatches(force = false) {
+    if (state.leadIntakeLoading || (state.leadIntakeLoaded && !force)) return;
+    state.leadIntakeLoading = true;
+    try {
+      const result = await importExportRequest("lead-intake-batches");
+      state.leadIntakeBatches = Array.isArray(result.batches) ? result.batches : [];
+      state.leadIntakeLoaded = true;
+    } catch (error) {
+      state.leadIntakeLoaded = true;
+      state.leadIntakeError = error.message || "Import batches could not load.";
+    } finally {
+      state.leadIntakeLoading = false;
+      if (state.activeSection === "call-queue") renderCallQueueWorkspace();
+    }
+  }
+
+  const LEAD_INTAKE_FORMAT_PROMPT = `Research prospective property-maintenance leads and return only valid CSV text—no introduction, explanation, Markdown, or code fences.
+
+Use this exact header row and column order:
+business,type,location,phone_number,source
+
+Requirements:
+- One business or property per row.
+- business: the organization or property name.
+- type: a short category such as Property Management, Apartment Community, HOA, Commercial Property, or Facility.
+- location: city and state, or the complete street address when available.
+- phone_number: a real, publicly listed US phone number with area code. Do not invent phone numbers. Omit any lead without a usable phone number.
+- source: the website URL or source name where the information was verified.
+- Quote any field containing a comma or quotation mark using standard CSV escaping.
+- Do not add, remove, or rename columns.
+- Remove duplicate businesses and duplicate phone numbers before returning the CSV.`;
+
+  function renderLeadIntakeCard() {
+    const awaiting = state.leadIntakeBatches.filter((batch) => batch.status === "preview");
+    const awaitingCount = awaiting.reduce((total, batch) => total + Number(leadIntakeSummary(batch).approved || 0), 0);
+    const duplicateCount = awaiting.reduce((total, batch) => {
+      const summary = leadIntakeSummary(batch);
+      return total + Number(summary.definiteDuplicates || 0) + Number(summary.possibleDuplicates || 0);
+    }, 0);
+    return `<section class="lead-intake-card" aria-labelledby="lead-intake-title">
+      <div class="lead-intake-heading">
+        <div><p class="eyebrow">Lead Intake</p><h3 id="lead-intake-title">Review prospect lists before they enter the queue</h3><p>Upload LLM research CSVs, validate records, resolve duplicates, and approve only clean prospects.</p></div>
+        <div class="lead-intake-actions">
+          <button type="button" data-action="lead-intake-import">Import CSV</button>
+          <button type="button" class="secondary-action" data-action="lead-intake-template">Download CSV Template</button>
+          <button type="button" class="secondary-action" data-action="lead-intake-review-imports">Review Imports</button>
+          <input type="file" accept=".csv,text/csv" data-lead-intake-file hidden>
+        </div>
+      </div>
+      <details class="lead-intake-prompt">
+        <summary>Copy &amp; paste formatting prompt</summary>
+        <p>Paste this into your research tool to receive a CSV that Lead Intake can validate.</p>
+        <textarea rows="10" readonly data-lead-intake-format-prompt aria-label="Lead Intake formatting prompt">${escapeHtml(LEAD_INTAKE_FORMAT_PROMPT)}</textarea>
+        <button type="button" class="secondary-action" data-action="lead-intake-copy-prompt">Copy Prompt</button>
+      </details>
+      <div class="lead-intake-metrics" aria-label="Lead Intake status">
+        <div><span>Awaiting review</span><strong>${escapeHtml(String(awaitingCount))}</strong></div>
+        <div><span>Possible duplicates</span><strong>${escapeHtml(String(duplicateCount))}</strong></div>
+        <div><span>Import batches</span><strong>${escapeHtml(String(state.leadIntakeBatches.length))}</strong></div>
+      </div>
+    </section>`;
+  }
+
+  async function openLeadIntakeBatch(batchId) {
+    setDashboardState("Loading import batch…");
+    const result = await importExportRequest("lead-intake-batches", { batchId });
+    state.leadIntakeSelectedBatch = result.batch;
+    state.leadIntakeRows = Array.isArray(result.rows) ? result.rows : [];
+    state.leadIntakePage = 1;
+    renderLeadIntakeReviewDrawer();
+    setDashboardState("");
+  }
+
+  function leadIntakeFilteredRows() {
+    const query = state.leadIntakeSearch.trim().toLowerCase();
+    return state.leadIntakeRows.filter((row) => {
+      const original = row.normalized_data?.original || row.source_data || {};
+      const statusMatches = state.leadIntakeStatusFilter === "All" || row.status === state.leadIntakeStatusFilter;
+      const queryMatches = !query || [original.business, original.type, original.location, original.phone_number, original.source].some((value) => String(value || "").toLowerCase().includes(query));
+      return statusMatches && queryMatches;
+    });
+  }
+
+  function renderLeadIntakeReviewDrawer() {
+    const batch = state.leadIntakeSelectedBatch;
+    if (!batch || !els.detailContent) return;
+    openDetailDrawer();
+    const summary = leadIntakeSummary(batch);
+    const filtered = leadIntakeFilteredRows();
+    const pageSize = 50;
+    const pageCount = Math.max(1, Math.ceil(filtered.length / pageSize));
+    state.leadIntakePage = Math.min(state.leadIntakePage, pageCount);
+    const visible = filtered.slice((state.leadIntakePage - 1) * pageSize, state.leadIntakePage * pageSize);
+    const approvalCount = state.leadIntakeRows.filter((row) => ["approve", "keep_both"].includes(row.action_type) && row.status !== "invalid").length;
+    els.detailContent.innerHTML = `<div class="drawer-content lead-intake-review" data-lead-intake-review>
+      <p class="eyebrow">Lead Intake</p><div class="lead-intake-review-title"><div><h3>Review Imported Leads</h3><label>Batch name<input data-lead-intake-batch-name value="${escapeHtml(leadIntakeBatchName(batch))}" maxlength="240"></label><p>${escapeHtml(batch.source_name || "CSV import")}</p></div><span class="status">${escapeHtml(leadIntakeStatusLabel(batch))}</span></div>
+      <div class="lead-intake-review-summary"><div><span>Imported records</span><strong>${summary.total}</strong></div><div><span>New unique prospects</span><strong>${summary.unique}</strong></div><div><span>Definite duplicates</span><strong>${summary.definiteDuplicates}</strong></div><div><span>Possible duplicates</span><strong>${summary.possibleDuplicates}</strong></div><div><span>Invalid rows</span><strong>${summary.invalid}</strong></div></div>
+      <div class="lead-intake-review-controls"><input type="search" data-lead-intake-search value="${escapeHtml(state.leadIntakeSearch)}" placeholder="Search imported records" aria-label="Search imported records"><select data-lead-intake-status-filter aria-label="Filter imported records"><option>All</option><option value="new_unique"${state.leadIntakeStatusFilter === "new_unique" ? " selected" : ""}>New Unique</option><option value="definite_duplicate"${state.leadIntakeStatusFilter === "definite_duplicate" ? " selected" : ""}>Definite Duplicate</option><option value="possible_duplicate"${state.leadIntakeStatusFilter === "possible_duplicate" ? " selected" : ""}>Possible Duplicate</option><option value="invalid"${state.leadIntakeStatusFilter === "invalid" ? " selected" : ""}>Invalid</option></select><button type="button" class="secondary-action" data-action="lead-intake-approve-unique">Approve All Unique Records</button><button type="button" class="secondary-action" data-action="lead-intake-skip-definite">Skip All Definite Duplicates</button></div>
+      <div class="lead-intake-table-wrap"><table class="lead-intake-table"><thead><tr><th>Imported prospect</th><th>Type / Source</th><th>Location</th><th>Phone</th><th>Duplicate review</th><th>Decision</th></tr></thead><tbody>${visible.map((row) => {
+        const original = row.normalized_data?.original || row.source_data || {};
+        const match = row.normalized_data?.match || {};
+        const action = row.action_type || "unresolved";
+        return `<tr data-lead-intake-row="${escapeHtml(row.id)}"><td><strong>${escapeHtml(original.business || `Row ${row.row_number}`)}</strong><small>${escapeHtml(row.status.replace(/_/g, " "))}</small></td><td>${escapeHtml(original.type || "—")}<small>${escapeHtml(original.source || "No source")}</small></td><td>${escapeHtml(original.location || "—")}</td><td>${escapeHtml(row.normalized_data?.normalized?.phone_display || original.phone_number || "—")}</td><td>${match.reason ? `<strong>${escapeHtml(match.confidence || "Possible")}</strong><small>${escapeHtml(match.reason)}</small><small>${escapeHtml([match.business, match.location, match.phone].filter(Boolean).join(" · "))}</small>` : row.errors?.length ? `<strong>Invalid</strong><small>${escapeHtml(row.errors.join(" "))}</small>` : `<span>New Unique</span>`}</td><td><select data-lead-intake-row-action="${escapeHtml(row.id)}"${row.status === "invalid" ? " disabled" : ""}><option value="approve"${action === "approve" ? " selected" : ""}>Add to Call Queue</option><option value="keep_existing"${action === "keep_existing" ? " selected" : ""}>Keep Existing</option><option value="use_imported"${action === "use_imported" ? " selected" : ""}>Use Imported Version</option><option value="merge_missing"${action === "merge_missing" ? " selected" : ""}>Merge Missing Information</option><option value="keep_both"${action === "keep_both" ? " selected" : ""}>Keep Both</option><option value="skip"${action === "skip" ? " selected" : ""}>Skip Imported Record</option><option value="exclude"${action === "exclude" ? " selected" : ""}>Exclude</option><option value="unresolved"${action === "unresolved" ? " selected" : ""}>Needs Review</option></select></td></tr>`;
+      }).join("") || `<tr><td colspan="6">No imported records match these filters.</td></tr>`}</tbody></table></div>
+      <div class="lead-intake-pagination"><button type="button" data-action="lead-intake-page-prev"${state.leadIntakePage <= 1 ? " disabled" : ""}>Previous</button><span>Page ${state.leadIntakePage} of ${pageCount} · ${filtered.length} records</span><button type="button" data-action="lead-intake-page-next"${state.leadIntakePage >= pageCount ? " disabled" : ""}>Next</button></div>
+      <div class="drawer-actions"><button type="button" data-action="lead-intake-approve-batch" data-id="${escapeHtml(batch.id)}"${approvalCount ? "" : " disabled"}>Add ${approvalCount} Leads to Call Queue</button><button type="button" class="secondary-action" data-action="lead-intake-error-report">Download Error Report</button>${batch.status === "preview" ? `<button type="button" class="secondary-action danger-action" data-action="lead-intake-cancel-batch" data-id="${escapeHtml(batch.id)}">Cancel Import</button>` : `<button type="button" class="secondary-action" data-action="lead-intake-undo-batch" data-id="${escapeHtml(batch.id)}">Undo Approved Batch</button>`}</div>
+    </div>`;
+  }
+
+  function renderCallQueueWorkspace() {
+    const target = qs("[data-call-queue-workspace]");
+    if (!target) return;
+    if (!canManageLeadWorkflow()) {
+      target.innerHTML = `<div class="panel call-queue-access-state">${emptyState("Your dashboard role does not have Call Queue access.")}</div>`;
+      return;
+    }
+    if (!state.outreachReady) {
+      target.innerHTML = `<div class="panel call-queue-access-state">${emptyState("Call Queue could not load lead records. Refresh the dashboard to retry.")}</div>`;
+      return;
+    }
+    const queue = filteredCallQueue();
+    if (!queue.some((item) => item.id === state.callQueueSelectedId)) state.callQueueSelectedId = queue[0]?.id || "";
+    const selected = queue.find((item) => item.id === state.callQueueSelectedId) || null;
+    const selectedIndex = selected ? queue.findIndex((item) => item.id === selected.id) : -1;
+    const visible = queue.slice(0, state.callQueueVisibleCount);
+    const history = selected ? callQueueHistory(selected) : [];
+    const phone = phoneInfo(selected?.phone || "");
+    const websiteUrl = safeExternalWebsiteUrl(selected?.website || selected?.source || "");
+    const duplicates = selected ? callQueueDuplicateMatches(selected) : [];
+    const relatedQuotes = selected ? (state.data.submissions || []).filter((quote) => (selected.email && String(quote.email || "").toLowerCase() === selected.email.toLowerCase()) || (phone.valid && phoneInfo(quote.phone).e164 === phone.e164)) : [];
+    if (!state.leadIntakeLoaded && !state.leadIntakeLoading) queueMicrotask(() => loadLeadIntakeBatches());
+    target.innerHTML = `<div class="call-queue-workspace" data-call-queue-root>
+      <header class="ticket-hero call-queue-hero">
+        <div><p class="eyebrow">Leads · Call Queue</p><h3>Sales Calling Workspace</h3><p>Work the next outreach call, record the result, and keep follow-ups connected to the existing lead and ticket workflow.</p></div>
+        <div class="call-queue-navigation"><button type="button" data-action="call-queue-previous"${selectedIndex <= 0 ? " disabled" : ""}>Previous</button><strong>${selected ? `${selectedIndex + 1} of ${queue.length}` : `0 of ${queue.length}`}</strong><button type="button" data-action="call-queue-next"${selectedIndex < 0 || selectedIndex >= queue.length - 1 ? " disabled" : ""}>Next</button></div>
+      </header>
+      ${renderLeadIntakeCard()}
+      <div class="call-queue-layout">
+        <aside class="call-queue-panel call-queue-list-panel">
+          <div class="call-queue-panel-head"><div><span>Queue</span><strong>${escapeHtml(String(queue.length))}</strong></div><small>${state.callQueueStatusFilter === "Active" ? "Needs outreach" : "Filtered leads"}</small></div>
+          <div class="call-queue-filters">
+            <input type="search" data-call-queue-search placeholder="Search leads…" value="${escapeHtml(state.callQueueSearch)}" aria-label="Search Call Queue">
+            <select data-call-queue-filter="status" aria-label="Filter call queue by status"><option>Active</option><option>All</option><option>Completed</option>${OUTREACH_STATUSES.map((status) => `<option${state.callQueueStatusFilter === status ? " selected" : ""}>${escapeHtml(status)}</option>`).join("")}</select>
+            <select data-call-queue-filter="priority" aria-label="Filter call queue by priority"><option>All</option>${OUTREACH_PRIORITIES.map((priority) => `<option${state.callQueuePriorityFilter === priority ? " selected" : ""}>${escapeHtml(priority)}</option>`).join("")}</select>
+            <select data-call-queue-filter="sort" aria-label="Sort call queue"><option value="queue"${state.callQueueSort === "queue" ? " selected" : ""}>Queue order</option><option value="priority"${state.callQueueSort === "priority" ? " selected" : ""}>Priority</option><option value="oldest"${state.callQueueSort === "oldest" ? " selected" : ""}>Oldest contact</option><option value="name"${state.callQueueSort === "name" ? " selected" : ""}>Name</option></select>
+          </div>
+          <div class="call-queue-list" role="listbox" aria-label="Leads needing outreach">
+            ${visible.length ? visible.map((item) => {
+              const itemHistory = callQueueHistory(item);
+              return `<button type="button" role="option" aria-selected="${item.id === selected?.id}" class="call-queue-row${item.id === selected?.id ? " is-selected" : ""}" data-action="select-call-queue-lead" data-id="${escapeHtml(item.id)}">
+                <span><strong>${escapeHtml(outreachTitle(item))}</strong><small>${escapeHtml([item.managementCompany, item.propertyName, item.city].filter(Boolean).join(" · ") || "Lead details needed")}</small></span>
+                <span class="call-queue-row-meta"><b>${escapeHtml(item.priority)}</b><small>${escapeHtml(item.nextFollowUpAt || (item.lastContactedAtRaw ? `Last ${item.lastContactedAt}` : "Never contacted"))}</small><em>${itemHistory.length} call${itemHistory.length === 1 ? "" : "s"}</em></span>
+              </button>`;
+            }).join("") : `<div class="call-queue-empty-inline">${state.callQueueSearch ? "No leads match this search." : "No leads currently need calls."}</div>`}
+          </div>
+          ${visible.length < queue.length ? `<button class="call-queue-load-more" type="button" data-action="load-more-call-queue">Load 25 more</button>` : ""}
+        </aside>
+        <main class="call-queue-panel call-queue-lead-panel">
+          ${selected ? `<div class="call-queue-lead-head"><div><p class="eyebrow">Active Lead</p><h3>${escapeHtml(outreachTitle(selected))}</h3><p>${escapeHtml([selected.managementCompany, selected.propertyName].filter(Boolean).join(" · ") || "No company or property set")}</p></div><span class="status">${escapeHtml(selected.status)}</span></div>
+          ${duplicates.length ? `<div class="call-queue-duplicate-warning"><strong>Possible duplicate</strong><span>${duplicates.length} matching contact or lead record${duplicates.length === 1 ? "" : "s"}. Review before creating another record.</span></div>` : ""}
+          <dl class="call-queue-lead-details">
+            <div><dt>Contact</dt><dd>${escapeHtml(selected.contactName || "Not provided")}</dd></div><div><dt>Phone</dt><dd>${escapeHtml(phone.display)}</dd></div>
+            <div><dt>Email</dt><dd>${escapeHtml(selected.email || "Not provided")}</dd></div><div><dt>Address</dt><dd>${escapeHtml([selected.address, selected.city].filter(Boolean).join(", ") || "Not provided")}</dd></div>
+            <div><dt>Source</dt><dd>${escapeHtml(selected.source || "Not provided")}</dd></div><div><dt>Website</dt><dd>${websiteUrl ? `<a class="call-queue-website-link" href="${escapeHtml(websiteUrl)}" target="_blank" rel="noopener noreferrer">Open website <span aria-hidden="true">↗</span></a>` : "Not provided"}</dd></div>
+            <div><dt>Assigned</dt><dd>Unassigned</dd></div>
+            <div><dt>Priority</dt><dd>${escapeHtml(selected.priority)}</dd></div><div><dt>Service</dt><dd>${escapeHtml(selected.serviceInterest)}</dd></div>
+            <div><dt>Follow-up</dt><dd>${escapeHtml(selected.nextFollowUpAt || "Not scheduled")}</dd></div><div><dt>Connected records</dt><dd>${relatedQuotes.length} quote/ticket lead${relatedQuotes.length === 1 ? "" : "s"}</dd></div>
+          </dl>
+          ${selected.notes ? `<section class="call-queue-notes"><h4>Existing Notes</h4><p>${escapeHtml(selected.notes)}</p></section>` : ""}
+          <div class="call-queue-actions">
+            <button type="button" data-action="call-lead" data-id="${escapeHtml(selected.id)}" data-lead-type="outreach_prospect" data-phone="${escapeHtml(phone.e164)}"${phone.valid ? "" : " disabled"}>Call</button>
+            <button type="button" data-action="copy-phone" data-phone="${escapeHtml(phone.e164)}"${phone.valid ? "" : " disabled"}>Copy Phone</button>
+            ${selected.email ? `<a class="button" href="mailto:${escapeHtml(selected.email)}">Email</a>` : `<button type="button" disabled>Email</button>`}
+            <button type="button" data-action="call-queue-add-note" data-id="${escapeHtml(selected.id)}">Add Note</button>
+            <button type="button" data-action="call-queue-follow-up" data-id="${escapeHtml(selected.id)}">Schedule Follow-Up</button>
+            <button type="button" data-action="open-outreach-prospect" data-id="${escapeHtml(selected.id)}">Edit Lead</button>
+            ${canDeleteLeadRecords() ? `<button type="button" class="danger-action" data-action="delete-outreach-prospect" data-id="${escapeHtml(selected.id)}">Delete Lead</button>` : ""}
+            <button type="button" data-action="create-ticket-from-prospect" data-id="${escapeHtml(selected.id)}"${canCreateTicketType("quote") ? "" : " disabled"}>Convert to Ticket</button>
+          </div>
+          <section class="call-queue-history"><div class="call-queue-section-title"><h4>Previous Call History</h4><span>${history.length}</span></div>${renderCallQueueTimeline(selected)}</section>` : `<div class="call-queue-empty-state"><h3>No lead selected</h3><p>Choose a lead from the queue to review contact details and call history.</p></div>`}
+        </main>
+        <aside class="call-queue-panel call-queue-outcome-panel">
+          <div class="call-queue-panel-head"><div><span>Call Outcome</span><strong>${selected ? "Save result" : "Waiting"}</strong></div></div>
+          ${selected ? `<form data-call-queue-outcome-form data-id="${escapeHtml(selected.id)}">
+            <fieldset><legend>Outcome</legend><div class="call-queue-outcomes">${CALL_QUEUE_OUTCOMES.map(([value, label]) => `<label><input type="radio" name="outcome" value="${escapeHtml(value)}" required><span>${escapeHtml(label)}</span></label>`).join("")}</div></fieldset>
+            <label>Call notes<textarea name="notes" rows="4" placeholder="What happened on the call?"></textarea></label>
+            <div class="call-queue-follow-up-grid"><label>Follow-up date<input type="date" name="follow_up_date"></label><label>Time<input type="time" name="follow_up_time"></label></div>
+            <label>Updated status<select name="status">${OUTREACH_STATUSES.map((status) => `<option${selected.status === status ? " selected" : ""}>${escapeHtml(status)}</option>`).join("")}</select></label>
+            <label>Updated priority<select name="priority">${OUTREACH_PRIORITIES.map((priority) => `<option${selected.priority === priority ? " selected" : ""}>${escapeHtml(priority)}</option>`).join("")}</select></label>
+            <label>Next action<input name="next_action" placeholder="Optional next step"></label>
+            <label class="call-queue-auto-next"><input type="checkbox" name="auto_next" checked> Move automatically to the next lead</label>
+            <button type="submit"${state.callQueueSaving ? " disabled" : ""}>${state.callQueueSaving ? "Saving…" : "Save Outcome"}</button>
+          </form>` : `<div class="call-queue-empty-inline">Select a lead before recording an outcome.</div>`}
+        </aside>
+      </div>
+    </div>`;
   }
 
   function renderLeadNextStepCard({ kicker, value, title, detail, action, actionLabel, extraAttrs = "" }) {
@@ -13127,7 +14511,7 @@
           label: "Follow Up",
           value: due.length,
           detail: "Prospects due for a call, email, or next-touch note.",
-          action: "go-leads",
+          action: "go-call-queue",
           actionLabel: "Open Queue",
           tone: due.length ? "warning" : ""
         })}
@@ -13193,7 +14577,7 @@
           value: due.length,
           detail: "Prospects with a follow-up date due now or missing the next touch.",
           items: due,
-          action: "go-leads",
+          action: "go-call-queue",
           actionLabel: "Open Queue",
           tone: due.length ? "warning" : ""
         })}
@@ -13228,59 +14612,24 @@
   }
 
   function renderLeadsCommandCenter({ prospectQueue, due, hot, intakeTickets, approvalTickets, accountingTickets, companies, properties }) {
+    const visibleProspects = state.leadsContactQueueExpanded ? prospectQueue : prospectQueue.slice(0, 10);
     return `<section class="leads-command-center" aria-label="Leads command center">
       <section class="ticket-lane leads-contact-queue">
         <div class="ticket-lane-heading">
           <div>
             <p class="eyebrow">Contact Queue</p>
-            <h3>Prospects needing the next touch</h3>
-            <p>Call, email, or open the lead record before it becomes a quote-ready Job Ticket.</p>
+            <h3>All active Call Queue leads</h3>
+            <p>This mirrors the active lead list on the Call Queue page so every prospect is available from one queue.</p>
           </div>
-          <span>${escapeHtml(String(prospectQueue.length))}</span>
+          <div class="lead-contact-queue-heading-actions">
+            <span>${escapeHtml(String(prospectQueue.length))}</span>
+            ${prospectQueue.length > 10 ? `<button type="button" data-action="toggle-leads-contact-queue" aria-expanded="${state.leadsContactQueueExpanded}">${state.leadsContactQueueExpanded ? "Show First 10" : "View All Leads"}</button>` : ""}
+          </div>
         </div>
         <div class="lead-queue-list">
-          ${prospectQueue.length ? prospectQueue.map((item) => renderLeadQueueItem(item, hot.some((hotItem) => hotItem.id === item.id) ? "hot" : "due")).join("") : emptyState("No prospect follow-ups are due right now.")}
+          ${visibleProspects.length ? visibleProspects.map((item) => renderLeadQueueItem(item, hot.some((hotItem) => hotItem.id === item.id) ? "hot" : due.some((dueItem) => dueItem.id === item.id) ? "due" : "")).join("") : emptyState("No active leads are currently in the Call Queue.")}
         </div>
       </section>
-      <aside class="lead-next-step-stack">
-        <div class="home-next-step-heading">
-          <span>Lead Handoffs</span>
-          <strong>Keep work moving</strong>
-        </div>
-        ${renderLeadNextStepCard({
-          kicker: "Ticket",
-          value: intakeTickets.length + approvalTickets.length,
-          title: "Create or update Job Tickets",
-          detail: "Use this when a lead has enough scope detail to track as real work.",
-          action: "open-ticket-create",
-          actionLabel: "New Job Ticket",
-          extraAttrs: ' data-ticket-type="quote"'
-        })}
-        ${renderLeadNextStepCard({
-          kicker: "Quote",
-          value: hot.length,
-          title: "Quote-ready conversations",
-          detail: "Interested prospects and approval follow-ups should get a clear quote action.",
-          action: "go-tickets",
-          actionLabel: "Open Tickets"
-        })}
-        ${renderLeadNextStepCard({
-          kicker: "Money",
-          value: accountingTickets.length,
-          title: "Approved work needs cost review",
-          detail: "Once the customer says yes, hand the ticket to Money before scheduling.",
-          action: "go-money",
-          actionLabel: "Open Money"
-        })}
-        ${renderLeadNextStepCard({
-          kicker: "Data",
-          value: `${companies.length}/${properties.length}`,
-          title: "Companies and properties",
-          detail: "Use CSV import for management companies, property locations, and prospect lists.",
-          action: "import-outreach-csv",
-          actionLabel: "Import CSV"
-        })}
-      </aside>
     </section>`;
   }
 
@@ -13293,8 +14642,11 @@
     const accountingTickets = dashboardTickets(data).filter((ticket) => ticketIsOpen(ticket) && ticketInStage(ticket, ["needs_budget"]));
     const due = typeof outreachDueProspects === "function" ? outreachDueProspects() : [];
     const hot = typeof outreachHotProspects === "function" ? outreachHotProspects() : [];
-    const activeProspects = (data.outreachProspects || []).filter((item) => !isClosedOutreach(item));
-    const prospectQueue = Array.from(new Map([...due, ...hot, ...activeProspects].map((item) => [String(item.id || outreachTitle(item)), item])).values());
+    const prospectQueue = (data.outreachProspects || [])
+      .filter((item) => !callQueueIsCompleted(item))
+      .sort((a, b) => callQueueSortValue(a) - callQueueSortValue(b)
+        || String(a.nextFollowUpAtRaw || "9999").localeCompare(String(b.nextFollowUpAtRaw || "9999"))
+        || outreachTitle(a).localeCompare(outreachTitle(b)));
     const companies = data.outreachCompanies || [];
     const properties = data.outreachProperties || [];
     target.innerHTML = `
@@ -13318,8 +14670,6 @@
           ${renderTicketMetric(approvalTickets.length + hot.length, "Quote-Ready", "Interested or pending approval")}
           ${renderTicketMetric(accountingTickets.length, "Money Handoff", "Approved work needs cost review")}
         </section>
-        ${renderLeadsRunwayPanel({ due, hot, intakeTickets, approvalTickets, accountingTickets, companies, properties })}
-        ${renderLeadsHandoffPanel({ due, hot, intakeTickets, approvalTickets, accountingTickets })}
         ${renderLeadsCommandCenter({ prospectQueue, due, hot, intakeTickets, approvalTickets, accountingTickets, companies, properties })}
       </div>`;
   }
@@ -13453,7 +14803,7 @@
           label: "Invoices",
           value: invoiceTickets.length,
           detail: "Open estimate or invoice records to reconcile.",
-          action: "go-documents",
+          action: "open-financial-records",
           actionLabel: "Open Records"
         })}
         ${renderMoneyRunwayCard({
@@ -13490,44 +14840,6 @@
           ${actionQueue.length ? actionQueue.map((ticket) => renderTicketCard(ticket, true)).join("") : emptyState("No financial review items require attention.")}
         </div>
       </section>
-      <aside class="money-next-step-stack">
-        <div class="home-next-step-heading">
-          <span>Money Handoffs</span>
-          <strong>Protect margin</strong>
-        </div>
-        ${renderMoneyNextStepCard({
-          kicker: "Cost",
-          value: needsBudget.length,
-          title: "Review costs before scheduling",
-          detail: "Approved work should have cost, budget, or margin review before it moves forward.",
-          action: "go-tickets",
-          actionLabel: "Open Tickets"
-        })}
-        ${renderMoneyNextStepCard({
-          kicker: "Invoice",
-          value: ownerApproval.length,
-          title: "Prepare estimate or invoice",
-          detail: "Owner approvals and invoice preparation stay visible before work is scheduled or closed.",
-          action: "quick-add-quote",
-          actionLabel: "Create Estimate"
-        })}
-        ${renderMoneyNextStepCard({
-          kicker: "Collect",
-          value: overdueInvoices.length,
-          title: "Payment follow-up",
-          detail: "Overdue invoices need a clear reminder, Square sync, or payment note.",
-          action: "quick-add-invoice-reminder",
-          actionLabel: "Payment Follow-Up"
-        })}
-        ${renderMoneyNextStepCard({
-          kicker: "Close",
-          value: fieldComplete.length + unpaidInvoices.length,
-          title: "Close the financial record",
-          detail: "Check actuals, documents, invoice status, and payment state before closing tickets.",
-          action: "go-documents",
-          actionLabel: "Open Records"
-        })}
-      </aside>
     </section>`;
   }
 
@@ -13603,6 +14915,580 @@
     </section>`;
   }
 
+  function moneyCurrency(value) {
+    return new Intl.NumberFormat("en-US", { style: "currency", currency: "USD" }).format(Number(value || 0));
+  }
+
+  function expenseSelectOptions(values, selected, emptyLabel = "") {
+    return `${emptyLabel ? `<option value="">${escapeHtml(emptyLabel)}</option>` : ""}${values.map((value) => `<option value="${escapeHtml(value)}"${value === selected ? " selected" : ""}>${escapeHtml(value)}</option>`).join("")}`;
+  }
+
+  function normalizeExpense(row = {}) {
+    return {
+      id: row.id || "",
+      expenseDate: row.expense_date || todayKey(),
+      vendorId: row.vendor_id || "",
+      vendorName: row.vendor_name || "",
+      category: row.category || "Other",
+      description: row.description || "",
+      clientId: row.client_id || "",
+      propertyId: row.property_id || "",
+      jobId: row.job_id || "",
+      ticketId: row.ticket_id || "",
+      paymentMethod: row.payment_method || "",
+      subtotal: row.subtotal ?? "",
+      tax: row.tax ?? "",
+      total: row.total ?? 0,
+      reimbursable: Boolean(row.reimbursable),
+      status: row.status || "Draft",
+      notes: row.notes || "",
+      createdBy: row.created_by || "",
+      updatedAt: row.updated_at || "",
+      version: Number(row.version || 1)
+    };
+  }
+
+  function financialDateRange() {
+    if (state.moneyDateStart && state.moneyDateEnd) return { start: state.moneyDateStart, end: state.moneyDateEnd };
+    const now = new Date();
+    const start = new Date(now.getFullYear(), now.getMonth(), 1);
+    return { start: toDateInputValue(start), end: toDateInputValue(now) };
+  }
+
+  async function loadMoneyView(view = state.moneyView, { force = false } = {}) {
+    if (state.moneyLoading || (!force && state.moneyLoadedViews.has(view))) return;
+    state.moneyLoading = true;
+    state.moneyError = "";
+    renderMoneyWorkspace();
+    try {
+      if (view === "overview") {
+        const range = financialDateRange();
+        state.data.financial.overview = await dashboardFinancialRequest("overview", range);
+      } else if (view === "expenses") {
+        const rows = await dashboardFinancialRequest("list-expenses", {
+          page: state.moneyExpensePage,
+          pageSize: state.moneyExpensePageSize,
+          search: state.moneySearch,
+          status: state.moneyExpenseStatus,
+          sort: state.moneyExpenseSort
+        });
+        state.data.financial.expenses = (rows || []).map(normalizeExpense);
+        if (!state.moneyLoadedViews.has("vendors")) {
+          const vendors = await dashboardFinancialRequest("list-vendors");
+          state.data.financial.vendors = vendors || [];
+          state.moneyLoadedViews.add("vendors");
+        }
+      } else if (view === "vendors") {
+        state.data.financial.vendors = await dashboardFinancialRequest("list-vendors") || [];
+      } else if (view === "invoicing") {
+        state.data.financial.invoices = await dashboardFinancialRequest("list-invoices") || [];
+      } else if (view === "documents") {
+        state.data.financial.documents = await dashboardFinancialRequest("list-documents") || [];
+      } else if (view === "reports") {
+        const range = financialDateRange();
+        state.data.financial.overview = await dashboardFinancialRequest("overview", range);
+        state.data.financial.invoices = await dashboardFinancialRequest("list-invoices") || [];
+      } else if (view === "deleted") {
+        state.data.financial.deleted = await dashboardFinancialRequest("list-deleted") || [];
+      }
+      state.moneyLoadedViews.add(view);
+    } catch (error) {
+      state.moneyError = error.message || "Financial records could not be loaded.";
+    } finally {
+      state.moneyLoading = false;
+      renderMoneyWorkspace();
+    }
+  }
+
+  function renderMoneyTabs() {
+    return `<nav class="money-tabs" role="tablist" aria-label="Money workspace views">
+      ${MONEY_TABS.map((tab) => `<button type="button" role="tab" data-action="money-tab" data-money-view="${escapeHtml(tab.key)}" aria-selected="${state.moneyView === tab.key ? "true" : "false"}" class="${state.moneyView === tab.key ? "is-active" : ""}">${escapeHtml(tab.label)}</button>`).join("")}
+    </nav>`;
+  }
+
+  function renderMoneyOverview() {
+    const overview = state.data.financial.overview || {};
+    const revenue = Number(overview.revenue || 0);
+    const expenses = Number(overview.expenses || 0);
+    const profit = revenue - expenses;
+    return `<section class="financial-overview" aria-label="Financial overview">
+      <div class="money-period-controls">
+        <button type="button" class="is-active" data-action="money-period" data-period="month">This month</button>
+        <button type="button" data-action="money-period" data-period="previous">Previous month</button>
+        <button type="button" data-action="money-period" data-period="quarter">Quarter</button>
+        <button type="button" data-action="money-period" data-period="ytd">Year to date</button>
+        <button type="button" data-action="money-period" data-period="custom">Custom range</button>
+      </div>
+      <section class="ticket-metrics financial-metrics">
+        ${renderTicketMetric(moneyCurrency(revenue), "Revenue", "Selected period")}
+        ${renderTicketMetric(moneyCurrency(expenses), "Expenses", "Selected period")}
+        ${renderTicketMetric(moneyCurrency(overview.outstanding), "Outstanding", "Open invoice balance")}
+        ${renderTicketMetric(moneyCurrency(overview.overdue), "Overdue", "Past due balance")}
+        ${renderTicketMetric(moneyCurrency(profit), "Gross Profit", "Revenue minus recorded expenses")}
+        ${renderTicketMetric(String(overview.missing_receipts || 0), "Missing Receipts", "Expenses needing proof")}
+      </section>
+      <div class="financial-overview-grid">
+        <article><p class="eyebrow">Revenue vs. Expenses</p><h4>${moneyCurrency(revenue)} / ${moneyCurrency(expenses)}</h4><p>${profit >= 0 ? "Positive" : "Negative"} operating spread for the selected period.</p></article>
+        <article><p class="eyebrow">Invoice Aging</p><h4>${moneyCurrency(overview.overdue)}</h4><p>Overdue balance requiring collection follow-up.</p></article>
+        <article><p class="eyebrow">Job Profitability</p><h4>Linked records</h4><p>Profitability will use ticket-linked expenses and invoice lines rather than copied totals.</p></article>
+      </div>
+    </section>`;
+  }
+
+  function renderExpenseRow(expense) {
+    const vendors = state.data.financial.vendors || [];
+    const selected = state.moneySelectedExpenseIds.has(expense.id);
+    return `<tr data-expense-row="${escapeHtml(expense.id)}"${selected ? " class=\"is-selected\"" : ""}>
+      <td class="money-select-cell"><input type="checkbox" data-expense-select value="${escapeHtml(expense.id)}"${selected ? " checked" : ""} aria-label="Select expense"></td>
+      <td class="money-frozen-cell"><input type="date" data-expense-field="expense_date" value="${escapeHtml(expense.expenseDate)}"></td>
+      <td><select data-expense-field="vendor_id"><option value="">Choose vendor</option>${vendors.map((vendor) => `<option value="${escapeHtml(vendor.id)}"${vendor.id === expense.vendorId ? " selected" : ""}>${escapeHtml(vendor.vendor_name)}</option>`).join("")}</select></td>
+      <td><select data-expense-field="category">${expenseSelectOptions(EXPENSE_CATEGORIES, expense.category)}</select></td>
+      <td><input data-expense-field="description" value="${escapeHtml(expense.description)}" placeholder="Expense description"></td>
+      <td><input data-expense-field="client_id" value="${escapeHtml(expense.clientId)}" placeholder="Client ID"></td>
+      <td><input data-expense-field="property_id" value="${escapeHtml(expense.propertyId)}" placeholder="Property ID"></td>
+      <td><input data-expense-field="ticket_id" value="${escapeHtml(expense.ticketId)}" placeholder="Ticket ID"></td>
+      <td><select data-expense-field="payment_method">${expenseSelectOptions(EXPENSE_PAYMENT_METHODS, expense.paymentMethod, "Choose method")}</select></td>
+      <td><input type="number" min="0" step="0.01" data-expense-field="subtotal" value="${escapeHtml(String(expense.subtotal))}"></td>
+      <td><input type="number" min="0" step="0.01" data-expense-field="tax" value="${escapeHtml(String(expense.tax))}"></td>
+      <td class="money-calculated">${escapeHtml(moneyCurrency(expense.total))}</td>
+      <td><button type="button" class="inline-action" data-action="expense-receipt" data-id="${escapeHtml(expense.id)}">Receipt</button></td>
+      <td><input type="checkbox" data-expense-field="reimbursable"${expense.reimbursable ? " checked" : ""} aria-label="Reimbursable"></td>
+      <td><select data-expense-field="status">${expenseSelectOptions(EXPENSE_STATUSES, expense.status)}</select></td>
+      <td><input data-expense-field="notes" value="${escapeHtml(expense.notes)}" placeholder="Notes"></td>
+      <td>${escapeHtml(expense.createdBy || "Current user")}</td>
+      <td>${escapeHtml(expense.updatedAt ? formatDate(expense.updatedAt) : "Not saved")}</td>
+      <td><button type="button" class="inline-action danger" data-action="archive-money-record" data-entity-type="expense" data-id="${escapeHtml(expense.id)}">Delete</button></td>
+    </tr>`;
+  }
+
+  function renderExpenseSpreadsheet() {
+    const rows = state.data.financial.expenses || [];
+    return `<section class="expense-workspace" aria-label="Expense spreadsheet">
+      <input type="file" data-expense-receipt-input accept=".pdf,.jpg,.jpeg,.png,.heic,.heif,.docx,.xlsx,.csv" hidden>
+      <input type="file" data-expense-import-input accept=".csv,text/csv" hidden>
+      <div class="money-grid-toolbar">
+        <div>
+          <button type="button" data-action="add-expense-row">+ Add Row</button>
+          <button type="button" data-action="paste-expenses">Paste Rows</button>
+          <button type="button" data-action="choose-expense-import">Import CSV</button>
+          <button type="button" data-action="export-expenses">Export View</button>
+          <button type="button" data-action="undo-expense-edit"${state.moneyUndo ? "" : " disabled"}>Undo</button>
+        </div>
+        <label class="money-grid-search">Search <input type="search" data-money-search value="${escapeHtml(state.moneySearch)}" placeholder="Vendor, description, notes"></label>
+        <label>Status <select data-money-status>${expenseSelectOptions(["All", ...EXPENSE_STATUSES], state.moneyExpenseStatus)}</select></label>
+        <span class="money-save-state ${state.moneySaveState ? `is-${escapeHtml(state.moneySaveState)}` : ""}" role="status">${escapeHtml(state.moneySaveState || "Ready")}</span>
+      </div>
+      <div class="money-bulk-bar"${state.moneySelectedExpenseIds.size ? "" : " hidden"}>
+        <strong>${state.moneySelectedExpenseIds.size} selected</strong>
+        <label>Category <select data-money-bulk-field="category">${expenseSelectOptions(EXPENSE_CATEGORIES, "", "Choose")}</select></label>
+        <label>Status <select data-money-bulk-field="status">${expenseSelectOptions(EXPENSE_STATUSES, "", "Choose")}</select></label>
+        <label>Payment <select data-money-bulk-field="payment_method">${expenseSelectOptions(EXPENSE_PAYMENT_METHODS, "", "Choose")}</select></label>
+        <button type="button" data-action="apply-expense-bulk">Apply</button>
+      </div>
+      <div class="money-grid-shell" tabindex="0">
+        <table class="money-grid" data-expense-grid>
+          <thead><tr>
+            <th><input type="checkbox" data-expense-select-all aria-label="Select all expenses"></th>
+            <th>Date</th><th>Vendor</th><th>Category</th><th>Description</th><th>Client</th><th>Property</th><th>Job / Ticket</th>
+            <th>Payment Method</th><th>Subtotal</th><th>Tax</th><th>Total</th><th>Receipt</th><th>Reimbursable</th>
+            <th>Status</th><th>Notes</th><th>Created By</th><th>Last Updated</th><th>Actions</th>
+          </tr></thead>
+          <tbody>${rows.length ? rows.map(renderExpenseRow).join("") : `<tr><td colspan="19">${emptyState("No expenses match this view. Add a row or paste spreadsheet data to begin.")}</td></tr>`}</tbody>
+        </table>
+      </div>
+      <footer class="money-grid-footer">
+        <button type="button" data-action="money-expense-page" data-direction="-1"${state.moneyExpensePage <= 1 ? " disabled" : ""}>Previous</button>
+        <span>Page ${state.moneyExpensePage} · up to ${state.moneyExpensePageSize} rows</span>
+        <button type="button" data-action="money-expense-page" data-direction="1"${rows.length < state.moneyExpensePageSize ? " disabled" : ""}>Next</button>
+      </footer>
+    </section>`;
+  }
+
+  function financialRecordName(type, id) {
+    if (!id) return "";
+    if (type === "client") {
+      const contact = (state.data.contacts || []).find((item) => item.id === id);
+      return contact?.name || contact?.company || id;
+    }
+    if (type === "property") {
+      const property = (state.data.outreachProperties || []).find((item) => item.id === id);
+      return property?.propertyName || property?.address || id;
+    }
+    const ticket = dashboardTickets(state.data).find((item) => item.id === id || item.sourceId === id);
+    return ticket?.number || ticket?.title || id;
+  }
+
+  function renderMoneyDisplayToggle() {
+    return `<div class="money-display-toggle" role="group" aria-label="Record display">
+      <button type="button" data-action="money-display" data-display="cards" class="${state.moneyDisplay === "cards" ? "is-active" : ""}">Simple view</button>
+      <button type="button" data-action="money-display" data-display="spreadsheet" class="${state.moneyDisplay === "spreadsheet" ? "is-active" : ""}">Spreadsheet view</button>
+    </div>`;
+  }
+
+  function renderExpenseWorkspace() {
+    if (state.moneyDisplay === "spreadsheet") return `${renderMoneyDisplayToggle()}${renderExpenseSpreadsheet()}`;
+    const rows = state.data.financial.expenses || [];
+    return `<section class="financial-directory money-simple-workspace" aria-label="Expenses">
+      <div class="ticket-lane-heading"><div><p class="eyebrow">Expenses</p><h3>Recorded costs</h3><p>Scan the essentials here. Open Spreadsheet view only when you need bulk editing.</p></div><div class="money-heading-actions"><button type="button" data-action="add-expense-row">+ New Expense</button>${renderMoneyDisplayToggle()}</div></div>
+      <div class="financial-card-list">${rows.length ? rows.map((expense) => `<article>
+        <div><strong>${escapeHtml(expense.description || expense.vendorName || "Untitled expense")}</strong><span>${escapeHtml([expense.expenseDate, expense.category].filter(Boolean).join(" · "))}</span></div>
+        <p>${escapeHtml(expense.vendorName || "No vendor")} · ${moneyCurrency(expense.total)}</p>
+        <small>${escapeHtml([financialRecordName("client", expense.clientId), financialRecordName("property", expense.propertyId), financialRecordName("ticket", expense.ticketId)].filter(Boolean).join(" / ") || "Not linked to a client, property, or ticket")}</small>
+        <div class="money-card-actions"><span class="status-badge">${escapeHtml(expense.status || "Draft")}</span><button type="button" data-action="money-display" data-display="spreadsheet">Edit</button><button type="button" class="inline-action danger" data-action="archive-money-record" data-entity-type="expense" data-id="${escapeHtml(expense.id)}">Delete</button></div>
+      </article>`).join("") : emptyState("No expenses are filed yet.")}</div>
+    </section>`;
+  }
+
+  function expenseRowPayload(row) {
+    const value = (field) => row.querySelector(`[data-expense-field="${field}"]`);
+    const subtotalText = value("subtotal")?.value?.trim() || "";
+    const taxText = value("tax")?.value?.trim() || "";
+    const subtotal = subtotalText === "" ? null : Number(subtotalText);
+    const tax = taxText === "" ? null : Number(taxText);
+    const displayedExpense = state.data.financial.expenses.find((item) => item.id === row.dataset.expenseRow);
+    const total = subtotal === null || tax === null ? Number(displayedExpense?.total || 0) : Math.round((subtotal + tax) * 100) / 100;
+    if (![subtotal, tax, total].filter((item) => item !== null).every(Number.isFinite)) {
+      throw new Error("Expense amounts must be valid numbers.");
+    }
+    return {
+      expense_date: value("expense_date")?.value || todayKey(),
+      vendor_id: value("vendor_id")?.value || null,
+      category: value("category")?.value || "Other",
+      description: value("description")?.value?.trim() || null,
+      client_id: value("client_id")?.value?.trim() || null,
+      property_id: value("property_id")?.value?.trim() || null,
+      ticket_id: value("ticket_id")?.value?.trim() || null,
+      payment_method: value("payment_method")?.value || null,
+      subtotal,
+      tax,
+      total,
+      reimbursable: Boolean(value("reimbursable")?.checked),
+      status: value("status")?.value || "Draft",
+      notes: value("notes")?.value?.trim() || null
+    };
+  }
+
+  async function saveExpenseRow(row) {
+    const id = row?.dataset.expenseRow;
+    if (!id) return;
+    const current = state.data.financial.expenses.find((item) => item.id === id);
+    const payload = expenseRowPayload(row);
+    state.moneyUndo = current ? { id, previous: current } : null;
+    state.moneySaveState = "saving";
+    const saveState = qs("[data-money-workspace] .money-save-state");
+    if (saveState) {
+      saveState.textContent = "saving";
+      saveState.className = "money-save-state is-saving";
+    }
+    try {
+      const result = await supabaseRestRequest(`expenses?id=eq.${encodeURIComponent(id)}`, {
+        method: "PATCH",
+        headers: { Prefer: "return=representation" },
+        body: JSON.stringify({ ...payload, version: Number(current?.version || 1) + 1 })
+      });
+      const saved = normalizeExpense(result?.[0] || { id, ...payload });
+      state.data.financial.expenses = state.data.financial.expenses.map((item) => item.id === id ? saved : item);
+      state.moneySaveState = "saved";
+      if (saveState) {
+        saveState.textContent = "saved";
+        saveState.className = "money-save-state is-saved";
+      }
+    } catch (error) {
+      state.moneySaveState = "error";
+      setDashboardState(error.message || "Expense save failed. Your previous value is still on the server.", "error");
+      renderMoneyWorkspace();
+    }
+  }
+
+  async function createExpense(payload = {}) {
+    const session = getSession() || {};
+    const rows = await supabaseRestRequest("expenses", {
+      method: "POST",
+      headers: { Prefer: "return=representation" },
+      body: JSON.stringify({
+        expense_date: payload.expense_date || todayKey(),
+        category: payload.category || "Other",
+        description: payload.description || null,
+        vendor_name: payload.vendor_name || null,
+        payment_method: payload.payment_method || null,
+        subtotal: payload.subtotal ?? null,
+        tax: payload.tax ?? null,
+        total: Number(payload.total || 0),
+        status: payload.status || "Draft",
+        notes: payload.notes || null,
+        created_by: session.userId || null,
+        updated_by: session.userId || null
+      })
+    });
+    return normalizeExpense(rows?.[0] || payload);
+  }
+
+  async function pasteExpenseRows(text) {
+    const lines = String(text || "").split(/\r?\n/).filter((line) => line.trim()).slice(0, 100);
+    if (!lines.length) throw new Error("Clipboard does not contain spreadsheet rows.");
+    const parsed = lines.map((line) => {
+      const cells = line.split("\t");
+      const subtotal = cells[4] === "" ? null : Number(cells[4] || 0);
+      const tax = cells[5] === "" ? null : Number(cells[5] || 0);
+      const explicitTotal = cells[6] === "" || cells[6] === undefined ? null : Number(cells[6]);
+      return {
+        expense_date: /^\d{4}-\d{2}-\d{2}$/.test(cells[0] || "") ? cells[0] : todayKey(),
+        vendor_name: (cells[1] || "").trim() || null,
+        category: EXPENSE_CATEGORIES.includes(cells[2]) ? cells[2] : "Other",
+        description: (cells[3] || "").trim() || null,
+        subtotal: Number.isFinite(subtotal) ? subtotal : null,
+        tax: Number.isFinite(tax) ? tax : null,
+        total: Number.isFinite(explicitTotal) ? explicitTotal : Math.round((Number(subtotal || 0) + Number(tax || 0)) * 100) / 100,
+        payment_method: EXPENSE_PAYMENT_METHODS.includes(cells[7]) ? cells[7] : null,
+        status: EXPENSE_STATUSES.includes(cells[8]) ? cells[8] : "Draft",
+        notes: (cells[9] || "").trim() || null
+      };
+    });
+    const created = [];
+    for (const payload of parsed) created.push(await createExpense(payload));
+    state.data.financial.expenses = [...created.reverse(), ...state.data.financial.expenses].slice(0, state.moneyExpensePageSize);
+    return created.length;
+  }
+
+  async function importExpenseCsv(file) {
+    if (!file || !/\.csv$/i.test(file.name)) throw new Error("Expense import currently accepts CSV files.");
+    const rows = parseCsv(await file.text());
+    if (rows.length < 2) throw new Error("The CSV needs a header row and at least one expense.");
+    const headers = new Map(rows[0].map((header, index) => [normalizeCsvHeader(header), index]));
+    const cell = (row, names) => csvCell(row, headers, names);
+    const parsed = rows.slice(1).map((row, index) => {
+      const subtotalText = cell(row, ["subtotal"]);
+      const taxText = cell(row, ["tax"]);
+      const totalText = cell(row, ["total", "amount"]);
+      const subtotal = subtotalText === "" ? null : Number(subtotalText.replace(/[$,]/g, ""));
+      const tax = taxText === "" ? null : Number(taxText.replace(/[$,]/g, ""));
+      const total = totalText === "" ? Number(subtotal || 0) + Number(tax || 0) : Number(totalText.replace(/[$,]/g, ""));
+      const expenseDate = cell(row, ["date", "expense_date", "expense date"]);
+      const vendorName = cell(row, ["vendor", "vendor_name", "vendor name"]);
+      const description = cell(row, ["description", "memo"]);
+      const errors = [];
+      if (!/^\d{4}-\d{2}-\d{2}$/.test(expenseDate)) errors.push("Date must be YYYY-MM-DD");
+      if (!Number.isFinite(total)) errors.push("Total must be numeric");
+      const duplicate = state.data.financial.expenses.some((expense) => expense.expenseDate === expenseDate && expense.vendorName.toLowerCase() === vendorName.toLowerCase() && Number(expense.total) === total && expense.description === description);
+      return {
+        rowNumber: index + 2,
+        disposition: errors.length ? "Invalid" : duplicate ? "Duplicate" : "New",
+        errors,
+        payload: {
+          expense_date: expenseDate,
+          vendor_name: vendorName || null,
+          category: EXPENSE_CATEGORIES.includes(cell(row, ["category"])) ? cell(row, ["category"]) : "Other",
+          description: description || null,
+          subtotal,
+          tax,
+          total: Math.round(total * 100) / 100,
+          payment_method: EXPENSE_PAYMENT_METHODS.includes(cell(row, ["payment_method", "payment method"])) ? cell(row, ["payment_method", "payment method"]) : null,
+          status: EXPENSE_STATUSES.includes(cell(row, ["status"])) ? cell(row, ["status"]) : "Draft",
+          notes: cell(row, ["notes", "note"]) || null
+        }
+      };
+    });
+    const newRows = parsed.filter((row) => row.disposition === "New");
+    const duplicates = parsed.filter((row) => row.disposition === "Duplicate").length;
+    const invalid = parsed.filter((row) => row.disposition === "Invalid").length;
+    if (!window.confirm(`Import ${newRows.length} new expenses? ${duplicates} possible duplicate${duplicates === 1 ? "" : "s"} and ${invalid} invalid row${invalid === 1 ? "" : "s"} will remain flagged and will not be imported.`)) return 0;
+    const batchRows = await supabaseRestRequest("financial_import_batches", {
+      method: "POST",
+      headers: { Prefer: "return=representation" },
+      body: JSON.stringify({ import_type: "Expenses", file_name: file.name, status: invalid ? "Partial" : "Completed", totals: { total: parsed.length, new: newRows.length, duplicate: duplicates, invalid } })
+    });
+    const batchId = batchRows?.[0]?.id;
+    const created = [];
+    for (const row of newRows) created.push(await createExpense(row.payload));
+    if (batchId) {
+      for (const row of parsed) {
+        await supabaseRestRequest("financial_import_batch_rows", {
+          method: "POST",
+          body: JSON.stringify({ batch_id: batchId, row_number: row.rowNumber, disposition: row.disposition, source_data: row.payload, normalized_data: row.payload, validation_errors: row.errors })
+        });
+      }
+    }
+    state.data.financial.expenses = [...created.reverse(), ...state.data.financial.expenses].slice(0, state.moneyExpensePageSize);
+    return created.length;
+  }
+
+  function renderVendorsWorkspace() {
+    const vendors = state.data.financial.vendors || [];
+    return `<section class="financial-directory">
+      <div class="ticket-lane-heading"><div><p class="eyebrow">Directory</p><h3>Vendors</h3><p>Controlled vendor records for consistent expense entry.</p></div><button type="button" data-action="add-vendor">Add Vendor</button></div>
+      <div class="financial-card-list">${vendors.length ? vendors.map((vendor) => `<article><div><strong>${escapeHtml(vendor.vendor_name)}</strong><span>${escapeHtml(vendor.default_expense_category || "No default category")}</span></div><p>${escapeHtml([vendor.contact_name, vendor.email, vendor.phone].filter(Boolean).join(" · ") || "No contact details")}</p><div class="money-card-actions"><span class="status-badge">${escapeHtml(vendor.status || "Active")}</span><button type="button" class="inline-action danger" data-action="archive-money-record" data-entity-type="vendor" data-id="${escapeHtml(vendor.id)}">Delete</button></div></article>`).join("") : emptyState("No vendors are filed yet.")}</div>
+    </section>`;
+  }
+
+  function financialCalculator() {
+    return window.UrbanYardsFinancial || {
+      invoiceSummary: (invoice) => {
+        const total = Number(invoice.subtotal || 0) + Number(invoice.tax || 0) - Number(invoice.discount || 0);
+        return { total, balance: Math.max(0, total - Number(invoice.deposit || 0) - Number(invoice.amount_paid || 0)) };
+      },
+      effectiveInvoiceStatus: (invoice) => invoice.status || "Draft"
+    };
+  }
+
+  function renderInvoiceSpreadsheet() {
+    const invoices = state.data.financial.invoices || [];
+    return `<section class="invoice-workspace" aria-label="Invoice spreadsheet">
+      <div class="money-grid-toolbar">
+        <div><button type="button" data-action="create-financial-invoice">+ New Invoice</button></div>
+        <p>Open a row to edit line items, payments, Square links, attachments, and notes.</p>
+      </div>
+      <div class="money-grid-shell">
+        <table class="money-grid invoice-grid">
+          <thead><tr><th>Invoice Number</th><th>Client</th><th>Property</th><th>Job / Ticket</th><th>Issue Date</th><th>Due Date</th><th>Subtotal</th><th>Tax</th><th>Discount</th><th>Deposit</th><th>Total</th><th>Amount Paid</th><th>Balance</th><th>Status</th><th>Payment Method</th><th>Square Invoice</th><th>Last Sent</th></tr></thead>
+          <tbody>${invoices.length ? invoices.map((invoice) => {
+            const summary = financialCalculator().invoiceSummary(invoice);
+            const status = financialCalculator().effectiveInvoiceStatus(invoice);
+            return `<tr data-action="open-financial-invoice" data-id="${escapeHtml(invoice.id)}" tabindex="0">
+              <td><strong>${escapeHtml(invoice.invoice_number || "Draft")}</strong></td>
+              <td>${escapeHtml(invoice.client_id || "Not linked")}</td>
+              <td>${escapeHtml(invoice.property_id || "Not linked")}</td>
+              <td>${escapeHtml(invoice.ticket_id || "Not linked")}</td>
+              <td>${escapeHtml(invoice.issue_date || "")}</td>
+              <td>${escapeHtml(invoice.due_date || "")}</td>
+              <td>${moneyCurrency(invoice.subtotal)}</td><td>${moneyCurrency(invoice.tax)}</td><td>${moneyCurrency(invoice.discount)}</td><td>${moneyCurrency(invoice.deposit)}</td>
+              <td class="money-calculated">${moneyCurrency(summary.total)}</td><td>${moneyCurrency(invoice.amount_paid)}</td><td class="money-calculated">${moneyCurrency(summary.balance)}</td>
+              <td><span class="status-badge">${escapeHtml(status)}</span></td>
+              <td>${escapeHtml(invoice.payment_method || "")}</td>
+              <td>${invoice.square_invoice_url ? `<a href="${escapeHtml(invoice.square_invoice_url)}" target="_blank" rel="noopener">Open Square</a>` : "Not linked"}</td>
+              <td>${escapeHtml(invoice.last_sent_at ? formatDate(invoice.last_sent_at) : "")}</td>
+            </tr>`;
+          }).join("") : `<tr><td colspan="17">${emptyState("No invoices are filed yet. Create one manually or from a completed ticket.")}</td></tr>`}</tbody>
+        </table>
+      </div>
+    </section>`;
+  }
+
+  function renderInvoiceWorkspace() {
+    if (state.moneyDisplay === "spreadsheet") return `${renderMoneyDisplayToggle()}${renderInvoiceSpreadsheet()}`;
+    const invoices = state.data.financial.invoices || [];
+    return `<section class="financial-directory money-simple-workspace" aria-label="Invoices">
+      <div class="ticket-lane-heading"><div><p class="eyebrow">Invoices</p><h3>Billing records</h3><p>Open a card to edit details, lines, payments, and Square links.</p></div><div class="money-heading-actions"><button type="button" data-action="create-financial-invoice">+ New Invoice</button>${renderMoneyDisplayToggle()}</div></div>
+      <div class="financial-card-list">${invoices.length ? invoices.map((invoice) => {
+        const summary = financialCalculator().invoiceSummary(invoice);
+        const status = financialCalculator().effectiveInvoiceStatus(invoice);
+        return `<article class="is-clickable" data-action="open-financial-invoice" data-id="${escapeHtml(invoice.id)}" tabindex="0">
+          <div><strong>${escapeHtml(invoice.invoice_number || "Draft invoice")}</strong><span>${escapeHtml([invoice.issue_date, invoice.due_date ? `Due ${invoice.due_date}` : ""].filter(Boolean).join(" · "))}</span></div>
+          <p>${escapeHtml(financialRecordName("client", invoice.client_id) || "Client not linked")} · ${moneyCurrency(summary.total)}</p>
+          <small>${escapeHtml([financialRecordName("property", invoice.property_id), financialRecordName("ticket", invoice.ticket_id)].filter(Boolean).join(" / ") || "No property or ticket linked")}</small>
+          <div class="money-card-actions"><span class="status-badge">${escapeHtml(status)}</span><strong>${moneyCurrency(summary.balance)} due</strong></div>
+        </article>`;
+      }).join("") : emptyState("No invoices are filed yet. Create one manually or from a completed ticket.")}</div>
+    </section>`;
+  }
+
+  function financialLinkOptions(type, selectedId) {
+    const records = type === "client"
+      ? (state.data.contacts || []).map((item) => ({ id: item.id, label: item.name || item.company }))
+      : type === "property"
+        ? (state.data.outreachProperties || []).map((item) => ({ id: item.id, label: item.propertyName || item.address }))
+        : dashboardTickets(state.data).map((item) => ({ id: item.id, label: [item.number, item.title].filter(Boolean).join(" — ") }));
+    const selectedExists = records.some((item) => item.id === selectedId);
+    return `<option value="">Not linked</option>${!selectedExists && selectedId ? `<option value="${escapeHtml(selectedId)}" selected>${escapeHtml(selectedId)}</option>` : ""}${records.map((item) => `<option value="${escapeHtml(item.id)}"${item.id === selectedId ? " selected" : ""}>${escapeHtml(item.label || item.id)}</option>`).join("")}`;
+  }
+
+  async function openFinancialInvoiceDrawer(id) {
+    if (!els.detailDrawer || !els.detailContent) return;
+    openDetailDrawer();
+    els.detailContent.innerHTML = `<section class="money-module-state" role="status"><strong>Loading invoice…</strong></section>`;
+    try {
+      const detail = await dashboardFinancialRequest("invoice-detail", { invoiceId: id });
+      state.moneyInvoiceDetail = detail;
+      const invoice = detail.invoice || {};
+      const summary = financialCalculator().invoiceSummary(invoice, detail.lineItems || []);
+      els.detailContent.innerHTML = `<div class="financial-invoice-drawer">
+        <header><p class="eyebrow">Invoice Detail</p><h3>${escapeHtml(invoice.invoice_number || "Draft Invoice")}</h3><p>${escapeHtml(financialCalculator().effectiveInvoiceStatus(invoice))}</p></header>
+        <form data-financial-invoice-form data-id="${escapeHtml(invoice.id || id)}" class="drawer-form">
+          <div class="drawer-grid">
+            <label>Client<select name="client_id">${financialLinkOptions("client", invoice.client_id)}</select></label>
+            <label>Property<select name="property_id">${financialLinkOptions("property", invoice.property_id)}</select></label>
+            <label>Ticket<select name="ticket_id">${financialLinkOptions("ticket", invoice.ticket_id)}</select></label>
+            <label>Issue date<input name="issue_date" type="date" value="${escapeHtml(invoice.issue_date || "")}"></label>
+            <label>Due date<input name="due_date" type="date" value="${escapeHtml(invoice.due_date || "")}"></label>
+            <label>Tax<input name="tax" type="number" min="0" step="0.01" value="${escapeHtml(String(invoice.tax || 0))}"></label>
+            <label>Discount<input name="discount" type="number" min="0" step="0.01" value="${escapeHtml(String(invoice.discount || 0))}"></label>
+            <label>Deposit<input name="deposit" type="number" min="0" step="0.01" value="${escapeHtml(String(invoice.deposit || 0))}"></label>
+            <label>Amount paid<input name="amount_paid" type="number" min="0" step="0.01" value="${escapeHtml(String(invoice.amount_paid || 0))}"></label>
+            <label>Status<select name="status">${expenseSelectOptions(["Draft","Ready","Sent","Viewed","Partially Paid","Paid","Overdue","Voided","Uncollectible"], invoice.status || "Draft")}</select></label>
+            <label class="span-full">Square invoice URL<input name="square_invoice_url" type="url" value="${escapeHtml(invoice.square_invoice_url || "")}"></label>
+            <label class="span-full">Internal notes<textarea name="internal_notes" rows="3">${escapeHtml(invoice.internal_notes || "")}</textarea></label>
+            <label class="span-full">Client-facing notes<textarea name="client_notes" rows="3">${escapeHtml(invoice.client_notes || "")}</textarea></label>
+          </div>
+          <section class="invoice-totals"><div><span>Subtotal</span><strong>${moneyCurrency(summary.subtotal)}</strong></div><div><span>Total</span><strong>${moneyCurrency(summary.total)}</strong></div><div><span>Balance</span><strong>${moneyCurrency(summary.balance)}</strong></div></section>
+          <section><div class="ticket-lane-heading"><div><h4>Line Items</h4></div><button type="button" data-action="add-invoice-line" data-id="${escapeHtml(invoice.id || id)}">Add Line</button></div>
+            <div class="invoice-line-list">${(detail.lineItems || []).length ? detail.lineItems.map((line) => `<article><strong>${escapeHtml(line.description)}</strong><span>${escapeHtml(`${line.quantity} ${line.unit} × ${moneyCurrency(line.unit_price)}`)}</span><b>${moneyCurrency(financialCalculator().lineTotal?.(line) || line.quantity * line.unit_price)}</b></article>`).join("") : emptyState("No line items yet.")}</div>
+          </section>
+          <section><div class="ticket-lane-heading"><div><h4>Payment History</h4></div><button type="button" data-action="record-invoice-payment" data-id="${escapeHtml(invoice.id || id)}">Record Payment</button></div>
+            <div class="invoice-line-list">${(detail.payments || []).length ? detail.payments.map((payment) => `<article><strong>${moneyCurrency(payment.amount)}</strong><span>${escapeHtml(payment.payment_date || "")}</span><b>${escapeHtml(payment.payment_method || "")}</b></article>`).join("") : emptyState("No payments recorded.")}</div>
+          </section>
+          <div class="drawer-actions">
+            <button type="submit">${buttonContent("Save", "save")}</button>
+            <button type="button" data-action="duplicate-financial-invoice" data-id="${escapeHtml(invoice.id || id)}">Duplicate</button>
+            <button type="button" data-action="print-financial-invoice">Print / PDF</button>
+            <button type="button" class="danger" data-action="archive-money-record" data-entity-type="invoice" data-id="${escapeHtml(invoice.id || id)}">Delete</button>
+            ${invoice.square_invoice_url ? `<a class="button-link" href="${escapeHtml(invoice.square_invoice_url)}" target="_blank" rel="noopener">Open Square Invoice</a>` : ""}
+          </div>
+        </form>
+      </div>`;
+      renderDetailDrawerBreadcrumbs();
+    } catch (error) {
+      els.detailContent.innerHTML = `<section class="money-module-state is-error"><strong>Invoice could not be opened</strong><p>${escapeHtml(error.message)}</p></section>`;
+    }
+  }
+
+  function renderMoneyActiveView() {
+    if (state.moneyLoading) return `<section class="money-module-state" role="status"><strong>Loading ${escapeHtml(state.moneyView)}…</strong><p>The rest of the dashboard remains available.</p></section>`;
+    if (state.moneyError) return `<section class="money-module-state is-error" role="alert"><strong>Could not load financial records</strong><p>${escapeHtml(state.moneyError)}</p><button type="button" data-action="retry-money-view">Retry</button></section>`;
+    if (state.moneyView === "overview") return renderMoneyOverview();
+    if (state.moneyView === "expenses") return renderExpenseWorkspace();
+    if (state.moneyView === "invoicing") return renderInvoiceWorkspace();
+    if (state.moneyView === "vendors") return renderVendorsWorkspace();
+    if (state.moneyView === "documents") {
+      const documents = state.data.financial.documents || [];
+      return `<section class="financial-directory">
+        <div class="ticket-lane-heading"><div><p class="eyebrow">Private Filing</p><h3>Financial Documents</h3><p>Receipts, invoices, insurance, licenses, permits, tax documents, contracts, W-9s, and estimates.</p></div></div>
+        <div class="financial-card-list">${documents.length ? documents.map((document) => `<article><div><strong>${escapeHtml(document.title || document.file_name)}</strong><span>${escapeHtml(document.document_type)}</span></div><p>${escapeHtml([document.document_date, document.file_name].filter(Boolean).join(" · "))}</p><small>${escapeHtml([document.expense_id ? "Expense" : "", document.invoice_id ? "Invoice" : "", document.vendor_id ? "Vendor" : "", document.ticket_id ? "Ticket" : ""].filter(Boolean).join(" / ") || "Missing association")}</small><div class="money-card-actions"><button type="button" class="inline-action danger" data-action="archive-money-record" data-entity-type="document" data-id="${escapeHtml(document.id)}">Delete</button></div></article>`).join("") : emptyState("No financial documents match this view. Expense receipts appear here after upload.")}</div>
+      </section>`;
+    }
+    if (state.moneyView === "reports") {
+      const overview = state.data.financial.overview || {};
+      const invoices = state.data.financial.invoices || [];
+      const paid = invoices.filter((invoice) => financialCalculator().effectiveInvoiceStatus(invoice) === "Paid").length;
+      const unpaid = invoices.filter((invoice) => !["Paid", "Voided", "Uncollectible"].includes(financialCalculator().effectiveInvoiceStatus(invoice))).length;
+      return `<section class="financial-reports">
+        <div class="ticket-lane-heading"><div><p class="eyebrow">Operational Reports</p><h3>Live financial summaries</h3><p>Operational reports are not a substitute for professional tax or accounting advice.</p></div><div><button type="button" data-action="export-financial-report" data-format="csv">Export CSV</button><button type="button" data-action="print-financial-report">Print / PDF</button></div></div>
+        <div class="financial-report-grid">
+          ${[
+            ["Profit and Loss", moneyCurrency(Number(overview.revenue || 0) - Number(overview.expenses || 0)), "Revenue minus recorded expenses"],
+            ["Revenue", moneyCurrency(overview.revenue), "Selected date range"],
+            ["Expenses", moneyCurrency(overview.expenses), "Selected date range"],
+            ["Outstanding Invoices", moneyCurrency(overview.outstanding), `${unpaid} unpaid records`],
+            ["Invoice Aging", moneyCurrency(overview.overdue), "Past-due open balance"],
+            ["Paid Invoices", String(paid), "Current loaded invoice period"],
+            ["Missing Receipts", String(overview.missing_receipts || 0), "Expenses lacking attachments"],
+            ["Taxes Collected", moneyCurrency(invoices.reduce((sum, invoice) => sum + Number(invoice.tax || 0), 0)), "Non-voided loaded invoices"]
+          ].map(([title, value, detail]) => `<article><p class="eyebrow">${escapeHtml(title)}</p><strong>${escapeHtml(value)}</strong><span>${escapeHtml(detail)}</span></article>`).join("")}
+        </div>
+      </section>`;
+    }
+    if (state.moneyView === "deleted") {
+      const deleted = state.data.financial.deleted || [];
+      const recordLabel = (record) => record.vendor_name || record.invoice_number || record.title || record.description || record.file_name || `${record.entityType} record`;
+      return `<section class="financial-directory money-deleted-bin">
+        <div class="ticket-lane-heading"><div><p class="eyebrow">Recovery</p><h3>Recently Deleted</h3><p>Restore a record to its original Money section, or permanently delete it. Permanent deletion cannot be undone.</p></div><span class="status-badge">${deleted.length} item${deleted.length === 1 ? "" : "s"}</span></div>
+        <div class="money-deleted-list">${deleted.length ? deleted.map((record) => `<article>
+          <div class="money-deleted-copy"><span class="status-badge">${escapeHtml(record.entityType)}</span><div><strong>${escapeHtml(recordLabel(record))}</strong><small>Deleted ${escapeHtml(record.archived_at ? formatDate(record.archived_at) : "recently")}</small></div></div>
+          <div class="money-card-actions"><button type="button" data-action="restore-money-record" data-entity-type="${escapeHtml(record.entityType)}" data-id="${escapeHtml(record.id)}">Restore</button><button type="button" class="danger" data-action="permanently-delete-money-record" data-entity-type="${escapeHtml(record.entityType)}" data-id="${escapeHtml(record.id)}">Delete permanently</button></div>
+        </article>`).join("") : emptyState("Recently Deleted is empty.")}</div>
+      </section>`;
+    }
+    return `<section class="money-module-state"><strong>${escapeHtml(MONEY_TABS.find((item) => item.key === state.moneyView)?.label || "Money")}</strong><p>This module is being connected to the same financial record foundation.</p></section>`;
+  }
+
   function renderMoneyWorkspace(data = state.data) {
     const target = qs("[data-money-workspace]");
     if (!target) return;
@@ -13643,20 +15529,16 @@
           </div>
           <div class="ticket-hero-actions">
             ${canManageMoneyWorkflow() ? `<button type="button" data-action="quick-add-quote">Create Estimate</button>` : ""}
-            ${canManageMoneyWorkflow() ? `<button type="button" data-action="go-tickets">Review Tickets</button>` : ""}
+            ${canManageMoneyWorkflow() ? `<button type="button" data-action="open-financial-records">Open Records</button>` : ""}
           </div>
         </header>
-        <section class="ticket-metrics" aria-label="Money ticket summary">
-          ${renderTicketMetric(needsBudget.length, "Cost Review", "Tickets needing cost review")}
-          ${renderTicketMetric(ownerApproval.length, "Owner Approval", "Cost and invoice prep")}
-          ${renderTicketMetric(unpaidInvoices.length, "Open Invoices", "Awaiting payment")}
-          ${renderTicketMetric(overdueInvoices.length, "Overdue", "Payment action needed")}
-        </section>
-        ${renderMoneyRunwayPanel({ needsBudget, ownerApproval, invoiceTickets, overdueInvoices })}
-        ${renderMoneyCommandCenter({ needsBudget, ownerApproval, fieldComplete, invoiceTickets, unpaidInvoices, overdueInvoices })}
-        ${renderMoneyCloseoutPanel({ needsBudget, fieldComplete, invoiceTickets, unpaidInvoices, overdueInvoices })}
-        ${renderMoneyBudgetPanel(data, tickets)}
+        ${renderMoneyTabs()}
+        ${renderMoneyActiveView()}
+        ${state.moneyView === "overview" ? `${renderMoneyCommandCenter({ needsBudget, ownerApproval, fieldComplete, invoiceTickets, unpaidInvoices, overdueInvoices })}${renderMoneyBudgetPanel(data, tickets)}` : ""}
       </div>`;
+    if (!state.moneyLoadedViews.has(state.moneyView) && !state.moneyLoading && !state.moneyError) {
+      queueMicrotask(() => void loadMoneyView(state.moneyView));
+    }
   }
 
   function renderToolsRunwayCard({ label, value, detail, tone = "", action, actionLabel }) {
@@ -13823,75 +15705,6 @@
           ${renderTicketMetric(supportWarnings.length, "Support Warnings", "Setup items for hidden support modules")}
           ${renderTicketMetric(documents.length, "Financial Documents", "Quotes, invoices, and records")}
           ${renderTicketMetric(documentationCount, "Forms and Files", "Templates and submissions")}
-        </section>
-        ${renderToolsRunwayPanel({ criticalWarnings, supportWarnings, documentationCount, equipmentCount, routeStopsToday, aiLiveVersion, usersCount })}
-        ${renderToolsSystemsPanel({ criticalWarnings, supportWarnings, documentationCount, equipmentCount, routeStopsToday, aiLiveVersion, usersCount, documentsCount: documents.length })}
-        <section class="tools-control-grid" aria-label="Dashboard support tools">
-          ${renderToolsCard({
-            label: "Route Planner",
-            detail: "Build the day route, pin stops, and keep route support close to scheduled work.",
-            meta: `${routeStopsToday} stops today`,
-            status: "Route",
-            primary: "Open Route Planner",
-            primaryAction: "go-route-planner"
-          })}
-          ${renderToolsCard({
-            label: "Equipment",
-            detail: "Track owned equipment, maintenance, replacement priorities, and hardware recommendations.",
-            meta: `${equipmentCount} equipment records`,
-            status: "Assets",
-            primary: "Open Equipment",
-            primaryAction: "go-equipment"
-          })}
-          ${renderToolsCard({
-            label: "Documentation",
-            detail: "Manage form templates, submitted paperwork, job photos, and reusable records.",
-            meta: `${documentationCount} files or forms`,
-            status: "Records",
-            primary: "Open Documentation",
-            primaryAction: "go-documentation",
-            secondary: "Refresh Forms",
-            secondaryAction: "refresh-documentation"
-          })}
-          ${renderToolsCard({
-            label: "Groundskeeper AI",
-            detail: "Train and review the public website helper with backend-protected knowledge and rules.",
-            meta: `Live version: ${aiLiveVersion}`,
-            status: "Assistant",
-            primary: "Open AI Studio",
-            primaryAction: "go-groundskeeper-ai",
-            secondary: "Refresh AI",
-            secondaryAction: "refresh-groundskeeper-ai"
-          })}
-          ${renderToolsCard({
-            label: "Import, Export & Backups",
-            detail: "Move records through CSV, Excel, Google Sheets, PDF reports, and full JSON backups.",
-            meta: state.importExportReady ? "Data tools ready" : "Setup may be needed",
-            status: "Data",
-            primary: "Open Data Tools",
-            primaryAction: "go-import-export",
-            secondary: "Full Backup",
-            secondaryAction: "export-full-backup"
-          })}
-          ${renderToolsCard({
-            label: "Users & Access",
-            detail: "Invite users, manage roles, disable access, and keep profile avatars clean.",
-            meta: `${usersCount} dashboard users`,
-            status: "Access",
-            primary: "Manage Access",
-            primaryAction: "focus-users-access"
-          })}
-          ${renderToolsCard({
-            label: "Dashboard Health",
-            detail: "Copy diagnostics, refresh dashboard data, and separate setup warnings from workflow issues.",
-            meta: `${rows.length} diagnostics`,
-            status: criticalWarnings.length ? "Needs Review" : "Healthy",
-            tone: criticalWarnings.length ? "warning" : "healthy",
-            primary: "Copy Diagnostics",
-            primaryAction: "copy-dashboard-diagnostics",
-            secondary: "Refresh Dashboard",
-            secondaryAction: "refresh-dashboard"
-          })}
         </section>
         <section class="tools-admin-grid" aria-label="Admin tools and diagnostics">
           <article class="users-access-panel tools-admin-panel" data-tools-users-access>
@@ -14886,7 +16699,7 @@
       item.managementCompany,
       item.city,
       item.email,
-      normalizePhone(item.phone)?.display
+      phoneInfo(item.phone).display
     ].map(normalizeDedupeKey).filter(Boolean);
     const serviceKey = normalizeDedupeKey(item.serviceInterest || item.service || "");
     return dashboardTickets().filter((ticket) => {
@@ -17045,12 +18858,34 @@
     win.print();
   }
 
-  function closeSubmissionDrawer() {
+  function finishClosingDetailDrawer() {
+    if (!els.detailDrawer) return;
+    els.detailDrawer.hidden = true;
+    els.detailDrawer.classList.remove("is-open", "is-closing");
+    els.detailDrawer.setAttribute("aria-hidden", "true");
+    if (els.detailContent) els.detailContent.innerHTML = "";
+    document.documentElement.classList.remove("is-detail-drawer-open");
+    document.documentElement.style.removeProperty("overflow-y");
+    document.body.classList.remove("is-detail-drawer-open");
+    const focusTarget = detailDrawerLastFocus;
+    detailDrawerLastFocus = null;
+    if (focusTarget && focusTarget.isConnected && typeof focusTarget.focus === "function") {
+      focusTarget.focus({ preventScroll: true });
+    }
+  }
+
+  function closeSubmissionDrawer(options = {}) {
     state.selectedSubmissionId = "";
     state.selectedJobId = "";
-    if (els.detailDrawer) els.detailDrawer.hidden = true;
-    if (els.detailContent) els.detailContent.innerHTML = "";
-    document.body.classList.remove("is-detail-drawer-open");
+    if (!els.detailDrawer || els.detailDrawer.hidden) return;
+    window.clearTimeout(detailDrawerCloseTimer);
+    els.detailDrawer.classList.remove("is-open");
+    els.detailDrawer.classList.add("is-closing");
+    if (options.immediate) {
+      finishClosingDetailDrawer();
+      return;
+    }
+    detailDrawerCloseTimer = window.setTimeout(finishClosingDetailDrawer, DETAIL_DRAWER_SETTLE_MS);
   }
 
   function csvValue(value) {
@@ -17498,8 +19333,45 @@
     `).join("")}${hiddenLogCount > 0 ? `<div class="groundskeeper-ai-more">Showing ${visibleLogs.length} of ${logs.length} recent questions.</div>` : ""}`;
   }
 
+  const GROUNDSKEEPER_OPERATIONS = [
+    { key: "daily-briefing", group: "Today", title: "Daily operations briefing", detail: "Calls, visits, approvals, proof, invoices, and urgent work.", prompt: "Create my concise daily operations briefing. Order the work by urgency, explain why each item matters, and finish with the best first three actions." },
+    { key: "next-actions", group: "Today", title: "Smart next actions", detail: "Recommend the next move for active records.", prompt: "Recommend the most useful next action for each high-priority lead and ticket in the context. Explain each recommendation briefly and identify the responsible workspace." },
+    { key: "ticket-completeness", group: "Tickets", title: "Ticket completeness checker", detail: "Find missing fields, proof, costs, or closeout requirements.", prompt: "Audit the active tickets for completeness. Group missing information by ticket and stage, distinguish true blockers from optional improvements, and do not mark anything complete." },
+    { key: "dashboard-search", group: "Find", title: "Natural-language dashboard search", detail: "Ask a plain-language question about dashboard records.", prompt: "Use only the supplied dashboard context to answer the user's dashboard search question. State when the available snapshot is insufficient and never invent a matching record.", needsQuestion: true, placeholder: "Example: Which Kennedy tickets still need completion photos?" },
+    { key: "lead-priority", group: "Leads", title: "Lead prioritization", detail: "Rank prospects by urgency, fit, location, and value signals.", prompt: "Rank the active leads that deserve attention first. Use follow-up date, priority, service fit, property context, and contact history signals. Explain the ranking without inventing revenue." },
+    { key: "call-brief", group: "Leads", title: "Call preparation brief", detail: "Prepare talking points and questions for a prospect.", prompt: "Prepare concise call briefs for the highest-priority leads. Include known context, the goal of the call, useful questions, likely objections, and the recommended outcome. Do not claim facts not present." },
+    { key: "call-outcome", group: "Leads", title: "Call outcome assistant", detail: "Turn rough notes into status, follow-up, and next action.", prompt: "Convert the user's rough call notes into a structured outcome with summary, recommended lead status, follow-up timing, next action, and a polished internal note. Return a draft only.", needsQuestion: true, placeholder: "Paste rough call notes here…" },
+    { key: "scope-builder", group: "Planning", title: "Scope-of-work generator", detail: "Draft a structured scope from ticket or walkthrough notes.", prompt: "Draft a practical scope of work from the supplied ticket context and the user's notes. Include included work, exclusions, assumptions, access, proof, and questions still needing answers. This is a draft for review.", needsQuestion: true, placeholder: "Optional: identify the ticket and add walkthrough details…" },
+    { key: "estimate-prep", group: "Planning", title: "Estimate preparation", detail: "Suggest labor, materials, equipment, and missing questions.", prompt: "Prepare an estimate worksheet for the relevant ticket. Suggest labor categories, materials, equipment, risk allowances, and unanswered questions. Do not provide final pricing or promises." },
+    { key: "profitability", group: "Money", title: "Profitability insights", detail: "Explain margin strengths, risks, and cost drivers.", prompt: "Review the supplied financial and ticket signals for profitability. Explain likely cost drivers, weak or strong margin signals, missing actuals, and the records that need review. Do not invent amounts." },
+    { key: "schedule", group: "Planning", title: "Schedule optimizer", detail: "Recommend visit order and scheduling improvements.", prompt: "Recommend a practical schedule and work order using dates, urgency, location text, and ticket readiness. Flag conflicts and missing information. Do not change the calendar." },
+    { key: "weather", group: "Planning", title: "Weather-aware planning", detail: "Identify weather-sensitive work and a forecast checklist.", prompt: "Identify upcoming work that is weather-sensitive and create a planning checklist. If live forecast data is not present in the context, say so explicitly and recommend what must be checked before rescheduling. Never invent weather." },
+    { key: "property-history", group: "Properties", title: "Property history summary", detail: "Summarize visits, issues, preferences, and costs.", prompt: "Create concise property history summaries using only the supplied contacts, properties, jobs, tickets, expenses, and documents. Highlight recurring needs, open issues, and missing history." },
+    { key: "closeout", group: "Tickets", title: "Closeout assistant", detail: "Review proof, N/A decisions, costs, documents, and blockers.", prompt: "Prepare a ticket closeout review. Show completed evidence, missing proof, N/A decisions, actual costs, invoice and payment state, linked documents, and remaining blockers. Recommend; do not close anything." },
+    { key: "invoice-ready", group: "Money", title: "Invoice readiness checker", detail: "Find missing billing details and approvals.", prompt: "Determine which tickets appear ready to invoice and which are not. For each one, list missing client details, scope, line items, proof, actuals, approvals, or documents. Do not create or send invoices." },
+    { key: "expense-category", group: "Money", title: "Expense categorization", detail: "Suggest vendor, category, ticket, and receipt details.", prompt: "Categorize the user's expense or receipt notes. Suggest vendor, expense category, likely property or ticket link, reimbursable status, and missing receipt information. Return a draft only.", needsQuestion: true, placeholder: "Paste receipt text or describe the purchase…" },
+    { key: "anomalies", group: "Insights", title: "Anomaly and duplicate detection", detail: "Find unusual costs, duplicates, conflicts, and stuck records.", prompt: "Inspect the dashboard snapshot for likely duplicates, inconsistent totals, unusual costs, scheduling conflicts, missing links, and tickets stuck too long. Separate confirmed problems from possible issues." },
+    { key: "communication", group: "Clients", title: "Client communication drafts", detail: "Draft confirmations, follow-ups, updates, or reminders.", prompt: "Draft the requested client communication using only supplied record facts. Keep it concise, professional, and owner-operated. Clearly label it as a draft and do not send it.", needsQuestion: true, placeholder: "Example: Draft a schedule-change message for Smith Property…" }
+  ];
+  const GROUNDSKEEPER_PAGE_TOOLS = {
+    overview: ["daily-briefing", "next-actions", "anomalies"],
+    tickets: ["ticket-completeness", "closeout", "next-actions"],
+    calendar: ["schedule", "weather", "ticket-completeness"],
+    "route-planner": ["schedule", "weather", "property-history"],
+    outreach: ["lead-priority", "call-brief", "communication"],
+    "call-queue": ["call-brief", "call-outcome", "lead-priority"],
+    contacts: ["property-history", "communication", "dashboard-search"],
+    documents: ["profitability", "invoice-ready", "expense-category"],
+    equipment: ["anomalies", "expense-category", "schedule"],
+    documentation: ["ticket-completeness", "closeout", "dashboard-search"],
+    "import-export": ["anomalies", "dashboard-search", "ticket-completeness"],
+    settings: ["anomalies", "daily-briefing", "dashboard-search"]
+  };
+
   const AI_SECTIONS = [
+    { id: "operations", icon: "OP", title: "Operations Copilot", table: "", type: "", description: "Review daily work, tickets, leads, estimates, schedules, closeout, Money, and client communication with live dashboard context." },
     { id: "training", icon: "TR", title: "AI Helper Training", table: "ai_training_rules", type: "trainingRules", description: "Train, test, approve, and publish how the public website helper responds to visitors." },
+    { id: "landscaping", icon: "LK", title: "Landscaping Knowledge", table: "", type: "landscapingKnowledge", description: "Versioned general, Pacific Northwest, Urban Yards, and safety knowledge used by the dashboard assistant." },
     { id: "assistant", icon: "AI", title: "Dashboard Assistant", table: "", type: "", description: "Ask for follow-up drafts, lead summaries, copy ideas, or outreach planning. Dashboard mode can use internal AI knowledge." },
     { id: "settings", icon: "BF", title: "Business Facts", table: "ai_settings", type: "settings", description: "Settings, service area, contact info, tone, quote process, and payment process." },
     { id: "knowledge", icon: "SK", title: "Services & Knowledge", table: "ai_knowledge", type: "knowledge", description: "Published and draft knowledge entries for services, site content, and business context." },
@@ -17515,6 +19387,7 @@
 
   function aiItemsForSection(ai, section) {
     if (section.id === "training") return ai.trainingRules || [];
+    if (section.id === "landscaping") return ai.landscapingKnowledge || [];
     if (section.id === "logs") return ai.logs || [];
     if (section.id === "settings") return ai.settings || [];
     if (section.id === "knowledge") return ai.knowledge || [];
@@ -17564,7 +19437,7 @@
   function renderAiNav(ai) {
     if (!els.aiNav) return;
     els.aiNav.innerHTML = AI_SECTIONS.map((section) => {
-      const count = section.id === "assistant" ? state.groundskeeperMessages.length : aiItemsForSection(ai, section).length;
+      const count = section.id === "operations" ? GROUNDSKEEPER_OPERATIONS.length : section.id === "assistant" ? state.groundskeeperMessages.length : aiItemsForSection(ai, section).length;
       const active = state.groundskeeperAiView === section.id ? " is-active" : "";
       return `<button type="button" class="ai-nav-item${active}" data-ai-view="${escapeHtml(section.id)}">
         <span class="ai-nav-icon">${escapeHtml(section.icon)}</span>
@@ -17683,6 +19556,69 @@
     renderGroundskeeperChat();
   }
 
+  function renderOperationsWorkspace() {
+    if (!els.aiMain) return;
+    const selected = GROUNDSKEEPER_OPERATIONS.find((item) => item.key === state.groundskeeperOperationKey) || GROUNDSKEEPER_OPERATIONS[0];
+    const groups = [...new Set(GROUNDSKEEPER_OPERATIONS.map((item) => item.group))];
+    els.aiMain.innerHTML = `
+      <section class="groundskeeper-operations">
+        <div class="ai-workspace-heading">
+          <div><p class="eyebrow">Owner Operations</p><h3>Groundskeeper Operations Copilot</h3><p>Choose a focused review. Groundskeeper uses a bounded dashboard snapshot and prepares recommendations or drafts for you to approve.</p></div>
+          <span class="ai-review-badge">Review before applying</span>
+        </div>
+        <div class="groundskeeper-operation-groups">
+          ${groups.map((group) => `<section><h4>${escapeHtml(group)}</h4><div class="groundskeeper-operation-grid">
+            ${GROUNDSKEEPER_OPERATIONS.filter((item) => item.group === group).map((item) => `<button type="button" class="groundskeeper-operation-card${selected.key === item.key ? " is-active" : ""}" data-action="select-ai-operation" data-operation="${escapeHtml(item.key)}"><strong>${escapeHtml(item.title)}</strong><span>${escapeHtml(item.detail)}</span></button>`).join("")}
+          </div></section>`).join("")}
+        </div>
+        <section class="groundskeeper-operation-runner">
+          <div><p class="eyebrow">${escapeHtml(selected.group)}</p><h3>${escapeHtml(selected.title)}</h3><p>${escapeHtml(selected.detail)}</p></div>
+          ${selected.needsQuestion ? `<label>Details or question<textarea rows="4" maxlength="800" data-ai-operation-question placeholder="${escapeHtml(selected.placeholder || "Add the details Groundskeeper should review…")}"></textarea></label>` : ""}
+          <button type="button" data-action="run-ai-operation" data-operation="${escapeHtml(selected.key)}"${state.groundskeeperOperationLoading ? " disabled" : ""}>${state.groundskeeperOperationLoading ? "Reviewing…" : "Run Review"}</button>
+        </section>
+        <section class="groundskeeper-operation-result" aria-live="polite">
+          <div class="ticket-lane-heading"><div><p class="eyebrow">AI Review</p><h3>Recommendation</h3></div></div>
+          ${state.groundskeeperOperationResult
+            ? `<div class="groundskeeper-operation-output">${escapeHtml(state.groundskeeperOperationResult).replace(/\n/g, "<br>")}</div><p class="ai-review-note">Nothing above has been applied. Review the source records before taking action.</p>`
+            : emptyState("Choose a tool and run a review. Results will appear here without changing dashboard records.")}
+        </section>
+      </section>`;
+  }
+
+  function groundskeeperToolsForPage(section = state.activeSection) {
+    return (GROUNDSKEEPER_PAGE_TOOLS[normalizeDashboardSection(section)] || [])
+      .map((key) => GROUNDSKEEPER_OPERATIONS.find((item) => item.key === key))
+      .filter(Boolean);
+  }
+
+  function renderContextualGroundskeeperTools(section = state.activeSection) {
+    // The persistent conversational copilot is now the single AI entry point.
+    document.querySelectorAll("[data-contextual-ai-tools]").forEach((panel) => panel.remove());
+  }
+
+  function renderContextualAiDrawer(operationKey = state.groundskeeperOperationKey) {
+    const operation = GROUNDSKEEPER_OPERATIONS.find((item) => item.key === operationKey) || GROUNDSKEEPER_OPERATIONS[0];
+    state.groundskeeperOperationKey = operation.key;
+    openDetailDrawer();
+    els.detailContent.innerHTML = `<div class="drawer-content contextual-ai-drawer">
+      <p class="eyebrow">Groundskeeper AI · ${escapeHtml(detailDrawerSectionLabel())}</p>
+      <div class="ticket-drawer-heading"><div><h3>${escapeHtml(operation.title)}</h3><p>${escapeHtml(operation.detail)}</p></div><span class="ai-review-badge">Review before applying</span></div>
+      <div class="contextual-ai-page-tools">${groundskeeperToolsForPage().map((tool) => `<button type="button" data-action="switch-contextual-ai" data-operation="${escapeHtml(tool.key)}" class="${tool.key === operation.key ? "is-active" : ""}">${escapeHtml(tool.title)}</button>`).join("")}</div>
+      ${operation.needsQuestion ? `<label>Details or question<textarea rows="5" maxlength="800" data-contextual-ai-question placeholder="${escapeHtml(operation.placeholder || "Add details…")}"></textarea></label>` : ""}
+      <button type="button" data-action="run-contextual-ai" data-operation="${escapeHtml(operation.key)}"${state.groundskeeperOperationLoading ? " disabled" : ""}>${state.groundskeeperOperationLoading ? "Reviewing…" : "Run AI Review"}</button>
+      <section class="groundskeeper-operation-result" aria-live="polite">
+        ${state.groundskeeperOperationResult ? `<div class="groundskeeper-operation-output">${escapeHtml(state.groundskeeperOperationResult).replace(/\n/g, "<br>")}</div><p class="ai-review-note">Nothing above has been applied. Review the source records before taking action.</p>` : emptyState("Run this page-specific review. No dashboard records will be changed.")}
+      </section>
+    </div>`;
+    renderDetailDrawerBreadcrumbs();
+  }
+
+  async function runGroundskeeperOperation(operation, question = "") {
+    await ensureGlobalSearchFinancialData();
+    const message = `${operation.prompt}${question ? `\n\nOwner input:\n${question}` : ""}\n\nReturn a concise, structured answer with headings and specific record names or numbers when available. Recommendations only; do not claim any dashboard change was made.`;
+    return groundskeeperChat(message, `${operation.key}:${normalizeDashboardSection(state.activeSection)}`);
+  }
+
   function renderKnowledgeWorkspace(ai, section) {
     if (!els.aiMain) return;
     const items = filteredAiItems(ai, section);
@@ -17741,7 +19677,32 @@
   function renderAiWorkspace(ai) {
     renderAiNav(ai);
     const section = aiSectionById(state.groundskeeperAiView);
-    if (section.id === "training") renderTrainingWorkspace(ai);
+    if (section.id === "operations") renderOperationsWorkspace();
+    else if (section.id === "training") renderTrainingWorkspace(ai);
+    else if (section.id === "landscaping") {
+      const items = filteredAiItems(ai, section);
+      const outdated = items.filter((item) => {
+        const reviewed = Date.parse(item.lastReviewedDate || "");
+        return reviewed && Date.now() > reviewed + Number(item.reviewFrequencyDays || 180) * 86400000;
+      });
+      els.aiMain.innerHTML = `<section class="panel ai-command-panel">
+        <div class="ai-workspace-heading">
+          <div><p class="eyebrow">Owner Knowledge Management</p><h3>Landscaping Intelligence Library</h3><p>Approved records are retrieved lazily by layer. Property memory and ticket context remain separate.</p></div>
+          <button type="button" data-action="export-landscaping-knowledge"><span class="button-icon" aria-hidden="true">↓</span><span>Export Catalog</span></button>
+        </div>
+        <div class="ticket-metrics">
+          <article><span>Approved records</span><strong>${escapeHtml(items.length)}</strong></article>
+          <article><span>Needs review</span><strong>${escapeHtml(outdated.length)}</strong></article>
+          <article><span>Knowledge layers</span><strong>${escapeHtml(new Set(items.map((item) => item.layer)).size)}</strong></article>
+        </div>
+        <div class="ai-entry-table-heading"><h4>Version-controlled records</h4><span>${escapeHtml(items.length)} shown</span></div>
+        <div class="ai-entry-list">${items.length ? items.map((item) => `<article class="ai-entry-row">
+          <div><strong>${escapeHtml(item.title)}</strong><p>${escapeHtml(item.id)}</p><small>${escapeHtml(`${item.layer} / ${item.category} / v${item.version} / ${item.confidenceLevel} confidence`)}</small></div>
+          <div class="ai-entry-actions"><span class="training-status-badge is-approved">${escapeHtml(item.status)}</span><button class="inline-action" type="button" data-action="draft-landscaping-update" data-id="${escapeHtml(item.id)}">Draft Update</button></div>
+        </article>`).join("") : emptyState(state.groundskeeperAiSearch ? "No landscaping records match that search." : "No landscaping records are available.")}</div>
+        <p class="training-version-note">Draft Update opens the approval-controlled knowledge editor. Neither AI model can silently rewrite approved policy.</p>
+      </section>`;
+    }
     else if (section.id === "assistant") renderAssistantWorkspace();
     else if (section.id === "logs") renderLogWorkspace(ai);
     else renderKnowledgeWorkspace(ai, section);
@@ -18617,6 +20578,61 @@
     await refreshConnectedOperationsData(`Approval marked ${status.toLowerCase()}.`);
   }
 
+  async function loadAssistantMemories() {
+    state.assistantMemoriesLoading = true;
+    state.assistantMemoriesError = "";
+    try {
+      const result = await groundskeeperRequest("memory-list");
+      state.assistantMemories = result.memories || [];
+      state.assistantMemoriesLoaded = true;
+    } catch (error) {
+      state.assistantMemoriesError = error.message || "AI Memory could not load.";
+      state.assistantMemories = [];
+    } finally {
+      state.assistantMemoriesLoading = false;
+    }
+  }
+
+  function assistantMemoryScopeLabel(memory) {
+    const scope = memory.scope || {};
+    const entries = Object.entries(scope);
+    return entries.length ? entries.map(([key, value]) => `${key.replace(/Id$/, "")}: ${value}`).join(" · ") : "Company-wide";
+  }
+
+  function renderAiMemoryWorkspace() {
+    const target = qs("[data-ai-memory-workspace]");
+    if (!target) return;
+    const groups = [
+      ["business_rule", "Business rules"],
+      ["record", "Client, property, and record memories"],
+      ["user_preference", "User preferences"],
+      ["outcome", "Learned recommendations"],
+      ["conversation", "Conversation memory"]
+    ];
+    target.innerHTML = `<section class="ai-memory-workspace">
+      <div class="ticket-lane-heading"><div><p class="eyebrow">Groundskeeper AI</p><h2>AI Memory</h2><p>Review exactly what Groundskeeper can remember. Permanent memories are saved only after approval.</p></div><button type="button" data-action="refresh-ai-memory">Refresh</button></div>
+      <form class="ai-memory-form" data-ai-memory-form>
+        <label>Memory type<select name="memory_type"><option value="business_rule">Business rule</option><option value="record">Record memory</option><option value="user_preference">User preference</option><option value="outcome">Outcome</option><option value="conversation">Conversation</option></select></label>
+        <label class="span-full">Statement<textarea name="statement" rows="3" maxlength="2000" required placeholder="Write one clear fact, rule, preference, or outcome."></textarea></label>
+        <label>Scope<select name="scope_key"><option value="">Company-wide</option><option value="clientId">Client</option><option value="propertyId">Property</option><option value="ticketId">Ticket</option><option value="serviceType">Service type</option><option value="userId">User</option></select></label>
+        <label>Scope ID or value<input name="scope_value" maxlength="160" placeholder="Optional record ID or service type"></label>
+        <label>Confidence<select name="confidence"><option>high</option><option selected>medium</option><option>low</option></select></label>
+        <button type="submit">Save approved memory</button>
+      </form>
+      ${state.assistantMemoriesError ? `<div class="dashboard-state is-error"><strong>Memory storage needs setup.</strong><span>${escapeHtml(state.assistantMemoriesError)}</span><small>Run the 20260724 Groundskeeper memory migration in Supabase, then refresh.</small></div>` : ""}
+      ${state.assistantMemoriesLoading ? `<div class="loading-state">Loading AI memory…</div>` : groups.map(([type, label]) => {
+        const items = state.assistantMemories.filter((memory) => memory.memory_type === type);
+        return `<section class="ai-memory-group"><div class="ticket-lane-heading"><div><h3>${escapeHtml(label)}</h3><p>${items.length} saved</p></div></div><div class="ai-memory-list">${items.length ? items.map((memory) => `
+          <article class="ai-memory-card${memory.is_active ? "" : " is-disabled"}">
+            <div><span class="status-badge">${escapeHtml(memory.confidence || "medium")}</span><span class="status-badge">${memory.is_active ? "Active" : "Disabled"}</span></div>
+            <p>${escapeHtml(memory.statement)}</p>
+            <small>${escapeHtml(assistantMemoryScopeLabel(memory))} · ${escapeHtml(memory.source || "record")} · Last used ${escapeHtml(memory.last_used_at ? formatDateTime(memory.last_used_at) : "never")}</small>
+            <div class="memory-actions"><button type="button" data-action="edit-ai-memory" data-id="${escapeHtml(memory.id)}">Edit</button><button type="button" data-action="toggle-ai-memory" data-id="${escapeHtml(memory.id)}" data-active="${memory.is_active ? "true" : "false"}">${memory.is_active ? "Disable" : "Enable"}</button><button type="button" data-action="scope-ai-memory" data-id="${escapeHtml(memory.id)}">Change scope</button><button type="button" data-action="view-ai-memory-source" data-id="${escapeHtml(memory.id)}">View source</button><button type="button" class="danger-action" data-action="delete-ai-memory" data-id="${escapeHtml(memory.id)}">Delete</button></div>
+          </article>`).join("") : emptyState("No memories in this group.")}</div></section>`;
+      }).join("")}
+    </section>`;
+  }
+
   async function render() {
     const data = state.data;
     safeRender("notifications", () => renderNotifications(data));
@@ -18634,6 +20650,8 @@
       safeRender("work workspace", () => renderWorkWorkspace(data));
     } else if (active === "outreach") {
       safeRender("leads workspace", () => renderLeadsWorkspace(data));
+    } else if (active === "call-queue") {
+      safeRender("call queue workspace", () => renderCallQueueWorkspace());
     } else if (active === "documents") {
       safeRender("money workspace", () => renderMoneyWorkspace(data));
     } else if (active === "settings") {
@@ -18648,9 +20666,14 @@
       safeRender("route planner", () => renderRoutePlanner(data));
     } else if (active === "groundskeeper-ai") {
       safeRender("Groundskeeper AI", () => renderGroundskeeperAi(data));
+    } else if (active === "ai-memory") {
+      if (!state.assistantMemoriesLoading && !state.assistantMemoriesLoaded && !state.assistantMemoriesError) await loadAssistantMemories();
+      safeRender("AI Memory", () => renderAiMemoryWorkspace());
     } else if (active === "import-export") {
       safeRender("import/export", () => renderImportExport(data));
     }
+    safeRender("contextual Groundskeeper tools", () => renderContextualGroundskeeperTools(active));
+    safeRender("dashboard Groundskeeper", () => renderDashboardCopilot());
     safeRender("avatar fallbacks", () => bindAvatarFallbacks());
     if (els.todayChip) els.todayChip.textContent = new Date().toLocaleDateString("en-US", { weekday: "long", month: "short", day: "numeric" });
     setActiveSection(state.activeSection, { hydrate: false });
@@ -18757,7 +20780,10 @@
     if (shouldOpen) {
       els.appView.classList.remove("is-sidebar-closing");
       els.appView.classList.add("is-sidebar-open");
+      const activeGroup = dashboardPrimarySection(state.activeSection);
+      if (qs(`[data-sidebar-nav-group="${cssEscape(activeGroup)}"]`)) setSidebarSubnavOpen(activeGroup, true);
     } else {
+      setSidebarSubnavOpen("", false);
       els.appView.classList.remove("is-sidebar-open");
       if (wasOpen) {
         els.appView.classList.add("is-sidebar-closing");
@@ -18838,6 +20864,13 @@
   }
 
   function bindEvents() {
+    window.addEventListener("hashchange", async () => {
+      const hashSection = window.location.hash.replace(/^#/, "");
+      if (!hashSection) return;
+      setActiveSection(dashboardSectionForRole(hashSection));
+      await render();
+    });
+
     els.loginForm?.addEventListener("submit", async (event) => {
       event.preventDefault();
       const formData = new FormData(els.loginForm);
@@ -18856,13 +20889,185 @@
     });
 
     document.addEventListener("click", async (event) => {
+      const copilotTarget = event.target instanceof Element ? event.target.closest("[data-action]") : null;
+      const action = copilotTarget?.dataset.action || "";
+      if (action === "toggle-dashboard-copilot") {
+        state.copilotOpen = !state.copilotOpen;
+        renderDashboardCopilot();
+        if (state.copilotOpen) qs("[data-dashboard-copilot-form] textarea")?.focus();
+        else qs(".dashboard-copilot-launcher")?.focus();
+        return;
+      }
+      if (action === "copilot-prompt") {
+        state.copilotOpen = true;
+        await handleDashboardCopilotMessage(copilotTarget.dataset.prompt || "");
+        return;
+      }
+      if (action === "copilot-shortcut") {
+        const section = copilotTarget.dataset.copilotSection || "overview";
+        if (section === "reports") {
+          state.moneyView = "reports";
+          await loadMoneyView("reports");
+          setActiveSection("documents");
+          replaceDashboardHash("documents");
+        } else {
+          setActiveSection(section);
+          replaceDashboardHash(section);
+        }
+        await render();
+        return;
+      }
+      if (action === "copilot-cancel-schedule") {
+        state.copilotScheduleDraft = null;
+        copilotPush("assistant", "The visit preview was cancelled. Nothing was added.");
+        renderDashboardCopilot();
+        return;
+      }
+      if (action === "copilot-apply-schedule") {
+        const draft = state.copilotScheduleDraft;
+        if (!draft?.visit_date || !draft?.site_name) return;
+        try {
+          state.copilotLoading = true;
+          renderDashboardCopilot();
+          const formData = new FormData();
+          Object.entries(draft).forEach(([key, value]) => formData.set(key, value || ""));
+          const payloads = scheduledJobPayloads(formData, { ...draft, status: "Scheduled" });
+          await insertScheduledJobs(payloads);
+          state.copilotScheduleDraft = null;
+          await refreshDashboard({ section: "calendar", quiet: true });
+          copilotPush("assistant", `Added ${draft.service} at ${draft.site_name} on ${formatDate(draft.visit_date)}${draft.visit_window ? `, ${draft.visit_window}` : ""}.`, `<button class="copilot-record" type="button" data-dashboard-link="calendar"><span><strong>Open Work</strong><small>View the scheduled visit</small></span><b>Open</b></button>`);
+        } catch (error) {
+          copilotPush("assistant", error.message || "I couldn't add that visit.");
+        } finally {
+          state.copilotLoading = false;
+          renderDashboardCopilot();
+        }
+        return;
+      }
+      if (action === "copilot-memory-use-once") {
+        if (state.copilotPendingMemory) {
+          state.copilotConversationMemories.push({ ...state.copilotPendingMemory, memoryType: "conversation", createdAt: new Date().toISOString() });
+          state.copilotPendingMemory = null;
+          copilotPush("assistant", "I’ll use that correction for this conversation only. It was not saved permanently.");
+          renderDashboardCopilot();
+        }
+        return;
+      }
+      if (action === "copilot-memory-save-record" || action === "copilot-memory-save-rule") {
+        try {
+          const memoryType = action === "copilot-memory-save-record" ? "record" : "business_rule";
+          await saveCopilotMemory(memoryType);
+          copilotPush("assistant", memoryType === "record" ? "Saved that correction as an approved record memory." : "Saved that correction as an approved business rule.");
+        } catch (error) {
+          copilotPush("assistant", error.message || "I couldn't save that memory.");
+        }
+        renderDashboardCopilot();
+        return;
+      }
+      if (action === "copilot-memory-cancel") {
+        state.copilotPendingMemory = null;
+        copilotPush("assistant", "Correction cancelled. Nothing was remembered or changed.");
+        renderDashboardCopilot();
+        return;
+      }
+      if (action === "copilot-transition-approve") {
+        const preview = state.copilotPendingTransition;
+        if (!preview) return;
+        try {
+          state.copilotLoading = true;
+          renderDashboardCopilot();
+          const result = await dashboardTicketRequest("transition", {
+            id: preview.ticketId,
+            toStage: preview.newStage,
+            notes: "AI-initiated ticket stage transition approved by the owner.",
+            aiInitiated: true,
+            ownerApproved: true,
+            approvalRequestId: preview.approvalRequestId
+          });
+          state.copilotPendingTransition = null;
+          await refreshDashboard({ quiet: true });
+          const updatedStage = result?.ticket?.stage || result?.stage || preview.newStage;
+          copilotPush("assistant", `${preview.ticketNumber || preview.ticketTitle || "The ticket"} changed from ${preview.currentStageLabel || preview.currentStage} to ${ticketStageLabel(updatedStage)}. The approved change was recorded in the audit history.`);
+        } catch (error) {
+          copilotPush("assistant", `${error.message || "I couldn't complete that stage change."} No success was recorded; refresh the ticket before trying again.`);
+        } finally {
+          state.copilotLoading = false;
+          renderDashboardCopilot();
+        }
+        return;
+      }
+      if (action === "copilot-transition-cancel") {
+        const preview = state.copilotPendingTransition;
+        if (!preview) return;
+        try {
+          state.copilotLoading = true;
+          renderDashboardCopilot();
+          await dashboardTicketRequest("ai-transition-cancel", {
+            id: preview.ticketId,
+            toStage: preview.newStage,
+            approvalRequestId: preview.approvalRequestId
+          });
+          state.copilotPendingTransition = null;
+          copilotPush("assistant", `Cancelled the proposed change for ${preview.ticketNumber || preview.ticketTitle || "the ticket"}. Its stage was not changed.`);
+        } catch (error) {
+          copilotPush("assistant", error.message || "I couldn't record the cancellation. The ticket stage was not changed.");
+        } finally {
+          state.copilotLoading = false;
+          renderDashboardCopilot();
+        }
+        return;
+      }
+      if (["refresh-ai-memory", "edit-ai-memory", "toggle-ai-memory", "scope-ai-memory", "view-ai-memory-source", "delete-ai-memory"].includes(action)) {
+        const id = copilotTarget.dataset.id || "";
+        const memory = state.assistantMemories.find((item) => item.id === id);
+        try {
+          if (action === "refresh-ai-memory") {
+            state.assistantMemoriesLoaded = false;
+            await loadAssistantMemories();
+          } else if (action === "edit-ai-memory" && memory) {
+            const statement = window.prompt("Edit memory", memory.statement);
+            if (statement?.trim()) await groundskeeperRequest("memory-update", { id, values: { statement: statement.trim() } });
+          } else if (action === "toggle-ai-memory" && memory) {
+            await groundskeeperRequest("memory-update", { id, values: { isActive: !memory.is_active } });
+          } else if (action === "scope-ai-memory" && memory) {
+            const scopeKey = window.prompt("Scope key: clientId, propertyId, ticketId, serviceType, userId, or blank for company-wide", Object.keys(memory.scope || {})[0] || "");
+            if (scopeKey !== null) {
+              const scopeValue = scopeKey ? window.prompt("Scope value", Object.values(memory.scope || {})[0] || "") : "";
+              if (scopeValue !== null) await groundskeeperRequest("memory-update", { id, values: { scope: scopeKey && scopeValue ? { [scopeKey]: scopeValue } : {} } });
+            }
+          } else if (action === "view-ai-memory-source" && memory) {
+            setDashboardState(`Source: ${memory.source || "record"} · Approved by: ${memory.approved_by || "not recorded"} · Created: ${formatDateTime(memory.created_at)}`);
+          } else if (action === "delete-ai-memory" && memory) {
+            if (!window.confirm(`Permanently delete this AI memory?\n\n${memory.statement}`)) return;
+            await groundskeeperRequest("memory-delete", { id });
+          }
+          if (action !== "view-ai-memory-source") {
+            state.assistantMemoriesLoaded = false;
+            await loadAssistantMemories();
+            renderAiMemoryWorkspace();
+          }
+        } catch (error) {
+          setDashboardState(error.message || "Unable to update AI Memory.", "error");
+        }
+        return;
+      }
       const link = event.target instanceof Element ? event.target.closest("[data-dashboard-link]") : null;
-      if (!link) return;
+      if (!link) {
+        if (!(event.target instanceof Element) || !event.target.closest(".dashboard-nav")) setSidebarSubnavOpen("", false);
+        return;
+      }
       event.preventDefault();
       const nextSection = dashboardSectionForRole(link.dataset.dashboardLink);
       setActiveSection(nextSection);
       replaceDashboardHash(nextSection);
       await render();
+    });
+
+    document.addEventListener("keydown", (event) => {
+      if (event.key !== "Escape" || !state.copilotOpen) return;
+      state.copilotOpen = false;
+      renderDashboardCopilot();
+      qs(".dashboard-copilot-launcher")?.focus();
     });
 
     if (els.sidebarClose) {
@@ -18977,6 +21182,7 @@
         if (els.clientSearch && els.clientSearch.value !== state.search) els.clientSearch.value = state.search;
         if (els.overviewSearch && els.overviewSearch.value !== state.search) els.overviewSearch.value = state.search;
         if (els.workSearch && els.workSearch.value !== state.search) els.workSearch.value = state.search;
+        if (state.globalSearchOpen) await ensureGlobalSearchFinancialData();
         await render();
       });
       els.globalSearch.addEventListener("keydown", (event) => {
@@ -19249,6 +21455,181 @@
       const target = event.target;
       if (!target) return;
 
+      if (target.matches("[data-ticket-client-select]")) {
+        const option = target.selectedOptions?.[0];
+        const form = target.closest("[data-ticket-create-form]");
+        if (form && option?.value) {
+          form.elements.customer_name.value = option.dataset.name || "";
+          form.elements.email.value = option.dataset.email || "";
+          form.elements.phone.value = option.dataset.phone || "";
+          if (!form.elements.city.value) form.elements.city.value = option.dataset.property || "";
+          saveTicketWizardDraft(form);
+        }
+        return;
+      }
+
+      if (target.matches("[data-ticket-property-select]")) {
+        const option = target.selectedOptions?.[0];
+        const form = target.closest("[data-ticket-create-form]");
+        if (form && option?.value) {
+          if (!form.elements.customer_name.value) form.elements.customer_name.value = option.dataset.name || "";
+          form.elements.city.value = option.dataset.city || option.dataset.name || "";
+          form.elements.property_type.value = option.dataset.type || form.elements.property_type.value;
+          saveTicketWizardDraft(form);
+        }
+        return;
+      }
+
+      if (target.matches("[data-ticket-template]")) {
+        const form = target.closest("[data-ticket-create-form]");
+        const template = TICKET_TEMPLATES.find((item) => item.key === target.value);
+        if (form && template) {
+          form.elements.service.value = template.service;
+          form.elements.notes.value = template.notes;
+          saveTicketWizardDraft(form);
+        }
+        return;
+      }
+
+      if (target.matches("[data-expense-receipt-input], [data-field-expense-receipt-input]")) {
+        const file = target.files?.[0];
+        const expenseId = state.moneyReceiptExpenseId;
+        target.value = "";
+        if (!file || !expenseId) return;
+        try {
+          setDashboardState("Uploading receipt…");
+          await dashboardFinancialStorageRequest("upload-expense-receipt", {
+            expenseId,
+            fileName: file.name,
+            mimeType: file.type || "application/octet-stream",
+            size: file.size,
+            contentBase64: await readFileAsBase64(file)
+          });
+          state.moneyReceiptExpenseId = "";
+          setDashboardState("Receipt securely uploaded.");
+        } catch (error) {
+          state.moneyReceiptExpenseId = "";
+          setDashboardState(error.message || "Receipt upload failed.", "error");
+        }
+        return;
+      }
+
+      if (target.matches("[data-expense-import-input]")) {
+        const file = target.files?.[0];
+        target.value = "";
+        if (!file) return;
+        try {
+          setDashboardState("Validating expense import…");
+          const count = await importExpenseCsv(file);
+          renderMoneyWorkspace();
+          setDashboardState(`${count} expense row${count === 1 ? "" : "s"} imported.`);
+        } catch (error) {
+          setDashboardState(error.message || "Expense import failed.", "error");
+        }
+        return;
+      }
+
+      if (target.matches("[data-expense-field]")) {
+        await saveExpenseRow(target.closest("[data-expense-row]"));
+        return;
+      }
+
+      if (target.matches("[data-expense-select]")) {
+        if (target.checked) state.moneySelectedExpenseIds.add(target.value);
+        else state.moneySelectedExpenseIds.delete(target.value);
+        renderMoneyWorkspace();
+        return;
+      }
+
+      if (target.matches("[data-expense-select-all]")) {
+        state.moneySelectedExpenseIds.clear();
+        if (target.checked) state.data.financial.expenses.forEach((item) => state.moneySelectedExpenseIds.add(item.id));
+        renderMoneyWorkspace();
+        return;
+      }
+
+      if (target.matches("[data-money-status]")) {
+        state.moneyExpenseStatus = target.value || "All";
+        state.moneyExpensePage = 1;
+        state.moneyLoadedViews.delete("expenses");
+        await loadMoneyView("expenses", { force: true });
+        return;
+      }
+
+      if (target.matches("[data-completion-na]")) {
+        const item = target.closest("[data-completion-item]");
+        const complete = item?.querySelector("[data-completion-complete]");
+        if (complete) {
+          if (target.checked) complete.checked = false;
+          complete.disabled = target.checked;
+        }
+        item?.classList.toggle("is-resolved", target.checked || Boolean(complete?.checked));
+        return;
+      }
+
+      if (target.matches("[data-completion-complete]")) {
+        const item = target.closest("[data-completion-item]");
+        const notApplicable = item?.querySelector("[data-completion-na]");
+        if (target.checked && notApplicable) notApplicable.checked = false;
+        item?.classList.toggle("is-resolved", target.checked || Boolean(notApplicable?.checked));
+        return;
+      }
+
+      if (target.matches("[data-call-queue-filter]")) {
+        const filter = target.dataset.callQueueFilter;
+        if (filter === "status") state.callQueueStatusFilter = target.value || "Active";
+        if (filter === "priority") state.callQueuePriorityFilter = target.value || "All";
+        if (filter === "sort") state.callQueueSort = target.value || "queue";
+        state.callQueueVisibleCount = 25;
+        renderCallQueueWorkspace();
+        return;
+      }
+
+      if (target.matches("[data-lead-intake-file]")) {
+        const file = target.files && target.files[0];
+        target.value = "";
+        if (!file) return;
+        if (!/\.csv$/i.test(file.name)) {
+          setDashboardState("Lead Intake accepts .csv files only.", "error");
+          return;
+        }
+        try {
+          setDashboardState("Uploading and validating prospect records…");
+          const result = await importExportRequest("lead-intake-preview", { filename: file.name, format: "csv", fileBase64: await readFileAsBase64(file) });
+          state.leadIntakeLoaded = false;
+          await loadLeadIntakeBatches(true);
+          await openLeadIntakeBatch(result.batch.id);
+          setDashboardState("Import is ready for review.");
+        } catch (error) {
+          setDashboardState(error.message || "Lead Intake could not process this CSV.", "error");
+        }
+        return;
+      }
+
+      if (target.matches("[data-lead-intake-row-action]")) {
+        const rowId = target.dataset.leadIntakeRowAction;
+        const row = state.leadIntakeRows.find((item) => item.id === rowId);
+        if (!row) return;
+        const previous = row.action_type;
+        row.action_type = target.value;
+        try {
+          await importExportRequest("lead-intake-review", { rowId, reviewAction: target.value });
+          renderLeadIntakeReviewDrawer();
+        } catch (error) {
+          row.action_type = previous;
+          renderLeadIntakeReviewDrawer();
+          setDashboardState(error.message || "Review decision could not be saved.", "error");
+        }
+        return;
+      }
+
+      if (target.matches("[data-lead-intake-status-filter]")) {
+        state.leadIntakeStatusFilter = target.value || "All";
+        state.leadIntakePage = 1;
+        renderLeadIntakeReviewDrawer();
+        return;
+      }
+
       if (target.matches("[data-user-avatar-upload]")) {
         const file = target.files && target.files[0];
         if (!file) return;
@@ -19321,12 +21702,14 @@
       }
 
       if (target.matches("[data-ticket-board-stage-filter]")) {
+        state.ticketBoardCloseoutOnly = false;
         state.ticketBoardStageFilter = target.value || "All";
         renderJobTicketWorkspace(state.data);
         return;
       }
 
       if (target.matches("[data-ticket-board-owner-filter]")) {
+        state.ticketBoardCloseoutOnly = false;
         state.ticketBoardOwnerFilter = target.value || "All";
         renderJobTicketWorkspace(state.data);
         return;
@@ -19337,9 +21720,22 @@
         if (filter === "assignee") state.ownerKanbanAssigneeFilter = target.value || "All";
         if (filter === "priority") state.ownerKanbanPriorityFilter = target.value || "All";
         if (filter === "type") state.ownerKanbanTypeFilter = target.value || "All";
-        if (filter === "date") state.ownerKanbanDateFilter = target.value || "All";
         if (filter === "status") state.ownerKanbanStatusFilter = target.value || "All";
         if (filter === "sort") state.ownerKanbanSort = target.value || "priority";
+        persistOwnerKanbanFilters();
+        renderHomeWorkspace(state.data);
+        return;
+      }
+
+      if (target.matches("[data-owner-kanban-date-range]")) {
+        const boundary = target.dataset.ownerKanbanDateRange;
+        if (boundary === "start") state.ownerKanbanDateStart = target.value || "";
+        if (boundary === "end") state.ownerKanbanDateEnd = target.value || "";
+        if (state.ownerKanbanDateStart && state.ownerKanbanDateEnd && state.ownerKanbanDateStart > state.ownerKanbanDateEnd) {
+          if (boundary === "start") state.ownerKanbanDateEnd = state.ownerKanbanDateStart;
+          else state.ownerKanbanDateStart = state.ownerKanbanDateEnd;
+        }
+        state.ownerKanbanOverdueOnly = false;
         persistOwnerKanbanFilters();
         renderHomeWorkspace(state.data);
         return;
@@ -19349,25 +21745,19 @@
         const filter = target.dataset.ownerKanbanToggle;
         if (filter === "activeOnly") state.ownerKanbanActiveOnly = target.checked;
         if (filter === "blockedOnly") state.ownerKanbanBlockedOnly = target.checked;
-        if (filter === "overdueOnly") state.ownerKanbanOverdueOnly = target.checked;
+        if (filter === "overdueOnly") {
+          state.ownerKanbanOverdueOnly = target.checked;
+          if (target.checked) {
+            state.ownerKanbanDateStart = "";
+            state.ownerKanbanDateEnd = daysFromToday(-1);
+          } else {
+            const defaultRange = ownerKanbanDefaultDateRange();
+            state.ownerKanbanDateStart = defaultRange.start;
+            state.ownerKanbanDateEnd = defaultRange.end;
+          }
+        }
         persistOwnerKanbanFilters();
         renderHomeWorkspace(state.data);
-        return;
-      }
-
-      if (target.matches("[data-owner-kanban-move]")) {
-        const ticketId = target.dataset.id || "";
-        const nextStage = target.value || "";
-        const previousValue = ownerKanbanColumnForTicket(dashboardTickets().find((ticket) => ticket.id === ticketId) || {});
-        try {
-          setDashboardState("Moving ticket...");
-          await moveOwnerKanbanTicket(ticketId, nextStage, { notes: "Moved from Owner Overview Kanban status menu." });
-          setDashboardState(`Ticket moved to ${ownerKanbanColumnLabel(nextStage)}.`);
-        } catch (error) {
-          target.value = previousValue;
-          setDashboardState(error.message || "Unable to move ticket.", "error");
-          openTicketDrawer("ticket", ticketId);
-        }
         return;
       }
 
@@ -19486,7 +21876,53 @@
     });
 
     els.appView.addEventListener("input", (event) => {
+      const ticketCreateForm = event.target?.closest?.("[data-ticket-create-form]");
+      if (ticketCreateForm) {
+        event.target.removeAttribute?.("aria-invalid");
+        window.clearTimeout(ticketCreateForm._draftTimer);
+        const stateLabel = ticketCreateForm.querySelector("[data-ticket-autosave-state]");
+        if (stateLabel) stateLabel.textContent = "Saving draft…";
+        ticketCreateForm._draftTimer = window.setTimeout(() => saveTicketWizardDraft(ticketCreateForm), 250);
+        return;
+      }
+
+      if (event.target?.matches?.("[data-money-search]")) {
+        state.moneySearch = event.target.value || "";
+        state.moneyExpensePage = 1;
+        window.clearTimeout(state._moneySearchTimer);
+        state._moneySearchTimer = window.setTimeout(() => {
+          state.moneyLoadedViews.delete("expenses");
+          void loadMoneyView("expenses", { force: true });
+        }, 300);
+        return;
+      }
+
+      if (event.target?.matches?.("[data-expense-field='subtotal'], [data-expense-field='tax']")) {
+        const row = event.target.closest("[data-expense-row]");
+        const subtotal = Number(row?.querySelector("[data-expense-field='subtotal']")?.value || 0);
+        const tax = Number(row?.querySelector("[data-expense-field='tax']")?.value || 0);
+        const calculated = row?.querySelector(".money-calculated");
+        if (calculated) calculated.textContent = moneyCurrency(subtotal + tax);
+        return;
+      }
+
+      if (event.target?.matches?.("[data-call-queue-search]")) {
+        state.callQueueSearch = event.target.value || "";
+        state.callQueueVisibleCount = 25;
+        window.clearTimeout(state._callQueueSearchTimer);
+        state._callQueueSearchTimer = window.setTimeout(() => renderCallQueueWorkspace(), 120);
+        return;
+      }
+      if (event.target?.matches?.("[data-lead-intake-search]")) {
+        state.leadIntakeSearch = event.target.value || "";
+        state.leadIntakePage = 1;
+        window.clearTimeout(state._leadIntakeSearchTimer);
+        state._leadIntakeSearchTimer = window.setTimeout(() => renderLeadIntakeReviewDrawer(), 120);
+        return;
+      }
+
       if (event.target?.matches?.("[data-ticket-board-search]")) {
+        state.ticketBoardCloseoutOnly = false;
         state.ticketBoardSearch = event.target.value || "";
         window.clearTimeout(state._ticketBoardSearchTimer);
         state._ticketBoardSearchTimer = window.setTimeout(() => renderJobTicketWorkspace(state.data), 120);
@@ -19515,8 +21951,39 @@
       form._duplicateTimer = window.setTimeout(() => renderDuplicateWarning(form), 250);
     });
 
+    els.appView.addEventListener("keydown", (event) => {
+      const cell = event.target?.matches?.("[data-expense-field]") ? event.target : null;
+      if (!cell || !["Enter", "ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight"].includes(event.key)) return;
+      if ((event.key === "ArrowLeft" || event.key === "ArrowRight") && cell.matches("input:not([type='date']):not([type='number'])")) return;
+      const row = cell.closest("[data-expense-row]");
+      const grid = cell.closest("[data-expense-grid]");
+      if (!row || !grid) return;
+      const field = cell.dataset.expenseField;
+      const rows = Array.from(grid.querySelectorAll("[data-expense-row]"));
+      const rowIndex = rows.indexOf(row);
+      let next = null;
+      if (event.key === "Enter" || event.key === "ArrowDown") next = rows[rowIndex + 1]?.querySelector(`[data-expense-field="${field}"]`);
+      if (event.key === "ArrowUp") next = rows[rowIndex - 1]?.querySelector(`[data-expense-field="${field}"]`);
+      if (event.key === "ArrowLeft" || event.key === "ArrowRight") {
+        const cells = Array.from(row.querySelectorAll("[data-expense-field]"));
+        const index = cells.indexOf(cell);
+        next = cells[index + (event.key === "ArrowRight" ? 1 : -1)];
+      }
+      if (next) {
+        event.preventDefault();
+        cell.dispatchEvent(new Event("change", { bubbles: true }));
+        next.focus();
+        next.select?.();
+      }
+    });
+
     els.appView.addEventListener("click", async (event) => {
-      const target = event.target.closest("[data-action], [data-export]");
+      if (Date.now() < Number(state.ownerKanbanSuppressClickUntil || 0) && event.target?.closest?.("[data-owner-kanban-card]")) {
+        event.preventDefault();
+        event.stopPropagation();
+        return;
+      }
+      const target = event.target.closest("[data-action], [data-export], [data-ai-view]");
       if (!target) return;
 
       const action = target.dataset.action;
@@ -19526,6 +21993,478 @@
 
       if (target.dataset.export) {
         exportData(target.dataset.export);
+        return;
+      }
+
+      if (action === "dashboard-undo") {
+        const undo = state.undoAction;
+        state.undoAction = null;
+        window.clearTimeout(state.undoTimer);
+        if (!undo) return;
+        try {
+          setDashboardState("Undoing…");
+          await undo();
+        } catch (error) {
+          setDashboardState(error.message || "That action could not be undone.", "error");
+        }
+        return;
+      }
+
+      if (action === "ticket-wizard-next" || action === "ticket-wizard-back") {
+        const form = target.closest("[data-ticket-create-form]");
+        if (!form) return;
+        const step = ticketWizardStep(form);
+        if (action === "ticket-wizard-next" && !ticketWizardValidate(form, step)) {
+          setDashboardState("Complete the highlighted field before continuing.", "error");
+          return;
+        }
+        saveTicketWizardDraft(form);
+        renderTicketWizardStep(form, step + (action === "ticket-wizard-next" ? 1 : -1));
+        setDashboardState("");
+        return;
+      }
+
+      if (action === "money-display") {
+        state.moneyDisplay = target.dataset.display === "spreadsheet" ? "spreadsheet" : "cards";
+        renderMoneyWorkspace();
+        return;
+      }
+
+      if (["open-money-expense", "open-money-vendor", "open-money-document"].includes(action)) {
+        state.moneyView = action === "open-money-expense" ? "expenses" : action === "open-money-vendor" ? "vendors" : "documents";
+        state.moneyDisplay = action === "open-money-expense" ? "spreadsheet" : state.moneyDisplay;
+        state.moneySearch = action === "open-money-expense"
+          ? (state.data.financial?.expenses || []).find((item) => item.id === id)?.description || ""
+          : "";
+        setActiveSection("documents");
+        replaceDashboardHash("documents");
+        await render();
+        return;
+      }
+
+      if (action === "quick-add-expense" || action === "quick-add-vendor") {
+        state.moneyView = action === "quick-add-expense" ? "expenses" : "vendors";
+        setActiveSection("documents");
+        replaceDashboardHash("documents");
+        await render();
+        if (action === "quick-add-expense") qs('[data-action="add-expense-row"]')?.click();
+        else qs('[data-action="add-vendor"]')?.click();
+        return;
+      }
+
+      if (action === "money-tab") {
+        state.moneyView = target.dataset.moneyView || "overview";
+        renderMoneyWorkspace();
+        return;
+      }
+
+      if (action === "archive-money-record") {
+        const entityType = target.dataset.entityType || "";
+        try {
+          await dashboardFinancialRequest("archive-record", { entityType, id });
+          const sourceView = { expense: "expenses", invoice: "invoicing", vendor: "vendors", document: "documents" }[entityType];
+          if (sourceView) state.moneyLoadedViews.delete(sourceView);
+          state.moneyLoadedViews.delete("deleted");
+          if (entityType === "invoice") closeSubmissionDrawer();
+          await loadMoneyView(sourceView || state.moneyView, { force: true });
+          showDashboardUndo(`${entityType.charAt(0).toUpperCase()}${entityType.slice(1)} moved to Recently Deleted.`, async () => {
+            await dashboardFinancialRequest("restore-record", { entityType, id });
+            if (sourceView) state.moneyLoadedViews.delete(sourceView);
+            state.moneyLoadedViews.delete("deleted");
+            await loadMoneyView(sourceView || state.moneyView, { force: true });
+            setDashboardState("Financial record restored.");
+          });
+        } catch (error) {
+          setDashboardState(error.message || "The record could not be deleted.", "error");
+        }
+        return;
+      }
+
+      if (action === "restore-money-record") {
+        const entityType = target.dataset.entityType || "";
+        try {
+          await dashboardFinancialRequest("restore-record", { entityType, id });
+          const sourceView = { expense: "expenses", invoice: "invoicing", vendor: "vendors", document: "documents" }[entityType];
+          if (sourceView) state.moneyLoadedViews.delete(sourceView);
+          state.moneyLoadedViews.delete("deleted");
+          await loadMoneyView("deleted", { force: true });
+          setDashboardState("Financial record restored.");
+        } catch (error) {
+          setDashboardState(error.message || "The record could not be restored.", "error");
+        }
+        return;
+      }
+
+      if (action === "permanently-delete-money-record") {
+        const entityType = target.dataset.entityType || "";
+        if (target.dataset.confirmed !== "true") {
+          target.dataset.confirmed = "true";
+          target.textContent = "Confirm delete";
+          target.setAttribute("aria-label", `Confirm permanent deletion of this ${entityType}`);
+          window.setTimeout(() => {
+            if (!target.isConnected || target.dataset.confirmed !== "true") return;
+            target.dataset.confirmed = "false";
+            target.textContent = "Delete permanently";
+            target.removeAttribute("aria-label");
+          }, 6000);
+          return;
+        }
+        try {
+          await dashboardFinancialRequest("delete-record-permanently", { entityType, id });
+          state.moneyLoadedViews.delete("deleted");
+          await loadMoneyView("deleted", { force: true });
+          setDashboardState("Financial record permanently deleted.");
+        } catch (error) {
+          setDashboardState(error.message || "The record could not be permanently deleted.", "error");
+        }
+        return;
+      }
+
+      if (action === "submit-field-expense") {
+        const total = Number(window.prompt("Expense total", "0") || 0);
+        if (!(total >= 0)) return;
+        const description = window.prompt("What was purchased?") || "";
+        const vendorName = window.prompt("Vendor") || "";
+        const ticketId = window.prompt("Assigned ticket ID (optional)") || "";
+        try {
+          const rows = await dashboardFinancialRequest("submit-expense", {
+            expenseDate: todayKey(),
+            total,
+            description,
+            vendorName,
+            ticketId,
+            category: "Other"
+          });
+          const expense = rows?.[0];
+          if (expense?.id && window.confirm("Expense saved as Pending Receipt. Upload the receipt now?")) {
+            state.moneyReceiptExpenseId = expense.id;
+            qs("[data-field-expense-receipt-input]")?.click();
+          }
+          setDashboardState("Expense submitted.");
+        } catch (error) {
+          setDashboardState(error.message || "Expense could not be submitted.", "error");
+        }
+        return;
+      }
+
+      if (action === "money-period") {
+        const period = target.dataset.period || "month";
+        const now = new Date();
+        let start = new Date(now.getFullYear(), now.getMonth(), 1);
+        let end = now;
+        if (period === "previous") {
+          start = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+          end = new Date(now.getFullYear(), now.getMonth(), 0);
+        } else if (period === "quarter") {
+          start = new Date(now.getFullYear(), Math.floor(now.getMonth() / 3) * 3, 1);
+        } else if (period === "ytd") {
+          start = new Date(now.getFullYear(), 0, 1);
+        } else if (period === "custom") {
+          const customStart = window.prompt("Start date (YYYY-MM-DD)", state.moneyDateStart || toDateInputValue(start));
+          if (!customStart) return;
+          const customEnd = window.prompt("End date (YYYY-MM-DD)", state.moneyDateEnd || toDateInputValue(end));
+          if (!customEnd) return;
+          state.moneyDateStart = customStart;
+          state.moneyDateEnd = customEnd;
+          state.moneyLoadedViews.delete("overview");
+          await loadMoneyView("overview", { force: true });
+          return;
+        }
+        state.moneyDateStart = toDateInputValue(start);
+        state.moneyDateEnd = toDateInputValue(end);
+        state.moneyLoadedViews.delete("overview");
+        await loadMoneyView("overview", { force: true });
+        return;
+      }
+
+      if (action === "add-vendor") {
+        const vendorName = window.prompt("Vendor name");
+        if (!vendorName?.trim()) return;
+        try {
+          const rows = await supabaseRestRequest("vendors", {
+            method: "POST",
+            headers: { Prefer: "return=representation" },
+            body: JSON.stringify({ vendor_name: vendorName.trim(), status: "Active" })
+          });
+          if (rows?.[0]) state.data.financial.vendors.push(rows[0]);
+          state.data.financial.vendors.sort((a, b) => String(a.vendor_name).localeCompare(String(b.vendor_name)));
+          renderMoneyWorkspace();
+          setDashboardState("Vendor added.");
+        } catch (error) {
+          setDashboardState(error.message || "Vendor could not be added.", "error");
+        }
+        return;
+      }
+
+      if (action === "create-financial-invoice") {
+        try {
+          const result = await dashboardFinancialRequest("create-invoice", {
+            issueDate: todayKey(),
+            dueDate: addDaysKey(todayKey(), 30)
+          });
+          const invoice = result?.[0];
+          if (invoice) state.data.financial.invoices.unshift(invoice);
+          renderMoneyWorkspace();
+          if (invoice?.id) await openFinancialInvoiceDrawer(invoice.id);
+          setDashboardState("Draft invoice created.");
+        } catch (error) {
+          setDashboardState(error.message || "Invoice could not be created.", "error");
+        }
+        return;
+      }
+
+      if (action === "create-financial-invoice-from-ticket") {
+        const ticket = findTicketForDrawer("ticket", id);
+        if (!ticket) {
+          setDashboardState("The unified ticket could not be found.", "error");
+          return;
+        }
+        try {
+          const result = await dashboardFinancialRequest("create-invoice", {
+            issueDate: todayKey(),
+            dueDate: addDaysKey(todayKey(), 30),
+            clientId: ticket.clientId,
+            propertyId: ticket.propertyId,
+            ticketId: ticket.id,
+            subtotal: ticket.proposedPrice || ticket.quotedPrice || 0
+          });
+          state.moneyLoadedViews.delete("invoicing");
+          if (result?.[0]?.id) await openFinancialInvoiceDrawer(result[0].id);
+          setDashboardState("Draft invoice created from the ticket. Review it before saving or sending.");
+        } catch (error) {
+          setDashboardState(error.message || "Draft invoice could not be created.", "error");
+        }
+        return;
+      }
+
+      if (action === "open-financial-invoice") {
+        await openFinancialInvoiceDrawer(id);
+        return;
+      }
+
+      if (action === "add-invoice-line") {
+        const description = window.prompt("Line item description");
+        if (!description?.trim()) return;
+        const price = Number(window.prompt("Unit price", "0") || 0);
+        try {
+          await supabaseRestRequest("invoice_line_items", {
+            method: "POST",
+            headers: { Prefer: "return=representation" },
+            body: JSON.stringify({ invoice_id: id, description: description.trim(), item_type: "Service", quantity: 1, unit: "Each", unit_price: price, position: state.moneyInvoiceDetail?.lineItems?.length || 0 })
+          });
+          await openFinancialInvoiceDrawer(id);
+          setDashboardState("Invoice line added.");
+        } catch (error) {
+          setDashboardState(error.message || "Invoice line could not be added.", "error");
+        }
+        return;
+      }
+
+      if (action === "record-invoice-payment") {
+        const amount = Number(window.prompt("Payment amount", "0") || 0);
+        if (!(amount > 0)) return;
+        const paymentMethod = window.prompt("Payment method", "Square Checking") || "Other";
+        try {
+          await supabaseRestRequest("invoice_payments", {
+            method: "POST",
+            body: JSON.stringify({ invoice_id: id, payment_date: todayKey(), amount, payment_method: paymentMethod })
+          });
+          const invoice = state.moneyInvoiceDetail?.invoice || {};
+          await supabaseRestRequest(`invoices?id=eq.${encodeURIComponent(id)}`, {
+            method: "PATCH",
+            body: JSON.stringify({ amount_paid: Number(invoice.amount_paid || 0) + amount })
+          });
+          await openFinancialInvoiceDrawer(id);
+          state.moneyLoadedViews.delete("invoicing");
+          setDashboardState("Payment recorded.");
+        } catch (error) {
+          setDashboardState(error.message || "Payment could not be recorded.", "error");
+        }
+        return;
+      }
+
+      if (action === "print-financial-invoice") {
+        window.print();
+        return;
+      }
+
+      if (action === "export-financial-report") {
+        const overview = state.data.financial.overview || {};
+        downloadCsv("urban-yards-financial-report.csv", [
+          ["Operational Report", "Value"],
+          ["Revenue", overview.revenue || 0],
+          ["Expenses", overview.expenses || 0],
+          ["Gross Profit", Number(overview.revenue || 0) - Number(overview.expenses || 0)],
+          ["Outstanding Invoices", overview.outstanding || 0],
+          ["Overdue Invoices", overview.overdue || 0],
+          ["Missing Receipts", overview.missing_receipts || 0]
+        ]);
+        setDashboardState("Financial report exported.");
+        return;
+      }
+
+      if (action === "print-financial-report") {
+        window.print();
+        return;
+      }
+
+      if (action === "duplicate-financial-invoice") {
+        try {
+          const source = state.moneyInvoiceDetail?.invoice || {};
+          const result = await dashboardFinancialRequest("create-invoice", {
+            issueDate: todayKey(),
+            dueDate: addDaysKey(todayKey(), 30),
+            clientId: source.client_id,
+            propertyId: source.property_id,
+            ticketId: source.ticket_id
+          });
+          state.moneyLoadedViews.delete("invoicing");
+          closeSubmissionDrawer();
+          await loadMoneyView("invoicing", { force: true });
+          if (result?.[0]?.id) await openFinancialInvoiceDrawer(result[0].id);
+          setDashboardState("Invoice duplicated as a new draft.");
+        } catch (error) {
+          setDashboardState(error.message || "Invoice could not be duplicated.", "error");
+        }
+        return;
+      }
+
+      if (action === "retry-money-view") {
+        state.moneyError = "";
+        state.moneyLoadedViews.delete(state.moneyView);
+        await loadMoneyView(state.moneyView, { force: true });
+        return;
+      }
+
+      if (action === "add-expense-row") {
+        try {
+          state.moneySaveState = "saving";
+          const created = await createExpense();
+          state.data.financial.expenses.unshift(created);
+          state.moneySaveState = "saved";
+          state.moneyDisplay = "spreadsheet";
+          renderMoneyWorkspace();
+        } catch (error) {
+          state.moneySaveState = "error";
+          setDashboardState(error.message || "Expense row could not be added.", "error");
+          renderMoneyWorkspace();
+        }
+        return;
+      }
+
+      if (action === "paste-expenses") {
+        try {
+          const text = await navigator.clipboard.readText();
+          state.moneySaveState = "saving";
+          const count = await pasteExpenseRows(text);
+          state.moneySaveState = "saved";
+          renderMoneyWorkspace();
+          setDashboardState(`${count} expense row${count === 1 ? "" : "s"} added from the clipboard.`);
+        } catch (error) {
+          state.moneySaveState = "error";
+          setDashboardState(error.message || "Spreadsheet rows could not be pasted.", "error");
+          renderMoneyWorkspace();
+        }
+        return;
+      }
+
+      if (action === "choose-expense-import") {
+        qs("[data-expense-import-input]")?.click();
+        return;
+      }
+
+      if (action === "export-expenses") {
+        downloadCsv("urban-yards-expenses.csv", [
+          ["Date","Vendor","Category","Description","Payment Method","Subtotal","Tax","Total","Reimbursable","Status","Notes"],
+          ...state.data.financial.expenses.map((expense) => [expense.expenseDate, expense.vendorName, expense.category, expense.description, expense.paymentMethod, expense.subtotal, expense.tax, expense.total, expense.reimbursable ? "Yes" : "No", expense.status, expense.notes])
+        ]);
+        setDashboardState("Current expense view exported.");
+        return;
+      }
+
+      if (action === "expense-receipt") {
+        state.moneyReceiptExpenseId = id;
+        qs("[data-expense-receipt-input]")?.click();
+        return;
+      }
+
+      if (action === "void-expense") {
+        if (!window.confirm("Void this expense? The financial record will remain in the activity history.")) return;
+        try {
+          await supabaseRestRequest(`expenses?id=eq.${encodeURIComponent(id)}`, {
+            method: "PATCH",
+            headers: { Prefer: "return=representation" },
+            body: JSON.stringify({ status: "Voided" })
+          });
+          state.data.financial.expenses = state.data.financial.expenses.map((item) => item.id === id ? { ...item, status: "Voided" } : item);
+          renderMoneyWorkspace();
+          setDashboardState("Expense voided.");
+        } catch (error) {
+          setDashboardState(error.message || "Expense could not be voided.", "error");
+        }
+        return;
+      }
+
+      if (action === "apply-expense-bulk") {
+        const toolbar = target.closest(".money-bulk-bar");
+        const updates = {};
+        toolbar?.querySelectorAll("[data-money-bulk-field]").forEach((input) => {
+          if (input.value) updates[input.dataset.moneyBulkField] = input.value;
+        });
+        if (!Object.keys(updates).length) {
+          setDashboardState("Choose a bulk value first.", "error");
+          return;
+        }
+        try {
+          for (const expenseId of state.moneySelectedExpenseIds) {
+            await supabaseRestRequest(`expenses?id=eq.${encodeURIComponent(expenseId)}`, {
+              method: "PATCH",
+              body: JSON.stringify(updates)
+            });
+          }
+          state.moneySelectedExpenseIds.clear();
+          state.moneyLoadedViews.delete("expenses");
+          await loadMoneyView("expenses", { force: true });
+          setDashboardState("Selected expenses updated.");
+        } catch (error) {
+          setDashboardState(error.message || "Bulk update failed.", "error");
+        }
+        return;
+      }
+
+      if (action === "money-expense-page") {
+        state.moneyExpensePage = Math.max(1, state.moneyExpensePage + Number(target.dataset.direction || 0));
+        state.moneyLoadedViews.delete("expenses");
+        await loadMoneyView("expenses", { force: true });
+        return;
+      }
+
+      if (action === "undo-expense-edit" && state.moneyUndo) {
+        const { id: undoId, previous } = state.moneyUndo;
+        try {
+          await supabaseRestRequest(`expenses?id=eq.${encodeURIComponent(undoId)}`, {
+            method: "PATCH",
+            body: JSON.stringify({
+              expense_date: previous.expenseDate,
+              vendor_id: previous.vendorId || null,
+              category: previous.category,
+              description: previous.description || null,
+              payment_method: previous.paymentMethod || null,
+              subtotal: previous.subtotal === "" ? null : previous.subtotal,
+              tax: previous.tax === "" ? null : previous.tax,
+              total: previous.total,
+              reimbursable: previous.reimbursable,
+              status: previous.status,
+              notes: previous.notes || null
+            })
+          });
+          state.moneyUndo = null;
+          state.moneyLoadedViews.delete("expenses");
+          await loadMoneyView("expenses", { force: true });
+          setDashboardState("Most recent expense edit undone.");
+        } catch (error) {
+          setDashboardState(error.message || "Expense edit could not be undone.", "error");
+        }
         return;
       }
 
@@ -19543,6 +22482,7 @@
         state.ticketBoardSearch = "";
         state.ticketBoardStageFilter = "All";
         state.ticketBoardOwnerFilter = "All";
+        state.ticketBoardCloseoutOnly = false;
         renderJobTicketWorkspace(state.data);
         setDashboardState("Ticket board filters reset.");
         return;
@@ -19555,6 +22495,9 @@
         state.ownerKanbanTypeFilter = "All";
         state.ownerKanbanClientFilter = "";
         state.ownerKanbanDateFilter = "All";
+        const defaultRange = ownerKanbanDefaultDateRange();
+        state.ownerKanbanDateStart = defaultRange.start;
+        state.ownerKanbanDateEnd = defaultRange.end;
         state.ownerKanbanStatusFilter = "All";
         state.ownerKanbanSort = "priority";
         state.ownerKanbanActiveOnly = true;
@@ -19566,6 +22509,32 @@
         return;
       }
 
+      if (action === "apply-owner-kanban-view") {
+        const view = target.dataset.view || "today";
+        state.ownerKanbanSearch = "";
+        state.ownerKanbanAssigneeFilter = "All";
+        state.ownerKanbanPriorityFilter = "All";
+        state.ownerKanbanTypeFilter = "All";
+        state.ownerKanbanClientFilter = "";
+        state.ownerKanbanDateFilter = "All";
+        state.ownerKanbanStatusFilter = view === "review" ? "review" : "All";
+        state.ownerKanbanSort = view === "today" || view === "overdue" ? "due" : "priority";
+        state.ownerKanbanActiveOnly = true;
+        state.ownerKanbanBlockedOnly = view === "blocked";
+        state.ownerKanbanOverdueOnly = view === "overdue";
+        if (view === "today") {
+          state.ownerKanbanDateStart = todayKey();
+          state.ownerKanbanDateEnd = todayKey();
+        } else {
+          state.ownerKanbanDateStart = "";
+          state.ownerKanbanDateEnd = "";
+        }
+        persistOwnerKanbanFilters();
+        renderHomeWorkspace(state.data);
+        setDashboardState(`${OWNER_KANBAN_SAVED_VIEWS.find((item) => item.key === view)?.label || "Saved"} view applied.`);
+        return;
+      }
+
       if (action === "refresh-owner-kanban") {
         await hydrateDashboardSection("overview", {
           force: true,
@@ -19573,6 +22542,42 @@
           recordErrors: true
         });
         setDashboardState("Owner Kanban refreshed.");
+        return;
+      }
+
+      if (action === "clear-owner-kanban-leads") {
+        if (!canManageOwnerWorkflow()) {
+          setDashboardState("Only Owner or Admin users can clear Kanban leads.", "error");
+          return;
+        }
+        const leads = dashboardTickets().filter((ticket) => ["ticket", "quote", "job"].includes(ticket.source) && ownerKanbanColumnForTicket(ticket) === "new");
+        if (!leads.length) {
+          setDashboardState("There are no leads to clear.");
+          return;
+        }
+        const ok = window.confirm(`Permanently delete all ${leads.length} card${leads.length === 1 ? "" : "s"} in the New column? This deletes their underlying records and cannot be undone.`);
+        if (!ok) return;
+        try {
+          target.disabled = true;
+          setDashboardState(`Deleting ${leads.length} New-column card${leads.length === 1 ? "" : "s"}...`);
+          for (const lead of leads) {
+            if (lead.source === "quote") {
+              await deleteRow("quote_submissions", lead.id);
+            } else if (lead.source === "job") {
+              await deleteRow("scheduled_jobs", lead.id);
+            } else {
+              if (lead.sourceType === "quote" && lead.sourceId) await deleteRow("quote_submissions", lead.sourceId);
+              if (lead.sourceType === "job" && lead.sourceId) await deleteRow("scheduled_jobs", lead.sourceId);
+              await deleteJobTicket(lead.id);
+            }
+          }
+          await refreshDashboard();
+          setDashboardState(`${leads.length} New-column card${leads.length === 1 ? "" : "s"} permanently deleted.`);
+        } catch (error) {
+          target.disabled = false;
+          await refreshDashboard();
+          setDashboardState(error.message || "Unable to clear all leads.", "error");
+        }
         return;
       }
 
@@ -19864,6 +22869,9 @@
         try {
           setDashboardState("Creating Job Ticket from document...");
           const ticket = await ensureJobTicketForSalesDocument(document);
+          if (!ticket?.id) {
+            throw new Error("The Job Ticket was not saved. The live ticket schema needs attention.");
+          }
           await refreshDashboard();
           const refreshedTicket = ticket?.id
             ? dashboardTickets().find((item) => item.source === "ticket" && item.id === ticket.id)
@@ -20324,9 +23332,97 @@
         return;
       }
 
+      if (action === "export-landscaping-knowledge") {
+        downloadJson(`urban-yards-landscaping-knowledge-${todayKey()}.json`, state.data.groundskeeperAi?.landscapingKnowledge || []);
+        setDashboardState("Landscaping knowledge catalog exported.");
+        return;
+      }
+
+      if (action === "draft-landscaping-update") {
+        const record = (state.data.groundskeeperAi?.landscapingKnowledge || []).find((item) => item.id === id);
+        if (record) {
+          const section = aiSectionById("knowledge");
+          fillAiEditor(section, null, {
+            table: "ai_knowledge",
+            title: `${record.title} update`,
+            category: `Landscaping / ${record.layer} / ${record.category}`,
+            visibility: "internal",
+            status: "draft",
+            content: `${record.summary || ""}\n\nSource record: ${record.id} v${record.version}. Review and approve before publishing.`
+          });
+          setDashboardState("Draft created from the approved record. Review before saving.");
+        }
+        return;
+      }
+
       if (target.matches("[data-ai-view]")) {
         state.groundskeeperAiView = target.dataset.aiView || "assistant";
         await render();
+        return;
+      }
+
+      if (action === "open-contextual-ai" || action === "switch-contextual-ai") {
+        state.groundskeeperOperationResult = "";
+        state.groundskeeperOperationLoading = false;
+        renderContextualAiDrawer(target.dataset.operation);
+        return;
+      }
+
+      if (action === "run-contextual-ai") {
+        const operation = GROUNDSKEEPER_OPERATIONS.find((item) => item.key === target.dataset.operation);
+        if (!operation) return;
+        const question = qs("[data-contextual-ai-question]")?.value?.trim() || "";
+        if (operation.needsQuestion && !question) {
+          setDashboardState("Add the details or question Groundskeeper should review.", "error");
+          qs("[data-contextual-ai-question]")?.focus();
+          return;
+        }
+        try {
+          state.groundskeeperOperationLoading = true;
+          renderContextualAiDrawer(operation.key);
+          setDashboardState(`${operation.title} is reviewing this page…`);
+          state.groundskeeperOperationResult = await runGroundskeeperOperation(operation, question);
+          setDashboardState(`${operation.title} review is ready.`);
+        } catch (error) {
+          state.groundskeeperOperationResult = error.message || "Groundskeeper could not complete this review.";
+          setDashboardState(state.groundskeeperOperationResult, "error");
+        } finally {
+          state.groundskeeperOperationLoading = false;
+          renderContextualAiDrawer(operation.key);
+        }
+        return;
+      }
+
+      if (action === "select-ai-operation") {
+        state.groundskeeperOperationKey = target.dataset.operation || GROUNDSKEEPER_OPERATIONS[0].key;
+        state.groundskeeperOperationResult = "";
+        renderOperationsWorkspace();
+        return;
+      }
+
+      if (action === "run-ai-operation") {
+        const operation = GROUNDSKEEPER_OPERATIONS.find((item) => item.key === (target.dataset.operation || state.groundskeeperOperationKey));
+        if (!operation) return;
+        const question = qs("[data-ai-operation-question]")?.value?.trim() || "";
+        if (operation.needsQuestion && !question) {
+          setDashboardState("Add the details or question Groundskeeper should review.", "error");
+          qs("[data-ai-operation-question]")?.focus();
+          return;
+        }
+        try {
+          state.groundskeeperOperationLoading = true;
+          state.groundskeeperOperationResult = "";
+          renderOperationsWorkspace();
+          setDashboardState(`${operation.title} is reviewing the dashboard snapshot…`);
+          state.groundskeeperOperationResult = await runGroundskeeperOperation(operation, question);
+          setDashboardState(`${operation.title} review is ready.`);
+        } catch (error) {
+          state.groundskeeperOperationResult = error.message || "Groundskeeper could not complete this review.";
+          setDashboardState(state.groundskeeperOperationResult, "error");
+        } finally {
+          state.groundskeeperOperationLoading = false;
+          renderOperationsWorkspace();
+        }
         return;
       }
 
@@ -20726,6 +23822,60 @@
         return;
       }
 
+      if (action === "show-open-tickets" || action === "show-completed-tickets") {
+        state.ticketBoardMode = action === "show-completed-tickets" ? "completed" : "open";
+        state.ticketBoardCloseoutOnly = false;
+        if (state.activeSection !== "tickets") {
+          setActiveSection("tickets");
+          replaceDashboardHash("tickets");
+        }
+        renderJobTicketWorkspace(state.data);
+        return;
+      }
+
+      if (action === "reopen-completed-ticket") {
+        if (currentSessionRole() !== "owner") {
+          setDashboardState("Only the Owner can reopen completed tickets.", "error");
+          return;
+        }
+        const ticketSource = target.dataset.ticketSource || "ticket";
+        const ticket = findTicketForDrawer(ticketSource, id) || dashboardTickets().find((item) => String(item.id) === String(id));
+        if (!ticket || ticketStage(ticket) !== "closed") {
+          setDashboardState("This completed ticket could not be found.", "error");
+          return;
+        }
+        try {
+          setDashboardState("Reopening ticket...");
+          if (ticketSource === "ticket") {
+            await updateJobTicket(id, {
+              stage: "completion_review",
+              status: "active",
+              responsible_role: "owner",
+              next_action: "Review reopened ticket"
+            });
+            await insertJobTicketEvent(id, {
+              event_type: "ticket_reopened",
+              from_stage: "closed",
+              to_stage: "completion_review",
+              notes: "Owner reopened the completed ticket."
+            });
+          } else if (ticketSource === "job") {
+            await insertJobNote(
+              `Rent deduction reopened: ${ticket.title || "Completed visit"}`,
+              `Owner reopened this completed rent-deduction visit. Source visit: ${id}.`
+            );
+          } else {
+            throw new Error("This completed record cannot be reopened from Tickets.");
+          }
+          state.ticketBoardMode = "open";
+          await refreshDashboard();
+          setDashboardState(`${ticket.title || "Ticket"} reopened for completion review.`);
+        } catch (error) {
+          setDashboardState(error.message || "Unable to reopen this ticket.", "error");
+        }
+        return;
+      }
+
       if (action === "advance-ticket-status") {
         const source = target.dataset.ticketSource;
         const status = target.dataset.status;
@@ -20759,8 +23909,92 @@
           setDashboardState(error.message || "Unable to move ticket forward.", "error");
         }
         return;
+      } else if (action === "save-ticket-completion") {
+        const form = target.closest("[data-ticket-completion-form]");
+        if (!form) return;
+        const payload = ticketCompletionFormPayload(form);
+        if (Object.keys(payload.notApplicable).length && !payload.notes) {
+          setDashboardState("Add a closeout note explaining why the N/A items do not apply.", "error");
+          form.querySelector("[data-completion-closeout-note]")?.focus();
+          return;
+        }
+        try {
+          setDashboardState("Saving completion checklist...");
+          const ticket = await updateJobTicket(id, payload.ticket);
+          await insertJobTicketEvent(id, {
+            event_type: "ticket_completion_checklist_saved",
+            notes: payload.notes || "Unified completion checklist saved.",
+            new_value: { completed: payload.completed, notApplicable: payload.notApplicable }
+          });
+          await refreshDashboard();
+          openTicketDrawer("ticket", ticket?.id || id);
+          setDashboardState("Completion checklist saved.");
+        } catch (error) {
+          setDashboardState(error.message || "Unable to save the completion checklist.", "error");
+        }
+        return;
+      } else if (action === "owner-finalize-ticket") {
+        if (currentSessionRole() !== "owner") {
+          setDashboardState("Only the Owner can close a ticket from the unified checklist.", "error");
+          return;
+        }
+        const form = target.closest("[data-ticket-completion-form]");
+        if (!form) return;
+        const payload = ticketCompletionFormPayload(form);
+        const unresolved = ticketCompletionChecklistItems.filter((item) => !payload.completed.includes(item.key) && !payload.notApplicable[item.key]);
+        if (unresolved.length) {
+          setDashboardState(`Resolve every completion item first: ${unresolved.map((item) => item.label).join(", ")}.`, "error");
+          return;
+        }
+        if (Object.keys(payload.notApplicable).length && !payload.notes) {
+          setDashboardState("Add a closeout note explaining why the N/A items do not apply.", "error");
+          form.querySelector("[data-completion-closeout-note]")?.focus();
+          return;
+        }
+        const currentTicket = dashboardTickets().find((item) => item.source === "ticket" && item.id === id) || findTicketForDrawer("ticket", id);
+        if (target.dataset.confirmClose !== "true") {
+          renderTicketCompletionReview(form, currentTicket || { id }, payload);
+          target.dataset.confirmClose = "true";
+          target.textContent = "Confirm Close Ticket";
+          setDashboardState("Review the completion summary, then confirm close.");
+          return;
+        }
+        try {
+          target.disabled = true;
+          setDashboardState("Validating and closing ticket...");
+          const result = isDemoMode()
+            ? { ticket: await updateJobTicket(id, { ...payload.ticket, stage: "closed", status: "completed", next_action: "Completed from unified checklist" }) }
+            : await dashboardTicketRequest("owner-finalize-ticket", { id, ...payload });
+          state.ticketBoardMode = "completed";
+          await refreshDashboard();
+          openTicketDrawer("ticket", result.ticket?.id || id);
+          showDashboardUndo("Ticket completed from the unified checklist.", async () => {
+            await updateJobTicket(result.ticket?.id || id, {
+              stage: "completion_review",
+              status: "active",
+              responsible_role: "owner",
+              next_action: "Review reopened ticket"
+            });
+            await insertJobTicketEvent(result.ticket?.id || id, {
+              event_type: "ticket_reopened",
+              from_stage: "closed",
+              to_stage: "completion_review",
+              notes: "Owner undid ticket completion."
+            });
+            state.ticketBoardMode = "open";
+            await refreshDashboard();
+            openTicketDrawer("ticket", result.ticket?.id || id);
+            setDashboardState("Ticket completion undone.");
+          });
+        } catch (error) {
+          target.disabled = false;
+          setDashboardState(error.message || "Unable to complete this ticket.", "error");
+        }
+        return;
       } else if (action === "transition-ticket-stage") {
         const nextStage = target.dataset.stage;
+        const previousTicket = dashboardTickets().find((item) => item.source === "ticket" && item.id === id);
+        const previousStage = previousTicket ? ticketStage(previousTicket) : "";
         const panel = target.closest("[data-ticket-command-panel]");
         const noteInput = panel?.querySelector("[data-ticket-transition-notes]");
         const nextActionInput = panel?.querySelector("[data-ticket-next-action-input]");
@@ -20772,9 +24006,131 @@
           });
           await refreshDashboard();
           openTicketDrawer("ticket", ticket?.id || id);
-          setDashboardState(`Ticket moved to ${ticketStageLabel(normalizeTicketStageForDashboard(nextStage))}.`);
+          showDashboardUndo(`Ticket moved to ${ticketStageLabel(normalizeTicketStageForDashboard(nextStage))}.`, previousStage ? async () => {
+            await updateJobTicket(ticket?.id || id, {
+              stage: previousStage,
+              next_action: previousTicket?.nextAction || ticketNextAction(previousStage)
+            });
+            await insertJobTicketEvent(ticket?.id || id, {
+              event_type: "ticket_stage_undo",
+              from_stage: nextStage,
+              to_stage: previousStage,
+              notes: "Most recent stage change was undone."
+            });
+            await refreshDashboard();
+            openTicketDrawer("ticket", ticket?.id || id);
+            setDashboardState("Ticket stage change undone.");
+          } : null);
         } catch (error) {
           setDashboardState(error.message || "Unable to move ticket.", "error");
+        }
+        return;
+      } else if (action === "owner-force-ticket-stage") {
+        if (currentSessionRole() !== "owner") {
+          setDashboardState("Only the Owner can override ticket requirements.", "error");
+          return;
+        }
+        const nextStage = target.dataset.stage;
+        const previousTicket = dashboardTickets().find((item) => item.source === "ticket" && item.id === id);
+        const previousStage = previousTicket ? ticketStage(previousTicket) : "";
+        const panel = target.closest("[data-ticket-command-panel]");
+        const noteInput = panel?.querySelector("[data-ticket-transition-notes]");
+        const nextActionInput = panel?.querySelector("[data-ticket-next-action-input]");
+        const confirmed = window.confirm(`Owner override: move this ticket to ${ticketStageLabel(normalizeTicketStageForDashboard(nextStage))} even though requirements are missing? This will be recorded in ticket history.`);
+        if (!confirmed) return;
+        try {
+          setDashboardState("Applying Owner override...");
+          const result = await dashboardTicketRequest("owner-force-transition", {
+            id,
+            toStage: nextStage,
+            notes: noteInput?.value || "Owner approved bypassing the missing workflow requirements.",
+            nextAction: nextActionInput?.value || target.dataset.nextAction || ticketNextAction(nextStage)
+          });
+          await refreshDashboard();
+          openTicketDrawer("ticket", result.ticket?.id || id);
+          setDashboardState(`Owner override moved ticket to ${ticketStageLabel(normalizeTicketStageForDashboard(nextStage))}.`);
+        } catch (error) {
+          setDashboardState(error.message || "Unable to apply Owner override.", "error");
+        }
+        return;
+      } else if (action === "owner-force-source-ticket-stage") {
+        if (currentSessionRole() !== "owner") {
+          setDashboardState("Only the Owner can override ticket requirements.", "error");
+          return;
+        }
+        const source = target.dataset.ticketSource;
+        const nextStage = target.dataset.stage;
+        const sourceTicket = findTicketForDrawer(source, id) || dashboardTickets().find((item) => String(item.id) === String(id));
+        const confirmed = window.confirm(`Owner override: create the unified Job Ticket and move it to ${ticketStageLabel(normalizeTicketStageForDashboard(nextStage))} even though requirements are missing? This will be recorded in ticket history.`);
+        if (!confirmed) return;
+        try {
+          setDashboardState("Creating the unified ticket and applying Owner override...");
+          const canonicalTicket = await ensureJobTicketForSourceRecord(source, id, {
+            stage: ticketStage(sourceTicket),
+            internal_notes: sourceTicket?.internalNotes || "Unified by the Owner from a source-record ticket."
+          });
+          if (!canonicalTicket?.id) {
+            throw new Error("The unified Job Ticket could not be created. Apply the Job Ticket database migration, then retry this action.");
+          }
+          const result = await dashboardTicketRequest("owner-force-transition", {
+            id: canonicalTicket.id,
+            toStage: nextStage,
+            notes: "Owner approved creating the unified ticket and bypassing missing workflow requirements.",
+            nextAction: target.dataset.nextAction || ticketNextAction(nextStage)
+          });
+          await refreshDashboard();
+          openTicketDrawer("ticket", result.ticket?.id || canonicalTicket.id);
+          setDashboardState(`Owner override moved ticket to ${ticketStageLabel(normalizeTicketStageForDashboard(nextStage))}.`);
+        } catch (error) {
+          setDashboardState(error.message || "Unable to create and override the unified ticket.", "error");
+        }
+        return;
+      } else if (action === "owner-close-rent-deduction") {
+        if (currentSessionRole() !== "owner") {
+          setDashboardState("Only the Owner can close a ticket as a rent deduction.", "error");
+          return;
+        }
+        const ticketSource = target.dataset.ticketSource || "ticket";
+        const ticket = findTicketForDrawer(ticketSource, id) || dashboardTickets().find((item) => String(item.id) === String(id));
+        const control = target.closest(".ticket-rent-deduction-control");
+        const entered = control?.querySelector("[data-rent-deduction-amount]")?.value || "";
+        const amount = Number(String(entered).replace(/[$,\s]/g, ""));
+        if (!Number.isFinite(amount) || amount <= 0 || amount > 350) {
+          setDashboardState("Enter a rent deduction amount between $0.01 and $350.00.", "error");
+          return;
+        }
+        try {
+          setDashboardState("Closing ticket as a rent deduction...");
+          let canonicalTicket = ticket?.source === "ticket" ? ticket : null;
+          if (!canonicalTicket) {
+            canonicalTicket = await ensureJobTicketForSourceRecord(ticketSource, id, {
+              stage: ticketStage(ticket),
+              field_completion_notes: ticket?.fieldCompletionNotes || "Owner confirmed completed rent-deduction work.",
+              next_action: "Close as rent deduction"
+            });
+          }
+          if (!canonicalTicket?.id && ticketSource === "job") {
+            await updateStatus("scheduled_jobs", id, "Completed");
+            await insertJobNote(
+              `Rent deduction: ${ticket?.title || "Completed visit"}`,
+              `$${amount.toFixed(2)} rent deduction recorded by the Owner instead of an invoice. Source visit: ${id}.`
+            );
+            await refreshDashboard();
+            closeSubmissionDrawer();
+            setDashboardState(`Visit closed as a $${amount.toFixed(2)} rent deduction.`);
+            return;
+          }
+          if (!canonicalTicket?.id) throw new Error("The unified ticket could not be created for this completed record.");
+          const result = await dashboardTicketRequest("owner-close-rent-deduction", {
+            id: canonicalTicket.id,
+            amount,
+            notes: `Owner closed ${ticket?.number || "ticket"} as a rent deduction instead of invoicing.`
+          });
+          await refreshDashboard();
+          openTicketDrawer("ticket", result.ticket?.id || canonicalTicket.id);
+          setDashboardState(`Ticket closed as a $${amount.toFixed(2)} rent deduction. $${Number(result.monthlyRemaining || 0).toFixed(2)} remains this month.`);
+        } catch (error) {
+          setDashboardState(error.message || "Unable to close this ticket as a rent deduction.", "error");
         }
         return;
       } else if (action === "save-ticket-command") {
@@ -20895,6 +24251,124 @@
         setDashboardState("Property CSV import canceled.");
       } else if (action === "open-outreach-prospect" || action === "edit-outreach-prospect") {
         openOutreachDrawer(id);
+      } else if (action === "select-call-queue-lead") {
+        state.callQueueSelectedId = id;
+        renderCallQueueWorkspace();
+      } else if (action === "lead-intake-import") {
+        const input = qs("[data-lead-intake-file]");
+        if (input) input.click();
+      } else if (action === "lead-intake-template") {
+        try {
+          await importExportDownload("lead-intake-template", {}, "urban-yards-lead-intake-template.csv");
+          setDashboardState("CSV template downloaded.");
+        } catch (error) {
+          setDashboardState(error.message || "Template could not be downloaded.", "error");
+        }
+      } else if (action === "lead-intake-copy-prompt") {
+        try {
+          await navigator.clipboard.writeText(LEAD_INTAKE_FORMAT_PROMPT);
+          setDashboardState("Lead Intake formatting prompt copied. Paste it into your research tool.");
+        } catch (error) {
+          setDashboardState("Unable to copy automatically. Select the prompt text and copy it manually.", "error");
+        }
+      } else if (action === "lead-intake-review-imports") {
+        try {
+          await loadLeadIntakeBatches(true);
+          const batch = state.leadIntakeBatches.find((item) => item.status === "preview") || state.leadIntakeBatches[0];
+          if (!batch) { setDashboardState("No import batches yet. Choose Import CSV to begin."); return; }
+          await openLeadIntakeBatch(batch.id);
+        } catch (error) {
+          setDashboardState(error.message || "Import batches could not be opened.", "error");
+        }
+      } else if (action === "lead-intake-open-batch") {
+        try { await openLeadIntakeBatch(id); } catch (error) { setDashboardState(error.message || "Import batch could not be opened.", "error"); }
+      } else if (action === "lead-intake-page-prev" || action === "lead-intake-page-next") {
+        state.leadIntakePage += action === "lead-intake-page-prev" ? -1 : 1;
+        renderLeadIntakeReviewDrawer();
+      } else if (action === "lead-intake-approve-unique" || action === "lead-intake-skip-definite") {
+        const status = action === "lead-intake-approve-unique" ? "new_unique" : "definite_duplicate";
+        const reviewAction = action === "lead-intake-approve-unique" ? "approve" : "keep_existing";
+        const rows = state.leadIntakeRows.filter((row) => row.status === status);
+        try {
+          await importExportRequest("lead-intake-review", { rowIds: rows.map((row) => row.id), reviewAction });
+          rows.forEach((row) => { row.action_type = reviewAction; });
+          renderLeadIntakeReviewDrawer();
+          setDashboardState(`${rows.length} imported record${rows.length === 1 ? "" : "s"} updated.`);
+        } catch (error) {
+          setDashboardState(error.message || "Bulk review could not be saved.", "error");
+        }
+      } else if (action === "lead-intake-approve-batch") {
+        if (!window.confirm("Add the approved imported prospects to the live Call Queue?")) return;
+        try {
+          setDashboardState("Adding approved leads to the Call Queue…");
+          const result = await importExportRequest("lead-intake-approve", { batchId: id, batchName: qs("[data-lead-intake-batch-name]")?.value || leadIntakeBatchName(state.leadIntakeSelectedBatch) });
+          closeSubmissionDrawer();
+          state.leadIntakeLoaded = false;
+          await refreshDashboard();
+          await loadLeadIntakeBatches(true);
+          setDashboardState(`${result.approved} lead${result.approved === 1 ? "" : "s"} added to the Call Queue.${result.updated ? ` ${result.updated} existing lead${result.updated === 1 ? "" : "s"} updated.` : ""}`);
+        } catch (error) {
+          setDashboardState(error.message || "Approved leads could not be added.", "error");
+        }
+      } else if (action === "lead-intake-cancel-batch") {
+        if (!window.confirm("Cancel this staged import? No live leads will be deleted.")) return;
+        try {
+          await importExportRequest("lead-intake-cancel", { batchId: id });
+          closeSubmissionDrawer(); state.leadIntakeLoaded = false; await loadLeadIntakeBatches(true); setDashboardState("Import cancelled.");
+        } catch (error) { setDashboardState(error.message || "Import could not be cancelled.", "error"); }
+      } else if (action === "lead-intake-undo-batch") {
+        if (!window.confirm("Undo only untouched leads created by this batch? Leads with calls, notes, follow-ups, or downstream work will be kept.")) return;
+        try {
+          const result = await importExportRequest("lead-intake-undo", { batchId: id });
+          closeSubmissionDrawer(); state.leadIntakeLoaded = false; await refreshDashboard(); await loadLeadIntakeBatches(true);
+          setDashboardState(`${result.removed} untouched lead${result.removed === 1 ? "" : "s"} removed.${result.blocked?.length ? ` ${result.blocked.length} kept because they have downstream activity.` : ""}`);
+        } catch (error) { setDashboardState(error.message || "Batch could not be undone.", "error"); }
+      } else if (action === "lead-intake-error-report") {
+        const invalid = state.leadIntakeRows.filter((row) => row.status === "invalid");
+        if (!invalid.length) { setDashboardState("This batch has no invalid rows."); return; }
+        const safeCell = (value) => /^[=+\-@]/.test(String(value || "").trim()) ? `'${String(value || "")}` : String(value || "");
+        downloadCsv("urban-yards-lead-intake-errors.csv", [["row_number", "business", "type", "location", "phone_number", "errors"], ...invalid.map((row) => {
+          const original = row.normalized_data?.original || row.source_data || {};
+          return [row.row_number, safeCell(original.business), safeCell(original.type), safeCell(original.location), safeCell(original.phone_number), safeCell((row.errors || []).join(" "))];
+        })]);
+      } else if (action === "call-queue-previous" || action === "call-queue-next") {
+        const queue = filteredCallQueue();
+        const currentIndex = queue.findIndex((item) => item.id === state.callQueueSelectedId);
+        const offset = action === "call-queue-previous" ? -1 : 1;
+        const next = queue[currentIndex + offset];
+        if (next) {
+          state.callQueueSelectedId = next.id;
+          renderCallQueueWorkspace();
+        }
+      } else if (action === "load-more-call-queue") {
+        state.callQueueVisibleCount += 25;
+        renderCallQueueWorkspace();
+      } else if (action === "call-queue-add-note") {
+        const prospect = findOutreachProspect(id);
+        if (!prospect) return;
+        const note = window.prompt("Add lead note", "");
+        if (note === null || !note.trim()) return;
+        try {
+          setDashboardState("Saving lead note...");
+          await updateOutreachProspect(id, { notes: [prospect.notes, `${todayKey()}: ${note.trim()}`].filter(Boolean).join("\n\n") });
+          await refreshDashboard();
+          setDashboardState("Lead note saved.");
+        } catch (error) {
+          setDashboardState(error.message || "Unable to save lead note.", "error");
+        }
+      } else if (action === "call-queue-follow-up") {
+        const prospect = findOutreachProspect(id);
+        if (!prospect) return;
+        const followUp = window.prompt("Follow-up date (YYYY-MM-DD)", prospect.nextFollowUpAtRaw || daysFromToday(1));
+        if (followUp === null) return;
+        try {
+          setDashboardState("Scheduling follow-up...");
+          await updateOutreachProspect(id, { next_follow_up_at: followUp || null, status: followUp ? "Follow-Up Needed" : prospect.status });
+          await refreshDashboard();
+          setDashboardState(followUp ? "Follow-up scheduled." : "Follow-up cleared.");
+        } catch (error) {
+          setDashboardState(error.message || "Unable to schedule follow-up.", "error");
+        }
       } else if (action === "create-ticket-from-prospect") {
         if (!canCreateTicketType("quote")) {
           setDashboardState("Your dashboard role cannot create job tickets.", "error");
@@ -21069,18 +24543,62 @@
           recordErrors: true
         });
         setDashboardState("");
+      } else if (action === "review-closeout-tickets") {
+        state.ticketBoardSearch = "";
+        state.ticketBoardStageFilter = "All";
+        state.ticketBoardOwnerFilter = "All";
+        state.ticketBoardCloseoutOnly = true;
+        setActiveSection("tickets");
+        replaceDashboardHash("tickets");
+        renderJobTicketWorkspace(state.data);
+        window.requestAnimationFrame(() => {
+          qs(".ticket-board-controls")?.scrollIntoView({
+            behavior: window.matchMedia?.("(prefers-reduced-motion: reduce)")?.matches ? "auto" : "smooth",
+            block: "start"
+          });
+        });
+        setDashboardState("Showing tickets ready for closeout review.");
       } else if (action === "go-tickets") {
         setActiveSection("tickets");
         replaceDashboardHash("tickets");
       } else if (action === "go-leads") {
         setActiveSection("outreach");
         replaceDashboardHash("outreach");
+      } else if (action === "open-call-queue-lead") {
+        state.callQueueSearch = "";
+        state.callQueueStatusFilter = "Active";
+        state.callQueuePriorityFilter = "All";
+        state.callQueueSelectedId = id;
+        setActiveSection("call-queue");
+        replaceDashboardHash("call-queue");
+      } else if (action === "toggle-leads-contact-queue") {
+        state.leadsContactQueueExpanded = !state.leadsContactQueueExpanded;
+        renderLeadsWorkspace(state.data);
+      } else if (action === "go-call-queue") {
+        setActiveSection("call-queue");
+        replaceDashboardHash("call-queue");
       } else if (action === "go-work") {
         setActiveSection("calendar");
         replaceDashboardHash("calendar");
+      } else if (action === "focus-work-queue") {
+        setActiveSection("calendar");
+        replaceDashboardHash("calendar");
+        await render();
+        qs("[data-work-queue]")?.scrollIntoView({ behavior: "smooth", block: "start" });
       } else if (action === "go-money") {
         setActiveSection("documents");
         replaceDashboardHash("documents");
+      } else if (action === "open-financial-records") {
+        setActiveSection("documents");
+        replaceDashboardHash("documents");
+        renderMoneyWorkspace(state.data);
+        window.requestAnimationFrame(() => {
+          qs(".money-action-queue")?.scrollIntoView({
+            behavior: window.matchMedia?.("(prefers-reduced-motion: reduce)")?.matches ? "auto" : "smooth",
+            block: "start"
+          });
+        });
+        setDashboardState("Showing financial records ready for review.");
       } else if (action === "go-tools") {
         setActiveSection("settings");
         replaceDashboardHash("settings");
@@ -21575,57 +25093,232 @@
       }
     });
 
-    els.appView.addEventListener("dragstart", (event) => {
-      const card = event.target?.closest?.("[data-owner-kanban-card][draggable='true']");
-      if (!card) return;
-      state.ownerKanbanMovingId = card.dataset.id || "";
-      event.dataTransfer.effectAllowed = "move";
-      event.dataTransfer.setData("text/plain", state.ownerKanbanMovingId);
-      card.classList.add("is-dragging");
-    });
+    let ownerKanbanPointerDrag = null;
 
-    els.appView.addEventListener("dragend", (event) => {
-      event.target?.closest?.("[data-owner-kanban-card]")?.classList.remove("is-dragging");
+    const clearOwnerKanbanPointerDrag = () => {
+      ownerKanbanPointerDrag?.card?.classList.remove("is-dragging");
+      ownerKanbanPointerDrag?.ghost?.remove();
       qsa("[data-owner-kanban-column].is-drag-over").forEach((column) => column.classList.remove("is-drag-over"));
+      ownerKanbanPointerDrag = null;
       state.ownerKanbanMovingId = "";
+    };
+
+    els.appView.addEventListener("pointerdown", (event) => {
+      const card = event.target?.closest?.("[data-owner-kanban-card]");
+      if (!card || !card.dataset.id || event.button > 0 || event.target?.closest?.("select, input, textarea, label")) return;
+      ownerKanbanPointerDrag = {
+        card,
+        pointerId: event.pointerId,
+        ticketId: card.dataset.id,
+        ticketSource: card.dataset.ticketSource || "ticket",
+        startX: event.clientX,
+        startY: event.clientY,
+        offsetX: event.clientX - card.getBoundingClientRect().left,
+        offsetY: event.clientY - card.getBoundingClientRect().top,
+        ghost: null,
+        active: false
+      };
     });
 
-    els.appView.addEventListener("dragover", (event) => {
-      const column = event.target?.closest?.("[data-owner-kanban-column]");
-      if (!column || !state.ownerKanbanMovingId) return;
+    document.addEventListener("pointermove", (event) => {
+      if (!ownerKanbanPointerDrag || ownerKanbanPointerDrag.pointerId !== event.pointerId) return;
+      if (!ownerKanbanPointerDrag.active) {
+        const distance = Math.hypot(event.clientX - ownerKanbanPointerDrag.startX, event.clientY - ownerKanbanPointerDrag.startY);
+        if (distance < 7) return;
+        ownerKanbanPointerDrag.active = true;
+        state.ownerKanbanMovingId = ownerKanbanPointerDrag.ticketId;
+        ownerKanbanPointerDrag.card.classList.add("is-dragging");
+        const rect = ownerKanbanPointerDrag.card.getBoundingClientRect();
+        const ghost = ownerKanbanPointerDrag.card.cloneNode(true);
+        ghost.classList.add("owner-kanban-drag-ghost");
+        ghost.classList.remove("is-dragging", "is-saving");
+        ghost.removeAttribute("id");
+        ghost.setAttribute("aria-hidden", "true");
+        ghost.querySelectorAll("button, select, input, textarea").forEach((control) => control.setAttribute("tabindex", "-1"));
+        ghost.style.width = `${rect.width}px`;
+        ownerKanbanPointerDrag.ghost = ghost;
+        document.body.appendChild(ghost);
+        setDashboardState("Dragging ticket—release it over a highlighted column.");
+      }
       event.preventDefault();
-      event.dataTransfer.dropEffect = "move";
-      column.classList.add("is-drag-over");
+      if (ownerKanbanPointerDrag.ghost) {
+        ownerKanbanPointerDrag.ghost.style.left = `${event.clientX - ownerKanbanPointerDrag.offsetX}px`;
+        ownerKanbanPointerDrag.ghost.style.top = `${event.clientY - ownerKanbanPointerDrag.offsetY}px`;
+      }
+      const column = document.elementFromPoint(event.clientX, event.clientY)?.closest?.("[data-owner-kanban-column]");
+      qsa("[data-owner-kanban-column].is-drag-over").forEach((item) => item.classList.toggle("is-drag-over", item === column));
     });
 
-    els.appView.addEventListener("dragleave", (event) => {
-      const column = event.target?.closest?.("[data-owner-kanban-column]");
-      if (!column || column.contains(event.relatedTarget)) return;
-      column.classList.remove("is-drag-over");
-    });
+    document.addEventListener("pointercancel", clearOwnerKanbanPointerDrag);
 
-    els.appView.addEventListener("drop", async (event) => {
-      const column = event.target?.closest?.("[data-owner-kanban-column]");
-      if (!column) return;
+    document.addEventListener("pointerup", async (event) => {
+      if (!ownerKanbanPointerDrag || ownerKanbanPointerDrag.pointerId !== event.pointerId) return;
+      const { ticketId, ticketSource, active } = ownerKanbanPointerDrag;
+      if (!active) {
+        clearOwnerKanbanPointerDrag();
+        return;
+      }
       event.preventDefault();
-      column.classList.remove("is-drag-over");
-      const ticketId = event.dataTransfer?.getData("text/plain") || state.ownerKanbanMovingId;
-      const nextStage = column.dataset.ownerKanbanColumn || "";
-      if (!ticketId || !nextStage) return;
+      state.ownerKanbanSuppressClickUntil = Date.now() + 400;
+      const column = document.elementFromPoint(event.clientX, event.clientY)?.closest?.("[data-owner-kanban-column]");
+      const nextColumn = column?.dataset.ownerKanbanColumn || "";
+      if (!ticketId || !nextColumn) {
+        clearOwnerKanbanPointerDrag();
+        return;
+      }
       try {
-        setDashboardState("Moving ticket...");
-        await moveOwnerKanbanTicket(ticketId, nextStage, { notes: "Moved by drag and drop from Owner Overview Kanban." });
-        setDashboardState(`Ticket moved to ${ownerKanbanColumnLabel(nextStage)}.`);
+        setDashboardState(`Moving ticket to ${ownerKanbanColumnLabel(nextColumn)}...`);
+        await moveOwnerKanbanSourceCard(ticketId, ticketSource, nextColumn);
+        clearOwnerKanbanPointerDrag();
+        renderHomeWorkspace(state.data);
+        await refreshDashboard();
+        setDashboardState(`Ticket moved to ${ownerKanbanColumnLabel(nextColumn)}.`);
       } catch (error) {
+        clearOwnerKanbanPointerDrag();
+        renderHomeWorkspace(state.data);
         setDashboardState(error.message || "Unable to move ticket.", "error");
-        openTicketDrawer("ticket", ticketId);
-      } finally {
-        state.ownerKanbanMovingId = "";
       }
     });
 
   els.appView.addEventListener("submit", async (event) => {
-      if (event.target.matches("[data-users-invite-form]")) {
+      if (event.target.matches("[data-ai-memory-form]")) {
+        event.preventDefault();
+        const data = new FormData(event.target);
+        const scopeKey = String(data.get("scope_key") || "");
+        const scopeValue = String(data.get("scope_value") || "").trim();
+        if (scopeKey && !scopeValue) {
+          setDashboardState("Add a scope ID or value, or choose Company-wide.", "error");
+          return;
+        }
+        try {
+          setDashboardState("Saving approved AI memory...");
+          await groundskeeperRequest("memory-upsert", {
+            memory: {
+              memoryType: String(data.get("memory_type") || "business_rule"),
+              statement: String(data.get("statement") || "").trim(),
+              scope: scopeKey && scopeValue ? { [scopeKey]: scopeValue } : {},
+              source: String(data.get("memory_type")) === "outcome" ? "outcome" : "approved_rule",
+              confidence: String(data.get("confidence") || "medium")
+            }
+          });
+          event.target.reset();
+          state.assistantMemoriesLoaded = false;
+          await loadAssistantMemories();
+          renderAiMemoryWorkspace();
+          setDashboardState("Approved memory saved.");
+        } catch (error) {
+          setDashboardState(error.message || "Unable to save AI memory.", "error");
+        }
+      } else if (event.target.matches("[data-financial-invoice-form]")) {
+        event.preventDefault();
+        const id = event.target.dataset.id;
+        const data = new FormData(event.target);
+        const nullableId = (name) => {
+          const value = String(data.get(name) || "").trim();
+          return value || null;
+        };
+        const payload = {
+          client_id: nullableId("client_id"),
+          property_id: nullableId("property_id"),
+          ticket_id: nullableId("ticket_id"),
+          issue_date: nullableId("issue_date"),
+          due_date: nullableId("due_date"),
+          tax: Number(data.get("tax") || 0),
+          discount: Number(data.get("discount") || 0),
+          deposit: Number(data.get("deposit") || 0),
+          amount_paid: Number(data.get("amount_paid") || 0),
+          status: String(data.get("status") || "Draft"),
+          square_invoice_url: nullableId("square_invoice_url"),
+          internal_notes: nullableId("internal_notes"),
+          client_notes: nullableId("client_notes")
+        };
+        try {
+          await supabaseRestRequest(`invoices?id=eq.${encodeURIComponent(id)}`, {
+            method: "PATCH",
+            headers: { Prefer: "return=representation" },
+            body: JSON.stringify(payload)
+          });
+          state.moneyLoadedViews.delete("invoicing");
+          await openFinancialInvoiceDrawer(id);
+          setDashboardState("Invoice saved.");
+        } catch (error) {
+          setDashboardState(error.message || "Invoice could not be saved.", "error");
+        }
+      } else if (event.target.matches("[data-call-queue-outcome-form]")) {
+        event.preventDefault();
+        const id = event.target.dataset.id || "";
+        const prospect = findOutreachProspect(id);
+        if (!prospect) {
+          setDashboardState("The selected lead is no longer available.", "error");
+          return;
+        }
+        const formData = new FormData(event.target);
+        const outcome = String(formData.get("outcome") || "");
+        const followUpDate = String(formData.get("follow_up_date") || "");
+        const followUpTime = String(formData.get("follow_up_time") || "");
+        const notes = String(formData.get("notes") || "").trim();
+        const nextAction = String(formData.get("next_action") || "").trim();
+        if (!CALL_QUEUE_OUTCOMES.some(([value]) => value === outcome)) {
+          setDashboardState("Choose a call outcome before saving.", "error");
+          return;
+        }
+        if (outcome === "follow_up_needed" && !followUpDate) {
+          setDashboardState("Choose a follow-up date for Follow-Up Needed.", "error");
+          return;
+        }
+        const queue = filteredCallQueue();
+        const currentIndex = queue.findIndex((item) => item.id === id);
+        const nextId = queue[currentIndex + 1]?.id || queue[currentIndex - 1]?.id || "";
+        const outcomeLabel = CALL_QUEUE_OUTCOMES.find(([value]) => value === outcome)?.[1] || outcome;
+        const storedOutcome = ["interested", "quote_requested"].includes(outcome) ? "spoke_with_contact" : outcome;
+        const automaticStatus = {
+          no_answer: ["Prospect", "Researched"].includes(prospect.status) ? "Contacted" : prospect.status,
+          left_voicemail: "Follow-Up Needed",
+          spoke_with_contact: "Contacted",
+          follow_up_needed: "Follow-Up Needed",
+          interested: "Interested",
+          quote_requested: "Quote Needed",
+          not_interested: "Lost / No Fit",
+          wrong_number: "Lost / No Fit"
+        }[outcome];
+        const requestedStatus = String(formData.get("status") || prospect.status);
+        const updatedStatus = requestedStatus !== prospect.status ? requestedStatus : (automaticStatus || prospect.status);
+        const activityNotes = [outcomeLabel, notes, followUpTime ? `Follow-up time: ${followUpTime}` : "", nextAction ? `Next action: ${nextAction}` : ""].filter(Boolean).join("\n");
+        try {
+          state.callQueueSaving = true;
+          renderCallQueueWorkspace();
+          setDashboardState("Saving call outcome...");
+          await insertLeadActivity({
+            lead_id: id,
+            lead_type: "outreach_prospect",
+            phone_number: prospect.phone,
+            type: "call_attempt",
+            outcome: storedOutcome,
+            notes: activityNotes,
+            follow_up_date: followUpDate || null,
+            metadata: {
+              call_queue_outcome: outcome,
+              follow_up_time: followUpTime || null,
+              next_action: nextAction || null
+            }
+          });
+          await updateOutreachProspect(id, {
+            status: updatedStatus,
+            priority: String(formData.get("priority") || prospect.priority),
+            last_contacted_at: new Date().toISOString(),
+            next_follow_up_at: followUpDate || null,
+            notes: [prospect.notes, notes ? `${todayKey()} call: ${notes}` : "", nextAction ? `Next action: ${nextAction}` : ""].filter(Boolean).join("\n\n")
+          });
+          state.callQueueSelectedId = formData.get("auto_next") ? nextId : id;
+          await refreshDashboard();
+          setDashboardState(`${outcomeLabel} saved.${formData.get("auto_next") && nextId ? " Moved to the next lead." : ""}`);
+        } catch (error) {
+          setDashboardState(error.message || "Unable to save call outcome.", "error");
+        } finally {
+          state.callQueueSaving = false;
+          renderCallQueueWorkspace();
+        }
+      } else if (event.target.matches("[data-users-invite-form]")) {
         event.preventDefault();
         const formData = new FormData(event.target);
         try {
@@ -21729,34 +25422,6 @@
         } catch (error) {
           setDashboardState(error.message || "Unable to save invoice status.", "error");
         }
-      } else if (event.target.matches("[data-unified-ticket-checklist]")) {
-        event.preventDefault();
-        const form = event.target;
-        const ticketId = form.dataset.ticketId;
-        if (!canManageOwnerWorkflow()) {
-          setDashboardState("Only an Owner, Admin, or Manager can override the ticket checklist.", "error");
-          return;
-        }
-        try {
-          const formData = new FormData(form);
-          const payload = {};
-          unifiedTicketChecklist.filter((item) => !item.payment).forEach((item) => {
-            payload[item.key] = formData.has(item.key);
-          });
-          payload.next_action = String(formData.get("next_action") || "").trim();
-          payload.internal_notes = String(formData.get("internal_notes") || "").trim();
-          setDashboardState("Saving ticket checklist...");
-          const ticket = await updateJobTicket(ticketId, payload);
-          await insertJobTicketEvent(ticketId, {
-            event_type: "owner_checklist_override",
-            notes: payload.internal_notes || "Owner checklist and overrides saved."
-          });
-          await refreshDashboard();
-          openTicketDrawer("ticket", ticket?.id || ticketId);
-          setDashboardState("Ticket checklist saved and recorded.");
-        } catch (error) {
-          setDashboardState(error.message || "Unable to save the ticket checklist.", "error");
-        }
       } else if (event.target.matches("[data-ticket-create-form]")) {
         event.preventDefault();
         const formData = new FormData(event.target);
@@ -21807,8 +25472,10 @@
               next_action: "Work the visit"
             }) : null;
             await refreshDashboard();
-            if (canonicalTicket?.id) openTicketDrawer("ticket", canonicalTicket.id);
-            else if (jobs[0]?.id) openTicketDrawer("job", jobs[0].id);
+            if (!canonicalTicket?.id) {
+              throw new Error("The work visit was created, but its unified Job Ticket was not. Apply the Job Ticket database migration, then open the visit and retry.");
+            }
+            openTicketDrawer("ticket", canonicalTicket.id);
             setDashboardState("Work ticket created.");
           } else {
             const quote = await insertQuoteSubmission({
@@ -21840,10 +25507,13 @@
               next_action: "Review intake"
             }) : null;
             await refreshDashboard();
-            if (canonicalTicket?.id) openTicketDrawer("ticket", canonicalTicket.id);
-            else if (quote?.id) openTicketDrawer("quote", quote.id);
+            if (!canonicalTicket?.id) {
+              throw new Error("The intake record was created, but its unified Job Ticket was not. Apply the Job Ticket database migration, then open the intake record and retry.");
+            }
+            openTicketDrawer("ticket", canonicalTicket.id);
             setDashboardState("Intake ticket created.");
           }
+          localStorage.removeItem(TICKET_DRAFT_KEY);
         } catch (error) {
           setDashboardState(error.message || "Unable to create ticket.", "error");
         }
@@ -22186,6 +25856,12 @@
         } catch (error) {
           setDashboardState(error.message || "Unable to save AI entry.", "error");
         }
+      } else if (event.target.matches("[data-dashboard-copilot-form]")) {
+        event.preventDefault();
+        const message = String(new FormData(event.target).get("message") || "").trim();
+        if (!message || state.copilotLoading) return;
+        event.target.reset();
+        await handleDashboardCopilotMessage(message);
       } else if (event.target.matches("[data-groundskeeper-chat-form]")) {
         event.preventDefault();
         const formData = new FormData(event.target);

@@ -86,4 +86,8 @@ Do not run cleanup blindly. Search for the exact prefix `TEST – CODEX QA –` 
 - Deployed ticket search: PASS for the `TEST - CODEX QA -` record.
 - Deployed source-record Owner controls: PASS. The QA ticket exposes audited Owner overrides for the valid next stage and cancellation.
 - Native confirmation behavior: present. Automated acceptance was not bypassed when the browser controller could not safely complete the blocking confirmation.
-- Final validation and map-loader deployment: pending the follow-up commit and push.
+- Map-loader repair commit: `90fcd52` (`Load dashboard maps asynchronously`).
+- Final production asset confirmed: `dashboard.js?v=20260725-live-qa-map-async`.
+- Final production console: PASS with no errors or warnings after a fresh cache-busted load.
+- Final ticket Owner-control retest: PASS. The QA source record displayed overrides for `scope_in_progress` and `cancelled`, matching its current workflow stage.
+- Final deployment result: PASS.

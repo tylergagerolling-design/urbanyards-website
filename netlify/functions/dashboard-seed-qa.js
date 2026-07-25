@@ -95,8 +95,12 @@ exports.handler = async (event) => {
   try { body = JSON.parse(event.body || "{}"); } catch {}
   if (body.confirmation !== "CREATE 20 MOCK TICKETS") return json(400, { error: "Invalid QA confirmation.", requestId });
 
-  const existing = await supabaseAdminRequest("job_tickets?ticket_number=like.QA-*&select=id&limit=1", { method: "GET" });
-  if (Array.isArray(existing) && existing.length) return json(409, { error: "QA tickets already exist. Reset them before reseeding.", requestId });
+  let phase = "checking existing QA tickets";
+  try {
+  const existing = await supabaseAdminRequest("job_tickets?select=id,ticket_number&limit=5000", { method: "GET" });
+  if (Array.isArray(existing) && existing.some((ticket) => String(ticket.ticket_number || "").startsWith("QA-"))) {
+    return json(409, { error: "QA tickets already exist. Reset them before reseeding.", requestId });
+  }
 
   const invoiceDocs = STAGES.map((stage, index) => ({ stage, index }))
     .filter(({ stage }) => ["invoice_preparation", "ready_to_schedule", "scheduled", "in_progress", "completion_review", "closed"].includes(stage))
@@ -115,6 +119,7 @@ exports.handler = async (event) => {
       notes: "QA-only invoice. Never send or sync to Square."
     }));
 
+  phase = "creating internal QA invoices";
   const createdDocs = await supabaseAdminRequest("sales_documents", {
     method: "POST", headers: { Prefer: "return=representation" }, body: JSON.stringify(invoiceDocs)
   });
@@ -124,6 +129,7 @@ exports.handler = async (event) => {
     const invoiceId = needsInvoice ? createdDocs[documentCursor++]?.id || null : null;
     return ticketState(stage, index, invoiceId);
   });
+  phase = "creating canonical QA tickets";
   const createdTickets = await supabaseAdminRequest("job_tickets", {
     method: "POST", headers: { Prefer: "return=representation" }, body: JSON.stringify(tickets)
   });
@@ -139,6 +145,7 @@ exports.handler = async (event) => {
     status: ticket.stage === "closed" ? "Complete" : ticket.stage === "in_progress" ? "In Progress" : "Planned",
     stop_order: index + 1
   }));
+  phase = "creating QA route stops";
   await supabaseAdminRequest("route_stops", {
     method: "POST", headers: { Prefer: "return=minimal" }, body: JSON.stringify(routeStops)
   });
@@ -150,6 +157,7 @@ exports.handler = async (event) => {
     notes: "Owner-authorized mock ticket generated for live workflow testing.",
     new_value: { qa: true, stage: ticket.stage }
   }));
+  phase = "creating QA ticket history";
   await supabaseAdminRequest("job_ticket_events", {
     method: "POST", headers: { Prefer: "return=minimal" }, body: JSON.stringify(events)
   });
@@ -160,5 +168,7 @@ exports.handler = async (event) => {
     event, module: "tickets"
   });
   return json(200, { tickets: createdTickets.length, invoices: createdDocs.length, routeStops: routeStops.length, requestId });
+  } catch (error) {
+    return json(500, { error: `QA seed failed while ${phase}: ${error.message || "Unknown database error."}`, requestId });
+  }
 };
-

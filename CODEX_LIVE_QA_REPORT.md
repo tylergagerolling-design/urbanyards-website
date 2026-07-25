@@ -67,6 +67,13 @@ Related Owner override commit included in the deployment: `c35aa8d` (`Add owner 
 
 Production data impact: no legitimate records changed or removed.
 
+## Defect: Google Maps loader warning
+
+Severity: Low
+Area: Work / Route Planner performance
+
+The production console reported that the Maps JavaScript API was loaded without its asynchronous loading mode. The route-map loader now includes `loading=async`, preserving the existing map libraries and key flow while avoiding a render-blocking load recommendation.
+
 ## Cleanup
 
 Do not run cleanup blindly. Search for the exact prefix `TEST – CODEX QA –` and batch marker `codex-live-audit-2026`, verify every matched record is fictional, then move those records to the application’s reversible archive/recently-deleted flow. Permanently delete only after a second exact-match review. The audit does not authorize deleting any non-QA record.
@@ -74,4 +81,9 @@ Do not run cleanup blindly. Search for the exact prefix `TEST – CODEX QA –` 
 ## Deployment record
 
 - Local validation after repair: PASS, 207/207 automated tests.
-- Push, Netlify deployment confirmation, and deployed live retest: pending.
+- Production asset confirmed: `dashboard.js?v=20260725-live-qa-ticket-unify`.
+- Netlify deployment: successful; the production dashboard served the new asset on 2026-07-25.
+- Deployed ticket search: PASS for the `TEST - CODEX QA -` record.
+- Deployed source-record Owner controls: PASS. The QA ticket exposes audited Owner overrides for the valid next stage and cancellation.
+- Native confirmation behavior: present. Automated acceptance was not bypassed when the browser controller could not safely complete the blocking confirmation.
+- Final validation and map-loader deployment: pending the follow-up commit and push.

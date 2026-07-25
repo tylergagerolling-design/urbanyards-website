@@ -15,6 +15,10 @@ function read(relativePath) {
   return fs.readFileSync(path.join(root, relativePath), "utf8");
 }
 
+test("Google Maps loads asynchronously to avoid blocking dashboard startup", () => {
+  assert.match(read("dashboard.js"), /maps\/api\/js\?key=.*&loading=async/);
+});
+
 test("live workspace polish contains long records and management cards", () => {
   const css = read("dashboard.css");
   const html = read("dashboard.html");

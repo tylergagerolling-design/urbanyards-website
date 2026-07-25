@@ -15464,6 +15464,19 @@ body:not(.is-login-screen) .app-view .dashboard-main :is(#overview, #calendar) :
   box-shadow: 0 10px 22px rgba(38, 61, 44, .18) !important;
 }
 
+body:not(.is-login-screen) .app-view .dashboard-main :is(#overview, #calendar) [data-action="open-ticket-create"] {
+  border-color: var(--button-forest-700) !important;
+  background: var(--button-forest-700) !important;
+  color: var(--button-white) !important;
+  box-shadow: 0 8px 18px rgba(38, 61, 44, .16) !important;
+}
+
+body:not(.is-login-screen) .app-view .dashboard-main :is(#overview, #calendar) [data-action="open-ticket-create"]:hover:not(:disabled):not([aria-disabled="true"]) {
+  border-color: var(--button-forest-800) !important;
+  background: var(--button-forest-800) !important;
+  color: var(--button-white) !important;
+}
+
 body:not(.is-login-screen) .app-view .dashboard-main :is(#overview, #calendar) :is(
   .inline-action,
   a.inline-action,

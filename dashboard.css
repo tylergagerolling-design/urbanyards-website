@@ -23377,3 +23377,59 @@ body:not(.is-login-screen) .app-view .dashboard-main :is(
   background: var(--button-danger-700) !important;
   color: var(--button-white) !important;
 }
+
+/* Workspace rules use ID-level specificity, so repeat only the semantic
+   colors at the same level. No sizing or shape properties belong here. */
+body:not(.is-login-screen) .app-view .dashboard-main #calendar :is(
+  [data-action="quick-add-job"],
+  [data-action="submit-field-expense"],
+  .schedule-create-form button[type="submit"]
+),
+body:not(.is-login-screen) .app-view .dashboard-main #settings :is(
+  [data-action="seed-qa-ticket-suite"],
+  [data-action="upload-user-avatar"],
+  .users-access-invite button[type="submit"]
+) {
+  border-color: var(--button-forest-700) !important;
+  background: var(--button-forest-700) !important;
+  color: var(--button-white) !important;
+}
+
+body:not(.is-login-screen) .app-view .dashboard-main #calendar :is(
+  [data-action="quick-add-job"],
+  [data-action="submit-field-expense"],
+  .schedule-create-form button[type="submit"]
+):hover:not(:disabled):not([aria-disabled="true"]),
+body:not(.is-login-screen) .app-view .dashboard-main #settings :is(
+  [data-action="seed-qa-ticket-suite"],
+  [data-action="upload-user-avatar"],
+  .users-access-invite button[type="submit"]
+):hover:not(:disabled):not([aria-disabled="true"]) {
+  border-color: var(--button-forest-800) !important;
+  background: var(--button-forest-800) !important;
+  color: var(--button-white) !important;
+}
+
+body:not(.is-login-screen) .app-view .dashboard-main #overview
+  [data-action="clear-owner-kanban-leads"]:not(:disabled),
+body:not(.is-login-screen) .app-view .dashboard-main #settings :is(
+  [data-action="reset-all-operational-data"],
+  [data-action="remove-user-avatar"],
+  [data-action="disable-dashboard-user"]
+):not(:disabled) {
+  border-color: var(--button-danger-600) !important;
+  background: var(--button-danger-600) !important;
+  color: var(--button-white) !important;
+}
+
+body:not(.is-login-screen) .app-view .dashboard-main #overview
+  [data-action="clear-owner-kanban-leads"]:hover:not(:disabled),
+body:not(.is-login-screen) .app-view .dashboard-main #settings :is(
+  [data-action="reset-all-operational-data"],
+  [data-action="remove-user-avatar"],
+  [data-action="disable-dashboard-user"]
+):hover:not(:disabled) {
+  border-color: var(--button-danger-700) !important;
+  background: var(--button-danger-700) !important;
+  color: var(--button-white) !important;
+}

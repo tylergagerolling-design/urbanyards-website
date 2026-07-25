@@ -1,12 +1,59 @@
 # Groundskeeper AI Architecture Audit
 
-Date: July 24, 2026
+Date: July 24, 2026 (continuation audit)
 
 ## Executive summary
 
 Groundskeeper AI currently has two working surfaces: a public website helper and an authenticated dashboard assistant. Both use the same protected server endpoint. The dashboard also has deterministic browser-side helpers for record search, ticket completeness, priorities, and schedule previews. The safest upgrade path is to preserve those behaviors while moving request classification, permission checks, tool selection, citations, verification, and error recovery into a modular server-side orchestration layer.
 
-Phase 1 adds that foundation without changing Supabase schemas or enabling autonomous writes.
+That foundation is now implemented. The current continuation preserves it and deepens the existing landscaping retrieval and diagnostic behavior without adding a competing endpoint, table, memory platform, or assistant surface.
+
+## Current implementation status
+
+### Working
+
+- The floating dashboard assistant is rendered in `dashboard.js` and calls the shared protected `groundskeeper-ai` endpoint.
+- OpenAI remains the primary responder (`gpt-4.1-mini` by default).
+- Gemini is a server-side, rate-limited specialist consultant. It is called selectively, returns structured review data, and cannot override verified records, approved policy, permissions, or approval gates.
+- The modular server orchestration in `src/assistant` provides intent routing, page-context sanitizing, entity resolution, permissions, read tools, citations, verification, UI actions, diagnostics, scoped memory, and write previews.
+- Durable scoped memory uses `assistant_memories`; recommendation outcomes use `assistant_outcomes`.
+- The landscaping library uses small versioned JSON records with schema, evaluation fixtures, owner catalog controls, and lazy retrieval.
+- Existing business context includes permitted snapshots of properties, tickets, clients, leads, schedules, invoices, expenses, and documents.
+- Ticket stage changes are preview-only until explicit approval.
+
+### Partial
+
+- Retrieval is hybrid keyword and metadata ranking, not embedding/vector search.
+- Property and ticket context is bounded to the records supplied to the endpoint; there is no unrestricted database agent.
+- Memory supports scope, source, confidence, approval, expiry, and active state but does not yet expose the complete field-observation verification vocabulary proposed in the continuation brief.
+- Knowledge editing currently supports catalog search/export and update drafting; full compare/version restore and embedding rebuild controls are not yet implemented.
+- Completed-work learning compares estimate and actual cost but the ticket completion form does not yet capture every proposed outcome-learning field.
+
+### Duplication audit
+
+- One primary assistant surface and one shared endpoint exist.
+- One Gemini provider and consultation policy exist.
+- One scoped memory table exists.
+- One landscaping knowledge library exists.
+- No competing property database, vector store, assistant endpoint, or Gemini integration was added.
+
+### Safe continuation implemented
+
+- Added structured symptom diagnosis that reports alternatives, required observations, safe immediate action, confidence, escalation conditions, and contradictions.
+- Added verified-record contradiction detection that requests owner review rather than silently choosing a value.
+- Added automatic seasonal context without claiming live weather.
+- Added authority, confidence, and freshness weight to the existing ranking function.
+- Expanded the existing approved library from 11 to 17 focused records covering turf discoloration, PNW moss/compaction, plant wilt/yellowing, trunk/crown mulch safety, heat/traffic safety, and commercial recurring inspections.
+- Preserved lazy loading, bounded results, 2.5-second tool timeouts, server-side model calls, role permissions, citations, and explicit write approval.
+
+### Remain untouched
+
+- Dashboard navigation and visual design
+- Authentication and existing role model
+- Ticket, property, customer, estimate, scheduling, and financial schemas
+- Supabase configuration and existing data
+- Primary model endpoint and Gemini environment variables
+- Production deployment pattern
 
 ## 1. Existing components and endpoints
 
@@ -178,4 +225,3 @@ Likely later migrations:
 - Query optimization
 - Development diagnostics
 - Continuous regression additions
-

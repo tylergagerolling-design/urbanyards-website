@@ -10,6 +10,11 @@ const {
 } = require("../src/assistant/landscaping-knowledge");
 const { orchestrateDashboardRequest } = require("../src/assistant/orchestrator");
 const { consultationDecision } = require("../src/assistant/consultation/policy");
+const {
+  currentSeason,
+  detectRecordContradictions,
+  diagnoseLandscapingIssue
+} = require("../src/assistant/landscaping-diagnostics");
 
 const root = path.join(__dirname, "..");
 const records = JSON.parse(fs.readFileSync(path.join(root, "knowledge/indexes/records.json"), "utf8"));
@@ -80,4 +85,48 @@ test("repository documents separate knowledge, property memory, and temporary co
   assert.match(readme, /Customer\/property memory and temporary ticket\/conversation context are intentionally stored elsewhere/i);
   assert.match(dashboard, /Landscaping Intelligence Library/);
   assert.match(dashboard, /approval-controlled knowledge editor/);
+});
+
+test("diagnostic guidance keeps symptoms uncertain and lists field observations", () => {
+  const result = diagnoseLandscapingIssue({
+    query: "Why is this Portland lawn brown and yellow?",
+    region: "Portland",
+    season: "summer"
+  });
+  assert.equal(result.diagnostic, true);
+  assert.equal(result.confidence, "moderate");
+  assert.ok(result.requiredObservations.includes("damage pattern"));
+  assert.ok(result.otherReasonablePossibilities.length > 0);
+  assert.match(result.safeImmediateAction, /document/i);
+  assert.ok(result.records.some((record) => record.id === "general.turf.brown-yellow-001"));
+});
+
+test("diagnostic contradiction checking never silently picks between verified facts", () => {
+  const conflicts = detectRecordContradictions([
+    { id: "property-1", verifiedFacts: { irrigationZone: "Zone 3", soil: "clay" } },
+    { id: "ticket-1", verifiedFacts: { irrigationZone: "Zone 4", soil: "clay" } }
+  ]);
+  assert.equal(conflicts.length, 1);
+  assert.equal(conflicts[0].field, "irrigationzone");
+  assert.equal(conflicts[0].requiresOwnerReview, true);
+});
+
+test("season context is derived without loading weather data", () => {
+  assert.equal(currentSeason(new Date("2026-01-15T00:00:00Z")), "winter");
+  assert.equal(currentSeason(new Date("2026-04-15T00:00:00Z")), "spring");
+  assert.equal(currentSeason(new Date("2026-07-15T00:00:00Z")), "summer");
+  assert.equal(currentSeason(new Date("2026-10-15T00:00:00Z")), "fall");
+});
+
+test("orchestrator uses the structured diagnostic tool for landscaping symptoms", async () => {
+  const result = await orchestrateDashboardRequest({
+    message: "Why does this mossy lawn keep returning in Portland?",
+    context: { properties: [], tickets: [], pageContext: {} },
+    actor: { userId: "owner-1", role: "owner" },
+    hasPermission: () => true
+  });
+  const diagnostic = result.toolResults.find((tool) => tool.name === "diagnose_landscaping_issue");
+  assert.equal(diagnostic?.ok, true);
+  assert.equal(diagnostic.output.diagnostic, true);
+  assert.ok(diagnostic.output.records.some((record) => record.id === "regional.pnw.moss-compaction-001"));
 });

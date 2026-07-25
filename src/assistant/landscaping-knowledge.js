@@ -3,14 +3,15 @@
 const records = require("../../knowledge/indexes/records.json");
 
 const SAFETY_TERMS = /\b(safety|hazard|danger|toxic|poison|power line|electrical|licensed?|permit|backflow|pesticide|tree risk|hanging limb|structural)\b/i;
-const LANDSCAPING_TERMS = /\b(lawn|turf|mow|edge|aerat|seed|thatch|plant|tree|shrub|perennial|annual|groundcover|grass|weed|prun|hedge|soil|compost|mulch|bed|irrigation|sprinkler|drain|drainage|standing water|ponding|grading|rain garden|erosion|pest|disease|seasonal|grounds|pressure wash|equipment|estimate|material|crew|inspection|landscap)\b/i;
+const LANDSCAPING_TERMS = /\b(lawn|turf|mow|edge|aerat|seed|thatch|plant|tree|shrub|perennial|annual|groundcover|grass|weed|moss|brown lawn|yellow lawn|wilt|leaf|prun|hedge|soil|compost|mulch|bed|irrigation|sprinkler|drain|drainage|standing water|ponding|grading|rain garden|erosion|pest|disease|seasonal|grounds|pressure wash|equipment|estimate|material|crew|inspection|landscap)\b/i;
+const STOP_WORDS = new Set(["about", "after", "again", "also", "before", "being", "could", "does", "from", "have", "into", "just", "more", "need", "provide", "should", "that", "this", "when", "where", "which", "with", "would", "your"]);
 
 function normalize(value) {
   return String(value || "").toLowerCase().replace(/[^a-z0-9]+/g, " ").trim();
 }
 
 function tokens(value) {
-  return [...new Set(normalize(value).split(" ").filter((token) => token.length > 2))];
+  return [...new Set(normalize(value).split(" ").filter((token) => token.length > 2 && !STOP_WORDS.has(token)))];
 }
 
 function landscapingIntent(message) {
@@ -27,7 +28,8 @@ function recordText(record) {
 
 function scoreRecord(record, queryTokens, context = {}) {
   const text = recordText(record);
-  let score = queryTokens.reduce((sum, token) => sum + (text.includes(token) ? (record.aliases || []).some((alias) => normalize(alias).includes(token)) ? 5 : 2 : 0), 0);
+  const textTokens = new Set(text.split(" ").filter(Boolean));
+  let score = queryTokens.reduce((sum, token) => sum + (textTokens.has(token) ? (record.aliases || []).some((alias) => tokens(alias).includes(token)) ? 5 : 2 : 0), 0);
   const region = normalize(context.region);
   const season = normalize(context.season);
   const propertyType = normalize(context.propertyType);
@@ -38,6 +40,13 @@ function scoreRecord(record, queryTokens, context = {}) {
   if (jobType && (record.jobTypes || []).some((value) => jobType.includes(normalize(value)) || normalize(value).includes(jobType))) score += 3;
   if (context.preferredLayers?.includes(record.layer)) score += 2;
   if (SAFETY_TERMS.test(context.message || "") && record.layer === "safety") score += 8;
+  if (score > 0) {
+    const authorityWeight = { safety: 5, company: 4, regional: 3, general: 2 };
+    score += authorityWeight[record.layer] || 0;
+    if (record.confidenceLevel === "high") score += 2;
+    const reviewedAt = Date.parse(record.lastReviewedDate || "");
+    if (Number.isFinite(reviewedAt) && Date.now() - reviewedAt < 370 * 24 * 60 * 60 * 1000) score += 1;
+  }
   return score;
 }
 
@@ -58,8 +67,14 @@ function retrieveLandscapingKnowledge({ query, region = "Portland", season = "",
   const queryTokens = tokens(query);
   if (!queryTokens.length) return { summary: "No landscaping search terms were supplied.", records: [], citations: [], partial: true };
   const context = { message: query, region, season, propertyType, jobType, preferredLayers: ["regional", "company"] };
-  const ranked = records.filter((record) => record.status === "approved")
-    .map((record) => ({ record, score: scoreRecord(record, queryTokens, context) }))
+  const initiallyScored = records.filter((record) => record.status === "approved")
+    .map((record) => ({ record, score: scoreRecord(record, queryTokens, context) }));
+  const directlyRelevantIds = new Set(initiallyScored.filter((item) => item.score >= 14).map((item) => item.record.id));
+  const ranked = initiallyScored
+    .map((item) => ({
+      ...item,
+      score: item.score + ((item.record.relatedRecords || []).some((id) => directlyRelevantIds.has(id)) ? 8 : 0)
+    }))
     .filter((item) => item.score > 0)
     .sort((a, b) => b.score - a.score || a.record.id.localeCompare(b.record.id));
   const selected = ranked.slice(0, Math.max(1, Math.min(8, Number(limit) || 6)))

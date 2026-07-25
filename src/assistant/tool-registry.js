@@ -9,6 +9,7 @@ const {
   proactiveRisks, relationshipMap, scheduleInsights
 } = require("./intelligence-service");
 const { retrieveLandscapingKnowledge } = require("./landscaping-knowledge");
+const { diagnoseLandscapingIssue } = require("./landscaping-diagnostics");
 
 function timeout(promise, timeoutMs, toolName) {
   let timer;
@@ -207,6 +208,7 @@ function createToolRegistry({ permissionGuard }) {
   register({ name: "analyze_lead_next_actions", description: "Rank active leads using follow-up timing and record completeness, then recommend the next touch.", requiredPermission: "leads:read", inputSchema: {}, outputSchema: { records: "array", recommendation: "string", citations: "array" }, execute: leadInsights });
   register({ name: "detect_operational_risks", description: "Proactively identify blocked tickets, unpaid invoices, and documents needing review.", requiredPermission: "dashboard:read", inputSchema: {}, outputSchema: { records: "array", calculation: "object" }, execute: proactiveRisks });
   register({ name: "retrieve_landscaping_knowledge", description: "Retrieve ranked approved landscaping, regional, company, and safety records.", requiredPermission: "dashboard:read", inputSchema: { query: "string", region: "string", season: "string", propertyType: "string", jobType: "string" }, outputSchema: { records: "array", citations: "array", contextBoundaries: "object" }, execute: retrieveLandscapingKnowledge });
+  register({ name: "diagnose_landscaping_issue", description: "Build a cautious symptom assessment with alternatives, missing observations, contradictions, confidence, safety, and escalation conditions.", requiredPermission: "dashboard:read", inputSchema: { query: "string", region: "string", season: "string", propertyType: "string", jobType: "string" }, outputSchema: { records: "array", citations: "array", conflictingEvidence: "array", requiredObservations: "array", confidence: "string" }, execute: diagnoseLandscapingIssue });
   register({
     name: "transition_ticket_stage",
     description: "Validate and preview one legal ticket stage transition. Execution requires explicit button approval.",

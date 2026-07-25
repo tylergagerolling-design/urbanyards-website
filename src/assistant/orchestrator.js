@@ -10,6 +10,7 @@ const { verifyAssistantResult } = require("./verification-service");
 const { correctionPreview, relevantMemories, toModelMemory } = require("./memory-service");
 const { planUIActions } = require("./ui-action-planner");
 const { landscapingIntent } = require("./landscaping-knowledge");
+const { DIAGNOSTIC_TERMS, currentSeason } = require("./landscaping-diagnostics");
 
 function queryFromMessage(message) {
   return String(message || "")
@@ -44,13 +45,15 @@ function toolsForRouting(routing, resolvedEntity) {
   if (/\b(proactive|risk|risks|what needs attention|falling through|missing across|operations check)\b/i.test(routing.message)) calls.push({ name: "detect_operational_risks", input: {} });
   if (landscapingIntent(routing.message)) {
     const selected = resolvedEntity?.record || {};
-    calls.push({ name: "retrieve_landscaping_knowledge", input: {
+    const landscapingInput = {
       query: routing.message,
       region: selected.city || selected.region || "Portland",
-      season: "",
+      season: currentSeason(),
       propertyType: selected.propertyType || selected.type || "",
       jobType: selected.service || selected.requestedService || ""
-    } });
+    };
+    calls.push({ name: "retrieve_landscaping_knowledge", input: landscapingInput });
+    if (DIAGNOSTIC_TERMS.test(routing.message)) calls.push({ name: "diagnose_landscaping_issue", input: landscapingInput });
   }
   const transitionStage = requestedTicketStage(routing.message);
   if (transitionStage && resolvedEntity?.recordType === "ticket") {

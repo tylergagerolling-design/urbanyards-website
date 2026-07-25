@@ -14706,10 +14706,10 @@ body:not(.is-login-screen) .app-view :is(.dashboard-main, .detail-drawer) :is(
   min-width: 0 !important;
   max-width: 100% !important;
   padding: 0 var(--dashboard-button-pad-x) !important;
-  border: 1px solid var(--button-forest-300) !important;
+  border: 1px solid var(--button-neutral-300) !important;
   border-radius: var(--dashboard-button-radius) !important;
-  background: var(--button-forest-100) !important;
-  color: var(--button-forest-900) !important;
+  background: var(--button-neutral-100) !important;
+  color: var(--button-neutral-900) !important;
   box-shadow: 0 5px 14px rgba(32, 38, 34, .05) !important;
   font: inherit !important;
   font-size: 14px !important;
@@ -14734,9 +14734,9 @@ body:not(.is-login-screen) .app-view :is(.dashboard-main, .detail-drawer) :is(
   .quick-action-link,
   .uy-button
 ):hover:not(:disabled):not([aria-disabled="true"]) {
-  border-color: var(--button-forest-500) !important;
-  background: var(--button-forest-200) !important;
-  color: var(--button-forest-900) !important;
+  border-color: var(--button-neutral-400) !important;
+  background: var(--button-neutral-200) !important;
+  color: var(--button-neutral-900) !important;
   box-shadow: 0 8px 18px rgba(32, 61, 44, .08) !important;
   transform: translateY(-1px) !important;
 }
@@ -14835,7 +14835,16 @@ body:not(.is-login-screen) .app-view :is(.dashboard-main, .detail-drawer) :is(
   [data-action="confirm-publish-training"],
   [data-action="publish-groundskeeper-ai"],
   [data-action="new-ai-entry"],
-  [data-action="invite-dashboard-user"]
+  [data-action="invite-dashboard-user"],
+  button[type="submit"],
+  [data-action*="create"],
+  [data-action*="add"],
+  [data-action*="save"],
+  [data-action*="schedule"],
+  [data-action*="upload"],
+  [data-action*="import"],
+  [data-action*="connect"],
+  [data-action*="assign"]
 ) {
   border-color: var(--button-forest-700) !important;
   background: var(--button-forest-700) !important;
@@ -14885,7 +14894,16 @@ body:not(.is-login-screen) .app-view :is(.dashboard-main, .detail-drawer) :is(
   [data-action="confirm-publish-training"],
   [data-action="publish-groundskeeper-ai"],
   [data-action="new-ai-entry"],
-  [data-action="invite-dashboard-user"]
+  [data-action="invite-dashboard-user"],
+  button[type="submit"],
+  [data-action*="create"],
+  [data-action*="add"],
+  [data-action*="save"],
+  [data-action*="schedule"],
+  [data-action*="upload"],
+  [data-action*="import"],
+  [data-action*="connect"],
+  [data-action*="assign"]
 ):hover:not(:disabled):not([aria-disabled="true"]) {
   border-color: var(--button-forest-800) !important;
   background: var(--button-forest-800) !important;
@@ -14950,9 +14968,9 @@ body:not(.is-login-screen) .app-view :is(.dashboard-main, .detail-drawer) :is(
   a.inline-action[href^="mailto:"],
   a.inline-action[target="_blank"]
 ) {
-  border-color: var(--button-forest-300) !important;
+  border-color: var(--button-neutral-300) !important;
   background: var(--button-white) !important;
-  color: var(--button-forest-800) !important;
+  color: var(--button-neutral-900) !important;
   box-shadow: 0 4px 12px rgba(32, 38, 34, .04) !important;
 }
 
@@ -14980,8 +14998,8 @@ body:not(.is-login-screen) .app-view :is(.dashboard-main, .detail-drawer) :is(
   a.inline-action[href^="mailto:"],
   a.inline-action[target="_blank"]
 ):hover:not(:disabled):not([aria-disabled="true"]) {
-  border-color: var(--button-forest-600) !important;
-  background: var(--button-forest-50) !important;
+  border-color: var(--button-neutral-400) !important;
+  background: var(--button-neutral-100) !important;
 }
 
 body:not(.is-login-screen) .app-view :is(.dashboard-main, .detail-drawer) :is(
@@ -15039,10 +15057,10 @@ body:not(.is-login-screen) .app-view :is(.dashboard-main, .detail-drawer) :is(
   [data-action="save-call-outcome"],
   [data-action="upload-documentation-submission"]
 ) {
-  border-color: #a8c896 !important;
-  background: #eaf5e1 !important;
-  color: var(--button-forest-900) !important;
-  box-shadow: 0 4px 12px rgba(95, 125, 98, .08) !important;
+  border-color: var(--button-forest-700) !important;
+  background: var(--button-forest-700) !important;
+  color: var(--button-white) !important;
+  box-shadow: 0 8px 18px rgba(38, 61, 44, .16) !important;
 }
 
 body:not(.is-login-screen) .app-view :is(.dashboard-main, .detail-drawer) :is(
@@ -15054,8 +15072,8 @@ body:not(.is-login-screen) .app-view :is(.dashboard-main, .detail-drawer) :is(
   [data-action="confirm-outreach-import"],
   [data-action="upload-documentation-submission"]
 ):hover:not(:disabled):not([aria-disabled="true"]) {
-  border-color: #8dbb76 !important;
-  background: #d9eccb !important;
+  border-color: var(--button-forest-800) !important;
+  background: var(--button-forest-800) !important;
 }
 
 body:not(.is-login-screen) .app-view :is(.dashboard-main, .detail-drawer) :is(
@@ -15093,13 +15111,14 @@ body:not(.is-login-screen) .app-view :is(.dashboard-main, .detail-drawer) :is(
   [data-action*="remove"],
   [data-action*="reject"],
   [data-action*="undo"],
+  [data-action*="cancel"],
   [data-action*="cancel-job"],
   [data-action="clear-demo-data"]
 ) {
-  border-color: rgba(217, 45, 32, .7) !important;
-  background: var(--button-danger-50) !important;
-  color: var(--button-danger-700) !important;
-  box-shadow: none !important;
+  border-color: var(--button-danger-600) !important;
+  background: var(--button-danger-600) !important;
+  color: var(--button-white) !important;
+  box-shadow: 0 8px 18px rgba(180, 35, 24, .16) !important;
 }
 
 body:not(.is-login-screen) .app-view :is(.dashboard-main, .detail-drawer) :is(
@@ -15109,12 +15128,13 @@ body:not(.is-login-screen) .app-view :is(.dashboard-main, .detail-drawer) :is(
   [data-action*="remove"],
   [data-action*="reject"],
   [data-action*="undo"],
+  [data-action*="cancel"],
   [data-action*="cancel-job"],
   [data-action="clear-demo-data"]
 ):hover:not(:disabled):not([aria-disabled="true"]) {
-  border-color: var(--button-danger-600) !important;
-  background: var(--button-danger-100) !important;
-  color: var(--button-danger-700) !important;
+  border-color: var(--button-danger-700) !important;
+  background: var(--button-danger-700) !important;
+  color: var(--button-white) !important;
 }
 
 body:not(.is-login-screen) .app-view :is(.dashboard-main, .detail-drawer) :is(
@@ -15384,10 +15404,10 @@ body:not(.is-login-screen) .app-view .dashboard-main :is(#overview, #calendar) :
   min-width: 0 !important;
   max-width: 100% !important;
   padding: 0 var(--dashboard-button-pad-x) !important;
-  border: 1px solid var(--button-forest-300) !important;
+  border: 1px solid var(--button-neutral-300) !important;
   border-radius: var(--dashboard-button-radius) !important;
-  background: var(--button-forest-100) !important;
-  color: var(--button-forest-900) !important;
+  background: var(--button-neutral-100) !important;
+  color: var(--button-neutral-900) !important;
   box-shadow: 0 5px 14px rgba(32, 38, 34, .05) !important;
   font: inherit !important;
   font-size: 14px !important;
@@ -15409,9 +15429,9 @@ body:not(.is-login-screen) .app-view .dashboard-main :is(#overview, #calendar) :
   .work-primary-action,
   .quick-action-link
 ):hover:not(:disabled):not([aria-disabled="true"]) {
-  border-color: var(--button-forest-500) !important;
-  background: var(--button-forest-200) !important;
-  color: var(--button-forest-900) !important;
+  border-color: var(--button-neutral-400) !important;
+  background: var(--button-neutral-200) !important;
+  color: var(--button-neutral-900) !important;
   box-shadow: 0 8px 18px rgba(32, 61, 44, .08) !important;
   transform: translateY(-1px) !important;
 }
@@ -23246,4 +23266,16 @@ body:not(.is-login-screen) .dashboard-health-item strong {
   min-width: 0;
   max-width: 100%;
   word-break: break-all;
+}
+
+body:not(.is-login-screen) .sidebar-notifications-clear {
+  border-color: var(--button-danger-600) !important;
+  background: var(--button-danger-600) !important;
+  color: #fff !important;
+}
+
+body:not(.is-login-screen) .sidebar-notifications-clear:hover {
+  border-color: var(--button-danger-700) !important;
+  background: var(--button-danger-700) !important;
+  color: #fff !important;
 }

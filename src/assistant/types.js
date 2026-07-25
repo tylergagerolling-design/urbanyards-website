@@ -4,7 +4,11 @@ const ASSISTANT_INTENTS = Object.freeze([
   "question", "record_search", "summary", "analysis", "comparison",
   "recommendation", "report", "navigation", "planning", "simulation",
   "create_action", "update_action", "schedule_action", "financial_action",
-  "document_action", "automation_request", "ambiguous"
+  "document_action", "automation_request", "ambiguous",
+  "landscaping_question", "plant_identification", "diagnostic_request",
+  "irrigation_troubleshooting", "drainage_troubleshooting", "property_inspection",
+  "estimate_request", "material_calculation", "labor_calculation", "field_guidance",
+  "safety_question", "licensing_question", "photo_review", "memory_request"
 ]);
 
 const RECORD_TYPES = Object.freeze([

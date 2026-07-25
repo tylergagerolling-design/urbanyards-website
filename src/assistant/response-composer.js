@@ -1,6 +1,6 @@
 "use strict";
 
-function composeModelContext({ routing, pageContext, resolvedEntity, toolResults, verification, memories = [], uiActions = [], memoryPreview = null }) {
+function composeModelContext({ routing, executionPlan, pageContext, resolvedEntity, toolResults, verification, memories = [], uiActions = [], memoryPreview = null }) {
   const safeResults = toolResults.map((result) => ({
     tool: result.name,
     ok: result.ok,
@@ -23,7 +23,8 @@ function composeModelContext({ routing, pageContext, resolvedEntity, toolResults
     "Landscaping knowledge records are separated into general, regional, approved Urban Yards company, and safety/licensing layers. Never describe one layer as another.",
     "For landscaping field guidance, organize relevant answers as Situation, Likely cause, Immediate action, Recommended procedure, Tools and materials, Safety, Quality check, Escalation, Documentation, and optional customer recommendation.",
     "Distinguish confirmed facts, likely or possible diagnoses, customer preferences, company policy, general best practice, legal/licensing requirements, and recommendations requiring an on-site inspection.",
-    JSON.stringify({ routing, pageContext, memories, uiActions, memoryPreview, resolvedEntity: resolvedEntity ? {
+    "Use the execution plan as bounded task metadata, not private chain-of-thought. Honor its missing-information and expected-output fields.",
+    JSON.stringify({ routing, executionPlan, pageContext, memories, uiActions, memoryPreview, resolvedEntity: resolvedEntity ? {
       entityType: resolvedEntity.recordType,
       recordId: resolvedEntity.recordId,
       displayName: resolvedEntity.displayName,

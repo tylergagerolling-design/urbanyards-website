@@ -44,6 +44,20 @@ function routeIntent(message) {
   if (matches(value, /\b(invoices?|expenses?|payments?|profit|margin|revenue|money|receivables?)\b/)) intents.push("financial_action");
   if (matches(value, /\b(documents?|forms?|photos?|proof)\b/)) intents.push("document_action");
   if (matches(value, /\b(automate|automation|every time|recurring rule)\b/)) intents.push("automation_request");
+  if (matches(value, /\b(lawn|turf|plant|shrub|tree|soil|mulch|weed|pest|disease|mow|prun|irrigation|drainage|landscap)\b/)) intents.push("landscaping_question");
+  if (matches(value, /\b(identify|what plant|which plant|species)\b/)) intents.push("plant_identification");
+  if (matches(value, /\b(brown|yellow|bare|moss|wilt|spot|scorch|rot|damage|dying|declin|diagnos)\b/)) intents.push("diagnostic_request");
+  if (matches(value, /\b(irrigation|sprinkler|zone|low pressure|coverage)\b/)) intents.push("irrigation_troubleshooting");
+  if (matches(value, /\b(drainage|standing water|ponding|runoff|erosion)\b/)) intents.push("drainage_troubleshooting");
+  if (matches(value, /\b(property inspection|inspect (?:the )?(?:property|site)|property review)\b/)) intents.push("property_inspection");
+  if (matches(value, /\b(estimate|quote|pricing|price this)\b/)) intents.push("estimate_request");
+  if (matches(value, /\b(calculate|how much|quantity)\b/) && matches(value, /\b(mulch|soil|gravel|plant|material|square feet|linear feet)\b/)) intents.push("material_calculation");
+  if (matches(value, /\b(labor hours|crew hours|how long|crew size)\b/)) intents.push("labor_calculation");
+  if (matches(value, /\b(field worker|work sequence|what .* bring|required tools|ppe|job instructions)\b/)) intents.push("field_guidance");
+  if (matches(value, /\b(safety|hazard|danger|stop work|power line|chemical)\b/)) intents.push("safety_question");
+  if (matches(value, /\b(license|licensing|permit|regulated|backflow)\b/)) intents.push("licensing_question");
+  if (matches(value, /\b(photos?|image|picture)\b/) && matches(value, /\b(review|inspect|look at|analy[sz]e|identify)\b/)) intents.push("photo_review");
+  if (matches(value, /\b(remember|memory|forget|save this)\b/)) intents.push("memory_request");
   if (!intents.length) intents.push(value ? "question" : "ambiguous");
   const explicitWrite = /\b(create|add|update|edit|change|assign|move|schedule|reschedule|send|record|delete|archive|enable|disable|automate)\b/i.test(value);
   return {

@@ -6,6 +6,7 @@ const RESPONSE_SCHEMA = {
   type: "object",
   required: ["summary", "findings", "risks", "missingInformation", "recommendation", "shouldEscalate"],
   properties: {
+    consultantRole: { type: "string" },
     summary: { type: "string" },
     findings: {
       type: "array",
@@ -29,6 +30,10 @@ const RESPONSE_SCHEMA = {
     alternativeExplanations: { type: "array", items: { type: "string" } },
     alternativeSolutions: { type: "array", items: { type: "string" } },
     regionalConsiderations: { type: "array", items: { type: "string" } },
+    seasonalConsiderations: { type: "array", items: { type: "string" } },
+    propertyDamageRisks: { type: "array", items: { type: "string" } },
+    economicalOption: { type: "string" },
+    durableOption: { type: "string" },
     recommendedChanges: { type: "array", items: { type: "string" } },
     confidenceScore: { type: "number" }
   }
@@ -56,6 +61,7 @@ function validateConsultation(value) {
     confidence: Math.max(0, Math.min(1, Number(item?.confidence) || 0))
   })).filter((item) => item.finding) : [];
   const result = {
+    consultantRole: String(value.consultantRole || "").slice(0, 100),
     summary: String(value.summary || "").slice(0, 1200),
     findings,
     risks: boundedStrings(value.risks),
@@ -68,6 +74,10 @@ function validateConsultation(value) {
     alternativeExplanations: boundedStrings(value.alternativeExplanations),
     alternativeSolutions: boundedStrings(value.alternativeSolutions),
     regionalConsiderations: boundedStrings(value.regionalConsiderations),
+    seasonalConsiderations: boundedStrings(value.seasonalConsiderations),
+    propertyDamageRisks: boundedStrings(value.propertyDamageRisks),
+    economicalOption: String(value.economicalOption || "").slice(0, 800),
+    durableOption: String(value.durableOption || "").slice(0, 800),
     recommendedChanges: boundedStrings(value.recommendedChanges),
     confidenceScore: Math.max(0, Math.min(1, Number(value.confidenceScore) || 0))
   };

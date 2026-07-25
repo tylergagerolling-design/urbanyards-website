@@ -46,6 +46,39 @@ That foundation is now implemented. The current continuation preserves it and de
 - Expanded the existing approved library from 11 to 17 focused records covering turf discoloration, PNW moss/compaction, plant wilt/yellowing, trunk/crown mulch safety, heat/traffic safety, and commercial recurring inspections.
 - Preserved lazy loading, bounded results, 2.5-second tool timeouts, server-side model calls, role permissions, citations, and explicit write approval.
 
+## Reasoning continuation
+
+The next continuation adds the requested operating pattern to the same orchestration path without exposing chain-of-thought or introducing a second model workflow.
+
+### Added
+
+- Multi-intent classification for landscaping, plant identification, diagnosis, irrigation, drainage, property inspection, estimates, material and labor calculations, field guidance, safety, licensing, photos, and memory.
+- Combinable reasoning modes: general, landscaping diagnostic, property analysis, estimating, field worker, quality control, business operations, and safety/compliance.
+- A bounded execution plan containing desired outcome, required record types, selected tools, missing information, risk flags, consultation candidacy, and expected output.
+- An approved mulch/soil/gravel volume calculator that uses supplied square footage and depth, shows its formula and contingency, and refuses to invent missing dimensions.
+- Confidence calibration across information completeness, grounded sources, contradictions, partial results, safety, licensing, and specialist-review need.
+- A concise final self-check contract for record resolution, unsupported measurements, contradictions, regional/seasonal context, and practical next actions.
+- Targeted Gemini roles for horticulture, turf, irrigation, drainage, safety, licensing, estimating, property operations, or general critical review.
+- Expanded structured Gemini output for seasonal considerations, property-damage risk, economical alternatives, and durable alternatives.
+
+### Performance and security boundaries retained
+
+- No additional model round trip is introduced by task planning, calculators, or verification.
+- Simple greetings and navigation requests remain in general mode.
+- Calculators and reasoning metadata execute locally inside the existing bounded server orchestration.
+- Gemini remains threshold-controlled, rate-limited, single-depth, server-side, sanitized, optional, and failure tolerant.
+- Existing permission checks run before every tool.
+- No new table, migration, embedding request, initial-dashboard query, client secret, or autonomous write was added.
+
+### Still incomplete
+
+- Photo understanding requires a separately authorized image-input path; metadata alone is not treated as image content.
+- Current weather and rainfall tools are not yet registered with a trusted provider.
+- Full labor, plant-spacing, disposal, travel, overhead, margin, and cost calculators remain future work.
+- Memory does not yet expose the full verification-state vocabulary in its persisted schema.
+- Completed-ticket forms do not yet capture every proposed outcome-learning field.
+- The owner evaluation workspace does not yet aggregate reasoning-test and production-telemetry results.
+
 ### Remain untouched
 
 - Dashboard navigation and visual design

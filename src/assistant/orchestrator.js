@@ -11,6 +11,7 @@ const { correctionPreview, relevantMemories, toModelMemory } = require("./memory
 const { planUIActions } = require("./ui-action-planner");
 const { landscapingIntent } = require("./landscaping-knowledge");
 const { DIAGNOSTIC_TERMS, currentSeason } = require("./landscaping-diagnostics");
+const { buildExecutionPlan } = require("./reasoning-planner");
 
 function queryFromMessage(message) {
   return String(message || "")
@@ -55,6 +56,9 @@ function toolsForRouting(routing, resolvedEntity) {
     calls.push({ name: "retrieve_landscaping_knowledge", input: landscapingInput });
     if (DIAGNOSTIC_TERMS.test(routing.message)) calls.push({ name: "diagnose_landscaping_issue", input: landscapingInput });
   }
+  if (routing.intents.includes("material_calculation")) {
+    calls.push({ name: "calculate_landscape_material", input: { query: routing.message } });
+  }
   const transitionStage = requestedTicketStage(routing.message);
   if (transitionStage && resolvedEntity?.recordType === "ticket") {
     calls.push({ name: "transition_ticket_stage", input: { ticketId: resolvedEntity.recordId, newStage: transitionStage } });
@@ -82,6 +86,7 @@ async function orchestrateDashboardRequest({ message, context = {}, actor, hasPe
   const permissionGuard = createPermissionGuard({ hasPermission });
   const registry = createToolRegistry({ permissionGuard });
   const calls = toolsForRouting(routing, resolvedEntity);
+  const executionPlan = buildExecutionPlan({ message, routing, resolvedEntity, calls });
   const toolStartedAt = Date.now();
   const toolResults = await Promise.all(calls.map((call) => registry.execute(call.name, call.input, { actor, snapshot, pageContext })));
   const citations = [];
@@ -133,6 +138,7 @@ async function orchestrateDashboardRequest({ message, context = {}, actor, hasPe
   };
   return {
     routing,
+    executionPlan,
     pageContext,
     resolvedEntity,
     toolResults,
@@ -145,7 +151,7 @@ async function orchestrateDashboardRequest({ message, context = {}, actor, hasPe
     transitionAttempt,
     relevantMemory,
     uiActions,
-    modelContext: composeModelContext({ routing, pageContext, resolvedEntity, toolResults, verification, memories: relevantMemory, uiActions, memoryPreview })
+    modelContext: composeModelContext({ routing, executionPlan, pageContext, resolvedEntity, toolResults, verification, memories: relevantMemory, uiActions, memoryPreview })
   };
 }
 

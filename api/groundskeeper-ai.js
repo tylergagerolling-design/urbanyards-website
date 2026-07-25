@@ -792,7 +792,7 @@ async function handler(req, res) {
         manual: consultation?.manual === true,
         doubleCheck: consultation?.doubleCheck === true
       });
-      consultationMeta = { used: false, status: "skipped", reason: decision.reason, provider: "gemini", model: settings.model };
+      consultationMeta = { used: false, status: "skipped", reason: decision.reason, consultantRole: decision.consultantRole, provider: "gemini", model: settings.model };
       if (decision.consult) {
         const userKey = dashboardActor?.userId || dashboardActor?.email || clientIp(req);
         const perUser = rateLimit(`gemini-user-daily:${userKey}`, settings.perUserDailyLimit, 24 * 60 * 60 * 1000);
@@ -804,7 +804,7 @@ async function handler(req, res) {
             message: userMessage,
             context,
             primaryConclusion: primaryReply,
-            purpose: decision.reason,
+            purpose: `${decision.consultantRole}: ${decision.reason}`,
             groundedContext: {
               toolResults: orchestration?.toolResults || [],
               memories: orchestration?.relevantMemory || [],
@@ -829,6 +829,7 @@ async function handler(req, res) {
               used: true,
               status: "completed",
               reason: decision.reason,
+              consultantRole: reviewed.consultation.consultantRole || decision.consultantRole,
               provider: reviewed.provider,
               model: reviewed.model,
               durationMs: reviewed.durationMs,
@@ -844,6 +845,7 @@ async function handler(req, res) {
               used: false,
               status: "failed",
               reason: decision.reason,
+              consultantRole: decision.consultantRole,
               provider: "gemini",
               model: settings.model,
               errorCategory: error.category || "unavailable",

@@ -2352,6 +2352,19 @@
     return result;
   }
 
+  async function seedQaTicketSuite() {
+    const session = getSession();
+    if (!session?.accessToken) throw new Error("Please sign in again.");
+    const response = await fetch("/.netlify/functions/dashboard-seed-qa", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Authorization: `Bearer ${session.accessToken}` },
+      body: JSON.stringify({ confirmation: "CREATE 20 MOCK TICKETS" })
+    });
+    const result = await response.json().catch(() => ({}));
+    if (!response.ok) throw new Error(result.error || "Unable to create QA ticket suite.");
+    return result;
+  }
+
   function demoImportExportSnapshot() {
     return {
       modules: [
@@ -15731,6 +15744,7 @@ Requirements:
             <button type="button" data-action="copy-dashboard-diagnostics">Copy Diagnostics</button>
             <input type="text" data-reset-confirmation-input aria-label="Data reset confirmation" placeholder="Type DELETE ALL OPERATIONAL DATA">
             <button type="button" class="danger-action" data-action="reset-all-operational-data">Delete All Records</button>
+            <button type="button" data-action="seed-qa-ticket-suite">Create 20 QA Tickets</button>
           </div>
         </header>
         <section class="ticket-metrics" aria-label="Tools summary">
@@ -22523,6 +22537,17 @@ Requirements:
           setDashboardState(`${result.deleted || 0} operational records deleted.`);
         } catch (error) {
           setDashboardState(error.message || "Unable to delete all operational records.", "error");
+        }
+        return;
+      }
+      if (action === "seed-qa-ticket-suite") {
+        try {
+          setDashboardState("Creating 20 linked QA tickets...");
+          const result = await seedQaTicketSuite();
+          await refreshDashboard();
+          setDashboardState(`${result.tickets} QA tickets, ${result.invoices} invoices, and ${result.routeStops} route stops created.`);
+        } catch (error) {
+          setDashboardState(error.message || "Unable to create QA ticket suite.", "error");
         }
         return;
       }

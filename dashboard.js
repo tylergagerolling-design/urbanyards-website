@@ -15729,6 +15729,7 @@ Requirements:
           <div class="ticket-hero-actions">
             <button type="button" data-action="refresh-dashboard">Refresh Dashboard</button>
             <button type="button" data-action="copy-dashboard-diagnostics">Copy Diagnostics</button>
+            <input type="text" data-reset-confirmation-input aria-label="Data reset confirmation" placeholder="Type DELETE ALL OPERATIONAL DATA">
             <button type="button" class="danger-action" data-action="reset-all-operational-data">Delete All Records</button>
           </div>
         </header>
@@ -22510,9 +22511,9 @@ Requirements:
         return;
       }
       if (action === "reset-all-operational-data") {
-        const phrase = window.prompt('This permanently deletes all jobs, tickets, leads, contacts, properties, invoices, budgets, photos/forms, and related history. Type DELETE ALL OPERATIONAL DATA to continue.');
+        const phrase = qs("[data-reset-confirmation-input]")?.value?.trim() || "";
         if (phrase !== "DELETE ALL OPERATIONAL DATA") {
-          setDashboardState("Data deletion cancelled.");
+          setDashboardState("Type DELETE ALL OPERATIONAL DATA in the confirmation field first.", "error");
           return;
         }
         try {

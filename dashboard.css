@@ -23476,3 +23476,11 @@ body:not(.is-login-screen) .app-view .dashboard-main #overview#overview
   background: var(--button-danger-700) !important;
   color: var(--button-white) !important;
 }
+
+body:not(.is-login-screen) .app-view .dashboard-main #overview#overview
+  [data-action="clear-owner-kanban-leads"]:is(:disabled, [aria-disabled="true"]) {
+  border-color: var(--button-danger-600) !important;
+  background: var(--button-danger-100) !important;
+  color: var(--button-danger-700) !important;
+  opacity: 0.72 !important;
+}

@@ -11447,6 +11447,12 @@
   }
 
   const ticketCompletionChecklistItems = [
+    { key: "scopeComplete", label: "Request and scope", detail: "Customer, property, service, and complete scope are in this ticket." },
+    { key: "customerApprovalRecorded", label: "Customer approval", detail: "The customer approval is recorded on the ticket." },
+    { key: "costReviewComplete", label: "Cost review", detail: "Revenue, costs, and margin have been reviewed." },
+    { key: "ownerApprovalRecorded", label: "Owner approval", detail: "The owner has approved the job to proceed." },
+    { key: "draftInvoiceExists", label: "Connected invoice", detail: "An invoice has been created and connected to this ticket.", requiredConnection: true },
+    { key: "scheduledDate", label: "Schedule and assignment", detail: "The work date and responsible team are recorded." },
     { key: "beforePhotosUploaded", label: "Arrival photos", detail: "Proof of the site before work begins." },
     { key: "afterPhotosUploaded", label: "Completion photos", detail: "Proof of the finished work." },
     { key: "fieldCompletionNotes", label: "Completion notes", detail: "What was completed, changed, or left for later." },
@@ -11468,7 +11474,10 @@
   }
 
   function ticketCompletionItemComplete(ticket, key, savedCompleted = []) {
+    if (key === "draftInvoiceExists") return Boolean(ticket.invoiceId || findInvoiceForTicket(ticket)?.id);
+    if (savedCompleted.includes(key)) return true;
     if (key === "actualsRecorded") return savedCompleted.includes(key);
+    if (key === "scheduledDate") return Boolean(ticket.scheduledDate || ticket.dateRaw) && Boolean(ticket.assignedUserId);
     return ticketHasRequirementValue(ticket, key);
   }
 
@@ -11481,9 +11490,9 @@
     return `<section class="ticket-drawer-card ticket-completion-checklist" id="ticket-closeout" aria-label="Unified completion checklist">
       <div class="ticket-drawer-card-heading">
         <div>
-          <p class="eyebrow">One-Step Closeout</p>
-          <h4>Completion checklist</h4>
-          <span>Add the final information here. Mark N/A when a requirement genuinely does not apply.</span>
+          <p class="eyebrow">Beginning-to-end checklist</p>
+          <h4>One ticket. One checklist.</h4>
+          <span>Keep the complete job in this box from intake through payment. The invoice connection cannot be skipped.</span>
         </div>
         <strong>${escapeHtml(`${resolved}/${ticketCompletionChecklistItems.length}`)}</strong>
       </div>
@@ -11497,8 +11506,8 @@
                 <strong>${escapeHtml(item.label)}</strong>
                 <small>${escapeHtml(item.detail)}</small>
               </div>
-              <label><input type="checkbox" value="${escapeHtml(item.key)}" data-completion-complete${isComplete ? " checked" : ""}${naReason ? " disabled" : ""}> Complete</label>
-              <label><input type="checkbox" value="${escapeHtml(item.key)}" data-completion-na${naReason ? " checked" : ""}> N/A</label>
+              <label><input type="checkbox" value="${escapeHtml(item.key)}" data-completion-complete${isComplete ? " checked" : ""}${naReason || item.requiredConnection ? " disabled" : ""}> ${item.requiredConnection ? "Connected automatically" : "Complete"}</label>
+              <label><input type="checkbox" value="${escapeHtml(item.key)}" data-completion-na${naReason ? " checked" : ""}${item.requiredConnection ? " disabled" : ""}> ${item.requiredConnection ? "Required" : "N/A"}</label>
               ${item.key === "fieldCompletionNotes" ? `<textarea data-completion-notes rows="2" placeholder="Completion notes...">${escapeHtml(ticket.fieldCompletionNotes || "")}</textarea>` : ""}
               ${item.key === "paymentStatus" ? `<select data-completion-payment aria-label="Payment status">
                 <option value="">Choose payment status</option>
@@ -11514,7 +11523,7 @@
         </label>
         <div class="drawer-actions ticket-completion-actions">
           <button type="button" data-action="save-ticket-completion" data-id="${escapeHtml(ticket.id)}">${buttonContent("Save Checklist", "save")}</button>
-          ${canManageMoneyWorkflow() ? `<button type="button" class="secondary-action" data-action="create-financial-invoice-from-ticket" data-id="${escapeHtml(ticket.id)}">${buttonContent("Create Draft Invoice", "create-invoice")}</button>` : ""}
+          ${canManageMoneyWorkflow() ? `<button type="button" class="secondary-action" data-action="create-financial-invoice-from-ticket" data-id="${escapeHtml(ticket.id)}">${buttonContent("Create & Connect Invoice", "create-invoice")}</button>` : ""}
           <button type="button" data-action="owner-finalize-ticket" data-id="${escapeHtml(ticket.id)}"${canClose ? "" : " disabled aria-disabled=\"true\""}>${buttonContent("Save & Close Ticket", "complete-reminder")}</button>
         </div>
         ${canClose ? `<p class="ticket-drawer-note">Closing is available when every line is Complete or N/A.</p>` : `<p class="ticket-drawer-note">You can fill this out now. Save & Close becomes available after the job is marked complete.</p>`}
@@ -11536,6 +11545,10 @@
       notApplicable,
       notes,
       ticket: {
+        scope_complete: completed.includes("scopeComplete"),
+        customer_approval_recorded: completed.includes("customerApprovalRecorded"),
+        cost_review_complete: completed.includes("costReviewComplete"),
+        owner_approval_recorded: completed.includes("ownerApprovalRecorded"),
         before_photos_uploaded: completed.includes("beforePhotosUploaded"),
         after_photos_uploaded: completed.includes("afterPhotosUploaded"),
         field_completion_notes: fieldCompletionNotes,
@@ -12764,6 +12777,7 @@
           <a href="#ticket-workbench">Money</a>
           <a href="#ticket-history">History</a>
         </nav>
+        <section class="ticket-single-box" aria-label="Complete ticket record">
         <section class="ticket-next-action-card" id="ticket-next-action">
           <div><p class="eyebrow">Next Action</p><h4>${escapeHtml(ticket.nextAction || "Review this ticket")}</h4><span>${escapeHtml(ticket.ownerLabel || "Unassigned")} owns this step.</span></div>
           <strong>${escapeHtml(ticket.stageLabel)}</strong>
@@ -12796,6 +12810,7 @@
         ${renderTicketRequirements(ticket)}
         ${renderTicketHistory(ticket)}
         ${renderTicketSourceActions(ticket)}
+        </section>
         ${sourceType === "document" && sourceItem ? renderTicketDocumentSource(sourceItem) : ""}
         ${sourceType === "quote" && sourceItem ? renderCallPanel(callPanelContext("quote_submission", sourceItem.id)) : ""}
         ${sourceType === "quote" && sourceItem ? `<div data-call-outcome-slot></div>${renderActivityTimeline({

@@ -21837,6 +21837,25 @@ body:not(.is-login-screen) .ticket-completion-checklist {
     rgba(255, 255, 255, 0.92);
 }
 
+body:not(.is-login-screen) .ticket-single-box {
+  display: grid;
+  gap: 18px;
+  padding: clamp(16px, 2.4vw, 28px);
+  border: 1px solid rgba(36, 75, 51, .2);
+  border-radius: 24px;
+  background: #fbfaf5;
+  box-shadow: 0 18px 45px rgba(25, 48, 34, .09);
+}
+
+body:not(.is-login-screen) .ticket-single-box > :is(section, .ticket-workbench) {
+  margin: 0;
+}
+
+body:not(.is-login-screen) .ticket-completion-item:has([data-completion-complete][value="draftInvoiceExists"]) {
+  border-color: rgba(35, 112, 71, .32);
+  background: #f2f8f3;
+}
+
 body:not(.is-login-screen) .ticket-completion-checklist > .ticket-drawer-card-heading > strong {
   flex: 0 0 auto;
   padding: 0.55rem 0.7rem;

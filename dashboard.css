@@ -14697,7 +14697,7 @@ body:not(.is-login-screen) .app-view :is(.dashboard-main, .detail-drawer) :is(
   .work-primary-action,
   .quick-action-link,
   .uy-button
-):not(.button-positive):not(.button-neutral):not(.button-danger) {
+) {
   display: inline-flex !important;
   align-items: center !important;
   justify-content: center !important;
@@ -14733,7 +14733,7 @@ body:not(.is-login-screen) .app-view :is(.dashboard-main, .detail-drawer) :is(
   .work-primary-action,
   .quick-action-link,
   .uy-button
-):not(.button-positive):not(.button-neutral):not(.button-danger):hover:not(:disabled):not([aria-disabled="true"]) {
+):hover:not(:disabled):not([aria-disabled="true"]) {
   border-color: var(--button-forest-500) !important;
   background: var(--button-forest-200) !important;
   color: var(--button-forest-900) !important;

@@ -2336,6 +2336,22 @@
     return result;
   }
 
+  async function resetAllOperationalData() {
+    const session = getSession();
+    if (!session?.accessToken) throw new Error("Please sign in again.");
+    const response = await fetch("/.netlify/functions/dashboard-reset-data", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${session.accessToken}`
+      },
+      body: JSON.stringify({ confirmation: "DELETE ALL OPERATIONAL DATA" })
+    });
+    const result = await response.json().catch(() => ({}));
+    if (!response.ok) throw new Error(result.error || `Cleanup stopped with ${result.failures?.length || 0} table errors.`);
+    return result;
+  }
+
   function demoImportExportSnapshot() {
     return {
       modules: [
@@ -15713,6 +15729,7 @@ Requirements:
           <div class="ticket-hero-actions">
             <button type="button" data-action="refresh-dashboard">Refresh Dashboard</button>
             <button type="button" data-action="copy-dashboard-diagnostics">Copy Diagnostics</button>
+            ${canManageUsers() ? `<button type="button" class="danger-action" data-action="reset-all-operational-data">Delete All Records</button>` : ""}
           </div>
         </header>
         <section class="ticket-metrics" aria-label="Tools summary">
@@ -22489,6 +22506,22 @@ Requirements:
           setDashboardState("Dashboard diagnostic summary copied.");
         } catch (error) {
           setDashboardState("Unable to copy diagnostics automatically. Browser clipboard permission may be blocked.", "error");
+        }
+        return;
+      }
+      if (action === "reset-all-operational-data") {
+        const phrase = window.prompt('This permanently deletes all jobs, tickets, leads, contacts, properties, invoices, budgets, photos/forms, and related history. Type DELETE ALL OPERATIONAL DATA to continue.');
+        if (phrase !== "DELETE ALL OPERATIONAL DATA") {
+          setDashboardState("Data deletion cancelled.");
+          return;
+        }
+        try {
+          setDashboardState("Deleting all operational records...");
+          const result = await resetAllOperationalData();
+          await refreshDashboard();
+          setDashboardState(`${result.deleted || 0} operational records deleted.`);
+        } catch (error) {
+          setDashboardState(error.message || "Unable to delete all operational records.", "error");
         }
         return;
       }

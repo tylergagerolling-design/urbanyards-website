@@ -23247,3 +23247,212 @@ body:not(.is-login-screen) .dashboard-health-item strong {
   max-width: 100%;
   word-break: break-all;
 }
+
+/* Semantic button language and final alignment pass. */
+body:not(.is-login-screen) :is(button, .button, .inline-action, .quick-action-link):is(.button-positive, .button-neutral, .button-danger) {
+  min-height: 42px;
+  max-width: 100%;
+  padding: 10px 16px;
+  border-width: 1px;
+  border-style: solid;
+  border-radius: 10px;
+  box-sizing: border-box;
+  box-shadow: 0 8px 18px rgba(19, 36, 28, .08);
+  font-weight: 800;
+  line-height: 1.15;
+  text-align: center;
+  text-decoration: none;
+  transition: transform .16s ease, border-color .16s ease, background .16s ease, box-shadow .16s ease, color .16s ease;
+}
+
+body:not(.is-login-screen) :is(button, .button, .inline-action, .quick-action-link).button-positive {
+  border-color: #174d3a;
+  background: linear-gradient(180deg, #2d7559, #174d3a);
+  color: #fff;
+  box-shadow: 0 10px 22px rgba(18, 63, 49, .2);
+}
+
+body:not(.is-login-screen) :is(button, .button, .inline-action, .quick-action-link).button-positive:hover {
+  border-color: #0f382a;
+  background: linear-gradient(180deg, #286a51, #103d2e);
+  color: #fff;
+  box-shadow: 0 14px 28px rgba(18, 63, 49, .24);
+  transform: translateY(-1px);
+}
+
+body:not(.is-login-screen) :is(button, .button, .inline-action, .quick-action-link).button-neutral {
+  border-color: #c6cfca;
+  background: linear-gradient(180deg, #f8faf9, #e7ece9);
+  color: #2f4038;
+  box-shadow: 0 7px 16px rgba(19, 36, 28, .07);
+}
+
+body:not(.is-login-screen) :is(button, .button, .inline-action, .quick-action-link).button-neutral:hover {
+  border-color: #9eaca5;
+  background: linear-gradient(180deg, #fff, #dde5e0);
+  color: #172a21;
+  box-shadow: 0 11px 22px rgba(19, 36, 28, .11);
+  transform: translateY(-1px);
+}
+
+body:not(.is-login-screen) :is(button, .button, .inline-action, .quick-action-link).button-danger {
+  border-color: #8f2f22;
+  background: linear-gradient(180deg, #b94837, #8f2f22);
+  color: #fff;
+  box-shadow: 0 10px 22px rgba(143, 47, 34, .18);
+}
+
+body:not(.is-login-screen) :is(button, .button, .inline-action, .quick-action-link).button-danger:hover {
+  border-color: #702117;
+  background: linear-gradient(180deg, #a83d2e, #762319);
+  color: #fff;
+  box-shadow: 0 14px 28px rgba(143, 47, 34, .24);
+  transform: translateY(-1px);
+}
+
+body:not(.is-login-screen) :is(.button-positive, .button-danger) .button-icon {
+  background: rgba(255, 255, 255, .18);
+  color: inherit;
+}
+
+body:not(.is-login-screen) :is(.button-neutral) .button-icon {
+  background: rgba(47, 64, 56, .1);
+  color: inherit;
+}
+
+body:not(.is-login-screen) :is(button, .button, .inline-action, .quick-action-link):disabled,
+body:not(.is-login-screen) :is(button, .button, .inline-action, .quick-action-link)[aria-disabled="true"] {
+  border-color: #d5dbd7 !important;
+  background: #edf0ee !important;
+  color: #839087 !important;
+  box-shadow: none !important;
+  cursor: not-allowed;
+  transform: none !important;
+  opacity: .78;
+}
+
+body:not(.is-login-screen) :is(
+  .topbar-actions,
+  .quick-actions,
+  .toolbar,
+  .drawer-actions,
+  .card-actions,
+  .money-card-actions,
+  .money-heading-actions,
+  .operations-command-actions,
+  .operations-command-item-actions,
+  .outreach-actions,
+  .route-stop-actions,
+  .document-card-actions,
+  .document-primary-actions,
+  .client-profile-actions,
+  .memory-actions,
+  .ticket-workbench-actions,
+  .ticket-lane-heading > :last-child
+) {
+  display: flex;
+  align-items: center;
+  align-content: center;
+  justify-content: flex-start;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+body:not(.is-login-screen) :is(
+  .ticket-lane-heading,
+  .panel-heading,
+  .money-grid-toolbar,
+  .document-drawer-heading,
+  .operations-command-heading
+) {
+  align-items: flex-start;
+  gap: 14px;
+}
+
+body:not(.is-login-screen) :is(
+  .ticket-lane-heading,
+  .panel-heading,
+  .money-grid-toolbar,
+  .document-drawer-heading,
+  .operations-command-heading
+) > :first-child {
+  min-width: 0;
+  flex: 1 1 260px;
+}
+
+body:not(.is-login-screen) :is(
+  .ticket-lane-heading,
+  .panel-heading,
+  .money-grid-toolbar,
+  .document-drawer-heading,
+  .operations-command-heading
+) > :last-child {
+  margin-left: auto;
+}
+
+body:not(.is-login-screen) :is(
+  .drawer-actions,
+  .card-actions,
+  .money-card-actions,
+  .operations-command-actions,
+  .operations-command-item-actions,
+  .outreach-actions,
+  .route-stop-actions,
+  .document-card-actions,
+  .document-primary-actions,
+  .client-profile-actions,
+  .memory-actions
+) > :is(button, .button, .inline-action, .quick-action-link) {
+  flex: 0 1 auto;
+  margin: 0;
+}
+
+body:not(.is-login-screen) .drawer-actions :is(.button-danger, .danger-action, .document-delete-action) {
+  margin-left: auto;
+}
+
+body:not(.is-login-screen) :is(.toolbar, .calendar-tabs, .operations-filter-pills) > :is(button, .button, .inline-action) {
+  min-width: max-content;
+}
+
+@media (max-width: 760px) {
+  body:not(.is-login-screen) :is(
+    .ticket-lane-heading,
+    .panel-heading,
+    .money-grid-toolbar,
+    .document-drawer-heading,
+    .operations-command-heading
+  ) {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  body:not(.is-login-screen) :is(
+    .ticket-lane-heading,
+    .panel-heading,
+    .money-grid-toolbar,
+    .document-drawer-heading,
+    .operations-command-heading
+  ) > :last-child {
+    width: 100%;
+    margin-left: 0;
+  }
+
+  body:not(.is-login-screen) :is(
+    .drawer-actions,
+    .money-heading-actions,
+    .document-primary-actions,
+    .client-profile-actions
+  ) > :is(button, .button, .inline-action, .quick-action-link) {
+    flex: 1 1 150px;
+  }
+
+  body:not(.is-login-screen) .drawer-actions :is(.button-danger, .danger-action, .document-delete-action) {
+    margin-left: 0;
+  }
+
+  body:not(.is-login-screen) :is(.quick-actions, .settings-grid) > :is(button, .button, .inline-action, .quick-action-link) {
+    width: 100%;
+    min-width: 0;
+  }
+}

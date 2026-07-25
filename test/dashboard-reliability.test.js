@@ -26,7 +26,7 @@ test("live workspace polish contains long records and management cards", () => {
   assert.match(css, /\.call-queue-row > span:first-child :is\(strong, small\)[\s\S]*overflow-wrap: anywhere/);
   assert.match(css, /\.groundskeeper-operation-card[\s\S]*white-space: normal !important/);
   assert.match(css, /\.dashboard-health-item strong[\s\S]*word-break: break-all/);
-  assert.match(html, /dashboard\.css\?v=20260724-live-polish-2/);
+  assert.match(html, /dashboard\.css\?v=20260725-semantic-buttons-1/);
 });
 
 test("authenticated assistant prompt suppresses public quote calls to action", () => {
@@ -812,6 +812,19 @@ test("dashboard navigation and workspace calls to action have working destinatio
   assert.doesNotMatch(js, /action: "go-calendar",\s*actionLabel: "Open Work"/);
   assert.match(js, /closest\("\[data-action\], \[data-export\], \[data-ai-view\]"\)/);
   assert.match(js, /target\.matches\("\[data-ai-view\]"\)[\s\S]*?state\.groundskeeperAiView = target\.dataset\.aiView/);
+});
+
+test("dashboard buttons use semantic colors instead of container position", () => {
+  const js = read("dashboard.js");
+  const css = read("dashboard.css");
+  assert.match(js, /function applyDashboardButtonSemantics/);
+  assert.match(js, /button-positive/);
+  assert.match(js, /button-neutral/);
+  assert.match(js, /button-danger/);
+  assert.match(css, /Semantic button language and final alignment pass/);
+  assert.match(css, /\.button-positive/);
+  assert.match(css, /\.button-neutral/);
+  assert.match(css, /\.button-danger/);
 });
 
 test("production dashboard responses and invite sessions use hardened security defaults", () => {

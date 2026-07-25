@@ -750,26 +750,6 @@
     return `<button class="inline-action" type="button" data-action="${escapeHtml(action)}" data-id="${escapeHtml(id)}">${buttonContent(label, action)}</button>`;
   }
 
-  const DANGER_BUTTON_PATTERN = /\b(delete|remove|reject|decline|cancel|void|archive|disable|disconnect|clear all|reset all|permanent|undo)\b/i;
-  const POSITIVE_BUTTON_PATTERN = /\b(add|create|new|save|submit|confirm|approve|complete|finish|schedule|upload|import|connect|assign|invite|record|mark|sync|push to live|request approval)\b/i;
-
-  function applyDashboardButtonSemantics(root = document) {
-    root.querySelectorAll("button, a.button, a.inline-action, a.quick-action-link").forEach((control) => {
-      if (control.closest(".gm-style, .route-map-zoom, .dashboard-copilot-panel, .mobile-tabbar")) return;
-      const action = String(control.dataset?.action || "").replace(/[-_]+/g, " ");
-      const label = String(control.textContent || "").replace(/\s+/g, " ").trim();
-      const meaning = `${action} ${label}`;
-      control.classList.remove("button-positive", "button-neutral", "button-danger");
-      if (control.classList.contains("danger-action") || DANGER_BUTTON_PATTERN.test(meaning)) {
-        control.classList.add("button-danger");
-      } else if (control.type === "submit" || POSITIVE_BUTTON_PATTERN.test(meaning)) {
-        control.classList.add("button-positive");
-      } else {
-        control.classList.add("button-neutral");
-      }
-    });
-  }
-
   function dashboardIcon(name) {
     return `${DASHBOARD_ICON_PATH}${escapeHtml(name)}`;
   }
@@ -20742,7 +20722,6 @@ Requirements:
     safeRender("contextual Groundskeeper tools", () => renderContextualGroundskeeperTools(active));
     safeRender("dashboard Groundskeeper", () => renderDashboardCopilot());
     safeRender("avatar fallbacks", () => bindAvatarFallbacks());
-    safeRender("button semantics", () => applyDashboardButtonSemantics());
     if (els.todayChip) els.todayChip.textContent = new Date().toLocaleDateString("en-US", { weekday: "long", month: "short", day: "numeric" });
     setActiveSection(state.activeSection, { hydrate: false });
   }
@@ -26394,10 +26373,6 @@ Requirements:
   async function init() {
     applyDashboardPreferences();
     cacheElements();
-    const buttonSemanticsObserver = new MutationObserver((changes) => {
-      if (changes.some((change) => change.addedNodes.length)) applyDashboardButtonSemantics();
-    });
-    buttonSemanticsObserver.observe(document.body, { childList: true, subtree: true });
     bindEvents();
     const hashSection = window.location.hash.replace("#", "");
     const pathSection = dashboardSectionFromPath();

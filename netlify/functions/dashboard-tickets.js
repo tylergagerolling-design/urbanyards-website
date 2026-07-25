@@ -668,7 +668,7 @@ exports.handler = async (event) => {
   try {
     body = parseBody(event);
     const action = String(body.action || "").trim().toLowerCase();
-    if (!["list", "events", "create", "update", "delete", "transition", "ai-transition-cancel", "owner-close-rent-deduction", "owner-finalize-ticket", "event"].includes(action)) {
+    if (!["list", "events", "create", "update", "delete", "transition", "owner-force-transition", "ai-transition-cancel", "owner-close-rent-deduction", "owner-finalize-ticket", "event"].includes(action)) {
       return json(400, { error: "Unsupported ticket action.", requestId });
     }
 
@@ -767,6 +767,50 @@ exports.handler = async (event) => {
       if (!id) return json(400, { error: "A valid ticket id is required.", requestId });
       const result = await transitionTicket(id, body.toStage || body.stage, body, actor, event, requestId);
       return json(200, { ok: true, ...result, requestId });
+    }
+
+    if (action === "owner-force-transition") {
+      if (!canDeleteTicket(actor)) {
+        return json(403, { error: "Only an owner or admin can override ticket requirements.", requestId });
+      }
+      const id = uuidOrNull(body.id || body.ticketId);
+      if (!id) return json(400, { error: "A valid ticket id is required.", requestId });
+      const current = await getTicket(id);
+      if (!current?.id) return json(404, { error: "Ticket was not found.", requestId });
+      const toStage = normalizeStage(body.toStage || body.stage, current.stage);
+      if (toStage === current.stage) return json(200, { ok: true, changed: false, ticket: current, requestId });
+      const notes = cleanText(body.notes, 2000) || `Owner override moved the ticket from ${current.stage} to ${toStage}.`;
+      const ticket = await updateTicket(id, {
+        stage: toStage,
+        status: statusForStage(toStage),
+        next_action: cleanText(body.nextAction || body.next_action, 180)
+      });
+      await supabaseAdminRequest("job_ticket_events", {
+        method: "POST",
+        headers: { Prefer: "return=minimal" },
+        body: JSON.stringify(cleanEventPayload({
+          event_type: "owner_requirement_override",
+          from_stage: current.stage,
+          to_stage: toStage,
+          notes,
+          old_value: { stage: current.stage },
+          new_value: { stage: toStage, requirementsBypassed: true }
+        }, id, actor))
+      }).catch((error) => {
+        if (!tableMissing(error)) throw error;
+      });
+      await writeAuditLog({
+        actor,
+        action: "owner_ticket_requirement_override",
+        entityType: "job_tickets",
+        entityId: id,
+        oldValue: { stage: current.stage },
+        newValue: { stage: toStage },
+        metadata: { requirements_bypassed: true, notes },
+        event,
+        module: "tickets"
+      });
+      return json(200, { ok: true, changed: true, ticket, fromStage: current.stage, toStage, requestId });
     }
 
     if (action === "ai-transition-cancel") {

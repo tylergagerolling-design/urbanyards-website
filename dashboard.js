@@ -11932,7 +11932,9 @@
         ${rentDeductionCloseControl}
       </div>`;
     }
-    const primaryMove = status.move && !(status.blockers || []).length ? status.move : null;
+    const ownerCanOverride = currentSessionRole() === "owner";
+    const primaryMove = status.move && (!(status.blockers || []).length || ownerCanOverride) ? status.move : null;
+    const primaryIsOverride = Boolean(primaryMove && (status.blockers || []).length && ownerCanOverride);
     return `<div class="ticket-next-move-panel is-${escapeHtml(status.state)}">
       <div class="ticket-next-move-main">
         <span>${escapeHtml(owner)}</span>
@@ -11947,9 +11949,10 @@
       ${(status.blockers || []).length ? `<ul class="ticket-next-move-blockers">
         ${status.blockers.map((item) => `<li>${escapeHtml(item)}</li>`).join("")}
       </ul>` : ""}
-      ${primaryMove ? `<button type="button" class="ticket-next-move-button" data-action="transition-ticket-stage" data-id="${escapeHtml(ticket.id)}" data-stage="${escapeHtml(primaryMove.to)}" data-next-action="${escapeHtml(primaryMove.nextAction)}">
-        ${buttonContent(primaryMove.label, "complete-reminder")}
-      </button>` : ""}
+      ${primaryMove ? (primaryIsOverride
+        ? `<button type="button" class="ticket-next-move-button is-owner-override" data-action="owner-force-ticket-stage" data-id="${escapeHtml(ticket.id)}" data-stage="${escapeHtml(primaryMove.to)}" data-next-action="${escapeHtml(primaryMove.nextAction)}">${buttonContent(`Owner Override: ${primaryMove.label}`, "complete-reminder")}</button>`
+        : `<button type="button" class="ticket-next-move-button" data-action="transition-ticket-stage" data-id="${escapeHtml(ticket.id)}" data-stage="${escapeHtml(primaryMove.to)}" data-next-action="${escapeHtml(primaryMove.nextAction)}">${buttonContent(primaryMove.label, "complete-reminder")}</button>`
+      ) : ""}
       ${rentDeductionCloseControl}
     </div>`;
   }
@@ -12199,11 +12202,11 @@
       ${isCanonical ? `${useUnifiedCloseout ? `<p class="ticket-drawer-note">Use the Completion checklist below to finish this ticket. No stage-by-stage closeout handoffs are required.</p>` : `<div class="ticket-transition-grid">
         ${transitions.length ? transitions.map((item) => {
           const missing = item.missing || [];
-          const disabled = missing.length ? " disabled aria-disabled=\"true\"" : "";
-          return `<button type="button" data-action="transition-ticket-stage" data-id="${escapeHtml(ticket.id)}" data-stage="${escapeHtml(item.to)}" data-next-action="${escapeHtml(item.nextAction)}"${disabled}>
-            <strong>${escapeHtml(item.label)}</strong>
-            <small>${escapeHtml(missing.length ? `Missing: ${missing.join(", ")}` : item.detail)}</small>
-          </button>`;
+          const ownerOverride = missing.length && currentSessionRole() === "owner";
+          const disabled = missing.length && !ownerOverride ? " disabled aria-disabled=\"true\"" : "";
+          return ownerOverride
+            ? `<button type="button" class="is-owner-override" data-action="owner-force-ticket-stage" data-id="${escapeHtml(ticket.id)}" data-stage="${escapeHtml(item.to)}" data-next-action="${escapeHtml(item.nextAction)}"><strong>${escapeHtml(`Owner Override: ${item.label}`)}</strong><small>${escapeHtml(`Bypass missing: ${missing.join(", ")}`)}</small></button>`
+            : `<button type="button" data-action="transition-ticket-stage" data-id="${escapeHtml(ticket.id)}" data-stage="${escapeHtml(item.to)}" data-next-action="${escapeHtml(item.nextAction)}"${disabled}><strong>${escapeHtml(item.label)}</strong><small>${escapeHtml(missing.length ? `Missing: ${missing.join(", ")}` : item.detail)}</small></button>`;
         }).join("") : `<p class="ticket-drawer-note">No more workflow moves are available from ${escapeHtml(ticket.stageLabel || "this stage")}.</p>`}
       </div>`}
       ${renderTicketBudgetBridge(ticket)}
@@ -24017,6 +24020,34 @@ Requirements:
           } : null);
         } catch (error) {
           setDashboardState(error.message || "Unable to move ticket.", "error");
+        }
+        return;
+      } else if (action === "owner-force-ticket-stage") {
+        if (currentSessionRole() !== "owner") {
+          setDashboardState("Only the Owner can override ticket requirements.", "error");
+          return;
+        }
+        const nextStage = target.dataset.stage;
+        const previousTicket = dashboardTickets().find((item) => item.source === "ticket" && item.id === id);
+        const previousStage = previousTicket ? ticketStage(previousTicket) : "";
+        const panel = target.closest("[data-ticket-command-panel]");
+        const noteInput = panel?.querySelector("[data-ticket-transition-notes]");
+        const nextActionInput = panel?.querySelector("[data-ticket-next-action-input]");
+        const confirmed = window.confirm(`Owner override: move this ticket to ${ticketStageLabel(normalizeTicketStageForDashboard(nextStage))} even though requirements are missing? This will be recorded in ticket history.`);
+        if (!confirmed) return;
+        try {
+          setDashboardState("Applying Owner override...");
+          const result = await dashboardTicketRequest("owner-force-transition", {
+            id,
+            toStage: nextStage,
+            notes: noteInput?.value || "Owner approved bypassing the missing workflow requirements.",
+            nextAction: nextActionInput?.value || target.dataset.nextAction || ticketNextAction(nextStage)
+          });
+          await refreshDashboard();
+          openTicketDrawer("ticket", result.ticket?.id || id);
+          setDashboardState(`Owner override moved ticket to ${ticketStageLabel(normalizeTicketStageForDashboard(nextStage))}.`);
+        } catch (error) {
+          setDashboardState(error.message || "Unable to apply Owner override.", "error");
         }
         return;
       } else if (action === "owner-close-rent-deduction") {

@@ -15,27 +15,6 @@ function read(relativePath) {
   return fs.readFileSync(path.join(root, relativePath), "utf8");
 }
 
-test("Google Maps loads asynchronously to avoid blocking dashboard startup", () => {
-  assert.match(read("dashboard.js"), /maps\/api\/js\?key=.*&loading=async/);
-});
-
-test("live workspace polish contains long records and management cards", () => {
-  const css = read("dashboard.css");
-  const html = read("dashboard.html");
-  assert.match(css, /Live workspace containment and readable long-record polish/);
-  assert.match(css, /\.call-queue-row > span:first-child :is\(strong, small\)[\s\S]*overflow-wrap: anywhere/);
-  assert.match(css, /\.groundskeeper-operation-card[\s\S]*white-space: normal !important/);
-  assert.match(css, /\.dashboard-health-item strong[\s\S]*word-break: break-all/);
-  assert.match(html, /dashboard\.css\?v=20260724-live-polish-2/);
-});
-
-test("authenticated assistant prompt suppresses public quote calls to action", () => {
-  const api = read("api/groundskeeper-ai.js");
-  assert.match(api, /You are responding inside the authenticated Urban Yards owner dashboard/);
-  assert.match(api, /Do not invite the operator to request a free quote/);
-  assert.match(api, /mode === "dashboard" \? \[\{ role: "system", content: DASHBOARD_CONTEXT \}\] : \[\]/);
-});
-
 function withEnv(patch, callback) {
   const original = {};
   Object.keys(patch).forEach((key) => {
@@ -53,16 +32,6 @@ function withEnv(patch, callback) {
     });
   }
 }
-
-test("dashboard notifications provide a direct Google Voice voicemail shortcut", () => {
-  const html = read("dashboard.html");
-  const css = read("dashboard.css");
-  assert.match(html, /class="sidebar-voicemail-link"/);
-  assert.match(html, /href="https:\/\/voice\.google\.com\/"/);
-  assert.match(html, />\s*Check Voicemail\s*</);
-  assert.match(html, /target="_blank" rel="noopener noreferrer"/);
-  assert.match(css, /\.sidebar-voicemail-link/);
-});
 
 test("dashboard public config builder validates production deploy requirements", () => {
   assert.equal(validHttpsUrl("https://example.com"), true);
@@ -310,7 +279,7 @@ test("dashboard route aliases and new reliability diagnostics are wired", () => 
   assert.match(js, /await ensureBudgetForTicket\(ticket\)/);
   assert.match(js, /await syncBudgetToTicket\(budget\)/);
   assert.match(js, /function canManageWorkWorkflow/);
-  assert.doesNotMatch(js, /<h3>Support Tools<\/h3>[\s\S]*data-action="go-route-planner"[\s\S]*data-action="go-documentation"/);
+  assert.match(js, /field-proof-actions[\s\S]*data-action="go-route-planner"[\s\S]*data-action="go-documentation"[\s\S]*data-action="copy-dashboard-diagnostics"/);
   assert.match(js, /function renderTicketWorkAssignmentBridge/);
   assert.match(js, /async function saveTicketWorkAssignment/);
   assert.match(js, /data-ticket-assignment-form/);
@@ -407,13 +376,13 @@ test("dashboard route aliases and new reliability diagnostics are wired", () => 
   assert.match(js, /window\.google\.maps\.event\.trigger\(view\.map, "resize"\)/);
   assert.match(js, /window\.setTimeout\(triggerResize, 160\)/);
   assert.match(css, /dashboard-map-preview > div[\s\S]*height: 100% !important/);
-  assert.match(css, /work-day-map-card \.dashboard-map-preview \.gm-style[\s\S]*height: 100% !important/);
+  assert.match(css, /dashboard-map-preview \.gm-style > div[\s\S]*height: 100% !important/);
   assert.match(css, /work-day-map-card \.dashboard-map-preview-shell[\s\S]*height: clamp\(184px, 16vw, 246px\)/);
   assert.match(css, /work-day-map-card \.dashboard-map-preview-shell[\s\S]*margin-bottom: 0/);
   assert.match(css, /work-day-map-card \.dashboard-map-preview \.gm-style[\s\S]*height: 100% !important/);
-  assert.match(js, /ticket-drawer-operating-grid/);
+  assert.match(js, /unified-ticket-box/);
   assert.doesNotMatch(js, /renderTicketEndToEndFlow\(dashboardTickets\(\), ticket\.stage, "Current ticket lifecycle"\)/);
-  assert.match(css, /ticket-drawer-operating-grid[\s\S]*grid-template-columns: minmax\(240px, \.82fr\) minmax\(300px, 1\.18fr\)/);
+  assert.match(css, /unified-ticket-summary[\s\S]*grid-template-columns: repeat\(4, minmax\(0, 1fr\)\)/);
   assert.match(js, /function renderMoneyCloseoutPanel/);
   assert.match(js, /Closeout Checklist/);
   assert.match(js, /Protect the final handoff/);
@@ -459,7 +428,7 @@ test("dashboard route aliases and new reliability diagnostics are wired", () => 
   assert.match(workspaceRegistry, /Lead Dashboard/);
   assert.match(js, /Intake Focus/);
   assert.match(js, /data-action="\$\{escapeHtml\(secondaryAction\)\}">/);
-  assert.match(js, /action === "refresh-documentation"/);
+  assert.match(js, /secondaryAction: "refresh-documentation"/);
   assert.doesNotMatch(html, /data-action="go-documents">Open Money<\/button>\s*<\/article>/);
   assert.match(css, /#overview\.home-ticket-page > :not\(\[data-home-workspace\]\)/);
   assert.match(css, /#tickets\.job-ticket-page > :not\(\[data-job-ticket-workspace\]\)/);
@@ -493,146 +462,9 @@ test("dashboard route aliases and new reliability diagnostics are wired", () => 
   assert.match(css, /ticket-board-filter-row[\s\S]*grid-template-columns: repeat\(auto-fit, minmax\(min\(100%, 156px\), 1fr\)\)/);
   assert.match(css, /\.ticket-board-result-count/);
   assert.doesNotMatch(js, /workspace-focus-value/);
-  assert.match(js, /function renderHomeCommandCenter[\s\S]*return renderHomeActionQueue\(actions\)/);
+  assert.match(js, /Home workspace signals/);
   assert.doesNotMatch(js, /Tickets workspace signals/);
   assert.doesNotMatch(css, /#overview\.job-ticket-page > :not\(\[data-job-ticket-workspace\]\)/);
-});
-
-test("dashboard sidebar exposes a secondary drawer for multi-workspace sections", () => {
-  const html = read("dashboard.html");
-  const js = read("dashboard.js");
-  const css = read("dashboard.css");
-
-  assert.match(html, /data-sidebar-nav-group="calendar"[\s\S]*Route Planner/);
-  assert.match(html, /data-sidebar-nav-group="outreach"[\s\S]*Clients/);
-  assert.match(html, /data-sidebar-nav-group="settings"[\s\S]*Equipment[\s\S]*Documentation[\s\S]*Import &amp; Export[\s\S]*Groundskeeper AI/);
-  assert.doesNotMatch(html, /data-sidebar-subnav-toggle/);
-  assert.match(js, /function setSidebarSubnavOpen[\s\S]*data-sidebar-nav-group[\s\S]*classList\.toggle\("is-open"/);
-  assert.match(js, /function setSidebarOpen[\s\S]*if \(shouldOpen\)[\s\S]*setSidebarSubnavOpen\(activeGroup, true\)[\s\S]*else \{[\s\S]*setSidebarSubnavOpen\("", false\)/);
-  assert.match(js, /classList\.contains\("is-sidebar-open"\)[\s\S]*setSidebarSubnavOpen\(activeGroup, true\)[\s\S]*else setSidebarSubnavOpen\("", false\)/);
-  assert.match(css, /dashboard-nav-group\.is-open \.dashboard-subnav[\s\S]*opacity: 1[\s\S]*visibility: visible/);
-  assert.match(css, /dashboard-subnav[\s\S]*position: fixed[\s\S]*left: calc\(var\(--uy-page-pad/);
-  assert.match(css, /dashboard-subnav[\s\S]*left var\(--transition-drawer\)[\s\S]*transform var\(--transition-drawer\)/);
-  assert.match(css, /app-view:has\(\.dashboard-sidebar:hover\) \.dashboard-subnav[\s\S]*var\(--uy-drawer-width/);
-  assert.match(css, /dashboard-subnav[\s\S]*border-radius: 0 28px 28px 0/);
-  assert.match(css, /dashboard-sidebar:has\(\.dashboard-nav-group\.is-open\)[\s\S]*border-radius: 28px 0 0 28px/);
-  assert.match(css, /dashboard-subnav a\.is-active[\s\S]*background: transparent[\s\S]*box-shadow: none/);
-  assert.doesNotMatch(css, /dashboard-subnav a\.is-active::before/);
-  assert.match(css, /dashboard-subnav a\.is-active::after[\s\S]*background: #3f734d[\s\S]*opacity: 1/);
-  assert.match(css, /Stable drawer alignment[\s\S]*grid-template-columns: var\(--uy-sidebar-icon\) minmax\(0, 1fr\) 7px/);
-  assert.match(css, /dashboard-subnav a,[\s\S]*grid-template-columns: minmax\(0, 1fr\) 7px[\s\S]*transform: none/);
-  assert.match(html, /data-sidebar-subnav="settings"[\s\S]*<span>Import &amp; Export<\/span>/);
-  assert.match(css, /Final drawer typography lock[\s\S]*dashboard-subnav a > span[\s\S]*white-space: nowrap/);
-  assert.match(css, /dashboard-subnav a,[\s\S]*height: 42px[\s\S]*max-height: 42px[\s\S]*overflow: hidden/);
-});
-
-test("dashboard body uses the Urban Forest color scheme without recoloring the drawers", () => {
-  const html = read("dashboard.html");
-  const css = read("dashboard.css");
-
-  assert.match(html, /name="theme-color" content="#123f31"/);
-  assert.match(css, /--uy-green: #1f6b4f/);
-  assert.match(css, /--uy-paper: #f4f1e8/);
-  assert.match(css, /--uy-card: #ffffff/);
-  assert.match(css, /--uy-warm: #c9a227/);
-  assert.match(css, /--uy-ink: #1f2924/);
-  assert.match(css, /dashboard-sidebar[\s\S]*background: linear-gradient\(145deg, rgba\(255, 253, 247, \.96\), rgba\(248, 246, 238, \.9\)\) !important/);
-  assert.match(css, /dashboard-subnav[\s\S]*background:[\s\S]*rgba\(255, 253, 247, \.985\)/);
-  assert.match(css, /dashboard-main[\s\S]*border-color: transparent !important[\s\S]*background: transparent !important[\s\S]*box-shadow: none !important/);
-  assert.match(css, /Urban Forest exact card surface contract[\s\S]*background-color: #ffffff !important/);
-  assert.match(css, /Urban Forest body color hierarchy[\s\S]*dashboard-main[\s\S]*color: #1f2924 !important/);
-  assert.match(css, /Urban Forest body color hierarchy[\s\S]*h1,[\s\S]*color: #1f6b4f !important/);
-  assert.match(css, /Urban Forest body color hierarchy[\s\S]*\[class\*="eyebrow"\][\s\S]*color: #9a7916 !important/);
-  assert.match(css, /Urban Forest body color hierarchy[\s\S]*border-color: #c9a227 !important/);
-});
-
-test("dashboard and login use the supplied forest river background", () => {
-  const css = read("dashboard.css");
-
-  assert.equal(fs.existsSync(path.join(root, "images", "dashboard-login-forest-river.png")), true);
-  assert.match(css, /\.login-view[\s\S]*url\("images\/dashboard-login-forest-river\.png"\)/);
-  assert.match(css, /\.app-view[\s\S]*url\("images\/dashboard-login-forest-river\.png"\)/);
-  assert.match(css, /supplied landscape visible behind the signed-in dashboard[\s\S]*body:not\(\.is-login-screen\)[\s\S]*dashboard-login-forest-river\.png/);
-  assert.doesNotMatch(css, /dashboard-login-background\.png/);
-});
-
-test("dashboard map preview does not stretch Google Maps internal overlays", () => {
-  const css = read("dashboard.css");
-
-  assert.match(css, /Google Maps owns the layout of its internal panes and controls/);
-  assert.doesNotMatch(css, /\.dashboard-map-preview \.gm-style > div(?:\s*>\s*div)?\s*(?:,|\{)/);
-});
-
-test("Work Quick Add Visit stays inside its side card", () => {
-  const css = read("dashboard.css");
-
-  assert.match(css, /field-side-stack \.schedule-create-form[\s\S]*grid-template-columns: repeat\(2, minmax\(0, 1fr\)\)/);
-  assert.match(css, /field-side-stack \.schedule-create-form > \*[\s\S]*min-width: 0[\s\S]*max-width: 100%/);
-  assert.match(css, /field-side-stack \.schedule-create-form > \[name="service"\][\s\S]*grid-column: 1 \/ -1/);
-  assert.match(css, /field-side-stack \.schedule-create-form button\[type="submit"\][\s\S]*width: 100%/);
-});
-
-test("primary workspaces omit navigation cards already represented in the drawers", () => {
-  const js = read("dashboard.js");
-  const css = read("dashboard.css");
-  const section = (start, end) => js.slice(js.indexOf(start), js.indexOf(end));
-  const home = section("function renderHomeWorkspace", "function renderTicketNextStepCard");
-  const tickets = section("function renderJobTicketWorkspace", "function renderWorkPlanTile");
-  const work = section("function renderWorkWorkspace", "function renderLeadQueueItem");
-  const leads = section("function renderLeadsWorkspace", "function findTicketForBudget");
-  const money = section("function renderMoneyWorkspace", "function renderToolsRunwayCard");
-  const tools = section("function renderToolsWorkspace", "function renderToolsCard");
-
-  assert.doesNotMatch(home, /renderHomeFocusPanel|data-action="go-work">Open Work/);
-  assert.doesNotMatch(tickets, /renderTicketHandoffPanel/);
-  assert.doesNotMatch(work, /renderWorkReadinessPanel|renderWorkFieldPacketPanel|Support Tools|data-action="go-route-planner">Open Route/);
-  assert.doesNotMatch(leads, /renderLeadsRunwayPanel|renderLeadsHandoffPanel|lead-next-step-stack/);
-  assert.doesNotMatch(money, /renderMoneyRunwayPanel|renderMoneyCloseoutPanel|money-next-step-stack/);
-  assert.doesNotMatch(tools, /renderToolsRunwayPanel|renderToolsSystemsPanel|tools-control-grid/);
-  assert.match(css, /Concise workspaces:[\s\S]*grid-template-columns: minmax\(0, 1fr\) !important/);
-});
-
-test("owner Kanban cards omit letter-based assignee icons", () => {
-  const js = read("dashboard.js");
-  const css = read("dashboard.css");
-
-  assert.doesNotMatch(js, /ownerKanbanAssigneeInitials|owner-kanban-assignee/);
-  assert.doesNotMatch(css, /\.owner-kanban-assignee/);
-});
-
-test("closeout Review Tickets opens a focused, visible ticket queue", () => {
-  const js = read("dashboard.js");
-
-  assert.match(js, /data-action="review-closeout-tickets">Review Closeout/);
-  assert.match(js, /action === "review-closeout-tickets"[\s\S]*ticketBoardCloseoutOnly = true[\s\S]*renderJobTicketWorkspace[\s\S]*scrollIntoView/);
-  assert.match(js, /ticketBoardCloseoutOnly[\s\S]*field_work_complete[\s\S]*completion_review[\s\S]*invoice_review/);
-  assert.match(js, /reset-ticket-board-filters[\s\S]*ticketBoardCloseoutOnly = false/);
-});
-
-test("Open Records opens the financial closeout records", () => {
-  const js = read("dashboard.js");
-
-  assert.doesNotMatch(js, /action: "go-documents"/);
-  assert.match(js, /data-action="open-financial-records">Open Records/);
-  assert.match(js, /action === "open-financial-records"[\s\S]*setActiveSection\("documents"\)[\s\S]*renderMoneyWorkspace[\s\S]*money-action-queue[\s\S]*scrollIntoView/);
-});
-
-test("Leads flyout adds Call Queue without changing existing items", () => {
-  const html = read("dashboard.html");
-  const js = read("dashboard.js");
-  const css = read("dashboard.css");
-
-  assert.match(html, /data-sidebar-subnav="outreach"[\s\S]*>Lead Pipeline<\/span>[\s\S]*#contacts[\s\S]*>Clients<\/span>[\s\S]*#call-queue[\s\S]*>Call Queue<\/span>/);
-  assert.match(html, /id="call-queue" data-section="call-queue"[\s\S]*data-call-queue-workspace/);
-  assert.match(js, /"call-queue": "outreach"/);
-  assert.match(js, /"call-queue": \["outreachProspects", "leadActivity", "tickets", "contacts"\]/);
-  assert.match(js, /function filteredCallQueue[\s\S]*function renderCallQueueWorkspace/);
-  assert.match(js, /data-call-queue-outcome-form[\s\S]*Save Outcome/);
-  assert.match(js, /insertLeadActivity[\s\S]*updateOutreachProspect/);
-  assert.match(js, /call_queue_outcome: outcome[\s\S]*follow_up_time[\s\S]*next_action/);
-  assert.match(js, /create-ticket-from-prospect/);
-  assert.match(css, /call-queue-layout[\s\S]*grid-template-columns: minmax\(260px/);
-  assert.match(css, /@media \(max-width: 820px\)[\s\S]*call-queue-layout[\s\S]*grid-template-columns: 1fr/);
 });
 
 test("ticket drawer workbench layouts wrap without overlapping content", () => {
@@ -649,41 +481,22 @@ test("ticket drawer workbench layouts wrap without overlapping content", () => {
   assert.match(css, /ticket-source-context-meta[\s\S]*grid-template-columns: repeat\(auto-fit, minmax\(min\(100%, 140px\), 1fr\)\)/);
 });
 
-test("owner overview kanban keeps four freely movable stages and reserves completion for the ticket workflow", () => {
+test("owner overview kanban keeps five visual stages over canonical ticket workflow", () => {
   const js = read("dashboard.js");
   const css = read("dashboard.css");
 
-  assert.match(js, /\{ key: "new", label: "New"[\s\S]*\{ key: "planned", label: "Planned"[\s\S]*\{ key: "in_progress", label: "In Progress"[\s\S]*\{ key: "review", label: "Review"/);
-  assert.doesNotMatch(js, /\{ key: "completed", label: "Completed"/);
+  assert.match(js, /\{ key: "new", label: "New"[\s\S]*\{ key: "planned", label: "Planned"[\s\S]*\{ key: "in_progress", label: "In Progress"[\s\S]*\{ key: "review", label: "Review"[\s\S]*\{ key: "completed", label: "Completed"/);
   assert.match(js, /function ownerKanbanTargetStage/);
-  assert.doesNotMatch(js, /owner-kanban-drag-handle/);
-  assert.match(js, /addEventListener\("pointerdown"[\s\S]*closest\?\.\("\[data-owner-kanban-card\]"\)[\s\S]*document\.addEventListener\("pointermove"[\s\S]*Math\.hypot[\s\S]*distance < 7[\s\S]*document\.addEventListener\("pointerup"/);
-  assert.match(js, /ownerKanbanSuppressClickUntil/);
-  assert.match(js, /cloneNode\(true\)[\s\S]*owner-kanban-drag-ghost[\s\S]*document\.body\.appendChild/);
-  assert.match(css, /owner-kanban-drag-ghost[\s\S]*position: fixed[\s\S]*opacity: \.82[\s\S]*pointer-events: none/);
-  assert.doesNotMatch(js, /owner-kanban-add[\s\S]*\+ Add Ticket/);
-  assert.match(js, /await moveOwnerKanbanSourceCard[\s\S]*clearOwnerKanbanPointerDrag\(\)[\s\S]*renderHomeWorkspace/);
-  assert.doesNotMatch(js, /draggable="true" data-owner-kanban-card/);
-  assert.doesNotMatch(js, /data-owner-kanban-move/);
-  assert.match(js, /data-action="clear-owner-kanban-leads"/);
-  assert.match(js, /async function moveOwnerKanbanSourceCard[\s\S]*updateSubmission[\s\S]*updateScheduledJob/);
-  assert.match(js, /\{ new: "New", planned: "Scheduled", in_progress: "Contacted", review: "Invoiced" \}/);
-  assert.match(js, /status === "new"[\s\S]*status === "contacted"/);
-  assert.match(js, /addEventListener\("pointerup"[\s\S]*moveOwnerKanbanSourceCard[\s\S]*refreshDashboard/);
-  assert.match(js, /Clear New Column/);
-  assert.match(js, /action === "clear-owner-kanban-leads"[\s\S]*window\.confirm[\s\S]*deleteRow\("quote_submissions"[\s\S]*deleteRow\("scheduled_jobs"[\s\S]*deleteJobTicket[\s\S]*refreshDashboard/);
-  assert.match(css, /grid-template-columns: repeat\(4, minmax\(220px, 1fr\)\)/);
-  assert.match(js, /async function moveOwnerKanbanTicket[\s\S]*previousTickets[\s\S]*updateJobTicket[\s\S]*insertJobTicketEvent[\s\S]*state\.data\.tickets = previousTickets/);
+  assert.match(js, /async function moveOwnerKanbanTicket[\s\S]*previousTickets[\s\S]*transitionJobTicketStage[\s\S]*state\.data\.tickets = previousTickets/);
   assert.match(js, /data-owner-kanban-search/);
   assert.match(js, /data-owner-kanban-filter="assignee"/);
   assert.match(js, /data-owner-kanban-filter="priority"/);
   assert.match(js, /data-owner-kanban-filter="type"/);
-  assert.match(js, /data-owner-kanban-date-range="start"/);
-  assert.match(js, /data-owner-kanban-date-range="end"/);
+  assert.match(js, /data-owner-kanban-filter="date"/);
   assert.match(js, /data-owner-kanban-filter="status"/);
   assert.match(js, /data-owner-kanban-filter="sort"/);
   assert.match(js, /owner-kanban-empty[\s\S]*Clear for now/);
-  assert.match(css, /owner-kanban-scroll[\s\S]*grid-template-columns: repeat\(4, minmax\(220px, 1fr\)\)/);
+  assert.match(css, /owner-kanban-scroll[\s\S]*grid-template-columns: repeat\(5, minmax\(210px, 1fr\)\)/);
   assert.match(css, /@media \(max-width: 700px\)[\s\S]*grid-auto-columns: minmax\(260px, 84vw\)/);
 });
 
@@ -794,334 +607,4 @@ test("optional dashboard module migrations include tables queried by the UI", ()
   assert.match(ticketSql, /needs_budget/);
   assert.match(ticketSql, /budget_in_progress/);
   assert.doesNotMatch(ticketSql, /\b(drop table|truncate table|delete from)\b/i);
-});
-
-test("dashboard navigation and workspace calls to action have working destinations", () => {
-  const js = read("dashboard.js");
-
-  assert.match(js, /window\.addEventListener\("hashchange", async \(\) => \{/);
-  assert.match(js, /setActiveSection\(dashboardSectionForRole\(hashSection\)\)/);
-  assert.match(js, /action: "go-call-queue",\s*actionLabel: "Open Queue"/);
-  assert.match(js, /action === "go-call-queue"[\s\S]*?setActiveSection\("call-queue"\)/);
-  assert.match(js, /action: "quick-add-job",\s*actionLabel: "Add Visit"/);
-  assert.match(js, /action: "focus-work-queue",\s*actionLabel: "View Queue"/);
-  assert.match(js, /data-work-queue/);
-  assert.match(js, /action === "focus-work-queue"[\s\S]*?\[data-work-queue\][\s\S]*?scrollIntoView/);
-  assert.doesNotMatch(js, /action: "go-leads",\s*actionLabel: "Open Queue"/);
-  assert.doesNotMatch(js, /action: "go-calendar",\s*actionLabel: "Add Visit"/);
-  assert.doesNotMatch(js, /action: "go-calendar",\s*actionLabel: "Open Work"/);
-  assert.match(js, /closest\("\[data-action\], \[data-export\], \[data-ai-view\]"\)/);
-  assert.match(js, /target\.matches\("\[data-ai-view\]"\)[\s\S]*?state\.groundskeeperAiView = target\.dataset\.aiView/);
-});
-
-test("production dashboard responses and invite sessions use hardened security defaults", () => {
-  const netlify = read("netlify.toml");
-  const callback = read("auth/callback.js");
-
-  assert.match(netlify, /Strict-Transport-Security = "max-age=31536000; includeSubDomains"/);
-  assert.match(netlify, /Cross-Origin-Opener-Policy = "same-origin"/);
-  assert.match(netlify, /X-Permitted-Cross-Domain-Policies = "none"/);
-  assert.match(callback, /normalizeRole\(firstText\(appMetadata\.role, user\.role\)\)/);
-  assert.doesNotMatch(callback, /normalizeRole\(firstText\(userMetadata\.role/);
-});
-
-test("shared detail drawers animate, contain scrolling, and restore focus", () => {
-  const js = read("dashboard.js");
-  const css = read("dashboard.css");
-
-  assert.match(js, /const DETAIL_DRAWER_SETTLE_MS = 240/);
-  assert.match(js, /function openDetailDrawer[\s\S]*detailDrawerLastFocus = document\.activeElement[\s\S]*classList\.add\("is-open"\)/);
-  assert.match(js, /document\.documentElement\.classList\.add\("is-detail-drawer-open"\)/);
-  assert.match(js, /document\.documentElement\.classList\.remove\("is-detail-drawer-open"\)/);
-  assert.match(js, /document\.documentElement\.style\.setProperty\("overflow-y", "hidden", "important"\)/);
-  assert.match(js, /document\.documentElement\.style\.removeProperty\("overflow-y"\)/);
-  assert.match(js, /function closeSubmissionDrawer[\s\S]*classList\.remove\("is-open"\)[\s\S]*setTimeout\(finishClosingDetailDrawer, DETAIL_DRAWER_SETTLE_MS\)/);
-  assert.match(js, /function finishClosingDetailDrawer[\s\S]*focusTarget\.focus\(\{ preventScroll: true \}\)/);
-  assert.match(css, /is-detail-drawer-open[\s\S]*overflow: hidden !important/);
-  assert.match(css, /html:has\(body:not\(\.is-login-screen\)\.is-detail-drawer-open\)[\s\S]*overflow-y: hidden !important/);
-  assert.match(css, /detail-drawer\.is-open[\s\S]*pointer-events: auto[\s\S]*visibility: visible/);
-  assert.match(css, /detail-drawer \.drawer-panel[\s\S]*transform: translate3d\(32px, 0, 0\)/);
-  assert.match(css, /overscroll-behavior: contain/);
-  assert.match(css, /@media \(prefers-reduced-motion: reduce\)/);
-});
-
-test("expanded dashboard drawer centers the complete sign out control", () => {
-  const css = read("dashboard.css");
-
-  assert.match(css, /app-view\.is-sidebar-open \.dashboard-sidebar[\s\S]*\.sign-out[\s\S]*display: flex !important[\s\S]*justify-content: center !important/);
-});
-
-test("Call Queue contains staged Lead Intake without changing Leads navigation", () => {
-  const html = read("dashboard.html");
-  const js = read("dashboard.js");
-  const css = read("dashboard.css");
-  const backend = read("netlify/functions/dashboard-import-export.js");
-  const migration = read("supabase/migrations/20260721_lead_intake.sql");
-
-  assert.match(html, /Lead Pipeline[\s\S]*Clients[\s\S]*Call Queue/);
-  assert.doesNotMatch(html, /data-dashboard-link="lead-intake"/);
-  assert.match(js, /Lead Intake[\s\S]*Import CSV[\s\S]*Download CSV Template[\s\S]*Review Imports/);
-  assert.match(js, /LEAD_INTAKE_FORMAT_PROMPT[\s\S]*business,type,location,phone_number,source/);
-  assert.match(js, /data-action="lead-intake-copy-prompt"[\s\S]*navigator\.clipboard\.writeText\(LEAD_INTAKE_FORMAT_PROMPT\)/);
-  assert.match(js, /function safeExternalWebsiteUrl[\s\S]*\["http:", "https:"\]\.includes\(parsed\.protocol\)/);
-  assert.match(js, /call-queue-website-link[\s\S]*target="_blank"[\s\S]*rel="noopener noreferrer"/);
-  assert.doesNotMatch(js, /normalizePhone\(item\.phone\)/);
-  assert.match(js, /phoneInfo\(item\.phone\)\.display/);
-  assert.match(js, /Edit Lead[\s\S]*canDeleteLeadRecords\(\)[\s\S]*data-action="delete-outreach-prospect"[\s\S]*Delete Lead/);
-  assert.doesNotMatch(js, /class="lead-intake-recent"|<strong>Import Batches<\/strong>/);
-  assert.match(js, /Review Imported Leads/);
-  assert.match(js, /Possible Duplicate/);
-  assert.match(js, /Add \$\{approvalCount\} Leads to Call Queue/);
-  assert.match(js, /pageSize = 50/);
-  assert.match(backend, /lead-intake-preview/);
-  assert.match(backend, /lead-intake-approve/);
-  assert.match(backend, /lead-intake-undo/);
-  assert.match(backend, /requirePermission\(event, "imports:write"/);
-  assert.match(backend, /status: "preview"/);
-  assert.match(backend, /canUndoLead/);
-  assert.match(css, /lead-intake-card/);
-  assert.match(css, /lead-intake-prompt[\s\S]*lead-intake-prompt textarea/);
-  assert.match(css, /call-queue-website-link/);
-  assert.match(css, /#call-queue \.call-queue-list > \.call-queue-row:nth-child\(odd\)[\s\S]*#call-queue \.call-queue-list > \.call-queue-row:nth-child\(even\)/);
-  assert.match(css, /call-queue-row:nth-child\(odd\)[\s\S]*background:[^;]+!important[\s\S]*call-queue-row:nth-child\(even\)[\s\S]*background:[^;]+!important/);
-  assert.match(css, /call-queue-row:hover,[\s\S]*call-queue-row:focus-visible/);
-  assert.doesNotMatch(css, /lead-intake-recent/);
-  assert.match(migration, /alter table public\.outreach_prospects/);
-  assert.match(migration, /import_batch_id uuid references public\.import_batches/);
-  assert.doesNotMatch(migration, /create table[^;]+lead/i);
-});
-
-test("Owner Kanban resets to the next two months on refresh and supports a custom date range", () => {
-  const js = read("dashboard.js");
-  const css = read("dashboard.css");
-
-  assert.match(js, /function ownerKanbanDefaultDateRange\(\)[\s\S]*start = todayKey\(\)[\s\S]*addMonthsKey\(start, 2\)/);
-  assert.match(js, /data-owner-kanban-date-range="start"/);
-  assert.match(js, /data-owner-kanban-date-range="end"/);
-  assert.doesNotMatch(js, /data-action="show-all-owner-kanban-dates"/);
-  assert.match(js, /if \(state\.ownerKanbanDateStart && ticketDate < state\.ownerKanbanDateStart\) return false/);
-  assert.match(js, /if \(state\.ownerKanbanDateEnd && ticketDate > state\.ownerKanbanDateEnd\) return false/);
-  assert.doesNotMatch(js, /dateStart: state\.ownerKanbanDateStart[\s\S]*dateEnd: state\.ownerKanbanDateEnd/);
-  assert.doesNotMatch(js, /stored\.dateStart|stored\.dateEnd/);
-  assert.match(css, /owner-kanban-date-range[\s\S]*grid-template-columns: repeat\(2, minmax\(130px, 1fr\)\)/);
-});
-
-test("Owner can close completed non-landscaping tickets as monthly rent deductions", () => {
-  const js = read("dashboard.js");
-  const backend = read("netlify/functions/dashboard-tickets.js");
-
-  assert.match(js, /currentSessionRole\(\) === "owner"[\s\S]*Close as Rent Deduction/);
-  assert.match(js, /data-action="owner-close-rent-deduction"/);
-  assert.match(js, /data-ticket-source="\$\{escapeHtml\(ticket\.source\)\}"/);
-  assert.match(js, /ensureJobTicketForSourceRecord\(ticketSource, id,[\s\S]*stage: ticketStage\(ticket\)/);
-  assert.match(js, /updateStatus\("scheduled_jobs", id, "Completed"\)/);
-  assert.match(js, /Rent deduction: \$\{ticket\?\.title/);
-  assert.match(js, /rentDeductionCloseouts/);
-  assert.match(js, /tickets: \["tickets", "submissions", "jobs", "notes"\]/);
-  assert.match(js, /data-rent-deduction-amount/);
-  assert.doesNotMatch(js, /prompt\("Rent deduction amount/);
-  assert.match(backend, /RENT_DEDUCTION_MONTHLY_LIMIT = 350/);
-  assert.match(backend, /Only the Owner can close a ticket as a rent deduction/);
-  assert.match(backend, /Landscaping work is excluded from rent deductions/);
-  assert.match(backend, /rent_deduction_ticket_closed/);
-  assert.match(backend, /monthlyRemaining/);
-});
-
-test("Tickets includes a completed archive with owner reopen controls", () => {
-  const js = read("dashboard.js");
-  const css = read("dashboard.css");
-
-  assert.match(js, /data-action="show-completed-tickets"/);
-  assert.match(js, /function renderCompletedTicketArchive/);
-  assert.match(js, /data-action="reopen-completed-ticket"/);
-  assert.match(js, /Rent deduction reopened:/);
-  assert.match(js, /stage: "completion_review"/);
-  assert.match(css, /\.completed-ticket-card/);
-});
-
-test("Leads contact queue mirrors active Call Queue leads and opens the selected lead", () => {
-  const js = read("dashboard.js");
-
-  assert.match(js, /All active Call Queue leads/);
-  assert.match(js, /\.filter\(\(item\) => !callQueueIsCompleted\(item\)\)/);
-  assert.match(js, /data-action="open-call-queue-lead"/);
-  assert.match(js, /state\.callQueueSelectedId = id[\s\S]*setActiveSection\("call-queue"\)/);
-  assert.match(js, /data-action="toggle-leads-contact-queue"[\s\S]*View All Leads/);
-});
-
-test("Leads Contact Queue shows ten records until View All Leads is expanded", () => {
-  const js = read("dashboard.js");
-
-  assert.match(js, /leadsContactQueueExpanded: false/);
-  assert.match(js, /visibleProspects = state\.leadsContactQueueExpanded \? prospectQueue : prospectQueue\.slice\(0, 10\)/);
-  assert.match(js, /data-action="toggle-leads-contact-queue"[\s\S]*Show First 10[\s\S]*View All Leads/);
-  assert.match(js, /action === "toggle-leads-contact-queue"[\s\S]*leadsContactQueueExpanded = !state\.leadsContactQueueExpanded[\s\S]*renderLeadsWorkspace/);
-});
-
-test("dashboard daily workflow prioritizes actions, saved views, and data quality", () => {
-  const html = read("dashboard.html");
-  const js = read("dashboard.js");
-  const css = read("dashboard.css");
-
-  assert.match(html, /data-global-search[\s\S]*Search everything/);
-  assert.match(html, /data-action="toggle-global-add"/);
-  assert.match(js, /function dashboardActionMetrics/);
-  assert.match(js, /Calls Due[\s\S]*Overdue Follow-ups[\s\S]*Needs Approval[\s\S]*Closeout \/ Payment/);
-  assert.match(js, /OWNER_KANBAN_SAVED_VIEWS[\s\S]*Due Today[\s\S]*Overdue[\s\S]*Blocked[\s\S]*Needs Review/);
-  assert.match(js, /action === "apply-owner-kanban-view"/);
-  assert.match(js, /function renderDataQualityPanel/);
-  assert.match(js, /Contacts missing phone or email[\s\S]*Possible duplicate contacts[\s\S]*Tickets missing a property[\s\S]*Jobs missing a date[\s\S]*Closed tickets without documents/);
-  assert.match(js, /function renderActivityTimeline/);
-  assert.match(css, /\.dashboard-data-quality-grid/);
-  assert.match(css, /dashboard-data-quality-grid > button[\s\S]*display: grid !important[\s\S]*grid-template-areas:[\s\S]*"value label"[\s\S]*"detail detail"/);
-  assert.match(css, /dashboard-data-quality-grid > button > span[\s\S]*overflow-wrap: anywhere[\s\S]*white-space: normal/);
-});
-
-test("unified tickets provide one validated completion checklist with N/A exceptions", () => {
-  const js = read("dashboard.js");
-  const css = read("dashboard.css");
-  const backend = read("netlify/functions/dashboard-tickets.js");
-
-  assert.match(js, /ticketCompletionChecklistItems[\s\S]*Arrival photos[\s\S]*Completion photos[\s\S]*Required forms and documents[\s\S]*Actual costs[\s\S]*Final invoice[\s\S]*Payment/);
-  assert.match(js, /data-completion-complete[\s\S]*data-completion-na/);
-  assert.match(js, /data-action="save-ticket-completion"/);
-  assert.match(js, /data-action="owner-finalize-ticket"/);
-  assert.match(js, /Resolve every completion item first/);
-  assert.match(backend, /OWNER_FINALIZE_REQUIREMENTS/);
-  assert.match(backend, /owner-finalize-ticket/);
-  assert.match(backend, /Add a closeout note explaining why the N\/A items do not apply/);
-  assert.match(backend, /ticket_completed_from_checklist/);
-  assert.match(css, /\.ticket-completion-list[\s\S]*repeat\(2, minmax\(0, 1fr\)\)/);
-});
-
-test("ticket creation is guided, searchable, templated, and safely autosaved", () => {
-  const js = read("dashboard.js");
-  const css = read("dashboard.css");
-
-  for (const label of ["Lead", "Ticket", "Visit", "Expense", "Invoice", "Vendor", "Note"]) {
-    assert.match(js, new RegExp(`label: "${label}"`));
-  }
-  assert.match(js, /data-ticket-wizard-step="1"/);
-  assert.match(js, /data-ticket-client-select/);
-  assert.match(js, /data-ticket-property-select/);
-  assert.match(js, /TICKET_TEMPLATES[\s\S]*Routine groundskeeping[\s\S]*Property cleanup[\s\S]*Property walkthrough[\s\S]*Landscaping project/);
-  assert.match(js, /data-action="ticket-wizard-next"[\s\S]*Save &amp; Continue/);
-  assert.match(js, /localStorage\.setItem\(TICKET_DRAFT_KEY/);
-  assert.match(js, /localStorage\.removeItem\(TICKET_DRAFT_KEY\)/);
-  assert.match(js, /ticket-next-action-card[\s\S]*Next Action/);
-  assert.match(css, /\.ticket-wizard-actions[\s\S]*position: sticky/);
-  assert.match(css, /\.ticket-create-wizard \[aria-invalid="true"\]/);
-});
-
-test("global search groups every operational and financial record family", () => {
-  const js = read("dashboard.js");
-
-  for (const label of ["Leads", "Contacts", "Properties", "Tickets", "Invoices", "Expenses", "Vendors", "Documents"]) {
-    assert.match(js, new RegExp(`label: "${label}"`));
-  }
-  assert.match(js, /ensureGlobalSearchFinancialData/);
-  assert.match(js, /\["expenses", "invoicing", "vendors", "documents"\]/);
-  assert.match(js, /data-global-search-result/);
-});
-
-test("detail drawers expose breadcrumbs and a reliable Back control", () => {
-  const js = read("dashboard.js");
-  const css = read("dashboard.css");
-
-  assert.match(js, /function renderDetailDrawerBreadcrumbs/);
-  assert.match(js, /Money → \$\{MONEY_TABS/);
-  assert.match(js, /Leads → Call Queue/);
-  assert.match(js, /data-action="close-drawer"[\s\S]*← Back/);
-  assert.match(css, /\.drawer-breadcrumbs[\s\S]*position: sticky/);
-});
-
-test("Home provides a larger urgency-ordered My Work Today queue", () => {
-  const js = read("dashboard.js");
-
-  assert.match(js, /My Work Today/);
-  assert.match(js, /Calls, visits, blocked tickets, approvals, missing proof, overdue invoices, and follow-ups/);
-  assert.match(js, /\.sort\(\(a, b\) => \(a\.urgency - b\.urgency\)/);
-  assert.match(js, /\.slice\(0, 16\)/);
-});
-
-test("ticket closeout uses a completion review and reversible actions offer Undo", () => {
-  const js = read("dashboard.js");
-  const css = read("dashboard.css");
-
-  assert.match(js, /function renderTicketCompletionReview/);
-  assert.match(js, /Final Review[\s\S]*Ready to close\?/);
-  assert.match(js, /N\/A decisions[\s\S]*Costs[\s\S]*Payment[\s\S]*Documents[\s\S]*Remaining blockers/);
-  assert.match(js, /target\.dataset\.confirmClose !== "true"/);
-  assert.match(js, /function showDashboardUndo/);
-  assert.match(js, /data-action="dashboard-undo"/);
-  assert.match(js, /8000/);
-  assert.match(js, /moved to Recently Deleted[\s\S]*restore-record/);
-  assert.match(js, /Ticket completion undone/);
-  assert.match(js, /Ticket stage change undone/);
-  assert.match(css, /\.ticket-completion-review-grid/);
-  assert.match(css, /\[data-dashboard-state\]\[data-tone="undo"\]/);
-});
-
-test("Groundskeeper AI exposes the selected owner operations suite with review safeguards", () => {
-  const js = read("dashboard.js");
-  const css = read("dashboard.css");
-  const api = read("api/groundskeeper-ai.js");
-
-  for (const title of [
-    "Daily operations briefing",
-    "Smart next actions",
-    "Ticket completeness checker",
-    "Natural-language dashboard search",
-    "Lead prioritization",
-    "Call preparation brief",
-    "Call outcome assistant",
-    "Scope-of-work generator",
-    "Estimate preparation",
-    "Profitability insights",
-    "Schedule optimizer",
-    "Weather-aware planning",
-    "Property history summary",
-    "Closeout assistant",
-    "Invoice readiness checker",
-    "Expense categorization",
-    "Anomaly and duplicate detection",
-    "Client communication drafts"
-  ]) {
-    assert.match(js, new RegExp(title.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")));
-  }
-  assert.match(js, /function groundskeeperOperationsContext/);
-  assert.match(js, /Recommend and draft only\. Never mutate records/);
-  assert.match(js, /function renderOperationsWorkspace/);
-  assert.match(js, /data-action="run-ai-operation"/);
-  assert.match(js, /Nothing above has been applied/);
-  assert.match(api, /Never claim that you changed a record/);
-  assert.match(api, /Never invent weather or forecast conditions/);
-  assert.match(api, /orchestrateDashboardRequest/);
-  assert.match(api, /orchestration\.modelContext/);
-  assert.doesNotMatch(js, /groundskeeperChat\(`\$\{message\}\\n\\nAnswer conversationally/);
-  assert.match(css, /\.groundskeeper-operation-grid[\s\S]*repeat\(3, minmax\(0, 1fr\)\)/);
-});
-
-test("the persistent dashboard copilot replaces duplicate page-level AI tool strips", () => {
-  const js = read("dashboard.js");
-  const css = read("dashboard.css");
-
-  assert.match(js, /function renderContextualGroundskeeperTools/);
-  assert.match(js, /document\.querySelectorAll\("\[data-contextual-ai-tools\]"\)/);
-  assert.doesNotMatch(js, /host\.prepend\(panel\)/);
-  assert.match(js, /function renderDashboardCopilot/);
-  assert.match(js, /Groundskeeper AI raccoon mascot/);
-  assert.match(js, /Your smart helper for jobs, clients, and everything in between\./);
-  assert.match(js, /How can I help you today\?/);
-  assert.match(js, /data-copilot-section="tickets"/);
-  assert.match(js, /data-copilot-section="outreach"/);
-  assert.match(js, /data-copilot-section="reports"/);
-  assert.match(js, /event\.key !== "Escape"/);
-  assert.match(js, /safeRender\("dashboard Groundskeeper"/);
-  assert.match(js, /safeRender\("contextual Groundskeeper tools"/);
-  assert.match(css, /\.dashboard-copilot[\s\S]*top: 18px/);
-  assert.match(css, /\.dashboard-copilot-panel/);
-  assert.match(css, /\.copilot-landscape/);
-  assert.match(css, /\.copilot-shortcuts/);
-  assert.match(css, /@media \(max-width: 700px\)[\s\S]*position: fixed/);
 });

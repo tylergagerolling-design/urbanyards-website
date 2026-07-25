@@ -13,8 +13,47 @@ const dashboardCss = fs.readFileSync(path.join(root, "dashboard.css"), "utf8");
 const authJs = fs.readFileSync(path.join(root, "netlify", "functions", "lib", "dashboard-auth.js"), "utf8");
 const financialApiJs = fs.readFileSync(path.join(root, "netlify", "functions", "dashboard-financial.js"), "utf8");
 const financialStorageJs = fs.readFileSync(path.join(root, "netlify", "functions", "dashboard-financial-storage.js"), "utf8");
-const { createInvoiceNumber, expensePath } = require("../netlify/functions/dashboard-financial")._internals;
+const {
+  canonicalInvoiceStatus,
+  createInvoiceNumber,
+  expensePath,
+  legacyInvoiceLineItems,
+  legacyInvoiceRow
+} = require("../netlify/functions/dashboard-financial")._internals;
 const storage = require("../netlify/functions/dashboard-financial-storage")._internals;
+
+test("legacy sales-document invoices map into the Money invoice shape", () => {
+  const invoice = legacyInvoiceRow({
+    id: "11111111-1111-4111-8111-111111111111",
+    document_number: "QA-INV-019",
+    client_name: "TEST Client",
+    issue_date: "2026-07-25",
+    due_date: "2026-08-08",
+    subtotal: 1875,
+    tax: 0,
+    total: 1875,
+    status: "paid"
+  }, "22222222-2222-4222-8222-222222222222");
+
+  assert.equal(invoice.invoice_number, "QA-INV-019");
+  assert.equal(invoice.client_name, "TEST Client");
+  assert.equal(invoice.ticket_id, "22222222-2222-4222-8222-222222222222");
+  assert.equal(invoice.status, "Paid");
+  assert.equal(invoice.amount_paid, 1875);
+  assert.equal(invoice.legacy_sales_document, true);
+});
+
+test("legacy invoice status and line items normalize for invoice detail", () => {
+  assert.equal(canonicalInvoiceStatus("partially_paid"), "Partially Paid");
+  assert.equal(canonicalInvoiceStatus("unknown"), "Draft");
+  const items = legacyInvoiceLineItems({
+    id: "11111111-1111-4111-8111-111111111111",
+    line_items: [{ description: "Cleanup", quantity: 2, unit_price: 125 }]
+  });
+  assert.equal(items.length, 1);
+  assert.equal(items[0].description, "Cleanup");
+  assert.equal(items[0].unit_price, 125);
+});
 
 test("financial workspace migration is additive and preserves canonical links", () => {
   assert.match(migration, /create table if not exists public\.expenses/i);

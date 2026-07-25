@@ -47,6 +47,67 @@ function createInvoiceNumber(now = new Date(), suffix = crypto.randomUUID().slic
   return `INV-${stamp.slice(0, 8)}-${stamp.slice(8)}-${String(suffix).replace(/[^a-z0-9]/gi, "").slice(0, 4).toUpperCase()}`;
 }
 
+function canonicalInvoiceStatus(status) {
+  const value = String(status || "").trim().toLowerCase();
+  return {
+    draft: "Draft",
+    ready: "Ready",
+    sent: "Sent",
+    viewed: "Viewed",
+    partially_paid: "Partially Paid",
+    "partially paid": "Partially Paid",
+    paid: "Paid",
+    overdue: "Overdue",
+    voided: "Voided",
+    uncollectible: "Uncollectible"
+  }[value] || "Draft";
+}
+
+function legacyInvoiceRow(document, ticketId = null) {
+  const subtotal = Number(document.subtotal || document.total || 0);
+  const tax = Number(document.tax || 0);
+  const discount = Number(document.discount || 0);
+  const total = Math.max(0, subtotal + tax - discount);
+  const status = canonicalInvoiceStatus(document.status);
+  return {
+    id: document.id,
+    invoice_number: document.document_number || "Draft",
+    client_id: null,
+    client_name: document.client_name || "",
+    property_id: null,
+    ticket_id: ticketId,
+    issue_date: document.issue_date || null,
+    due_date: document.due_date || null,
+    subtotal,
+    tax,
+    discount,
+    deposit: 0,
+    amount_paid: status === "Paid" ? total : 0,
+    status,
+    payment_method: null,
+    square_invoice_url: document.square_payment_url || null,
+    last_sent_at: null,
+    updated_at: document.created_at || null,
+    sales_document_id: document.id,
+    legacy_sales_document: true
+  };
+}
+
+function legacyInvoiceLineItems(document) {
+  const items = Array.isArray(document.line_items) ? document.line_items : [];
+  return items.map((item, position) => ({
+    id: `legacy-${document.id}-${position}`,
+    invoice_id: document.id,
+    position,
+    item_type: "Service",
+    description: item.description || "Service",
+    quantity: Number(item.quantity || 1),
+    unit: item.unit || "Each",
+    unit_price: Number(item.unit_price || item.amount || 0),
+    taxable: Boolean(item.taxable)
+  }));
+}
+
 function expensePath(body) {
   const page = Math.max(1, Number.parseInt(body.page, 10) || 1);
   const pageSize = Math.min(MAX_PAGE_SIZE, Math.max(10, Number.parseInt(body.pageSize, 10) || 50));
@@ -142,9 +203,24 @@ async function handleAction(body, actor = {}) {
     );
   }
   if (action === "list-invoices") {
-    return supabaseAdminRequest(
-      "invoices?select=id,invoice_number,client_id,property_id,ticket_id,issue_date,due_date,subtotal,tax,discount,deposit,amount_paid,status,payment_method,square_invoice_url,last_sent_at,updated_at&archived_at=is.null&order=issue_date.desc&limit=100",
-      { method: "GET" }
+    const [invoices, legacyDocuments, tickets] = await Promise.all([
+      supabaseAdminRequest(
+        "invoices?select=id,invoice_number,client_id,property_id,ticket_id,issue_date,due_date,subtotal,tax,discount,deposit,amount_paid,status,payment_method,square_invoice_url,last_sent_at,updated_at,sales_document_id&archived_at=is.null&order=issue_date.desc&limit=100",
+        { method: "GET" }
+      ),
+      supabaseAdminRequest(
+        "sales_documents?select=id,document_number,client_name,issue_date,due_date,subtotal,tax,total,status,square_payment_url,created_at&document_type=eq.invoice&order=issue_date.desc&limit=100",
+        { method: "GET" }
+      ),
+      supabaseAdminRequest("job_tickets?select=id,invoice_id&invoice_id=not.is.null&limit=500", { method: "GET" })
+    ]);
+    const represented = new Set((invoices || []).flatMap((invoice) => [invoice.id, invoice.sales_document_id].filter(Boolean)));
+    const ticketByInvoice = new Map((tickets || []).map((ticket) => [ticket.invoice_id, ticket.id]));
+    const legacy = (legacyDocuments || [])
+      .filter((document) => !represented.has(document.id))
+      .map((document) => legacyInvoiceRow(document, ticketByInvoice.get(document.id) || null));
+    return [...(invoices || []), ...legacy].sort((left, right) =>
+      String(right.issue_date || "").localeCompare(String(left.issue_date || ""))
     );
   }
   if (action === "list-documents") {
@@ -219,7 +295,19 @@ async function handleAction(body, actor = {}) {
       supabaseAdminRequest(`invoice_attachments?invoice_id=eq.${invoiceId}&select=*&archived_at=is.null&order=created_at.desc&limit=100`, { method: "GET" }),
       supabaseAdminRequest(`financial_activity?entity_type=eq.invoice&entity_id=eq.${invoiceId}&select=*&order=created_at.desc&limit=100`, { method: "GET" })
     ]);
-    return { invoice: invoice?.[0] || null, lineItems, payments, attachments, activity };
+    if (invoice?.[0]) return { invoice: invoice[0], lineItems, payments, attachments, activity };
+    const [legacy, tickets] = await Promise.all([
+      supabaseAdminRequest(`sales_documents?id=eq.${invoiceId}&document_type=eq.invoice&select=*&limit=1`, { method: "GET" }),
+      supabaseAdminRequest(`job_tickets?invoice_id=eq.${invoiceId}&select=id&limit=1`, { method: "GET" })
+    ]);
+    if (!legacy?.[0]) return { invoice: null, lineItems: [], payments: [], attachments: [], activity: [] };
+    return {
+      invoice: legacyInvoiceRow(legacy[0], tickets?.[0]?.id || null),
+      lineItems: legacyInvoiceLineItems(legacy[0]),
+      payments: [],
+      attachments: [],
+      activity: []
+    };
   }
   const error = new Error("Unsupported financial action.");
   error.statusCode = 400;
@@ -256,4 +344,12 @@ exports.handler = async (event) => {
   }
 };
 
-exports._internals = { createInvoiceNumber, expensePath, safeDate, safeText };
+exports._internals = {
+  canonicalInvoiceStatus,
+  createInvoiceNumber,
+  expensePath,
+  legacyInvoiceLineItems,
+  legacyInvoiceRow,
+  safeDate,
+  safeText
+};

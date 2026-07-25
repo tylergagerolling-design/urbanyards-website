@@ -15417,7 +15417,7 @@ Requirements:
         const status = financialCalculator().effectiveInvoiceStatus(invoice);
         return `<article class="is-clickable" data-action="open-financial-invoice" data-id="${escapeHtml(invoice.id)}" tabindex="0">
           <div><strong>${escapeHtml(invoice.invoice_number || "Draft invoice")}</strong><span>${escapeHtml([invoice.issue_date, invoice.due_date ? `Due ${invoice.due_date}` : ""].filter(Boolean).join(" · "))}</span></div>
-          <p>${escapeHtml(financialRecordName("client", invoice.client_id) || "Client not linked")} · ${moneyCurrency(summary.total)}</p>
+          <p>${escapeHtml(financialRecordName("client", invoice.client_id) || invoice.client_name || "Client not linked")} · ${moneyCurrency(summary.total)}</p>
           <small>${escapeHtml([financialRecordName("property", invoice.property_id), financialRecordName("ticket", invoice.ticket_id)].filter(Boolean).join(" / ") || "No property or ticket linked")}</small>
           <div class="money-card-actions"><span class="status-badge">${escapeHtml(status)}</span><strong>${moneyCurrency(summary.balance)} due</strong></div>
         </article>`;

@@ -15395,7 +15395,7 @@ body:not(.is-login-screen) .app-view .dashboard-main :is(#overview, #calendar) :
   .overview-primary-action,
   .work-primary-action,
   .quick-action-link
-) {
+):not([data-action="open-ticket-create"]) {
   display: inline-flex !important;
   align-items: center !important;
   justify-content: center !important;
@@ -15428,7 +15428,7 @@ body:not(.is-login-screen) .app-view .dashboard-main :is(#overview, #calendar) :
   .overview-primary-action,
   .work-primary-action,
   .quick-action-link
-):hover:not(:disabled):not([aria-disabled="true"]) {
+):not([data-action="open-ticket-create"]):hover:not(:disabled):not([aria-disabled="true"]) {
   border-color: var(--button-neutral-400) !important;
   background: var(--button-neutral-200) !important;
   color: var(--button-neutral-900) !important;

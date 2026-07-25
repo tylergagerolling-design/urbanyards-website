@@ -26,7 +26,7 @@ test("live workspace polish contains long records and management cards", () => {
   assert.match(css, /\.call-queue-row > span:first-child :is\(strong, small\)[\s\S]*overflow-wrap: anywhere/);
   assert.match(css, /\.groundskeeper-operation-card[\s\S]*white-space: normal !important/);
   assert.match(css, /\.dashboard-health-item strong[\s\S]*word-break: break-all/);
-  assert.match(html, /dashboard\.css\?v=20260725-button-system-4/);
+  assert.match(html, /dashboard\.css\?v=20260725-button-system-5/);
 });
 
 test("authenticated assistant prompt suppresses public quote calls to action", () => {

@@ -23461,3 +23461,18 @@ body:not(.is-login-screen) .app-view :is(.dashboard-main, .detail-drawer) :is(
   color: var(--button-danger-700) !important;
   opacity: 0.72 !important;
 }
+
+body:not(.is-login-screen) .app-view .dashboard-main #overview#overview
+  [data-action="clear-owner-kanban-leads"]:not(:disabled):not([aria-disabled="true"]) {
+  border-color: var(--button-danger-600) !important;
+  background: var(--button-danger-600) !important;
+  color: var(--button-white) !important;
+  opacity: 1 !important;
+}
+
+body:not(.is-login-screen) .app-view .dashboard-main #overview#overview
+  [data-action="clear-owner-kanban-leads"]:hover:not(:disabled):not([aria-disabled="true"]) {
+  border-color: var(--button-danger-700) !important;
+  background: var(--button-danger-700) !important;
+  color: var(--button-white) !important;
+}

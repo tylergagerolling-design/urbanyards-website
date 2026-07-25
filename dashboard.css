@@ -23444,3 +23444,20 @@ body:not(.is-login-screen) .app-view input[type="checkbox"] {
   max-width: 13px !important;
   align-self: center !important;
 }
+
+/* Disabled destructive actions stay visibly destructive without appearing
+   available. This must follow the shared disabled-button neutral rule. */
+body:not(.is-login-screen) .app-view :is(.dashboard-main, .detail-drawer) :is(
+  .danger-action,
+  [data-action="clear-owner-kanban-leads"],
+  [data-action="reset-all-operational-data"],
+  [data-action="disable-dashboard-user"],
+  [data-action*="delete"],
+  [data-action*="remove"],
+  [data-action*="cancel"]
+):is(:disabled, [aria-disabled="true"]) {
+  border-color: var(--button-danger-600) !important;
+  background: var(--button-danger-100) !important;
+  color: var(--button-danger-700) !important;
+  opacity: 0.72 !important;
+}

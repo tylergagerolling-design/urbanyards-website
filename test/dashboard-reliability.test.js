@@ -15,6 +15,23 @@ function read(relativePath) {
   return fs.readFileSync(path.join(root, relativePath), "utf8");
 }
 
+test("live workspace polish contains long records and management cards", () => {
+  const css = read("dashboard.css");
+  const html = read("dashboard.html");
+  assert.match(css, /Live workspace containment and readable long-record polish/);
+  assert.match(css, /\.call-queue-row > span:first-child :is\(strong, small\)[\s\S]*overflow-wrap: anywhere/);
+  assert.match(css, /\.groundskeeper-operation-card[\s\S]*white-space: normal/);
+  assert.match(css, /\.dashboard-health-item strong[\s\S]*word-break: break-all/);
+  assert.match(html, /dashboard\.css\?v=20260724-live-polish/);
+});
+
+test("authenticated assistant prompt suppresses public quote calls to action", () => {
+  const api = read("api/groundskeeper-ai.js");
+  assert.match(api, /You are responding inside the authenticated Urban Yards owner dashboard/);
+  assert.match(api, /Do not invite the operator to request a free quote/);
+  assert.match(api, /mode === "dashboard" \? \[\{ role: "system", content: DASHBOARD_CONTEXT \}\] : \[\]/);
+});
+
 function withEnv(patch, callback) {
   const original = {};
   Object.keys(patch).forEach((key) => {

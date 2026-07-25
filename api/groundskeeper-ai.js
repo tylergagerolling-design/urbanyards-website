@@ -56,6 +56,14 @@ Rules:
 - Never invent weather or forecast conditions. If live forecast data is absent, say that it must be checked.
 `;
 
+const DASHBOARD_CONTEXT = `
+You are responding inside the authenticated Urban Yards owner dashboard.
+- Speak to the operator as an internal business assistant, not as a public website visitor.
+- Do not invite the operator to request a free quote, submit the public contact form, or contact Urban Yards.
+- For calculations and operational questions, give the verified result, assumptions, missing information, and the next internal action.
+- Use public lead-capture language only in public mode.
+`;
+
 const UNAVAILABLE_REPLY = "Sorry, the AI helper is not available right now. You can still request a free quote.";
 const PUBLIC_TABLES = ["ai_settings", "ai_knowledge", "ai_faqs", "ai_rules", "ai_saved_answers"];
 const ADMIN_TABLES = [...PUBLIC_TABLES, "ai_conversation_logs", "ai_feedback", "ai_training_rules", "ai_helper_versions"];
@@ -768,6 +776,7 @@ async function handler(req, res) {
   }
   const messages = [
     { role: "system", content: BUSINESS_CONTEXT },
+    ...(mode === "dashboard" ? [{ role: "system", content: DASHBOARD_CONTEXT }] : []),
     { role: "system", content: siteContext },
     { role: "system", content: buildDynamicContext(aiKnowledge, mode) },
     { role: "system", content: leadContextText(page, lead) },

@@ -3,6 +3,7 @@
 const CONSULTATION_MODES = new Set(["off", "auto", "always_review"]);
 const TRIVIAL = /\b(hello|hi|thanks|thank you|open|go to|navigate|show page|which tab|where is|sign out)\b/i;
 const MATERIAL = /\b(financial|budget|profit|margin|cost|estimate|calculate|compare|options|plan|risk|review|recommend|strategy|debug|complex|multi(?:ple)?|client (?:email|message|communication)|large summary|double[- ]check|second opinion|consult gemini|plant identification|plant health|irrigation|drainage|unusual site|safety|hazard|licens|customer dispute|low confidence)\b/i;
+const DETERMINISTIC_CALCULATION = /\bcalculate\b[\s\S]*\b\d+(?:\.\d+)?\s*(?:square\s*(?:feet|foot)|sq\.?\s*ft|ft²)[\s\S]*\b\d+(?:\.\d+)?\s*(?:inches|inch|in\.?)\b/i;
 
 function normalizeMode(value) {
   const mode = String(value || "").trim().toLowerCase().replace(/\s+/g, "_");
@@ -42,9 +43,12 @@ function consultationDecision({ message, mode = "auto", enabled = true, emergenc
   if (normalizedMode === "always_review") {
     return { consult: String(message || "").trim().length >= 30, reason: "always_review", explicit: false, consultantRole };
   }
+  if (DETERMINISTIC_CALCULATION.test(String(message || "")) && !/\b(complex|risk|hazard|compare|review|second opinion|unusual)\b/i.test(String(message || ""))) {
+    return { consult: false, reason: "verified_deterministic_calculation", explicit: false, consultantRole };
+  }
   return MATERIAL.test(String(message || ""))
     ? { consult: true, reason: "auto_material_request", explicit: false, consultantRole }
     : { consult: false, reason: "auto_not_needed", explicit: false, consultantRole };
 }
 
-module.exports = { CONSULTATION_MODES, consultationDecision, consultantRoleFor, explicitConsultation, normalizeMode };
+module.exports = { CONSULTATION_MODES, DETERMINISTIC_CALCULATION, consultationDecision, consultantRoleFor, explicitConsultation, normalizeMode };

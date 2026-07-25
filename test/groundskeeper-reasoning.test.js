@@ -96,3 +96,9 @@ test("Gemini receives one targeted specialist role and remains selective", () =>
   assert.equal(material.consult, true);
   assert.equal(material.consultantRole, "drainage_consultant");
 });
+
+test("verified deterministic material calculations do not call Gemini", () => {
+  const decision = consultationDecision({ message: "Calculate mulch for 540 square feet at 3 inches deep." });
+  assert.equal(decision.consult, false);
+  assert.equal(decision.reason, "verified_deterministic_calculation");
+});

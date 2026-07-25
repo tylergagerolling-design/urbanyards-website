@@ -23134,3 +23134,87 @@ body:not(.is-login-screen) .money-grid select {
   .dashboard-copilot-launcher,
   .copilot-shortcuts button { transition: none; }
 }
+
+/* Live workspace containment and readable long-record polish. */
+body:not(.is-login-screen) .call-queue-row > span:first-child {
+  overflow: hidden;
+}
+
+body:not(.is-login-screen) .call-queue-row > span:first-child :is(strong, small) {
+  max-width: 100%;
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+
+body:not(.is-login-screen) .call-queue-row > span:first-child small {
+  display: -webkit-box;
+  overflow: hidden;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
+}
+
+body:not(.is-login-screen) .groundskeeper-ai-workspace,
+body:not(.is-login-screen) .groundskeeper-ai-sidebar,
+body:not(.is-login-screen) .groundskeeper-ai-main,
+body:not(.is-login-screen) .groundskeeper-operations,
+body:not(.is-login-screen) .groundskeeper-operation-groups,
+body:not(.is-login-screen) .groundskeeper-operation-grid {
+  width: 100%;
+  min-width: 0;
+  max-width: 100%;
+  box-sizing: border-box;
+}
+
+body:not(.is-login-screen) .groundskeeper-ai-main {
+  overflow: hidden;
+}
+
+body:not(.is-login-screen) .groundskeeper-operation-card {
+  width: 100%;
+  max-width: 100%;
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+
+@media (max-width: 1320px) {
+  body:not(.is-login-screen) .groundskeeper-operation-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+body:not(.is-login-screen) .field-side-stack .schedule-create-form .recurring-toggle {
+  gap: 8px;
+  white-space: normal;
+}
+
+body:not(.is-login-screen) .field-side-stack .schedule-create-form .recurring-toggle span {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+body:not(.is-login-screen) .owner-kanban-date-range {
+  width: 100%;
+  max-width: 100%;
+  box-sizing: border-box;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+body:not(.is-login-screen) .owner-kanban-date-range label,
+body:not(.is-login-screen) .owner-kanban-date-range input[type="date"] {
+  min-width: 0;
+  max-width: 100%;
+  box-sizing: border-box;
+}
+
+body:not(.is-login-screen) .dashboard-health-item {
+  min-width: 0;
+  max-width: 100%;
+  overflow: hidden;
+}
+
+body:not(.is-login-screen) .dashboard-health-item strong {
+  min-width: 0;
+  max-width: 100%;
+  word-break: break-all;
+}

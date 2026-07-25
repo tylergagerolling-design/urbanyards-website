@@ -20,9 +20,9 @@ test("live workspace polish contains long records and management cards", () => {
   const html = read("dashboard.html");
   assert.match(css, /Live workspace containment and readable long-record polish/);
   assert.match(css, /\.call-queue-row > span:first-child :is\(strong, small\)[\s\S]*overflow-wrap: anywhere/);
-  assert.match(css, /\.groundskeeper-operation-card[\s\S]*white-space: normal/);
+  assert.match(css, /\.groundskeeper-operation-card[\s\S]*white-space: normal !important/);
   assert.match(css, /\.dashboard-health-item strong[\s\S]*word-break: break-all/);
-  assert.match(html, /dashboard\.css\?v=20260724-live-polish/);
+  assert.match(html, /dashboard\.css\?v=20260724-live-polish-2/);
 });
 
 test("authenticated assistant prompt suppresses public quote calls to action", () => {

@@ -23171,10 +23171,20 @@ body:not(.is-login-screen) .groundskeeper-ai-main {
 }
 
 body:not(.is-login-screen) .groundskeeper-operation-card {
+  display: grid !important;
   width: 100%;
   max-width: 100%;
-  white-space: normal;
+  min-width: 0 !important;
+  padding: 14px !important;
+  white-space: normal !important;
   overflow-wrap: anywhere;
+}
+
+body:not(.is-login-screen) .groundskeeper-operation-card :is(strong, span) {
+  min-width: 0;
+  max-width: 100%;
+  white-space: normal !important;
+  overflow-wrap: anywhere !important;
 }
 
 @media (max-width: 1320px) {

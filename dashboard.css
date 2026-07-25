@@ -23380,7 +23380,7 @@ body:not(.is-login-screen) .app-view .dashboard-main :is(
 
 /* Workspace rules use ID-level specificity, so repeat only the semantic
    colors at the same level. No sizing or shape properties belong here. */
-body:not(.is-login-screen) .app-view .dashboard-main #calendar :is(
+body:not(.is-login-screen) .app-view .dashboard-main #calendar#calendar :is(
   [data-action="quick-add-job"],
   [data-action="submit-field-expense"],
   .schedule-create-form button[type="submit"]
@@ -23395,7 +23395,7 @@ body:not(.is-login-screen) .app-view .dashboard-main #settings :is(
   color: var(--button-white) !important;
 }
 
-body:not(.is-login-screen) .app-view .dashboard-main #calendar :is(
+body:not(.is-login-screen) .app-view .dashboard-main #calendar#calendar :is(
   [data-action="quick-add-job"],
   [data-action="submit-field-expense"],
   .schedule-create-form button[type="submit"]

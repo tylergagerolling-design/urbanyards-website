@@ -331,11 +331,11 @@ async function createTicket(payload, actor, event) {
 }
 
 async function updateTicket(id, payload) {
-  const rows = await supabaseAdminRequest(`job_tickets?id=eq.${encodeURIComponent(id)}`, {
+  const writeResult = await writeTicketWithSchemaFallback(`job_tickets?id=eq.${encodeURIComponent(id)}`, {
     method: "PATCH",
-    headers: { Prefer: "return=representation" },
-    body: JSON.stringify(payload)
-  });
+    headers: { Prefer: "return=representation" }
+  }, payload);
+  const rows = writeResult.rows;
   return Array.isArray(rows) ? rows[0] || null : null;
 }
 

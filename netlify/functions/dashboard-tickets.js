@@ -275,17 +275,46 @@ async function existingTicketBySource(payload) {
   return Array.isArray(rows) ? rows[0] || null : null;
 }
 
+function missingSchemaColumn(error) {
+  const message = String(error?.message || "");
+  const match = message.match(/(?:column|field)\s+['"]?([a-z][a-z0-9_]*)['"]?/i)
+    || message.match(/['"]([a-z][a-z0-9_]*)['"]\s+column/i);
+  return match ? match[1] : "";
+}
+
+async function writeTicketWithSchemaFallback(path, options, payload) {
+  const compatiblePayload = { ...payload };
+  const removedColumns = [];
+
+  while (Object.keys(compatiblePayload).length) {
+    try {
+      const rows = await supabaseAdminRequest(path, {
+        ...options,
+        body: JSON.stringify(compatiblePayload)
+      });
+      return { rows, removedColumns };
+    } catch (error) {
+      const missingColumn = missingSchemaColumn(error);
+      if (!missingColumn || !Object.prototype.hasOwnProperty.call(compatiblePayload, missingColumn)) throw error;
+      delete compatiblePayload[missingColumn];
+      removedColumns.push(missingColumn);
+    }
+  }
+
+  throw new Error("The live Job Ticket schema does not contain any writable ticket fields.");
+}
+
 async function createTicket(payload, actor, event) {
   const existing = await existingTicketBySource(payload);
   if (existing) return { ticket: existing, created: false };
 
-  const rows = await supabaseAdminRequest("job_tickets", {
+  const writeResult = await writeTicketWithSchemaFallback("job_tickets", {
     method: "POST",
-    headers: { Prefer: "return=representation" },
-    body: JSON.stringify(payload)
-  });
+    headers: { Prefer: "return=representation" }
+  }, payload);
+  const rows = writeResult.rows;
   const ticket = Array.isArray(rows) ? rows[0] : null;
-  if (!ticket?.id) return { ticket, created: true };
+  if (!ticket?.id) throw new Error("The Job Ticket was not saved. No ticket record was returned.");
 
   await supabaseAdminRequest("job_ticket_events", {
     method: "POST",
@@ -298,7 +327,7 @@ async function createTicket(payload, actor, event) {
   }).catch((error) => {
     if (!tableMissing(error)) throw error;
   });
-  return { ticket, created: true };
+  return { ticket, created: true, removedColumns: writeResult.removedColumns };
 }
 
 async function updateTicket(id, payload) {

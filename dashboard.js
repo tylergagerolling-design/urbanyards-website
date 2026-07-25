@@ -22855,6 +22855,9 @@ Requirements:
         try {
           setDashboardState("Creating Job Ticket from document...");
           const ticket = await ensureJobTicketForSalesDocument(document);
+          if (!ticket?.id) {
+            throw new Error("The Job Ticket was not saved. The live ticket schema needs attention.");
+          }
           await refreshDashboard();
           const refreshedTicket = ticket?.id
             ? dashboardTickets().find((item) => item.source === "ticket" && item.id === ticket.id)

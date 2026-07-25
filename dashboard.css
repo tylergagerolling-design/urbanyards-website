@@ -23434,3 +23434,18 @@ body:not(.is-login-screen) .app-view .dashboard-main #settings :is(
   background: var(--button-danger-700) !important;
   color: var(--button-white) !important;
 }
+
+/* Keep every native dashboard checkbox the same compact size. Labels retain
+   the larger click target, while form layout rules cannot stretch the box. */
+body:not(.is-login-screen) .app-view input[type="checkbox"] {
+  flex: 0 0 13px !important;
+  width: 13px !important;
+  min-width: 13px !important;
+  max-width: 13px !important;
+  height: 13px !important;
+  min-height: 13px !important;
+  max-height: 13px !important;
+  padding: 0 !important;
+  margin: 0 !important;
+  box-sizing: border-box !important;
+}

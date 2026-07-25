@@ -23306,3 +23306,74 @@ body:not(.is-login-screen) #calendar .ticket-hero-actions button[data-action="op
   background: var(--button-forest-800) !important;
   color: var(--button-white) !important;
 }
+
+/* Final semantic-color coverage.
+   These overrides intentionally change color only; existing button geometry,
+   spacing, typography, and layout remain owned by the component rules above. */
+body:not(.is-login-screen) .app-view .dashboard-main :is(
+  [data-action="open-ticket-create"],
+  [data-action="quick-add-job"],
+  [data-action="new-outreach-prospect"],
+  [data-action="import-outreach-csv"],
+  [data-action="quick-add-quote"],
+  [data-action="submit-field-expense"],
+  [data-action="seed-qa-ticket-suite"],
+  [data-action="upload-user-avatar"],
+  [data-action="invite-dashboard-user"],
+  [data-action="reopen-completed-ticket"],
+  #calendar .schedule-create-form button[type="submit"],
+  #settings .user-invite-form button[type="submit"]
+) {
+  border-color: var(--button-forest-700) !important;
+  background: var(--button-forest-700) !important;
+  color: var(--button-white) !important;
+}
+
+body:not(.is-login-screen) .app-view .dashboard-main :is(
+  [data-action="open-ticket-create"],
+  [data-action="quick-add-job"],
+  [data-action="new-outreach-prospect"],
+  [data-action="import-outreach-csv"],
+  [data-action="quick-add-quote"],
+  [data-action="submit-field-expense"],
+  [data-action="seed-qa-ticket-suite"],
+  [data-action="upload-user-avatar"],
+  [data-action="invite-dashboard-user"],
+  [data-action="reopen-completed-ticket"],
+  #calendar .schedule-create-form button[type="submit"],
+  #settings .user-invite-form button[type="submit"]
+):hover:not(:disabled):not([aria-disabled="true"]) {
+  border-color: var(--button-forest-800) !important;
+  background: var(--button-forest-800) !important;
+  color: var(--button-white) !important;
+}
+
+body:not(.is-login-screen) .app-view .dashboard-main :is(
+  .danger-action,
+  [data-action="reset-all-operational-data"],
+  [data-action="clear-owner-kanban-leads"],
+  [data-action="remove-user-avatar"],
+  [data-action="disable-dashboard-user"],
+  [data-action*="delete"],
+  [data-action*="remove"],
+  [data-action*="cancel"]
+) {
+  border-color: var(--button-danger-600) !important;
+  background: var(--button-danger-600) !important;
+  color: var(--button-white) !important;
+}
+
+body:not(.is-login-screen) .app-view .dashboard-main :is(
+  .danger-action,
+  [data-action="reset-all-operational-data"],
+  [data-action="clear-owner-kanban-leads"],
+  [data-action="remove-user-avatar"],
+  [data-action="disable-dashboard-user"],
+  [data-action*="delete"],
+  [data-action*="remove"],
+  [data-action*="cancel"]
+):hover:not(:disabled):not([aria-disabled="true"]) {
+  border-color: var(--button-danger-700) !important;
+  background: var(--button-danger-700) !important;
+  color: var(--button-white) !important;
+}

@@ -23442,10 +23442,5 @@ body:not(.is-login-screen) .app-view input[type="checkbox"] {
   width: 13px !important;
   min-width: 13px !important;
   max-width: 13px !important;
-  height: 13px !important;
-  min-height: 13px !important;
-  max-height: 13px !important;
-  padding: 0 !important;
-  margin: 0 !important;
-  box-sizing: border-box !important;
+  align-self: center !important;
 }

@@ -23266,47 +23266,47 @@ body:not(.is-login-screen) :is(button, .button, .inline-action, .quick-action-li
 }
 
 body:not(.is-login-screen) :is(button, .button, .inline-action, .quick-action-link).button-positive {
-  border-color: #174d3a !important;
-  background: linear-gradient(180deg, #2d7559, #174d3a) !important;
-  color: #fff !important;
-  box-shadow: 0 10px 22px rgba(18, 63, 49, .2) !important;
+  border-color: #174d3a;
+  background: linear-gradient(180deg, #2d7559, #174d3a);
+  color: #fff;
+  box-shadow: 0 10px 22px rgba(18, 63, 49, .2);
 }
 
 body:not(.is-login-screen) :is(button, .button, .inline-action, .quick-action-link).button-positive:hover {
-  border-color: #0f382a !important;
-  background: linear-gradient(180deg, #286a51, #103d2e) !important;
-  color: #fff !important;
-  box-shadow: 0 14px 28px rgba(18, 63, 49, .24) !important;
+  border-color: #0f382a;
+  background: linear-gradient(180deg, #286a51, #103d2e);
+  color: #fff;
+  box-shadow: 0 14px 28px rgba(18, 63, 49, .24);
   transform: translateY(-1px);
 }
 
 body:not(.is-login-screen) :is(button, .button, .inline-action, .quick-action-link).button-neutral {
-  border-color: #c6cfca !important;
-  background: linear-gradient(180deg, #f8faf9, #e7ece9) !important;
-  color: #2f4038 !important;
-  box-shadow: 0 7px 16px rgba(19, 36, 28, .07) !important;
+  border-color: #c6cfca;
+  background: linear-gradient(180deg, #f8faf9, #e7ece9);
+  color: #2f4038;
+  box-shadow: 0 7px 16px rgba(19, 36, 28, .07);
 }
 
 body:not(.is-login-screen) :is(button, .button, .inline-action, .quick-action-link).button-neutral:hover {
-  border-color: #9eaca5 !important;
-  background: linear-gradient(180deg, #fff, #dde5e0) !important;
-  color: #172a21 !important;
-  box-shadow: 0 11px 22px rgba(19, 36, 28, .11) !important;
+  border-color: #9eaca5;
+  background: linear-gradient(180deg, #fff, #dde5e0);
+  color: #172a21;
+  box-shadow: 0 11px 22px rgba(19, 36, 28, .11);
   transform: translateY(-1px);
 }
 
 body:not(.is-login-screen) :is(button, .button, .inline-action, .quick-action-link).button-danger {
-  border-color: #8f2f22 !important;
-  background: linear-gradient(180deg, #b94837, #8f2f22) !important;
-  color: #fff !important;
-  box-shadow: 0 10px 22px rgba(143, 47, 34, .18) !important;
+  border-color: #8f2f22;
+  background: linear-gradient(180deg, #b94837, #8f2f22);
+  color: #fff;
+  box-shadow: 0 10px 22px rgba(143, 47, 34, .18);
 }
 
 body:not(.is-login-screen) :is(button, .button, .inline-action, .quick-action-link).button-danger:hover {
-  border-color: #702117 !important;
-  background: linear-gradient(180deg, #a83d2e, #762319) !important;
-  color: #fff !important;
-  box-shadow: 0 14px 28px rgba(143, 47, 34, .24) !important;
+  border-color: #702117;
+  background: linear-gradient(180deg, #a83d2e, #762319);
+  color: #fff;
+  box-shadow: 0 14px 28px rgba(143, 47, 34, .24);
   transform: translateY(-1px);
 }
 

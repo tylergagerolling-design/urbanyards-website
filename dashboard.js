@@ -12185,6 +12185,7 @@
     const isCanonical = ticket?.source === "ticket";
     const transitions = ticketTransitionOptions(ticket || {});
     const useUnifiedCloseout = isCanonical && ["field_work_complete", "completion_review", "invoice_review", "invoice_sent", "partially_paid", "paid"].includes(ticketStage(ticket));
+    const ownerCanUnifyAndOverride = !isCanonical && currentSessionRole() === "owner" && transitions.length;
     return `<section class="ticket-drawer-card ticket-command-card" data-ticket-command-panel data-ticket-id="${escapeHtml(ticket?.id || "")}">
       <div class="ticket-drawer-card-heading">
         <div>
@@ -12212,7 +12213,9 @@
       ${renderTicketBudgetBridge(ticket)}
       <div class="drawer-actions ticket-command-actions">
         <button type="button" data-action="save-ticket-command" data-id="${escapeHtml(ticket.id)}">${buttonContent("Save Ticket Note", "save")}</button>
-      </div>` : `<p class="ticket-drawer-note">This is still a source record preview. Open or create the unified ticket to use lifecycle controls.</p>`}
+      </div>` : `${ownerCanUnifyAndOverride ? `<div class="ticket-transition-grid">
+        ${transitions.map((item) => `<button type="button" class="is-owner-override" data-action="owner-force-source-ticket-stage" data-ticket-source="${escapeHtml(ticket.sourceType || ticket.source || "")}" data-id="${escapeHtml(ticket.sourceId || ticket.id || "")}" data-stage="${escapeHtml(item.to)}" data-next-action="${escapeHtml(item.nextAction)}"><strong>${escapeHtml(`Owner Override: ${item.label}`)}</strong><small>Create the unified ticket and bypass missing requirements.</small></button>`).join("")}
+      </div>` : ""}<p class="ticket-drawer-note">This is still a source record preview. Open or create the unified ticket to use lifecycle controls.</p>`}
     </section>`;
   }
 
@@ -24050,6 +24053,38 @@ Requirements:
           setDashboardState(error.message || "Unable to apply Owner override.", "error");
         }
         return;
+      } else if (action === "owner-force-source-ticket-stage") {
+        if (currentSessionRole() !== "owner") {
+          setDashboardState("Only the Owner can override ticket requirements.", "error");
+          return;
+        }
+        const source = target.dataset.ticketSource;
+        const nextStage = target.dataset.stage;
+        const sourceTicket = findTicketForDrawer(source, id) || dashboardTickets().find((item) => String(item.id) === String(id));
+        const confirmed = window.confirm(`Owner override: create the unified Job Ticket and move it to ${ticketStageLabel(normalizeTicketStageForDashboard(nextStage))} even though requirements are missing? This will be recorded in ticket history.`);
+        if (!confirmed) return;
+        try {
+          setDashboardState("Creating the unified ticket and applying Owner override...");
+          const canonicalTicket = await ensureJobTicketForSourceRecord(source, id, {
+            stage: ticketStage(sourceTicket),
+            internal_notes: sourceTicket?.internalNotes || "Unified by the Owner from a source-record ticket."
+          });
+          if (!canonicalTicket?.id) {
+            throw new Error("The unified Job Ticket could not be created. Apply the Job Ticket database migration, then retry this action.");
+          }
+          const result = await dashboardTicketRequest("owner-force-transition", {
+            id: canonicalTicket.id,
+            toStage: nextStage,
+            notes: "Owner approved creating the unified ticket and bypassing missing workflow requirements.",
+            nextAction: target.dataset.nextAction || ticketNextAction(nextStage)
+          });
+          await refreshDashboard();
+          openTicketDrawer("ticket", result.ticket?.id || canonicalTicket.id);
+          setDashboardState(`Owner override moved ticket to ${ticketStageLabel(normalizeTicketStageForDashboard(nextStage))}.`);
+        } catch (error) {
+          setDashboardState(error.message || "Unable to create and override the unified ticket.", "error");
+        }
+        return;
       } else if (action === "owner-close-rent-deduction") {
         if (currentSessionRole() !== "owner") {
           setDashboardState("Only the Owner can close a ticket as a rent deduction.", "error");
@@ -25437,8 +25472,10 @@ Requirements:
               next_action: "Work the visit"
             }) : null;
             await refreshDashboard();
-            if (canonicalTicket?.id) openTicketDrawer("ticket", canonicalTicket.id);
-            else if (jobs[0]?.id) openTicketDrawer("job", jobs[0].id);
+            if (!canonicalTicket?.id) {
+              throw new Error("The work visit was created, but its unified Job Ticket was not. Apply the Job Ticket database migration, then open the visit and retry.");
+            }
+            openTicketDrawer("ticket", canonicalTicket.id);
             setDashboardState("Work ticket created.");
           } else {
             const quote = await insertQuoteSubmission({
@@ -25470,8 +25507,10 @@ Requirements:
               next_action: "Review intake"
             }) : null;
             await refreshDashboard();
-            if (canonicalTicket?.id) openTicketDrawer("ticket", canonicalTicket.id);
-            else if (quote?.id) openTicketDrawer("quote", quote.id);
+            if (!canonicalTicket?.id) {
+              throw new Error("The intake record was created, but its unified Job Ticket was not. Apply the Job Ticket database migration, then open the intake record and retry.");
+            }
+            openTicketDrawer("ticket", canonicalTicket.id);
             setDashboardState("Intake ticket created.");
           }
           localStorage.removeItem(TICKET_DRAFT_KEY);

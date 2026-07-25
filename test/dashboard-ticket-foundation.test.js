@@ -511,3 +511,13 @@ test("protected dashboard auth recognizes rebuilt job-ticket roles", () => {
   assert.equal(dashboardAuth.hasPermission("accountant", "invoices:read"), true);
   assert.equal(dashboardAuth.hasPermission("accountant", "leads:write"), false);
 });
+
+test("source-record tickets can be unified for owner overrides and never report partial creation as success", () => {
+  const source = require("node:fs").readFileSync(require("node:path").join(__dirname, "..", "dashboard.js"), "utf8");
+
+  assert.match(source, /data-action="owner-force-source-ticket-stage"/);
+  assert.match(source, /await ensureJobTicketForSourceRecord\(source, id/);
+  assert.match(source, /The unified Job Ticket could not be created/);
+  assert.match(source, /The work visit was created, but its unified Job Ticket was not/);
+  assert.match(source, /The intake record was created, but its unified Job Ticket was not/);
+});

@@ -15729,7 +15729,7 @@ Requirements:
           <div class="ticket-hero-actions">
             <button type="button" data-action="refresh-dashboard">Refresh Dashboard</button>
             <button type="button" data-action="copy-dashboard-diagnostics">Copy Diagnostics</button>
-            ${canManageUsers() ? `<button type="button" class="danger-action" data-action="reset-all-operational-data">Delete All Records</button>` : ""}
+            <button type="button" class="danger-action" data-action="reset-all-operational-data">Delete All Records</button>
           </div>
         </header>
         <section class="ticket-metrics" aria-label="Tools summary">

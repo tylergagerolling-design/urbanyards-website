@@ -26,7 +26,7 @@ test("live workspace polish contains long records and management cards", () => {
   assert.match(css, /\.call-queue-row > span:first-child :is\(strong, small\)[\s\S]*overflow-wrap: anywhere/);
   assert.match(css, /\.groundskeeper-operation-card[\s\S]*white-space: normal !important/);
   assert.match(css, /\.dashboard-health-item strong[\s\S]*word-break: break-all/);
-  assert.match(html, /dashboard\.css\?v=20260726-work-board-1/);
+  assert.match(html, /dashboard\.css\?v=20260726-work-board-2/);
 });
 
 test("authenticated assistant prompt suppresses public quote calls to action", () => {
@@ -664,6 +664,7 @@ test("component Work Board assigns, tracks, completes, and audits ticket require
   assert.match(js, /data-action="complete-work-component"/);
   assert.match(js, /data-action="reopen-work-component"/);
   assert.match(js, /data-action="assign-visible-components-to-me"/);
+  assert.match(js, /create-financial-invoice-from-ticket[\s\S]*invoice_id: invoice\.id[\s\S]*ticket_invoice_connected/);
   assert.doesNotMatch(js, /owner-kanban-drag-handle/);
   assert.match(js, /addEventListener\("pointerdown"[\s\S]*closest\?\.\("\[data-owner-kanban-card\]"\)[\s\S]*document\.addEventListener\("pointermove"[\s\S]*Math\.hypot[\s\S]*distance < 7[\s\S]*document\.addEventListener\("pointerup"/);
   assert.match(js, /ownerKanbanSuppressClickUntil/);

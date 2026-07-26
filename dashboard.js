@@ -23120,7 +23120,23 @@ Requirements:
             subtotal: ticket.proposedPrice || ticket.quotedPrice || 0
           });
           state.moneyLoadedViews.delete("invoicing");
-          if (result?.[0]?.id) await openFinancialInvoiceDrawer(result[0].id);
+          const invoice = result?.[0];
+          if (invoice?.id) {
+            state.data.financial.invoices = [
+              invoice,
+              ...(state.data.financial.invoices || []).filter((item) => item.id !== invoice.id)
+            ];
+            await updateJobTicket(ticket.id, {
+              invoice_id: invoice.id,
+              next_action: "Review invoice, record delivery, and confirm final authorization"
+            });
+            await insertJobTicketEvent(ticket.id, {
+              eventType: "ticket_invoice_connected",
+              notes: `Invoice ${invoice.invoice_number || invoice.id} was created and connected from the ticket.`,
+              newValue: { invoiceId: invoice.id, invoiceNumber: invoice.invoice_number || "" }
+            });
+            await openFinancialInvoiceDrawer(invoice.id);
+          }
           setDashboardState("Draft invoice created from the ticket. Review it before saving or sending.");
         } catch (error) {
           setDashboardState(error.message || "Draft invoice could not be created.", "error");

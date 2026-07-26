@@ -26295,6 +26295,24 @@ Requirements:
             headers: { Prefer: "return=representation" },
             body: JSON.stringify(payload)
           });
+          if (payload.ticket_id) {
+            const linkedTicket = (state.data.tickets || []).find((ticket) => ticket.id === payload.ticket_id);
+            const ticketPatch = {
+              invoice_id: id,
+              next_action: /^paid$/i.test(payload.status)
+                ? "Complete final ticket closeout"
+                : "Review invoice, record delivery, and confirm final authorization"
+            };
+            if (/^paid$/i.test(payload.status)) ticketPatch.payment_status = "paid";
+            await updateJobTicket(payload.ticket_id, ticketPatch);
+            if (linkedTicket?.invoiceId !== id) {
+              await insertJobTicketEvent(payload.ticket_id, {
+                eventType: "ticket_invoice_connected",
+                notes: `Invoice ${state.moneyInvoiceDetail?.invoice?.invoice_number || id} was linked from Money.`,
+                newValue: { invoiceId: id, invoiceNumber: state.moneyInvoiceDetail?.invoice?.invoice_number || "" }
+              });
+            }
+          }
           state.moneyLoadedViews.delete("invoicing");
           await openFinancialInvoiceDrawer(id);
           setDashboardState("Invoice saved.");

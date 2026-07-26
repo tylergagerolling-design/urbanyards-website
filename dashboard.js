@@ -9359,8 +9359,12 @@
     });
   }
 
-  function replaceDashboardHash(section) {
-    history.replaceState(null, "", `#${dashboardSectionForRole(section)}`);
+  function replaceDashboardHash(section, { replace = false } = {}) {
+    const target = dashboardSectionForRole(section);
+    const current = window.location.hash.replace(/^#/, "");
+    if (current === target) return;
+    const method = replace ? "replaceState" : "pushState";
+    history[method]({ dashboardSection: target }, "", `#${target}`);
   }
 
   function setSidebarSubnavOpen(groupKey, open) {

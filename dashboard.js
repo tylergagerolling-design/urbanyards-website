@@ -14128,12 +14128,12 @@
   }
 
   function renderTicketCommandCenter({ filteredTickets, workTickets, officeTickets, readyTickets, reviewTickets }) {
-    const priorityTickets = [
+    const priorityTickets = [...new Map([
       ...officeTickets,
       ...readyTickets,
       ...workTickets,
       ...reviewTickets
-    ].slice(0, 5);
+    ].map((ticket) => [`${ticket.source || ticket.sourceType}:${ticket.id}`, ticket])).values()].slice(0, 5);
     return `<section class="ticket-lane ticket-priority-queue" aria-label="Ticket triage center">
         <div class="ticket-lane-heading">
           <div>
@@ -14191,7 +14191,7 @@
     const workTickets = filteredTickets.filter((ticket) => ticketInLane(ticket, ["field"]));
     const officeTickets = filteredTickets.filter((ticket) => ticketInLane(ticket, ["sales", "accounting", "review", "money"]));
     const readyTickets = filteredTickets.filter((ticket) => ticketInLane(ticket, ["ready"]));
-    const reviewTickets = openTickets.filter((ticket) => ticketInLane(ticket, ["review", "money"]));
+    const reviewTickets = filteredTickets.filter((ticket) => ticketInLane(ticket, ["review", "money"]));
     const blockedTickets = filteredTickets.filter((ticket) => {
       const transitionBlockers = ticketTransitionOptions(ticket).flatMap((item) => item.missing || []);
       return Boolean(ticket.blockers?.length || transitionBlockers.length);

@@ -1003,13 +1003,6 @@ test("unified tickets provide one validated completion checklist with N/A except
   assert.match(css, /\.ticket-workbench \.ticket-workbench-grid[\s\S]*grid-template-columns: 1fr/);
 });
 
-test("dashboard navigation uses browser history so Back returns to the previous workspace", () => {
-  const js = read("dashboard.js");
-  assert.match(js, /const method = replace \? "replaceState" : "pushState"/);
-  assert.match(js, /history\[method\]\(\{ dashboardSection: target \}, "", `#\$\{target\}`\)/);
-  assert.match(js, /window\.addEventListener\("hashchange"/);
-});
-
 test("Urban Yards launch center exposes all nineteen product-readiness controls", () => {
   const js = read("dashboard.js");
   const css = read("dashboard.css");

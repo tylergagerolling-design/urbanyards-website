@@ -6318,17 +6318,22 @@
         blockerReason: Object.prototype.hasOwnProperty.call(changes, "blockerReason") ? changes.blockerReason : component.blockerReason
       });
       state.ownerKanbanMovingId = "";
-      if (result.ticket) {
-        const normalized = normalizeCanonicalTicket(result.ticket);
-        const index = state.data.tickets.findIndex((item) => item.id === normalized.id);
-        if (index >= 0) state.data.tickets[index] = normalized;
-        else state.data.tickets.unshift(normalized);
-      }
-      [result.checklistEvent, result.event].filter(Boolean).forEach((event) => {
-        state.data.ticketEvents.unshift(normalizeJobTicketEvent(event));
-      });
+      const normalizedTicket = result.ticket ? normalizeCanonicalTicket(result.ticket) : null;
+      const returnedEvents = [result.checklistEvent, result.event]
+        .filter(Boolean)
+        .map(normalizeJobTicketEvent);
       if (options.refresh !== false) await refreshDashboard();
-      else renderWorkComponentBoardWorkspaces();
+      if (normalizedTicket) {
+        const index = state.data.tickets.findIndex((item) => item.id === normalizedTicket.id);
+        if (index >= 0) state.data.tickets[index] = normalizedTicket;
+        else state.data.tickets.unshift(normalizedTicket);
+      }
+      returnedEvents.forEach((event) => {
+        const index = state.data.ticketEvents.findIndex((item) => item.id === event.id);
+        if (index >= 0) state.data.ticketEvents.splice(index, 1);
+        state.data.ticketEvents.unshift(event);
+      });
+      renderWorkComponentBoardWorkspaces();
       return result;
     } catch (error) {
       state.ownerKanbanMovingId = "";
@@ -12153,7 +12158,7 @@
     if (field === "scopeOfWork") return Boolean(ticket.scopeOfWork || ticket.detail || ticket.notes);
     if (field === "proposedPrice") return Boolean(ticket.proposedPrice || ticket.expectedRevenue || ticket.finalRevenue);
     if (field === "expectedRevenue") return Boolean(ticket.expectedRevenue || ticket.proposedPrice || ticket.finalRevenue);
-    if (field === "draftInvoiceExists") return Boolean(ticket.draftInvoiceExists || findInvoiceForTicket(ticket));
+    if (field === "draftInvoiceExists") return Boolean(ticket.draftInvoiceExists || ticket.invoiceId || findInvoiceForTicket(ticket));
     if (field === "invoiceFinalized") return Boolean(ticket.invoiceFinalized || findInvoiceForTicket(ticket));
     const value = ticket[field];
     return value !== undefined && value !== null && value !== "" && value !== false;

@@ -26,7 +26,7 @@ test("live workspace polish contains long records and management cards", () => {
   assert.match(css, /\.call-queue-row > span:first-child :is\(strong, small\)[\s\S]*overflow-wrap: anywhere/);
   assert.match(css, /\.groundskeeper-operation-card[\s\S]*white-space: normal !important/);
   assert.match(css, /\.dashboard-health-item strong[\s\S]*word-break: break-all/);
-  assert.match(html, /dashboard\.css\?v=20260726-work-board-3/);
+  assert.match(html, /dashboard\.css\?v=20260726-work-board-4/);
 });
 
 test("authenticated assistant prompt suppresses public quote calls to action", () => {
@@ -696,6 +696,8 @@ test("component Work Board assigns, tracks, completes, and audits ticket require
   assert.match(backend, /ticket_completion_checklist_saved/);
   assert.match(backend, /action === "component-update"/);
   assert.match(backend, /customerId: row\.customer_id \|\| row\.customer_name[\s\S]*propertyId: row\.property_id \|\| row\.property_name[\s\S]*draftInvoiceExists: row\.draft_invoice_exists \|\| row\.invoice_id/);
+  assert.match(js, /draftInvoiceExists"\) return Boolean\(ticket\.draftInvoiceExists \|\| ticket\.invoiceId \|\| findInvoiceForTicket\(ticket\)\)/);
+  assert.match(js, /const returnedEvents = \[result\.checklistEvent, result\.event\][\s\S]*if \(options\.refresh !== false\) await refreshDashboard\(\);[\s\S]*returnedEvents\.forEach/);
 });
 
 test("dashboard creates canonical job tickets without removing source fallbacks", () => {

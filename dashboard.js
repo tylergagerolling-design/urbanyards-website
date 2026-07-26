@@ -15836,7 +15836,10 @@ Requirements:
           <h3>Urban Yards Launch Center</h3>
           <p>One operating checklist for the customer journey, staff workflow, data quality, recovery, QA, and production health.</p>
         </div>
-        <strong>${escapeHtml(`${readiness.ready}/19 ready`)}</strong>
+        <div class="ticket-hero-actions">
+          <strong>${escapeHtml(`${readiness.ready}/19 ready`)}</strong>
+          <button type="button" data-action="setup-urban-yards-tools">Set Up Urban Yards Defaults</button>
+        </div>
       </div>
       <div class="uy-launch-progress" aria-label="${escapeHtml(`${readiness.ready} of 19 capabilities ready`)}"><span style="width:${escapeHtml(String(Math.round(readiness.ready / 19 * 100)))}%"></span></div>
       <div class="uy-launch-grid">
@@ -20832,6 +20835,108 @@ Requirements:
     await refreshConnectedOperationsData("Connected operations record saved.");
   }
 
+  async function setupUrbanYardsTools() {
+    if (!state.connectedOpsReady && !isDemoMode()) throw new Error("Connected Operations needs its Supabase migration before defaults can be installed.");
+    const ops = activeConnectedOpsBundle();
+    const hasTitle = (items, title) => items.some((item) => String(item.title || "").toLowerCase() === title.toLowerCase());
+    const records = [];
+
+    [
+      {
+        title: "Standard Landscaping Visit",
+        category: "On-site Work",
+        service_type: "Landscaping",
+        description: "Arrival, scope review, work completion, cleanup, photos, and customer-ready closeout.",
+        status: "Active",
+        visibility: "Field"
+      },
+      {
+        title: "Project Installation Closeout",
+        category: "Project Work",
+        service_type: "Installation",
+        description: "Confirm approved scope, document progress, complete punch list, capture final proof, and release for invoicing.",
+        status: "Active",
+        visibility: "Field"
+      }
+    ].forEach((record) => {
+      if (!hasTitle(ops.checklistTemplates, record.title)) records.push(["job_checklist_templates", record]);
+    });
+
+    [
+      {
+        title: "Quote Ready for Approval",
+        category: "Quotes",
+        channel: "email",
+        subject: "Your Urban Yards quote is ready",
+        body: "Your Urban Yards quote is ready for review. Please use the secure approval link provided to approve it or request changes.",
+        status: "Active"
+      },
+      {
+        title: "Deposit Request",
+        category: "Invoices",
+        channel: "email",
+        subject: "Urban Yards deposit request",
+        body: "Your project is approved. The connected invoice is ready for the deposit required before scheduling work.",
+        status: "Active"
+      },
+      {
+        title: "Work Complete",
+        category: "Closeout",
+        channel: "email",
+        subject: "Urban Yards work is complete",
+        body: "The work is complete and the final invoice and closeout details are ready for your review.",
+        status: "Active"
+      }
+    ].forEach((record) => {
+      if (!hasTitle(ops.communicationTemplates, record.title)) records.push(["communication_templates", record]);
+    });
+
+    [
+      ["Approved quote moves to cost review", "quote_approved", "advance_ticket_to_cost_review"],
+      ["Sent invoice schedules deposit follow-up", "invoice_sent", "create_deposit_follow_up"],
+      ["Completed on-site service opens final review", "field_service_completed", "advance_ticket_to_final_review"]
+    ].forEach(([title, trigger_key, action_key]) => {
+      if (!hasTitle(ops.automationRules, title)) records.push(["automation_rules", { title, trigger_key, action_key, enabled: true }]);
+    });
+
+    if (!ops.communications.length) {
+      records.push(["communications", {
+        direction: "internal",
+        channel: "note",
+        contact_name: "Urban Yards Team",
+        subject: "Dashboard operating workflow initialized",
+        body: "Urban Yards defaults installed: quote approval, deposit follow-up, field closeout, communication templates, and field checklists."
+      }]);
+    }
+
+    if (isDemoMode()) {
+      records.forEach(([table, record]) => {
+        const id = nextDemoId(table);
+        const now = new Date().toISOString();
+        if (table === "job_checklist_templates") state.data.connectedOps.checklistTemplates.unshift(normalizeChecklistTemplate({ id, ...record, created_at: now, updated_at: now }));
+        if (table === "communication_templates") state.data.connectedOps.communicationTemplates.unshift({ id, ...record, created_at: now, updated_at: now });
+        if (table === "automation_rules") state.data.connectedOps.automationRules.unshift(normalizeAutomationRule({ id, ...record, created_at: now, updated_at: now }));
+        if (table === "communications") state.data.connectedOps.communications.unshift(normalizeCommunication({ id, ...record, created_at: now, updated_at: now }));
+      });
+      await render();
+      setDashboardState("Urban Yards defaults are ready.");
+      return;
+    }
+
+    setDashboardState("Installing Urban Yards workflow defaults...");
+    for (const [table, record] of records) {
+      await supabaseRestRequest(table, {
+        method: "POST",
+        headers: { Prefer: "return=minimal" },
+        body: JSON.stringify(record)
+      });
+    }
+    await refreshDashboard();
+    setActiveSection("settings");
+    replaceDashboardHash("settings", { replace: true });
+    setDashboardState(records.length ? `${records.length} Urban Yards workflow defaults installed.` : "Urban Yards defaults were already installed.");
+  }
+
   async function resolveConnectedApproval(id, status) {
     if (!id) return;
     if (isDemoMode()) {
@@ -22284,6 +22389,18 @@ Requirements:
           await undo();
         } catch (error) {
           setDashboardState(error.message || "That action could not be undone.", "error");
+        }
+        return;
+      }
+
+      if (action === "setup-urban-yards-tools") {
+        target.disabled = true;
+        try {
+          await setupUrbanYardsTools();
+        } catch (error) {
+          setDashboardState(error.message || "Urban Yards defaults could not be installed.", "error");
+        } finally {
+          target.disabled = false;
         }
         return;
       }

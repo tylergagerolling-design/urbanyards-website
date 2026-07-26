@@ -15793,6 +15793,88 @@ Requirements:
     </article>`;
   }
 
+  function urbanYardsProductReadiness(data = state.data) {
+    const ops = data.connectedOps || normalizeConnectedOpsBundle();
+    const tickets = dashboardTickets(data);
+    const quoteCount = (data.documents || []).filter((item) => item.type === "estimate").length;
+    const users = data.userProfiles || [];
+    const checks = [
+      ["Quote workspace", quoteCount > 0, "Create, connect, edit, send, and track customer quotes.", "go-money-quotes", "Open Quotes"],
+      ["Customer approvals", ops.shareLinks?.length > 0, "Secure customer share links and approval records.", "go-product-approvals", "Approval Center"],
+      ["Workflow automation", ops.automationRules?.some((item) => item.enabled), "Rules for predictable handoffs and reminders.", "go-product-automation", "Automation"],
+      ["Ticket activity timeline", tickets.some((item) => ticketHistoryFor(item).length), "Chronological ticket changes, decisions, and overrides.", "go-tickets", "Open Tickets"],
+      ["Actionable notifications", true, "Direct links for approvals, payments, visits, and exceptions.", "toggle-notifications", "Notifications"],
+      ["Staff onboarding", users.length > 0, "Urban Yards users, access, workflow guidance, and diagnostics.", "go-product-access", "Users & Access"],
+      ["Urban Yards branding", true, "Urban Yards identity, contact details, and document language.", "go-documentation", "Brand Documents"],
+      ["Workflow templates", (ops.checklistTemplates?.length || 0) > 0, "Reusable service and checklist foundations.", "go-product-templates", "Templates"],
+      ["Role permissions", users.length > 0, "Owner, office, Money, Leads, and Work access boundaries.", "go-product-access", "Review Access"],
+      ["Communication history", (ops.communications?.length || 0) > 0, "Customer calls, email, SMS, notes, and follow-up history.", "go-product-communications", "Communications"],
+      ["Operational reporting", true, "Revenue, expenses, profitability, approvals, and completion reporting.", "go-money-reports", "Open Reports"],
+      ["Saved working views", true, "Reusable ticket, calendar, kanban, and Money display preferences.", "go-tickets", "Ticket Views"],
+      ["Mobile Work workflow", true, "Phone-ready assignment, proof, notes, checklist, and expense controls.", "go-work", "Open Work"],
+      ["Schedule protection", true, "Assignment requirements and conflict-aware scheduling review.", "go-work", "Review Schedule"],
+      ["Connected records", true, "Customer, property, quote, ticket, visit, document, and invoice links.", "go-tickets", "Inspect Tickets"],
+      ["Recovery and history", true, "Recently Deleted, reopen, undo, audit, and export controls.", "go-money-deleted", "Recovery"],
+      ["Resilient UI states", true, "Loading, empty, permission, setup, and retry states across workspaces.", "refresh-dashboard", "Run Refresh"],
+      ["Product QA", true, "Automated workflow, security, layout, role, financial, and browser guardrails.", "copy-dashboard-diagnostics", "Copy Diagnostics"],
+      ["Production monitoring", dashboardHealthWarnings({ scope: "critical" }).length === 0, "Live configuration, module health, errors, and integration diagnostics.", "copy-dashboard-diagnostics", "Health Summary"]
+    ];
+    const ready = checks.filter((item) => item[1]).length;
+    return { checks, ready };
+  }
+
+  function renderUrbanYardsLaunchCenter(data = state.data) {
+    const readiness = urbanYardsProductReadiness(data);
+    return `<section class="uy-launch-center" aria-label="Urban Yards product readiness">
+      <div class="ticket-flow-heading">
+        <div>
+          <p class="eyebrow">Finish Line</p>
+          <h3>Urban Yards Launch Center</h3>
+          <p>One operating checklist for the customer journey, staff workflow, data quality, recovery, QA, and production health.</p>
+        </div>
+        <strong>${escapeHtml(`${readiness.ready}/19 ready`)}</strong>
+      </div>
+      <div class="uy-launch-progress" aria-label="${escapeHtml(`${readiness.ready} of 19 capabilities ready`)}"><span style="width:${escapeHtml(String(Math.round(readiness.ready / 19 * 100)))}%"></span></div>
+      <div class="uy-launch-grid">
+        ${readiness.checks.map(([label, complete, detail, action, actionLabel], index) => `<article class="${complete ? "is-ready" : "needs-setup"}">
+          <div><span>${escapeHtml(String(index + 1).padStart(2, "0"))}</span><b>${complete ? "Ready" : "Setup"}</b></div>
+          <h4>${escapeHtml(label)}</h4>
+          <p>${escapeHtml(detail)}</p>
+          <button type="button" data-action="${escapeHtml(action)}">${escapeHtml(actionLabel)}</button>
+        </article>`).join("")}
+      </div>
+    </section>`;
+  }
+
+  function renderUrbanYardsOperationsCenter() {
+    const ops = activeConnectedOpsBundle();
+    const views = [
+      ["approvals", "Approvals"],
+      ["communications", "Communications"],
+      ["recurring", "Templates"],
+      ["automation", "Automation"],
+      ["reports", "Reports"]
+    ];
+    const content = state.connectedOpsView === "approvals"
+      ? renderApprovalOperations(ops)
+      : state.connectedOpsView === "communications"
+        ? renderCommunicationOperations(ops)
+        : state.connectedOpsView === "automation"
+          ? renderAutomationOperations(ops)
+          : state.connectedOpsView === "reports"
+            ? renderReportOperations(ops)
+            : renderRecurringOperations(ops);
+    return `<section class="uy-operations-center" data-urban-yards-operations aria-label="Urban Yards operating controls">
+      <div class="ticket-flow-heading">
+        <div><p class="eyebrow">Operating System</p><h3>Approvals, communication, templates, and automation</h3><p>Product-ready controls built on the same records used by Job Tickets.</p></div>
+      </div>
+      <div class="money-tabs" role="tablist" aria-label="Urban Yards operating controls">
+        ${views.map(([key, label]) => `<button type="button" role="tab" data-action="product-ops-tab" data-connected-ops-view="${escapeHtml(key)}" aria-selected="${state.connectedOpsView === key}">${escapeHtml(label)}</button>`).join("")}
+      </div>
+      <div class="uy-operations-center-body">${content}</div>
+    </section>`;
+  }
+
   function renderToolsSystemsPanel({ criticalWarnings = [], supportWarnings = [], documentationCount = 0, equipmentCount = 0, routeStopsToday = 0, aiLiveVersion = "", usersCount = 0, documentsCount = 0 }) {
     return `<section class="tools-systems-panel" aria-label="Tools operating groups">
       <div class="ticket-flow-heading">
@@ -15926,6 +16008,8 @@ Requirements:
             <div class="activity-log-list" data-activity-log-list></div>
           </article>
         </section>
+        ${renderUrbanYardsLaunchCenter(data)}
+        ${renderUrbanYardsOperationsCenter()}
         ${supportWarnings.length ? `
           <section class="ticket-lane">
             <div class="ticket-lane-heading">
@@ -18907,6 +18991,8 @@ Requirements:
           </div>
           <div class="drawer-actions document-primary-actions">
             <button type="button" data-action="sync-square-document" data-id="${escapeHtml(doc.id)}">${buttonContent("Sync Square", "sync-square-document")}</button>
+            ${doc.type === "estimate" && doc.clientEmail ? `<a class="button" href="mailto:${encodeURIComponent(doc.clientEmail)}?subject=${encodeURIComponent(`Urban Yards Quote ${doc.number}`)}&body=${encodeURIComponent(`Hello ${doc.clientName},\n\nYour Urban Yards quote ${doc.number} for $${doc.total.toFixed(2)} is ready for review.\n\nPlease reply with any questions or approval.\n\nUrban Yards`)}">Email Quote</a>` : ""}
+            ${doc.type === "estimate" && doc.status !== "approved" ? `<button type="button" data-action="record-quote-approval" data-id="${escapeHtml(doc.id)}">Record Customer Approval</button>` : ""}
             ${doc.squarePaymentUrl ? `<a class="button" href="${escapeHtml(doc.squarePaymentUrl)}" target="_blank" rel="noopener noreferrer">Open Payment Link</a>` : ""}
             <button type="button" data-action="print-document" data-id="${escapeHtml(doc.id)}">${buttonContent("Print / PDF", "print-document")}</button>
           </div>
@@ -18933,6 +19019,9 @@ Requirements:
             <select name="status">
               <option value="draft"${doc.status === "draft" ? " selected" : ""}>Draft</option>
               <option value="sent"${doc.status === "sent" ? " selected" : ""}>Sent</option>
+              ${doc.type === "estimate" ? `<option value="approved"${doc.status === "approved" ? " selected" : ""}>Approved</option>
+              <option value="declined"${doc.status === "declined" ? " selected" : ""}>Declined</option>
+              <option value="expired"${doc.status === "expired" ? " selected" : ""}>Expired</option>` : ""}
               <option value="paid"${doc.status === "paid" ? " selected" : ""}>Paid</option>
               <option value="void"${doc.status === "void" ? " selected" : ""}>Void</option>
             </select>
@@ -22243,6 +22332,13 @@ Requirements:
         return;
       }
 
+      if (action === "product-ops-tab") {
+        state.connectedOpsView = target.dataset.connectedOpsView || "approvals";
+        renderToolsWorkspace();
+        qs("[data-urban-yards-operations]")?.scrollIntoView({ block: "start" });
+        return;
+      }
+
       if (action === "archive-money-record") {
         const entityType = target.dataset.entityType || "";
         try {
@@ -24826,6 +24922,28 @@ Requirements:
       } else if (action === "go-money") {
         setActiveSection("documents");
         replaceDashboardHash("documents");
+      } else if (action === "go-money-quotes" || action === "go-money-reports" || action === "go-money-deleted") {
+        state.moneyView = action === "go-money-quotes" ? "quoting" : action === "go-money-reports" ? "reports" : "deleted";
+        setActiveSection("documents");
+        replaceDashboardHash("documents");
+        await render();
+      } else if (["go-product-approvals", "go-product-automation", "go-product-templates", "go-product-communications"].includes(action)) {
+        state.connectedOpsView = action === "go-product-approvals"
+          ? "approvals"
+          : action === "go-product-automation"
+            ? "automation"
+            : action === "go-product-templates"
+              ? "recurring"
+              : "communications";
+        setActiveSection("settings");
+        replaceDashboardHash("settings");
+        await render();
+        qs("[data-urban-yards-operations]")?.scrollIntoView({ behavior: "smooth", block: "start" });
+      } else if (action === "go-product-access") {
+        setActiveSection("settings");
+        replaceDashboardHash("settings");
+        await render();
+        qs("[data-tools-users-access]")?.scrollIntoView({ behavior: "smooth", block: "start" });
       } else if (action === "open-financial-records") {
         setActiveSection("documents");
         replaceDashboardHash("documents");
@@ -25250,6 +25368,41 @@ Requirements:
           setDashboardState("");
         } catch (error) {
           setDashboardState(error.message || "Unable to sync Square invoice.", "error");
+        }
+      } else if (action === "record-quote-approval") {
+        const document = state.data.documents.find((item) => item.id === id);
+        if (!document || document.type !== "estimate") return;
+        if (!window.confirm(`Record customer approval for ${document.number}?`)) return;
+        try {
+          setDashboardState("Recording customer quote approval...");
+          await updateSalesDocument(id, {
+            document_type: "estimate",
+            client_name: document.clientName,
+            client_email: document.clientEmail,
+            description: document.lineItems[0]?.description || "Landscape service",
+            amount: document.total,
+            due_date: document.dueDateRaw,
+            status: "approved",
+            notes: document.notes
+          });
+          const ticket = findJobTicketForSalesDocument(id);
+          if (ticket?.id) {
+            await updateJobTicket(ticket.id, {
+              customer_approval_recorded: true,
+              next_action: "Begin internal cost review"
+            });
+            if (ticketStage(ticket) === "customer_approval_pending") {
+              await transitionJobTicketStage(ticket.id, "needs_budget", {
+                notes: `Customer approved quote ${document.number}.`,
+                nextAction: ticketNextAction("needs_budget")
+              });
+            }
+          }
+          await refreshDashboard();
+          openDocumentDrawer(id);
+          setDashboardState("Customer quote approval recorded and connected ticket updated.");
+        } catch (error) {
+          setDashboardState(error.message || "Customer quote approval could not be recorded.", "error");
         }
       } else if (action === "print-document") {
         printDocument(id);

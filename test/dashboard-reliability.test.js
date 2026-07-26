@@ -26,7 +26,7 @@ test("live workspace polish contains long records and management cards", () => {
   assert.match(css, /\.call-queue-row > span:first-child :is\(strong, small\)[\s\S]*overflow-wrap: anywhere/);
   assert.match(css, /\.groundskeeper-operation-card[\s\S]*white-space: normal !important/);
   assert.match(css, /\.dashboard-health-item strong[\s\S]*word-break: break-all/);
-  assert.match(html, /dashboard\.css\?v=20260725-ticket-workbench-edit-2/);
+  assert.match(html, /dashboard\.css\?v=20260725-product-ready-1/);
 });
 
 test("authenticated assistant prompt suppresses public quote calls to action", () => {
@@ -1001,6 +1001,20 @@ test("unified tickets provide one validated completion checklist with N/A except
   assert.match(css, /\.ticket-workbench-fields[\s\S]*repeat\(2, minmax\(0, 1fr\)\)/);
   assert.match(css, /\.ticket-workbench-section \.ticket-completion-list[\s\S]*grid-template-columns: 1fr/);
   assert.match(css, /\.ticket-workbench \.ticket-workbench-grid[\s\S]*grid-template-columns: 1fr/);
+});
+
+test("Urban Yards launch center exposes all nineteen product-readiness controls", () => {
+  const js = read("dashboard.js");
+  const css = read("dashboard.css");
+  assert.match(js, /function urbanYardsProductReadiness/);
+  assert.match(js, /function renderUrbanYardsLaunchCenter/);
+  assert.match(js, /Urban Yards Launch Center/);
+  assert.match(js, /readiness\.ready}\/19 ready/);
+  assert.match(js, /function renderUrbanYardsOperationsCenter/);
+  assert.match(js, /Record Customer Approval/);
+  assert.match(js, /customer_approval_recorded: true/);
+  assert.match(css, /\.uy-launch-grid/);
+  assert.match(css, /\.uy-operations-center/);
 });
 
 test("ticket creation is guided, searchable, templated, and safely autosaved", () => {

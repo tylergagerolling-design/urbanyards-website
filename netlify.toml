@@ -37,6 +37,16 @@
   status = 200
 
 [[redirects]]
+  from = "/quote-approval"
+  to = "/quote-approval.html"
+  status = 200
+
+[[redirects]]
+  from = "/quote-approval/"
+  to = "/quote-approval.html"
+  status = 200
+
+[[redirects]]
   from = "/api/admin/upload-user-avatar"
   to = "/.netlify/functions/admin-upload-user-avatar"
   status = 200
@@ -112,3 +122,9 @@
   for = "/dashboard-config.js"
   [headers.values]
     Cache-Control = "no-store, max-age=0"
+
+[[headers]]
+  for = "/quote-approval*"
+  [headers.values]
+    Cache-Control = "no-store, max-age=0"
+    Referrer-Policy = "no-referrer"

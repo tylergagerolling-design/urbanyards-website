@@ -43,6 +43,8 @@
   const DASHBOARD_COMPACT_KEY = "urbanYardsDashboardCompact";
   const DASHBOARD_REDUCED_MOTION_KEY = "urbanYardsDashboardReducedMotion";
   const DISMISSED_NOTIFICATIONS_KEY = "urbanYardsDismissedNotifications";
+  const QA_VISIBILITY_KEY = "urbanYardsShowQaRecords";
+  const TICKET_DRAFT_PREFIX = "urbanYardsTicketDraft:";
   const GOOGLE_VOICE_HOME_URL = "https://voice.google.com/";
   const GOOGLE_VOICE_CALLS_URL = "https://voice.google.com/u/0/calls";
   const URBAN_YARDS_GOOGLE_VOICE_NUMBER = "(971) 258-1109";
@@ -359,6 +361,7 @@
     ticketBoardOwnerFilter: "All",
     ticketBoardCloseoutOnly: false,
     ticketBoardMode: "open",
+    showQaData: readStoredPreference(QA_VISIBILITY_KEY, "false") === "true",
     ownerKanbanSearch: "",
     ownerKanbanAssigneeFilter: "All",
     ownerKanbanPriorityFilter: "All",
@@ -764,7 +767,7 @@
   }
 
   function emptyState(message) {
-    return `<div class="empty-state">${escapeHtml(message)}</div>`;
+    return `<div class="empty-state"><strong>${escapeHtml(message)}</strong><span>Use the closest create or connect action to add the first record. If data should already be here, refresh and review Dashboard Health.</span></div>`;
   }
 
   function loadingState(message) {
@@ -1661,6 +1664,17 @@
       ...item,
       scope: item.scope || moduleWarningScope(item.name)
     }));
+    dashboardSectionLoadState.forEach((info, section) => {
+      if (!["partial", "failed"].includes(info.status)) return;
+      const name = `${titleCase(section)} workspace`;
+      if (warnings.some((item) => item.name === name)) return;
+      warnings.push({
+        name,
+        message: info.error || "Some workspace records could not be loaded.",
+        detail: info.error || "Refresh the workspace or review authentication and permissions.",
+        scope: "critical"
+      });
+    });
     if (!state.groundskeeperAiReady && state.groundskeeperAiError) {
       warnings.push({ name: "Groundskeeper AI", message: state.groundskeeperAiError, detail: state.groundskeeperAiError, scope: "support" });
     }
@@ -1995,6 +2009,28 @@
     const payload = await response.json().catch(() => ({}));
     if (!response.ok) throw new Error(payload.error || "Financial records could not be loaded.");
     return payload.data;
+  }
+
+  async function quoteApprovalRequest(body = {}) {
+    if (isDemoMode()) {
+      return {
+        url: `${window.location.origin}/quote-approval?token=demo-approval-token-not-for-production`,
+        delivery: { status: "link_created", channel: body.delivery || "copy" }
+      };
+    }
+    const session = getSession();
+    if (!session?.accessToken) throw new Error("Please sign in again.");
+    const response = await fetch("/api/client-quote-approval", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${session.accessToken}`
+      },
+      body: JSON.stringify(body)
+    });
+    const payload = await response.json().catch(() => ({}));
+    if (!response.ok) throw new Error(payload.error || "The secure approval link could not be created.");
+    return payload;
   }
 
   async function dashboardFinancialStorageRequest(action, body = {}) {
@@ -7407,14 +7443,66 @@
     });
   }
 
-  function buildDocumentPayload(input) {
-    const amount = Number(input.amount || 0);
-    const lineItems = [{
+  function parseQuoteLineItems(input = {}) {
+    if (Array.isArray(input.line_items) && input.line_items.length) {
+      return input.line_items.map((item) => {
+        const quantity = Math.max(0.01, Number(item.quantity || 1));
+        const unitPrice = Math.max(0, Number(item.unit_price || item.unitPrice || 0));
+        return {
+          description: String(item.description || "Landscape service").trim().slice(0, 240),
+          quantity,
+          unit_price: unitPrice,
+          amount: Math.round(quantity * unitPrice * 100) / 100
+        };
+      });
+    }
+    const text = String(input.line_items_text || "").trim();
+    const parsed = text.split(/\r?\n/).map((line) => {
+      const [description, quantityText, unitPriceText] = line.split("|").map((value) => String(value || "").trim());
+      const quantity = Math.max(0.01, Number(quantityText || 1));
+      const unitPrice = Math.max(0, Number(String(unitPriceText || "").replace(/[$,]/g, "")) || 0);
+      if (!description) return null;
+      return {
+        description: description.slice(0, 240),
+        quantity,
+        unit_price: unitPrice,
+        amount: Math.round(quantity * unitPrice * 100) / 100
+      };
+    }).filter(Boolean);
+    if (parsed.length) return parsed;
+    const amount = Math.max(0, Number(input.amount || 0));
+    return [{
       description: input.description || "Landscape service",
       quantity: 1,
       unit_price: amount,
       amount
     }];
+  }
+
+  function quotePricingSummary(input = {}) {
+    const serviceItems = parseQuoteLineItems(input);
+    const serviceSubtotal = serviceItems.reduce((sum, item) => sum + Number(item.amount || 0), 0);
+    const discountType = String(input.discount_type || "amount");
+    const discountInput = Math.max(0, Number(input.discount || 0));
+    const discount = Math.min(serviceSubtotal, discountType === "percent" ? serviceSubtotal * discountInput / 100 : discountInput);
+    const netSubtotal = Math.max(0, serviceSubtotal - discount);
+    const taxRate = Math.max(0, Number(input.tax_rate || 0));
+    const tax = Math.round(netSubtotal * taxRate) / 100;
+    const total = Math.round((netSubtotal + tax) * 100) / 100;
+    const lineItems = discount > 0
+      ? [...serviceItems, { description: "Discount", quantity: 1, unit_price: -discount, amount: -discount }]
+      : serviceItems;
+    return { lineItems, serviceSubtotal, discount, netSubtotal, taxRate, tax, total };
+  }
+
+  function buildDocumentPayload(input) {
+    const pricing = quotePricingSummary(input);
+    const terms = [
+      input.deposit_percent ? `Deposit requested: ${Number(input.deposit_percent)}%.` : "",
+      input.terms ? `Terms: ${String(input.terms).trim()}` : "",
+      input.customer_message ? `Customer message: ${String(input.customer_message).trim()}` : "",
+      input.notes || ""
+    ].filter(Boolean).join("\n");
     return {
       document_type: input.document_type || "estimate",
       document_number: input.document_number || nextDocumentNumber(input.document_type || "estimate"),
@@ -7425,11 +7513,11 @@
       issue_date: new Date().toISOString().slice(0, 10),
       due_date: input.due_date || null,
       status: "draft",
-      line_items: lineItems,
-      subtotal: amount,
-      tax: 0,
-      total: amount,
-      notes: input.notes || ""
+      line_items: pricing.lineItems,
+      subtotal: pricing.netSubtotal,
+      tax: pricing.tax,
+      total: pricing.total,
+      notes: terms
     };
   }
 
@@ -10110,7 +10198,7 @@
   }
 
   function dashboardRouteStopsForDate(data = state.data, routeDate = todayKey()) {
-    return data.routeStops
+    return visibleOperationalRecords(data.routeStops || [])
       .filter((stop) => stop.routeDate === routeDate)
       .sort((a, b) => a.stopOrder - b.stopOrder || a.createdAt.localeCompare(b.createdAt));
   }
@@ -11102,7 +11190,9 @@
       beforePhotosUploaded: Boolean(row.before_photos_uploaded || row.beforePhotosUploaded || row.arrival_photos_uploaded || row.arrivalPhotosUploaded),
       afterPhotosUploaded: Boolean(row.after_photos_uploaded || row.afterPhotosUploaded || row.completion_photos_uploaded || row.completionPhotosUploaded),
       fieldCompletionNotes: row.field_completion_notes || row.fieldCompletionNotes || "",
-      invoiceFinalized: Boolean(row.invoice_finalized || row.invoiceFinalized)
+      invoiceFinalized: Boolean(row.invoice_finalized || row.invoiceFinalized),
+      createdAtRaw: row.created_at || "",
+      updatedAtRaw: row.updated_at || row.created_at || ""
     };
   }
 
@@ -11194,6 +11284,45 @@
     };
   }
 
+  function isQaRecord(record = {}) {
+    if (record?.metadata?.qa === true || record?.qa === true) return true;
+    const values = [
+      record.ticket_number,
+      record.number,
+      record.document_number,
+      record.invoice_number,
+      record.title,
+      record.customer,
+      record.customerName,
+      record.clientName,
+      record.property,
+      record.site,
+      record.service
+    ].filter(Boolean).map((value) => String(value).trim());
+    return values.some((value) => /^QA[-\s]/i.test(value) || /^TEST(?:\s|[-:])/i.test(value));
+  }
+
+  function visibleOperationalRecords(records = []) {
+    return state.showQaData ? records : records.filter((record) => !isQaRecord(record));
+  }
+
+  function qaRecordCount(data = state.data) {
+    return [
+      ...(data.tickets || []),
+      ...(data.jobs || []),
+      ...(data.submissions || []),
+      ...(data.documents || [])
+    ].filter(isQaRecord).length;
+  }
+
+  function dashboardDocuments(data = state.data) {
+    return visibleOperationalRecords(data.documents || []);
+  }
+
+  function dashboardFinancialInvoices(data = state.data) {
+    return visibleOperationalRecords(data.financial?.invoices || []);
+  }
+
   function dashboardTickets(data = state.data) {
     const rentDeductionCloseouts = new Map();
     const rentDeductionReopens = new Map();
@@ -11231,12 +11360,16 @@
     const quotes = (data.submissions || []).map(buildTicketFromQuote);
     const derived = [...jobs, ...quotes];
     const canonical = (data.tickets || []).filter((ticket) => ticket && ticket.id);
+    let tickets;
     if (!canonical.length) {
-      return derived.sort((a, b) => String(a.dateRaw || "").localeCompare(String(b.dateRaw || "")));
+      tickets = derived;
+    } else {
+      const canonicalSourceKeys = new Set(canonical.map(ticketSourceKey).filter((key) => !key.endsWith(":")));
+      const fallbackTickets = derived.filter((ticket) => !canonicalSourceKeys.has(ticketSourceKey(ticket)));
+      tickets = [...canonical, ...fallbackTickets];
     }
-    const canonicalSourceKeys = new Set(canonical.map(ticketSourceKey).filter((key) => !key.endsWith(":")));
-    const fallbackTickets = derived.filter((ticket) => !canonicalSourceKeys.has(ticketSourceKey(ticket)));
-    return [...canonical, ...fallbackTickets].sort((a, b) => String(a.dateRaw || "").localeCompare(String(b.dateRaw || "")));
+    return visibleOperationalRecords(tickets)
+      .sort((a, b) => String(a.dateRaw || "").localeCompare(String(b.dateRaw || "")));
   }
 
   function ticketCountBy(tickets, predicate) {
@@ -11270,11 +11403,11 @@
   }
 
   function ticketCardMilestoneOverride(ticket = {}, key) {
-    if (key === "quote") return Boolean(ticket.quoteId || ticket.proposedPrice || ticket.expectedRevenue);
+    if (key === "quote") return Boolean(ticket.quoteId);
     if (key === "budget") return Boolean(ticket.budgetId || ticket.budgetApproved || ticket.costReviewComplete);
     if (key === "work") return Boolean(ticket.jobId || ticket.scheduledJobId || ticket.scheduledVisitId);
     if (key === "proof") return Boolean(ticket.actualsRecorded || ticket.completionPhotosReady || ticket.arrivalPhotosReady || ticket.formsComplete);
-    if (key === "invoice") return Boolean(ticket.invoiceId || ticket.invoiceFinalized || ticket.paymentStatus);
+    if (key === "invoice") return Boolean(ticket.invoiceId);
     return true;
   }
 
@@ -11707,22 +11840,80 @@
       : resolved === checklistItems.length
         ? "Complete"
         : `${resolved}/${checklistItems.length}`;
-    return `<article class="ticket-workbench-section ${stateClass}">
-      <div class="ticket-workbench-section-heading">
+    return `<details class="ticket-workbench-section ${stateClass}"${section.stages.includes(activeStage) ? " open" : ""}>
+      <summary class="ticket-workbench-section-heading">
         <div>
           <p class="eyebrow">${escapeHtml(section.owner)}</p>
           <h5>${escapeHtml(section.title)}</h5>
         </div>
         <span>${escapeHtml(stateLabel)}</span>
+      </summary>
+      <div class="ticket-workbench-section-body">
+        <p>${escapeHtml(section.detail)}</p>
+        <div class="ticket-workbench-fields">
+          ${section.fields.map((field) => ticketWorkbenchField(field, ticket)).join("")}
+        </div>
+        <div class="ticket-completion-list">
+          ${checklistItems.map((item) => ticketWorkbenchChecklistItem(item, ticket, completed, notApplicable)).join("")}
+        </div>
       </div>
-      <p>${escapeHtml(section.detail)}</p>
-      <div class="ticket-workbench-fields">
-        ${section.fields.map((field) => ticketWorkbenchField(field, ticket)).join("")}
-      </div>
-      <div class="ticket-completion-list">
-        ${checklistItems.map((item) => ticketWorkbenchChecklistItem(item, ticket, completed, notApplicable)).join("")}
-      </div>
-    </article>`;
+    </details>`;
+  }
+
+  function ticketWorkbenchDraftKey(ticketId) {
+    return `${TICKET_DRAFT_PREFIX}${ticketId}`;
+  }
+
+  function saveTicketWorkbenchDraft(form) {
+    const ticketId = form?.dataset?.ticketId || "";
+    if (!ticketId) return;
+    const values = {};
+    new FormData(form).forEach((value, key) => {
+      values[key] = value;
+    });
+    try {
+      localStorage.setItem(ticketWorkbenchDraftKey(ticketId), JSON.stringify({
+        values,
+        updatedAt: new Date().toISOString(),
+        recordUpdatedAt: form.dataset.recordUpdatedAt || ""
+      }));
+      const indicator = form.querySelector("[data-ticket-save-state]");
+      if (indicator) indicator.textContent = "Draft saved on this device";
+    } catch {
+      const indicator = form.querySelector("[data-ticket-save-state]");
+      if (indicator) indicator.textContent = "Unsaved changes";
+    }
+  }
+
+  function restoreTicketWorkbenchDraft(form) {
+    const ticketId = form?.dataset?.ticketId || "";
+    if (!ticketId) return;
+    try {
+      const draft = JSON.parse(localStorage.getItem(ticketWorkbenchDraftKey(ticketId)) || "null");
+      if (!draft?.values) return;
+      Object.entries(draft.values).forEach(([name, value]) => {
+        const field = form.elements.namedItem(name);
+        if (!field || field instanceof RadioNodeList) return;
+        if (field.type === "checkbox") field.checked = value === "on";
+        else field.value = value;
+      });
+      const indicator = form.querySelector("[data-ticket-save-state]");
+      if (indicator) {
+        indicator.textContent = draft.recordUpdatedAt && form.dataset.recordUpdatedAt && draft.recordUpdatedAt !== form.dataset.recordUpdatedAt
+          ? "Draft restored — review newer ticket changes"
+          : "Draft restored from this device";
+      }
+    } catch {
+      localStorage.removeItem(ticketWorkbenchDraftKey(ticketId));
+    }
+  }
+
+  function clearTicketWorkbenchDraft(ticketId) {
+    try {
+      localStorage.removeItem(ticketWorkbenchDraftKey(ticketId));
+    } catch {
+      // Local draft cleanup must never block the saved ticket.
+    }
   }
 
   function renderTicketWorkbench(ticket) {
@@ -11812,7 +12003,11 @@
         </div>
         <span>${escapeHtml(`${resolved}/${ticketCompletionChecklistItems.length}`)}</span>
       </div>
-      <form data-ticket-workbench-form data-ticket-completion-form data-ticket-id="${escapeHtml(ticket.id)}" data-ticket-source="${escapeHtml(ticket.source || ticket.sourceType || "ticket")}">
+      <form data-ticket-workbench-form data-ticket-completion-form data-ticket-id="${escapeHtml(ticket.id)}" data-ticket-source="${escapeHtml(ticket.source || ticket.sourceType || "ticket")}" data-record-updated-at="${escapeHtml(ticket.updatedAtRaw || "")}">
+        <div class="ticket-workbench-save-state" role="status">
+          <span data-ticket-save-state>All saved</span>
+          <small>The current step opens automatically. Expand any other area to edit it.</small>
+        </div>
         <div class="ticket-workbench-grid">
           ${sections.map((section) => ticketWorkbenchSection(section, stage, ticket, completed, notApplicable)).join("")}
         </div>
@@ -12155,6 +12350,17 @@
     return `<option value="">Choose team member...</option>${options}`;
   }
 
+  function ticketSchedulingConflicts(ticket = {}, visitDate = "", assignedUserId = "") {
+    const date = dateKey(visitDate);
+    if (!date) return [];
+    return dashboardTickets().filter((candidate) => {
+      if (!ticketIsOpen(candidate) || candidate.id === ticket.id) return false;
+      if (dateKey(candidate.dateRaw || candidate.scheduledDate) !== date) return false;
+      if (assignedUserId && candidate.assignedUserId) return candidate.assignedUserId === assignedUserId;
+      return ticketInStage(candidate, ["scheduled", "in_progress", "paused"]);
+    });
+  }
+
   function renderTicketWorkAssignmentBridge(ticket = {}, sourceItem = null) {
     const stage = ticketStage(ticket);
     if (!["ready_to_schedule", "scheduled", "in_progress", "paused"].includes(stage)) return "";
@@ -12163,6 +12369,7 @@
     const visitDate = toDateInputValue(linkedJob?.dateRaw || ticket.dateRaw || "");
     const visitWindow = linkedJob?.window && linkedJob.window !== "Window not set" ? linkedJob.window : "";
     const assignedUserId = ticket.assignedUserId || "";
+    const conflicts = ticketSchedulingConflicts(ticket, visitDate, assignedUserId);
     const buttonLabel = linkedJob?.id ? "Update Work Assignment" : "Create Work Assignment";
     return `<section class="ticket-drawer-card ticket-work-assignment-bridge">
       <div class="ticket-drawer-card-heading">
@@ -12171,6 +12378,7 @@
           <span>${escapeHtml(linkedJob?.id ? "Linked to a scheduled visit." : "Create the scheduled visit and assign the work owner.")}</span>
         </div>
       </div>
+      ${conflicts.length ? `<div class="ticket-schedule-conflict" role="alert"><strong>${escapeHtml(String(conflicts.length))} possible scheduling conflict${conflicts.length === 1 ? "" : "s"}</strong><span>${escapeHtml(conflicts.slice(0, 3).map((item) => `${item.number} / ${item.customer}`).join(", "))}</span></div>` : `<div class="ticket-schedule-clear"><strong>No assignment conflict detected</strong><span>Travel time and customer confirmation still need human review.</span></div>`}
       <form class="ticket-work-assignment-form" data-ticket-assignment-form data-ticket-id="${escapeHtml(ticket.id || "")}" data-ticket-source="${escapeHtml(ticket.source || ticket.sourceType || "ticket")}" data-job-id="${escapeHtml(linkedJob?.id || "")}">
         <label>Visit date
           <input name="visit_date" type="date" value="${escapeHtml(visitDate)}" required>
@@ -12443,22 +12651,12 @@
     const nextDetail = command.move
       ? command.move.detail || command.nextAction || "Ready for the next workflow move."
       : command.detail || ticket.detail || "Review the ticket details and choose the next step.";
-    return `<section class="ticket-drawer-action-strip" aria-label="Ticket action summary">
-      <article>
-        <span>Current workspace</span>
-        <strong>${escapeHtml(workspace.label)}</strong>
-        <small>${escapeHtml(workspace.detail)}</small>
-      </article>
-      <article>
-        <span>Next move</span>
+    return `<section class="ticket-drawer-action-strip ${blockers.length ? "is-blocked" : "is-ready"}" aria-label="Ticket action summary">
+      <div class="ticket-drawer-action-strip-copy">
+        <span>${escapeHtml(workspace.label)} / ${escapeHtml(readinessTitle)}</span>
         <strong>${escapeHtml(nextTitle)}</strong>
-        <small>${escapeHtml(nextDetail)}</small>
-      </article>
-      <article class="${blockers.length ? "is-blocked" : "is-ready"}">
-        <span>Readiness</span>
-        <strong>${escapeHtml(readinessTitle)}</strong>
-        <small>${escapeHtml(readinessDetail)}</small>
-      </article>
+        <small>${escapeHtml(blockers.length ? readinessDetail : nextDetail)}</small>
+      </div>
       <div class="ticket-drawer-action-strip-actions">
         <button type="button" data-action="${escapeHtml(workspace.action)}">${buttonContent(`Open ${workspace.label}`, workspace.action)}</button>
         ${sourceAction ? `<button type="button" data-action="${escapeHtml(sourceAction.action)}" data-id="${escapeHtml(sourceAction.id)}">${buttonContent(sourceAction.label, sourceAction.action)}</button>` : ""}
@@ -12782,12 +12980,24 @@
           const stageDetail = event.fromStageLabel || event.toStageLabel
             ? [event.fromStageLabel, event.toStageLabel].filter(Boolean).join(" to ")
             : "";
+          const oldValue = event.oldValue && typeof event.oldValue === "object"
+            ? Object.entries(event.oldValue).slice(0, 3).map(([key, value]) => `${titleCase(key)}: ${String(value)}`).join(", ")
+            : "";
+          const newValue = event.newValue && typeof event.newValue === "object"
+            ? Object.entries(event.newValue).slice(0, 3).map(([key, value]) => `${titleCase(key)}: ${Array.isArray(value) ? value.join(", ") : String(value)}`).join(", ")
+            : "";
           return `<article class="ticket-history-row">
             <span aria-hidden="true"></span>
             <div>
               <strong>${escapeHtml(event.title)}</strong>
-              <p>${escapeHtml(event.notes || stageDetail || "Ticket record updated.")}</p>
-              <small>${escapeHtml([event.actorEmail || "Dashboard", event.createdAt].filter(Boolean).join(" / "))}</small>
+              <p>${escapeHtml(event.notes || "Ticket record updated.")}</p>
+              <dl>
+                <div><dt>Actor</dt><dd>${escapeHtml(event.actorEmail || "Dashboard")}</dd></div>
+                <div><dt>Time</dt><dd>${escapeHtml(event.createdAt || "Not recorded")}</dd></div>
+                ${stageDetail ? `<div><dt>Change</dt><dd>${escapeHtml(stageDetail)}</dd></div>` : ""}
+                ${oldValue ? `<div><dt>Before</dt><dd>${escapeHtml(oldValue)}</dd></div>` : ""}
+                ${newValue ? `<div><dt>After</dt><dd>${escapeHtml(newValue)}</dd></div>` : ""}
+              </dl>
             </div>
           </article>`;
         }).join("")}
@@ -12905,34 +13115,13 @@
         ${renderTicketDrawerActionStrip(ticket)}
         <nav class="ticket-workspace-nav" aria-label="Ticket workspace sections">
           <a href="#ticket-next-action">Overview</a>
-          <a href="#ticket-workbench">Work</a>
+          <a href="#ticket-workbench">Checklist &amp; details</a>
           <a href="#ticket-closeout">Proof &amp; closeout</a>
-          <a href="#ticket-workbench">Money</a>
           <a href="#ticket-history">History</a>
         </nav>
         <section class="ticket-single-box" aria-label="Complete ticket record">
-        <section class="ticket-next-action-card" id="ticket-next-action">
-          <div><p class="eyebrow">Next Action</p><h4>${escapeHtml(ticket.nextAction || "Review this ticket")}</h4><span>${escapeHtml(ticket.ownerLabel || "Unassigned")} owns this step.</span></div>
-          <strong>${escapeHtml(ticket.stageLabel)}</strong>
-        </section>
-        <section class="ticket-drawer-operating-grid" aria-label="Ticket operating controls">
-          ${renderTicketDrawerCockpit(ticket)}
+        <section class="ticket-drawer-operating-grid" id="ticket-next-action" aria-label="Ticket operating controls">
           ${renderTicketDetailCommandCenter(ticket)}
-        </section>
-        <section class="ticket-drawer-card ticket-essentials-card">
-          <div class="ticket-drawer-card-heading">
-            <div>
-              <h4>Ticket essentials</h4>
-              <span>Current owner, source, date, and working detail.</span>
-            </div>
-          </div>
-          <div class="drawer-grid ticket-drawer-grid">
-            <div class="drawer-field"><span>Current owner</span>${escapeHtml(ticket.ownerLabel || "Unassigned")}</div>
-            <div class="drawer-field"><span>Next action</span>${escapeHtml(ticket.nextAction || "Open ticket")}</div>
-            <div class="drawer-field"><span>Source</span>${escapeHtml(ticket.sourceLabel || ticketSourceLabel(ticket))}</div>
-            <div class="drawer-field"><span>Date</span>${escapeHtml(ticket.dateLabel || "No date")}</div>
-            <div class="drawer-field span-full"><span>Details</span>${escapeHtml(ticket.detail || "No details yet.")}</div>
-          </div>
         </section>
         ${renderTicketWorkbench(ticket)}
         ${renderTicketWorkAssignmentBridge(ticket, sourceItem)}
@@ -12955,6 +13144,7 @@
         })}` : ""}
       </div>
     `;
+      restoreTicketWorkbenchDraft(els.detailContent.querySelector("[data-ticket-workbench-form]"));
     } catch (error) {
       console.error("Ticket drawer failed to render", error);
       openDetailDrawer();
@@ -13451,7 +13641,9 @@
         <span>Quick views</span>
         ${OWNER_KANBAN_SAVED_VIEWS.map((view) => `<button type="button" data-action="apply-owner-kanban-view" data-view="${escapeHtml(view.key)}">${escapeHtml(view.label)}</button>`).join("")}
       </div>
-      <div class="owner-kanban-filters">
+      <details class="owner-kanban-advanced-filters">
+        <summary>Advanced filters</summary>
+        <div class="owner-kanban-filters">
         <label class="owner-kanban-search">Search
           <input type="search" placeholder="Search tickets, clients, properties..." value="${escapeHtml(state.ownerKanbanSearch || "")}" data-owner-kanban-search>
         </label>
@@ -13753,6 +13945,42 @@
     </section>`;
   }
 
+  function renderOwnerScorecard(data = state.data, tickets = dashboardTickets(data)) {
+    const openTickets = tickets.filter(ticketIsOpen);
+    const quotes = dashboardDocuments(data).filter((item) => item.type === "estimate");
+    const approvedQuotes = quotes.filter((item) => item.status === "approved" || findJobTicketForSalesDocument(item.id)?.customerApprovalRecorded);
+    const scheduledRevenue = openTickets
+      .filter((ticket) => ticketInStage(ticket, ["ready_to_schedule", "scheduled", "in_progress", "paused"]))
+      .reduce((sum, ticket) => sum + Number(ticket.expectedRevenue || ticket.proposedPrice || 0), 0);
+    const expectedProfit = openTickets.reduce((sum, ticket) => sum + Number(ticket.estimatedProfit || 0), 0);
+    const outstanding = dashboardDocuments(data)
+      .filter((item) => item.type === "invoice" && !["paid", "void"].includes(statusText(item.status)))
+      .reduce((sum, item) => sum + Number(item.squareAmountDueCents !== null ? item.squareAmountDueCents / 100 : item.total || 0), 0);
+    const completionBlockers = openTickets.filter((ticket) => ticketInStage(ticket, ["field_work_complete", "completion_review", "invoice_review"]) && !ticket.invoiceId).length;
+    const approvalRate = quotes.length ? Math.round((approvedQuotes.length / quotes.length) * 100) : 0;
+    const items = [
+      ["Open jobs", openTickets.length, "All current operational tickets"],
+      ["Quote approval", `${approvalRate}%`, `${approvedQuotes.length} of ${quotes.length} customer quotes`],
+      ["Scheduled revenue", moneyCurrency(scheduledRevenue), "Ready, scheduled, and active work"],
+      ["Expected profit", moneyCurrency(expectedProfit), "Current ticket cost estimates"],
+      ["Outstanding", moneyCurrency(outstanding), "Unpaid invoice value"],
+      ["Closeout blockers", completionBlockers, "Completed work without an invoice link"]
+    ];
+    return `<section class="owner-scorecard" aria-label="Owner scorecard">
+      <div class="ticket-flow-heading">
+        <div>
+          <p class="eyebrow">Owner Scorecard</p>
+          <h3>Pipeline, margin, and cash at a glance</h3>
+          <p>Operational figures use connected records only and exclude QA data unless testing records are turned on.</p>
+        </div>
+      </div>
+      <div class="owner-scorecard-grid">
+        ${items.map(([label, value, detail]) => `<article><span>${escapeHtml(label)}</span><strong>${escapeHtml(String(value))}</strong><small>${escapeHtml(detail)}</small></article>`).join("")}
+        </div>
+      </details>
+    </section>`;
+  }
+
   function renderHomeWorkspace(data = state.data) {
     const target = qs("[data-home-workspace]");
     if (!target) return;
@@ -13811,6 +14039,7 @@
           ${renderTicketMetric(actionMetrics.paymentsAndCloseout, "Closeout / Payment", "Financial records needing action")}
         </section>
         ${renderHomeCommandCenter({ actions, attentionTickets, todayTickets, workTickets, moneyTickets, workflowWarnings, notifications })}
+        ${renderOwnerScorecard(data, tickets)}
         ${renderOwnerKanbanBoard(activeTickets)}
         ${renderDataQualityPanel(data, tickets)}
       </div>`;
@@ -14023,7 +14252,7 @@
   function renderWorkDayPlanPanel(stops = [], todayTickets = [], upcomingTickets = [], reviewTickets = []) {
     const openStops = stops.filter((stop) => stop.status !== "Complete");
     const nextStop = openStops[0] || stops[0];
-    return `<section class="work-day-plan-panel" aria-label="Work day plan">
+    return `<section class="work-day-plan-panel ${stops.length ? "" : "is-empty"}" aria-label="Work day plan">
       <article class="work-day-map-card">
         <div class="ticket-lane-heading">
           <div>
@@ -14033,7 +14262,7 @@
           </div>
           <span>${escapeHtml(String(openStops.length))}</span>
         </div>
-        ${routePreviewMapShell("work")}
+        ${stops.length ? routePreviewMapShell("work") : `<div class="work-route-empty"><strong>No route to map yet</strong><p>Schedule a visit first, then build the driving order when stops exist.</p><button type="button" data-action="quick-add-job">Add Visit</button></div>`}
         <div class="work-day-route-footer">
           <span>${escapeHtml(stops.length ? `${openStops.length} open / ${stops.length} total stops` : "Build the route when work is scheduled.")}</span>
         </div>
@@ -15478,7 +15707,7 @@ Requirements:
   }
 
   function renderInvoiceSpreadsheet() {
-    const invoices = state.data.financial.invoices || [];
+    const invoices = dashboardFinancialInvoices();
     return `<section class="invoice-workspace" aria-label="Invoice spreadsheet">
       <div class="money-grid-toolbar">
         <div><button type="button" data-action="create-financial-invoice">+ New Invoice</button></div>
@@ -15512,7 +15741,7 @@ Requirements:
 
   function renderInvoiceWorkspace() {
     if (state.moneyDisplay === "spreadsheet") return `${renderMoneyDisplayToggle()}${renderInvoiceSpreadsheet()}`;
-    const invoices = state.data.financial.invoices || [];
+    const invoices = dashboardFinancialInvoices();
     return `<section class="financial-directory money-simple-workspace" aria-label="Invoices">
       <div class="ticket-lane-heading"><div><p class="eyebrow">Invoices</p><h3>Billing records</h3><p>Open a card to edit details, lines, payments, and Square links.</p></div><div class="money-heading-actions"><button type="button" data-action="create-financial-invoice">+ New Invoice</button>${renderMoneyDisplayToggle()}</div></div>
       <div class="financial-card-list">${invoices.length ? invoices.map((invoice) => {
@@ -15529,7 +15758,7 @@ Requirements:
   }
 
   function renderQuoteWorkspace() {
-    const quotes = (state.data.documents || []).filter((document) => document.type === "estimate");
+    const quotes = dashboardDocuments().filter((document) => document.type === "estimate");
     const cards = quotes.map((quote) => {
       const ticket = findJobTicketForSalesDocument(quote.id);
       return `<article class="is-clickable" data-action="open-document" data-id="${escapeHtml(quote.id)}" tabindex="0">
@@ -15553,17 +15782,47 @@ Requirements:
     openDetailDrawer();
     els.detailContent.innerHTML = `<div class="drawer-content document-drawer">
       <div class="document-drawer-heading"><div><p class="eyebrow">New Quote</p><h3>Prepare customer quote</h3><p>Build the customer-facing scope and price before invoice preparation.</p></div></div>
-      <form class="drawer-form document-edit-form" data-document-form data-ticket-id="${escapeHtml(ticket?.id || "")}">
+      <form class="drawer-form document-edit-form quote-builder-form" data-document-form data-quote-builder data-ticket-id="${escapeHtml(ticket?.id || "")}">
         <input type="hidden" name="document_type" value="estimate">
         <label>Client name<input name="client_name" value="${escapeHtml(ticket?.customer || "")}" required></label>
         <label>Client email<input name="client_email" type="email" value="${escapeHtml(ticket?.email || "")}"></label>
-        <label class="span-full">Scope / description<input name="description" value="${escapeHtml(ticket?.scopeOfWork || ticket?.detail || ticket?.requestedService || "")}" required></label>
-        <label>Quoted amount<input name="amount" type="number" min="0" step="0.01" value="${escapeHtml(String(ticket?.proposedPrice || ""))}" required></label>
+        <label class="span-full">Property / project<input name="property_name" value="${escapeHtml(ticket?.property || "")}" placeholder="Service property or project name"></label>
+        <label class="span-full">Line items
+          <textarea name="line_items_text" rows="6" placeholder="Description | quantity | unit price" required>${escapeHtml(`${ticket?.scopeOfWork || ticket?.detail || ticket?.requestedService || "Landscape service"} | 1 | ${ticket?.proposedPrice || 0}`)}</textarea>
+          <small>One item per line. Example: Weekly landscape service | 4 | 175</small>
+        </label>
+        <label>Discount<input name="discount" type="number" min="0" step="0.01" value="0"></label>
+        <label>Discount type<select name="discount_type"><option value="amount">Dollar amount</option><option value="percent">Percent</option></select></label>
+        <label>Tax rate %<input name="tax_rate" type="number" min="0" step="0.01" value="0"></label>
+        <label>Deposit request %<input name="deposit_percent" type="number" min="0" max="100" step="1" value="0"></label>
         <label>Approval due<input name="due_date" type="date" value="${escapeHtml(addDaysKey(todayKey(), 14))}"></label>
+        <label class="span-full">Customer message<textarea name="customer_message" rows="3" placeholder="A short note shown with the quote."></textarea></label>
+        <label class="span-full">Terms<textarea name="terms" rows="3" placeholder="Scope assumptions, expiration, payment, and change-order terms.">Quote valid for 14 days. Changes outside the listed scope require written approval.</textarea></label>
+        <section class="quote-builder-preview span-full" data-quote-builder-preview aria-live="polite"></section>
         <div class="drawer-actions"><button type="submit">${buttonContent("Create Quote", "save")}</button></div>
       </form>
     </div>`;
+    updateQuoteBuilderPreview(els.detailContent.querySelector("[data-quote-builder]"));
     renderDetailDrawerBreadcrumbs();
+  }
+
+  function updateQuoteBuilderPreview(form) {
+    if (!form) return;
+    const data = new FormData(form);
+    const pricing = quotePricingSummary({
+      line_items_text: data.get("line_items_text"),
+      discount: data.get("discount"),
+      discount_type: data.get("discount_type"),
+      tax_rate: data.get("tax_rate")
+    });
+    const deposit = pricing.total * Math.max(0, Number(data.get("deposit_percent") || 0)) / 100;
+    const target = form.querySelector("[data-quote-builder-preview]");
+    if (!target) return;
+    target.innerHTML = `<div><span>Services</span><strong>${moneyCurrency(pricing.serviceSubtotal)}</strong></div>
+      <div><span>Discount</span><strong>-${moneyCurrency(pricing.discount)}</strong></div>
+      <div><span>Tax</span><strong>${moneyCurrency(pricing.tax)}</strong></div>
+      <div class="is-total"><span>Quote total</span><strong>${moneyCurrency(pricing.total)}</strong></div>
+      <div><span>Requested deposit</span><strong>${moneyCurrency(deposit)}</strong></div>`;
   }
 
   function financialLinkOptions(type, selectedId) {
@@ -15642,7 +15901,7 @@ Requirements:
     }
     if (state.moneyView === "reports") {
       const overview = state.data.financial.overview || {};
-      const invoices = state.data.financial.invoices || [];
+      const invoices = dashboardFinancialInvoices();
       const paid = invoices.filter((invoice) => financialCalculator().effectiveInvoiceStatus(invoice) === "Paid").length;
       const unpaid = invoices.filter((invoice) => !["Paid", "Voided", "Uncollectible"].includes(financialCalculator().effectiveInvoiceStatus(invoice))).length;
       return `<section class="financial-reports">
@@ -15682,7 +15941,7 @@ Requirements:
     const needsBudget = tickets.filter((ticket) => ticketInStage(ticket, ["needs_budget", "budget_in_progress"]));
     const ownerApproval = tickets.filter((ticket) => ticketInStage(ticket, ["needs_owner_approval", "invoice_preparation"]));
     const fieldComplete = tickets.filter((ticket) => ticketInStage(ticket, ["field_work_complete", "completion_review", "invoice_review"]));
-    const documents = data.documents || [];
+    const documents = dashboardDocuments(data);
     const unpaidInvoices = documents.filter((doc) => doc.type === "invoice" && doc.status !== "paid");
     const overdueInvoices = unpaidInvoices.filter((doc) => doc.dueDateRaw && doc.dueDateRaw < todayKey());
     const invoiceTickets = unpaidInvoices.slice(0, 6).map((doc, index) => ({
@@ -15969,9 +16228,6 @@ Requirements:
           <div class="ticket-hero-actions">
             <button type="button" data-action="refresh-dashboard">Refresh Dashboard</button>
             <button type="button" data-action="copy-dashboard-diagnostics">Copy Diagnostics</button>
-            <input type="text" data-reset-confirmation-input aria-label="Data reset confirmation" placeholder="Type DELETE ALL OPERATIONAL DATA">
-            <button type="button" class="danger-action" data-action="reset-all-operational-data">Delete All Records</button>
-            <button type="button" data-action="seed-qa-ticket-suite">Create 20 QA Tickets</button>
           </div>
         </header>
         <section class="ticket-metrics" aria-label="Tools summary">
@@ -16036,6 +16292,30 @@ Requirements:
             </div>
           </section>
         ` : ""}
+        <section class="tools-safety-center" aria-label="Testing data and danger zone">
+          <article class="tools-test-data">
+            <div>
+              <p class="eyebrow">Testing Data</p>
+              <h3>QA records are separated from operations</h3>
+              <p>${escapeHtml(String(qaRecordCount(data)))} QA-linked records detected. They are ${state.showQaData ? "currently visible" : "hidden from operational totals, queues, and scorecards"}.</p>
+            </div>
+            <div class="drawer-actions">
+              <button type="button" class="secondary-action" data-action="toggle-qa-data">${state.showQaData ? "Hide QA Records" : "Show QA Records"}</button>
+              <button type="button" class="secondary-action" data-action="seed-qa-ticket-suite">Create 20 QA Tickets</button>
+            </div>
+          </article>
+          <article class="tools-danger-zone">
+            <div>
+              <p class="eyebrow">Danger Zone</p>
+              <h3>Delete all operational records</h3>
+              <p>This permanently clears supported operational tables. It stays separate from normal setup and testing actions.</p>
+            </div>
+            <label>Confirmation
+              <input type="text" data-reset-confirmation-input autocomplete="off" placeholder="Type DELETE ALL OPERATIONAL DATA">
+            </label>
+            <button type="button" class="danger-action" data-action="reset-all-operational-data">Delete All Records</button>
+          </article>
+        </section>
       </div>`;
     els.usersAccessStatus = qs("[data-users-access-status]");
     els.usersAccessList = qs("[data-users-access-list]");
@@ -18962,6 +19242,31 @@ Requirements:
     </section>`;
   }
 
+  function renderQuoteDeliveryStatus(doc) {
+    if (doc.type !== "estimate") return "";
+    const operations = state.data.connectedOps || {};
+    const communications = (operations.communications || [])
+      .filter((item) => item.relatedTable === "sales_documents" && item.relatedId === doc.id)
+      .slice(0, 4);
+    const shares = (operations.shareLinks || [])
+      .filter((item) => item.relatedTable === "sales_documents" && item.relatedId === doc.id)
+      .slice(0, 3);
+    return `<section class="document-delivery-status" aria-label="Quote delivery and response status">
+      <div class="ticket-drawer-card-heading">
+        <div>
+          <p class="eyebrow">Customer Delivery</p>
+          <h4>${shares.length ? "Secure approval is connected" : "Ready to send securely"}</h4>
+          <span>Email, text, portal views, and customer responses are logged against this quote.</span>
+        </div>
+      </div>
+      <div class="document-delivery-grid">
+        ${shares.map((link) => `<article><strong>${escapeHtml(link.status)}</strong><span>${escapeHtml(`${link.viewCount} view${link.viewCount === 1 ? "" : "s"}`)}</span><small>${escapeHtml(link.lastViewedAt ? `Last viewed ${link.lastViewedAt}` : `Expires ${link.expiresAt || "not set"}`)}</small></article>`).join("")}
+        ${communications.map((item) => `<article><strong>${escapeHtml(titleCase(item.channel))}</strong><span>${escapeHtml(item.outcome || "Logged")}</span><small>${escapeHtml(item.sentAt || item.createdAt || "Pending")}</small></article>`).join("")}
+        ${!shares.length && !communications.length ? `<p>No delivery activity yet. Use a secure approval action below; the operational timeline will update on refresh.</p>` : ""}
+      </div>
+    </section>`;
+  }
+
   function openDocumentDrawer(id) {
     const doc = state.data.documents.find((item) => item.id === id);
     if (!doc || !els.detailDrawer || !els.detailContent) return;
@@ -18983,6 +19288,7 @@ Requirements:
         ${renderSourceTicketContext(ticket)}
         ${renderDocumentTicketBridge(doc, ticket)}
         ${renderPrintableDocument(doc)}
+        ${renderQuoteDeliveryStatus(doc)}
         <section class="document-sidebar-card">
           <div class="document-sidebar-total">
             <span>${doc.squareAmountDueCents !== null ? "Square amount due" : "Document total"}</span>
@@ -18998,7 +19304,9 @@ Requirements:
           </div>
           <div class="drawer-actions document-primary-actions">
             <button type="button" data-action="sync-square-document" data-id="${escapeHtml(doc.id)}">${buttonContent("Sync Square", "sync-square-document")}</button>
-            ${doc.type === "estimate" && doc.clientEmail ? `<a class="button" href="mailto:${encodeURIComponent(doc.clientEmail)}?subject=${encodeURIComponent(`Urban Yards Quote ${doc.number}`)}&body=${encodeURIComponent(`Hello ${doc.clientName},\n\nYour Urban Yards quote ${doc.number} for $${doc.total.toFixed(2)} is ready for review.\n\nPlease reply with any questions or approval.\n\nUrban Yards`)}">Email Quote</a>` : ""}
+            ${doc.type === "estimate" ? `<button type="button" class="secondary-action" data-action="create-quote-approval-link" data-delivery="copy" data-id="${escapeHtml(doc.id)}">Copy Secure Approval Link</button>` : ""}
+            ${doc.type === "estimate" && doc.clientEmail ? `<button type="button" data-action="create-quote-approval-link" data-delivery="email" data-id="${escapeHtml(doc.id)}">Send Approval Email</button>` : ""}
+            ${doc.type === "estimate" ? `<button type="button" data-action="create-quote-approval-link" data-delivery="sms" data-id="${escapeHtml(doc.id)}">Send Approval Text</button>` : ""}
             ${doc.type === "estimate" && doc.status !== "approved" ? `<button type="button" data-action="record-quote-approval" data-id="${escapeHtml(doc.id)}">Record Customer Approval</button>` : ""}
             ${doc.squarePaymentUrl ? `<a class="button" href="${escapeHtml(doc.squarePaymentUrl)}" target="_blank" rel="noopener noreferrer">Open Payment Link</a>` : ""}
             <button type="button" data-action="print-document" data-id="${escapeHtml(doc.id)}">${buttonContent("Print / PDF", "print-document")}</button>
@@ -19106,8 +19414,13 @@ Requirements:
             </tr>
           `).join("")}</tbody>
         </table>
-        <p class="print-total"><span>Total</span><strong>$${doc.total.toFixed(2)}</strong></p>
+        <div class="print-document-totals">
+          <p><span>Subtotal</span><strong>$${doc.subtotal.toFixed(2)}</strong></p>
+          ${doc.tax ? `<p><span>Tax</span><strong>$${doc.tax.toFixed(2)}</strong></p>` : ""}
+          <p class="print-total"><span>Total</span><strong>$${doc.total.toFixed(2)}</strong></p>
+        </div>
         ${doc.notes ? `<p>${escapeHtml(doc.notes)}</p>` : ""}
+        <footer><strong>Urban Yards</strong><span>Landscape service built around clear scope, documented work, and reliable follow-through.</span></footer>
       </section>
     `;
   }
@@ -22259,6 +22572,21 @@ Requirements:
     });
 
     els.appView.addEventListener("input", (event) => {
+      const quoteBuilder = event.target?.closest?.("[data-quote-builder]");
+      if (quoteBuilder) {
+        updateQuoteBuilderPreview(quoteBuilder);
+        return;
+      }
+
+      const ticketWorkbenchForm = event.target?.closest?.("[data-ticket-workbench-form]");
+      if (ticketWorkbenchForm) {
+        const indicator = ticketWorkbenchForm.querySelector("[data-ticket-save-state]");
+        if (indicator) indicator.textContent = "Saving local draft…";
+        window.clearTimeout(ticketWorkbenchForm._draftTimer);
+        ticketWorkbenchForm._draftTimer = window.setTimeout(() => saveTicketWorkbenchDraft(ticketWorkbenchForm), 250);
+        return;
+      }
+
       const ticketCreateForm = event.target?.closest?.("[data-ticket-create-form]");
       if (ticketCreateForm) {
         event.target.removeAttribute?.("aria-invalid");
@@ -22892,6 +23220,17 @@ Requirements:
         } catch (error) {
           setDashboardState("Unable to copy diagnostics automatically. Browser clipboard permission may be blocked.", "error");
         }
+        return;
+      }
+      if (action === "toggle-qa-data") {
+        state.showQaData = !state.showQaData;
+        try {
+          localStorage.setItem(QA_VISIBILITY_KEY, String(state.showQaData));
+        } catch {
+          // The toggle still applies for this session when storage is unavailable.
+        }
+        await render();
+        setDashboardState(state.showQaData ? "QA records are visible for testing." : "QA records are hidden from operational workspaces.");
         return;
       }
       if (action === "reset-all-operational-data") {
@@ -24378,6 +24717,7 @@ Requirements:
             notes: payload.notes || "Ticket Workbench fields and completion checks saved.",
             new_value: { completed: payload.completed, notApplicable: payload.notApplicable, fieldsUpdated: Object.keys(workbenchUpdate) }
           });
+          clearTicketWorkbenchDraft(ticketId);
           await refreshDashboard();
           openTicketDrawer("ticket", ticket?.id || ticketId);
           setDashboardState("Ticket Workbench saved.");
@@ -24493,12 +24833,18 @@ Requirements:
         const nextActionInput = panel?.querySelector("[data-ticket-next-action-input]");
         const confirmed = window.confirm(`Owner override: move this ticket to ${ticketStageLabel(normalizeTicketStageForDashboard(nextStage))} even though requirements are missing? This will be recorded in ticket history.`);
         if (!confirmed) return;
+        const overrideReason = String(noteInput?.value || window.prompt("Reason for this Owner override:") || "").trim();
+        if (!overrideReason) {
+          setDashboardState("Add an Owner override reason so the exception is auditable.", "error");
+          noteInput?.focus();
+          return;
+        }
         try {
           setDashboardState("Applying Owner override...");
           const result = await dashboardTicketRequest("owner-force-transition", {
             id,
             toStage: nextStage,
-            notes: noteInput?.value || "Owner approved bypassing the missing workflow requirements.",
+            notes: overrideReason,
             nextAction: nextActionInput?.value || target.dataset.nextAction || ticketNextAction(nextStage)
           });
           await refreshDashboard();
@@ -24518,6 +24864,11 @@ Requirements:
         const sourceTicket = findTicketForDrawer(source, id) || dashboardTickets().find((item) => String(item.id) === String(id));
         const confirmed = window.confirm(`Owner override: create the unified Job Ticket and move it to ${ticketStageLabel(normalizeTicketStageForDashboard(nextStage))} even though requirements are missing? This will be recorded in ticket history.`);
         if (!confirmed) return;
+        const overrideReason = String(window.prompt("Reason for creating and advancing this ticket with missing requirements:") || "").trim();
+        if (!overrideReason) {
+          setDashboardState("An Owner override reason is required.", "error");
+          return;
+        }
         try {
           setDashboardState("Creating the unified ticket and applying Owner override...");
           const canonicalTicket = await ensureJobTicketForSourceRecord(source, id, {
@@ -24530,7 +24881,7 @@ Requirements:
           const result = await dashboardTicketRequest("owner-force-transition", {
             id: canonicalTicket.id,
             toStage: nextStage,
-            notes: "Owner approved creating the unified ticket and bypassing missing workflow requirements.",
+            notes: overrideReason,
             nextAction: target.dataset.nextAction || ticketNextAction(nextStage)
           });
           await refreshDashboard();
@@ -25525,6 +25876,41 @@ Requirements:
         } catch (error) {
           setDashboardState(error.message || "Customer quote approval could not be recorded.", "error");
         }
+      } else if (action === "create-quote-approval-link") {
+        const document = state.data.documents.find((item) => item.id === id);
+        if (!document || document.type !== "estimate") return;
+        const delivery = target.dataset.delivery || "copy";
+        const contactPhone = delivery === "sms"
+          ? String(window.prompt("Customer mobile number for the approval link:") || "").trim()
+          : "";
+        if (delivery === "sms" && !contactPhone) return;
+        try {
+          setDashboardState(delivery === "copy" ? "Creating secure approval link..." : `Sending approval ${delivery}...`);
+          const result = await quoteApprovalRequest({
+            action: "create",
+            documentId: id,
+            contactEmail: document.clientEmail,
+            contactPhone,
+            delivery,
+            expiresInDays: 14
+          });
+          await navigator.clipboard.writeText(result.url);
+          if (result.delivery?.status === "sent") {
+            setDashboardState(`Secure approval ${delivery} sent. The private link was also copied.`);
+          } else if (delivery === "email" && document.clientEmail) {
+            window.location.href = `mailto:${encodeURIComponent(document.clientEmail)}?subject=${encodeURIComponent(`Urban Yards quote ${document.number}`)}&body=${encodeURIComponent(`Hello ${document.clientName},\n\nReview and approve your Urban Yards quote securely:\n${result.url}\n\nThis private link expires in 14 days.`)}`;
+            setDashboardState("Approval link copied and your email app opened. Direct email delivery needs the Resend key in Netlify.");
+          } else if (delivery === "sms") {
+            window.location.href = `sms:${encodeURIComponent(contactPhone)}?body=${encodeURIComponent(`Urban Yards quote ${document.number}: ${result.url}`)}`;
+            setDashboardState("Approval link copied and your text app opened. Direct SMS delivery needs Twilio credentials in Netlify.");
+          } else {
+            setDashboardState("Secure customer approval link copied.");
+          }
+          await refreshDashboard();
+          openDocumentDrawer(id);
+        } catch (error) {
+          setDashboardState(error.message || "Secure approval link could not be created.", "error");
+        }
       } else if (action === "print-document") {
         printDocument(id);
       } else if (action === "delete-contact") {
@@ -25914,6 +26300,17 @@ Requirements:
         }
       } else if (event.target.matches("[data-ticket-assignment-form]")) {
         event.preventDefault();
+        const assignmentData = new FormData(event.target);
+        const assignmentTicket = findTicketForDrawer("ticket", event.target.dataset.ticketId);
+        const assignmentConflicts = ticketSchedulingConflicts(
+          assignmentTicket || { id: event.target.dataset.ticketId },
+          assignmentData.get("visit_date"),
+          assignmentData.get("assigned_user_id")
+        );
+        if (assignmentConflicts.length && !window.confirm(`${assignmentConflicts.length} other active ticket${assignmentConflicts.length === 1 ? "" : "s"} share this date or assignee. Save this assignment anyway?`)) {
+          setDashboardState("Assignment not changed. Review the scheduling conflict first.", "error");
+          return;
+        }
         try {
           setDashboardState("Saving work assignment...");
           const result = await saveTicketWorkAssignment(event.target);
@@ -26175,13 +26572,20 @@ Requirements:
             square_invoice_number: String(formData.get("square_invoice_number") || ""),
             description: String(formData.get("description") || ""),
             amount: Number(formData.get("amount") || 0),
+            line_items_text: String(formData.get("line_items_text") || ""),
+            discount: Number(formData.get("discount") || 0),
+            discount_type: String(formData.get("discount_type") || "amount"),
+            tax_rate: Number(formData.get("tax_rate") || 0),
+            deposit_percent: Number(formData.get("deposit_percent") || 0),
+            customer_message: String(formData.get("customer_message") || ""),
+            terms: String(formData.get("terms") || ""),
             due_date: String(formData.get("due_date") || "")
           });
           const ticketId = event.target.dataset.ticketId || "";
           if (ticketId) {
             await updateJobTicket(ticketId, {
               quote_id: document.id,
-              proposed_price: Number(formData.get("amount") || 0),
+              proposed_price: Number(document.total || 0),
               customer_approval_recorded: false,
               next_action: "Send quote and record customer approval"
             });

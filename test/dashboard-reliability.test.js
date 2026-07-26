@@ -26,7 +26,7 @@ test("live workspace polish contains long records and management cards", () => {
   assert.match(css, /\.call-queue-row > span:first-child :is\(strong, small\)[\s\S]*overflow-wrap: anywhere/);
   assert.match(css, /\.groundskeeper-operation-card[\s\S]*white-space: normal !important/);
   assert.match(css, /\.dashboard-health-item strong[\s\S]*word-break: break-all/);
-  assert.match(html, /dashboard\.css\?v=20260725-product-ready-1/);
+  assert.match(html, /dashboard\.css\?v=20260725-product-ready-2/);
 });
 
 test("authenticated assistant prompt suppresses public quote calls to action", () => {
@@ -1038,9 +1038,25 @@ test("ticket creation is guided, searchable, templated, and safely autosaved", (
   assert.match(js, /data-action="ticket-wizard-next"[\s\S]*Save &amp; Continue/);
   assert.match(js, /localStorage\.setItem\(TICKET_DRAFT_KEY/);
   assert.match(js, /localStorage\.removeItem\(TICKET_DRAFT_KEY\)/);
-  assert.match(js, /ticket-next-action-card[\s\S]*Next Action/);
+  assert.match(js, /ticket-drawer-action-strip-copy[\s\S]*nextTitle/);
   assert.match(css, /\.ticket-wizard-actions[\s\S]*position: sticky/);
   assert.match(css, /\.ticket-create-wizard \[aria-invalid="true"\]/);
+});
+
+test("product readiness release separates QA data and provides secure quote approval", () => {
+  const js = read("dashboard.js");
+  const approval = read("netlify/functions/client-quote-approval.js");
+  const portal = read("quote-approval.html");
+
+  assert.match(js, /QA_VISIBILITY_KEY/);
+  assert.match(js, /visibleOperationalRecords/);
+  assert.match(js, /Copy Secure Approval Link/);
+  assert.match(js, /ticketWorkbenchDraftKey/);
+  assert.match(approval, /token_hash: tokenHash\(token\)/);
+  assert.match(approval, /customer_quote_approved/);
+  assert.match(approval, /RESEND_API_KEY/);
+  assert.match(approval, /TWILIO_ACCOUNT_SID/);
+  assert.match(portal, /Secure quote review/);
 });
 
 test("global search groups every operational and financial record family", () => {

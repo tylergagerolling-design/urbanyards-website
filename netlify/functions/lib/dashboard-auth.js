@@ -91,7 +91,7 @@ const ROLE_PERMISSIONS = {
     "clients:read",
     "appointments:read",
     "documentation:read", "documentation:write", "documentation:review",
-    "operations:read",
+    "operations:read", "operations:share",
     "notes:read", "notes:write",
     "invoices:read",
     "money:read", "money:write",

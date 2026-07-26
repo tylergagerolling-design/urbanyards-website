@@ -681,29 +681,29 @@
 
   function buttonContent(label, action) {
     const icons = {
-      "cancel-job": "x",
+      "cancel-job": "×",
       "call-lead": "GV",
-      "clear-demo-data": "x",
-      "complete-operation": "OK",
-      "complete-reminder": "OK",
+      "clear-demo-data": "×",
+      "complete-operation": "✓",
+      "complete-reminder": "✓",
       "copy-phone": "Copy",
       "create-estimate": "+",
       "create-invoice": "$",
       "create-outreach-quote": "+",
       "create-reminder": "+",
-      "delete-contact": "x",
-      "delete-document": "x",
-      "download-documentation-template": "DL",
-      "delete-note": "x",
-      "delete-operation": "x",
-      "delete-outreach-property": "x",
-      "delete-reminder": "x",
-      "delete-outreach-prospect": "x",
-      "delete-route-stop": "x",
-      "delete-submission": "x",
-      "edit-job": "/",
-      "edit-outreach-prospect": "/",
-      "edit-route-stop": "/",
+      "delete-contact": "×",
+      "delete-document": "×",
+      "download-documentation-template": "↓",
+      "delete-note": "×",
+      "delete-operation": "×",
+      "delete-outreach-property": "×",
+      "delete-reminder": "×",
+      "delete-outreach-prospect": "×",
+      "delete-route-stop": "×",
+      "delete-submission": "×",
+      "edit-job": "✎",
+      "edit-outreach-prospect": "✎",
+      "edit-route-stop": "✎",
       "export-full-backup": "JSON",
       "export-backend-backup": "DB",
       "find-stop-map": "M",
@@ -719,10 +719,10 @@
       "go-work": "+",
       "refresh-documentation": "R",
       "import-outreach-csv": "CSV",
-      "mark-route-complete": "OK",
-      "mark-outreach-contacted": "OK",
-      "move-route-down": "v",
-      "move-route-up": "^",
+      "mark-route-complete": "✓",
+      "mark-outreach-contacted": "✓",
+      "move-route-down": "↓",
+      "move-route-up": "↑",
       "new-outreach-prospect": "+",
       "open-route-map": "M",
       "open-contact": "Open",
@@ -738,13 +738,13 @@
       "quick-add-property": "+",
       "quick-add-quote": "+",
       "review-import-history": "IN",
-      "approve-documentation-submission": "OK",
-      "reject-documentation-submission": "x",
+      "approve-documentation-submission": "✓",
+      "reject-documentation-submission": "×",
       "reschedule-job": "R",
       "route-outreach-prospect": "M",
-      "save": "OK",
-      "sync-contact": "~",
-      "sync-square-document": "~"
+      "save": "✓",
+      "sync-contact": "↻",
+      "sync-square-document": "↻"
     };
     const icon = icons[action] || "";
     return `${icon ? `<span class="button-icon" aria-hidden="true">${icon}</span>` : ""}<span>${escapeHtml(label)}</span>`;
@@ -13705,7 +13705,7 @@
         ${String(ticketPriorityLabel(ticket)).toLowerCase() !== "normal" ? `<span class="owner-kanban-priority is-${escapeHtml(String(ticketPriorityLabel(ticket)).toLowerCase())}">${escapeHtml(ticketPriorityLabel(ticket))}</span>` : ""}
       </div>
       <div class="owner-kanban-card-date">
-        <span><span aria-hidden="true">▣</span> ${escapeHtml(ticket.dateLabel || "No due date")}</span>
+        <span>${escapeHtml(ticket.dateLabel || "No due date")}</span>
       </div>
       ${blockers.length ? `<div class="owner-kanban-blockers">${blockers.slice(0, 2).map((item) => `<span>${escapeHtml(item)}</span>`).join("")}</div>` : ""}
       ${saving ? `<div class="owner-kanban-saving" role="status">Saving…</div>` : ""}

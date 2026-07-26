@@ -20421,6 +20421,10 @@ body:not(.is-login-screen) .ticket-workbench-section .ticket-completion-item {
   padding: 10px;
 }
 
+body:not(.is-login-screen) .ticket-workbench .ticket-workbench-grid {
+  grid-template-columns: 1fr;
+}
+
 @media (max-width: 620px) {
   body:not(.is-login-screen) .ticket-workbench-fields {
     grid-template-columns: 1fr;

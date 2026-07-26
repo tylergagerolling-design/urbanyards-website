@@ -26,7 +26,7 @@ test("live workspace polish contains long records and management cards", () => {
   assert.match(css, /\.call-queue-row > span:first-child :is\(strong, small\)[\s\S]*overflow-wrap: anywhere/);
   assert.match(css, /\.groundskeeper-operation-card[\s\S]*white-space: normal !important/);
   assert.match(css, /\.dashboard-health-item strong[\s\S]*word-break: break-all/);
-  assert.match(html, /dashboard\.css\?v=20260725-ticket-workbench-edit-1/);
+  assert.match(html, /dashboard\.css\?v=20260725-ticket-workbench-edit-2/);
 });
 
 test("authenticated assistant prompt suppresses public quote calls to action", () => {
@@ -1000,6 +1000,7 @@ test("unified tickets provide one validated completion checklist with N/A except
   assert.match(css, /\.ticket-completion-list[\s\S]*repeat\(2, minmax\(0, 1fr\)\)/);
   assert.match(css, /\.ticket-workbench-fields[\s\S]*repeat\(2, minmax\(0, 1fr\)\)/);
   assert.match(css, /\.ticket-workbench-section \.ticket-completion-list[\s\S]*grid-template-columns: 1fr/);
+  assert.match(css, /\.ticket-workbench \.ticket-workbench-grid[\s\S]*grid-template-columns: 1fr/);
 });
 
 test("ticket creation is guided, searchable, templated, and safely autosaved", () => {

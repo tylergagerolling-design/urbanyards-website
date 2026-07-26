@@ -77,6 +77,17 @@
     staff: ["view", "create", "edit"],
     viewer: ["view"]
   };
+  const WORK_ASSIGNMENT_AREAS_BY_ROLE = {
+    owner: ["Leads", "Money", "Owner", "Work"],
+    admin: ["Leads", "Money", "Owner", "Work"],
+    manager: ["Leads", "Money", "Owner", "Work"],
+    sales_outreach: ["Leads"],
+    accountant: ["Money"],
+    field_worker: ["Work"],
+    worker: ["Work"],
+    staff: ["Leads", "Work"],
+    viewer: []
+  };
   const DASHBOARD_WORKSPACE_ACCESS = {
     overview: ["owner", "admin", "manager", "sales_outreach", "accountant", "field_worker", "worker", "staff", "viewer"],
     tickets: ["owner", "admin", "manager", "sales_outreach", "accountant", "field_worker", "worker", "staff"],
@@ -382,6 +393,9 @@
     ownerKanbanEditingComponentId: "",
     ownerKanbanCollapsedTicketIds: new Set(),
     ownerKanbanExpandedDoneTicketIds: new Set(),
+    ownerKanbanAssignmentUserId: "",
+    ownerKanbanAssignmentPendingIds: new Set(),
+    ownerKanbanOptimisticAssignments: new Map(),
     ownerKanbanFiltersLoaded: false,
     addMenuOpen: false,
     globalSearchOpen: false,
@@ -6301,6 +6315,81 @@
     renderWorkWorkspace(state.data);
   }
 
+  function renderWorkComponentBoardsOnly() {
+    const boards = qsa("[data-owner-kanban-board]");
+    if (!boards.length) return;
+    const scrollPositions = boards.map((board) => board.querySelector(".owner-kanban-scroll")?.scrollLeft || 0);
+    const markup = renderOwnerKanbanBoard(dashboardTickets());
+    boards.forEach((board) => {
+      board.outerHTML = markup;
+    });
+    qsa("[data-owner-kanban-board]").forEach((board, index) => {
+      const scroll = board.querySelector(".owner-kanban-scroll");
+      if (scroll) scroll.scrollLeft = scrollPositions[index] || 0;
+    });
+  }
+
+  function mergeWorkComponentResult(result = {}) {
+    const normalizedTicket = result.ticket ? normalizeCanonicalTicket(result.ticket) : null;
+    const returnedEvents = [result.checklistEvent, result.event]
+      .filter(Boolean)
+      .map(normalizeJobTicketEvent);
+    if (normalizedTicket) {
+      const index = state.data.tickets.findIndex((item) => item.id === normalizedTicket.id);
+      if (index >= 0) state.data.tickets[index] = normalizedTicket;
+      else state.data.tickets.unshift(normalizedTicket);
+    }
+    returnedEvents.forEach((event) => {
+      const index = state.data.ticketEvents.findIndex((item) => item.id === event.id);
+      if (index >= 0) state.data.ticketEvents.splice(index, 1);
+      state.data.ticketEvents.unshift(event);
+    });
+  }
+
+  async function rapidAssignWorkComponent(ticketId, componentKey) {
+    const component = dashboardWorkComponents().find((item) => item.ticketId === ticketId && item.key === componentKey);
+    const profile = assignmentProfileForId(state.ownerKanbanAssignmentUserId);
+    if (!component || !profile) throw new Error("Choose an employee before assigning tasks.");
+    if (!workProfileCanTakeComponent(profile, component)) {
+      throw new Error(`${roleLabel(profile.role)} can only receive ${workAssignmentAreaLabel(profile)} tasks.`);
+    }
+    if (state.ownerKanbanAssignmentPendingIds.has(component.id)) return null;
+    const profileId = profile.userId || profile.email;
+    const removing = component.assignedUserId === profileId;
+    const assignedUserId = removing ? "" : profileId;
+    const status = removing && component.status === "assigned"
+      ? "todo"
+      : !removing && component.status === "todo"
+        ? "assigned"
+        : component.status;
+    state.ownerKanbanAssignmentPendingIds.add(component.id);
+    state.ownerKanbanOptimisticAssignments.set(component.id, { assignedUserId, status });
+    renderWorkComponentBoardsOnly();
+    try {
+      const result = await dashboardTicketRequest("component-assign", {
+        id: ticketId,
+        componentKey,
+        status,
+        assignedUserId,
+        dueDate: component.dueDate,
+        blockerReason: component.blockerReason
+      });
+      mergeWorkComponentResult(result);
+      state.ownerKanbanOptimisticAssignments.delete(component.id);
+      state.ownerKanbanAssignmentPendingIds.delete(component.id);
+      renderWorkComponentBoardsOnly();
+      setDashboardState(removing
+        ? `${component.label} unassigned from ${assignmentProfileLabel(profile)}.`
+        : `${component.label} assigned to ${assignmentProfileLabel(profile)}.`);
+      return result;
+    } catch (error) {
+      state.ownerKanbanOptimisticAssignments.delete(component.id);
+      state.ownerKanbanAssignmentPendingIds.delete(component.id);
+      renderWorkComponentBoardsOnly();
+      throw error;
+    }
+  }
+
   async function updateWorkComponent(ticketId, componentKey, changes = {}, options = {}) {
     const component = dashboardWorkComponents().find((item) => item.ticketId === ticketId && item.key === componentKey);
     if (!component) throw new Error("This ticket component could not be found.");
@@ -6321,21 +6410,8 @@
         blockerReason: Object.prototype.hasOwnProperty.call(changes, "blockerReason") ? changes.blockerReason : component.blockerReason
       });
       state.ownerKanbanMovingId = "";
-      const normalizedTicket = result.ticket ? normalizeCanonicalTicket(result.ticket) : null;
-      const returnedEvents = [result.checklistEvent, result.event]
-        .filter(Boolean)
-        .map(normalizeJobTicketEvent);
       if (options.refresh !== false) await refreshDashboard();
-      if (normalizedTicket) {
-        const index = state.data.tickets.findIndex((item) => item.id === normalizedTicket.id);
-        if (index >= 0) state.data.tickets[index] = normalizedTicket;
-        else state.data.tickets.unshift(normalizedTicket);
-      }
-      returnedEvents.forEach((event) => {
-        const index = state.data.ticketEvents.findIndex((item) => item.id === event.id);
-        if (index >= 0) state.data.ticketEvents.splice(index, 1);
-        state.data.ticketEvents.unshift(event);
-      });
+      mergeWorkComponentResult(result);
       renderWorkComponentBoardWorkspaces();
       return result;
     } catch (error) {
@@ -12310,6 +12386,25 @@
     return profile.name || profile.email || "Dashboard user";
   }
 
+  function workAssignmentAreasForRole(role = "viewer") {
+    return WORK_ASSIGNMENT_AREAS_BY_ROLE[normalizeDashboardRole(role)] || [];
+  }
+
+  function workProfileRoleCanTakeComponent(profile = {}, component = {}) {
+    if (!profile || profile.disabledAt) return false;
+    return workAssignmentAreasForRole(profile.role).includes(component.roleLabel);
+  }
+
+  function workProfileCanTakeComponent(profile = {}, component = {}) {
+    return component.status !== "done" && workProfileRoleCanTakeComponent(profile, component);
+  }
+
+  function workAssignmentAreaLabel(profile = {}) {
+    const areas = workAssignmentAreasForRole(profile.role);
+    if (areas.length === 4) return "All task areas";
+    return areas.join(" + ");
+  }
+
   function assignableWorkProfiles() {
     const profiles = (state.data.userProfiles || [])
       .filter((profile) => profile && !profile.disabledAt)
@@ -12332,8 +12427,9 @@
     return assignableWorkProfiles().find((profile) => profile.userId === value || profile.email === value) || null;
   }
 
-  function workAssignmentOptions(selectedId = "") {
-    const profiles = assignableWorkProfiles();
+  function workAssignmentOptions(selectedId = "", component = null) {
+    const profiles = assignableWorkProfiles()
+      .filter((profile) => !component || workProfileRoleCanTakeComponent(profile, component) || [profile.userId, profile.email].includes(selectedId));
     const selected = String(selectedId || "").trim();
     const options = profiles.map((profile) => {
       const value = profile.userId || profile.email;
@@ -13546,12 +13642,17 @@
     return ticketCompletionChecklistItems.map((item, index) => {
       const meta = workComponentMeta[item.key] || { group: "Internal", owner: ticket.ownerLabel || "Owner", proof: item.detail };
       const snapshot = snapshots.get(item.key) || {};
+      const optimistic = state.ownerKanbanOptimisticAssignments.get(`${ticket.id}:${item.key}`) || null;
       const resolvedByTicket = ticketCompletionItemComplete(ticket, item.key, completed);
       const naReason = notApplicable[item.key] || "";
-      const assignedUserId = snapshot.assignedUserId
+      const savedAssignedUserId = snapshot.assignedUserId
         || (meta.group === "Work" ? ticket.assignedUserId : "")
         || "";
-      const savedStatus = ownerKanbanColumns.some((column) => column.key === snapshot.status) ? snapshot.status : "";
+      const assignedUserId = optimistic && Object.prototype.hasOwnProperty.call(optimistic, "assignedUserId")
+        ? optimistic.assignedUserId
+        : savedAssignedUserId;
+      const statusValue = optimistic?.status || snapshot.status;
+      const savedStatus = ownerKanbanColumns.some((column) => column.key === statusValue) ? statusValue : "";
       const status = resolvedByTicket || naReason
         ? "done"
         : savedStatus && savedStatus !== "done"
@@ -13665,6 +13766,36 @@
     return `<option value="All">All people</option><option value="__unassigned__"${selected === "__unassigned__" ? " selected" : ""}>Unassigned</option>${options}`;
   }
 
+  function renderOwnerKanbanAssigneeRoster(components = []) {
+    if (!canManageOwnerWorkflow()) return "";
+    const profiles = assignableWorkProfiles()
+      .filter((profile) => workAssignmentAreasForRole(profile.role).length > 0);
+    const selectedId = state.ownerKanbanAssignmentUserId;
+    const selectedProfile = assignmentProfileForId(selectedId);
+    return `<section class="owner-kanban-assignee-roster${selectedProfile ? " is-active" : ""}" aria-label="Rapid task assignment">
+      <div class="owner-kanban-assignee-roster-head">
+        <div>
+          <strong>Rapid assign</strong>
+          <span>${selectedProfile ? `Click eligible task boxes to assign or unassign ${escapeHtml(assignmentProfileLabel(selectedProfile))}.` : "Choose an employee once, then click every task they should own."}</span>
+        </div>
+        ${selectedProfile ? `<button type="button" data-action="finish-work-assignment">Done Assigning</button>` : ""}
+      </div>
+      <div class="owner-kanban-assignee-list" role="group" aria-label="Employees available for task assignment">
+        ${profiles.length ? profiles.map((profile) => {
+          const value = profile.userId || profile.email;
+          const active = value === selectedId;
+          const eligible = components.filter((component) => workProfileCanTakeComponent(profile, component)).length;
+          const assigned = components.filter((component) => component.assignedUserId === value && component.status !== "done").length;
+          return `<button type="button" class="owner-kanban-assignee${active ? " is-active" : ""}" data-action="select-work-assignee" data-assignee-id="${escapeHtml(value)}" aria-pressed="${active}">
+            <strong>${escapeHtml(assignmentProfileLabel(profile))}</strong>
+            <span>${escapeHtml(roleLabel(profile.role))} / ${escapeHtml(workAssignmentAreaLabel(profile))}</span>
+            <small>${escapeHtml(assigned)} assigned / ${escapeHtml(eligible)} eligible</small>
+          </button>`;
+        }).join("") : `<p>Add an active employee in Tools to use rapid assignment.</p>`}
+      </div>
+    </section>`;
+  }
+
   function renderOwnerKanbanToolbar(components = [], filteredComponents = []) {
     const priorities = components.map((component) => component.priority);
     const groups = components.map((component) => component.group);
@@ -13696,6 +13827,7 @@
         <span>Quick views</span>
         ${OWNER_KANBAN_SAVED_VIEWS.map((view) => `<button type="button" data-action="apply-owner-kanban-view" data-view="${escapeHtml(view.key)}">${escapeHtml(view.label)}</button>`).join("")}
       </div>
+      ${renderOwnerKanbanAssigneeRoster(components)}
       <details class="owner-kanban-advanced-filters">
         <summary>Advanced filters</summary>
         <div class="owner-kanban-filters">
@@ -13752,7 +13884,7 @@
       <p class="component-kanban-customer">${escapeHtml([component.customer, component.property].filter(Boolean).join(" / ") || "Customer or property not set")}</p>
       <div class="owner-kanban-card-meta">
         <label>Person
-          <select data-work-component-assignee aria-label="Assign ${escapeHtml(component.label)}" data-id="${escapeHtml(component.ticketId)}" data-component-key="${escapeHtml(component.key)}">${workAssignmentOptions(component.assignedUserId)}</select>
+          <select data-work-component-assignee aria-label="Assign ${escapeHtml(component.label)}" data-id="${escapeHtml(component.ticketId)}" data-component-key="${escapeHtml(component.key)}">${workAssignmentOptions(component.assignedUserId, component)}</select>
         </label>
         <label>Due
           <input type="date" value="${escapeHtml(component.dueDate || "")}" data-work-component-due data-id="${escapeHtml(component.ticketId)}" data-component-key="${escapeHtml(component.key)}">
@@ -13831,7 +13963,13 @@
 
   function renderOwnerWorkComponentRow(component = {}) {
     const dateState = workComponentDateState(component);
-    const saving = state.ownerKanbanMovingId === component.id;
+    const assignmentProfile = assignmentProfileForId(state.ownerKanbanAssignmentUserId);
+    const assignmentMode = Boolean(assignmentProfile);
+    const assignmentEligible = assignmentMode && workProfileCanTakeComponent(assignmentProfile, component);
+    const assignmentProfileId = assignmentProfile?.userId || assignmentProfile?.email || "";
+    const assignedToSelected = assignmentMode && component.assignedUserId === assignmentProfileId;
+    const assignmentPending = state.ownerKanbanAssignmentPendingIds.has(component.id);
+    const saving = state.ownerKanbanMovingId === component.id || assignmentPending;
     const editing = state.ownerKanbanEditingComponentId === component.id;
     const completionDetail = component.status === "done"
       ? [component.completionMode, component.completedBy, component.completedAt ? formatDateTime(component.completedAt) : ""].filter(Boolean).join(" / ")
@@ -13839,24 +13977,31 @@
     const editorId = `work-component-${slug(component.id)}`;
     const dragAttrs = `data-owner-kanban-card data-id="${escapeHtml(component.ticketId)}" data-component-key="${escapeHtml(component.key)}" data-component-status="${escapeHtml(component.status)}"`;
     const proofState = component.status === "done" ? (component.completionMode || "Complete") : "Proof";
-    return `<article class="owner-kanban-card component-kanban-row is-team-${escapeHtml(slug(component.group))} ${dateState === "overdue" ? "is-overdue" : ""} ${component.status === "blocked" ? "is-blocked" : ""} ${editing ? "is-editing" : ""} ${saving ? "is-saving" : ""}" ${dragAttrs} aria-busy="${saving ? "true" : "false"}">
+    const rapidAction = assignmentMode ? `data-action="rapid-assign-work-component" data-id="${escapeHtml(component.ticketId)}" data-component-key="${escapeHtml(component.key)}"` : "";
+    const rowAction = assignmentMode ? "rapid-assign-work-component" : "toggle-work-component-editor";
+    return `<article class="owner-kanban-card component-kanban-row is-team-${escapeHtml(slug(component.group))} ${dateState === "overdue" ? "is-overdue" : ""} ${component.status === "blocked" ? "is-blocked" : ""} ${editing ? "is-editing" : ""} ${saving ? "is-saving" : ""} ${assignmentMode ? "is-rapid-mode" : ""} ${assignmentEligible ? "is-rapid-eligible" : ""} ${assignedToSelected ? "is-rapid-assigned" : ""} ${assignmentMode && !assignmentEligible ? "is-rapid-ineligible" : ""}" ${dragAttrs} ${rapidAction} aria-busy="${saving ? "true" : "false"}">
       <div class="component-kanban-row-summary">
-        <button type="button" class="component-kanban-row-main" data-action="toggle-work-component-editor" data-id="${escapeHtml(component.ticketId)}" data-component-key="${escapeHtml(component.key)}" aria-expanded="${editing}" aria-controls="${escapeHtml(editorId)}">
+        <button type="button" class="component-kanban-row-main" data-action="${rowAction}" data-id="${escapeHtml(component.ticketId)}" data-component-key="${escapeHtml(component.key)}"${assignmentMode ? ` aria-pressed="${assignedToSelected}"` : ` aria-expanded="${editing}" aria-controls="${escapeHtml(editorId)}"`}>
           <strong>${escapeHtml(component.label)}</strong>
           <small>${escapeHtml(component.group)}</small>
         </button>
-        <button type="button" class="component-kanban-row-toggle" data-action="toggle-work-component-editor" data-id="${escapeHtml(component.ticketId)}" data-component-key="${escapeHtml(component.key)}" aria-expanded="${editing}" aria-controls="${escapeHtml(editorId)}">${editing ? "Close" : "Edit"}</button>
+        ${assignmentMode
+          ? `<span class="component-kanban-assignment-check${assignedToSelected ? " is-assigned" : ""}${assignmentEligible ? "" : " is-ineligible"}" aria-hidden="true">${assignmentPending ? "..." : assignmentEligible ? assignedToSelected ? "&#10003;" : "+" : "Locked"}</span>`
+          : `<button type="button" class="component-kanban-row-toggle" data-action="toggle-work-component-editor" data-id="${escapeHtml(component.ticketId)}" data-component-key="${escapeHtml(component.key)}" aria-expanded="${editing}" aria-controls="${escapeHtml(editorId)}">${editing ? "Close" : "Edit"}</button>`}
       </div>
       <div class="component-kanban-row-chips">
-        <button type="button" class="component-kanban-chip is-person${component.assignedUserId ? "" : " is-empty"}" data-action="toggle-work-component-editor" data-id="${escapeHtml(component.ticketId)}" data-component-key="${escapeHtml(component.key)}" title="Edit assignment">${escapeHtml(component.assigneeLabel)}</button>
-        <button type="button" class="component-kanban-chip is-due is-${escapeHtml(dateState)}" data-action="toggle-work-component-editor" data-id="${escapeHtml(component.ticketId)}" data-component-key="${escapeHtml(component.key)}" title="Edit due date">${escapeHtml(component.dueDateLabel)}</button>
+        ${assignmentMode
+          ? `<span class="component-kanban-chip is-person${component.assignedUserId ? "" : " is-empty"}">${escapeHtml(component.assigneeLabel)}</span>
+            <span class="component-kanban-chip is-due is-${escapeHtml(dateState)}">${escapeHtml(component.dueDateLabel)}</span>`
+          : `<button type="button" class="component-kanban-chip is-person${component.assignedUserId ? "" : " is-empty"}" data-action="toggle-work-component-editor" data-id="${escapeHtml(component.ticketId)}" data-component-key="${escapeHtml(component.key)}" title="Edit assignment">${escapeHtml(component.assigneeLabel)}</button>
+            <button type="button" class="component-kanban-chip is-due is-${escapeHtml(dateState)}" data-action="toggle-work-component-editor" data-id="${escapeHtml(component.ticketId)}" data-component-key="${escapeHtml(component.key)}" title="Edit due date">${escapeHtml(component.dueDateLabel)}</button>`}
         <span class="component-kanban-proof-chip${component.status === "done" ? " is-complete" : ""}" title="${escapeHtml(component.proof)}" aria-label="${escapeHtml(`${proofState}: ${component.proof}`)}"><span aria-hidden="true">${component.status === "done" ? "&#10003;" : "&#8226;"}</span></span>
       </div>
       ${component.status === "blocked" ? `<p class="component-kanban-blocker-summary"><strong>Blocked:</strong> ${escapeHtml(component.blockerReason || component.blockedLabel || "Reason needed")}</p>` : ""}
-      ${editing ? `<div class="component-kanban-editor" id="${escapeHtml(editorId)}" role="region" aria-label="Edit ${escapeHtml(component.label)}">
+      ${editing && !assignmentMode ? `<div class="component-kanban-editor" id="${escapeHtml(editorId)}" role="region" aria-label="Edit ${escapeHtml(component.label)}">
         <div class="component-kanban-editor-fields">
           <label>Person
-            <select data-work-component-assignee aria-label="Assign ${escapeHtml(component.label)}" data-id="${escapeHtml(component.ticketId)}" data-component-key="${escapeHtml(component.key)}">${workAssignmentOptions(component.assignedUserId)}</select>
+            <select data-work-component-assignee aria-label="Assign ${escapeHtml(component.label)}" data-id="${escapeHtml(component.ticketId)}" data-component-key="${escapeHtml(component.key)}">${workAssignmentOptions(component.assignedUserId, component)}</select>
           </label>
           <label>Due
             <input type="date" value="${escapeHtml(component.dueDate || "")}" data-work-component-due data-id="${escapeHtml(component.ticketId)}" data-component-key="${escapeHtml(component.key)}">
@@ -23589,6 +23734,39 @@ Requirements:
         return;
       }
 
+      if (action === "select-work-assignee") {
+        const assigneeId = target.dataset.assigneeId || "";
+        const profile = assignmentProfileForId(assigneeId);
+        if (!profile || !workAssignmentAreasForRole(profile.role).length) {
+          setDashboardState("This employee role does not have assignable task areas.", "error");
+          return;
+        }
+        state.ownerKanbanAssignmentUserId = state.ownerKanbanAssignmentUserId === assigneeId ? "" : assigneeId;
+        state.ownerKanbanEditingComponentId = "";
+        if (state.ownerKanbanAssignmentUserId) state.ownerKanbanCollapsedTicketIds.clear();
+        renderWorkComponentBoardsOnly();
+        setDashboardState(state.ownerKanbanAssignmentUserId
+          ? `Rapid assignment is active for ${assignmentProfileLabel(profile)}. Click eligible task boxes.`
+          : "Rapid assignment closed.");
+        return;
+      }
+
+      if (action === "finish-work-assignment") {
+        state.ownerKanbanAssignmentUserId = "";
+        renderWorkComponentBoardsOnly();
+        setDashboardState("Rapid assignment finished.");
+        return;
+      }
+
+      if (action === "rapid-assign-work-component") {
+        try {
+          await rapidAssignWorkComponent(id, target.dataset.componentKey || "");
+        } catch (error) {
+          setDashboardState(error.message || "Unable to assign this task.", "error");
+        }
+        return;
+      }
+
       if (action === "toggle-work-ticket-swimlane") {
         if (state.ownerKanbanCollapsedTicketIds.has(id)) state.ownerKanbanCollapsedTicketIds.delete(id);
         else {
@@ -26337,6 +26515,7 @@ Requirements:
     let ownerKanbanPointerDrag = null;
 
     const clearOwnerKanbanPointerDrag = () => {
+      window.clearTimeout(ownerKanbanPointerDrag?.holdTimer);
       ownerKanbanPointerDrag?.card?.classList.remove("is-dragging");
       ownerKanbanPointerDrag?.ghost?.remove();
       qsa("[data-owner-kanban-column].is-drag-over").forEach((column) => column.classList.remove("is-drag-over"));
@@ -26344,41 +26523,58 @@ Requirements:
       state.ownerKanbanMovingId = "";
     };
 
+    const activateOwnerKanbanPointerDrag = () => {
+      if (!ownerKanbanPointerDrag || ownerKanbanPointerDrag.active || !ownerKanbanPointerDrag.card?.isConnected) return;
+      window.clearTimeout(ownerKanbanPointerDrag.holdTimer);
+      ownerKanbanPointerDrag.active = true;
+      state.ownerKanbanMovingId = `${ownerKanbanPointerDrag.ticketId}:${ownerKanbanPointerDrag.componentKey}`;
+      ownerKanbanPointerDrag.card.classList.add("is-dragging");
+      const rect = ownerKanbanPointerDrag.card.getBoundingClientRect();
+      const ghost = ownerKanbanPointerDrag.card.cloneNode(true);
+      ghost.classList.add("owner-kanban-drag-ghost");
+      ghost.classList.remove("is-dragging", "is-saving");
+      ghost.removeAttribute("id");
+      ghost.setAttribute("aria-hidden", "true");
+      ghost.querySelectorAll("button, select, input, textarea").forEach((control) => control.setAttribute("tabindex", "-1"));
+      ghost.style.width = `${rect.width}px`;
+      ghost.style.left = `${ownerKanbanPointerDrag.lastX - ownerKanbanPointerDrag.offsetX}px`;
+      ghost.style.top = `${ownerKanbanPointerDrag.lastY - ownerKanbanPointerDrag.offsetY}px`;
+      ownerKanbanPointerDrag.ghost = ghost;
+      document.body.appendChild(ghost);
+      setDashboardState("Component lifted - release it over a highlighted column.");
+    };
+
     els.appView.addEventListener("pointerdown", (event) => {
       const card = event.target?.closest?.("[data-owner-kanban-card]");
-      if (!card || !card.dataset.id || !card.dataset.componentKey || event.button > 0 || event.target?.closest?.("button, select, input, textarea, label")) return;
+      const interactive = event.target?.closest?.("button, select, input, textarea, label");
+      const dragSafeControl = interactive?.matches?.(".component-kanban-row-main");
+      if (!card || !card.dataset.id || !card.dataset.componentKey || event.button > 0 || (interactive && !dragSafeControl)) return;
       ownerKanbanPointerDrag = {
         card,
         pointerId: event.pointerId,
         ticketId: card.dataset.id,
         componentKey: card.dataset.componentKey || "",
+        status: card.dataset.componentStatus || "",
         startX: event.clientX,
         startY: event.clientY,
+        lastX: event.clientX,
+        lastY: event.clientY,
         offsetX: event.clientX - card.getBoundingClientRect().left,
         offsetY: event.clientY - card.getBoundingClientRect().top,
         ghost: null,
-        active: false
+        active: false,
+        holdTimer: window.setTimeout(activateOwnerKanbanPointerDrag, 180)
       };
     });
 
     document.addEventListener("pointermove", (event) => {
       if (!ownerKanbanPointerDrag || ownerKanbanPointerDrag.pointerId !== event.pointerId) return;
+      ownerKanbanPointerDrag.lastX = event.clientX;
+      ownerKanbanPointerDrag.lastY = event.clientY;
       if (!ownerKanbanPointerDrag.active) {
         const distance = Math.hypot(event.clientX - ownerKanbanPointerDrag.startX, event.clientY - ownerKanbanPointerDrag.startY);
         if (distance < 7) return;
-        ownerKanbanPointerDrag.active = true;
-        state.ownerKanbanMovingId = `${ownerKanbanPointerDrag.ticketId}:${ownerKanbanPointerDrag.componentKey}`;
-        ownerKanbanPointerDrag.card.classList.add("is-dragging");
-        const rect = ownerKanbanPointerDrag.card.getBoundingClientRect();
-        const ghost = ownerKanbanPointerDrag.card.cloneNode(true);
-        ghost.classList.add("owner-kanban-drag-ghost");
-        ghost.classList.remove("is-dragging", "is-saving");
-        ghost.removeAttribute("id");
-        ghost.setAttribute("aria-hidden", "true");
-        ghost.querySelectorAll("button, select, input, textarea").forEach((control) => control.setAttribute("tabindex", "-1"));
-        ghost.style.width = `${rect.width}px`;
-        ownerKanbanPointerDrag.ghost = ghost;
-        document.body.appendChild(ghost);
+        activateOwnerKanbanPointerDrag();
         setDashboardState("Dragging component—release it over a highlighted column.");
       }
       event.preventDefault();
@@ -26394,7 +26590,7 @@ Requirements:
 
     document.addEventListener("pointerup", async (event) => {
       if (!ownerKanbanPointerDrag || ownerKanbanPointerDrag.pointerId !== event.pointerId) return;
-      const { ticketId, componentKey, active } = ownerKanbanPointerDrag;
+      const { ticketId, componentKey, status, active } = ownerKanbanPointerDrag;
       if (!active) {
         clearOwnerKanbanPointerDrag();
         return;
@@ -26405,6 +26601,11 @@ Requirements:
       const nextColumn = column?.dataset.ownerKanbanColumn || "";
       if (!ticketId || !componentKey || !nextColumn) {
         clearOwnerKanbanPointerDrag();
+        return;
+      }
+      if (nextColumn === status) {
+        clearOwnerKanbanPointerDrag();
+        setDashboardState("Component stayed in the same column.");
         return;
       }
       try {

@@ -26,7 +26,8 @@ test("live workspace polish contains long records and management cards", () => {
   assert.match(css, /\.call-queue-row > span:first-child :is\(strong, small\)[\s\S]*overflow-wrap: anywhere/);
   assert.match(css, /\.groundskeeper-operation-card[\s\S]*white-space: normal !important/);
   assert.match(css, /\.dashboard-health-item strong[\s\S]*word-break: break-all/);
-  assert.match(html, /dashboard\.css\?v=20260726-ticket-swimlanes-1/);
+  assert.match(html, /dashboard\.css\?v=20260726-rapid-assignment-2/);
+  assert.match(html, /dashboard\.js\?v=20260726-rapid-assignment-2/);
 });
 
 test("authenticated assistant prompt suppresses public quote calls to action", () => {
@@ -596,8 +597,8 @@ test("owner Kanban cards omit letter-based assignee icons", () => {
   const js = read("dashboard.js");
   const css = read("dashboard.css");
 
-  assert.doesNotMatch(js, /ownerKanbanAssigneeInitials|owner-kanban-assignee/);
-  assert.doesNotMatch(css, /\.owner-kanban-assignee/);
+  assert.doesNotMatch(js, /ownerKanbanAssigneeInitials|owner-kanban-assignee-(?:initials|icon)/);
+  assert.doesNotMatch(css, /\.owner-kanban-assignee-(?:initials|icon)/);
 });
 
 test("closeout Review Tickets opens a focused, visible ticket queue", () => {
@@ -664,13 +665,24 @@ test("component Work Board assigns, tracks, completes, and audits ticket require
   assert.match(js, /data-action="complete-work-component"/);
   assert.match(js, /data-action="reopen-work-component"/);
   assert.match(js, /data-action="assign-visible-components-to-me"/);
+  assert.match(js, /const WORK_ASSIGNMENT_AREAS_BY_ROLE =/);
+  assert.match(js, /function renderOwnerKanbanAssigneeRoster/);
+  assert.match(js, /data-action="select-work-assignee"/);
+  assert.match(js, /data-action="rapid-assign-work-component"/);
+  assert.match(js, /ownerKanbanOptimisticAssignments/);
+  assert.match(js, /function renderWorkComponentBoardsOnly/);
+  assert.match(js, /dashboardTicketRequest\("component-assign"/);
   assert.match(js, /create-financial-invoice-from-ticket[\s\S]*invoice_id: invoice\.id[\s\S]*ticket_invoice_connected/);
   assert.match(js, /data-financial-invoice-form[\s\S]*payload\.ticket_id[\s\S]*invoice_id: id[\s\S]*payment_status = "paid"/);
   assert.doesNotMatch(js, /owner-kanban-drag-handle/);
   assert.match(js, /addEventListener\("pointerdown"[\s\S]*closest\?\.\("\[data-owner-kanban-card\]"\)[\s\S]*document\.addEventListener\("pointermove"[\s\S]*Math\.hypot[\s\S]*distance < 7[\s\S]*document\.addEventListener\("pointerup"/);
+  assert.match(js, /const activateOwnerKanbanPointerDrag/);
+  assert.match(js, /dragSafeControl = interactive\?\.matches\?\.\("\.component-kanban-row-main"\)/);
+  assert.match(js, /holdTimer: window\.setTimeout\(activateOwnerKanbanPointerDrag, 180\)/);
   assert.match(js, /ownerKanbanSuppressClickUntil/);
   assert.match(js, /cloneNode\(true\)[\s\S]*owner-kanban-drag-ghost[\s\S]*document\.body\.appendChild/);
   assert.match(css, /owner-kanban-drag-ghost[\s\S]*position: fixed[\s\S]*opacity: \.82[\s\S]*pointer-events: none/);
+  assert.match(css, /@keyframes owner-kanban-card-lift/);
   assert.match(js, /addEventListener\("pointerup"[\s\S]*updateWorkComponent\(ticketId, componentKey, \{ status: nextColumn \}\)/);
   assert.doesNotMatch(js, /draggable="true" data-owner-kanban-card/);
   assert.doesNotMatch(js, /data-owner-kanban-move/);
@@ -702,14 +714,26 @@ test("component Work Board assigns, tracks, completes, and audits ticket require
   assert.match(css, /component-kanban-row-main strong[\s\S]*text-overflow: ellipsis[\s\S]*white-space: nowrap/);
   assert.match(css, /component-kanban-editor[\s\S]*component-kanban-editor-fields/);
   assert.match(css, /@media \(max-width: 760px\)[\s\S]*component-ticket-swimlane-grid[\s\S]*grid-template-columns: minmax\(0, 1fr\)/);
+  assert.match(css, /Work Board compact aesthetic pass/);
+  assert.match(css, /\[data-owner-kanban-board\][\s\S]*component-ticket-swimlane[\s\S]*min-width: 1080px !important/);
+  assert.match(css, /\[data-owner-kanban-board\][\s\S]*component-kanban-row-toggle[\s\S]*height: 24px !important/);
+  assert.match(css, /\[data-owner-kanban-board\][\s\S]*component-kanban-chip[\s\S]*height: 21px !important[\s\S]*border-radius: 999px !important/);
+  assert.match(css, /\[data-owner-kanban-board\][\s\S]*component-kanban-editor :is\(select, input\)[\s\S]*height: 32px !important/);
+  assert.match(css, /owner-kanban-assignee-roster[\s\S]*owner-kanban-assignee\.is-active/);
+  assert.match(css, /component-kanban-row\.is-rapid-eligible[\s\S]*component-kanban-row\.is-rapid-assigned[\s\S]*component-kanban-row\.is-rapid-ineligible/);
+  assert.match(css, /component-kanban-assignment-check\.is-assigned/);
   assert.match(backend, /WORK_COMPONENT_STATUSES[\s\S]*"todo"[\s\S]*"assigned"[\s\S]*"done"/);
+  assert.match(backend, /WORK_COMPONENT_ASSIGNMENT_AREAS/);
+  assert.match(backend, /async function validateWorkComponentAssignee/);
   assert.match(backend, /async function updateTicketWorkComponent/);
   assert.match(backend, /ticket_work_component_updated/);
   assert.match(backend, /ticket_completion_checklist_saved/);
   assert.match(backend, /action === "component-update"/);
+  assert.match(backend, /action === "component-assign"[\s\S]*validateWorkComponentAssignee[\s\S]*updateTicketWorkComponent/);
   assert.match(backend, /customerId: row\.customer_id \|\| row\.customer_name[\s\S]*propertyId: row\.property_id \|\| row\.property_name[\s\S]*draftInvoiceExists: row\.draft_invoice_exists \|\| row\.invoice_id/);
   assert.match(js, /draftInvoiceExists"\) return Boolean\(ticket\.draftInvoiceExists \|\| ticket\.invoiceId \|\| findInvoiceForTicket\(ticket\)\)/);
-  assert.match(js, /const returnedEvents = \[result\.checklistEvent, result\.event\][\s\S]*if \(options\.refresh !== false\) await refreshDashboard\(\);[\s\S]*returnedEvents\.forEach/);
+  assert.match(js, /function mergeWorkComponentResult[\s\S]*const returnedEvents = \[result\.checklistEvent, result\.event\][\s\S]*returnedEvents\.forEach/);
+  assert.match(js, /if \(options\.refresh !== false\) await refreshDashboard\(\);[\s\S]*mergeWorkComponentResult\(result\)/);
   assert.match(js, /function nextDocumentNumber\(type\)[\s\S]*randomUUID[\s\S]*return `\$\{prefix\}-\$\{clock\}-\$\{unique\}`/);
   assert.doesNotMatch(js, /const count = state\.data\.documents\.filter\(\(doc\) => doc\.type === type\)\.length \+ 1/);
 });

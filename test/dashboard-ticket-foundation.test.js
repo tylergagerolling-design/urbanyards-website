@@ -62,6 +62,17 @@ test("job ticket deletion remains an administrator-only operation", () => {
   assert.equal(ticketFunctionInternals.canDeleteTicket({ role: "field_worker" }), false);
 });
 
+test("rapid Work Board assignment respects employee role areas", () => {
+  assert.equal(ticketFunctionInternals.canRoleTakeComponent("sales_outreach", "scopeComplete"), true);
+  assert.equal(ticketFunctionInternals.canRoleTakeComponent("sales_outreach", "costReviewComplete"), false);
+  assert.equal(ticketFunctionInternals.canRoleTakeComponent("accountant", "invoiceFinalized"), true);
+  assert.equal(ticketFunctionInternals.canRoleTakeComponent("accountant", "beforePhotosUploaded"), false);
+  assert.equal(ticketFunctionInternals.canRoleTakeComponent("field_worker", "fieldCompletionNotes"), true);
+  assert.equal(ticketFunctionInternals.canRoleTakeComponent("field_worker", "ownerApprovalRecorded"), false);
+  assert.equal(ticketFunctionInternals.canRoleTakeComponent("manager", "ownerApprovalRecorded"), true);
+  assert.deepEqual(ticketFunctionInternals.workAssignmentAreasForRole("viewer"), []);
+});
+
 test("ticket permissions keep one canonical role-aware workflow", () => {
   const owner = { role: ROLES.OWNER, userId: "owner-1" };
   const sales = { role: ROLES.SALES_OUTREACH, userId: "sales-1" };

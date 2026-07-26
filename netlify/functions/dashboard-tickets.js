@@ -3,6 +3,7 @@ const {
   hasPermission,
   ipFromEvent,
   json,
+  normalizeRole,
   rateLimit,
   requestIdFromEvent,
   requirePermission,
@@ -68,6 +69,34 @@ const WORK_COMPONENT_BOOLEAN_FIELDS = Object.freeze({
   afterPhotosUploaded: "after_photos_uploaded",
   requiredDocumentsPresent: "required_documents_present",
   invoiceFinalized: "invoice_finalized"
+});
+const WORK_COMPONENT_ASSIGNMENT_AREAS = Object.freeze({
+  scopeComplete: "Leads",
+  customerApprovalRecorded: "Leads",
+  costReviewComplete: "Money",
+  actualsRecorded: "Money",
+  draftInvoiceExists: "Money",
+  invoiceSentToCustomer: "Money",
+  finalCustomerApprovalRecorded: "Money",
+  ownerApprovalRecorded: "Owner",
+  scheduledDate: "Work",
+  beforePhotosUploaded: "Work",
+  afterPhotosUploaded: "Work",
+  requiredDocumentsPresent: "Work",
+  fieldCompletionNotes: "Work",
+  invoiceFinalized: "Money",
+  paymentStatus: "Money"
+});
+const WORK_ASSIGNMENT_AREAS_BY_ROLE = Object.freeze({
+  owner: ["Leads", "Money", "Owner", "Work"],
+  admin: ["Leads", "Money", "Owner", "Work"],
+  manager: ["Leads", "Money", "Owner", "Work"],
+  sales_outreach: ["Leads"],
+  accountant: ["Money"],
+  field_worker: ["Work"],
+  worker: ["Work"],
+  staff: ["Leads", "Work"],
+  viewer: []
 });
 
 function parseBody(event) {
@@ -307,6 +336,61 @@ async function existingTicketBySource(payload) {
   const query = `job_tickets?source_type=eq.${encodeURIComponent(payload.source_type)}&source_id=eq.${encodeURIComponent(payload.source_id)}&select=*&limit=1`;
   const rows = await supabaseAdminRequest(query, { method: "GET" });
   return Array.isArray(rows) ? rows[0] || null : null;
+}
+
+function workAssignmentAreasForRole(role) {
+  return WORK_ASSIGNMENT_AREAS_BY_ROLE[normalizeRole(role) || "viewer"] || [];
+}
+
+function canRoleTakeComponent(role, componentKey) {
+  const area = WORK_COMPONENT_ASSIGNMENT_AREAS[componentKey];
+  return Boolean(area && workAssignmentAreasForRole(role).includes(area));
+}
+
+async function loadWorkAssignmentProfile(assignedUserId) {
+  const identity = cleanText(assignedUserId, 220);
+  if (!identity) return null;
+  const paths = [];
+  if (uuidOrNull(identity)) {
+    paths.push(`profiles?id=eq.${encodeURIComponent(identity)}&select=*&limit=1`);
+    paths.push(`profiles?user_id=eq.${encodeURIComponent(identity)}&select=*&limit=1`);
+    paths.push(`roles?user_id=eq.${encodeURIComponent(identity)}&select=*&limit=1`);
+  }
+  if (identity.includes("@")) {
+    paths.push(`profiles?email=eq.${encodeURIComponent(identity.toLowerCase())}&select=*&limit=1`);
+    paths.push(`roles?email=eq.${encodeURIComponent(identity.toLowerCase())}&select=*&limit=1`);
+  }
+  for (const path of paths) {
+    try {
+      const rows = await supabaseAdminRequest(path, { method: "GET" });
+      if (Array.isArray(rows) && rows[0]) return rows[0];
+    } catch (error) {
+      if (!tableMissing(error)) throw error;
+    }
+  }
+  return null;
+}
+
+async function validateWorkComponentAssignee(componentKey, assignedUserId) {
+  if (!cleanText(assignedUserId, 220)) return null;
+  const profile = await loadWorkAssignmentProfile(assignedUserId);
+  if (!profile) {
+    const error = new Error("That employee profile could not be found.");
+    error.statusCode = 404;
+    throw error;
+  }
+  if (profile.disabled_at || profile.disabledAt) {
+    const error = new Error("That employee is disabled and cannot receive tasks.");
+    error.statusCode = 409;
+    throw error;
+  }
+  const role = normalizeRole(profile.role || profile.dashboard_role || profile.app_role) || "viewer";
+  if (!canRoleTakeComponent(role, componentKey)) {
+    const error = new Error("That employee role cannot receive this type of task.");
+    error.statusCode = 409;
+    throw error;
+  }
+  return { profile, role };
 }
 
 function missingSchemaColumn(error) {
@@ -847,7 +931,7 @@ exports.handler = async (event) => {
   try {
     body = parseBody(event);
     const action = String(body.action || "").trim().toLowerCase();
-    if (!["list", "events", "create", "update", "delete", "transition", "component-update", "owner-force-transition", "ai-transition-cancel", "owner-close-rent-deduction", "owner-finalize-ticket", "event"].includes(action)) {
+    if (!["list", "events", "create", "update", "delete", "transition", "component-update", "component-assign", "owner-force-transition", "ai-transition-cancel", "owner-close-rent-deduction", "owner-finalize-ticket", "event"].includes(action)) {
       return json(400, { error: "Unsupported ticket action.", requestId });
     }
 
@@ -918,6 +1002,23 @@ exports.handler = async (event) => {
     if (action === "component-update") {
       const id = uuidOrNull(body.id || body.ticketId);
       if (!id) return json(400, { error: "A valid ticket id is required.", requestId });
+      const componentKey = cleanText(body.componentKey, 80);
+      if (!WORK_COMPONENT_KEYS.has(componentKey || "")) {
+        return json(400, { error: "This work component is not supported.", requestId });
+      }
+      await validateWorkComponentAssignee(componentKey, body.assignedUserId);
+      const result = await updateTicketWorkComponent(id, body, actor, event);
+      return json(200, { ok: true, ...result, requestId });
+    }
+
+    if (action === "component-assign") {
+      const id = uuidOrNull(body.id || body.ticketId);
+      if (!id) return json(400, { error: "A valid ticket id is required.", requestId });
+      const componentKey = cleanText(body.componentKey, 80);
+      if (!WORK_COMPONENT_KEYS.has(componentKey || "")) {
+        return json(400, { error: "This work component is not supported.", requestId });
+      }
+      await validateWorkComponentAssignee(componentKey, body.assignedUserId);
       const result = await updateTicketWorkComponent(id, body, actor, event);
       return json(200, { ok: true, ...result, requestId });
     }
@@ -1077,5 +1178,8 @@ module.exports._internals = {
   ticketForWorkflow,
   transitionTicket,
   ownerFinalizeTicket,
+  workAssignmentAreasForRole,
+  canRoleTakeComponent,
+  validateWorkComponentAssignee,
   uuidOrNull
 };

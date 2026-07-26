@@ -695,6 +695,7 @@ test("component Work Board assigns, tracks, completes, and audits ticket require
   assert.match(backend, /ticket_work_component_updated/);
   assert.match(backend, /ticket_completion_checklist_saved/);
   assert.match(backend, /action === "component-update"/);
+  assert.match(backend, /customerId: row\.customer_id \|\| row\.customer_name[\s\S]*propertyId: row\.property_id \|\| row\.property_name[\s\S]*draftInvoiceExists: row\.draft_invoice_exists \|\| row\.invoice_id/);
 });
 
 test("dashboard creates canonical job tickets without removing source fallbacks", () => {

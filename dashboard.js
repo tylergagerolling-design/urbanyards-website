@@ -11629,28 +11629,71 @@
     return Number.isFinite(number) ? `${number.toLocaleString(undefined, { maximumFractionDigits: 1 })}%` : ticketFieldText(value);
   }
 
-  function ticketWorkbenchItem(label, value, isComplete) {
-    return `<li class="${isComplete ? "is-complete" : ""}">
-      <span aria-hidden="true"></span>
-      <div>
-        <strong>${escapeHtml(label)}</strong>
-        <small>${escapeHtml(value)}</small>
-      </div>
-    </li>`;
+  function ticketWorkbenchField(field, ticket) {
+    const value = field.value ?? "";
+    if (field.type === "textarea") {
+      return `<label class="span-full">${escapeHtml(field.label)}
+        <textarea name="${escapeHtml(field.name)}" rows="${escapeHtml(field.rows || 3)}" placeholder="${escapeHtml(field.placeholder || "")}">${escapeHtml(value)}</textarea>
+      </label>`;
+    }
+    if (field.type === "assignee") {
+      return `<label>${escapeHtml(field.label)}
+        <select name="${escapeHtml(field.name)}">${workAssignmentOptions(value)}</select>
+      </label>`;
+    }
+    if (field.type === "checkbox") {
+      return `<label class="ticket-workbench-toggle">
+        <input type="checkbox" name="${escapeHtml(field.name)}"${value ? " checked" : ""}>
+        <span>${escapeHtml(field.label)}</span>
+      </label>`;
+    }
+    if (field.type === "managed") {
+      return `<div class="ticket-workbench-managed-field">
+        <span>${escapeHtml(field.label)}</span>
+        <strong>${escapeHtml(ticketFieldText(value, field.placeholder || "Not connected"))}</strong>
+        <small>${escapeHtml(field.detail || "Managed by the linked ticket record.")}</small>
+      </div>`;
+    }
+    return `<label>${escapeHtml(field.label)}
+      <input name="${escapeHtml(field.name)}" type="${escapeHtml(field.type || "text")}" value="${escapeHtml(value)}"${field.step ? ` step="${escapeHtml(field.step)}"` : ""} placeholder="${escapeHtml(field.placeholder || "")}">
+    </label>`;
   }
 
-  function ticketWorkbenchSection(section, activeStage) {
-    const completed = section.items.filter((item) => item.complete).length;
+  function ticketWorkbenchChecklistItem(item, ticket, completed, notApplicable) {
+    const isComplete = ticketCompletionItemComplete(ticket, item.key, completed);
+    const naReason = notApplicable[item.key] || "";
+    return `<article class="ticket-completion-item ${isComplete || naReason ? "is-resolved" : ""}" data-completion-item="${escapeHtml(item.key)}">
+      <div>
+        <strong>${escapeHtml(item.label)}</strong>
+        <small>${escapeHtml(item.detail)}</small>
+      </div>
+      <label><input type="checkbox" value="${escapeHtml(item.key)}" data-completion-complete${isComplete ? " checked" : ""}${naReason || item.requiredConnection ? " disabled" : ""}> ${item.requiredConnection ? "Connected automatically" : "Complete"}</label>
+      <label><input type="checkbox" value="${escapeHtml(item.key)}" data-completion-na${naReason ? " checked" : ""}${item.requiredConnection ? " disabled" : ""}> ${item.requiredConnection ? "Required" : "N/A"}</label>
+      ${item.key === "fieldCompletionNotes" ? `<textarea data-completion-notes rows="2" placeholder="Completion notes...">${escapeHtml(ticket.fieldCompletionNotes || "")}</textarea>` : ""}
+      ${item.key === "paymentStatus" ? `<select data-completion-payment aria-label="Payment status">
+        <option value="">Choose payment status</option>
+        <option value="unpaid"${statusText(ticket.paymentStatus) === "unpaid" ? " selected" : ""}>Unpaid</option>
+        <option value="partially_paid"${statusText(ticket.paymentStatus) === "partially_paid" ? " selected" : ""}>Partially paid</option>
+        <option value="paid"${statusText(ticket.paymentStatus) === "paid" ? " selected" : ""}>Paid</option>
+      </select>` : ""}
+    </article>`;
+  }
+
+  function ticketWorkbenchSection(section, activeStage, ticket, completed, notApplicable) {
+    const checklistItems = section.checklistKeys
+      .map((key) => ticketCompletionChecklistItems.find((item) => item.key === key))
+      .filter(Boolean);
+    const resolved = checklistItems.filter((item) => ticketCompletionItemComplete(ticket, item.key, completed) || notApplicable[item.key]).length;
     const stateClass = section.stages.includes(activeStage)
       ? "is-active"
-      : completed === section.items.length
+      : resolved === checklistItems.length
         ? "is-complete"
         : "";
     const stateLabel = section.stages.includes(activeStage)
       ? "Current"
-      : completed === section.items.length
+      : resolved === checklistItems.length
         ? "Complete"
-        : `${completed}/${section.items.length}`;
+        : `${resolved}/${checklistItems.length}`;
     return `<article class="ticket-workbench-section ${stateClass}">
       <div class="ticket-workbench-section-heading">
         <div>
@@ -11660,83 +11703,88 @@
         <span>${escapeHtml(stateLabel)}</span>
       </div>
       <p>${escapeHtml(section.detail)}</p>
-      <ul>
-        ${section.items.map((item) => ticketWorkbenchItem(item.label, item.value, item.complete)).join("")}
-      </ul>
+      <div class="ticket-workbench-fields">
+        ${section.fields.map((field) => ticketWorkbenchField(field, ticket)).join("")}
+      </div>
+      <div class="ticket-completion-list">
+        ${checklistItems.map((item) => ticketWorkbenchChecklistItem(item, ticket, completed, notApplicable)).join("")}
+      </div>
     </article>`;
   }
 
   function renderTicketWorkbench(ticket) {
     const stage = ticketStage(ticket);
+    const { completed, notApplicable, notes } = ticketCompletionChecklistState(ticket);
+    const canClose = currentSessionRole() === "owner" && ["field_work_complete", "completion_review", "invoice_review", "invoice_sent", "partially_paid", "paid"].includes(stage);
+    const resolved = ticketCompletionChecklistItems.filter((item) => ticketCompletionItemComplete(ticket, item.key, completed) || notApplicable[item.key]).length;
     const sections = [
       {
         title: "Sales & Scope",
         owner: "Leads",
         detail: "Client, property, service request, and customer approval.",
         stages: ["draft", "sales_intake", "scope_in_progress", "quote_pending", "customer_approval_pending", "scope_change_requested"],
-        items: [
-          { label: "Client", value: ticketFieldText(ticket.customerId ? ticket.customer : ticket.customer, "Client not set"), complete: Boolean(ticket.customerId || ticket.customer) },
-          { label: "Property", value: ticketFieldText(ticket.propertyId ? ticket.property : ticket.property, "Property not set"), complete: Boolean(ticket.propertyId || ticket.property) },
-          { label: "Scope", value: ticketFieldText(ticket.scopeOfWork || ticket.detail, "Scope needed"), complete: Boolean(ticket.scopeOfWork || ticket.scopeComplete) },
-          { label: "Customer approval", value: ticket.customerApprovalRecorded ? "Recorded" : "Needed before cost review", complete: Boolean(ticket.customerApprovalRecorded) }
-        ]
+        fields: [
+          { label: "Client", name: "customer_name", value: ticket.customer || "" },
+          { label: "Property", name: "property_name", value: ticket.property || "" },
+          { label: "Service request", name: "requested_service", value: ticket.requestedService || ticket.title || "" },
+          { label: "Scope of work", name: "scope_of_work", type: "textarea", rows: 4, value: ticket.scopeOfWork || ticket.detail || "", placeholder: "Describe the complete work scope." }
+        ],
+        checklistKeys: ["scopeComplete", "customerApprovalRecorded"]
       },
       {
         title: "Cost Review",
         owner: "Money",
         detail: "Internal revenue, cost, margin, and owner-ready notes.",
         stages: ["needs_budget", "budget_in_progress"],
-        items: [
-          { label: "Expected revenue", value: ticketMoneyText(ticket.expectedRevenue || ticket.proposedPrice), complete: Boolean(ticket.expectedRevenue || ticket.proposedPrice) },
-          { label: "Estimated cost", value: ticketMoneyText(ticket.estimatedTotalCost), complete: Boolean(ticket.estimatedTotalCost) },
-          { label: "Estimated profit", value: ticketMoneyText(ticket.estimatedProfit), complete: Boolean(ticket.estimatedProfit) },
-          { label: "Target margin", value: ticketPercentText(ticket.targetMargin), complete: Boolean(ticket.targetMargin) }
-        ]
+        fields: [
+          { label: "Expected revenue", name: "expected_revenue", type: "number", step: "0.01", value: ticket.expectedRevenue || ticket.proposedPrice || "" },
+          { label: "Estimated cost", name: "estimated_total_cost", type: "number", step: "0.01", value: ticket.estimatedTotalCost || "" },
+          { label: "Estimated profit", name: "estimated_profit", type: "number", step: "0.01", value: ticket.estimatedProfit || "" },
+          { label: "Target margin %", name: "target_margin", type: "number", step: "0.1", value: ticket.targetMargin || "" }
+        ],
+        checklistKeys: ["costReviewComplete", "actualsRecorded"]
       },
       {
         title: "Owner Approval",
         owner: "Owner",
         detail: "Final internal approval before invoice prep and scheduling.",
         stages: ["needs_owner_approval"],
-        items: [
-          { label: "Cost review", value: ticket.costReviewComplete || ticket.budgetComplete ? "Complete" : "Waiting on Money", complete: Boolean(ticket.costReviewComplete || ticket.budgetComplete) },
-          { label: "Owner approval", value: ticket.ownerApprovalRecorded ? "Recorded" : "Needs approval", complete: Boolean(ticket.ownerApprovalRecorded) },
-          { label: "Deposit rule", value: ticket.depositRequired ? (ticket.depositPaid ? "Deposit paid" : "Deposit required") : "No deposit required", complete: !ticket.depositRequired || Boolean(ticket.depositPaid) }
-        ]
+        fields: [
+          { label: "Deposit required", name: "deposit_required", type: "checkbox", value: ticket.depositRequired },
+          { label: "Deposit paid", name: "deposit_paid", type: "checkbox", value: ticket.depositPaid }
+        ],
+        checklistKeys: ["ownerApprovalRecorded"]
       },
       {
         title: "Draft Invoice",
         owner: "Money",
         detail: "Prepare the invoice/payment handoff before work is scheduled.",
         stages: ["invoice_preparation"],
-        items: [
-          { label: "Draft invoice", value: ticket.draftInvoiceExists ? "Ready" : "Not created yet", complete: Boolean(ticket.draftInvoiceExists) },
-          { label: "Payment status", value: ticketFieldText(ticket.paymentStatus, "No payment recorded"), complete: ["paid", "partially_paid"].includes(statusText(ticket.paymentStatus)) }
-        ]
+        fields: [
+          { label: "Connected invoice", type: "managed", value: ticket.invoiceId || findInvoiceForTicket(ticket)?.number || "", placeholder: "No invoice connected", detail: "Use Create & Connect Invoice below to preserve the required link." }
+        ],
+        checklistKeys: ["draftInvoiceExists"]
       },
       {
         title: "Work & Site Proof",
         owner: "Work",
         detail: "Schedule, assign, capture arrival photos, and complete the visit.",
         stages: ["ready_to_schedule", "scheduled", "in_progress", "paused"],
-        items: [
-          { label: "Visit date", value: ticketFieldText(ticket.dateLabel, "Not scheduled"), complete: Boolean(ticket.dateRaw && ticket.dateLabel !== "No date") },
-          { label: "Assigned team", value: ticket.assignedUserId ? "Assigned" : "Not assigned", complete: Boolean(ticket.assignedUserId) },
-          { label: "Arrival photos", value: ticket.beforePhotosUploaded ? "Uploaded" : "Needed on arrival", complete: Boolean(ticket.beforePhotosUploaded) },
-          { label: "Completion photos", value: ticket.afterPhotosUploaded ? "Uploaded" : "Needed at completion", complete: Boolean(ticket.afterPhotosUploaded) }
-        ]
+        fields: [
+          { label: "Visit date", name: "scheduled_date", type: "date", value: toDateInputValue(ticket.scheduledDate || ticket.dateRaw || "") },
+          { label: "Assigned team", name: "assigned_user_id", type: "assignee", value: ticket.assignedUserId || "" }
+        ],
+        checklistKeys: ["scheduledDate", "beforePhotosUploaded", "afterPhotosUploaded", "requiredDocumentsPresent"]
       },
       {
         title: "Closeout",
         owner: "Owner & Money",
         detail: "Completion review, final invoice, payment, and close.",
         stages: ["field_work_complete", "completion_review", "invoice_review", "invoice_sent", "partially_paid", "paid", "closed"],
-        items: [
-          { label: "Completion notes", value: ticketFieldText(ticket.fieldCompletionNotes, "Notes needed"), complete: Boolean(ticket.fieldCompletionNotes) },
-          { label: "Final invoice", value: ticket.invoiceFinalized ? "Finalized" : "Needs final review", complete: Boolean(ticket.invoiceFinalized) },
-          { label: "Payment", value: ticketFieldText(ticket.paymentStatus, "Not recorded"), complete: statusText(ticket.paymentStatus) === "paid" },
-          { label: "Ticket close", value: stage === "closed" ? "Closed" : "Open", complete: stage === "closed" }
-        ]
+        fields: [
+          { label: "Ticket close", type: "managed", value: stage === "closed" ? "Closed" : "Open", detail: "Closing remains controlled by the validated checklist action." }
+        ],
+        checklistKeys: ["fieldCompletionNotes", "invoiceFinalized", "paymentStatus"]
       }
     ];
 
@@ -11744,14 +11792,50 @@
       <div class="ticket-workbench-heading">
         <div>
           <p class="eyebrow">Ticket Workbench</p>
-          <h4>Role workflow</h4>
+          <h4>Editable ticket record</h4>
+          <small>Update the fields and resolve each Complete or N/A check in the area where it belongs.</small>
         </div>
-        <span>${escapeHtml(ticket.ownerLabel || "Unassigned")}</span>
+        <span>${escapeHtml(`${resolved}/${ticketCompletionChecklistItems.length}`)}</span>
       </div>
-      <div class="ticket-workbench-grid">
-        ${sections.map((section) => ticketWorkbenchSection(section, stage)).join("")}
-      </div>
+      <form data-ticket-workbench-form data-ticket-completion-form data-ticket-id="${escapeHtml(ticket.id)}" data-ticket-source="${escapeHtml(ticket.source || ticket.sourceType || "ticket")}">
+        <div class="ticket-workbench-grid">
+          ${sections.map((section) => ticketWorkbenchSection(section, stage, ticket, completed, notApplicable)).join("")}
+        </div>
+        <label class="ticket-completion-closeout-note">Closeout note
+          <textarea data-completion-closeout-note rows="3" placeholder="Required when anything is marked N/A. Explain the exception once here.">${escapeHtml(notes)}</textarea>
+        </label>
+        <div class="drawer-actions ticket-completion-actions">
+          <button type="button" data-action="save-ticket-completion" data-id="${escapeHtml(ticket.id)}">${buttonContent("Save Ticket Workbench", "save")}</button>
+          ${canManageMoneyWorkflow() ? `<button type="button" class="secondary-action" data-action="create-financial-invoice-from-ticket" data-id="${escapeHtml(ticket.id)}">${buttonContent("Create & Connect Invoice", "create-invoice")}</button>` : ""}
+          <button type="button" data-action="owner-finalize-ticket" data-id="${escapeHtml(ticket.id)}"${canClose ? "" : " disabled aria-disabled=\"true\""}>${buttonContent("Save & Close Ticket", "complete-reminder")}</button>
+        </div>
+        ${canClose ? `<p class="ticket-drawer-note">Closing is available when every line is Complete or N/A.</p>` : `<p class="ticket-drawer-note">You can edit and save this ticket now. Save & Close becomes available after the job is marked complete.</p>`}
+      </form>
     </section>`;
+  }
+
+  function ticketWorkbenchUpdatePayload(form) {
+    const data = new FormData(form);
+    const money = (name) => {
+      const value = String(data.get(name) || "").trim();
+      return value === "" ? null : Number(value);
+    };
+    return {
+      customer_name: String(data.get("customer_name") || "").trim(),
+      property_name: String(data.get("property_name") || "").trim(),
+      requested_service: String(data.get("requested_service") || "").trim(),
+      service: String(data.get("requested_service") || "").trim(),
+      scope_of_work: String(data.get("scope_of_work") || "").trim(),
+      expected_revenue: money("expected_revenue"),
+      estimated_total_cost: money("estimated_total_cost"),
+      estimated_profit: money("estimated_profit"),
+      target_margin: money("target_margin"),
+      deposit_required: data.get("deposit_required") === "on",
+      deposit_paid: data.get("deposit_paid") === "on",
+      scheduled_date: String(data.get("scheduled_date") || "").trim() || null,
+      visit_date: String(data.get("scheduled_date") || "").trim() || null,
+      assigned_user_id: String(data.get("assigned_user_id") || "").trim() || null
+    };
   }
 
   const ticketLifecycleTransitions = {
@@ -12831,7 +12915,6 @@
           </div>
         </section>
         ${renderTicketWorkbench(ticket)}
-        ${renderTicketCompletionChecklist(ticket)}
         ${renderTicketWorkAssignmentBridge(ticket, sourceItem)}
         ${renderTicketSiteProofBridge(ticket, sourceItem)}
         ${renderTicketInvoiceBridge(ticket)}
@@ -23987,24 +24070,32 @@ Requirements:
         const form = target.closest("[data-ticket-completion-form]");
         if (!form) return;
         const payload = ticketCompletionFormPayload(form);
+        const workbenchUpdate = form.matches("[data-ticket-workbench-form]") ? ticketWorkbenchUpdatePayload(form) : {};
+        payload.ticket = { ...workbenchUpdate, ...payload.ticket };
         if (Object.keys(payload.notApplicable).length && !payload.notes) {
           setDashboardState("Add a closeout note explaining why the N/A items do not apply.", "error");
           form.querySelector("[data-completion-closeout-note]")?.focus();
           return;
         }
         try {
-          setDashboardState("Saving completion checklist...");
-          const ticket = await updateJobTicket(id, payload.ticket);
-          await insertJobTicketEvent(id, {
+          setDashboardState("Saving ticket workbench...");
+          let ticketId = id;
+          if ((form.dataset.ticketSource || "ticket") !== "ticket") {
+            const canonical = await ensureJobTicketForSourceRecord(form.dataset.ticketSource, id, workbenchUpdate);
+            if (!canonical?.id) throw new Error("The unified Job Ticket could not be created for this record.");
+            ticketId = canonical.id;
+          }
+          const ticket = await updateJobTicket(ticketId, payload.ticket);
+          await insertJobTicketEvent(ticketId, {
             event_type: "ticket_completion_checklist_saved",
-            notes: payload.notes || "Unified completion checklist saved.",
-            new_value: { completed: payload.completed, notApplicable: payload.notApplicable }
+            notes: payload.notes || "Ticket Workbench fields and completion checks saved.",
+            new_value: { completed: payload.completed, notApplicable: payload.notApplicable, fieldsUpdated: Object.keys(workbenchUpdate) }
           });
           await refreshDashboard();
-          openTicketDrawer("ticket", ticket?.id || id);
-          setDashboardState("Completion checklist saved.");
+          openTicketDrawer("ticket", ticket?.id || ticketId);
+          setDashboardState("Ticket Workbench saved.");
         } catch (error) {
-          setDashboardState(error.message || "Unable to save the completion checklist.", "error");
+          setDashboardState(error.message || "Unable to save the Ticket Workbench.", "error");
         }
         return;
       } else if (action === "owner-finalize-ticket") {
@@ -24015,6 +24106,9 @@ Requirements:
         const form = target.closest("[data-ticket-completion-form]");
         if (!form) return;
         const payload = ticketCompletionFormPayload(form);
+        if (form.matches("[data-ticket-workbench-form]")) {
+          payload.ticket = { ...ticketWorkbenchUpdatePayload(form), ...payload.ticket };
+        }
         const unresolved = ticketCompletionChecklistItems.filter((item) => !payload.completed.includes(item.key) && !payload.notApplicable[item.key]);
         if (unresolved.length) {
           setDashboardState(`Resolve every completion item first: ${unresolved.map((item) => item.label).join(", ")}.`, "error");

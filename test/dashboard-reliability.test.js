@@ -26,7 +26,7 @@ test("live workspace polish contains long records and management cards", () => {
   assert.match(css, /\.call-queue-row > span:first-child :is\(strong, small\)[\s\S]*overflow-wrap: anywhere/);
   assert.match(css, /\.groundskeeper-operation-card[\s\S]*white-space: normal !important/);
   assert.match(css, /\.dashboard-health-item strong[\s\S]*word-break: break-all/);
-  assert.match(html, /dashboard\.css\?v=20260725-clear-column-danger-3/);
+  assert.match(html, /dashboard\.css\?v=20260725-ticket-workbench-edit-1/);
 });
 
 test("authenticated assistant prompt suppresses public quote calls to action", () => {
@@ -706,6 +706,12 @@ test("dashboard creates canonical job tickets without removing source fallbacks"
   assert.match(js, /function renderTicketHistory/);
   assert.match(js, /function renderTicketDocumentSource/);
   assert.match(js, /function renderTicketWorkbench/);
+  assert.match(js, /function ticketWorkbenchUpdatePayload/);
+  assert.match(js, /data-ticket-workbench-form data-ticket-completion-form/);
+  assert.match(js, /Save Ticket Workbench/);
+  assert.match(js, /ticketWorkbenchChecklistItem/);
+  assert.match(js, /checklistKeys: \["scopeComplete", "customerApprovalRecorded"\]/);
+  assert.match(js, /payload\.ticket = \{ \.\.\.workbenchUpdate, \.\.\.payload\.ticket \}/);
   assert.match(js, /function renderTicketInvoiceBridge/);
   assert.match(js, /function findInvoiceForTicket/);
   assert.match(js, /async function ensureInvoiceForTicket/);
@@ -992,6 +998,8 @@ test("unified tickets provide one validated completion checklist with N/A except
   assert.match(backend, /Add a closeout note explaining why the N\/A items do not apply/);
   assert.match(backend, /ticket_completed_from_checklist/);
   assert.match(css, /\.ticket-completion-list[\s\S]*repeat\(2, minmax\(0, 1fr\)\)/);
+  assert.match(css, /\.ticket-workbench-fields[\s\S]*repeat\(2, minmax\(0, 1fr\)\)/);
+  assert.match(css, /\.ticket-workbench-section \.ticket-completion-list[\s\S]*grid-template-columns: 1fr/);
 });
 
 test("ticket creation is guided, searchable, templated, and safely autosaved", () => {

@@ -95,18 +95,18 @@ const TRANSITIONS = Object.freeze({
     transition(TICKET_STAGES.SCOPE_IN_PROGRESS, PERMISSIONS.COST_REVIEW_EDIT, "ticket_returned_to_sales")
   ],
   [TICKET_STAGES.BUDGET_IN_PROGRESS]: [
-    transition(TICKET_STAGES.NEEDS_OWNER_APPROVAL, PERMISSIONS.COST_REVIEW_EDIT, "cost_review_submitted_to_owner"),
+    transition(TICKET_STAGES.INVOICE_PREPARATION, PERMISSIONS.COST_REVIEW_EDIT, "cost_review_submitted_for_invoice"),
     transition(TICKET_STAGES.SCOPE_IN_PROGRESS, PERMISSIONS.COST_REVIEW_EDIT, "ticket_returned_to_sales")
   ],
   [TICKET_STAGES.NEEDS_OWNER_APPROVAL]: [
-    transition(TICKET_STAGES.INVOICE_PREPARATION, PERMISSIONS.TICKETS_APPROVE_OWNER, "owner_approved"),
+    transition(TICKET_STAGES.READY_TO_SCHEDULE, PERMISSIONS.TICKETS_APPROVE_OWNER, "owner_agreement_recorded"),
     transition(TICKET_STAGES.BUDGET_IN_PROGRESS, PERMISSIONS.TICKETS_APPROVE_OWNER, "owner_returned_to_accounting"),
     transition(TICKET_STAGES.SCOPE_IN_PROGRESS, PERMISSIONS.TICKETS_APPROVE_OWNER, "owner_returned_to_sales"),
     transition(TICKET_STAGES.CANCELLED, PERMISSIONS.TICKETS_CANCEL, "ticket_cancelled")
   ],
   [TICKET_STAGES.INVOICE_PREPARATION]: [
-    transition(TICKET_STAGES.READY_TO_SCHEDULE, PERMISSIONS.INVOICES_CREATE, "draft_invoice_created"),
-    transition(TICKET_STAGES.NEEDS_OWNER_APPROVAL, PERMISSIONS.INVOICES_CREATE, "invoice_returned_for_approval")
+    transition(TICKET_STAGES.NEEDS_OWNER_APPROVAL, PERMISSIONS.INVOICES_CREATE, "customer_prework_authorization_recorded"),
+    transition(TICKET_STAGES.BUDGET_IN_PROGRESS, PERMISSIONS.INVOICES_CREATE, "invoice_returned_to_cost_review")
   ],
   [TICKET_STAGES.READY_TO_SCHEDULE]: [
     transition(TICKET_STAGES.SCHEDULED, PERMISSIONS.TICKETS_ASSIGN, "ticket_scheduled")
@@ -171,10 +171,12 @@ function getRequiredFieldsForStage(stage) {
   switch (normalizeTicketStage(stage)) {
     case TICKET_STAGES.NEEDS_BUDGET:
       return ["customerId", "propertyId", "primaryContact", "requestedService", "scopeOfWork", "proposedPrice", "customerApprovalRecorded"];
-    case TICKET_STAGES.NEEDS_OWNER_APPROVAL:
+    case TICKET_STAGES.INVOICE_PREPARATION:
       return ["costReviewComplete", "expectedRevenue", "estimatedTotalCost", "estimatedProfit", "targetMargin"];
+    case TICKET_STAGES.NEEDS_OWNER_APPROVAL:
+      return ["draftInvoiceExists", "invoiceSentToCustomer", "finalCustomerApprovalRecorded"];
     case TICKET_STAGES.READY_TO_SCHEDULE:
-      return ["scopeComplete", "customerApprovalRecorded", "costReviewComplete", "ownerApprovalRecorded", "draftInvoiceExists"];
+      return ["scopeComplete", "customerApprovalRecorded", "costReviewComplete", "draftInvoiceExists", "invoiceSentToCustomer", "finalCustomerApprovalRecorded", "ownerApprovalRecorded"];
     case TICKET_STAGES.SCHEDULED:
       return ["scheduledDate", "assignedUserId"];
     case TICKET_STAGES.FIELD_WORK_COMPLETE:

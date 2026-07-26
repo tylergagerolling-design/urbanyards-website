@@ -186,6 +186,7 @@
   const MONEY_TABS = [
     { key: "overview", label: "Overview" },
     { key: "expenses", label: "Expenses" },
+    { key: "quoting", label: "Quotes" },
     { key: "invoicing", label: "Invoicing" },
     { key: "vendors", label: "Vendors" },
     { key: "documents", label: "Documents" },
@@ -6110,6 +6111,8 @@
       ["budget_complete", "budgetComplete"],
       ["scope_complete", "scopeComplete"],
       ["customer_approval_recorded", "customerApprovalRecorded"],
+      ["invoice_sent_to_customer", "invoiceSentToCustomer"],
+      ["final_customer_approval_recorded", "finalCustomerApprovalRecorded"],
       ["owner_approval_recorded", "ownerApprovalRecorded"],
       ["draft_invoice_exists", "draftInvoiceExists"],
       ["deposit_required", "depositRequired"],
@@ -11080,6 +11083,8 @@
       paymentStatus: row.payment_status || row.paymentStatus || "",
       internalNotes: row.internal_notes || row.internalNotes || "",
       customerApprovalRecorded: Boolean(row.customer_approval_recorded || row.customerApprovalRecorded),
+      invoiceSentToCustomer: Boolean(row.invoice_sent_to_customer || row.invoiceSentToCustomer),
+      finalCustomerApprovalRecorded: Boolean(row.final_customer_approval_recorded || row.finalCustomerApprovalRecorded),
       costReviewComplete: Boolean(row.cost_review_complete || row.costReviewComplete),
       budgetComplete: Boolean(row.budget_complete || row.budgetComplete),
       scopeComplete: Boolean(row.scope_complete || row.scopeComplete),
@@ -11477,10 +11482,12 @@
 
   const ticketCompletionChecklistItems = [
     { key: "scopeComplete", label: "Request and scope", detail: "Customer, property, service, and complete scope are in this ticket." },
-    { key: "customerApprovalRecorded", label: "Customer approval", detail: "The customer approval is recorded on the ticket." },
+    { key: "customerApprovalRecorded", label: "Quote approved by customer", detail: "The customer approved the connected quote." },
     { key: "costReviewComplete", label: "Cost review", detail: "Revenue, costs, and margin have been reviewed." },
-    { key: "ownerApprovalRecorded", label: "Owner approval", detail: "The owner has approved the job to proceed." },
     { key: "draftInvoiceExists", label: "Connected invoice", detail: "An invoice has been created and connected to this ticket.", requiredConnection: true },
+    { key: "invoiceSentToCustomer", label: "Invoice sent to customer", detail: "The invoice was submitted to request the deposit and final authorization." },
+    { key: "finalCustomerApprovalRecorded", label: "Final customer approval", detail: "The customer gave final authorization to begin the work." },
+    { key: "ownerApprovalRecorded", label: "Owner agreement", detail: "The owner agreed that the job is ready to proceed." },
     { key: "scheduledDate", label: "Schedule and assignment", detail: "The work date and responsible team are recorded." },
     { key: "beforePhotosUploaded", label: "Arrival photos", detail: "Proof of the site before work begins." },
     { key: "afterPhotosUploaded", label: "Completion photos", detail: "Proof of the finished work." },
@@ -11576,6 +11583,8 @@
       ticket: {
         scope_complete: completed.includes("scopeComplete"),
         customer_approval_recorded: completed.includes("customerApprovalRecorded"),
+        invoice_sent_to_customer: completed.includes("invoiceSentToCustomer"),
+        final_customer_approval_recorded: completed.includes("finalCustomerApprovalRecorded"),
         cost_review_complete: completed.includes("costReviewComplete"),
         owner_approval_recorded: completed.includes("ownerApprovalRecorded"),
         before_photos_uploaded: completed.includes("beforePhotosUploaded"),
@@ -11719,14 +11728,15 @@
     const resolved = ticketCompletionChecklistItems.filter((item) => ticketCompletionItemComplete(ticket, item.key, completed) || notApplicable[item.key]).length;
     const sections = [
       {
-        title: "Sales & Scope",
+        title: "Quote & Customer Approval",
         owner: "Leads",
-        detail: "Client, property, service request, and customer approval.",
+        detail: "Build and connect the quote, then record the customer's quote approval.",
         stages: ["draft", "sales_intake", "scope_in_progress", "quote_pending", "customer_approval_pending", "scope_change_requested"],
         fields: [
           { label: "Client", name: "customer_name", value: ticket.customer || "" },
           { label: "Property", name: "property_name", value: ticket.property || "" },
           { label: "Service request", name: "requested_service", value: ticket.requestedService || ticket.title || "" },
+          { label: "Quoted price", name: "proposed_price", type: "number", step: "0.01", value: ticket.proposedPrice || "" },
           { label: "Scope of work", name: "scope_of_work", type: "textarea", rows: 4, value: ticket.scopeOfWork || ticket.detail || "", placeholder: "Describe the complete work scope." }
         ],
         checklistKeys: ["scopeComplete", "customerApprovalRecorded"]
@@ -11745,25 +11755,26 @@
         checklistKeys: ["costReviewComplete", "actualsRecorded"]
       },
       {
-        title: "Owner Approval",
-        owner: "Owner",
-        detail: "Final internal approval before invoice prep and scheduling.",
-        stages: ["needs_owner_approval"],
+        title: "Invoice, Deposit & Final Approval",
+        owner: "Money & Customer",
+        detail: "Create and send the invoice, request any deposit, and record the customer's final authorization.",
+        stages: ["invoice_preparation"],
         fields: [
+          { label: "Connected invoice", type: "managed", value: ticket.invoiceId || findInvoiceForTicket(ticket)?.number || "", placeholder: "No invoice connected", detail: "Use Create & Connect Invoice below to preserve the required link." },
           { label: "Deposit required", name: "deposit_required", type: "checkbox", value: ticket.depositRequired },
           { label: "Deposit paid", name: "deposit_paid", type: "checkbox", value: ticket.depositPaid }
         ],
-        checklistKeys: ["ownerApprovalRecorded"]
+        checklistKeys: ["draftInvoiceExists", "invoiceSentToCustomer", "finalCustomerApprovalRecorded"]
       },
       {
-        title: "Draft Invoice",
-        owner: "Money",
-        detail: "Prepare the invoice/payment handoff before work is scheduled.",
-        stages: ["invoice_preparation"],
+        title: "Owner Agreement",
+        owner: "Owner",
+        detail: "Final owner agreement after the customer authorization and before work starts.",
+        stages: ["needs_owner_approval"],
         fields: [
-          { label: "Connected invoice", type: "managed", value: ticket.invoiceId || findInvoiceForTicket(ticket)?.number || "", placeholder: "No invoice connected", detail: "Use Create & Connect Invoice below to preserve the required link." }
+          { label: "Pre-work gate", type: "managed", value: ticket.ownerApprovalRecorded ? "Agreed" : "Waiting", detail: "Work cannot move to scheduling until the owner agreement is recorded." }
         ],
-        checklistKeys: ["draftInvoiceExists"]
+        checklistKeys: ["ownerApprovalRecorded"]
       },
       {
         title: "Work & Site Proof",
@@ -11806,6 +11817,7 @@
         </label>
         <div class="drawer-actions ticket-completion-actions">
           <button type="button" data-action="save-ticket-completion" data-id="${escapeHtml(ticket.id)}">${buttonContent("Save Ticket Workbench", "save")}</button>
+          ${canManageMoneyWorkflow() ? `<button type="button" class="secondary-action" data-action="create-financial-quote-from-ticket" data-id="${escapeHtml(ticket.id)}">${buttonContent("Create & Connect Quote", "quick-add-quote")}</button>` : ""}
           ${canManageMoneyWorkflow() ? `<button type="button" class="secondary-action" data-action="create-financial-invoice-from-ticket" data-id="${escapeHtml(ticket.id)}">${buttonContent("Create & Connect Invoice", "create-invoice")}</button>` : ""}
           <button type="button" data-action="owner-finalize-ticket" data-id="${escapeHtml(ticket.id)}"${canClose ? "" : " disabled aria-disabled=\"true\""}>${buttonContent("Save & Close Ticket", "complete-reminder")}</button>
         </div>
@@ -11826,6 +11838,7 @@
       requested_service: String(data.get("requested_service") || "").trim(),
       service: String(data.get("requested_service") || "").trim(),
       scope_of_work: String(data.get("scope_of_work") || "").trim(),
+      proposed_price: money("proposed_price"),
       expected_revenue: money("expected_revenue"),
       estimated_total_cost: money("estimated_total_cost"),
       estimated_profit: money("estimated_profit"),
@@ -11861,18 +11874,18 @@
       { to: "scope_in_progress", label: "Return to Leads", detail: "Send back for scope clarification." }
     ],
     budget_in_progress: [
-      { to: "needs_owner_approval", label: "Submit to owner", detail: "Cost review is ready for owner approval." },
+      { to: "invoice_preparation", label: "Prepare customer invoice", detail: "Cost review is complete. Create and send the invoice for deposit and final authorization." },
       { to: "scope_in_progress", label: "Return to Leads", detail: "Send back for scope clarification." }
     ],
     needs_owner_approval: [
-      { to: "invoice_preparation", label: "Approve", detail: "Owner approved. Prepare the invoice/draft money handoff." },
+      { to: "ready_to_schedule", label: "Owner agrees", detail: "Owner agreement is recorded. The job may move to scheduling." },
       { to: "budget_in_progress", label: "Return to cost review", detail: "Send back to Money for changes." },
       { to: "scope_in_progress", label: "Return to Leads", detail: "Send back to scope work." },
       { to: "cancelled", label: "Cancel ticket", detail: "Close this ticket as cancelled." }
     ],
     invoice_preparation: [
-      { to: "ready_to_schedule", label: "Ready to schedule", detail: "Invoice prep is done. Hand off to Work." },
-      { to: "needs_owner_approval", label: "Return to owner", detail: "Needs another owner review before scheduling." }
+      { to: "needs_owner_approval", label: "Submit for owner agreement", detail: "Invoice, deposit, and final customer authorization are complete." },
+      { to: "budget_in_progress", label: "Return to cost review", detail: "Revise costs or pricing before resubmitting." }
     ],
     ready_to_schedule: [{ to: "scheduled", label: "Mark scheduled", detail: "A work visit is on the calendar." }],
     scheduled: [
@@ -11909,8 +11922,9 @@
 
   const ticketRequiredFieldsByStage = {
     needs_budget: ["customerId", "propertyId", "primaryContact", "requestedService", "scopeOfWork", "proposedPrice", "customerApprovalRecorded"],
-    needs_owner_approval: ["costReviewComplete", "expectedRevenue", "estimatedTotalCost", "estimatedProfit", "targetMargin"],
-    ready_to_schedule: ["scopeComplete", "customerApprovalRecorded", "costReviewComplete", "ownerApprovalRecorded", "draftInvoiceExists"],
+    invoice_preparation: ["costReviewComplete", "expectedRevenue", "estimatedTotalCost", "estimatedProfit", "targetMargin"],
+    needs_owner_approval: ["draftInvoiceExists", "invoiceSentToCustomer", "finalCustomerApprovalRecorded"],
+    ready_to_schedule: ["scopeComplete", "customerApprovalRecorded", "costReviewComplete", "draftInvoiceExists", "invoiceSentToCustomer", "finalCustomerApprovalRecorded", "ownerApprovalRecorded"],
     scheduled: ["dateRaw", "assignedUserId"],
     field_work_complete: ["beforePhotosUploaded", "afterPhotosUploaded", "fieldCompletionNotes"],
     closed: ["invoiceFinalized", "paymentStatus"]
@@ -11924,14 +11938,16 @@
       requestedService: "Service set",
       scopeOfWork: "Scope of work",
       proposedPrice: "Proposed price",
-      customerApprovalRecorded: "Customer approval",
+      customerApprovalRecorded: "Customer quote approval",
       costReviewComplete: "Cost review complete",
       expectedRevenue: "Expected revenue",
       estimatedTotalCost: "Estimated cost",
       estimatedProfit: "Estimated profit",
       targetMargin: "Target margin",
       scopeComplete: "Scope complete",
-      ownerApprovalRecorded: "Owner approval",
+      invoiceSentToCustomer: "Invoice sent to customer",
+      finalCustomerApprovalRecorded: "Final customer approval",
+      ownerApprovalRecorded: "Owner agreement",
       draftInvoiceExists: "Draft invoice",
       depositPaid: "Deposit paid",
       requiredDocumentsPresent: "Required documents",
@@ -15508,6 +15524,44 @@ Requirements:
     </section>`;
   }
 
+  function renderQuoteWorkspace() {
+    const quotes = (state.data.documents || []).filter((document) => document.type === "estimate");
+    const cards = quotes.map((quote) => {
+      const ticket = findJobTicketForSalesDocument(quote.id);
+      return `<article class="is-clickable" data-action="open-document" data-id="${escapeHtml(quote.id)}" tabindex="0">
+        <div><strong>${escapeHtml(quote.number || "Draft quote")}</strong><span>${escapeHtml([quote.issueDate, quote.dueDateRaw ? `Expires ${quote.dueDate}` : ""].filter(Boolean).join(" · "))}</span></div>
+        <p>${escapeHtml(quote.clientName || "Client not linked")} · ${moneyCurrency(quote.total)}</p>
+        <small>${escapeHtml(ticket ? `${ticket.number || "Ticket"} / ${ticket.title || ticket.requestedService || "Connected"}` : "No ticket connected")}</small>
+        <div class="money-card-actions"><span class="status-badge">${escapeHtml(quote.status || "draft")}</span><strong>${ticket?.customerApprovalRecorded ? "Customer approved" : quote.status === "sent" ? "Awaiting approval" : "Draft"}</strong></div>
+      </article>`;
+    }).join("");
+    return `<section class="financial-directory money-simple-workspace" aria-label="Quotes">
+      <div class="ticket-lane-heading">
+        <div><p class="eyebrow">Quotes</p><h3>Customer quote records</h3><p>Create the scope and price, send the quote, and record customer approval before invoicing.</p></div>
+        <button type="button" data-action="create-financial-quote">+ New Quote</button>
+      </div>
+      <div class="financial-card-list">${cards || emptyState("No quotes are filed yet. Create one here or from a ticket.")}</div>
+    </section>`;
+  }
+
+  function openFinancialQuoteCreateDrawer(ticket = null) {
+    if (!els.detailDrawer || !els.detailContent) return;
+    openDetailDrawer();
+    els.detailContent.innerHTML = `<div class="drawer-content document-drawer">
+      <div class="document-drawer-heading"><div><p class="eyebrow">New Quote</p><h3>Prepare customer quote</h3><p>Build the customer-facing scope and price before invoice preparation.</p></div></div>
+      <form class="drawer-form document-edit-form" data-document-form data-ticket-id="${escapeHtml(ticket?.id || "")}">
+        <input type="hidden" name="document_type" value="estimate">
+        <label>Client name<input name="client_name" value="${escapeHtml(ticket?.customer || "")}" required></label>
+        <label>Client email<input name="client_email" type="email" value="${escapeHtml(ticket?.email || "")}"></label>
+        <label class="span-full">Scope / description<input name="description" value="${escapeHtml(ticket?.scopeOfWork || ticket?.detail || ticket?.requestedService || "")}" required></label>
+        <label>Quoted amount<input name="amount" type="number" min="0" step="0.01" value="${escapeHtml(String(ticket?.proposedPrice || ""))}" required></label>
+        <label>Approval due<input name="due_date" type="date" value="${escapeHtml(addDaysKey(todayKey(), 14))}"></label>
+        <div class="drawer-actions"><button type="submit">${buttonContent("Create Quote", "save")}</button></div>
+      </form>
+    </div>`;
+    renderDetailDrawerBreadcrumbs();
+  }
+
   function financialLinkOptions(type, selectedId) {
     const records = type === "client"
       ? (state.data.contacts || []).map((item) => ({ id: item.id, label: item.name || item.company }))
@@ -15572,6 +15626,7 @@ Requirements:
     if (state.moneyError) return `<section class="money-module-state is-error" role="alert"><strong>Could not load financial records</strong><p>${escapeHtml(state.moneyError)}</p><button type="button" data-action="retry-money-view">Retry</button></section>`;
     if (state.moneyView === "overview") return renderMoneyOverview();
     if (state.moneyView === "expenses") return renderExpenseWorkspace();
+    if (state.moneyView === "quoting") return renderQuoteWorkspace();
     if (state.moneyView === "invoicing") return renderInvoiceWorkspace();
     if (state.moneyView === "vendors") return renderVendorsWorkspace();
     if (state.moneyView === "documents") {
@@ -15655,7 +15710,7 @@ Requirements:
             <p>Review cost readiness, prepare invoices, track Square payment state, and close the financial record inside the ticket workflow.</p>
           </div>
           <div class="ticket-hero-actions">
-            ${canManageMoneyWorkflow() ? `<button type="button" data-action="quick-add-quote">Create Estimate</button>` : ""}
+            ${canManageMoneyWorkflow() ? `<button type="button" data-action="create-financial-quote">Create Quote</button>` : ""}
             ${canManageMoneyWorkflow() ? `<button type="button" data-action="open-financial-records">Open Records</button>` : ""}
           </div>
         </header>
@@ -22343,6 +22398,21 @@ Requirements:
         return;
       }
 
+      if (action === "create-financial-quote") {
+        openFinancialQuoteCreateDrawer();
+        return;
+      }
+
+      if (action === "create-financial-quote-from-ticket") {
+        const ticket = findTicketForDrawer("ticket", id);
+        if (!ticket) {
+          setDashboardState("The unified ticket could not be found.", "error");
+          return;
+        }
+        openFinancialQuoteCreateDrawer(ticket);
+        return;
+      }
+
       if (action === "create-financial-invoice-from-ticket") {
         const ticket = findTicketForDrawer("ticket", id);
         if (!ticket) {
@@ -25833,7 +25903,17 @@ Requirements:
             amount: Number(formData.get("amount") || 0),
             due_date: String(formData.get("due_date") || "")
           });
-          await ensureJobTicketForSalesDocument(document);
+          const ticketId = event.target.dataset.ticketId || "";
+          if (ticketId) {
+            await updateJobTicket(ticketId, {
+              quote_id: document.id,
+              proposed_price: Number(formData.get("amount") || 0),
+              customer_approval_recorded: false,
+              next_action: "Send quote and record customer approval"
+            });
+          } else {
+            await ensureJobTicketForSalesDocument(document);
+          }
           event.target.reset();
           await refreshDashboard();
           openDocumentDrawer(document.id);

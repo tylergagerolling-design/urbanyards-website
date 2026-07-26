@@ -719,10 +719,10 @@ test("dashboard creates canonical job tickets without removing source fallbacks"
   assert.match(js, /data-ticket-workbench/);
   assert.match(js, /data-ticket-invoice-form/);
   assert.match(js, /data-action="create-ticket-invoice"/);
-  assert.match(js, /Sales & Scope/);
+  assert.match(js, /Quote & Customer Approval/);
   assert.match(js, /Cost Review/);
-  assert.match(js, /Owner Approval/);
-  assert.match(js, /Draft Invoice/);
+  assert.match(js, /Invoice, Deposit & Final Approval/);
+  assert.match(js, /Owner Agreement/);
   assert.match(js, /Work & Site Proof/);
   assert.match(js, /Closeout/);
   assert.match(js, /renderTicketWorkbench\(ticket\)/);

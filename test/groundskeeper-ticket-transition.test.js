@@ -77,7 +77,7 @@ test("invalid stage skips are blocked without changing the ticket", async () => 
 });
 
 test("role permission failures are distinguished from invalid transitions", async () => {
-  const snapshot = snapshotWith({ stage: "needs_owner_approval" });
+  const snapshot = snapshotWith({ stage: "budget_in_progress", costReviewComplete: true, expectedRevenue: 1200, estimatedTotalCost: 700, estimatedProfit: 500, targetMargin: 35 });
   const result = await orchestrateDashboardRequest({
     message: "Move this ticket to Invoice Preparation",
     context: snapshot,
@@ -85,7 +85,7 @@ test("role permission failures are distinguished from invalid transitions", asyn
     hasPermission
   });
   assert.equal(result.transitionAttempt.outcome, "permission_denied");
-  assert.equal(snapshot.tickets[0].stage, "needs_owner_approval");
+  assert.equal(snapshot.tickets[0].stage, "budget_in_progress");
 });
 
 test("noncanonical dashboard rows cannot be transitioned", async () => {

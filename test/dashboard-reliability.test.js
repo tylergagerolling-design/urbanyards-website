@@ -26,7 +26,7 @@ test("live workspace polish contains long records and management cards", () => {
   assert.match(css, /\.call-queue-row > span:first-child :is\(strong, small\)[\s\S]*overflow-wrap: anywhere/);
   assert.match(css, /\.groundskeeper-operation-card[\s\S]*white-space: normal !important/);
   assert.match(css, /\.dashboard-health-item strong[\s\S]*word-break: break-all/);
-  assert.match(html, /dashboard\.css\?v=20260726-work-board-5/);
+  assert.match(html, /dashboard\.css\?v=20260726-ticket-swimlanes-1/);
 });
 
 test("authenticated assistant prompt suppresses public quote calls to action", () => {
@@ -684,12 +684,24 @@ test("component Work Board assigns, tracks, completes, and audits ticket require
   assert.match(js, /data-owner-kanban-date-range="end"/);
   assert.match(js, /data-owner-kanban-filter="status"/);
   assert.match(js, /data-owner-kanban-filter="sort"/);
-  assert.match(js, /data-owner-kanban-filter="group"/);
-  assert.match(js, /component-kanban-swimlane/);
+  assert.doesNotMatch(js, /data-owner-kanban-filter="group"/);
+  assert.match(js, /function renderOwnerKanbanTicketSwimlane/);
+  assert.match(js, /class="component-ticket-swimlane/);
+  assert.match(js, /class="component-ticket-swimlane-grid"/);
+  assert.match(js, /class="component-ticket-swimlane-head"/);
+  assert.match(js, /data-action="toggle-work-ticket-swimlane"/);
+  assert.match(js, /data-action="toggle-work-component-editor"/);
+  assert.match(js, /data-action="toggle-work-ticket-completed"/);
+  assert.match(js, /component-ticket-progress[\s\S]*<progress/);
+  assert.match(js, /column\.key === "done" && !doneExpanded \? columnComponents\.slice\(0, 2\)/);
   assert.match(js, /WIP\$\{overLimit \? " \/ reduce load" : ""\}/);
-  assert.match(js, /owner-kanban-empty[\s\S]*Clear for now/);
-  assert.match(css, /owner-kanban-scroll[\s\S]*grid-template-columns: repeat\(6, minmax\(270px, 1fr\)\)/);
-  assert.match(css, /@media \(max-width: 760px\)[\s\S]*owner-kanban-scroll[\s\S]*grid-template-columns: minmax\(0, 1fr\)/);
+  assert.match(js, /owner-kanban-empty[\s\S]*No matching ticket work/);
+  assert.match(css, /Ticket swimlane Work Board/);
+  assert.match(css, /owner-kanban-column-guide,[\s\S]*component-ticket-swimlane-grid[\s\S]*grid-template-columns: repeat\(6, minmax\(190px, 1fr\)\)/);
+  assert.match(css, /owner-kanban-card\.component-kanban-row[\s\S]*padding: 8px 8px 8px 9px/);
+  assert.match(css, /component-kanban-row-main strong[\s\S]*text-overflow: ellipsis[\s\S]*white-space: nowrap/);
+  assert.match(css, /component-kanban-editor[\s\S]*component-kanban-editor-fields/);
+  assert.match(css, /@media \(max-width: 760px\)[\s\S]*component-ticket-swimlane-grid[\s\S]*grid-template-columns: minmax\(0, 1fr\)/);
   assert.match(backend, /WORK_COMPONENT_STATUSES[\s\S]*"todo"[\s\S]*"assigned"[\s\S]*"done"/);
   assert.match(backend, /async function updateTicketWorkComponent/);
   assert.match(backend, /ticket_work_component_updated/);

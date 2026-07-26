@@ -379,6 +379,9 @@
     ownerKanbanBlockedOnly: false,
     ownerKanbanOverdueOnly: false,
     ownerKanbanMovingId: "",
+    ownerKanbanEditingComponentId: "",
+    ownerKanbanCollapsedTicketIds: new Set(),
+    ownerKanbanExpandedDoneTicketIds: new Set(),
     ownerKanbanFiltersLoaded: false,
     addMenuOpen: false,
     globalSearchOpen: false,
@@ -13665,6 +13668,7 @@
   function renderOwnerKanbanToolbar(components = [], filteredComponents = []) {
     const priorities = components.map((component) => component.priority);
     const groups = components.map((component) => component.group);
+    const shownTickets = new Set(filteredComponents.map((component) => component.ticketId)).size;
     const current = currentUserProfile();
     const canAssignToSelf = Boolean(current?.userId || current?.email)
       && filteredComponents.some((component) => !component.assignedUserId && component.status !== "done");
@@ -13672,11 +13676,11 @@
       <div class="owner-kanban-toolbar-head">
         <div>
           <p class="eyebrow">Execution Board</p>
-          <h3>Work Components</h3>
-          <p>See every ticket requirement, give it one accountable person, and complete it without losing the parent ticket.</p>
+          <h3>Ticket Work Board</h3>
+          <p>Each ticket stays together while its requirements move through the six work stages.</p>
         </div>
         <div class="owner-kanban-toolbar-actions">
-          <span>${escapeHtml(filteredComponents.length)} of ${escapeHtml(components.length)} shown</span>
+          <span>${escapeHtml(shownTickets)} ticket${shownTickets === 1 ? "" : "s"} / ${escapeHtml(filteredComponents.length)} steps</span>
           <button type="button" data-action="refresh-owner-kanban">Refresh</button>
           ${canManageOwnerWorkflow() ? `<button type="button" data-action="assign-visible-components-to-me"${canAssignToSelf ? "" : " disabled"}>Assign Visible to Me</button>` : ""}
           <details class="owner-kanban-view-settings">
@@ -13723,13 +13727,9 @@
             ${[["priority", "Priority"], ["due", "Due date"], ["newest", "Newest"], ["oldest", "Oldest"]].map(([value, label]) => `<option value="${value}"${value === state.ownerKanbanSort ? " selected" : ""}>${label}</option>`).join("")}
           </select>
         </label>
-        <label>Group cards
-          <select data-owner-kanban-filter="group">
-            ${[["none", "No grouping"], ["ticket", "Parent ticket"], ["person", "Assigned person"], ["due", "Due date"]].map(([value, label]) => `<option value="${value}"${value === state.ownerKanbanGroupBy ? " selected" : ""}>${label}</option>`).join("")}
-          </select>
-        </label>
         <button type="button" data-action="reset-owner-kanban-filters">Reset Filters</button>
       </div>
+      </details>
     </section>`;
   }
 
@@ -13801,7 +13801,7 @@
     </section>`).join("");
   }
 
-  function renderOwnerKanbanBoard(tickets = []) {
+  function renderOwnerKanbanBoardLegacy(tickets = []) {
     const components = dashboardWorkComponents(tickets);
     const filteredComponents = components.filter(ownerKanbanComponentMatches);
     return `<section class="owner-kanban-board" aria-label="Ticket component Work Board" data-owner-kanban-board>
@@ -13825,6 +13825,156 @@
             </div>
           </section>`;
         }).join("")}
+      </div>
+    </section>`;
+  }
+
+  function renderOwnerWorkComponentRow(component = {}) {
+    const dateState = workComponentDateState(component);
+    const saving = state.ownerKanbanMovingId === component.id;
+    const editing = state.ownerKanbanEditingComponentId === component.id;
+    const completionDetail = component.status === "done"
+      ? [component.completionMode, component.completedBy, component.completedAt ? formatDateTime(component.completedAt) : ""].filter(Boolean).join(" / ")
+      : "";
+    const editorId = `work-component-${slug(component.id)}`;
+    const dragAttrs = `data-owner-kanban-card data-id="${escapeHtml(component.ticketId)}" data-component-key="${escapeHtml(component.key)}" data-component-status="${escapeHtml(component.status)}"`;
+    const proofState = component.status === "done" ? (component.completionMode || "Complete") : "Proof";
+    return `<article class="owner-kanban-card component-kanban-row is-team-${escapeHtml(slug(component.group))} ${dateState === "overdue" ? "is-overdue" : ""} ${component.status === "blocked" ? "is-blocked" : ""} ${editing ? "is-editing" : ""} ${saving ? "is-saving" : ""}" ${dragAttrs} aria-busy="${saving ? "true" : "false"}">
+      <div class="component-kanban-row-summary">
+        <button type="button" class="component-kanban-row-main" data-action="toggle-work-component-editor" data-id="${escapeHtml(component.ticketId)}" data-component-key="${escapeHtml(component.key)}" aria-expanded="${editing}" aria-controls="${escapeHtml(editorId)}">
+          <strong>${escapeHtml(component.label)}</strong>
+          <small>${escapeHtml(component.group)}</small>
+        </button>
+        <button type="button" class="component-kanban-row-toggle" data-action="toggle-work-component-editor" data-id="${escapeHtml(component.ticketId)}" data-component-key="${escapeHtml(component.key)}" aria-expanded="${editing}" aria-controls="${escapeHtml(editorId)}">${editing ? "Close" : "Edit"}</button>
+      </div>
+      <div class="component-kanban-row-chips">
+        <button type="button" class="component-kanban-chip is-person${component.assignedUserId ? "" : " is-empty"}" data-action="toggle-work-component-editor" data-id="${escapeHtml(component.ticketId)}" data-component-key="${escapeHtml(component.key)}" title="Edit assignment">${escapeHtml(component.assigneeLabel)}</button>
+        <button type="button" class="component-kanban-chip is-due is-${escapeHtml(dateState)}" data-action="toggle-work-component-editor" data-id="${escapeHtml(component.ticketId)}" data-component-key="${escapeHtml(component.key)}" title="Edit due date">${escapeHtml(component.dueDateLabel)}</button>
+        <span class="component-kanban-proof-chip${component.status === "done" ? " is-complete" : ""}" title="${escapeHtml(component.proof)}" aria-label="${escapeHtml(`${proofState}: ${component.proof}`)}"><span aria-hidden="true">${component.status === "done" ? "&#10003;" : "&#8226;"}</span></span>
+      </div>
+      ${component.status === "blocked" ? `<p class="component-kanban-blocker-summary"><strong>Blocked:</strong> ${escapeHtml(component.blockerReason || component.blockedLabel || "Reason needed")}</p>` : ""}
+      ${editing ? `<div class="component-kanban-editor" id="${escapeHtml(editorId)}" role="region" aria-label="Edit ${escapeHtml(component.label)}">
+        <div class="component-kanban-editor-fields">
+          <label>Person
+            <select data-work-component-assignee aria-label="Assign ${escapeHtml(component.label)}" data-id="${escapeHtml(component.ticketId)}" data-component-key="${escapeHtml(component.key)}">${workAssignmentOptions(component.assignedUserId)}</select>
+          </label>
+          <label>Due
+            <input type="date" value="${escapeHtml(component.dueDate || "")}" data-work-component-due data-id="${escapeHtml(component.ticketId)}" data-component-key="${escapeHtml(component.key)}">
+          </label>
+          <label>Status
+            <select data-work-component-status aria-label="Status for ${escapeHtml(component.label)}" data-id="${escapeHtml(component.ticketId)}" data-component-key="${escapeHtml(component.key)}">
+              ${ownerKanbanColumns.map((column) => `<option value="${escapeHtml(column.key)}"${column.key === component.status ? " selected" : ""}${column.key === "done" && !component.boardManaged && component.status !== "done" ? " disabled" : ""}>${escapeHtml(column.label)}</option>`).join("")}
+            </select>
+          </label>
+        </div>
+        ${component.status === "blocked" ? `<label class="component-kanban-blocker">Blocker
+          <input value="${escapeHtml(component.blockerReason)}" placeholder="What is this waiting on?" data-work-component-blocker data-id="${escapeHtml(component.ticketId)}" data-component-key="${escapeHtml(component.key)}">
+        </label>` : ""}
+        <p class="component-kanban-proof"><strong>Required proof</strong><span>${escapeHtml(component.proof)}</span></p>
+        ${completionDetail ? `<p class="component-kanban-completion">${escapeHtml(completionDetail)}</p>` : ""}
+        <div class="component-kanban-actions">
+          <button type="button" class="secondary-action" data-action="open-ticket" data-ticket-source="ticket" data-id="${escapeHtml(component.ticketId)}">Open Ticket</button>
+          ${component.status !== "done"
+            ? component.boardManaged
+              ? `<button type="button" data-action="complete-work-component" data-id="${escapeHtml(component.ticketId)}" data-component-key="${escapeHtml(component.key)}">Complete</button>`
+              : `<button type="button" data-action="open-ticket" data-ticket-source="ticket" data-id="${escapeHtml(component.ticketId)}">Open Requirement</button>`
+            : `<button type="button" class="secondary-action" data-action="reopen-work-component" data-id="${escapeHtml(component.ticketId)}" data-component-key="${escapeHtml(component.key)}"${component.boardManaged ? "" : " disabled"}>Reopen</button>`}
+          ${saving ? `<span class="owner-kanban-saving" role="status">Saving...</span>` : ""}
+        </div>
+      </div>` : saving ? `<span class="owner-kanban-saving is-inline" role="status">Saving...</span>` : ""}
+    </article>`;
+  }
+
+  function renderOwnerKanbanTicketSwimlane(allComponents = [], visibleComponents = []) {
+    const first = allComponents[0] || visibleComponents[0] || {};
+    const ticketId = first.ticketId || "";
+    const collapsed = state.ownerKanbanCollapsedTicketIds.has(ticketId);
+    const doneExpanded = state.ownerKanbanExpandedDoneTicketIds.has(ticketId);
+    const completed = allComponents.filter((component) => component.status === "done").length;
+    const blocked = allComponents.filter((component) => component.status === "blocked");
+    const nextComponent = sortOwnerKanbanComponents(allComponents.filter((component) => component.status !== "done"))[0];
+    const nextAction = blocked[0]
+      ? `Blocked: ${blocked[0].blockerReason || blocked[0].label}`
+      : nextComponent
+        ? `Next: ${nextComponent.label}`
+        : "All work components complete";
+    const customerProperty = [first.customer, first.property].filter(Boolean).join(" / ") || "Customer or property not set";
+    const priority = String(first.priority || "Normal");
+    return `<section class="component-ticket-swimlane${collapsed ? " is-collapsed" : ""}" data-ticket-swimlane data-ticket-id="${escapeHtml(ticketId)}" role="listitem">
+      <header class="component-ticket-swimlane-head">
+        <button type="button" class="component-ticket-collapse" data-action="toggle-work-ticket-swimlane" data-id="${escapeHtml(ticketId)}" aria-expanded="${!collapsed}" aria-label="${collapsed ? "Expand" : "Collapse"} ${escapeHtml(first.ticketNumber || "ticket")}">${collapsed ? "&#8250;" : "&#8964;"}</button>
+        <div class="component-ticket-identity">
+          <span>${escapeHtml(first.ticketNumber || "Ticket")}${priority.toLowerCase() !== "normal" ? ` / ${escapeHtml(priority)}` : ""}</span>
+          <strong>${escapeHtml(first.ticketTitle || "Untitled ticket")}</strong>
+          <small>${escapeHtml(customerProperty)}</small>
+        </div>
+        <div class="component-ticket-next${blocked.length ? " is-blocked" : ""}">
+          <span>${escapeHtml(nextAction)}</span>
+          ${blocked.length ? `<small>${escapeHtml(blocked.length)} blocked step${blocked.length === 1 ? "" : "s"}</small>` : ""}
+        </div>
+        <div class="component-ticket-progress" aria-label="${escapeHtml(`${completed} of ${allComponents.length} steps complete`)}">
+          <span><b>${escapeHtml(completed)}</b> / ${escapeHtml(allComponents.length)}</span>
+          <progress max="${escapeHtml(allComponents.length || 1)}" value="${escapeHtml(completed)}">${escapeHtml(completed)} of ${escapeHtml(allComponents.length)}</progress>
+        </div>
+        <button type="button" class="component-ticket-open" data-action="open-ticket" data-ticket-source="ticket" data-id="${escapeHtml(ticketId)}">Open Ticket</button>
+      </header>
+      ${collapsed ? "" : `<div class="component-ticket-swimlane-grid">
+        ${ownerKanbanColumns.map((column) => {
+          const columnComponents = visibleComponents.filter((component) => component.status === column.key);
+          const shownComponents = column.key === "done" && !doneExpanded ? columnComponents.slice(0, 2) : columnComponents;
+          const hiddenDone = columnComponents.length - shownComponents.length;
+          return `<section class="component-ticket-status-cell owner-kanban-column--${escapeHtml(column.key)}" data-owner-kanban-column="${escapeHtml(column.key)}" data-column-label="${escapeHtml(column.label)}" aria-label="${escapeHtml(`${column.label} for ${first.ticketNumber || "ticket"}`)}">
+            <div class="component-ticket-status-list">
+              ${shownComponents.map(renderOwnerWorkComponentRow).join("")}
+              ${columnComponents.length === 0 ? `<span class="component-ticket-empty" aria-hidden="true">-</span>` : ""}
+              ${hiddenDone > 0 ? `<button type="button" class="component-ticket-done-toggle" data-action="toggle-work-ticket-completed" data-id="${escapeHtml(ticketId)}">+${escapeHtml(hiddenDone)} more complete</button>` : ""}
+              ${column.key === "done" && doneExpanded && columnComponents.length > 2 ? `<button type="button" class="component-ticket-done-toggle" data-action="toggle-work-ticket-completed" data-id="${escapeHtml(ticketId)}">Show fewer</button>` : ""}
+            </div>
+          </section>`;
+        }).join("")}
+      </div>`}
+    </section>`;
+  }
+
+  function renderOwnerKanbanBoard(tickets = []) {
+    const components = dashboardWorkComponents(tickets);
+    const filteredComponents = sortOwnerKanbanComponents(components.filter(ownerKanbanComponentMatches));
+    const visibleTicketIds = [...new Set(filteredComponents.map((component) => component.ticketId))];
+    const componentsByTicket = new Map();
+    components.forEach((component) => {
+      if (!componentsByTicket.has(component.ticketId)) componentsByTicket.set(component.ticketId, []);
+      componentsByTicket.get(component.ticketId).push(component);
+    });
+    return `<section class="owner-kanban-board" aria-label="Ticket component Work Board" data-owner-kanban-board>
+      ${renderOwnerKanbanToolbar(components, filteredComponents)}
+      <div class="owner-kanban-scroll" aria-label="Ticket workflow columns">
+        <div class="owner-kanban-track">
+          <div class="owner-kanban-column-guide" role="row" aria-label="Work stages">
+            ${ownerKanbanColumns.map((column) => {
+              const totalComponents = components.filter((component) => component.status === column.key);
+              const shownComponents = filteredComponents.filter((component) => component.status === column.key);
+              const overLimit = column.limit && shownComponents.length > column.limit;
+              return `<section class="owner-kanban-stage-head owner-kanban-column--${escapeHtml(column.key)}${overLimit ? " is-over-limit" : ""}" role="columnheader">
+                <div class="owner-kanban-column-head">
+                  <div>
+                    <h4>${escapeHtml(column.label)}</h4>
+                    <p>${escapeHtml(column.detail)}</p>
+                  </div>
+                  <span title="${escapeHtml(String(totalComponents.length))} total components">${escapeHtml(String(shownComponents.length))}</span>
+                </div>
+                ${column.limit ? `<p class="owner-kanban-limit${overLimit ? " is-over-limit" : ""}">${escapeHtml(shownComponents.length)}/${escapeHtml(column.limit)} WIP${overLimit ? " / reduce load" : ""}</p>` : ""}
+              </section>`;
+            }).join("")}
+          </div>
+          <div class="component-ticket-swimlanes" role="list" aria-label="Tickets and their work steps">
+            ${visibleTicketIds.length
+              ? visibleTicketIds.map((ticketId) => renderOwnerKanbanTicketSwimlane(
+                componentsByTicket.get(ticketId) || [],
+                filteredComponents.filter((component) => component.ticketId === ticketId)
+              )).join("")
+              : `<div class="owner-kanban-empty"><strong>No matching ticket work</strong><span>Change the filters or refresh the dashboard.</span></div>`}
+          </div>
+        </div>
       </div>
     </section>`;
   }
@@ -23436,6 +23586,33 @@ Requirements:
         state.ticketBoardCloseoutOnly = false;
         renderJobTicketWorkspace(state.data);
         setDashboardState("Ticket board filters reset.");
+        return;
+      }
+
+      if (action === "toggle-work-ticket-swimlane") {
+        if (state.ownerKanbanCollapsedTicketIds.has(id)) state.ownerKanbanCollapsedTicketIds.delete(id);
+        else {
+          state.ownerKanbanCollapsedTicketIds.add(id);
+          if (state.ownerKanbanEditingComponentId.startsWith(`${id}:`)) state.ownerKanbanEditingComponentId = "";
+        }
+        renderWorkComponentBoardWorkspaces();
+        return;
+      }
+
+      if (action === "toggle-work-ticket-completed") {
+        if (state.ownerKanbanExpandedDoneTicketIds.has(id)) state.ownerKanbanExpandedDoneTicketIds.delete(id);
+        else state.ownerKanbanExpandedDoneTicketIds.add(id);
+        renderWorkComponentBoardWorkspaces();
+        return;
+      }
+
+      if (action === "toggle-work-component-editor") {
+        const componentId = `${id}:${target.dataset.componentKey || ""}`;
+        state.ownerKanbanEditingComponentId = state.ownerKanbanEditingComponentId === componentId ? "" : componentId;
+        renderWorkComponentBoardWorkspaces();
+        if (state.ownerKanbanEditingComponentId) {
+          window.requestAnimationFrame(() => qs(`#work-component-${slug(componentId)} select`)?.focus());
+        }
         return;
       }
 

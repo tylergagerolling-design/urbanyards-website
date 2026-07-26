@@ -24383,3 +24383,610 @@ body:not(.is-login-screen) .owner-kanban-tag.is-customer {
     width: 100%;
   }
 }
+
+/* Ticket swimlane Work Board */
+body:not(.is-login-screen) .owner-kanban-scroll {
+  display: block !important;
+  grid-template-columns: none !important;
+  overflow-x: auto !important;
+  overflow-y: hidden;
+  padding: 4px 2px 14px !important;
+  scroll-snap-type: none;
+  scrollbar-gutter: stable;
+}
+
+body:not(.is-login-screen) .owner-kanban-track {
+  display: grid;
+  gap: 10px;
+  min-width: 1220px;
+}
+
+body:not(.is-login-screen) .owner-kanban-column-guide,
+body:not(.is-login-screen) .component-ticket-swimlane-grid {
+  display: grid;
+  grid-template-columns: repeat(6, minmax(190px, 1fr));
+}
+
+body:not(.is-login-screen) .owner-kanban-column-guide {
+  gap: 8px;
+}
+
+body:not(.is-login-screen) .owner-kanban-stage-head {
+  min-width: 0;
+  padding: 10px 11px;
+  border: 1px solid rgba(20, 67, 48, .12);
+  border-radius: 12px;
+}
+
+body:not(.is-login-screen) .owner-kanban-stage-head.owner-kanban-column--todo {
+  background: #f2f1ed;
+}
+
+body:not(.is-login-screen) .owner-kanban-stage-head.owner-kanban-column--assigned {
+  background: #edf4ef;
+}
+
+body:not(.is-login-screen) .owner-kanban-stage-head.owner-kanban-column--in_progress {
+  background: #eaf1f5;
+}
+
+body:not(.is-login-screen) .owner-kanban-stage-head.owner-kanban-column--blocked {
+  background: #f8ebe8;
+}
+
+body:not(.is-login-screen) .owner-kanban-stage-head.owner-kanban-column--review {
+  background: #f1edf5;
+}
+
+body:not(.is-login-screen) .owner-kanban-stage-head.owner-kanban-column--done {
+  background: #e8f2e9;
+}
+
+body:not(.is-login-screen) .owner-kanban-stage-head.is-over-limit {
+  border-color: rgba(155, 47, 34, .42);
+  box-shadow: inset 0 0 0 1px rgba(155, 47, 34, .16);
+}
+
+body:not(.is-login-screen) .component-ticket-swimlanes {
+  display: grid;
+  gap: 10px;
+}
+
+body:not(.is-login-screen) .component-ticket-swimlane {
+  display: grid;
+  overflow: hidden;
+  border: 1px solid rgba(20, 67, 48, .17);
+  border-radius: 16px;
+  background: rgba(255, 255, 255, .94);
+  box-shadow: 0 9px 22px rgba(19, 36, 28, .045);
+}
+
+body:not(.is-login-screen) .component-ticket-swimlane.is-collapsed {
+  box-shadow: none;
+}
+
+body:not(.is-login-screen) .component-ticket-swimlane-head {
+  display: grid;
+  grid-template-columns: 34px minmax(290px, 1.45fr) minmax(240px, 1fr) 112px auto;
+  gap: 12px;
+  align-items: center;
+  padding: 11px 12px;
+  border-bottom: 1px solid rgba(20, 67, 48, .12);
+  background: linear-gradient(90deg, rgba(239, 245, 234, .94), rgba(250, 251, 247, .96));
+}
+
+body:not(.is-login-screen) .component-ticket-swimlane.is-collapsed .component-ticket-swimlane-head {
+  border-bottom: 0;
+}
+
+body:not(.is-login-screen) .component-ticket-collapse,
+body:not(.is-login-screen) .component-ticket-open,
+body:not(.is-login-screen) .component-kanban-row button,
+body:not(.is-login-screen) .component-ticket-done-toggle {
+  box-shadow: none;
+}
+
+body:not(.is-login-screen) .component-ticket-collapse {
+  display: grid;
+  width: 30px;
+  min-width: 30px;
+  height: 30px;
+  min-height: 30px !important;
+  place-items: center;
+  padding: 0 !important;
+  border: 1px solid rgba(20, 67, 48, .16);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, .82);
+  color: var(--uy-green-deep);
+  font-size: 1.1rem;
+  line-height: 1;
+}
+
+body:not(.is-login-screen) .component-ticket-identity {
+  display: grid;
+  min-width: 0;
+  gap: 2px;
+}
+
+body:not(.is-login-screen) .component-ticket-identity span {
+  color: #52705d;
+  font-size: .66rem;
+  font-weight: 900;
+  letter-spacing: .055em;
+  text-transform: uppercase;
+}
+
+body:not(.is-login-screen) .component-ticket-identity strong {
+  overflow: hidden;
+  color: var(--uy-green-deep);
+  font-size: .96rem;
+  line-height: 1.2;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+body:not(.is-login-screen) .component-ticket-identity small,
+body:not(.is-login-screen) .component-ticket-next {
+  overflow: hidden;
+  color: var(--uy-muted);
+  font-size: .74rem;
+  font-weight: 720;
+  line-height: 1.3;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+body:not(.is-login-screen) .component-ticket-next {
+  display: grid;
+  gap: 2px;
+  padding: 7px 9px;
+  border-radius: 9px;
+  background: rgba(20, 67, 48, .045);
+}
+
+body:not(.is-login-screen) .component-ticket-next.is-blocked {
+  background: rgba(172, 55, 42, .09);
+  color: #8d3127;
+}
+
+body:not(.is-login-screen) .component-ticket-next small {
+  font-size: .65rem;
+  font-weight: 850;
+}
+
+body:not(.is-login-screen) .component-ticket-progress {
+  display: grid;
+  gap: 5px;
+}
+
+body:not(.is-login-screen) .component-ticket-progress span {
+  color: var(--uy-green-deep);
+  font-size: .75rem;
+  font-weight: 800;
+  text-align: right;
+}
+
+body:not(.is-login-screen) .component-ticket-progress progress {
+  width: 100%;
+  height: 6px;
+  border: 0;
+  border-radius: 999px;
+  accent-color: #2d714d;
+}
+
+body:not(.is-login-screen) .component-ticket-open {
+  min-height: 34px !important;
+  padding: 6px 10px !important;
+  border: 1px solid rgba(20, 67, 48, .17) !important;
+  border-radius: 8px !important;
+  background: #eef1ec !important;
+  color: var(--uy-green-deep) !important;
+  white-space: nowrap;
+}
+
+body:not(.is-login-screen) .component-ticket-status-cell {
+  min-width: 0;
+  min-height: 68px;
+  padding: 8px;
+  border-right: 1px solid rgba(20, 67, 48, .09);
+  transition: background-color .18s ease, box-shadow .18s ease;
+}
+
+body:not(.is-login-screen) .component-ticket-status-cell:last-child {
+  border-right: 0;
+}
+
+body:not(.is-login-screen) .component-ticket-status-cell.owner-kanban-column--todo {
+  background: rgba(242, 241, 237, .48);
+}
+
+body:not(.is-login-screen) .component-ticket-status-cell.owner-kanban-column--assigned {
+  background: rgba(237, 244, 239, .52);
+}
+
+body:not(.is-login-screen) .component-ticket-status-cell.owner-kanban-column--in_progress {
+  background: rgba(234, 241, 245, .52);
+}
+
+body:not(.is-login-screen) .component-ticket-status-cell.owner-kanban-column--blocked {
+  background: rgba(248, 235, 232, .58);
+}
+
+body:not(.is-login-screen) .component-ticket-status-cell.owner-kanban-column--review {
+  background: rgba(241, 237, 245, .52);
+}
+
+body:not(.is-login-screen) .component-ticket-status-cell.owner-kanban-column--done {
+  background: rgba(232, 242, 233, .6);
+}
+
+body:not(.is-login-screen) .component-ticket-status-cell.is-drag-over {
+  background: rgba(213, 235, 204, .96);
+  box-shadow: inset 0 0 0 3px rgba(45, 113, 77, .36);
+}
+
+body:not(.is-login-screen) .component-ticket-status-list {
+  display: grid;
+  gap: 7px;
+}
+
+body:not(.is-login-screen) .component-ticket-empty {
+  display: grid;
+  min-height: 30px;
+  place-items: center;
+  color: rgba(72, 98, 82, .36);
+  font-size: .8rem;
+}
+
+body:not(.is-login-screen) .owner-kanban-card.component-kanban-row {
+  position: relative;
+  display: grid;
+  gap: 7px;
+  min-width: 0;
+  padding: 8px 8px 8px 9px !important;
+  border: 1px solid rgba(20, 67, 48, .13) !important;
+  border-left: 4px solid #6c806f !important;
+  border-radius: 10px !important;
+  background: rgba(255, 255, 255, .97) !important;
+  box-shadow: 0 3px 9px rgba(19, 36, 28, .04) !important;
+  cursor: grab;
+  touch-action: pan-y;
+  user-select: none;
+}
+
+body:not(.is-login-screen) .owner-kanban-card.component-kanban-row.is-team-leads {
+  border-left-color: #2f8155 !important;
+}
+
+body:not(.is-login-screen) .owner-kanban-card.component-kanban-row.is-team-money {
+  border-left-color: #287a74 !important;
+}
+
+body:not(.is-login-screen) .owner-kanban-card.component-kanban-row.is-team-work {
+  border-left-color: #6957a1 !important;
+}
+
+body:not(.is-login-screen) .owner-kanban-card.component-kanban-row:is(.is-team-owner, .is-team-customer) {
+  border-left-color: #a67922 !important;
+}
+
+body:not(.is-login-screen) .owner-kanban-card.component-kanban-row.is-blocked {
+  border-color: rgba(157, 49, 37, .3) !important;
+  border-left-color: #a53c30 !important;
+  background: #fff9f7 !important;
+}
+
+body:not(.is-login-screen) .owner-kanban-card.component-kanban-row.is-overdue:not(.is-blocked) {
+  border-color: rgba(169, 109, 22, .32) !important;
+}
+
+body:not(.is-login-screen) .owner-kanban-card.component-kanban-row.is-editing {
+  border-color: rgba(45, 113, 77, .4) !important;
+  box-shadow: 0 8px 20px rgba(19, 54, 37, .1) !important;
+}
+
+body:not(.is-login-screen) .component-kanban-row-summary {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 6px;
+  align-items: start;
+}
+
+body:not(.is-login-screen) .component-kanban-row-main {
+  display: grid !important;
+  min-width: 0;
+  min-height: 0 !important;
+  gap: 2px;
+  padding: 0 !important;
+  border: 0 !important;
+  border-radius: 0 !important;
+  background: transparent !important;
+  color: var(--uy-green-deep) !important;
+  text-align: left;
+}
+
+body:not(.is-login-screen) .component-kanban-row-main strong {
+  overflow: hidden;
+  font-size: .78rem;
+  line-height: 1.22;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+body:not(.is-login-screen) .component-kanban-row-main small {
+  color: var(--uy-muted);
+  font-size: .61rem;
+  font-weight: 820;
+  letter-spacing: .04em;
+  text-transform: uppercase;
+}
+
+body:not(.is-login-screen) .component-kanban-row-toggle {
+  min-height: 26px !important;
+  padding: 3px 6px !important;
+  border: 1px solid rgba(20, 67, 48, .14) !important;
+  border-radius: 6px !important;
+  background: #eef1ec !important;
+  color: #405449 !important;
+  font-size: .62rem !important;
+}
+
+body:not(.is-login-screen) .component-kanban-row-chips {
+  display: flex;
+  min-width: 0;
+  gap: 4px;
+  align-items: center;
+}
+
+body:not(.is-login-screen) .component-kanban-chip {
+  overflow: hidden;
+  min-width: 0 !important;
+  min-height: 23px !important;
+  padding: 3px 6px !important;
+  border: 0 !important;
+  border-radius: 999px !important;
+  background: #edf1ec !important;
+  color: #405449 !important;
+  font-size: .6rem !important;
+  font-weight: 780 !important;
+  line-height: 1 !important;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+body:not(.is-login-screen) .component-kanban-chip.is-person {
+  flex: 1 1 auto;
+}
+
+body:not(.is-login-screen) .component-kanban-chip.is-empty {
+  color: #6d776f !important;
+}
+
+body:not(.is-login-screen) .component-kanban-chip.is-due {
+  flex: 0 1 auto;
+}
+
+body:not(.is-login-screen) .component-kanban-chip.is-due.is-overdue {
+  background: #fff0d7 !important;
+  color: #7c4f14 !important;
+}
+
+body:not(.is-login-screen) .component-kanban-proof-chip {
+  display: inline-grid;
+  flex: 0 0 23px;
+  width: 23px;
+  height: 23px;
+  place-items: center;
+  border-radius: 999px;
+  background: #e9ede8;
+  color: #5d6e63;
+  font-size: .72rem;
+  cursor: help;
+}
+
+body:not(.is-login-screen) .component-kanban-proof-chip.is-complete {
+  background: #dcecdf;
+  color: #25613f;
+}
+
+body:not(.is-login-screen) .component-kanban-blocker-summary {
+  margin: 0;
+  padding: 5px 6px;
+  border-radius: 6px;
+  background: rgba(165, 60, 48, .08);
+  color: #8d3127;
+  font-size: .64rem;
+  line-height: 1.3;
+  overflow-wrap: anywhere;
+}
+
+body:not(.is-login-screen) .component-kanban-editor {
+  display: grid;
+  gap: 8px;
+  padding-top: 8px;
+  border-top: 1px solid rgba(20, 67, 48, .1);
+  cursor: default;
+  user-select: text;
+}
+
+body:not(.is-login-screen) .component-kanban-editor-fields {
+  display: grid;
+  gap: 7px;
+}
+
+body:not(.is-login-screen) .component-kanban-editor :is(label, .component-kanban-blocker) {
+  display: grid;
+  gap: 3px;
+  color: var(--uy-muted);
+  font-size: .6rem;
+  font-weight: 850;
+  letter-spacing: .035em;
+  text-transform: uppercase;
+}
+
+body:not(.is-login-screen) .component-kanban-editor :is(select, input) {
+  width: 100%;
+  min-width: 0;
+  min-height: 32px;
+  padding: 5px 6px;
+  border: 1px solid rgba(20, 67, 48, .17);
+  border-radius: 7px;
+  background: #fff;
+  color: var(--uy-green-deep);
+  font: inherit;
+  font-size: .72rem;
+  text-transform: none;
+}
+
+body:not(.is-login-screen) .component-kanban-proof,
+body:not(.is-login-screen) .component-kanban-completion {
+  display: grid;
+  gap: 2px;
+  margin: 0;
+  padding: 6px;
+  border-radius: 7px;
+  background: rgba(20, 67, 48, .045);
+  color: var(--uy-muted);
+  font-size: .64rem;
+  line-height: 1.3;
+}
+
+body:not(.is-login-screen) .component-kanban-proof strong {
+  color: var(--uy-green-deep);
+  font-size: .59rem;
+  letter-spacing: .04em;
+  text-transform: uppercase;
+}
+
+body:not(.is-login-screen) .component-kanban-actions {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+body:not(.is-login-screen) .component-kanban-actions button {
+  flex: 1 1 72px;
+  min-height: 31px !important;
+  padding: 5px 7px !important;
+  border-radius: 7px !important;
+  font-size: .66rem !important;
+}
+
+body:not(.is-login-screen) .component-kanban-actions button:not(.secondary-action) {
+  border-color: #286746 !important;
+  background: #2d714d !important;
+  color: #fff !important;
+}
+
+body:not(.is-login-screen) .component-kanban-actions .secondary-action {
+  border-color: rgba(20, 67, 48, .16) !important;
+  background: #eef1ec !important;
+  color: var(--uy-green-deep) !important;
+}
+
+body:not(.is-login-screen) .owner-kanban-saving.is-inline {
+  color: var(--uy-muted);
+  font-size: .62rem;
+}
+
+body:not(.is-login-screen) .component-ticket-done-toggle {
+  width: 100%;
+  min-height: 28px !important;
+  padding: 4px 7px !important;
+  border: 1px dashed rgba(20, 67, 48, .2) !important;
+  border-radius: 7px !important;
+  background: rgba(255, 255, 255, .62) !important;
+  color: #42614e !important;
+  font-size: .64rem !important;
+}
+
+body:not(.is-login-screen) .component-ticket-swimlanes > .owner-kanban-empty {
+  display: grid;
+  gap: 4px;
+  padding: 28px;
+}
+
+body:not(.is-login-screen) .component-ticket-swimlanes > .owner-kanban-empty span {
+  font-weight: 650;
+}
+
+@media (max-width: 760px) {
+  body:not(.is-login-screen) .owner-kanban-track {
+    min-width: 0;
+  }
+
+  body:not(.is-login-screen) .owner-kanban-column-guide {
+    display: none;
+  }
+
+  body:not(.is-login-screen) .component-ticket-swimlane-head {
+    grid-template-columns: 32px minmax(0, 1fr) auto;
+    gap: 8px;
+    padding: 10px;
+  }
+
+  body:not(.is-login-screen) .component-ticket-identity {
+    grid-column: 2;
+  }
+
+  body:not(.is-login-screen) .component-ticket-identity strong,
+  body:not(.is-login-screen) .component-ticket-identity small {
+    overflow: visible;
+    text-overflow: clip;
+    white-space: normal;
+  }
+
+  body:not(.is-login-screen) .component-ticket-next {
+    grid-column: 2 / -1;
+    grid-row: 2;
+    white-space: normal;
+  }
+
+  body:not(.is-login-screen) .component-ticket-progress {
+    grid-column: 2;
+    grid-row: 3;
+  }
+
+  body:not(.is-login-screen) .component-ticket-open {
+    grid-column: 3;
+    grid-row: 3;
+  }
+
+  body:not(.is-login-screen) .component-ticket-swimlane-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  body:not(.is-login-screen) .component-ticket-status-cell {
+    display: grid;
+    grid-template-columns: 82px minmax(0, 1fr);
+    gap: 8px;
+    min-height: 48px;
+    border-right: 0;
+    border-bottom: 1px solid rgba(20, 67, 48, .09);
+  }
+
+  body:not(.is-login-screen) .component-ticket-status-cell:last-child {
+    border-bottom: 0;
+  }
+
+  body:not(.is-login-screen) .component-ticket-status-cell::before {
+    align-self: start;
+    padding-top: 7px;
+    color: var(--uy-green-deep);
+    content: attr(data-column-label);
+    font-size: .65rem;
+    font-weight: 900;
+    letter-spacing: .035em;
+    text-transform: uppercase;
+  }
+
+  body:not(.is-login-screen) .component-kanban-actions {
+    align-items: stretch;
+    flex-direction: row;
+  }
+
+  body:not(.is-login-screen) .component-kanban-actions button {
+    width: auto;
+  }
+}

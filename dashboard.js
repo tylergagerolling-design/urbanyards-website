@@ -7511,9 +7511,10 @@
 
   function nextDocumentNumber(type) {
     const prefix = type === "invoice" ? "INV" : "EST";
-    const stamp = new Date().toISOString().slice(0, 10).replace(/-/g, "");
-    const count = state.data.documents.filter((doc) => doc.type === type).length + 1;
-    return `${prefix}-${stamp}-${String(count).padStart(3, "0")}`;
+    const clock = new Date().toISOString().replace(/\D/g, "").slice(0, 14);
+    const unique = window.crypto?.randomUUID?.().split("-")[0].toUpperCase()
+      || Math.random().toString(36).slice(2, 10).toUpperCase();
+    return `${prefix}-${clock}-${unique}`;
   }
 
   async function insertSalesDocument(input) {

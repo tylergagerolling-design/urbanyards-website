@@ -39,6 +39,36 @@ const ALLOWED_STAGES = new Set([
 
 const ALLOWED_STATUSES = new Set(["open", "active", "on_hold", "blocked", "completed", "cancelled", "archived"]);
 const ALLOWED_SOURCES = new Set(["ticket", "quote", "job", "document", "outreach", "contact", "property", "client", "manual"]);
+const WORK_COMPONENT_STATUSES = new Set(["todo", "assigned", "in_progress", "blocked", "review", "done"]);
+const WORK_COMPONENT_KEYS = new Set([
+  "scopeComplete",
+  "customerApprovalRecorded",
+  "costReviewComplete",
+  "actualsRecorded",
+  "draftInvoiceExists",
+  "invoiceSentToCustomer",
+  "finalCustomerApprovalRecorded",
+  "ownerApprovalRecorded",
+  "scheduledDate",
+  "beforePhotosUploaded",
+  "afterPhotosUploaded",
+  "requiredDocumentsPresent",
+  "fieldCompletionNotes",
+  "invoiceFinalized",
+  "paymentStatus"
+]);
+const WORK_COMPONENT_BOOLEAN_FIELDS = Object.freeze({
+  scopeComplete: "scope_complete",
+  customerApprovalRecorded: "customer_approval_recorded",
+  costReviewComplete: "cost_review_complete",
+  invoiceSentToCustomer: "invoice_sent_to_customer",
+  finalCustomerApprovalRecorded: "final_customer_approval_recorded",
+  ownerApprovalRecorded: "owner_approval_recorded",
+  beforePhotosUploaded: "before_photos_uploaded",
+  afterPhotosUploaded: "after_photos_uploaded",
+  requiredDocumentsPresent: "required_documents_present",
+  invoiceFinalized: "invoice_finalized"
+});
 
 function parseBody(event) {
   try {
@@ -543,6 +573,151 @@ async function getTicket(id) {
   return Array.isArray(rows) ? rows[0] || null : null;
 }
 
+function workComponentAutomaticValue(ticket = {}, componentKey = "") {
+  if (componentKey === "draftInvoiceExists") return Boolean(ticket.invoice_id || ticket.draft_invoice_exists);
+  if (componentKey === "scheduledDate") return Boolean(ticket.scheduled_date || ticket.visit_date) && Boolean(ticket.assigned_user_id);
+  if (componentKey === "fieldCompletionNotes") return Boolean(cleanText(ticket.field_completion_notes, 3000));
+  if (componentKey === "paymentStatus") return String(ticket.payment_status || "").toLowerCase() === "paid";
+  return false;
+}
+
+async function updateTicketWorkComponent(id, body, actor, event) {
+  const componentKey = cleanText(body.componentKey, 80);
+  const status = cleanText(body.status, 40);
+  if (!WORK_COMPONENT_KEYS.has(componentKey || "")) {
+    const error = new Error("This work component is not supported.");
+    error.statusCode = 400;
+    throw error;
+  }
+  if (!WORK_COMPONENT_STATUSES.has(status || "")) {
+    const error = new Error("Choose a valid work component status.");
+    error.statusCode = 400;
+    throw error;
+  }
+
+  const existing = await getTicket(id);
+  if (!existing?.id) {
+    const error = new Error("Ticket was not found.");
+    error.statusCode = 404;
+    throw error;
+  }
+
+  const eventRows = await supabaseAdminRequest(
+    `job_ticket_events?ticket_id=eq.${encodeURIComponent(id)}&select=*&order=created_at.desc&limit=200`,
+    { method: "GET" }
+  ).catch((error) => {
+    if (tableMissing(error)) return [];
+    throw error;
+  });
+  const history = Array.isArray(eventRows) ? eventRows : [];
+  const latestComponentEvent = history.find((item) => (
+    item.event_type === "ticket_work_component_updated"
+    && item.new_value?.componentKey === componentKey
+  ));
+  const latestChecklistEvent = history.find((item) => (
+    ["ticket_completion_checklist_saved", "ticket_completed_from_checklist"].includes(item.event_type)
+  ));
+  const previousSnapshot = latestComponentEvent?.new_value || {};
+  const completed = Array.isArray(latestChecklistEvent?.new_value?.completed)
+    ? latestChecklistEvent.new_value.completed.filter((key) => WORK_COMPONENT_KEYS.has(key))
+    : [];
+  const notApplicable = latestChecklistEvent?.new_value?.notApplicable
+    && typeof latestChecklistEvent.new_value.notApplicable === "object"
+    && !Array.isArray(latestChecklistEvent.new_value.notApplicable)
+    ? latestChecklistEvent.new_value.notApplicable
+    : {};
+
+  if (status === "done" && ["draftInvoiceExists", "scheduledDate", "fieldCompletionNotes", "paymentStatus"].includes(componentKey)
+    && !workComponentAutomaticValue(existing, componentKey)) {
+    const labels = {
+      draftInvoiceExists: "Connect an invoice from the ticket before completing this component.",
+      scheduledDate: "Add the work date and assigned person from the ticket before completing this component.",
+      fieldCompletionNotes: "Add completion notes in the ticket before completing this component.",
+      paymentStatus: "Record the ticket as paid before completing this component."
+    };
+    const error = new Error(labels[componentKey]);
+    error.statusCode = 409;
+    throw error;
+  }
+
+  const completedSet = new Set(completed);
+  const wasCompleted = completedSet.has(componentKey);
+  if (status === "done") completedSet.add(componentKey);
+  else completedSet.delete(componentKey);
+
+  const ticketPatch = {};
+  const booleanField = WORK_COMPONENT_BOOLEAN_FIELDS[componentKey];
+  if (booleanField) ticketPatch[booleanField] = status === "done";
+  if (actor?.userId && Object.keys(ticketPatch).length) ticketPatch.updated_by = actor.userId;
+  const ticket = Object.keys(ticketPatch).length ? await updateTicket(id, ticketPatch) : existing;
+
+  let checklistEvent = null;
+  if (wasCompleted !== completedSet.has(componentKey)) {
+    const checklistPayload = cleanEventPayload({
+      event_type: "ticket_completion_checklist_saved",
+      notes: status === "done"
+        ? `Completed ${componentKey} from the Work Board.`
+        : `Reopened ${componentKey} from the Work Board.`,
+      old_value: { completed, notApplicable },
+      new_value: { completed: [...completedSet], notApplicable, source: "work_board" }
+    }, id, actor);
+    const rows = await supabaseAdminRequest("job_ticket_events", {
+      method: "POST",
+      headers: { Prefer: "return=representation" },
+      body: JSON.stringify(checklistPayload)
+    });
+    checklistEvent = Array.isArray(rows) ? rows[0] || null : null;
+  }
+
+  const now = new Date().toISOString();
+  const assignedUserId = cleanText(body.assignedUserId, 220);
+  const dueDate = pickDate(body.dueDate);
+  const blockerReason = cleanText(body.blockerReason, 600);
+  const nextSnapshot = {
+    componentKey,
+    status,
+    assignedUserId,
+    dueDate,
+    blockerReason: status === "blocked" ? blockerReason : null,
+    completedBy: status === "done"
+      ? wasCompleted
+        ? previousSnapshot.completedBy || latestChecklistEvent?.actor_email || actor?.email || actor?.userId || "Dashboard user"
+        : actor?.email || actor?.userId || "Dashboard user"
+      : null,
+    completedAt: status === "done"
+      ? wasCompleted
+        ? previousSnapshot.completedAt || latestChecklistEvent?.created_at || now
+        : now
+      : null
+  };
+  const workEventPayload = cleanEventPayload({
+    event_type: "ticket_work_component_updated",
+    notes: `${componentKey} moved to ${status} on the Work Board.`,
+    old_value: previousSnapshot,
+    new_value: nextSnapshot
+  }, id, actor);
+  const workRows = await supabaseAdminRequest("job_ticket_events", {
+    method: "POST",
+    headers: { Prefer: "return=representation" },
+    body: JSON.stringify(workEventPayload)
+  });
+  const workEvent = Array.isArray(workRows) ? workRows[0] || null : null;
+
+  await writeAuditLog({
+    actor,
+    action: "ticket_work_component_updated",
+    entityType: "job_tickets",
+    entityId: id,
+    oldValue: previousSnapshot,
+    newValue: nextSnapshot,
+    metadata: { component_key: componentKey, source: "work_board" },
+    event,
+    module: "tickets"
+  });
+
+  return { ticket, event: workEvent, checklistEvent, component: nextSnapshot };
+}
+
 async function transitionTicket(id, toStage, options, actor, event, requestId) {
   const current = await getTicket(id);
   if (!current?.id) {
@@ -672,7 +847,7 @@ exports.handler = async (event) => {
   try {
     body = parseBody(event);
     const action = String(body.action || "").trim().toLowerCase();
-    if (!["list", "events", "create", "update", "delete", "transition", "owner-force-transition", "ai-transition-cancel", "owner-close-rent-deduction", "owner-finalize-ticket", "event"].includes(action)) {
+    if (!["list", "events", "create", "update", "delete", "transition", "component-update", "owner-force-transition", "ai-transition-cancel", "owner-close-rent-deduction", "owner-finalize-ticket", "event"].includes(action)) {
       return json(400, { error: "Unsupported ticket action.", requestId });
     }
 
@@ -738,6 +913,13 @@ exports.handler = async (event) => {
         module: "tickets"
       });
       return json(200, { ok: true, ticket, requestId });
+    }
+
+    if (action === "component-update") {
+      const id = uuidOrNull(body.id || body.ticketId);
+      if (!id) return json(400, { error: "A valid ticket id is required.", requestId });
+      const result = await updateTicketWorkComponent(id, body, actor, event);
+      return json(200, { ok: true, ...result, requestId });
     }
 
     if (action === "delete") {

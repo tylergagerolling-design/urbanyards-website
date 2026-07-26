@@ -26,7 +26,7 @@ test("live workspace polish contains long records and management cards", () => {
   assert.match(css, /\.call-queue-row > span:first-child :is\(strong, small\)[\s\S]*overflow-wrap: anywhere/);
   assert.match(css, /\.groundskeeper-operation-card[\s\S]*white-space: normal !important/);
   assert.match(css, /\.dashboard-health-item strong[\s\S]*word-break: break-all/);
-  assert.match(html, /dashboard\.css\?v=20260725-product-ready-2/);
+  assert.match(html, /dashboard\.css\?v=20260726-work-board-1/);
 });
 
 test("authenticated assistant prompt suppresses public quote calls to action", () => {
@@ -649,31 +649,31 @@ test("ticket drawer workbench layouts wrap without overlapping content", () => {
   assert.match(css, /ticket-source-context-meta[\s\S]*grid-template-columns: repeat\(auto-fit, minmax\(min\(100%, 140px\), 1fr\)\)/);
 });
 
-test("owner overview kanban keeps four freely movable stages and reserves completion for the ticket workflow", () => {
+test("component Work Board assigns, tracks, completes, and audits ticket requirements", () => {
   const js = read("dashboard.js");
   const css = read("dashboard.css");
+  const backend = read("netlify/functions/dashboard-tickets.js");
 
-  assert.match(js, /\{ key: "new", label: "New"[\s\S]*\{ key: "planned", label: "Planned"[\s\S]*\{ key: "in_progress", label: "In Progress"[\s\S]*\{ key: "review", label: "Review"/);
-  assert.doesNotMatch(js, /\{ key: "completed", label: "Completed"/);
-  assert.match(js, /function ownerKanbanTargetStage/);
+  assert.match(js, /\{ key: "todo", label: "To Do"[\s\S]*\{ key: "assigned", label: "Assigned"[\s\S]*\{ key: "in_progress", label: "In Progress"[\s\S]*\{ key: "blocked", label: "Blocked"[\s\S]*\{ key: "review", label: "Review"[\s\S]*\{ key: "done", label: "Done"/);
+  assert.match(js, /function ticketWorkComponents[\s\S]*ticketCompletionChecklistItems\.map/);
+  assert.match(js, /function latestWorkComponentSnapshots[\s\S]*ticket_work_component_updated/);
+  assert.match(js, /data-work-component-assignee/);
+  assert.match(js, /data-work-component-status/);
+  assert.match(js, /data-work-component-due/);
+  assert.match(js, /data-work-component-blocker/);
+  assert.match(js, /data-action="complete-work-component"/);
+  assert.match(js, /data-action="reopen-work-component"/);
+  assert.match(js, /data-action="assign-visible-components-to-me"/);
   assert.doesNotMatch(js, /owner-kanban-drag-handle/);
   assert.match(js, /addEventListener\("pointerdown"[\s\S]*closest\?\.\("\[data-owner-kanban-card\]"\)[\s\S]*document\.addEventListener\("pointermove"[\s\S]*Math\.hypot[\s\S]*distance < 7[\s\S]*document\.addEventListener\("pointerup"/);
   assert.match(js, /ownerKanbanSuppressClickUntil/);
   assert.match(js, /cloneNode\(true\)[\s\S]*owner-kanban-drag-ghost[\s\S]*document\.body\.appendChild/);
   assert.match(css, /owner-kanban-drag-ghost[\s\S]*position: fixed[\s\S]*opacity: \.82[\s\S]*pointer-events: none/);
-  assert.doesNotMatch(js, /owner-kanban-add[\s\S]*\+ Add Ticket/);
-  assert.match(js, /await moveOwnerKanbanSourceCard[\s\S]*clearOwnerKanbanPointerDrag\(\)[\s\S]*renderHomeWorkspace/);
+  assert.match(js, /addEventListener\("pointerup"[\s\S]*updateWorkComponent\(ticketId, componentKey, \{ status: nextColumn \}\)/);
   assert.doesNotMatch(js, /draggable="true" data-owner-kanban-card/);
   assert.doesNotMatch(js, /data-owner-kanban-move/);
-  assert.match(js, /data-action="clear-owner-kanban-leads"/);
-  assert.match(js, /async function moveOwnerKanbanSourceCard[\s\S]*updateSubmission[\s\S]*updateScheduledJob/);
-  assert.match(js, /\{ new: "New", planned: "Scheduled", in_progress: "Contacted", review: "Invoiced" \}/);
-  assert.match(js, /status === "new"[\s\S]*status === "contacted"/);
-  assert.match(js, /addEventListener\("pointerup"[\s\S]*moveOwnerKanbanSourceCard[\s\S]*refreshDashboard/);
-  assert.match(js, /Clear New Column/);
-  assert.match(js, /action === "clear-owner-kanban-leads"[\s\S]*window\.confirm[\s\S]*deleteRow\("quote_submissions"[\s\S]*deleteRow\("scheduled_jobs"[\s\S]*deleteJobTicket[\s\S]*refreshDashboard/);
-  assert.match(css, /grid-template-columns: repeat\(4, minmax\(220px, 1fr\)\)/);
-  assert.match(js, /async function moveOwnerKanbanTicket[\s\S]*previousTickets[\s\S]*updateJobTicket[\s\S]*insertJobTicketEvent[\s\S]*state\.data\.tickets = previousTickets/);
+  assert.doesNotMatch(js, /data-action="clear-owner-kanban-leads"/);
+  assert.doesNotMatch(js, /Clear New Column/);
   assert.match(js, /data-owner-kanban-search/);
   assert.match(js, /data-owner-kanban-filter="assignee"/);
   assert.match(js, /data-owner-kanban-filter="priority"/);
@@ -682,9 +682,17 @@ test("owner overview kanban keeps four freely movable stages and reserves comple
   assert.match(js, /data-owner-kanban-date-range="end"/);
   assert.match(js, /data-owner-kanban-filter="status"/);
   assert.match(js, /data-owner-kanban-filter="sort"/);
+  assert.match(js, /data-owner-kanban-filter="group"/);
+  assert.match(js, /component-kanban-swimlane/);
+  assert.match(js, /WIP\$\{overLimit \? " \/ reduce load" : ""\}/);
   assert.match(js, /owner-kanban-empty[\s\S]*Clear for now/);
-  assert.match(css, /owner-kanban-scroll[\s\S]*grid-template-columns: repeat\(4, minmax\(220px, 1fr\)\)/);
-  assert.match(css, /@media \(max-width: 700px\)[\s\S]*grid-auto-columns: minmax\(260px, 84vw\)/);
+  assert.match(css, /owner-kanban-scroll[\s\S]*grid-template-columns: repeat\(6, minmax\(270px, 1fr\)\)/);
+  assert.match(css, /@media \(max-width: 760px\)[\s\S]*owner-kanban-scroll[\s\S]*grid-template-columns: minmax\(0, 1fr\)/);
+  assert.match(backend, /WORK_COMPONENT_STATUSES[\s\S]*"todo"[\s\S]*"assigned"[\s\S]*"done"/);
+  assert.match(backend, /async function updateTicketWorkComponent/);
+  assert.match(backend, /ticket_work_component_updated/);
+  assert.match(backend, /ticket_completion_checklist_saved/);
+  assert.match(backend, /action === "component-update"/);
 });
 
 test("dashboard creates canonical job tickets without removing source fallbacks", () => {
@@ -897,16 +905,16 @@ test("Call Queue contains staged Lead Intake without changing Leads navigation",
   assert.doesNotMatch(migration, /create table[^;]+lead/i);
 });
 
-test("Owner Kanban resets to the next two months on refresh and supports a custom date range", () => {
+test("Work Board shows undated work by default and supports component due-date filters", () => {
   const js = read("dashboard.js");
   const css = read("dashboard.css");
 
-  assert.match(js, /function ownerKanbanDefaultDateRange\(\)[\s\S]*start = todayKey\(\)[\s\S]*addMonthsKey\(start, 2\)/);
+  assert.match(js, /function ownerKanbanDefaultDateRange\(\)[\s\S]*return \{ start: "", end: "" \}/);
   assert.match(js, /data-owner-kanban-date-range="start"/);
   assert.match(js, /data-owner-kanban-date-range="end"/);
   assert.doesNotMatch(js, /data-action="show-all-owner-kanban-dates"/);
-  assert.match(js, /if \(state\.ownerKanbanDateStart && ticketDate < state\.ownerKanbanDateStart\) return false/);
-  assert.match(js, /if \(state\.ownerKanbanDateEnd && ticketDate > state\.ownerKanbanDateEnd\) return false/);
+  assert.match(js, /if \(state\.ownerKanbanDateStart && component\.dueDate < state\.ownerKanbanDateStart\) return false/);
+  assert.match(js, /if \(state\.ownerKanbanDateEnd && component\.dueDate > state\.ownerKanbanDateEnd\) return false/);
   assert.doesNotMatch(js, /dateStart: state\.ownerKanbanDateStart[\s\S]*dateEnd: state\.ownerKanbanDateEnd/);
   assert.doesNotMatch(js, /stored\.dateStart|stored\.dateEnd/);
   assert.match(css, /owner-kanban-date-range[\s\S]*grid-template-columns: repeat\(2, minmax\(130px, 1fr\)\)/);

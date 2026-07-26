@@ -243,6 +243,8 @@
   ];
   const OWNER_KANBAN_FILTER_KEY = "urbanYardsOwnerKanbanFilters";
   const OWNER_KANBAN_SAVED_VIEWS = [
+    { key: "mine", label: "My Work" },
+    { key: "unassigned", label: "Unassigned" },
     { key: "today", label: "Due Today" },
     { key: "overdue", label: "Overdue" },
     { key: "blocked", label: "Blocked" },
@@ -372,6 +374,7 @@
     ownerKanbanDateEnd: "",
     ownerKanbanStatusFilter: "All",
     ownerKanbanSort: "priority",
+    ownerKanbanGroupBy: "none",
     ownerKanbanActiveOnly: true,
     ownerKanbanBlockedOnly: false,
     ownerKanbanOverdueOnly: false,
@@ -5717,7 +5720,7 @@
 
   async function loadCanonicalTicketEvents({ signal } = {}) {
     try {
-      const result = await dashboardTicketRequest("events", { limit: 250 }, { signal });
+      const result = await dashboardTicketRequest("events", { limit: 1000 }, { signal });
       const rows = Array.isArray(result.events) ? result.events : [];
       state.ticketEventsReady = true;
       return rows.map(normalizeJobTicketEvent);
@@ -6290,85 +6293,65 @@
     return ticket;
   }
 
-  async function moveOwnerKanbanTicket(ticketId, toStage, options = {}) {
-    const ticket = dashboardTickets().find((item) => item.source === "ticket" && item.id === ticketId);
-    if (!ticket) throw new Error("Only unified Job Tickets can be moved on the Owner Kanban board.");
-    if (!canManageOwnerWorkflow()) throw new Error("Your dashboard role cannot move tickets on the owner board.");
-    const fromStage = ticketStage(ticket);
-    const nextStage = normalizeTicketStageForDashboard(ownerKanbanTargetStage(toStage));
-    if (fromStage === nextStage) return ticket;
+  function renderWorkComponentBoardWorkspaces() {
+    renderHomeWorkspace(state.data);
+    renderWorkWorkspace(state.data);
+  }
 
-    const previousTickets = state.data.tickets.slice();
-    state.ownerKanbanMovingId = ticketId;
-    const optimisticIndex = state.data.tickets.findIndex((item) => item.id === ticketId);
-    if (optimisticIndex >= 0) {
-      state.data.tickets[optimisticIndex] = normalizeCanonicalTicket({
-        ...state.data.tickets[optimisticIndex],
-        stage: nextStage,
-        status: ticketRecordStatusForStage(nextStage),
-        next_action: ticketNextAction(nextStage),
-        updated_at: new Date().toISOString()
-      });
-      renderHomeWorkspace(state.data);
-      renderJobTicketWorkspace(state.data);
+  async function updateWorkComponent(ticketId, componentKey, changes = {}, options = {}) {
+    const component = dashboardWorkComponents().find((item) => item.ticketId === ticketId && item.key === componentKey);
+    if (!component) throw new Error("This ticket component could not be found.");
+    if (!canManageOwnerWorkflow()) throw new Error("Your dashboard role cannot update work components.");
+    const nextStatus = changes.status || component.status;
+    if (nextStatus === "done" && !component.boardManaged && component.status !== "done") {
+      throw new Error(component.blockedLabel || "Complete this requirement from the connected ticket.");
     }
-
+    state.ownerKanbanMovingId = component.id;
+    renderWorkComponentBoardWorkspaces();
     try {
-      const updated = await updateJobTicket(ticketId, {
-        stage: nextStage,
-        status: ticketRecordStatusForStage(nextStage),
-        next_action: ticketNextAction(nextStage)
-      });
-      await insertJobTicketEvent(ticketId, {
-        eventType: "ticket_stage_changed",
-        fromStage,
-        toStage: nextStage,
-        notes: options.notes || `Moved from ${ticketStageLabel(fromStage)} to ${ticketStageLabel(nextStage)} from Owner Overview Kanban.`
+      const result = await dashboardTicketRequest("component-update", {
+        id: ticketId,
+        componentKey,
+        status: nextStatus,
+        assignedUserId: Object.prototype.hasOwnProperty.call(changes, "assignedUserId") ? changes.assignedUserId : component.assignedUserId,
+        dueDate: Object.prototype.hasOwnProperty.call(changes, "dueDate") ? changes.dueDate : component.dueDate,
+        blockerReason: Object.prototype.hasOwnProperty.call(changes, "blockerReason") ? changes.blockerReason : component.blockerReason
       });
       state.ownerKanbanMovingId = "";
-      renderHomeWorkspace(state.data);
-      renderJobTicketWorkspace(state.data);
-      return updated;
+      if (result.ticket) {
+        const normalized = normalizeCanonicalTicket(result.ticket);
+        const index = state.data.tickets.findIndex((item) => item.id === normalized.id);
+        if (index >= 0) state.data.tickets[index] = normalized;
+        else state.data.tickets.unshift(normalized);
+      }
+      [result.checklistEvent, result.event].filter(Boolean).forEach((event) => {
+        state.data.ticketEvents.unshift(normalizeJobTicketEvent(event));
+      });
+      if (options.refresh !== false) await refreshDashboard();
+      else renderWorkComponentBoardWorkspaces();
+      return result;
     } catch (error) {
-      state.data.tickets = previousTickets;
       state.ownerKanbanMovingId = "";
-      renderHomeWorkspace(state.data);
-      renderJobTicketWorkspace(state.data);
+      renderWorkComponentBoardWorkspaces();
       throw error;
     }
   }
 
-  function ownerKanbanSourceStatus(columnKey, source) {
-    const statuses = source === "job"
-      ? { new: "New", planned: "Scheduled", in_progress: "Contacted", review: "Invoiced" }
-      : { new: "New", planned: "Interested", in_progress: "Won", review: "Review" };
-    return statuses[columnKey] || statuses.new;
-  }
-
-  async function moveOwnerKanbanSourceCard(ticketId, ticketSource, columnKey) {
-    if (ticketSource === "ticket") {
-      return moveOwnerKanbanTicket(ticketId, columnKey, { notes: "Moved freely on the Owner Overview Kanban." });
+  async function assignVisibleWorkComponentsToCurrentUser() {
+    const profile = currentUserProfile();
+    const assignedUserId = profile?.userId || profile?.email || getSession()?.userId || "";
+    if (!assignedUserId) throw new Error("Your dashboard profile is missing an assignment identity.");
+    const components = dashboardWorkComponents()
+      .filter(ownerKanbanComponentMatches)
+      .filter((component) => !component.assignedUserId && component.status !== "done");
+    for (const component of components) {
+      await updateWorkComponent(component.ticketId, component.key, {
+        assignedUserId,
+        status: component.status === "todo" ? "assigned" : component.status
+      }, { refresh: false });
     }
-    if (ticketSource === "quote") {
-      const item = findSubmission(ticketId);
-      if (!item) throw new Error("This lead could not be found.");
-      return updateSubmission(ticketId, {
-        status: ownerKanbanSourceStatus(columnKey, "quote"),
-        follow_up: item.followUp === "Not set" ? "" : item.followUp,
-        notes: item.notes || ""
-      });
-    }
-    if (ticketSource === "job") {
-      const item = state.data.jobs.find((job) => String(job.id) === String(ticketId));
-      if (!item) throw new Error("This scheduled job could not be found.");
-      const updated = await updateScheduledJob(ticketId, {
-        status: ownerKanbanSourceStatus(columnKey, "job")
-      });
-      const index = state.data.jobs.findIndex((job) => String(job.id) === String(ticketId));
-      if (index >= 0 && updated) state.data.jobs[index] = updated;
-      return updated;
-    }
-    throw new Error("This card type cannot be moved on the Kanban board.");
+    await refreshDashboard();
+    return components.length;
   }
 
   async function insertJobTicketEvent(ticketId, input = {}) {
@@ -13432,48 +13415,34 @@
   }
 
   const ownerKanbanColumns = [
-    { key: "new", label: "New", detail: "New requests and intake", targetStage: "sales_intake" },
-    { key: "planned", label: "Planned", detail: "Quoted, approved, or scheduled", targetStage: "scope_in_progress" },
-    { key: "in_progress", label: "In Progress", detail: "Active work and preparation", targetStage: "in_progress" },
-    { key: "review", label: "Review", detail: "Approval and closeout checks", targetStage: "completion_review" }
+    { key: "todo", label: "To Do", detail: "Visible work awaiting assignment" },
+    { key: "assigned", label: "Assigned", detail: "Owned and ready to begin", limit: 18 },
+    { key: "in_progress", label: "In Progress", detail: "Work actively being completed", limit: 8 },
+    { key: "blocked", label: "Blocked", detail: "Waiting on a decision or dependency" },
+    { key: "review", label: "Review", detail: "Ready for a second set of eyes", limit: 8 },
+    { key: "done", label: "Done", detail: "Completed with an audit trail" }
   ];
 
-  const ownerKanbanStageMap = {
-    draft: "new",
-    sales_intake: "new",
-    scope_in_progress: "planned",
-    quote_pending: "planned",
-    ready_to_schedule: "planned",
-    scheduled: "planned",
-    needs_budget: "in_progress",
-    budget_in_progress: "in_progress",
-    invoice_preparation: "in_progress",
-    in_progress: "in_progress",
-    paused: "in_progress",
-    customer_approval_pending: "review",
-    needs_owner_approval: "review",
-    scope_change_requested: "review",
-    completion_review: "review",
-    invoice_review: "review",
-    field_work_complete: "completed",
-    invoice_sent: "completed",
-    partially_paid: "completed",
-    paid: "completed",
-    closed: "completed",
-    cancelled: "completed"
+  const workComponentMeta = {
+    scopeComplete: { group: "Leads", owner: "Leads", proof: "Scope saved in the ticket" },
+    customerApprovalRecorded: { group: "Leads", owner: "Leads", proof: "Customer quote approval recorded" },
+    costReviewComplete: { group: "Money", owner: "Money", proof: "Revenue, cost, profit, and margin reviewed" },
+    actualsRecorded: { group: "Money", owner: "Money", proof: "Final job costs recorded" },
+    draftInvoiceExists: { group: "Money", owner: "Money", proof: "Connected invoice required", boardManaged: false, blockedLabel: "Connect the invoice from the ticket" },
+    invoiceSentToCustomer: { group: "Money", owner: "Money", proof: "Invoice delivery recorded" },
+    finalCustomerApprovalRecorded: { group: "Customer", owner: "Money", proof: "Final customer authorization recorded" },
+    ownerApprovalRecorded: { group: "Owner", owner: "Owner", proof: "Owner agreement recorded" },
+    scheduledDate: { group: "Work", owner: "Work", proof: "Date and person required", boardManaged: false, blockedLabel: "Schedule and assign from the ticket" },
+    beforePhotosUploaded: { group: "Work", owner: "Work", proof: "Arrival photos attached" },
+    afterPhotosUploaded: { group: "Work", owner: "Work", proof: "Completion photos attached" },
+    requiredDocumentsPresent: { group: "Work", owner: "Work", proof: "Required forms attached" },
+    fieldCompletionNotes: { group: "Work", owner: "Work", proof: "Completion notes required", boardManaged: false, blockedLabel: "Add completion notes in the ticket" },
+    invoiceFinalized: { group: "Money", owner: "Money", proof: "Final invoice reviewed" },
+    paymentStatus: { group: "Money", owner: "Money", proof: "Paid status required", boardManaged: false, blockedLabel: "Record payment in the ticket" }
   };
 
-  function ownerKanbanTargetStage(value) {
-    return ownerKanbanColumns.find((column) => column.key === value)?.targetStage || value;
-  }
-
   function ownerKanbanColumnLabel(value) {
-    return ownerKanbanColumns.find((column) => column.key === value)?.label || ticketStageLabel(value);
-  }
-
-  function ownerKanbanNextColumn(ticket = {}) {
-    const currentIndex = ownerKanbanColumns.findIndex((column) => column.key === ownerKanbanColumnForTicket(ticket));
-    return currentIndex >= 0 ? ownerKanbanColumns[currentIndex + 1] || null : null;
+    return ownerKanbanColumns.find((column) => column.key === value)?.label || titleCase(value);
   }
 
   function loadOwnerKanbanFilters() {
@@ -13489,8 +13458,9 @@
       state.ownerKanbanTypeFilter = stored.type || "All";
       state.ownerKanbanClientFilter = stored.client || "";
       state.ownerKanbanDateFilter = "All";
-      state.ownerKanbanStatusFilter = stored.status || "All";
+      state.ownerKanbanStatusFilter = ownerKanbanColumns.some((column) => column.key === stored.status) ? stored.status : "All";
       state.ownerKanbanSort = stored.sort || "priority";
+      state.ownerKanbanGroupBy = ["none", "ticket", "person", "due"].includes(stored.groupBy) ? stored.groupBy : "none";
       state.ownerKanbanActiveOnly = stored.activeOnly !== false;
       state.ownerKanbanBlockedOnly = Boolean(stored.blockedOnly);
       state.ownerKanbanOverdueOnly = Boolean(stored.overdueOnly);
@@ -13510,6 +13480,7 @@
         date: state.ownerKanbanDateFilter,
         status: state.ownerKanbanStatusFilter,
         sort: state.ownerKanbanSort,
+        groupBy: state.ownerKanbanGroupBy,
         activeOnly: state.ownerKanbanActiveOnly,
         blockedOnly: state.ownerKanbanBlockedOnly,
         overdueOnly: state.ownerKanbanOverdueOnly
@@ -13519,37 +13490,12 @@
     }
   }
 
-  function ownerKanbanColumnForTicket(ticket = {}) {
-    const stage = ticketStage(ticket);
-    return ownerKanbanStageMap[stage] || "sales_intake";
-  }
-
   function ticketPriorityLabel(ticket = {}) {
     return ticket.priority || ticket.priorityLabel || ticket.urgency || "Normal";
   }
 
-  function ticketAssigneeLabel(ticket = {}) {
-    const profile = assignmentProfileForId(ticket.assignedUserId);
-    return profile ? assignmentProfileLabel(profile) : ticket.assignedUserId || ticket.ownerLabel || "Unassigned";
-  }
-
-  function ticketValueLabel(ticket = {}) {
-    const value = budgetNumberOrNull(ticket.expectedRevenue ?? ticket.proposedPrice ?? ticket.finalRevenue);
-    return value ? formatCurrency(value) : "Value TBD";
-  }
-
-  function ownerKanbanDateState(ticket = {}) {
-    const key = dateKey(ticket.dateRaw);
-    const today = todayKey();
-    if (!key) return "none";
-    if (key < today) return "overdue";
-    if (key === today) return "today";
-    return "upcoming";
-  }
-
   function ownerKanbanDefaultDateRange() {
-    const start = todayKey();
-    return { start, end: addMonthsKey(start, 2) };
+    return { start: "", end: "" };
   }
 
   function ownerKanbanDateRangeLabel() {
@@ -13561,48 +13507,139 @@
     return `Through ${formatDate(end)}`;
   }
 
-  function ownerKanbanTicketMatches(ticket = {}) {
-    const stage = ticketStage(ticket);
-    if (state.ownerKanbanActiveOnly && !ticketIsOpen(ticket)) return false;
-    if (state.ownerKanbanBlockedOnly && !(ticket.blockers || []).length) return false;
-    if (state.ownerKanbanOverdueOnly && ownerKanbanDateState(ticket) !== "overdue") return false;
-    if (state.ownerKanbanAssigneeFilter !== "All" && ticketAssigneeLabel(ticket) !== state.ownerKanbanAssigneeFilter) return false;
-    if (state.ownerKanbanPriorityFilter !== "All" && ticketPriorityLabel(ticket) !== state.ownerKanbanPriorityFilter) return false;
-    if (state.ownerKanbanTypeFilter !== "All" && ticket.sourceType !== state.ownerKanbanTypeFilter) return false;
-    if (state.ownerKanbanDateFilter !== "All" && ownerKanbanDateState(ticket) !== state.ownerKanbanDateFilter) return false;
-    const ticketDate = dateKey(ticket.dateRaw);
-    if ((state.ownerKanbanDateStart || state.ownerKanbanDateEnd) && !ticketDate) return false;
-    if (state.ownerKanbanDateStart && ticketDate < state.ownerKanbanDateStart) return false;
-    if (state.ownerKanbanDateEnd && ticketDate > state.ownerKanbanDateEnd) return false;
-    if (state.ownerKanbanStatusFilter !== "All" && ownerKanbanColumnForTicket(ticket) !== state.ownerKanbanStatusFilter) return false;
+  function latestWorkComponentSnapshots(ticket = {}) {
+    const snapshots = new Map();
+    ticketHistoryFor(ticket).forEach((event) => {
+      if (event.eventType !== "ticket_work_component_updated") return;
+      const key = String(event.newValue?.componentKey || "");
+      if (!key || snapshots.has(key)) return;
+      snapshots.set(key, {
+        ...(event.newValue || {}),
+        actorEmail: event.actorEmail || "",
+        actorUserId: event.actorUserId || "",
+        eventId: event.id,
+        updatedAtRaw: event.createdAtRaw || "",
+        updatedAt: event.createdAt || ""
+      });
+    });
+    return snapshots;
+  }
+
+  function workComponentAssigneeLabel(component = {}) {
+    const profile = assignmentProfileForId(component.assignedUserId);
+    return profile ? assignmentProfileLabel(profile) : component.assignedUserId || "Unassigned";
+  }
+
+  function ticketWorkComponents(ticket = {}) {
+    if (ticket.source !== "ticket") return [];
+    const snapshots = latestWorkComponentSnapshots(ticket);
+    const { completed, notApplicable } = ticketCompletionChecklistState(ticket);
+    return ticketCompletionChecklistItems.map((item, index) => {
+      const meta = workComponentMeta[item.key] || { group: "Internal", owner: ticket.ownerLabel || "Owner", proof: item.detail };
+      const snapshot = snapshots.get(item.key) || {};
+      const resolvedByTicket = ticketCompletionItemComplete(ticket, item.key, completed);
+      const naReason = notApplicable[item.key] || "";
+      const assignedUserId = snapshot.assignedUserId
+        || (meta.group === "Work" ? ticket.assignedUserId : "")
+        || "";
+      const savedStatus = ownerKanbanColumns.some((column) => column.key === snapshot.status) ? snapshot.status : "";
+      const status = resolvedByTicket || naReason
+        ? "done"
+        : savedStatus && savedStatus !== "done"
+          ? savedStatus
+          : assignedUserId
+            ? "assigned"
+            : "todo";
+      const dueDate = dateKey(snapshot.dueDate || ticket.dueDate || ticket.scheduledDate || ticket.dateRaw);
+      return {
+        id: `${ticket.id}:${item.key}`,
+        key: item.key,
+        label: item.label,
+        detail: item.detail,
+        proof: meta.proof || item.detail,
+        group: meta.group,
+        roleLabel: meta.owner,
+        boardManaged: meta.boardManaged !== false,
+        blockedLabel: meta.blockedLabel || "",
+        status,
+        assignedUserId,
+        assigneeLabel: workComponentAssigneeLabel({ assignedUserId }),
+        dueDate,
+        dueDateLabel: dueDate ? formatDate(dueDate) : "No due date",
+        priority: snapshot.priority || ticketPriorityLabel(ticket),
+        blockerReason: snapshot.blockerReason || "",
+        completionMode: naReason ? "N/A" : resolvedByTicket ? "Complete" : "",
+        completedBy: snapshot.completedBy || snapshot.actorEmail || "",
+        completedAt: snapshot.completedAt || "",
+        updatedAtRaw: snapshot.updatedAtRaw || ticket.updatedAtRaw || "",
+        sortOrder: index,
+        ticket,
+        ticketId: ticket.id,
+        ticketNumber: ticket.number,
+        ticketTitle: ticket.title,
+        customer: ticket.customer,
+        property: ticket.property,
+        qa: isQaRecord(ticket)
+      };
+    });
+  }
+
+  function dashboardWorkComponents(tickets = dashboardTickets()) {
+    return tickets
+      .filter((ticket) => ticket.source === "ticket" && ticketIsOpen(ticket))
+      .flatMap(ticketWorkComponents);
+  }
+
+  function workComponentDateState(component = {}) {
+    const key = dateKey(component.dueDate);
+    const today = todayKey();
+    if (!key) return "none";
+    if (key < today && component.status !== "done") return "overdue";
+    if (key === today) return "today";
+    return "upcoming";
+  }
+
+  function ownerKanbanComponentMatches(component = {}) {
+    if (state.ownerKanbanBlockedOnly && component.status !== "blocked") return false;
+    if (state.ownerKanbanOverdueOnly && workComponentDateState(component) !== "overdue") return false;
+    if (state.ownerKanbanAssigneeFilter === "__unassigned__" && component.assignedUserId) return false;
+    if (!["All", "__unassigned__"].includes(state.ownerKanbanAssigneeFilter)
+      && ![component.assignedUserId, component.assigneeLabel].includes(state.ownerKanbanAssigneeFilter)) return false;
+    if (state.ownerKanbanPriorityFilter !== "All" && component.priority !== state.ownerKanbanPriorityFilter) return false;
+    if (state.ownerKanbanTypeFilter !== "All" && component.group !== state.ownerKanbanTypeFilter) return false;
+    if (state.ownerKanbanDateFilter !== "All" && workComponentDateState(component) !== state.ownerKanbanDateFilter) return false;
+    if ((state.ownerKanbanDateStart || state.ownerKanbanDateEnd) && !component.dueDate) return false;
+    if (state.ownerKanbanDateStart && component.dueDate < state.ownerKanbanDateStart) return false;
+    if (state.ownerKanbanDateEnd && component.dueDate > state.ownerKanbanDateEnd) return false;
+    if (state.ownerKanbanStatusFilter !== "All" && component.status !== state.ownerKanbanStatusFilter) return false;
     const clientFilter = String(state.ownerKanbanClientFilter || "").trim().toLowerCase();
-    if (clientFilter && ![ticket.customer, ticket.property].some((value) => String(value || "").toLowerCase().includes(clientFilter))) return false;
+    if (clientFilter && ![component.customer, component.property, component.ticketNumber].some((value) => String(value || "").toLowerCase().includes(clientFilter))) return false;
     const query = String(state.ownerKanbanSearch || "").trim().toLowerCase();
     if (!query) return true;
     return [
-      ticket.number,
-      ticket.title,
-      ticket.customer,
-      ticket.property,
-      ticket.detail,
-      ticket.stageLabel,
-      ticket.nextAction,
-      ticket.ownerLabel,
-      ticketAssigneeLabel(ticket),
-      ticketPriorityLabel(ticket),
-      ticketValueLabel(ticket),
-      stage
+      component.label,
+      component.detail,
+      component.proof,
+      component.group,
+      component.ticketNumber,
+      component.ticketTitle,
+      component.customer,
+      component.property,
+      component.assigneeLabel,
+      component.priority,
+      component.blockerReason
     ].some((value) => String(value || "").toLowerCase().includes(query));
   }
 
-  function sortOwnerKanbanTickets(tickets = []) {
+  function sortOwnerKanbanComponents(components = []) {
     const priorityRank = { urgent: 0, high: 1, normal: 2, low: 3 };
-    return tickets.slice().sort((a, b) => {
-      if (state.ownerKanbanSort === "due") return String(dateKey(a.dateRaw) || "9999-99-99").localeCompare(String(dateKey(b.dateRaw) || "9999-99-99"));
-      if (state.ownerKanbanSort === "newest") return String(b.createdAtRaw || b.updatedAtRaw || "").localeCompare(String(a.createdAtRaw || a.updatedAtRaw || ""));
-      if (state.ownerKanbanSort === "oldest") return String(a.createdAtRaw || a.updatedAtRaw || "").localeCompare(String(b.createdAtRaw || b.updatedAtRaw || ""));
-      return (priorityRank[String(ticketPriorityLabel(a)).toLowerCase()] ?? 2) - (priorityRank[String(ticketPriorityLabel(b)).toLowerCase()] ?? 2)
-        || String(dateKey(a.dateRaw) || "9999-99-99").localeCompare(String(dateKey(b.dateRaw) || "9999-99-99"));
+    return components.slice().sort((a, b) => {
+      if (state.ownerKanbanSort === "due") return String(a.dueDate || "9999-99-99").localeCompare(String(b.dueDate || "9999-99-99"));
+      if (state.ownerKanbanSort === "newest") return String(b.updatedAtRaw || "").localeCompare(String(a.updatedAtRaw || ""));
+      if (state.ownerKanbanSort === "oldest") return String(a.updatedAtRaw || "").localeCompare(String(b.updatedAtRaw || ""));
+      return (priorityRank[String(a.priority || "Normal").toLowerCase()] ?? 2) - (priorityRank[String(b.priority || "Normal").toLowerCase()] ?? 2)
+        || String(a.dueDate || "9999-99-99").localeCompare(String(b.dueDate || "9999-99-99"))
+        || a.sortOrder - b.sortOrder;
     });
   }
 
@@ -13611,26 +13648,34 @@
     return `<option value="All">${escapeHtml(fallback)}</option>${cleanValues.map((value) => `<option value="${escapeHtml(value)}"${value === selected ? " selected" : ""}>${escapeHtml(value)}</option>`).join("")}`;
   }
 
-  function renderOwnerKanbanToolbar(tickets = [], filteredTickets = []) {
-    const assignees = tickets.map(ticketAssigneeLabel);
-    const priorities = tickets.map(ticketPriorityLabel);
-    const types = tickets.map((ticket) => ticket.sourceType || ticket.source || "ticket");
-    const clearableLeads = tickets.filter((ticket) => ["ticket", "quote", "job"].includes(ticket.source) && ownerKanbanColumnForTicket(ticket) === "new");
-    return `<section class="owner-kanban-toolbar" aria-label="Owner Kanban filters">
+  function workComponentAssigneeOptions(selected = "All") {
+    const options = assignableWorkProfiles().map((profile) => {
+      const value = profile.userId || profile.email;
+      return `<option value="${escapeHtml(value)}"${value === selected ? " selected" : ""}>${escapeHtml(assignmentProfileLabel(profile))}</option>`;
+    }).join("");
+    return `<option value="All">All people</option><option value="__unassigned__"${selected === "__unassigned__" ? " selected" : ""}>Unassigned</option>${options}`;
+  }
+
+  function renderOwnerKanbanToolbar(components = [], filteredComponents = []) {
+    const priorities = components.map((component) => component.priority);
+    const groups = components.map((component) => component.group);
+    const current = currentUserProfile();
+    const canAssignToSelf = Boolean(current?.userId || current?.email)
+      && filteredComponents.some((component) => !component.assignedUserId && component.status !== "done");
+    return `<section class="owner-kanban-toolbar" aria-label="Work Board filters">
       <div class="owner-kanban-toolbar-head">
         <div>
-          <p class="eyebrow">Owner Overview</p>
-          <h3>Kanban Board</h3>
-          <p>Drag any ticket between board stages. Complete tickets through the normal workflow.</p>
+          <p class="eyebrow">Execution Board</p>
+          <h3>Work Components</h3>
+          <p>See every ticket requirement, give it one accountable person, and complete it without losing the parent ticket.</p>
         </div>
         <div class="owner-kanban-toolbar-actions">
-          <span>${escapeHtml(filteredTickets.length)} of ${escapeHtml(tickets.length)} shown</span>
+          <span>${escapeHtml(filteredComponents.length)} of ${escapeHtml(components.length)} shown</span>
           <button type="button" data-action="refresh-owner-kanban">Refresh</button>
-          ${canManageOwnerWorkflow() ? `<button type="button" class="owner-kanban-clear-leads" data-action="clear-owner-kanban-leads" data-count="${escapeHtml(clearableLeads.length)}"${clearableLeads.length ? "" : " disabled"}>Clear New Column (${escapeHtml(clearableLeads.length)})</button>` : ""}
+          ${canManageOwnerWorkflow() ? `<button type="button" data-action="assign-visible-components-to-me"${canAssignToSelf ? "" : " disabled"}>Assign Visible to Me</button>` : ""}
           <details class="owner-kanban-view-settings">
             <summary>View Settings</summary>
             <div>
-              <label><input type="checkbox" data-owner-kanban-toggle="activeOnly"${state.ownerKanbanActiveOnly ? " checked" : ""}> Active tickets only</label>
               <label><input type="checkbox" data-owner-kanban-toggle="blockedOnly"${state.ownerKanbanBlockedOnly ? " checked" : ""}> Blocked only</label>
               <label><input type="checkbox" data-owner-kanban-toggle="overdueOnly"${state.ownerKanbanOverdueOnly ? " checked" : ""}> Overdue only</label>
             </div>
@@ -13645,16 +13690,16 @@
         <summary>Advanced filters</summary>
         <div class="owner-kanban-filters">
         <label class="owner-kanban-search">Search
-          <input type="search" placeholder="Search tickets, clients, properties..." value="${escapeHtml(state.ownerKanbanSearch || "")}" data-owner-kanban-search>
+          <input type="search" placeholder="Search components, tickets, clients..." value="${escapeHtml(state.ownerKanbanSearch || "")}" data-owner-kanban-search>
         </label>
-        <label>Assignee
-          <select data-owner-kanban-filter="assignee">${ownerKanbanOptions(assignees, state.ownerKanbanAssigneeFilter, "All assignees")}</select>
+        <label>Person
+          <select data-owner-kanban-filter="assignee">${workComponentAssigneeOptions(state.ownerKanbanAssigneeFilter)}</select>
         </label>
         <label>Priority
           <select data-owner-kanban-filter="priority">${ownerKanbanOptions(priorities, state.ownerKanbanPriorityFilter, "All priorities")}</select>
         </label>
-        <label>Category
-          <select data-owner-kanban-filter="type">${ownerKanbanOptions(types, state.ownerKanbanTypeFilter, "All types")}</select>
+        <label>Team
+          <select data-owner-kanban-filter="type">${ownerKanbanOptions(groups, state.ownerKanbanTypeFilter, "All teams")}</select>
         </label>
         <fieldset class="owner-kanban-date-range">
           <legend>Date range <small>${escapeHtml(ownerKanbanDateRangeLabel())}</small></legend>
@@ -13672,65 +13717,105 @@
             ${[["priority", "Priority"], ["due", "Due date"], ["newest", "Newest"], ["oldest", "Oldest"]].map(([value, label]) => `<option value="${value}"${value === state.ownerKanbanSort ? " selected" : ""}>${label}</option>`).join("")}
           </select>
         </label>
+        <label>Group cards
+          <select data-owner-kanban-filter="group">
+            ${[["none", "No grouping"], ["ticket", "Parent ticket"], ["person", "Assigned person"], ["due", "Due date"]].map(([value, label]) => `<option value="${value}"${value === state.ownerKanbanGroupBy ? " selected" : ""}>${label}</option>`).join("")}
+          </select>
+        </label>
         <button type="button" data-action="reset-owner-kanban-filters">Reset Filters</button>
       </div>
     </section>`;
   }
 
-  function ownerKanbanCategory(ticket = {}) {
-    const stage = ticketStage(ticket);
-    if (["draft", "sales_intake"].includes(stage)) return ["Lead", "lead"];
-    if (["scope_in_progress", "quote_pending", "customer_approval_pending", "scope_change_requested"].includes(stage)) return ["Quote", "quote"];
-    if (["ready_to_schedule", "scheduled"].includes(stage)) return ["Scheduling", "scheduling"];
-    if (["in_progress", "paused", "field_work_complete", "completion_review"].includes(stage)) return ["Field Work", "field-work"];
-    if (["needs_budget", "budget_in_progress", "needs_owner_approval"].includes(stage)) return ["Budget", "budget"];
-    if (["invoice_preparation", "invoice_review", "invoice_sent", "partially_paid", "paid"].includes(stage)) return ["Invoice", "invoice"];
-    return [ticket.sourceLabel || ticketSourceLabel(ticket) || "Internal", "internal"];
-  }
-
-  function renderOwnerKanbanCard(ticket = {}) {
-    const dateState = ownerKanbanDateState(ticket);
-    const blockers = ticket.blockers || [];
-    const isCanonical = ticket.source === "ticket";
-    const dragAttrs = `data-owner-kanban-card data-ticket-source="${escapeHtml(ticket.source)}" data-id="${escapeHtml(ticket.id)}"`;
-    const [categoryLabel, categoryTone] = ownerKanbanCategory(ticket);
-    const saving = state.ownerKanbanMovingId === ticket.id;
-    return `<article class="owner-kanban-card ${dateState === "overdue" ? "is-overdue" : ""} ${blockers.length ? "is-blocked" : ""} ${saving ? "is-saving" : ""}" tabindex="0" ${dragAttrs} aria-busy="${saving ? "true" : "false"}">
-      <button type="button" class="owner-kanban-card-open" data-action="open-ticket" data-ticket-source="${escapeHtml(ticket.source)}" data-id="${escapeHtml(ticket.id)}">
-        <strong>${escapeHtml(ticket.title || "Untitled ticket")}</strong>
-        <small>${escapeHtml([ticket.customer, ticket.property].filter(Boolean).join(" · ") || ticket.number)}</small>
+  function renderOwnerWorkComponentCard(component = {}) {
+    const dateState = workComponentDateState(component);
+    const saving = state.ownerKanbanMovingId === component.id;
+    const dragAttrs = `data-owner-kanban-card data-id="${escapeHtml(component.ticketId)}" data-component-key="${escapeHtml(component.key)}" data-component-status="${escapeHtml(component.status)}"`;
+    const completionDetail = component.status === "done"
+      ? [component.completionMode, component.completedBy, component.completedAt ? formatDateTime(component.completedAt) : ""].filter(Boolean).join(" / ")
+      : "";
+    return `<article class="owner-kanban-card component-kanban-card ${dateState === "overdue" ? "is-overdue" : ""} ${component.status === "blocked" ? "is-blocked" : ""} ${saving ? "is-saving" : ""}" tabindex="0" ${dragAttrs} aria-busy="${saving ? "true" : "false"}">
+      <div class="component-kanban-card-head">
+        <span class="owner-kanban-tag is-${escapeHtml(slug(component.group))}">${escapeHtml(component.group)}</span>
+        ${String(component.priority).toLowerCase() !== "normal" ? `<span class="owner-kanban-priority is-${escapeHtml(String(component.priority).toLowerCase())}">${escapeHtml(component.priority)}</span>` : ""}
+      </div>
+      <button type="button" class="owner-kanban-card-open" data-action="open-ticket" data-ticket-source="ticket" data-id="${escapeHtml(component.ticketId)}">
+        <strong>${escapeHtml(component.label)}</strong>
+        <small>${escapeHtml(component.ticketNumber)} / ${escapeHtml(component.ticketTitle)}</small>
       </button>
+      <p class="component-kanban-customer">${escapeHtml([component.customer, component.property].filter(Boolean).join(" / ") || "Customer or property not set")}</p>
       <div class="owner-kanban-card-meta">
-        <span class="owner-kanban-tag is-${escapeHtml(categoryTone)}">${escapeHtml(categoryLabel)}</span>
-        ${String(ticketPriorityLabel(ticket)).toLowerCase() !== "normal" ? `<span class="owner-kanban-priority is-${escapeHtml(String(ticketPriorityLabel(ticket)).toLowerCase())}">${escapeHtml(ticketPriorityLabel(ticket))}</span>` : ""}
+        <label>Person
+          <select data-work-component-assignee aria-label="Assign ${escapeHtml(component.label)}" data-id="${escapeHtml(component.ticketId)}" data-component-key="${escapeHtml(component.key)}">${workAssignmentOptions(component.assignedUserId)}</select>
+        </label>
+        <label>Due
+          <input type="date" value="${escapeHtml(component.dueDate || "")}" data-work-component-due data-id="${escapeHtml(component.ticketId)}" data-component-key="${escapeHtml(component.key)}">
+        </label>
       </div>
-      <div class="owner-kanban-card-date">
-        <span>${escapeHtml(ticket.dateLabel || "No due date")}</span>
+      <div class="component-kanban-proof">
+        <span>Proof</span>
+        <small>${escapeHtml(component.proof)}</small>
       </div>
-      ${blockers.length ? `<div class="owner-kanban-blockers">${blockers.slice(0, 2).map((item) => `<span>${escapeHtml(item)}</span>`).join("")}</div>` : ""}
-      ${saving ? `<div class="owner-kanban-saving" role="status">Saving…</div>` : ""}
+      ${component.status === "blocked" ? `<label class="component-kanban-blocker">Blocker
+        <input value="${escapeHtml(component.blockerReason)}" placeholder="What is this waiting on?" data-work-component-blocker data-id="${escapeHtml(component.ticketId)}" data-component-key="${escapeHtml(component.key)}">
+      </label>` : ""}
+      ${completionDetail ? `<p class="component-kanban-completion">${escapeHtml(completionDetail)}</p>` : ""}
+      <div class="component-kanban-actions">
+        <select data-work-component-status aria-label="Status for ${escapeHtml(component.label)}" data-id="${escapeHtml(component.ticketId)}" data-component-key="${escapeHtml(component.key)}">
+          ${ownerKanbanColumns.map((column) => `<option value="${escapeHtml(column.key)}"${column.key === component.status ? " selected" : ""}${column.key === "done" && !component.boardManaged && component.status !== "done" ? " disabled" : ""}>${escapeHtml(column.label)}</option>`).join("")}
+        </select>
+        ${component.status !== "done"
+          ? component.boardManaged
+            ? `<button type="button" data-action="complete-work-component" data-id="${escapeHtml(component.ticketId)}" data-component-key="${escapeHtml(component.key)}">Complete</button>`
+            : `<button type="button" class="secondary-action" data-action="open-ticket" data-ticket-source="ticket" data-id="${escapeHtml(component.ticketId)}">Open Requirement</button>`
+          : `<button type="button" class="secondary-action" data-action="reopen-work-component" data-id="${escapeHtml(component.ticketId)}" data-component-key="${escapeHtml(component.key)}"${component.boardManaged ? "" : " disabled"}>Reopen</button>`}
+        ${saving ? `<div class="owner-kanban-saving" role="status">Saving…</div>` : ""}
+      </div>
     </article>`;
   }
 
+  function workComponentGroupLabel(component = {}) {
+    if (state.ownerKanbanGroupBy === "ticket") return `${component.ticketNumber} / ${component.ticketTitle}`;
+    if (state.ownerKanbanGroupBy === "person") return component.assigneeLabel || "Unassigned";
+    if (state.ownerKanbanGroupBy === "due") return component.dueDateLabel || "No due date";
+    return "";
+  }
+
+  function renderOwnerKanbanComponentList(components = []) {
+    if (state.ownerKanbanGroupBy === "none") return components.map(renderOwnerWorkComponentCard).join("");
+    const groups = new Map();
+    components.forEach((component) => {
+      const label = workComponentGroupLabel(component);
+      if (!groups.has(label)) groups.set(label, []);
+      groups.get(label).push(component);
+    });
+    return [...groups.entries()].map(([label, grouped]) => `<section class="component-kanban-swimlane">
+      <header><strong>${escapeHtml(label)}</strong><span>${escapeHtml(grouped.length)}</span></header>
+      ${grouped.map(renderOwnerWorkComponentCard).join("")}
+    </section>`).join("");
+  }
+
   function renderOwnerKanbanBoard(tickets = []) {
-    const boardTickets = tickets.filter((ticket) => ownerKanbanColumns.some((column) => column.key === ownerKanbanColumnForTicket(ticket)));
-    const filteredTickets = boardTickets.filter(ownerKanbanTicketMatches);
-    return `<section class="owner-kanban-board" aria-label="Owner ticket Kanban board" data-owner-kanban-board>
-      ${renderOwnerKanbanToolbar(boardTickets, filteredTickets)}
+    const components = dashboardWorkComponents(tickets);
+    const filteredComponents = components.filter(ownerKanbanComponentMatches);
+    return `<section class="owner-kanban-board" aria-label="Ticket component Work Board" data-owner-kanban-board>
+      ${renderOwnerKanbanToolbar(components, filteredComponents)}
       <div class="owner-kanban-scroll" role="list" aria-label="Ticket workflow columns">
         ${ownerKanbanColumns.map((column) => {
-          const totalTickets = boardTickets.filter((ticket) => ownerKanbanColumnForTicket(ticket) === column.key);
-          const shownTickets = sortOwnerKanbanTickets(filteredTickets.filter((ticket) => ownerKanbanColumnForTicket(ticket) === column.key));
-          return `<section class="owner-kanban-column owner-kanban-column--${escapeHtml(column.key)}" data-owner-kanban-column="${escapeHtml(column.key)}" aria-label="${escapeHtml(column.label)} column">
+          const totalComponents = components.filter((component) => component.status === column.key);
+          const shownComponents = sortOwnerKanbanComponents(filteredComponents.filter((component) => component.status === column.key));
+          const overLimit = column.limit && shownComponents.length > column.limit;
+          return `<section class="owner-kanban-column owner-kanban-column--${escapeHtml(column.key)}${overLimit ? " is-over-limit" : ""}" data-owner-kanban-column="${escapeHtml(column.key)}" aria-label="${escapeHtml(column.label)} column">
             <div class="owner-kanban-column-head">
               <div>
                 <h4>${escapeHtml(column.label)}</h4>
                 <p>${escapeHtml(column.detail)}</p>
               </div>
-              <span title="${escapeHtml(String(totalTickets.length))} total tickets">${escapeHtml(String(shownTickets.length))}</span>
+              <span title="${escapeHtml(String(totalComponents.length))} total components">${escapeHtml(String(shownComponents.length))}</span>
             </div>
+            ${column.limit ? `<p class="owner-kanban-limit${overLimit ? " is-over-limit" : ""}">${escapeHtml(shownComponents.length)}/${escapeHtml(column.limit)} WIP${overLimit ? " / reduce load" : ""}</p>` : ""}
             <div class="owner-kanban-column-list">
-              ${shownTickets.length ? shownTickets.map(renderOwnerKanbanCard).join("") : `<p class="owner-kanban-empty"><strong>Clear for now</strong><span>Drop a ticket here or add a new one.</span></p>`}
+              ${shownComponents.length ? renderOwnerKanbanComponentList(shownComponents) : `<p class="owner-kanban-empty"><strong>Clear for now</strong><span>Move a component here when its work state changes.</span></p>`}
             </div>
           </section>`;
         }).join("")}
@@ -14039,8 +14124,8 @@
           ${renderTicketMetric(actionMetrics.paymentsAndCloseout, "Closeout / Payment", "Financial records needing action")}
         </section>
         ${renderHomeCommandCenter({ actions, attentionTickets, todayTickets, workTickets, moneyTickets, workflowWarnings, notifications })}
-        ${renderOwnerScorecard(data, tickets)}
         ${renderOwnerKanbanBoard(activeTickets)}
+        ${renderOwnerScorecard(data, tickets)}
         ${renderDataQualityPanel(data, tickets)}
       </div>`;
   }
@@ -14451,6 +14536,7 @@
           ${renderTicketMetric(ticketCountBy(workTickets, (ticket) => ticketInLane(ticket, ["review"])), "Needs Proof", "Photos, actuals, forms")}
           ${renderTicketMetric(upcomingTickets.length, "Upcoming", "Scheduled tickets")}
         </section>
+        ${renderOwnerKanbanBoard(tickets.filter(ticketIsOpen))}
         ${renderWorkDayPlanPanel(routeStopsToday, todayTickets, upcomingTickets, reviewTickets)}
         <div class="field-grid work-execution-grid">
           <section class="ticket-lane field-primary-lane" data-work-queue>
@@ -22411,6 +22497,65 @@ Requirements:
         return;
       }
 
+      if (target.matches("[data-work-component-assignee]")) {
+        const ticketId = target.dataset.id || "";
+        const componentKey = target.dataset.componentKey || "";
+        const component = dashboardWorkComponents().find((item) => item.ticketId === ticketId && item.key === componentKey);
+        if (!component) return;
+        const assignedUserId = target.value || "";
+        try {
+          setDashboardState(assignedUserId ? "Assigning work component..." : "Removing component assignment...");
+          await updateWorkComponent(ticketId, componentKey, {
+            assignedUserId,
+            status: assignedUserId && component.status === "todo"
+              ? "assigned"
+              : !assignedUserId && component.status === "assigned"
+                ? "todo"
+                : component.status
+          });
+          setDashboardState(assignedUserId ? "Work component assigned." : "Work component is unassigned.");
+        } catch (error) {
+          setDashboardState(error.message || "Unable to assign this component.", "error");
+        }
+        return;
+      }
+
+      if (target.matches("[data-work-component-status]")) {
+        const ticketId = target.dataset.id || "";
+        const componentKey = target.dataset.componentKey || "";
+        try {
+          setDashboardState(`Moving component to ${ownerKanbanColumnLabel(target.value)}...`);
+          await updateWorkComponent(ticketId, componentKey, { status: target.value });
+          setDashboardState(`Component moved to ${ownerKanbanColumnLabel(target.value)}.`);
+        } catch (error) {
+          renderWorkComponentBoardWorkspaces();
+          setDashboardState(error.message || "Unable to change the component status.", "error");
+        }
+        return;
+      }
+
+      if (target.matches("[data-work-component-due]")) {
+        try {
+          setDashboardState("Saving component due date...");
+          await updateWorkComponent(target.dataset.id || "", target.dataset.componentKey || "", { dueDate: target.value || "" });
+          setDashboardState("Component due date saved.");
+        } catch (error) {
+          setDashboardState(error.message || "Unable to save the due date.", "error");
+        }
+        return;
+      }
+
+      if (target.matches("[data-work-component-blocker]")) {
+        try {
+          setDashboardState("Saving blocker...");
+          await updateWorkComponent(target.dataset.id || "", target.dataset.componentKey || "", { blockerReason: target.value.trim() });
+          setDashboardState("Blocker saved.");
+        } catch (error) {
+          setDashboardState(error.message || "Unable to save the blocker.", "error");
+        }
+        return;
+      }
+
       if (target.matches("[data-owner-kanban-filter]")) {
         const filter = target.dataset.ownerKanbanFilter;
         if (filter === "assignee") state.ownerKanbanAssigneeFilter = target.value || "All";
@@ -22418,8 +22563,9 @@ Requirements:
         if (filter === "type") state.ownerKanbanTypeFilter = target.value || "All";
         if (filter === "status") state.ownerKanbanStatusFilter = target.value || "All";
         if (filter === "sort") state.ownerKanbanSort = target.value || "priority";
+        if (filter === "group") state.ownerKanbanGroupBy = target.value || "none";
         persistOwnerKanbanFilters();
-        renderHomeWorkspace(state.data);
+        renderWorkComponentBoardWorkspaces();
         return;
       }
 
@@ -22433,7 +22579,7 @@ Requirements:
         }
         state.ownerKanbanOverdueOnly = false;
         persistOwnerKanbanFilters();
-        renderHomeWorkspace(state.data);
+        renderWorkComponentBoardWorkspaces();
         return;
       }
 
@@ -22453,7 +22599,7 @@ Requirements:
           }
         }
         persistOwnerKanbanFilters();
-        renderHomeWorkspace(state.data);
+        renderWorkComponentBoardWorkspaces();
         return;
       }
 
@@ -22644,7 +22790,7 @@ Requirements:
         state.ownerKanbanSearch = event.target.value || "";
         persistOwnerKanbanFilters();
         window.clearTimeout(state._ownerKanbanSearchTimer);
-        state._ownerKanbanSearchTimer = window.setTimeout(() => renderHomeWorkspace(state.data), 120);
+        state._ownerKanbanSearchTimer = window.setTimeout(renderWorkComponentBoardWorkspaces, 120);
         return;
       }
 
@@ -22652,7 +22798,7 @@ Requirements:
         state.ownerKanbanClientFilter = event.target.value || "";
         persistOwnerKanbanFilters();
         window.clearTimeout(state._ownerKanbanClientTimer);
-        state._ownerKanbanClientTimer = window.setTimeout(() => renderHomeWorkspace(state.data), 120);
+        state._ownerKanbanClientTimer = window.setTimeout(renderWorkComponentBoardWorkspaces, 120);
         return;
       }
 
@@ -23283,19 +23429,25 @@ Requirements:
         state.ownerKanbanDateEnd = defaultRange.end;
         state.ownerKanbanStatusFilter = "All";
         state.ownerKanbanSort = "priority";
+        state.ownerKanbanGroupBy = "none";
         state.ownerKanbanActiveOnly = true;
         state.ownerKanbanBlockedOnly = false;
         state.ownerKanbanOverdueOnly = false;
         persistOwnerKanbanFilters();
-        renderHomeWorkspace(state.data);
-        setDashboardState("Owner Kanban filters reset.");
+        renderWorkComponentBoardWorkspaces();
+        setDashboardState("Work Board filters reset.");
         return;
       }
 
       if (action === "apply-owner-kanban-view") {
         const view = target.dataset.view || "today";
         state.ownerKanbanSearch = "";
-        state.ownerKanbanAssigneeFilter = "All";
+        const current = currentUserProfile();
+        state.ownerKanbanAssigneeFilter = view === "mine"
+          ? current?.userId || current?.email || getSession()?.userId || "All"
+          : view === "unassigned"
+            ? "__unassigned__"
+            : "All";
         state.ownerKanbanPriorityFilter = "All";
         state.ownerKanbanTypeFilter = "All";
         state.ownerKanbanClientFilter = "";
@@ -23313,53 +23465,45 @@ Requirements:
           state.ownerKanbanDateEnd = "";
         }
         persistOwnerKanbanFilters();
-        renderHomeWorkspace(state.data);
+        renderWorkComponentBoardWorkspaces();
         setDashboardState(`${OWNER_KANBAN_SAVED_VIEWS.find((item) => item.key === view)?.label || "Saved"} view applied.`);
         return;
       }
 
       if (action === "refresh-owner-kanban") {
-        await hydrateDashboardSection("overview", {
-          force: true,
-          phase: "owner-kanban:refresh",
-          recordErrors: true
-        });
-        setDashboardState("Owner Kanban refreshed.");
+        await refreshDashboard();
+        setDashboardState("Work Board refreshed.");
         return;
       }
 
-      if (action === "clear-owner-kanban-leads") {
-        if (!canManageOwnerWorkflow()) {
-          setDashboardState("Only Owner or Admin users can clear Kanban leads.", "error");
-          return;
-        }
-        const leads = dashboardTickets().filter((ticket) => ["ticket", "quote", "job"].includes(ticket.source) && ownerKanbanColumnForTicket(ticket) === "new");
-        if (!leads.length) {
-          setDashboardState("There are no leads to clear.");
-          return;
-        }
-        const ok = window.confirm(`Permanently delete all ${leads.length} card${leads.length === 1 ? "" : "s"} in the New column? This deletes their underlying records and cannot be undone.`);
-        if (!ok) return;
+      if (action === "assign-visible-components-to-me") {
         try {
           target.disabled = true;
-          setDashboardState(`Deleting ${leads.length} New-column card${leads.length === 1 ? "" : "s"}...`);
-          for (const lead of leads) {
-            if (lead.source === "quote") {
-              await deleteRow("quote_submissions", lead.id);
-            } else if (lead.source === "job") {
-              await deleteRow("scheduled_jobs", lead.id);
-            } else {
-              if (lead.sourceType === "quote" && lead.sourceId) await deleteRow("quote_submissions", lead.sourceId);
-              if (lead.sourceType === "job" && lead.sourceId) await deleteRow("scheduled_jobs", lead.sourceId);
-              await deleteJobTicket(lead.id);
-            }
-          }
-          await refreshDashboard();
-          setDashboardState(`${leads.length} New-column card${leads.length === 1 ? "" : "s"} permanently deleted.`);
+          setDashboardState("Assigning visible components...");
+          const count = await assignVisibleWorkComponentsToCurrentUser();
+          setDashboardState(`${count} visible component${count === 1 ? "" : "s"} assigned to you.`);
         } catch (error) {
           target.disabled = false;
-          await refreshDashboard();
-          setDashboardState(error.message || "Unable to clear all leads.", "error");
+          setDashboardState(error.message || "Unable to assign visible components.", "error");
+        }
+        return;
+      }
+
+      if (action === "complete-work-component" || action === "reopen-work-component") {
+        const componentKey = target.dataset.componentKey || "";
+        const component = dashboardWorkComponents().find((item) => item.ticketId === id && item.key === componentKey);
+        if (!component) return;
+        const nextStatus = action === "complete-work-component" ? "done" : "in_progress";
+        try {
+          setDashboardState(action === "complete-work-component" ? "Completing work component..." : "Reopening work component...");
+          await updateWorkComponent(id, componentKey, { status: nextStatus });
+          setDashboardState(action === "complete-work-component" ? "Work component completed." : "Work component reopened.");
+          showDashboardUndo(action === "complete-work-component" ? "Work component completed." : "Work component reopened.", async () => {
+            await updateWorkComponent(id, componentKey, { status: component.status });
+            setDashboardState("Work component change undone.");
+          });
+        } catch (error) {
+          setDashboardState(error.message || "Unable to update this component.", "error");
         }
         return;
       }
@@ -26003,12 +26147,12 @@ Requirements:
 
     els.appView.addEventListener("pointerdown", (event) => {
       const card = event.target?.closest?.("[data-owner-kanban-card]");
-      if (!card || !card.dataset.id || event.button > 0 || event.target?.closest?.("select, input, textarea, label")) return;
+      if (!card || !card.dataset.id || !card.dataset.componentKey || event.button > 0 || event.target?.closest?.("button, select, input, textarea, label")) return;
       ownerKanbanPointerDrag = {
         card,
         pointerId: event.pointerId,
         ticketId: card.dataset.id,
-        ticketSource: card.dataset.ticketSource || "ticket",
+        componentKey: card.dataset.componentKey || "",
         startX: event.clientX,
         startY: event.clientY,
         offsetX: event.clientX - card.getBoundingClientRect().left,
@@ -26024,7 +26168,7 @@ Requirements:
         const distance = Math.hypot(event.clientX - ownerKanbanPointerDrag.startX, event.clientY - ownerKanbanPointerDrag.startY);
         if (distance < 7) return;
         ownerKanbanPointerDrag.active = true;
-        state.ownerKanbanMovingId = ownerKanbanPointerDrag.ticketId;
+        state.ownerKanbanMovingId = `${ownerKanbanPointerDrag.ticketId}:${ownerKanbanPointerDrag.componentKey}`;
         ownerKanbanPointerDrag.card.classList.add("is-dragging");
         const rect = ownerKanbanPointerDrag.card.getBoundingClientRect();
         const ghost = ownerKanbanPointerDrag.card.cloneNode(true);
@@ -26036,7 +26180,7 @@ Requirements:
         ghost.style.width = `${rect.width}px`;
         ownerKanbanPointerDrag.ghost = ghost;
         document.body.appendChild(ghost);
-        setDashboardState("Dragging ticket—release it over a highlighted column.");
+        setDashboardState("Dragging component—release it over a highlighted column.");
       }
       event.preventDefault();
       if (ownerKanbanPointerDrag.ghost) {
@@ -26051,7 +26195,7 @@ Requirements:
 
     document.addEventListener("pointerup", async (event) => {
       if (!ownerKanbanPointerDrag || ownerKanbanPointerDrag.pointerId !== event.pointerId) return;
-      const { ticketId, ticketSource, active } = ownerKanbanPointerDrag;
+      const { ticketId, componentKey, active } = ownerKanbanPointerDrag;
       if (!active) {
         clearOwnerKanbanPointerDrag();
         return;
@@ -26060,21 +26204,20 @@ Requirements:
       state.ownerKanbanSuppressClickUntil = Date.now() + 400;
       const column = document.elementFromPoint(event.clientX, event.clientY)?.closest?.("[data-owner-kanban-column]");
       const nextColumn = column?.dataset.ownerKanbanColumn || "";
-      if (!ticketId || !nextColumn) {
+      if (!ticketId || !componentKey || !nextColumn) {
         clearOwnerKanbanPointerDrag();
         return;
       }
       try {
-        setDashboardState(`Moving ticket to ${ownerKanbanColumnLabel(nextColumn)}...`);
-        await moveOwnerKanbanSourceCard(ticketId, ticketSource, nextColumn);
+        setDashboardState(`Moving component to ${ownerKanbanColumnLabel(nextColumn)}...`);
+        await updateWorkComponent(ticketId, componentKey, { status: nextColumn });
         clearOwnerKanbanPointerDrag();
-        renderHomeWorkspace(state.data);
-        await refreshDashboard();
-        setDashboardState(`Ticket moved to ${ownerKanbanColumnLabel(nextColumn)}.`);
+        renderWorkComponentBoardWorkspaces();
+        setDashboardState(`Component moved to ${ownerKanbanColumnLabel(nextColumn)}.`);
       } catch (error) {
         clearOwnerKanbanPointerDrag();
-        renderHomeWorkspace(state.data);
-        setDashboardState(error.message || "Unable to move ticket.", "error");
+        renderWorkComponentBoardWorkspaces();
+        setDashboardState(error.message || "Unable to move component.", "error");
       }
     });
 

@@ -24136,3 +24136,250 @@ body:not(.is-login-screen) .print-document footer {
     grid-template-columns: minmax(0, 1fr);
   }
 }
+
+/* Component-level Work Board */
+body:not(.is-login-screen) .owner-kanban-board {
+  overflow: hidden;
+}
+
+body:not(.is-login-screen) .owner-kanban-scroll {
+  display: grid !important;
+  grid-template-columns: repeat(6, minmax(270px, 1fr)) !important;
+  gap: 12px !important;
+  align-items: start;
+  overflow-x: auto !important;
+  overflow-y: hidden;
+  padding: 4px 2px 14px !important;
+  scroll-snap-type: x proximity;
+  scrollbar-gutter: stable;
+}
+
+body:not(.is-login-screen) .owner-kanban-column {
+  min-width: 270px !important;
+  min-height: 430px;
+  padding: 12px !important;
+  scroll-snap-align: start;
+}
+
+body:not(.is-login-screen) .owner-kanban-column--todo {
+  background: #f2f1ed !important;
+}
+
+body:not(.is-login-screen) .owner-kanban-column--assigned {
+  background: #edf4ef !important;
+}
+
+body:not(.is-login-screen) .owner-kanban-column--in_progress {
+  background: #eaf1f5 !important;
+}
+
+body:not(.is-login-screen) .owner-kanban-column--blocked {
+  background: #f8ebe8 !important;
+}
+
+body:not(.is-login-screen) .owner-kanban-column--review {
+  background: #f1edf5 !important;
+}
+
+body:not(.is-login-screen) .owner-kanban-column--done {
+  background: #e8f2e9 !important;
+}
+
+body:not(.is-login-screen) .component-kanban-card {
+  display: grid;
+  gap: 10px;
+  padding: 12px !important;
+  border: 1px solid rgba(20, 67, 48, 0.14) !important;
+  background: rgba(255, 255, 255, 0.96) !important;
+}
+
+body:not(.is-login-screen) .component-kanban-card-head,
+body:not(.is-login-screen) .component-kanban-actions {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  justify-content: space-between;
+}
+
+body:not(.is-login-screen) .component-kanban-card .owner-kanban-card-open {
+  display: grid !important;
+  gap: 4px;
+  width: 100%;
+  padding: 0 !important;
+  border: 0 !important;
+  background: transparent !important;
+  color: var(--uy-green-deep) !important;
+  text-align: left;
+  white-space: normal !important;
+}
+
+body:not(.is-login-screen) .component-kanban-card .owner-kanban-card-open strong,
+body:not(.is-login-screen) .component-kanban-card .owner-kanban-card-open small {
+  display: block;
+  width: 100%;
+  overflow-wrap: anywhere;
+}
+
+body:not(.is-login-screen) .component-kanban-card .owner-kanban-card-open strong {
+  font-size: 0.96rem;
+  line-height: 1.25;
+}
+
+body:not(.is-login-screen) .component-kanban-card .owner-kanban-card-open small,
+body:not(.is-login-screen) .component-kanban-customer,
+body:not(.is-login-screen) .component-kanban-proof small,
+body:not(.is-login-screen) .component-kanban-completion {
+  margin: 0;
+  color: var(--uy-muted);
+  font-size: 0.76rem;
+  line-height: 1.35;
+}
+
+body:not(.is-login-screen) .component-kanban-customer {
+  padding-bottom: 8px;
+  border-bottom: 1px solid rgba(20, 67, 48, 0.09);
+}
+
+body:not(.is-login-screen) .component-kanban-card .owner-kanban-card-meta {
+  display: grid !important;
+  grid-template-columns: minmax(0, 1fr) 116px;
+  gap: 8px;
+}
+
+body:not(.is-login-screen) .component-kanban-card .owner-kanban-card-meta label,
+body:not(.is-login-screen) .component-kanban-blocker {
+  display: grid;
+  gap: 4px;
+  color: var(--uy-muted);
+  font-size: 0.68rem;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+body:not(.is-login-screen) .component-kanban-card select,
+body:not(.is-login-screen) .component-kanban-card input {
+  width: 100%;
+  min-width: 0;
+  min-height: 34px;
+  padding: 6px 8px;
+  border: 1px solid rgba(20, 67, 48, 0.18);
+  border-radius: 7px;
+  background: #fff;
+  color: var(--uy-green-deep);
+  font: inherit;
+  text-transform: none;
+  letter-spacing: normal;
+}
+
+body:not(.is-login-screen) .component-kanban-proof {
+  display: grid;
+  gap: 3px;
+  padding: 8px;
+  border-radius: 8px;
+  background: rgba(20, 67, 48, 0.045);
+}
+
+body:not(.is-login-screen) .component-kanban-proof span {
+  color: var(--uy-green-deep);
+  font-size: 0.66rem;
+  font-weight: 900;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+body:not(.is-login-screen) .component-kanban-actions select {
+  flex: 1 1 auto;
+}
+
+body:not(.is-login-screen) .component-kanban-actions button {
+  flex: 0 0 auto;
+  min-height: 34px !important;
+  padding: 6px 10px !important;
+}
+
+body:not(.is-login-screen) .component-kanban-completion {
+  padding: 7px 8px;
+  border-radius: 7px;
+  background: rgba(48, 117, 72, 0.09);
+}
+
+body:not(.is-login-screen) .component-kanban-swimlane {
+  display: grid;
+  gap: 9px;
+  margin-bottom: 12px;
+}
+
+body:not(.is-login-screen) .component-kanban-swimlane > header {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  justify-content: space-between;
+  padding: 5px 2px;
+  border-bottom: 1px solid rgba(20, 67, 48, 0.13);
+  color: var(--uy-green-deep);
+  font-size: 0.72rem;
+}
+
+body:not(.is-login-screen) .owner-kanban-limit {
+  margin: 6px 0 0 !important;
+  font-size: 0.68rem !important;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+body:not(.is-login-screen) .owner-kanban-column.is-over-limit {
+  box-shadow: inset 0 0 0 2px rgba(174, 66, 45, 0.32);
+}
+
+body:not(.is-login-screen) .owner-kanban-limit.is-over-limit {
+  color: #9b2f22 !important;
+}
+
+body:not(.is-login-screen) .owner-kanban-tag.is-leads {
+  background: #dff2e8;
+  color: #17643e;
+}
+
+body:not(.is-login-screen) .owner-kanban-tag.is-money {
+  background: #dcefeb;
+  color: #245c54;
+}
+
+body:not(.is-login-screen) .owner-kanban-tag.is-work {
+  background: #e5ddfa;
+  color: #59428b;
+}
+
+body:not(.is-login-screen) .owner-kanban-tag.is-owner,
+body:not(.is-login-screen) .owner-kanban-tag.is-customer {
+  background: #fff0c9;
+  color: #765610;
+}
+
+@media (max-width: 760px) {
+  body:not(.is-login-screen) .owner-kanban-scroll {
+    grid-template-columns: minmax(0, 1fr) !important;
+    overflow-x: visible !important;
+    scroll-snap-type: none;
+  }
+
+  body:not(.is-login-screen) .owner-kanban-column {
+    min-width: 0 !important;
+    min-height: 0;
+  }
+
+  body:not(.is-login-screen) .component-kanban-card .owner-kanban-card-meta {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  body:not(.is-login-screen) .component-kanban-actions {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  body:not(.is-login-screen) .component-kanban-actions button {
+    width: 100%;
+  }
+}

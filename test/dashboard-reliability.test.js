@@ -26,8 +26,8 @@ test("live workspace polish contains long records and management cards", () => {
   assert.match(css, /\.call-queue-row > span:first-child :is\(strong, small\)[\s\S]*overflow-wrap: anywhere/);
   assert.match(css, /\.groundskeeper-operation-card[\s\S]*white-space: normal !important/);
   assert.match(css, /\.dashboard-health-item strong[\s\S]*word-break: break-all/);
-  assert.match(html, /dashboard\.css\?v=20260726-rapid-assignment-2/);
-  assert.match(html, /dashboard\.js\?v=20260726-rapid-assignment-2/);
+  assert.match(html, /dashboard\.css\?v=20260803-unified-ticket-5/);
+  assert.match(html, /dashboard\.js\?v=20260803-unified-ticket-5/);
 });
 
 test("authenticated assistant prompt suppresses public quote calls to action", () => {
@@ -412,9 +412,9 @@ test("dashboard route aliases and new reliability diagnostics are wired", () => 
   assert.match(css, /work-day-map-card \.dashboard-map-preview-shell[\s\S]*height: clamp\(184px, 16vw, 246px\)/);
   assert.match(css, /work-day-map-card \.dashboard-map-preview-shell[\s\S]*margin-bottom: 0/);
   assert.match(css, /work-day-map-card \.dashboard-map-preview \.gm-style[\s\S]*height: 100% !important/);
-  assert.match(js, /ticket-drawer-operating-grid/);
+  assert.match(js, /ticket-unified-layout/);
   assert.doesNotMatch(js, /renderTicketEndToEndFlow\(dashboardTickets\(\), ticket\.stage, "Current ticket lifecycle"\)/);
-  assert.match(css, /ticket-drawer-operating-grid[\s\S]*grid-template-columns: minmax\(240px, \.82fr\) minmax\(300px, 1\.18fr\)/);
+  assert.match(css, /ticket-unified-layout[\s\S]*grid-template-columns: minmax\(0, 1fr\) 270px/);
   assert.match(js, /function renderMoneyCloseoutPanel/);
   assert.match(js, /Closeout Checklist/);
   assert.match(js, /Protect the final handoff/);
@@ -759,9 +759,9 @@ test("dashboard creates canonical job tickets without removing source fallbacks"
   assert.match(js, /function renderTicketWorkbench/);
   assert.match(js, /function ticketWorkbenchUpdatePayload/);
   assert.match(js, /data-ticket-workbench-form data-ticket-completion-form/);
-  assert.match(js, /Save Ticket Workbench/);
+  assert.match(js, /Save Section/);
   assert.match(js, /ticketWorkbenchChecklistItem/);
-  assert.match(js, /checklistKeys: \["scopeComplete", "customerApprovalRecorded"\]/);
+  assert.match(js, /checklistKeys: \["scopeComplete"\]/);
   assert.match(js, /payload\.ticket = \{ \.\.\.workbenchUpdate, \.\.\.payload\.ticket \}/);
   assert.match(js, /function renderTicketInvoiceBridge/);
   assert.match(js, /function findInvoiceForTicket/);
@@ -770,13 +770,22 @@ test("dashboard creates canonical job tickets without removing source fallbacks"
   assert.match(js, /data-ticket-workbench/);
   assert.match(js, /data-ticket-invoice-form/);
   assert.match(js, /data-action="create-ticket-invoice"/);
-  assert.match(js, /Quote & Customer Approval/);
-  assert.match(js, /Cost Review/);
-  assert.match(js, /Invoice, Deposit & Final Approval/);
-  assert.match(js, /Owner Agreement/);
-  assert.match(js, /Work & Site Proof/);
-  assert.match(js, /Closeout/);
-  assert.match(js, /renderTicketWorkbench\(ticket\)/);
+  [
+    "Overview and Scope",
+    "Quote",
+    "Invoice",
+    "Customer Approval and Deposit",
+    "Scheduling and Assignment",
+    "Tasks",
+    "Arrival Photos",
+    "Completion Photos",
+    "Notes and Documents",
+    "Expenses and Actual Costs",
+    "Completion and Closeout",
+    "Activity and Audit Log",
+    "Owner Controls"
+  ].forEach((section) => assert.match(js, new RegExp(section)));
+  assert.match(js, /renderTicketWorkbench\(ticket, \{ openSection: routeSection, sourceItem \}\)/);
   assert.match(js, /const ticketLifecycleTransitions = \{/);
   assert.match(js, /function renderTicketCommandCenter/);
   assert.match(js, /data-action="transition-ticket-stage"/);
@@ -804,7 +813,8 @@ test("dashboard creates canonical job tickets without removing source fallbacks"
   assert.match(js, /await saveTicketInvoiceStatus\(event\.target\)/);
   assert.match(js, /const ticket = findJobTicketForSalesDocument\(id\)/);
   assert.match(js, /state\.data\.documents\.find\(\(item\) => item\.id === sourceId\)/);
-  assert.match(js, /renderTicketDocumentSource\(sourceItem\)/);
+  assert.match(js, /function renderUnifiedTicketDocuments/);
+  assert.match(js, /content: renderUnifiedTicketDocuments\(ticket\)/);
   assert.match(js, /await syncJobTicketPhotoProof\(jobId, photoStage\)/);
   assert.match(js, /field_completion_notes/);
   assert.match(js, /arrival_photos_uploaded/);
@@ -963,23 +973,27 @@ test("Work Board shows undated work by default and supports component due-date f
   assert.match(css, /owner-kanban-date-range[\s\S]*grid-template-columns: repeat\(2, minmax\(130px, 1fr\)\)/);
 });
 
-test("Owner can close completed non-landscaping tickets as monthly rent deductions", () => {
+test("Owner can close completed non-landscaping tickets as audited monthly rent credit", () => {
   const js = read("dashboard.js");
   const backend = read("netlify/functions/dashboard-tickets.js");
 
-  assert.match(js, /currentSessionRole\(\) === "owner"[\s\S]*Close as Rent Deduction/);
+  assert.match(js, /currentSessionRole\(\) === "owner"[\s\S]*Close as Rent Credit/);
   assert.match(js, /data-action="owner-close-rent-deduction"/);
   assert.match(js, /data-ticket-source="\$\{escapeHtml\(ticket\.source\)\}"/);
   assert.match(js, /ensureJobTicketForSourceRecord\(ticketSource, id,[\s\S]*stage: ticketStage\(ticket\)/);
-  assert.match(js, /updateStatus\("scheduled_jobs", id, "Completed"\)/);
-  assert.match(js, /Rent deduction: \$\{ticket\?\.title/);
+  assert.doesNotMatch(js, /Rent deduction: \$\{ticket\?\.title/);
   assert.match(js, /rentDeductionCloseouts/);
-  assert.match(js, /tickets: \["tickets", "submissions", "jobs", "notes"\]/);
+  assert.match(js, /tickets: \["tickets", "ticketEvents", "submissions", "jobs", "documents", "notes", "userProfiles"\]/);
   assert.match(js, /data-rent-deduction-amount/);
+  assert.match(js, /data-rent-credit-period/);
+  assert.match(js, /data-rent-credit-accounting-note/);
+  assert.match(js, /data-rent-credit-agreement/);
   assert.doesNotMatch(js, /prompt\("Rent deduction amount/);
   assert.match(backend, /RENT_DEDUCTION_MONTHLY_LIMIT = 350/);
   assert.match(backend, /Only the Owner can close a ticket as a rent deduction/);
-  assert.match(backend, /Landscaping work is excluded from rent deductions/);
+  assert.match(backend, /Landscaping work is excluded from rent credit/);
+  assert.match(backend, /Rent credit cannot bypass required work records/);
+  assert.match(backend, /next_action: "Closed as Rent Credit"/);
   assert.match(backend, /rent_deduction_ticket_closed/);
   assert.match(backend, /monthlyRemaining/);
 });
@@ -1052,6 +1066,39 @@ test("unified tickets provide one validated completion checklist with N/A except
   assert.match(css, /\.ticket-workbench-fields[\s\S]*repeat\(2, minmax\(0, 1fr\)\)/);
   assert.match(css, /\.ticket-workbench-section \.ticket-completion-list[\s\S]*grid-template-columns: 1fr/);
   assert.match(css, /\.ticket-workbench \.ticket-workbench-grid[\s\S]*grid-template-columns: 1fr/);
+});
+
+test("canonical ticket drawer is route-aware, reusable, auditable, and does not fabricate completion", () => {
+  const js = read("dashboard.js");
+  const css = read("dashboard.css");
+  const backend = read("netlify/functions/dashboard-tickets.js");
+  const migration = read("supabase/migrations/20260803_unified_ticket_drawer_fields.sql");
+
+  assert.match(js, /function ticketDrawerRouteState/);
+  assert.match(js, /searchParams\.set\("ticket", id\)/);
+  assert.match(js, /searchParams\.set\("ticketSection", section/);
+  assert.match(js, /window\.addEventListener\("popstate"/);
+  assert.match(js, /function restoreTicketDrawerFromRoute/);
+  assert.match(js, /function rerenderOpenTicketDrawer/);
+  assert.match(js, /has-unified-ticket/);
+  assert.match(js, /"open-submission": \["quote", "quote"\]/);
+  assert.match(js, /"edit-job": \["job", "scheduling"\]/);
+  assert.match(js, /"open-financial-invoice": \["invoice", "invoice"\]/);
+  assert.match(js, /"open-money-expense": \["expense", "costs"\]/);
+  assert.match(js, /data-completion-override/);
+  assert.match(js, /data-action="review-complete-all-parts"/);
+  assert.match(js, /data-complete-all-parts-form/);
+  assert.match(js, /Owner Override, not Complete/);
+  assert.match(js, /An invoice cannot be marked Paid while a balance remains/);
+  assert.match(backend, /owner-override-requirements/);
+  assert.match(backend, /ticket_requirement_owner_overridden/);
+  assert.match(backend, /status: "owner_override"/);
+  assert.match(backend, /paymentStatus: ticket\.payment_status \|\| "unpaid"/);
+  assert.match(css, /\.ticket-unified-header[\s\S]*position: sticky/);
+  assert.match(css, /\.ticket-owner-footer[\s\S]*position: sticky/);
+  assert.match(css, /@media \(max-width: 760px\)[\s\S]*width: 100vw/);
+  assert.match(migration, /add column if not exists priority/);
+  assert.doesNotMatch(migration, /delete from|drop table|truncate/i);
 });
 
 test("dashboard tabs use browser history before Back leaves the dashboard", () => {

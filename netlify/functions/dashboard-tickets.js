@@ -186,6 +186,8 @@ function cleanTicketPayload(input = {}, actor = null, { partial = false } = {}) 
   set("customer_name", cleanText(input.customer_name || input.customerName, 220));
   set("client_name", cleanText(input.client_name || input.clientName, 220));
   set("contact_name", cleanText(input.contact_name || input.contactName, 220));
+  set("contact_email", cleanText(input.contact_email || input.contactEmail, 220));
+  set("contact_phone", cleanText(input.contact_phone || input.contactPhone, 80));
   set("company_name", cleanText(input.company_name || input.companyName, 220));
   set("property_name", cleanText(input.property_name || input.propertyName, 220));
   set("property_address", cleanText(input.property_address || input.propertyAddress, 260));
@@ -193,6 +195,11 @@ function cleanTicketPayload(input = {}, actor = null, { partial = false } = {}) 
   set("requested_service", cleanText(input.requested_service || input.requestedService || input.service, 220));
   set("service", cleanText(input.service || input.requested_service || input.requestedService, 220));
   set("scope_of_work", cleanText(input.scope_of_work || input.scopeOfWork, 2000));
+  set("included_work", cleanText(input.included_work || input.includedWork, 3000));
+  set("excluded_work", cleanText(input.excluded_work || input.excludedWork, 3000));
+  set("requested_timing", cleanText(input.requested_timing || input.requestedTiming, 220));
+  set("access_instructions", cleanText(input.access_instructions || input.accessInstructions, 2000));
+  set("customer_notes", cleanText(input.customer_notes || input.customerNotes, 3000));
   set("description", cleanText(input.description, 2000));
   set("notes", cleanText(input.notes, 4000));
   set("internal_notes", cleanText(input.internal_notes || input.internalNotes, 4000));
@@ -206,6 +213,9 @@ function cleanTicketPayload(input = {}, actor = null, { partial = false } = {}) 
   set("due_date", pickDate(input.due_date || input.dueDate));
   set("assigned_user_id", uuidOrNull(input.assigned_user_id || input.assignedUserId));
   set("owner_label", cleanText(input.owner_label || input.ownerLabel, 80));
+  set("priority", cleanText(input.priority, 40));
+  set("work_window", cleanText(input.work_window || input.workWindow, 160));
+  set("schedule_status", cleanText(input.schedule_status || input.scheduleStatus, 40));
   set("next_action", cleanText(input.next_action || input.nextAction, 180));
 
   const blockers = cleanBlockers(input.blockers);
@@ -481,6 +491,91 @@ function cleanCompletionExceptions(value) {
     .map(([key, reason]) => [key, cleanText(reason, 500)]));
 }
 
+function cleanRequirementOverrides(value) {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return {};
+  return Object.fromEntries(Object.entries(value)
+    .filter(([key, reason]) => WORK_COMPONENT_KEYS.has(key) && cleanText(reason, 1000))
+    .map(([key, reason]) => [key, cleanText(reason, 1000)]));
+}
+
+async function latestCompletionChecklist(id) {
+  const rows = await supabaseAdminRequest(
+    `job_ticket_events?ticket_id=eq.${encodeURIComponent(id)}&event_type=in.(ticket_completion_checklist_saved,ticket_completed_from_checklist)&select=*&order=created_at.desc&limit=1`,
+    { method: "GET" }
+  ).catch((error) => {
+    if (tableMissing(error)) return [];
+    throw error;
+  });
+  const event = Array.isArray(rows) ? rows[0] || null : null;
+  return {
+    completed: Array.isArray(event?.new_value?.completed) ? event.new_value.completed.filter((key) => WORK_COMPONENT_KEYS.has(key)) : [],
+    notApplicable: event?.new_value?.notApplicable && typeof event.new_value.notApplicable === "object" ? event.new_value.notApplicable : {},
+    overrides: event?.new_value?.overrides && typeof event.new_value.overrides === "object" ? event.new_value.overrides : {},
+    event
+  };
+}
+
+async function ownerOverrideRequirements(id, body, actor, event) {
+  if (String(actor?.role || "").trim().toLowerCase() !== "owner") {
+    const error = new Error("Only the Owner can override ticket requirements.");
+    error.statusCode = 403;
+    throw error;
+  }
+  const ticket = await getTicket(id);
+  if (!ticket?.id) {
+    const error = new Error("Ticket was not found.");
+    error.statusCode = 404;
+    throw error;
+  }
+  const previous = await latestCompletionChecklist(id);
+  const requested = cleanRequirementOverrides(body.overrides);
+  const reason = cleanText(body.notes, 2000);
+  if (Object.keys(requested).length && !reason) {
+    const error = new Error("An owner override explanation is required.");
+    error.statusCode = 400;
+    throw error;
+  }
+  const completed = Array.isArray(body.completed) ? body.completed.filter((key) => WORK_COMPONENT_KEYS.has(key)) : previous.completed;
+  const notApplicable = body.notApplicable && typeof body.notApplicable === "object" && !Array.isArray(body.notApplicable) ? body.notApplicable : previous.notApplicable;
+  const overrides = requested;
+  const events = [];
+  for (const [componentKey, overrideReason] of Object.entries(overrides)) {
+    if (previous.overrides[componentKey] === overrideReason) continue;
+    const payload = cleanEventPayload({
+      event_type: "ticket_requirement_owner_overridden",
+      notes: overrideReason,
+      old_value: { componentKey, status: previous.completed.includes(componentKey) ? "complete" : previous.notApplicable[componentKey] ? "not_applicable" : previous.overrides[componentKey] ? "owner_override" : "incomplete" },
+      new_value: { componentKey, status: "owner_override", explanation: overrideReason }
+    }, id, actor);
+    const rows = await supabaseAdminRequest("job_ticket_events", {
+      method: "POST", headers: { Prefer: "return=representation" }, body: JSON.stringify(payload)
+    });
+    if (Array.isArray(rows) && rows[0]) events.push(rows[0]);
+    await writeAuditLog({
+      actor,
+      action: "ticket_requirement_owner_overridden",
+      entityType: "job_tickets",
+      entityId: id,
+      oldValue: payload.old_value,
+      newValue: payload.new_value,
+      metadata: { component_key: componentKey, source: cleanText(body.source, 80) },
+      event,
+      module: "tickets"
+    });
+  }
+  const checklistPayload = cleanEventPayload({
+    event_type: "ticket_completion_checklist_saved",
+    notes: reason || "Ticket completion statuses updated.",
+    old_value: { completed: previous.completed, notApplicable: previous.notApplicable, overrides: previous.overrides },
+    new_value: { completed, notApplicable, overrides, fieldsUpdated: Array.isArray(body.fieldsUpdated) ? body.fieldsUpdated.slice(0, 50) : [], source: cleanText(body.source, 80) || "ticket_drawer" }
+  }, id, actor);
+  const checklistRows = await supabaseAdminRequest("job_ticket_events", {
+    method: "POST", headers: { Prefer: "return=representation" }, body: JSON.stringify(checklistPayload)
+  });
+  if (Array.isArray(checklistRows) && checklistRows[0]) events.push(checklistRows[0]);
+  return { ticket, events, completed, notApplicable, overrides };
+}
+
 function ownerFinalizeValue(ticket, field, completed = []) {
   if (field === "paymentStatus") return String(ticket.payment_status || ticket.paymentStatus || "").toLowerCase() === "paid";
   if (field === "actualsRecorded") return completed.includes(field);
@@ -509,13 +604,14 @@ async function ownerFinalizeTicket(id, body, actor) {
   const merged = { ...existing, ...updates };
   const completed = Array.isArray(body.completed) ? body.completed.map((item) => cleanText(item, 80)).filter(Boolean) : [];
   const notApplicable = cleanCompletionExceptions(body.notApplicable);
+  const overrides = cleanRequirementOverrides(body.overrides);
   if (Object.keys(notApplicable).length && !cleanText(body.notes, 2000)) {
     const error = new Error("Add a closeout note explaining why the N/A items do not apply.");
     error.statusCode = 400;
     throw error;
   }
   const missing = OWNER_FINALIZE_REQUIREMENTS
-    .filter(([field]) => !ownerFinalizeValue(merged, field, completed) && !notApplicable[field])
+    .filter(([field]) => !ownerFinalizeValue(merged, field, completed) && !notApplicable[field] && !overrides[field])
     .map(([, label]) => label);
   if (missing.length) {
     const error = new Error(`Resolve every completion item before closing: ${missing.join(", ")}.`);
@@ -540,12 +636,12 @@ async function ownerFinalizeTicket(id, body, actor) {
       to_stage: "closed",
       notes: cleanText(body.notes, 2000) || "Owner completed every unified closeout requirement.",
       old_value: { stage: existing.stage },
-      new_value: { stage: "closed", completed, notApplicable }
+      new_value: { stage: "closed", completed, notApplicable, overrides }
     }, id, actor))
   }).catch((error) => {
     if (!tableMissing(error)) throw error;
   });
-  return { ticket, completed, notApplicable };
+  return { ticket, completed, notApplicable, overrides };
 }
 
 function isLandscapingTicket(ticket = {}) {
@@ -560,7 +656,7 @@ function monthBounds(now = new Date()) {
   return { start: start.toISOString(), end: end.toISOString() };
 }
 
-async function ownerCloseRentDeduction(id, amount, notes, actor, event) {
+async function ownerCloseRentDeduction(id, body, actor, event) {
   if (String(actor?.role || "").trim().toLowerCase() !== "owner") {
     const error = new Error("Only the Owner can close a ticket as a rent deduction.");
     error.statusCode = 403;
@@ -578,11 +674,42 @@ async function ownerCloseRentDeduction(id, amount, notes, actor, event) {
     throw error;
   }
   if (isLandscapingTicket(ticket)) {
-    const error = new Error("Landscaping work is excluded from rent deductions and must use normal invoice closeout.");
+    const error = new Error("Landscaping work is excluded from rent credit and must use normal invoice closeout.");
     error.statusCode = 409;
     throw error;
   }
-  const deductionAmount = cleanMoney(amount);
+  const rentPeriod = cleanText(body.rentPeriod, 20);
+  const reason = cleanText(body.reason, 2000);
+  const accountingNote = cleanText(body.accountingNote, 2000);
+  const supportingAgreement = body.supportingAgreement === true;
+  if (!/^\d{4}-\d{2}$/.test(rentPeriod || "") || !reason || !accountingNote || !supportingAgreement) {
+    const error = new Error("Rent period, reason, accounting note, and supporting agreement are required.");
+    error.statusCode = 400;
+    throw error;
+  }
+  const completion = await latestCompletionChecklist(id);
+  const required = [
+    ["scopeComplete", "Scope completion"],
+    ["customerApprovalRecorded", "Customer quote approval"],
+    ["costReviewComplete", "Cost review"],
+    ["finalCustomerApprovalRecorded", "Customer authorization"],
+    ["ownerApprovalRecorded", "Owner authorization"],
+    ["scheduledDate", "Scheduling and assignment"],
+    ["beforePhotosUploaded", "Arrival photos"],
+    ["afterPhotosUploaded", "Completion photos"],
+    ["requiredDocumentsPresent", "Required documents"],
+    ["fieldCompletionNotes", "Completion notes"],
+    ["actualsRecorded", "Actual costs"]
+  ];
+  const missing = required.filter(([key]) => !ownerFinalizeValue(ticket, key, completion.completed) && !completion.notApplicable[key] && !completion.overrides[key]).map(([, label]) => label);
+  if (!ticket.property_id && !ticket.property_name && !ticket.property_address) missing.push("Property");
+  if (ticket.deposit_required && !ticket.deposit_paid) missing.push("Required deposit");
+  if (missing.length) {
+    const error = new Error(`Rent credit cannot bypass required work records: ${missing.join(", ")}.`);
+    error.statusCode = 409;
+    throw error;
+  }
+  const deductionAmount = cleanMoney(body.amount);
   if (!deductionAmount || deductionAmount <= 0 || deductionAmount > RENT_DEDUCTION_MONTHLY_LIMIT) {
     const error = new Error("Enter a rent deduction amount between $0.01 and $350.00.");
     error.statusCode = 400;
@@ -604,7 +731,7 @@ async function ownerCloseRentDeduction(id, amount, notes, actor, event) {
     stage: "closed",
     status: "completed",
     responsible_role: "owner",
-    next_action: "Closed as rent deduction"
+    next_action: "Closed as Rent Credit"
   };
   if (actor?.userId) updatePayload.updated_by = actor.userId;
   const closedTicket = await updateTicket(id, updatePayload);
@@ -612,13 +739,18 @@ async function ownerCloseRentDeduction(id, amount, notes, actor, event) {
     event_type: "rent_deduction_ticket_closed",
     from_stage: ticket.stage,
     to_stage: "closed",
-    notes: cleanText(notes, 2000) || `Closed as a $${deductionAmount.toFixed(2)} rent deduction.`,
+    notes: cleanText(body.notes, 2000) || `Closed as a $${deductionAmount.toFixed(2)} rent credit for ${rentPeriod}.`,
     old_value: { stage: ticket.stage, status: ticket.status },
     new_value: {
       stage: "closed",
       status: "completed",
-      closeoutType: "rent_deduction",
+      closeoutType: "rent_credit",
       rentDeductionAmount: deductionAmount,
+      rentCreditPeriod: rentPeriod,
+      reason,
+      accountingNote,
+      supportingAgreement,
+      paymentStatus: ticket.payment_status || "unpaid",
       monthlyLimit: RENT_DEDUCTION_MONTHLY_LIMIT
     }
   }, id, actor);
@@ -630,7 +762,7 @@ async function ownerCloseRentDeduction(id, amount, notes, actor, event) {
     entityId: id,
     oldValue: eventPayload.old_value,
     newValue: eventPayload.new_value,
-    metadata: { monthly_used: used + deductionAmount, monthly_limit: RENT_DEDUCTION_MONTHLY_LIMIT },
+    metadata: { monthly_used: used + deductionAmount, monthly_limit: RENT_DEDUCTION_MONTHLY_LIMIT, rent_period: rentPeriod, closeout_type: "rent_credit" },
     event,
     module: "tickets"
   });
@@ -931,7 +1063,7 @@ exports.handler = async (event) => {
   try {
     body = parseBody(event);
     const action = String(body.action || "").trim().toLowerCase();
-    if (!["list", "events", "create", "update", "delete", "transition", "component-update", "component-assign", "owner-force-transition", "ai-transition-cancel", "owner-close-rent-deduction", "owner-finalize-ticket", "event"].includes(action)) {
+    if (!["list", "events", "create", "update", "delete", "transition", "component-update", "component-assign", "owner-force-transition", "ai-transition-cancel", "owner-close-rent-deduction", "owner-finalize-ticket", "owner-override-requirements", "event"].includes(action)) {
       return json(400, { error: "Unsupported ticket action.", requestId });
     }
 
@@ -1128,7 +1260,14 @@ exports.handler = async (event) => {
     if (action === "owner-close-rent-deduction") {
       const id = uuidOrNull(body.id || body.ticketId);
       if (!id) return json(400, { error: "A valid ticket id is required.", requestId });
-      const result = await ownerCloseRentDeduction(id, body.amount, body.notes, actor, event);
+      const result = await ownerCloseRentDeduction(id, body, actor, event);
+      return json(200, { ok: true, ...result, requestId });
+    }
+
+    if (action === "owner-override-requirements") {
+      const id = uuidOrNull(body.id || body.ticketId);
+      if (!id) return json(400, { error: "A valid ticket id is required.", requestId });
+      const result = await ownerOverrideRequirements(id, body, actor, event);
       return json(200, { ok: true, ...result, requestId });
     }
 
@@ -1169,6 +1308,7 @@ exports.handler = async (event) => {
 
 module.exports._internals = {
   canDeleteTicket,
+  cleanRequirementOverrides,
   cleanTicketPayload,
   cleanEventPayload,
   normalizeStage,

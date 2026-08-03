@@ -369,6 +369,12 @@
     undoTimer: 0,
     moneyReceiptExpenseId: "",
     moneyInvoiceDetail: null,
+    activeTicketDrawerId: "",
+    activeTicketDrawerSection: "overview",
+    ticketDrawerRestoring: false,
+    ticketDrawerRendering: false,
+    ticketDrawerHistoryOwned: false,
+    ticketOverrideReviewId: "",
     ticketBoardSearch: "",
     ticketBoardStageFilter: "All",
     ticketBoardOwnerFilter: "All",
@@ -1602,6 +1608,7 @@
   }
 
   function currentSessionRole() {
+    if (isDemoMode()) return "owner";
     const session = getSession() || {};
     return normalizeDashboardRole(session.role || session.profile?.role);
   }
@@ -5571,7 +5578,7 @@
     const normalized = normalizeDashboardSection(section);
     const keysBySection = {
       overview: ["submissions", "jobs", "reminders", "notes"],
-      tickets: ["tickets", "submissions", "jobs", "notes"],
+      tickets: ["tickets", "ticketEvents", "submissions", "jobs", "documents", "notes", "userProfiles"],
       calendar: ["jobs", "tickets"],
       outreach: ["outreachProspects", "tickets", "submissions"],
       "call-queue": ["outreachProspects", "leadActivity", "tickets", "contacts"],
@@ -5585,7 +5592,10 @@
       "ai-memory": [],
       "import-export": ["importExport"]
     };
-    return Array.from(new Set(keysBySection[normalized] || keysBySection.overview));
+    const routeKeys = ticketDrawerRouteState().ticketId
+      ? ["tickets", "ticketEvents", "submissions", "jobs", "documents", "documentation", "budgets", "userProfiles"]
+      : [];
+    return Array.from(new Set([...(keysBySection[normalized] || keysBySection.overview), ...routeKeys]));
   }
 
   async function loadDashboardData(options = {}) {
@@ -5697,6 +5707,7 @@
         await render();
       }
       applyDashboardSupportStatus();
+      restoreTicketDrawerFromRoute();
       return state.data;
     }).catch(async (error) => {
       info.status = "failed";
@@ -6106,6 +6117,8 @@
       customer_name: blankToNull(input.customer_name || input.customerName),
       client_name: blankToNull(input.client_name || input.clientName),
       contact_name: blankToNull(input.contact_name || input.contactName),
+      contact_email: blankToNull(input.contact_email || input.contactEmail),
+      contact_phone: blankToNull(input.contact_phone || input.contactPhone),
       company_name: blankToNull(input.company_name || input.companyName),
       property_name: blankToNull(input.property_name || input.propertyName),
       property_address: blankToNull(input.property_address || input.propertyAddress),
@@ -6113,6 +6126,11 @@
       requested_service: service,
       service,
       scope_of_work: blankToNull(input.scope_of_work || input.scopeOfWork),
+      included_work: blankToNull(input.included_work || input.includedWork),
+      excluded_work: blankToNull(input.excluded_work || input.excludedWork),
+      requested_timing: blankToNull(input.requested_timing || input.requestedTiming),
+      access_instructions: blankToNull(input.access_instructions || input.accessInstructions),
+      customer_notes: blankToNull(input.customer_notes || input.customerNotes),
       description: blankToNull(input.description),
       notes: blankToNull(input.notes),
       internal_notes: blankToNull(input.internal_notes || input.internalNotes),
@@ -6120,6 +6138,9 @@
       visit_date: blankToNull(input.visit_date || input.visitDate),
       due_date: blankToNull(input.due_date || input.dueDate),
       owner_label: blankToNull(input.owner_label || input.ownerLabel),
+      priority: blankToNull(input.priority) || "Normal",
+      work_window: blankToNull(input.work_window || input.workWindow),
+      schedule_status: blankToNull(input.schedule_status || input.scheduleStatus),
       next_action: blankToNull(input.next_action || input.nextAction),
       proposed_price: budgetNumberOrNull(input.proposed_price ?? input.proposedPrice),
       expected_revenue: budgetNumberOrNull(input.expected_revenue ?? input.expectedRevenue),
@@ -6160,7 +6181,17 @@
       ["assigned_user_id", "assignedUserId"],
       ["owner_label", "ownerLabel"],
       ["field_completion_notes", "fieldCompletionNotes"],
-      ["payment_status", "paymentStatus"]
+      ["payment_status", "paymentStatus"],
+      ["priority", "priority"],
+      ["work_window", "workWindow"],
+      ["schedule_status", "scheduleStatus"],
+      ["contact_email", "contactEmail"],
+      ["contact_phone", "contactPhone"],
+      ["included_work", "includedWork"],
+      ["excluded_work", "excludedWork"],
+      ["requested_timing", "requestedTiming"],
+      ["access_instructions", "accessInstructions"],
+      ["customer_notes", "customerNotes"]
     ];
     const boolFields = [
       ["cost_review_complete", "costReviewComplete"],
@@ -6194,6 +6225,9 @@
     }
     if (Object.prototype.hasOwnProperty.call(input, "internal_notes") || Object.prototype.hasOwnProperty.call(input, "internalNotes")) {
       payload.internal_notes = blankToNull(input.internal_notes || input.internalNotes);
+    }
+    if (Object.prototype.hasOwnProperty.call(input, "blockers")) {
+      payload.blockers = Array.isArray(input.blockers) ? input.blockers.map((item) => String(item || "").trim()).filter(Boolean) : [];
     }
     [
       ["proposed_price", "proposedPrice"],
@@ -6457,7 +6491,11 @@
     };
     try {
       const result = await dashboardTicketRequest("event", { ticketId: ticketUuid, event: payload });
-      return result.event || null;
+      const savedEvent = result.event ? normalizeJobTicketEvent(result.event) : null;
+      if (savedEvent) {
+        state.data.ticketEvents = [savedEvent, ...(state.data.ticketEvents || []).filter((item) => item.id !== savedEvent.id)];
+      }
+      return savedEvent;
     } catch (error) {
       if (isMissingOptionalTableError(error)) return null;
       recordModuleError("canonical tickets", error);
@@ -6469,7 +6507,7 @@
     const id = String(jobId || "");
     if (!id) return null;
     return (state.data.tickets || []).find((ticket) => (
-      ticket?.sourceType === "job" && ticket.sourceId === id
+      (ticket?.sourceType === "job" && ticket.sourceId === id) || ticket.jobId === id
     )) || null;
   }
 
@@ -6516,6 +6554,10 @@
       ...overrides
     });
     if (existing?.id) {
+      if (existing.sourceType && existing.sourceType !== "job") {
+        delete payload.source_type;
+        delete payload.source_id;
+      }
       return await updateJobTicket(existing.id, payload) || existing;
     }
     return insertJobTicket(payload);
@@ -6605,7 +6647,7 @@
     const id = String(documentId || "");
     if (!id) return null;
     return (state.data.tickets || []).find((ticket) => (
-      ticket?.sourceType === "document" && ticket.sourceId === id
+      (ticket?.sourceType === "document" && ticket.sourceId === id) || ticket.quoteId === id || ticket.invoiceId === id
     )) || null;
   }
 
@@ -6759,8 +6801,6 @@
     if (!job?.id) throw new Error("Unable to create the scheduled visit.");
 
     const updatePayload = {
-      source_type: "job",
-      source_id: job.id,
       job_id: job.id,
       scheduled_date: visitDate,
       visit_date: visitDate,
@@ -6768,6 +6808,10 @@
       owner_label: "Work",
       next_action: ticketNextAction("scheduled")
     };
+    if (!ticket.sourceType || ["ticket", "manual"].includes(ticket.sourceType)) {
+      updatePayload.source_type = "job";
+      updatePayload.source_id = job.id;
+    }
     await updateJobTicket(ticket.id, updatePayload);
     const refreshed = dashboardTickets().find((item) => item.source === "ticket" && item.id === ticket.id) || ticket;
     if (ticketStage(refreshed) === "ready_to_schedule") {
@@ -7209,14 +7253,59 @@
     if (!ticket) return null;
     const explicitId = ticket.invoiceId || (ticket.sourceType === "document" ? ticket.sourceId : "");
     if (explicitId) {
+      const financialInvoice = (state.data.financial?.invoices || []).find((item) => item.id === explicitId);
+      if (financialInvoice) return financialInvoice;
       const invoice = state.data.documents.find((item) => item.id === explicitId && item.type === "invoice");
       if (invoice) return invoice;
+      return { id: explicitId, invoice_number: "Connected invoice", status: "Connected", _ticketPlaceholder: true };
     }
+    const linkedFinancialInvoice = (state.data.financial?.invoices || []).find((item) => (
+      String(item.ticket_id || item.ticketId || "") === String(ticket.id || "")
+    ));
+    if (linkedFinancialInvoice) return linkedFinancialInvoice;
     const budget = findBudgetForTicket(ticket);
     if (budget?.invoiceId) {
       return state.data.documents.find((item) => item.id === budget.invoiceId && item.type === "invoice") || null;
     }
     return null;
+  }
+
+  function findQuoteForTicket(ticket = {}) {
+    if (!ticket) return null;
+    const ids = new Set([ticket.quoteId, ticket.sourceType === "document" ? ticket.sourceId : ""]
+      .map((value) => String(value || "").trim()).filter(Boolean));
+    return (state.data.documents || []).find((item) => item.type === "estimate" && (
+      ids.has(String(item.id || ""))
+      || String(item.jobTicketId || item.ticketId || "") === String(ticket.id || "")
+    )) || null;
+  }
+
+  function ticketLinkedExpenses(ticket = {}) {
+    const sourceIds = new Set([ticket.id, ticket.jobId, ticket.sourceType === "job" ? ticket.sourceId : ""]
+      .map((value) => String(value || "").trim()).filter(Boolean));
+    return (state.data.financial?.expenses || []).filter((item) => (
+      sourceIds.has(String(item.ticketId || item.ticket_id || ""))
+      || sourceIds.has(String(item.jobId || item.job_id || ""))
+    ));
+  }
+
+  function ticketLinkedDocuments(ticket = {}) {
+    const ids = new Set([ticket.id, ticket.jobId, ticket.quoteId, ticket.invoiceId, ticket.sourceId]
+      .map((value) => String(value || "").trim()).filter(Boolean));
+    return [
+      ...(state.data.documents || []),
+      ...(state.data.financial?.documents || [])
+    ].filter((item) => [
+      item.id,
+      item.jobTicketId,
+      item.ticketId,
+      item.ticket_id,
+      item.jobId,
+      item.job_id,
+      item.quoteId,
+      item.invoiceId,
+      item.invoice_id
+    ].some((value) => ids.has(String(value || ""))));
   }
 
   function ticketInvoiceAmount(ticket = {}) {
@@ -7615,7 +7704,9 @@
       headers: { Prefer: "return=representation" },
       body: JSON.stringify(buildDocumentPayload(input))
     });
-    return normalizeDocument(rows[0]);
+    const document = normalizeDocument(rows[0]);
+    state.data.documents = [document, ...state.data.documents.filter((item) => item.id !== document.id)];
+    return document;
   }
 
   function canManageDocumentationTemplates() {
@@ -8033,6 +8124,7 @@
     validateJobSitePhoto(file);
     const upload = await uploadDocumentationFile(file, { kind: "submission", assignmentId: job.id });
     const session = getSession() || {};
+    const ticket = findJobTicketForScheduledJob(job.id);
     return insertDocumentationAttachment({
       attachment_type: "supporting_photo",
       file_bucket: upload.bucket,
@@ -8044,6 +8136,7 @@
       uploaded_by_email: session.email || "",
       metadata: {
         scheduledJobId: job.id,
+        ticketId: ticket?.id || null,
         targetType: "scheduled_visit",
         targetId: job.id,
         photoStage,
@@ -8142,7 +8235,11 @@
         notes: input.notes || ""
       })
     });
-    return normalizeDocument(rows[0]);
+    const updated = normalizeDocument(rows[0]);
+    const index = state.data.documents.findIndex((doc) => doc.id === id);
+    if (index >= 0) state.data.documents[index] = updated;
+    else state.data.documents.unshift(updated);
+    return updated;
   }
 
   async function insertReminder(payload) {
@@ -9448,7 +9545,11 @@
     queueCurrentUserProfileHydration();
     syncDashboardNavAccess();
     syncDashboardSubviewVisibility();
+    if (isDemoMode() && !state.data.submissions.length) {
+      state.data = await loadDashboardData({ merge: false });
+    }
     await render();
+    restoreTicketDrawerFromRoute();
     state.performance.shellRenderedAt = new Date().toISOString();
     state.loading = false;
     setDashboardState("");
@@ -9521,6 +9622,43 @@
     if (current === target) return;
     const method = replace ? "replaceState" : "pushState";
     history[method]({ dashboardSection: target }, "", `#${target}`);
+  }
+
+  function ticketDrawerRouteState() {
+    const url = new URL(window.location.href);
+    return {
+      ticketId: String(url.searchParams.get("ticket") || "").trim(),
+      section: String(url.searchParams.get("ticketSection") || "overview").trim() || "overview"
+    };
+  }
+
+  function updateTicketDrawerRoute(ticketId, section = "overview", { replace = false } = {}) {
+    const id = String(ticketId || "").trim();
+    if (!id) return;
+    const url = new URL(window.location.href);
+    const alreadyOpen = Boolean(url.searchParams.get("ticket"));
+    url.searchParams.set("ticket", id);
+    url.searchParams.set("ticketSection", section || "overview");
+    const method = replace || alreadyOpen ? "replaceState" : "pushState";
+    history[method]({
+      ...(history.state || {}),
+      dashboardSection: state.activeSection,
+      ticketDrawerEntry: true,
+      ticketId: id,
+      ticketSection: section || "overview"
+    }, "", `${url.pathname}${url.search}${url.hash}`);
+    if (method === "pushState") state.ticketDrawerHistoryOwned = true;
+  }
+
+  function clearTicketDrawerRoute() {
+    const url = new URL(window.location.href);
+    url.searchParams.delete("ticket");
+    url.searchParams.delete("ticketSection");
+    const nextState = { ...(history.state || {}) };
+    delete nextState.ticketDrawerEntry;
+    delete nextState.ticketId;
+    delete nextState.ticketSection;
+    history.replaceState(nextState, "", `${url.pathname}${url.search}${url.hash}`);
   }
 
   function setSidebarSubnavOpen(groupKey, open) {
@@ -11216,22 +11354,36 @@
       property,
       detail: row.description || row.scope_of_work || row.notes || row.internal_notes || "Open the ticket to review details.",
       stage,
-      stageLabel: row.stage_label || meta.label,
+      stageLabel: row.stage_label || (stage === "closed" && /closed as rent credit/i.test(row.next_action || row.nextAction || "") ? "Closed as Rent Credit" : meta.label),
       tone: row.tone || meta.tone,
       lane: row.lane || meta.lane,
       ownerLabel: row.owner_label || row.responsible_role || meta.owner,
       action: sourceType === "quote" ? "open-submission" : sourceType === "job" ? "edit-job" : sourceType === "document" ? "open-document" : "open-ticket",
       dateRaw,
       dateLabel: row.date_label || formatDate(dateRaw) || "No date",
+      scheduledDate: row.scheduled_date || row.scheduledDate || row.visit_date || row.visitDate || "",
+      dueDate: row.due_date || row.dueDate || "",
       nextAction: row.next_action || ticketNextAction(stage),
       blockers: normalizeTicketBlockers(row.blockers || row.missing_requirements, stage),
       sourceLabel: ticketSourceLabel({ sourceType }),
       customerId: row.customer_id || row.customerId || "",
       propertyId: row.property_id || row.propertyId || "",
+      propertyAddress: row.property_address || row.propertyAddress || row.address || "",
       quoteId: row.quote_id || row.quoteId || "",
       jobId: row.job_id || row.jobId || "",
       invoiceId: row.invoice_id || row.invoiceId || "",
       assignedUserId: row.assigned_user_id || row.assignedUserId || "",
+      status: row.status || ticketRecordStatusForStage(stage),
+      priority: row.priority || row.priority_label || row.urgency || "Normal",
+      workWindow: row.work_window || row.visit_window || row.workWindow || row.visitWindow || "",
+      scheduleStatus: row.schedule_status || row.scheduleStatus || "",
+      contactEmail: row.contact_email || row.customer_email || row.email || "",
+      contactPhone: row.contact_phone || row.customer_phone || row.phone || "",
+      includedWork: row.included_work || row.includedWork || "",
+      excludedWork: row.excluded_work || row.excludedWork || "",
+      requestedTiming: row.requested_timing || row.requestedTiming || "",
+      accessInstructions: row.access_instructions || row.accessInstructions || "",
+      customerNotes: row.customer_notes || row.customerNotes || row.notes || "",
       primaryContact: row.contact_name || row.primary_contact || row.primaryContact || row.customer_name || "",
       requestedService: row.requested_service || row.service || row.requestedService || "",
       scopeOfWork: row.scope_of_work || row.scopeOfWork || row.description || "",
@@ -11259,6 +11411,8 @@
       afterPhotosUploaded: Boolean(row.after_photos_uploaded || row.afterPhotosUploaded || row.completion_photos_uploaded || row.completionPhotosUploaded),
       fieldCompletionNotes: row.field_completion_notes || row.fieldCompletionNotes || "",
       invoiceFinalized: Boolean(row.invoice_finalized || row.invoiceFinalized),
+      createdBy: row.created_by || row.createdBy || "",
+      updatedBy: row.updated_by || row.updatedBy || "",
       createdAtRaw: row.created_at || "",
       updatedAtRaw: row.updated_at || row.created_at || ""
     };
@@ -11711,7 +11865,8 @@
     const event = ticketCompletionChecklistEvent(ticket);
     const completed = Array.isArray(event?.newValue?.completed) ? event.newValue.completed : [];
     const notApplicable = event?.newValue?.notApplicable && typeof event.newValue.notApplicable === "object" ? event.newValue.notApplicable : {};
-    return { completed, notApplicable, notes: event?.notes || "" };
+    const overrides = event?.newValue?.overrides && typeof event.newValue.overrides === "object" ? event.newValue.overrides : {};
+    return { completed, notApplicable, overrides, notes: event?.notes || "" };
   }
 
   function ticketCompletionItemComplete(ticket, key, savedCompleted = []) {
@@ -11773,32 +11928,67 @@
   }
 
   function ticketCompletionFormPayload(form) {
-    const completed = qsa("[data-completion-complete]:checked", form).map((input) => input.value);
-    const naFields = qsa("[data-completion-na]:checked", form).map((input) => input.value);
-    const notes = form.querySelector("[data-completion-closeout-note]")?.value?.trim() || "";
-    const notApplicable = Object.fromEntries(naFields.map((field) => [field, notes || "Marked N/A by the Owner."]));
+    const ticket = findTicketForDrawer("ticket", form?.dataset?.ticketId || "");
+    const saved = ticketCompletionChecklistState(ticket || {});
+    const completed = new Set(saved.completed || []);
+    const notApplicable = { ...(saved.notApplicable || {}) };
+    const overrides = { ...(saved.overrides || {}) };
+    const controls = qsa("[data-completion-item]", form);
+    const notes = form.querySelector("[data-completion-closeout-note]")?.value?.trim() || saved.notes || "";
+    controls.forEach((item) => {
+      const key = item.dataset.completionItem || "";
+      if (!key) return;
+      const complete = item.querySelector("[data-completion-complete]")?.checked;
+      const notApplicableInput = item.querySelector("[data-completion-na]")?.checked;
+      const override = item.querySelector("[data-completion-override]")?.checked;
+      if (complete) {
+        completed.add(key);
+        delete notApplicable[key];
+        delete overrides[key];
+      } else if (notApplicableInput) {
+        completed.delete(key);
+        notApplicable[key] = notes || "Marked N/A with an owner-reviewed exception.";
+        delete overrides[key];
+      } else if (override) {
+        completed.delete(key);
+        delete notApplicable[key];
+        overrides[key] = notes || "Owner override explanation required.";
+      } else {
+        completed.delete(key);
+        delete notApplicable[key];
+        delete overrides[key];
+      }
+    });
     const fieldCompletionNotes = form.querySelector("[data-completion-notes]")?.value?.trim() || "";
     const paymentStatus = form.querySelector("[data-completion-payment]")?.value || "";
-    if (fieldCompletionNotes && !completed.includes("fieldCompletionNotes")) completed.push("fieldCompletionNotes");
-    if (paymentStatus === "paid" && !completed.includes("paymentStatus")) completed.push("paymentStatus");
+    if (fieldCompletionNotes) completed.add("fieldCompletionNotes");
+    if (paymentStatus === "paid") completed.add("paymentStatus");
+    const completedValues = [...completed];
+    const ticketPatch = {};
+    const completionFieldMap = {
+      scopeComplete: "scope_complete",
+      customerApprovalRecorded: "customer_approval_recorded",
+      invoiceSentToCustomer: "invoice_sent_to_customer",
+      finalCustomerApprovalRecorded: "final_customer_approval_recorded",
+      costReviewComplete: "cost_review_complete",
+      ownerApprovalRecorded: "owner_approval_recorded",
+      beforePhotosUploaded: "before_photos_uploaded",
+      afterPhotosUploaded: "after_photos_uploaded",
+      requiredDocumentsPresent: "required_documents_present",
+      invoiceFinalized: "invoice_finalized"
+    };
+    controls.forEach((item) => {
+      const key = item.dataset.completionItem || "";
+      if (completionFieldMap[key]) ticketPatch[completionFieldMap[key]] = completed.has(key);
+    });
+    if (form.querySelector("[data-completion-notes]")) ticketPatch.field_completion_notes = fieldCompletionNotes;
+    if (form.querySelector("[data-completion-payment]")) ticketPatch.payment_status = paymentStatus;
     return {
-      completed,
+      completed: completedValues,
       notApplicable,
+      overrides,
       notes,
-      ticket: {
-        scope_complete: completed.includes("scopeComplete"),
-        customer_approval_recorded: completed.includes("customerApprovalRecorded"),
-        invoice_sent_to_customer: completed.includes("invoiceSentToCustomer"),
-        final_customer_approval_recorded: completed.includes("finalCustomerApprovalRecorded"),
-        cost_review_complete: completed.includes("costReviewComplete"),
-        owner_approval_recorded: completed.includes("ownerApprovalRecorded"),
-        before_photos_uploaded: completed.includes("beforePhotosUploaded"),
-        after_photos_uploaded: completed.includes("afterPhotosUploaded"),
-        field_completion_notes: fieldCompletionNotes,
-        required_documents_present: completed.includes("requiredDocumentsPresent"),
-        invoice_finalized: completed.includes("invoiceFinalized"),
-        payment_status: paymentStatus
-      }
+      ticket: ticketPatch
     };
   }
 
@@ -11807,7 +11997,8 @@
     if (existing) existing.remove();
     const completedLabels = ticketCompletionChecklistItems.filter((item) => payload.completed.includes(item.key)).map((item) => item.label);
     const naLabels = ticketCompletionChecklistItems.filter((item) => payload.notApplicable[item.key]).map((item) => item.label);
-    const blockers = ticketCompletionChecklistItems.filter((item) => !payload.completed.includes(item.key) && !payload.notApplicable[item.key]).map((item) => item.label);
+    const overrideLabels = ticketCompletionChecklistItems.filter((item) => payload.overrides?.[item.key]).map((item) => item.label);
+    const blockers = ticketCompletionChecklistItems.filter((item) => !payload.completed.includes(item.key) && !payload.notApplicable[item.key] && !payload.overrides?.[item.key]).map((item) => item.label);
     const documents = (state.data.documents || []).filter((item) => [item.jobTicketId, item.ticketId, item.jobId].filter(Boolean).includes(ticket.id));
     const review = document.createElement("section");
     review.className = "ticket-completion-review";
@@ -11817,12 +12008,15 @@
       <div class="ticket-completion-review-grid">
         <div><span>Completed</span><strong>${completedLabels.length}/${ticketCompletionChecklistItems.length}</strong><small>${escapeHtml(completedLabels.join(", ") || "None")}</small></div>
         <div><span>N/A decisions</span><strong>${naLabels.length}</strong><small>${escapeHtml(naLabels.join(", ") || "None")}</small></div>
+        <div><span>Owner overrides</span><strong>${overrideLabels.length}</strong><small>${escapeHtml(overrideLabels.join(", ") || "None")}</small></div>
         <div><span>Costs</span><strong>${escapeHtml(ticketMoneyText(ticket.actualTotalCost || ticket.estimatedTotalCost))}</strong><small>Recorded or estimated job cost</small></div>
         <div><span>Payment</span><strong>${escapeHtml(ticketFieldText(payload.ticket.payment_status || ticket.paymentStatus, "Not recorded"))}</strong><small>Invoice: ${escapeHtml(ticket.invoiceFinalized || payload.ticket.invoice_finalized ? "Finalized" : "N/A or pending")}</small></div>
         <div><span>Documents</span><strong>${documents.length}</strong><small>${escapeHtml(documents.map((item) => item.title || item.number || item.type).filter(Boolean).slice(0, 3).join(", ") || "No linked documents")}</small></div>
         <div class="${blockers.length ? "has-blockers" : "is-clear"}"><span>Remaining blockers</span><strong>${blockers.length}</strong><small>${escapeHtml(blockers.join(", ") || "None — ready to close")}</small></div>
       </div>`;
-    form.querySelector(".ticket-completion-actions")?.before(review);
+    const insertionPoint = form.querySelector(".ticket-completion-actions, .ticket-section-save-row");
+    if (insertionPoint) insertionPoint.before(review);
+    else form.append(review);
     review.scrollIntoView({ behavior: "smooth", block: "nearest" });
   }
 
@@ -11873,16 +12067,31 @@
     </label>`;
   }
 
-  function ticketWorkbenchChecklistItem(item, ticket, completed, notApplicable) {
+  function canUpdateTicketCompletionItem(item = {}) {
+    if (currentSessionRole() === "owner") return true;
+    if (["scopeComplete", "customerApprovalRecorded"].includes(item.key)) return canManageLeadWorkflow();
+    if (["costReviewComplete", "actualsRecorded", "draftInvoiceExists", "invoiceSentToCustomer", "finalCustomerApprovalRecorded", "invoiceFinalized", "paymentStatus"].includes(item.key)) return canManageMoneyWorkflow();
+    if (item.key === "ownerApprovalRecorded") return false;
+    return canManageWorkWorkflow();
+  }
+
+  function ticketWorkbenchChecklistItem(item, ticket, completed, notApplicable, overrides = {}) {
     const isComplete = ticketCompletionItemComplete(ticket, item.key, completed);
     const naReason = notApplicable[item.key] || "";
-    return `<article class="ticket-completion-item ${isComplete || naReason ? "is-resolved" : ""}" data-completion-item="${escapeHtml(item.key)}">
+    const overrideReason = overrides[item.key] || "";
+    const resolution = isComplete ? "complete" : naReason ? "na" : overrideReason ? "override" : "incomplete";
+    const canUpdate = canUpdateTicketCompletionItem(item);
+    return `<article class="ticket-completion-item ${resolution !== "incomplete" ? "is-resolved" : ""} is-${escapeHtml(resolution)}" data-completion-item="${escapeHtml(item.key)}">
       <div>
         <strong>${escapeHtml(item.label)}</strong>
         <small>${escapeHtml(item.detail)}</small>
       </div>
-      <label><input type="checkbox" value="${escapeHtml(item.key)}" data-completion-complete${isComplete ? " checked" : ""}${naReason || item.requiredConnection ? " disabled" : ""}> ${item.requiredConnection ? "Connected automatically" : "Complete"}</label>
-      <label><input type="checkbox" value="${escapeHtml(item.key)}" data-completion-na${naReason ? " checked" : ""}${item.requiredConnection ? " disabled" : ""}> ${item.requiredConnection ? "Required" : "N/A"}</label>
+      <div class="ticket-resolution-controls" role="group" aria-label="${escapeHtml(item.label)} status">
+        <label><input type="checkbox" value="${escapeHtml(item.key)}" data-completion-complete${isComplete ? " checked" : ""}${naReason || overrideReason || item.requiredConnection || !canUpdate ? " disabled" : ""}> ${item.requiredConnection ? "Connected automatically" : "Complete"}</label>
+        <label><input type="checkbox" value="${escapeHtml(item.key)}" data-completion-na${naReason ? " checked" : ""}${item.requiredConnection || !canUpdate ? " disabled" : ""}> ${item.requiredConnection ? "Required" : "N/A"}</label>
+        ${currentSessionRole() === "owner" && !item.requiredConnection ? `<label class="ticket-override-choice"><input type="checkbox" value="${escapeHtml(item.key)}" data-completion-override${overrideReason ? " checked" : ""}> Owner Override</label>` : ""}
+      </div>
+      ${overrideReason ? `<small class="ticket-override-reason">Override: ${escapeHtml(overrideReason)}</small>` : ""}
       ${item.key === "fieldCompletionNotes" ? `<textarea data-completion-notes rows="2" placeholder="Completion notes...">${escapeHtml(ticket.fieldCompletionNotes || "")}</textarea>` : ""}
       ${item.key === "paymentStatus" ? `<select data-completion-payment aria-label="Payment status">
         <option value="">Choose payment status</option>
@@ -11893,43 +12102,44 @@
     </article>`;
   }
 
-  function ticketWorkbenchSection(section, activeStage, ticket, completed, notApplicable) {
+  function ticketWorkbenchSection(section, activeStage, ticket, completed, notApplicable, overrides = {}) {
     const checklistItems = section.checklistKeys
       .map((key) => ticketCompletionChecklistItems.find((item) => item.key === key))
       .filter(Boolean);
-    const resolved = checklistItems.filter((item) => ticketCompletionItemComplete(ticket, item.key, completed) || notApplicable[item.key]).length;
-    const stateClass = section.stages.includes(activeStage)
-      ? "is-active"
-      : resolved === checklistItems.length
-        ? "is-complete"
-        : "";
-    const stateLabel = section.stages.includes(activeStage)
-      ? "Current"
-      : resolved === checklistItems.length
-        ? "Complete"
-        : `${resolved}/${checklistItems.length}`;
-    return `<details class="ticket-workbench-section ${stateClass}"${section.stages.includes(activeStage) ? " open" : ""}>
+    const resolved = checklistItems.filter((item) => ticketCompletionItemComplete(ticket, item.key, completed) || notApplicable[item.key] || overrides[item.key]).length;
+    const hasOverride = checklistItems.some((item) => overrides[item.key]);
+    const hasBlocker = Boolean(section.blocker) || checklistItems.some((item) => !ticketCompletionItemComplete(ticket, item.key, completed) && !notApplicable[item.key] && !overrides[item.key]);
+    const stateLabel = section.summary || (checklistItems.length
+      ? hasOverride ? "Owner overridden" : resolved === checklistItems.length ? "Complete" : `${resolved} of ${checklistItems.length} complete`
+      : section.status || "Ready");
+    const open = section.open === true;
+    const form = section.fields.length || checklistItems.length
+      ? `<form class="ticket-unified-section-form" data-ticket-workbench-form data-ticket-completion-form data-ticket-id="${escapeHtml(ticket.id)}" data-ticket-source="${escapeHtml(ticket.source || ticket.sourceType || "ticket")}" data-ticket-section-form="${escapeHtml(section.key)}" data-record-updated-at="${escapeHtml(ticket.updatedAtRaw || "")}">
+          ${section.fields.length ? `<div class="ticket-workbench-fields">${section.fields.map((field) => ticketWorkbenchField(field, ticket)).join("")}</div>` : ""}
+          ${checklistItems.length ? `<div class="ticket-completion-list">${checklistItems.map((item) => ticketWorkbenchChecklistItem(item, ticket, completed, notApplicable, overrides)).join("")}</div>` : ""}
+          ${checklistItems.some((item) => notApplicable[item.key] || overrides[item.key]) || section.showExceptionNote ? `<label class="ticket-completion-closeout-note">Exception or override explanation
+            <textarea data-completion-closeout-note rows="2" placeholder="Required for N/A or Owner Override.">${escapeHtml(section.exceptionNote || "")}</textarea>
+          </label>` : ""}
+          <div class="ticket-section-save-row"><span data-ticket-save-state role="status">Saved</span><button type="button" data-action="save-ticket-completion" data-id="${escapeHtml(ticket.id)}">${buttonContent("Save Section", "save")}</button>${section.key === "closeout" && currentSessionRole() === "owner" ? `<button type="button" data-action="owner-finalize-ticket" data-id="${escapeHtml(ticket.id)}">${buttonContent("Review & Close Ticket", "complete-reminder")}</button>` : ""}</div>
+        </form>`
+      : "";
+    return `<details class="ticket-workbench-section ticket-unified-section ${hasBlocker ? "has-attention" : ""} ${resolved === checklistItems.length && checklistItems.length ? "is-complete" : ""}" data-ticket-section="${escapeHtml(section.key)}"${open ? " open" : ""}>
       <summary class="ticket-workbench-section-heading">
-        <div>
-          <p class="eyebrow">${escapeHtml(section.owner)}</p>
-          <h5>${escapeHtml(section.title)}</h5>
-        </div>
-        <span>${escapeHtml(stateLabel)}</span>
+        <span class="ticket-section-number">${escapeHtml(section.number)}</span>
+        <div class="ticket-section-title"><h5>${escapeHtml(section.title)}</h5><small>${escapeHtml(section.detail)}</small></div>
+        <div class="ticket-section-summary"><strong>${escapeHtml(stateLabel)}</strong><small>${escapeHtml(section.owner)}${section.count !== undefined ? ` / ${escapeHtml(String(section.count))} connected` : ""}</small></div>
+        <span class="ticket-section-state ${hasOverride ? "is-overridden" : hasBlocker ? "is-attention" : "is-complete"}" aria-label="${hasOverride ? "Overridden" : hasBlocker ? "Attention required" : "Complete"}"></span>
       </summary>
       <div class="ticket-workbench-section-body">
-        <p>${escapeHtml(section.detail)}</p>
-        <div class="ticket-workbench-fields">
-          ${section.fields.map((field) => ticketWorkbenchField(field, ticket)).join("")}
-        </div>
-        <div class="ticket-completion-list">
-          ${checklistItems.map((item) => ticketWorkbenchChecklistItem(item, ticket, completed, notApplicable)).join("")}
-        </div>
+        ${section.blocker ? `<div class="ticket-section-blocker"><strong>Needs attention</strong><span>${escapeHtml(section.blocker)}</span></div>` : ""}
+        ${section.content || ""}
+        ${form}
       </div>
     </details>`;
   }
 
-  function ticketWorkbenchDraftKey(ticketId) {
-    return `${TICKET_DRAFT_PREFIX}${ticketId}`;
+  function ticketWorkbenchDraftKey(ticketId, section = "") {
+    return `${TICKET_DRAFT_PREFIX}${ticketId}${section ? `:${section}` : ""}`;
   }
 
   function saveTicketWorkbenchDraft(form) {
@@ -11940,7 +12150,7 @@
       values[key] = value;
     });
     try {
-      localStorage.setItem(ticketWorkbenchDraftKey(ticketId), JSON.stringify({
+      localStorage.setItem(ticketWorkbenchDraftKey(ticketId, form.dataset.ticketSectionForm || ""), JSON.stringify({
         values,
         updatedAt: new Date().toISOString(),
         recordUpdatedAt: form.dataset.recordUpdatedAt || ""
@@ -11957,7 +12167,7 @@
     const ticketId = form?.dataset?.ticketId || "";
     if (!ticketId) return;
     try {
-      const draft = JSON.parse(localStorage.getItem(ticketWorkbenchDraftKey(ticketId)) || "null");
+      const draft = JSON.parse(localStorage.getItem(ticketWorkbenchDraftKey(ticketId, form.dataset.ticketSectionForm || "")) || "null");
       if (!draft?.values) return;
       Object.entries(draft.values).forEach(([name, value]) => {
         const field = form.elements.namedItem(name);
@@ -11972,124 +12182,276 @@
           : "Draft restored from this device";
       }
     } catch {
-      localStorage.removeItem(ticketWorkbenchDraftKey(ticketId));
+      localStorage.removeItem(ticketWorkbenchDraftKey(ticketId, form.dataset.ticketSectionForm || ""));
     }
   }
 
   function clearTicketWorkbenchDraft(ticketId) {
     try {
-      localStorage.removeItem(ticketWorkbenchDraftKey(ticketId));
+      Object.keys(localStorage).filter((key) => key.startsWith(ticketWorkbenchDraftKey(ticketId))).forEach((key) => localStorage.removeItem(key));
     } catch {
       // Local draft cleanup must never block the saved ticket.
     }
   }
 
-  function renderTicketWorkbench(ticket) {
+  function renderUnifiedTicketQuotePanel(ticket) {
+    const quote = findQuoteForTicket(ticket);
+    if (!quote) {
+      return `<div class="ticket-connected-empty"><strong>No quote connected</strong><p>Create it here with this ticket's customer, property, scope, and expected price already filled in.</p></div>
+        ${canManageMoneyWorkflow() ? renderFinancialQuoteForm(ticket, { embedded: true }) : `<p class="ticket-drawer-note">Your role cannot create financial documents.</p>`}`;
+    }
+    const status = statusText(quote.status || quote.squareStatus || "draft");
+    const versionEvents = ticketHistoryFor(ticket).filter((event) => /quote|estimate|change_order/.test(event.eventType));
+    return `<div class="ticket-connected-record">
+      <div><span>Quote</span><strong>${escapeHtml(quote.number || quote.title || "Connected quote")}</strong><small>Version ${escapeHtml(String(Math.max(1, versionEvents.length || 1)))} / ${escapeHtml(status || "draft")}</small></div>
+      <div><span>Total</span><strong>${escapeHtml(ticketMoneyText(quote.total))}</strong><small>${escapeHtml(quote.dueDate ? `Expires ${quote.dueDate}` : "No expiration date")}</small></div>
+      <div><span>Approval</span><strong>${escapeHtml(ticket.customerApprovalRecorded ? "Approved" : status === "approved" ? "Approved" : "Pending")}</strong><small>${escapeHtml(ticket.customerApprovalRecorded ? "Recorded on ticket" : "Customer response required")}</small></div>
+    </div>
+    <div class="drawer-actions ticket-inline-actions">
+      ${!ticket.customerApprovalRecorded ? `<button type="button" data-action="record-quote-approval" data-id="${escapeHtml(quote.id)}">Record Approval</button>` : ""}
+      <button type="button" class="secondary-action" data-action="copy-ticket-link" data-id="${escapeHtml(ticket.id)}">Copy Ticket Link</button>
+      ${status === "approved" || ticket.customerApprovalRecorded ? `<button type="button" class="secondary-action" data-action="create-financial-quote-from-ticket" data-id="${escapeHtml(ticket.id)}">Create Revision</button>` : ""}
+    </div>`;
+  }
+
+  function renderUnifiedTicketInvoicePanel(ticket) {
+    const invoice = findInvoiceForTicket(ticket);
+    if (!invoice) {
+      return `<div class="ticket-connected-empty"><strong>No invoice connected</strong><p>Create one only after the approved quote and authorization are ready. Duplicate clicks are ignored while the request is saving.</p>
+        ${canManageMoneyWorkflow() ? `<button type="button" data-action="create-financial-invoice-from-ticket" data-id="${escapeHtml(ticket.id)}">${buttonContent("Create & Connect Invoice", "create-invoice")}</button>` : ""}
+      </div>`;
+    }
+    const financial = Boolean(invoice.invoice_number || Object.prototype.hasOwnProperty.call(invoice, "amount_paid"));
+    const summary = financial ? financialCalculator().invoiceSummary(invoice) : {
+      total: Number(invoice.total || 0),
+      balance: Math.max(0, Number(invoice.total || 0) - Number(invoice.deposit || 0) - Number(invoice.amountPaid || 0))
+    };
+    const status = financial ? financialCalculator().effectiveInvoiceStatus(invoice) : (invoice.squareStatus || invoice.status || "Draft");
+    return `<div class="ticket-connected-record">
+      <div><span>Invoice</span><strong>${escapeHtml(invoice.invoice_number || invoice.number || "Connected invoice")}</strong><small>${escapeHtml(status)}</small></div>
+      <div><span>Total</span><strong>${moneyCurrency(summary.total)}</strong><small>Deposit ${moneyCurrency(invoice.deposit || 0)}</small></div>
+      <div><span>Balance</span><strong>${moneyCurrency(summary.balance)}</strong><small>${escapeHtml(invoice.due_date || invoice.dueDate || "No due date")}</small></div>
+    </div>
+    ${invoice._ticketPlaceholder ? `<button type="button" class="secondary-action" data-action="load-ticket-financial-invoice" data-id="${escapeHtml(invoice.id)}" data-ticket-id="${escapeHtml(ticket.id)}">Load Invoice Details</button>` : financial && canManageMoneyWorkflow() ? `<form class="ticket-inline-invoice-form" data-ticket-inline-invoice-form data-id="${escapeHtml(invoice.id)}" data-ticket-id="${escapeHtml(ticket.id)}">
+      <label>Deposit<input name="deposit" type="number" min="0" step="0.01" value="${escapeHtml(String(invoice.deposit || 0))}"></label>
+      <label>Amount paid<input name="amount_paid" type="number" min="0" step="0.01" value="${escapeHtml(String(invoice.amount_paid || 0))}"></label>
+      <label>Status<select name="status">${expenseSelectOptions(["Draft","Ready","Sent","Viewed","Partially Paid","Paid","Overdue","Voided","Refunded"], invoice.status || "Draft")}</select></label>
+      <label>Due date<input name="due_date" type="date" value="${escapeHtml(invoice.due_date || "")}"></label>
+      <div class="ticket-section-save-row span-full"><span data-ticket-save-state>Saved</span><button type="submit">${buttonContent("Save Invoice", "save")}</button></div>
+    </form>` : `<p class="ticket-drawer-note">Invoice status is connected to this ticket. Finalized and Paid remain separate.</p>`}`;
+  }
+
+  function renderUnifiedTicketTasks(ticket) {
+    const tasks = ticketWorkComponents(ticket);
+    const profiles = assignableWorkProfiles().filter((profile) => workAssignmentAreasForRole(profile.role).length);
+    return `<form class="ticket-task-manager" data-ticket-task-manager data-ticket-id="${escapeHtml(ticket.id)}">
+      <div class="ticket-rapid-assignment">
+        <label>Select employee once<select name="rapid_assignee"><option value="">Choose employee...</option>${profiles.map((profile) => {
+          const id = profile.userId || profile.email;
+          return `<option value="${escapeHtml(id)}">${escapeHtml(assignmentProfileLabel(profile))} / ${escapeHtml(roleLabel(profile.role))}</option>`;
+        }).join("")}</select></label>
+        <button type="submit">Assign Selected Tasks</button>
+      </div>
+      <div class="ticket-task-list">
+        ${tasks.map((task) => `<article class="ticket-task-row ${task.status === "blocked" ? "is-blocked" : ""}" data-task-key="${escapeHtml(task.key)}">
+          <input type="checkbox" name="selected_tasks" value="${escapeHtml(task.key)}" aria-label="Select ${escapeHtml(task.label)}">
+          <div><strong>${escapeHtml(task.label)}</strong><small>${escapeHtml(task.proof)} / ${escapeHtml(task.roleLabel)}</small></div>
+          <span class="status-badge">${escapeHtml(ownerKanbanColumnLabel(task.status))}</span>
+          <small>${escapeHtml(task.assigneeLabel)}</small>
+          <button type="button" class="inline-action" data-action="focus-ticket-task" data-ticket-id="${escapeHtml(ticket.id)}" data-component-key="${escapeHtml(task.key)}">Edit</button>
+        </article>`).join("")}
+      </div>
+    </form>`;
+  }
+
+  function renderUnifiedTicketPhotoPanel(ticket, sourceItem, photoStage) {
+    const job = ticketLinkedScheduledJob(ticket, sourceItem);
+    if (!job) return `<div class="ticket-connected-empty"><strong>No work visit connected</strong><p>Schedule and assign the visit before uploading ${escapeHtml(photoStage)} photos.</p></div>`;
+    const label = photoStage === "arrival" ? "Arrival" : "Completion";
+    return `<form class="job-support-form job-photo-form ticket-photo-upload" data-job-photo-form data-ticket-id="${escapeHtml(ticket.id)}" data-id="${escapeHtml(job.id)}" data-photo-stage="${escapeHtml(photoStage)}">
+      <label>${escapeHtml(label)} photos<input name="photo" type="file" accept="image/*" capture="environment" multiple required></label>
+      <button type="submit">${buttonContent(`Upload ${label} Photos`, "open-document")}</button>
+    </form>${renderJobPhotoList(job, photoStage)}`;
+  }
+
+  function renderUnifiedTicketDocuments(ticket) {
+    const documents = ticketLinkedDocuments(ticket);
+    const job = ticketLinkedScheduledJob(ticket);
+    const assignments = job ? documentationAssignmentsForJob(job) : [];
+    return `<div class="ticket-linked-list">
+      ${documents.length ? documents.map((item) => `<article><div><strong>${escapeHtml(item.number || item.title || item.file_name || "Document")}</strong><small>${escapeHtml(item.type || item.document_type || item.status || "File")}</small></div><span>${escapeHtml(item.createdAt || item.document_date || item.issueDate || "")}</span></article>`).join("") : `<p>No connected documents yet.</p>`}
+    </div>${job ? renderJobDocumentationSection(job) : `<p class="ticket-drawer-note">Connect a work visit to assign field forms and supporting documents.</p>`}
+    ${assignments.length ? `<p class="ticket-drawer-note">${escapeHtml(String(assignments.length))} field form${assignments.length === 1 ? "" : "s"} connected to this ticket.</p>` : ""}`;
+  }
+
+  function renderUnifiedTicketCosts(ticket) {
+    const expenses = ticketLinkedExpenses(ticket);
+    const actual = expenses.reduce((sum, item) => sum + Number(item.total || 0), 0);
+    const estimate = Number(ticket.estimatedTotalCost || 0);
+    const revenue = Number(ticket.expectedRevenue || ticket.proposedPrice || 0);
+    const profit = revenue - actual;
+    const margin = revenue > 0 ? (profit / revenue) * 100 : 0;
+    return `<div class="ticket-cost-summary">
+      <div><span>Estimated cost</span><strong>${moneyCurrency(estimate)}</strong></div>
+      <div><span>Actual cost</span><strong>${moneyCurrency(actual)}</strong></div>
+      <div><span>Variance</span><strong>${moneyCurrency(actual - estimate)}</strong></div>
+      <div><span>Gross profit</span><strong>${moneyCurrency(profit)}</strong></div>
+      <div><span>Gross margin</span><strong>${escapeHtml(`${margin.toFixed(1)}%`)}</strong></div>
+    </div>
+    <div class="ticket-linked-list">${expenses.length ? expenses.map((item) => `<article><div><strong>${escapeHtml(item.description || item.category || "Expense")}</strong><small>${escapeHtml(item.vendorName || item.category || "")}</small></div><span>${moneyCurrency(item.total)}</span></article>`).join("") : `<p>No expenses are connected to this ticket.</p>`}</div>
+    ${canManageMoneyWorkflow() ? `<button type="button" class="secondary-action" data-action="quick-add-expense" data-ticket-id="${escapeHtml(ticket.id)}">Add Connected Expense</button>` : ""}`;
+  }
+
+  function renderTicketCloseoutSnapshot(ticket, completed, notApplicable, overrides) {
+    return `<div class="ticket-closeout-snapshot">${ticketCompletionChecklistItems.map((item) => {
+      const status = ticketCompletionItemComplete(ticket, item.key, completed) ? "Complete" : notApplicable[item.key] ? "N/A" : overrides[item.key] ? "Owner Override" : "Incomplete";
+      return `<div class="is-${escapeHtml(statusText(status).replace(/\s/g, "-"))}"><span>${escapeHtml(item.label)}</span><strong>${escapeHtml(status)}</strong></div>`;
+    }).join("")}</div>`;
+  }
+
+  function renderTicketWorkbench(ticket, options = {}) {
     const stage = ticketStage(ticket);
-    const { completed, notApplicable, notes } = ticketCompletionChecklistState(ticket);
-    const canClose = currentSessionRole() === "owner" && ["field_work_complete", "completion_review", "invoice_review", "invoice_sent", "partially_paid", "paid"].includes(stage);
-    const resolved = ticketCompletionChecklistItems.filter((item) => ticketCompletionItemComplete(ticket, item.key, completed) || notApplicable[item.key]).length;
+    const { completed, notApplicable, overrides, notes } = ticketCompletionChecklistState(ticket);
+    const openSection = options.openSection || "overview";
+    const quote = findQuoteForTicket(ticket);
+    const invoice = findInvoiceForTicket(ticket);
+    const job = ticketLinkedScheduledJob(ticket, options.sourceItem || null);
+    const tasks = ticketWorkComponents(ticket);
+    const arrivalPhotos = job ? documentationAttachmentsForJob(job, "arrival") : [];
+    const completionPhotos = job ? documentationAttachmentsForJob(job, "completion") : [];
+    const documents = ticketLinkedDocuments(ticket);
+    const expenses = ticketLinkedExpenses(ticket);
+    const expenseTotal = expenses.reduce((sum, item) => sum + Number(item.total || 0), 0);
+    const history = ticketHistoryFor(ticket);
+    const resolved = ticketCompletionChecklistItems.filter((item) => ticketCompletionItemComplete(ticket, item.key, completed) || notApplicable[item.key] || overrides[item.key]).length;
+    const invoiceSummary = invoice && (invoice.invoice_number || Object.prototype.hasOwnProperty.call(invoice, "amount_paid"))
+      ? financialCalculator().invoiceSummary(invoice)
+      : invoice ? { total: Number(invoice.total || 0), balance: Number(invoice.total || 0) } : null;
+    const ownerFields = [
+      { label: "Ticket owner", name: "owner_label", value: ticket.ownerLabel || "" },
+      { label: "Priority", name: "priority", value: ticket.priority || "Normal" }
+    ];
     const sections = [
       {
-        title: "Quote & Customer Approval",
-        owner: "Leads",
-        detail: "Build and connect the quote, then record the customer's quote approval.",
-        stages: ["draft", "sales_intake", "scope_in_progress", "quote_pending", "customer_approval_pending", "scope_change_requested"],
+        key: "overview", number: "1", title: "Overview and Scope", owner: "Ticket owner",
+        detail: "Customer, property, service, scope, priority, blocker, and next action.", open: openSection === "overview",
+        summary: ticket.scopeComplete ? "Scope complete" : "Scope needs review",
+        blocker: !ticket.scopeComplete ? "Confirm the customer, property, service, and complete scope." : "",
         fields: [
           { label: "Client", name: "customer_name", value: ticket.customer || "" },
+          { label: "Customer contact", name: "contact_name", value: ticket.primaryContact || "" },
+          { label: "Contact email", name: "contact_email", type: "email", value: ticket.contactEmail || "" },
+          { label: "Contact phone", name: "contact_phone", type: "tel", value: ticket.contactPhone || "" },
           { label: "Property", name: "property_name", value: ticket.property || "" },
+          { label: "Service address", name: "property_address", value: ticket.propertyAddress || ticket.property || "" },
           { label: "Service request", name: "requested_service", value: ticket.requestedService || ticket.title || "" },
-          { label: "Quoted price", name: "proposed_price", type: "number", step: "0.01", value: ticket.proposedPrice || "" },
-          { label: "Scope of work", name: "scope_of_work", type: "textarea", rows: 4, value: ticket.scopeOfWork || ticket.detail || "", placeholder: "Describe the complete work scope." }
+          { label: "Price expectation", name: "proposed_price", type: "number", step: "0.01", value: ticket.proposedPrice || "" },
+          ...ownerFields,
+          { label: "Requested timing", name: "requested_timing", value: ticket.requestedTiming || "" },
+          { label: "Source", type: "managed", value: ticket.sourceLabel || ticket.sourceType, detail: "The original source remains linked for historical context." },
+          { label: "Created", type: "managed", value: formatDate(ticket.createdAtRaw), detail: "The job snapshot is preserved on this ticket." },
+          { label: "Current stage", type: "managed", value: ticket.stageLabel, detail: "Use Owner Controls for controlled stage changes." },
+          { label: "Scope of work", name: "scope_of_work", type: "textarea", rows: 4, value: ticket.scopeOfWork || ticket.detail || "", placeholder: "Describe the complete work scope." },
+          { label: "Included work", name: "included_work", type: "textarea", rows: 3, value: ticket.includedWork || "" },
+          { label: "Excluded work", name: "excluded_work", type: "textarea", rows: 3, value: ticket.excludedWork || "" },
+          { label: "Access instructions", name: "access_instructions", type: "textarea", rows: 3, value: ticket.accessInstructions || "" },
+          { label: "Current blocker", name: "blockers", type: "textarea", rows: 2, value: (ticket.blockers || []).join("\n") },
+          { label: "Next action", name: "next_action", value: ticket.nextAction || "" }
         ],
-        checklistKeys: ["scopeComplete", "customerApprovalRecorded"]
+        checklistKeys: ["scopeComplete"], stages: []
       },
       {
-        title: "Cost Review",
-        owner: "Money",
-        detail: "Internal revenue, cost, margin, and owner-ready notes.",
-        stages: ["needs_budget", "budget_in_progress"],
+        key: "quote", number: "2", title: "Quote", owner: "Leads & Money", detail: "Create, send, approve, and revise the connected quote.", open: openSection === "quote",
+        summary: quote ? `${quote.number || "Quote"} / ${quote.status || "draft"}` : "Not created",
+        blocker: !quote ? "Create and connect the customer quote." : !ticket.customerApprovalRecorded ? "Record the customer's quote approval." : "",
+        count: quote ? 1 : 0, content: canManageMoneyWorkflow() ? renderUnifiedTicketQuotePanel(ticket) : `<p class="ticket-drawer-note">Quote financial details are restricted for your dashboard role.</p>`, fields: [], checklistKeys: ["customerApprovalRecorded"], stages: []
+      },
+      {
+        key: "invoice", number: "3", title: "Invoice", owner: "Money", detail: "Invoice, deposit, payment, balance, and finalization stay distinct.", open: openSection === "invoice",
+        summary: invoice ? (canManageMoneyWorkflow() ? `${invoice.invoice_number || invoice.number || "Invoice"} / ${invoiceSummary ? moneyCurrency(invoiceSummary.balance) : "Connected"} due` : "Connected / restricted") : "Not created",
+        blocker: !invoice ? "Create and connect an invoice before normal closeout." : "", count: invoice ? 1 : 0,
+        content: canManageMoneyWorkflow() ? renderUnifiedTicketInvoicePanel(ticket) : `<p class="ticket-drawer-note">Invoice and payment details are restricted for your dashboard role.</p>`, fields: [], checklistKeys: ["draftInvoiceExists", "invoiceSentToCustomer"], stages: []
+      },
+      {
+        key: "approval", number: "4", title: "Customer Approval and Deposit", owner: "Customer & Owner", detail: "Review quote approval, authorization, deposit, and owner agreement together.", open: openSection === "approval",
+        summary: ticket.depositRequired ? (ticket.depositPaid ? "Deposit paid" : "Deposit pending") : (ticket.finalCustomerApprovalRecorded ? "Authorized" : "Approval pending"),
+        blocker: ticket.depositRequired && !ticket.depositPaid ? "Required deposit has not been recorded as received." : !ticket.finalCustomerApprovalRecorded ? "Final customer authorization is still required." : "",
         fields: [
+          { label: "Deposit required", name: "deposit_required", type: "checkbox", value: ticket.depositRequired },
+          { label: "Deposit received", name: "deposit_paid", type: "checkbox", value: ticket.depositPaid },
+          { label: "Pre-work gate", type: "managed", value: ticket.ownerApprovalRecorded ? "Owner authorized" : "Waiting", detail: "Work cannot be confirmed until required approvals are complete or owner-overridden." }
+        ],
+        checklistKeys: ["finalCustomerApprovalRecorded", "ownerApprovalRecorded"], stages: []
+      },
+      {
+        key: "scheduling", number: "5", title: "Scheduling and Assignment", owner: "Work", detail: "Work date, window, confirmation, owner, and crew assignment.", open: openSection === "scheduling",
+        summary: job || ticket.dateRaw ? `${formatDate(job?.dateRaw || ticket.dateRaw)} / ${ticket.assignedUserId ? "Assigned" : "Unassigned"}` : "Not scheduled",
+        blocker: !(job?.dateRaw || ticket.dateRaw) ? "Select a work date." : !ticket.assignedUserId ? "Assign the responsible employee or crew." : "",
+        count: job ? 1 : 0,
+        fields: [
+          { label: "Work date", name: "scheduled_date", type: "date", value: toDateInputValue(job?.dateRaw || ticket.scheduledDate || ticket.dateRaw || "") },
+          { label: "Work window", name: "work_window", value: job?.window || ticket.workWindow || "" },
+          { label: "Schedule status", name: "schedule_status", value: ticket.scheduleStatus || "Tentative" },
+          { label: "Assigned team", name: "assigned_user_id", type: "assignee", value: ticket.assignedUserId || "" }
+        ],
+        checklistKeys: ["scheduledDate"], stages: []
+      },
+      {
+        key: "tasks", number: "6", title: "Tasks", owner: "Assigned team", detail: "Assign and track every ticket requirement without leaving this drawer.", open: openSection === "tasks",
+        summary: `${tasks.filter((item) => item.status === "done").length} of ${tasks.length} complete`, blocker: tasks.some((item) => item.status === "blocked") ? "One or more tasks are blocked." : tasks.some((item) => item.status !== "done") ? "Complete or explicitly resolve the remaining assigned work." : "",
+        count: tasks.length, content: renderUnifiedTicketTasks(ticket), fields: [], checklistKeys: [], stages: []
+      },
+      {
+        key: "arrival-photos", number: "7", title: "Arrival Photos", owner: "Work", detail: "Before-work proof with uploader and timestamp.", open: openSection === "arrival-photos",
+        summary: arrivalPhotos.length ? `${arrivalPhotos.length} uploaded` : "Missing", blocker: arrivalPhotos.length || ticket.beforePhotosUploaded ? "" : "Upload arrival proof before work begins.", count: arrivalPhotos.length,
+        content: renderUnifiedTicketPhotoPanel(ticket, options.sourceItem, "arrival"), fields: [], checklistKeys: ["beforePhotosUploaded"], stages: []
+      },
+      {
+        key: "completion-photos", number: "8", title: "Completion Photos", owner: "Work", detail: "Finished-work evidence tied to this ticket.", open: openSection === "completion-photos",
+        summary: completionPhotos.length ? `${completionPhotos.length} uploaded` : "Missing", blocker: completionPhotos.length || ticket.afterPhotosUploaded ? "" : "Completion photos are required for normal closeout.", count: completionPhotos.length,
+        content: renderUnifiedTicketPhotoPanel(ticket, options.sourceItem, "completion"), fields: [], checklistKeys: ["afterPhotosUploaded"], stages: []
+      },
+      {
+        key: "documents", number: "9", title: "Notes and Documents", owner: "Ticket team", detail: "Internal notes, customer notes, forms, agreements, and supporting files.", open: openSection === "documents",
+        summary: `${documents.length} file${documents.length === 1 ? "" : "s"}`, blocker: !ticket.requiredDocumentsPresent ? "Confirm required forms and documents are present." : "", count: documents.length,
+        content: renderUnifiedTicketDocuments(ticket),
+        fields: [
+          { label: "Internal notes", name: "internal_notes", type: "textarea", rows: 3, value: ticket.internalNotes || "" },
+          { label: "Customer-visible notes", name: "customer_notes", type: "textarea", rows: 3, value: ticket.customerNotes || "" }
+        ], checklistKeys: ["requiredDocumentsPresent"], stages: []
+      },
+      {
+        key: "costs", number: "10", title: "Expenses and Actual Costs", owner: "Money", detail: "One connected cost record with estimate, actuals, profit, and variance.", open: openSection === "costs",
+        summary: canManageMoneyWorkflow() ? moneyCurrency(expenseTotal) : "Restricted", blocker: canManageMoneyWorkflow() && !completed.includes("actualsRecorded") ? "Review final labor, material, and other costs." : "", count: canManageMoneyWorkflow() ? expenses.length : undefined,
+        content: canManageMoneyWorkflow() ? renderUnifiedTicketCosts(ticket) : `<p class="ticket-drawer-note">Expenses and labor cost details are restricted for your dashboard role.</p>`,
+        fields: canManageMoneyWorkflow() ? [
           { label: "Expected revenue", name: "expected_revenue", type: "number", step: "0.01", value: ticket.expectedRevenue || ticket.proposedPrice || "" },
           { label: "Estimated cost", name: "estimated_total_cost", type: "number", step: "0.01", value: ticket.estimatedTotalCost || "" },
           { label: "Estimated profit", name: "estimated_profit", type: "number", step: "0.01", value: ticket.estimatedProfit || "" },
           { label: "Target margin %", name: "target_margin", type: "number", step: "0.1", value: ticket.targetMargin || "" }
-        ],
-        checklistKeys: ["costReviewComplete", "actualsRecorded"]
+        ] : [], checklistKeys: canManageMoneyWorkflow() ? ["costReviewComplete", "actualsRecorded"] : [], stages: []
       },
       {
-        title: "Invoice, Deposit & Final Approval",
-        owner: "Money & Customer",
-        detail: "Create and send the invoice, request any deposit, and record the customer's final authorization.",
-        stages: ["invoice_preparation"],
-        fields: [
-          { label: "Connected invoice", type: "managed", value: ticket.invoiceId || findInvoiceForTicket(ticket)?.number || "", placeholder: "No invoice connected", detail: "Use Create & Connect Invoice below to preserve the required link." },
-          { label: "Deposit required", name: "deposit_required", type: "checkbox", value: ticket.depositRequired },
-          { label: "Deposit paid", name: "deposit_paid", type: "checkbox", value: ticket.depositPaid }
-        ],
-        checklistKeys: ["draftInvoiceExists", "invoiceSentToCustomer", "finalCustomerApprovalRecorded"]
+        key: "closeout", number: "11", title: "Completion and Closeout", owner: "Owner & Money", detail: "Final review keeps Complete, N/A, and Owner Override distinct.", open: openSection === "closeout",
+        summary: stage === "closed" ? "Closed" : `${resolved} of ${ticketCompletionChecklistItems.length} resolved`, blocker: resolved < ticketCompletionChecklistItems.length ? "Resolve every applicable requirement before closing." : "",
+        content: renderTicketCloseoutSnapshot(ticket, completed, notApplicable, overrides),
+        fields: [{ label: "Ticket close", type: "managed", value: stage === "closed" ? "Closed" : "Open", detail: "Finalized is not Paid; overrides never manufacture evidence." }],
+        checklistKeys: ["fieldCompletionNotes", "invoiceFinalized", "paymentStatus"], showExceptionNote: true, exceptionNote: notes, stages: []
       },
       {
-        title: "Owner Agreement",
-        owner: "Owner",
-        detail: "Final owner agreement after the customer authorization and before work starts.",
-        stages: ["needs_owner_approval"],
-        fields: [
-          { label: "Pre-work gate", type: "managed", value: ticket.ownerApprovalRecorded ? "Agreed" : "Waiting", detail: "Work cannot move to scheduling until the owner agreement is recorded." }
-        ],
-        checklistKeys: ["ownerApprovalRecorded"]
+        key: "activity", number: "12", title: "Activity and Audit Log", owner: "System", detail: "Permanent chronological record of changes and decisions.", open: openSection === "activity",
+        summary: `${history.length} event${history.length === 1 ? "" : "s"}`, count: history.length, content: renderTicketHistory(ticket), fields: [], checklistKeys: [], stages: []
       },
       {
-        title: "Work & Site Proof",
-        owner: "Work",
-        detail: "Schedule, assign, capture arrival photos, and complete the visit.",
-        stages: ["ready_to_schedule", "scheduled", "in_progress", "paused"],
-        fields: [
-          { label: "Visit date", name: "scheduled_date", type: "date", value: toDateInputValue(ticket.scheduledDate || ticket.dateRaw || "") },
-          { label: "Assigned team", name: "assigned_user_id", type: "assignee", value: ticket.assignedUserId || "" }
-        ],
-        checklistKeys: ["scheduledDate", "beforePhotosUploaded", "afterPhotosUploaded", "requiredDocumentsPresent"]
-      },
-      {
-        title: "Closeout",
-        owner: "Owner & Money",
-        detail: "Completion review, final invoice, payment, and close.",
-        stages: ["field_work_complete", "completion_review", "invoice_review", "invoice_sent", "partially_paid", "paid", "closed"],
-        fields: [
-          { label: "Ticket close", type: "managed", value: stage === "closed" ? "Closed" : "Open", detail: "Closing remains controlled by the validated checklist action." }
-        ],
-        checklistKeys: ["fieldCompletionNotes", "invoiceFinalized", "paymentStatus"]
+        key: "owner-controls", number: "13", title: "Owner Controls", owner: "Owner only", detail: "Controlled status moves, exceptions, cancellation, reopening, and rent-credit closeout.", open: openSection === "owner-controls",
+        summary: currentSessionRole() === "owner" ? "Owner access" : "Restricted", content: currentSessionRole() === "owner" ? renderTicketDetailCommandCenter(ticket) : `<p class="ticket-drawer-note">Only the Owner can use overrides or final closeout controls.</p>`, fields: [], checklistKeys: [], stages: []
       }
     ];
 
-    return `<section class="ticket-workbench" id="ticket-workbench" data-ticket-workbench>
-      <div class="ticket-workbench-heading">
-        <div>
-          <p class="eyebrow">Ticket Workbench</p>
-          <h4>Editable ticket record</h4>
-          <small>Update the fields and resolve each Complete or N/A check in the area where it belongs.</small>
-        </div>
-        <span>${escapeHtml(`${resolved}/${ticketCompletionChecklistItems.length}`)}</span>
+    return `<section class="ticket-workbench ticket-unified-workbench" id="ticket-workbench" data-ticket-workbench>
+      <div class="ticket-workbench-grid">
+        ${sections.map((section) => ticketWorkbenchSection(section, stage, ticket, completed, notApplicable, overrides)).join("")}
       </div>
-      <form data-ticket-workbench-form data-ticket-completion-form data-ticket-id="${escapeHtml(ticket.id)}" data-ticket-source="${escapeHtml(ticket.source || ticket.sourceType || "ticket")}" data-record-updated-at="${escapeHtml(ticket.updatedAtRaw || "")}">
-        <div class="ticket-workbench-save-state" role="status">
-          <span data-ticket-save-state>All saved</span>
-          <small>The current step opens automatically. Expand any other area to edit it.</small>
-        </div>
-        <div class="ticket-workbench-grid">
-          ${sections.map((section) => ticketWorkbenchSection(section, stage, ticket, completed, notApplicable)).join("")}
-        </div>
-        <label class="ticket-completion-closeout-note">Closeout note
-          <textarea data-completion-closeout-note rows="3" placeholder="Required when anything is marked N/A. Explain the exception once here.">${escapeHtml(notes)}</textarea>
-        </label>
-        <div class="drawer-actions ticket-completion-actions">
-          <button type="button" data-action="save-ticket-completion" data-id="${escapeHtml(ticket.id)}">${buttonContent("Save Ticket Workbench", "save")}</button>
-          ${canManageMoneyWorkflow() ? `<button type="button" class="secondary-action" data-action="create-financial-quote-from-ticket" data-id="${escapeHtml(ticket.id)}">${buttonContent("Create & Connect Quote", "quick-add-quote")}</button>` : ""}
-          ${canManageMoneyWorkflow() ? `<button type="button" class="secondary-action" data-action="create-financial-invoice-from-ticket" data-id="${escapeHtml(ticket.id)}">${buttonContent("Create & Connect Invoice", "create-invoice")}</button>` : ""}
-          <button type="button" data-action="owner-finalize-ticket" data-id="${escapeHtml(ticket.id)}"${canClose ? "" : " disabled aria-disabled=\"true\""}>${buttonContent("Save & Close Ticket", "complete-reminder")}</button>
-        </div>
-        ${canClose ? `<p class="ticket-drawer-note">Closing is available when every line is Complete or N/A.</p>` : `<p class="ticket-drawer-note">You can edit and save this ticket now. Save & Close becomes available after the job is marked complete.</p>`}
-      </form>
     </section>`;
   }
 
@@ -12099,23 +12461,34 @@
       const value = String(data.get(name) || "").trim();
       return value === "" ? null : Number(value);
     };
-    return {
-      customer_name: String(data.get("customer_name") || "").trim(),
-      property_name: String(data.get("property_name") || "").trim(),
-      requested_service: String(data.get("requested_service") || "").trim(),
-      service: String(data.get("requested_service") || "").trim(),
-      scope_of_work: String(data.get("scope_of_work") || "").trim(),
-      proposed_price: money("proposed_price"),
-      expected_revenue: money("expected_revenue"),
-      estimated_total_cost: money("estimated_total_cost"),
-      estimated_profit: money("estimated_profit"),
-      target_margin: money("target_margin"),
-      deposit_required: data.get("deposit_required") === "on",
-      deposit_paid: data.get("deposit_paid") === "on",
-      scheduled_date: String(data.get("scheduled_date") || "").trim() || null,
-      visit_date: String(data.get("scheduled_date") || "").trim() || null,
-      assigned_user_id: String(data.get("assigned_user_id") || "").trim() || null
+    const payload = {};
+    const setText = (name, target = name) => {
+      if (form.elements.namedItem(name)) payload[target] = String(data.get(name) || "").trim() || null;
     };
+    const setMoney = (name, target = name) => {
+      if (form.elements.namedItem(name)) payload[target] = money(name);
+    };
+    const setBoolean = (name, target = name) => {
+      if (form.elements.namedItem(name)) payload[target] = data.get(name) === "on";
+    };
+    ["customer_name", "contact_name", "contact_email", "contact_phone", "property_name", "property_address", "requested_timing", "priority", "owner_label", "work_window", "schedule_status", "included_work", "excluded_work", "access_instructions", "internal_notes", "customer_notes", "next_action"].forEach((name) => setText(name));
+    if (form.elements.namedItem("requested_service")) {
+      setText("requested_service");
+      payload.service = payload.requested_service;
+    }
+    setText("scope_of_work");
+    ["proposed_price", "expected_revenue", "estimated_total_cost", "estimated_profit", "target_margin"].forEach((name) => setMoney(name));
+    setBoolean("deposit_required");
+    setBoolean("deposit_paid");
+    if (form.elements.namedItem("scheduled_date")) {
+      setText("scheduled_date");
+      payload.visit_date = payload.scheduled_date;
+    }
+    setText("assigned_user_id");
+    if (form.elements.namedItem("blockers")) {
+      payload.blockers = String(data.get("blockers") || "").split(/[\n,]/).map((item) => item.trim()).filter(Boolean);
+    }
+    return payload;
   }
 
   const ticketLifecycleTransitions = {
@@ -12320,11 +12693,15 @@
       && ["field_work_complete", "completion_review", "invoice_review", "invoice_sent", "partially_paid", "paid"].includes(stage)
       && !/\blandscap(?:e|ing|er|ers)?\b|\blawn\b|\bmow(?:ing)?\b/i.test([ticket?.title, ticket?.requestedService, ticket?.scopeOfWork, ticket?.detail].filter(Boolean).join(" "));
     const rentDeductionCloseControl = rentDeductionCloseEligible ? `<div class="ticket-rent-deduction-control">
-      <label>Rent deduction amount
+      <label>Rent-credit amount
         <span class="ticket-rent-deduction-input"><span aria-hidden="true">$</span><input type="number" min="0.01" max="350" step="0.01" inputmode="decimal" data-rent-deduction-amount aria-label="Rent deduction amount" placeholder="0.00" value="${Number(ticket?.proposedPrice) > 0 && Number(ticket.proposedPrice) <= 350 ? escapeHtml(Number(ticket.proposedPrice).toFixed(2)) : ""}"></span>
       </label>
-      <small>Closes this ticket without an invoice and counts toward the $350 monthly limit.</small>
-      <button type="button" class="secondary-action ticket-rent-deduction-close" data-action="owner-close-rent-deduction" data-id="${escapeHtml(ticket.id)}"${isCanonical ? "" : ` data-ticket-source="${escapeHtml(ticket.source)}"`}>${buttonContent("Close as Rent Deduction", "complete-reminder")}</button>
+      <label>Rent period<input type="month" data-rent-credit-period value="${escapeHtml(todayKey().slice(0, 7))}"></label>
+      <label class="span-full">Reason<textarea rows="2" data-rent-credit-reason placeholder="Why this qualifying non-landscaping work is credited toward rent."></textarea></label>
+      <label class="span-full">Accounting note<textarea rows="2" data-rent-credit-accounting-note placeholder="Accounting treatment and property reference."></textarea></label>
+      <label class="ticket-invoice-check"><input type="checkbox" data-rent-credit-agreement> Supporting agreement is connected</label>
+      <small>Rent credit replaces only the payment requirement. Scope, approvals, tasks, documents, costs, and completion evidence still must be resolved.</small>
+      <button type="button" class="secondary-action ticket-rent-deduction-close" data-action="owner-close-rent-deduction" data-id="${escapeHtml(ticket.id)}"${isCanonical ? "" : ` data-ticket-source="${escapeHtml(ticket.source)}"`}>${buttonContent("Close as Rent Credit", "complete-reminder")}</button>
     </div>` : "";
     if (!isCanonical) {
       return `<div class="ticket-next-move-panel is-source-preview">
@@ -13126,15 +13503,26 @@
     const direct = tickets.find((item) => item.id === idText && (!sourceText || item.source === sourceText));
     if (direct) return direct;
     if (sourceText === "ticket") return tickets.find((item) => item.id === idText) || null;
+    const sourceRecord = sourceText === "expense"
+      ? (state.data.financial?.expenses || []).find((item) => String(item.id) === idText)
+      : sourceText === "invoice"
+        ? (state.data.financial?.invoices || []).find((item) => String(item.id) === idText)
+        : sourceText === "document"
+          ? (state.data.financial?.documents || []).find((item) => String(item.id) === idText)
+          : null;
+    if (sourceRecord?.ticketId || sourceRecord?.ticket_id) {
+      const linked = tickets.find((item) => String(item.id) === String(sourceRecord.ticketId || sourceRecord.ticket_id));
+      if (linked) return linked;
+    }
     const sourceMatch = tickets.find((item) => {
       const itemSource = item.sourceType || item.source;
+      if (sourceText === "quote") return itemSource === "quote" && item.sourceId === idText || item.quoteId === idText;
+      if (sourceText === "job") return itemSource === "job" && item.sourceId === idText || item.jobId === idText;
+      if (["document", "invoice"].includes(sourceText)) return itemSource === "document" && item.sourceId === idText || item.invoiceId === idText || item.quoteId === idText;
+      if (sourceText === "customer") return item.customerId === idText;
+      if (sourceText === "property") return item.propertyId === idText;
       if (sourceText && itemSource !== sourceText && item.source !== sourceText) return false;
-      return item.sourceId === idText
-        || item.quoteId === idText
-        || item.jobId === idText
-        || item.invoiceId === idText
-        || item.customerId === idText
-        || item.propertyId === idText;
+      return item.sourceId === idText || item.quoteId === idText || item.jobId === idText || item.invoiceId === idText;
     });
     if (sourceMatch) return sourceMatch;
     return tickets.find((item) => item.id === idText) || null;
@@ -13168,7 +13556,86 @@
     </div>`;
   }
 
-  function openTicketDrawer(source, id) {
+  function renderUnifiedTicketHeader(ticket) {
+    const blocker = ticket.blockers?.[0] || "";
+    return `<header class="ticket-unified-header" data-drawer-breadcrumbs>
+      <div class="ticket-unified-header-top">
+        <button type="button" class="ticket-unified-back" data-action="close-drawer" aria-label="Close ticket"><span class="ticket-desktop-label">&#8592; Back to ${escapeHtml(detailDrawerSectionLabel())}</span><span class="ticket-mobile-label">&#8592; Tickets</span></button>
+        <div class="ticket-unified-header-actions">
+          <button type="button" class="secondary-action" data-action="focus-ticket-section" data-section="overview" data-id="${escapeHtml(ticket.id)}"><span class="ticket-desktop-label">Edit Ticket</span><span class="ticket-mobile-label">Edit</span></button>
+          <details class="ticket-more-actions">
+            <summary><span class="ticket-desktop-label">More actions</span><span class="ticket-mobile-label">More</span></summary>
+            <div>
+              <button type="button" data-action="copy-ticket-link" data-id="${escapeHtml(ticket.id)}">Copy ticket link</button>
+              <button type="button" data-action="focus-ticket-section" data-section="scheduling" data-id="${escapeHtml(ticket.id)}">Reassign owner</button>
+              <button type="button" data-action="focus-ticket-section" data-section="owner-controls" data-id="${escapeHtml(ticket.id)}">Change status</button>
+              ${["closed", "cancelled"].includes(ticketStage(ticket)) ? `<button type="button" data-action="focus-ticket-section" data-section="owner-controls" data-id="${escapeHtml(ticket.id)}">Reopen ticket</button>` : `<button type="button" class="danger" data-action="focus-ticket-section" data-section="owner-controls" data-id="${escapeHtml(ticket.id)}">Cancel ticket</button>`}
+            </div>
+          </details>
+          <button type="button" class="ticket-unified-close" data-action="close-drawer" aria-label="Close ticket">&#215;</button>
+        </div>
+      </div>
+      <div class="ticket-unified-title-row">
+        <div><span class="ticket-number">${escapeHtml(ticket.number)}</span><h3>${escapeHtml(ticket.title)}</h3><p>${escapeHtml(ticket.customer)}${ticket.property ? ` / ${escapeHtml(ticket.property)}` : ""}</p></div>
+        <span class="status-badge ticket-stage">${escapeHtml(ticket.stageLabel)}</span>
+      </div>
+      <dl class="ticket-unified-meta">
+        <div><dt>Priority</dt><dd>${escapeHtml(ticket.priority || "Normal")}</dd></div>
+        <div><dt>Scheduled</dt><dd>${escapeHtml(formatDate(ticket.scheduledDate || ticket.dateRaw) || "Not scheduled")}</dd></div>
+        <div><dt>Owner</dt><dd>${escapeHtml(ticket.ownerLabel || "Unassigned")}</dd></div>
+        <div><dt>Next action</dt><dd>${escapeHtml(ticket.nextAction || "Review ticket")}</dd></div>
+        <div class="${blocker ? "has-blocker" : ""}"><dt>Primary blocker</dt><dd>${escapeHtml(blocker || "None")}</dd></div>
+      </dl>
+    </header>`;
+  }
+
+  function renderUnifiedTicketSummaryRail(ticket) {
+    const { completed, notApplicable, overrides } = ticketCompletionChecklistState(ticket);
+    const resolved = ticketCompletionChecklistItems.filter((item) => ticketCompletionItemComplete(ticket, item.key, completed) || notApplicable[item.key] || overrides[item.key]).length;
+    const percent = Math.round((resolved / ticketCompletionChecklistItems.length) * 100);
+    const tasks = ticketWorkComponents(ticket);
+    const assignments = [...new Set(tasks.map((task) => task.assigneeLabel).filter((label) => label && label !== "Unassigned"))].slice(0, 5);
+    const invoice = findInvoiceForTicket(ticket);
+    const financialInvoice = invoice && (invoice.invoice_number || Object.prototype.hasOwnProperty.call(invoice, "amount_paid"));
+    const invoiceSummary = financialInvoice ? financialCalculator().invoiceSummary(invoice) : null;
+    const quote = findQuoteForTicket(ticket);
+    const history = ticketHistoryFor(ticket).slice(0, 4);
+    return `<aside class="ticket-unified-summary" aria-label="Ticket summary">
+      <section><h4>Overall Progress</h4><div class="ticket-progress-summary"><span class="ticket-progress-ring" style="--ticket-progress:${percent}%"><strong>${percent}%</strong></span><div><strong>${resolved} of ${ticketCompletionChecklistItems.length}</strong><small>requirements resolved</small></div></div></section>
+      <section><h4>Assignments</h4>${assignments.length ? `<ul>${assignments.map((label) => `<li><span>${escapeHtml(initialsForName(label, ""))}</span><strong>${escapeHtml(label)}</strong></li>`).join("")}</ul>` : `<p>No individual task assignments yet.</p>`}</section>
+      <section><h4>Key Dates</h4><dl><div><dt>Scheduled</dt><dd>${escapeHtml(formatDate(ticket.scheduledDate || ticket.dateRaw) || "Not set")}</dd></div><div><dt>Due</dt><dd>${escapeHtml(formatDate(ticket.dueDate) || "Not set")}</dd></div><div><dt>Created</dt><dd>${escapeHtml(formatDate(ticket.createdAtRaw) || "Not set")}</dd></div></dl></section>
+      ${canManageMoneyWorkflow() ? `<section><h4>Financial Summary</h4><dl><div><dt>Quote total</dt><dd>${quote ? ticketMoneyText(quote.total) : "Not quoted"}</dd></div><div><dt>Invoice total</dt><dd>${invoiceSummary ? moneyCurrency(invoiceSummary.total) : invoice ? ticketMoneyText(invoice.total) : "Not invoiced"}</dd></div><div><dt>Balance</dt><dd>${invoiceSummary ? moneyCurrency(invoiceSummary.balance) : "Not recorded"}</dd></div></dl></section>` : ""}
+      <section><h4>Recent Activity</h4>${history.length ? `<ol>${history.map((event) => `<li><strong>${escapeHtml(event.title)}</strong><small>${escapeHtml(event.createdAt || "")}</small></li>`).join("")}</ol>` : `<p>No audit events yet.</p>`}</section>
+    </aside>`;
+  }
+
+  function renderUnifiedTicketOwnerFooter(ticket) {
+    if (currentSessionRole() !== "owner") return "";
+    return `<footer class="ticket-owner-footer">
+      <span>Owner controls are audited. Overrides never create evidence or mark an unpaid invoice Paid.</span>
+      <button type="button" data-action="review-complete-all-parts" data-id="${escapeHtml(ticket.id)}">Complete All Parts</button>
+    </footer>`;
+  }
+
+  function renderTicketOverrideReview(ticket) {
+    const { completed, notApplicable, overrides } = ticketCompletionChecklistState(ticket);
+    const incomplete = ticketCompletionChecklistItems.filter((item) => (
+      !ticketCompletionItemComplete(ticket, item.key, completed) && !notApplicable[item.key] && !overrides[item.key]
+    ));
+    return `<dialog class="ticket-override-modal" open aria-modal="true" aria-labelledby="ticket-override-title">
+      <form data-complete-all-parts-form data-ticket-id="${escapeHtml(ticket.id)}">
+        <header><div><p class="eyebrow">Owner Review</p><h3 id="ticket-override-title">Complete All Parts</h3><p>This records explicit overrides; it does not fabricate approvals, evidence, documents, tasks, costs, photos, or payment.</p></div><button type="button" data-action="cancel-complete-all-parts" aria-label="Cancel">&#215;</button></header>
+        <section><h4>${escapeHtml(String(incomplete.length))} incomplete requirement${incomplete.length === 1 ? "" : "s"}</h4>
+          ${incomplete.length ? `<ul>${incomplete.map((item) => `<li><strong>${escapeHtml(item.label)}</strong><span>${escapeHtml(item.detail)}</span></li>`).join("")}</ul>` : `<p>Every requirement is already resolved. No override is needed.</p>`}
+        </section>
+        ${incomplete.length ? `<label>Required override explanation<textarea name="reason" rows="4" required placeholder="Explain why work may continue or close without these requirements."></textarea></label>
+        <label class="ticket-override-confirm"><input type="checkbox" name="confirmed" required> I understand these items will be marked Owner Override, not Complete, and unpaid invoices will remain unpaid.</label>` : ""}
+        <div class="drawer-actions"><button type="button" class="secondary-action" data-action="cancel-complete-all-parts">Cancel</button>${incomplete.length ? `<button type="submit" class="danger">Confirm Owner Overrides</button>` : ""}</div>
+      </form>
+    </dialog>`;
+  }
+
+  function openTicketDrawer(source, id, options = {}) {
     if (!els.detailDrawer || !els.detailContent) return;
     const ticket = findTicketForDrawer(source, id);
     if (!ticket) {
@@ -13185,59 +13652,71 @@
         : sourceType === "document"
           ? state.data.documents.find((item) => item.id === sourceId)
           : null;
+    const routeSection = options.section || ticketDrawerRouteState().section || "overview";
+    const panel = els.detailDrawer.querySelector(".drawer-panel");
+    const previousScroll = options.preserveScroll ? panel?.scrollTop || 0 : 0;
+    const openSections = options.preserveOpenSections
+      ? qsa("[data-ticket-section][open]", els.detailContent).map((item) => item.dataset.ticketSection)
+      : [];
     try {
-      openDetailDrawer();
-      els.detailContent.innerHTML = `
-      <div class="drawer-content ticket-detail-drawer">
-        <p class="eyebrow">Unified Job Ticket</p>
-        <div class="ticket-drawer-heading">
-          <div>
-            <h3>${escapeHtml(ticket.title)}</h3>
-            <p>${escapeHtml(ticket.customer)}${ticket.property ? ` / ${escapeHtml(ticket.property)}` : ""}</p>
-          </div>
-        <div class="ticket-drawer-status">
-          <span class="ticket-number">${escapeHtml(ticket.number)}</span>
-          <span class="ticket-stage">${escapeHtml(ticket.stageLabel)}</span>
+      state.ticketDrawerRendering = true;
+      state.activeTicketDrawerId = ticket.id;
+      state.activeTicketDrawerSection = routeSection;
+      els.detailDrawer.classList.add("has-unified-ticket");
+      els.detailDrawer.querySelector(":scope > .drawer-panel > .drawer-close")?.style.setProperty("display", "none", "important");
+      els.detailContent.innerHTML = `<div class="drawer-content ticket-detail-drawer unified-ticket-drawer">
+        ${renderUnifiedTicketHeader(ticket)}
+        <div class="ticket-unified-layout">
+          <main class="ticket-unified-main">${renderTicketWorkbench(ticket, { openSection: routeSection, sourceItem })}</main>
+          ${renderUnifiedTicketSummaryRail(ticket)}
         </div>
-      </div>
-        ${renderTicketDrawerActionStrip(ticket)}
-        <nav class="ticket-workspace-nav" aria-label="Ticket workspace sections">
-          <a href="#ticket-next-action">Overview</a>
-          <a href="#ticket-workbench">Checklist &amp; details</a>
-          <a href="#ticket-closeout">Proof &amp; closeout</a>
-          <a href="#ticket-history">History</a>
-        </nav>
-        <section class="ticket-single-box" aria-label="Complete ticket record">
-        <section class="ticket-drawer-operating-grid" id="ticket-next-action" aria-label="Ticket operating controls">
-          ${renderTicketDetailCommandCenter(ticket)}
-        </section>
-        ${renderTicketWorkbench(ticket)}
-        ${renderTicketWorkAssignmentBridge(ticket, sourceItem)}
-        ${renderTicketSiteProofBridge(ticket, sourceItem)}
-        ${renderTicketInvoiceBridge(ticket)}
-        ${renderTicketHandoffActions(ticket)}
-        ${renderTicketRequirements(ticket)}
-        ${renderTicketHistory(ticket)}
-        ${renderTicketSourceActions(ticket)}
-        </section>
-        ${sourceType === "document" && sourceItem ? renderTicketDocumentSource(sourceItem) : ""}
-        ${sourceType === "quote" && sourceItem ? renderCallPanel(callPanelContext("quote_submission", sourceItem.id)) : ""}
-        ${sourceType === "quote" && sourceItem ? `<div data-call-outcome-slot></div>${renderActivityTimeline({
-          leadId: sourceItem.id,
-          leadType: "quote_submission",
-          name: sourceItem.name,
-          companyProperty: [sourceItem.propertyType, sourceItem.city, sourceItem.service].filter(Boolean).join(" / "),
-          phone: sourceItem.phone,
-          email: sourceItem.email
-        })}` : ""}
-      </div>
-    `;
-      restoreTicketWorkbenchDraft(els.detailContent.querySelector("[data-ticket-workbench-form]"));
+        <div data-ticket-override-modal-slot></div>
+        ${renderUnifiedTicketOwnerFooter(ticket)}
+      </div>`;
+      qsa("[data-ticket-workbench-form]", els.detailContent).forEach(restoreTicketWorkbenchDraft);
+      qsa("[data-quote-builder]", els.detailContent).forEach(updateQuoteBuilderPreview);
+      openSections.forEach((key) => {
+        const section = els.detailContent.querySelector(`[data-ticket-section="${cssEscape(key)}"]`);
+        if (section) section.open = true;
+      });
+      openDetailDrawer();
+      requestAnimationFrame(() => {
+        if (panel && options.preserveScroll) panel.scrollTop = previousScroll;
+      });
+      window.setTimeout(() => {
+        state.ticketDrawerRendering = false;
+        if (!options.fromRoute) updateTicketDrawerRoute(ticket.id, routeSection, { replace: options.replaceRoute === true || Boolean(ticketDrawerRouteState().ticketId) });
+      }, 0);
     } catch (error) {
+      state.ticketDrawerRendering = false;
       console.error("Ticket drawer failed to render", error);
       openDetailDrawer();
       els.detailContent.innerHTML = renderTicketDrawerFallback(source, id, error.message || "The ticket matched, but the detail panel could not render it.", "The ticket matched, but the detail panel hit a rendering error.");
     }
+  }
+
+  function rerenderOpenTicketDrawer(ticketId = state.activeTicketDrawerId, options = {}) {
+    if (!ticketId) return;
+    openTicketDrawer("ticket", ticketId, {
+      section: options.section || state.activeTicketDrawerSection || "overview",
+      replaceRoute: true,
+      preserveScroll: options.preserveScroll !== false,
+      preserveOpenSections: options.preserveOpenSections !== false
+    });
+  }
+
+  function restoreTicketDrawerFromRoute() {
+    const route = ticketDrawerRouteState();
+    if (!route.ticketId || state.ticketDrawerRestoring) return false;
+    const ticket = findTicketForDrawer("ticket", route.ticketId);
+    if (!ticket) return false;
+    state.ticketDrawerRestoring = true;
+    try {
+      openTicketDrawer("ticket", ticket.id, { section: route.section, fromRoute: true, replaceRoute: true });
+    } finally {
+      state.ticketDrawerRestoring = false;
+    }
+    return true;
   }
 
   function openMoneyBudgetDrawer(id) {
@@ -13638,13 +14117,14 @@
   function ticketWorkComponents(ticket = {}) {
     if (ticket.source !== "ticket") return [];
     const snapshots = latestWorkComponentSnapshots(ticket);
-    const { completed, notApplicable } = ticketCompletionChecklistState(ticket);
+    const { completed, notApplicable, overrides } = ticketCompletionChecklistState(ticket);
     return ticketCompletionChecklistItems.map((item, index) => {
       const meta = workComponentMeta[item.key] || { group: "Internal", owner: ticket.ownerLabel || "Owner", proof: item.detail };
       const snapshot = snapshots.get(item.key) || {};
       const optimistic = state.ownerKanbanOptimisticAssignments.get(`${ticket.id}:${item.key}`) || null;
       const resolvedByTicket = ticketCompletionItemComplete(ticket, item.key, completed);
       const naReason = notApplicable[item.key] || "";
+      const overrideReason = overrides[item.key] || "";
       const savedAssignedUserId = snapshot.assignedUserId
         || (meta.group === "Work" ? ticket.assignedUserId : "")
         || "";
@@ -13653,7 +14133,7 @@
         : savedAssignedUserId;
       const statusValue = optimistic?.status || snapshot.status;
       const savedStatus = ownerKanbanColumns.some((column) => column.key === statusValue) ? statusValue : "";
-      const status = resolvedByTicket || naReason
+      const status = resolvedByTicket || naReason || overrideReason
         ? "done"
         : savedStatus && savedStatus !== "done"
           ? savedStatus
@@ -13678,7 +14158,8 @@
         dueDateLabel: dueDate ? formatDate(dueDate) : "No due date",
         priority: snapshot.priority || ticketPriorityLabel(ticket),
         blockerReason: snapshot.blockerReason || "",
-        completionMode: naReason ? "N/A" : resolvedByTicket ? "Complete" : "",
+        completionMode: overrideReason ? "Owner Override" : naReason ? "N/A" : resolvedByTicket ? "Complete" : "",
+        overrideReason,
         completedBy: snapshot.completedBy || snapshot.actorEmail || "",
         completedAt: snapshot.completedAt || "",
         updatedAtRaw: snapshot.updatedAtRaw || ticket.updatedAtRaw || "",
@@ -16164,15 +16645,11 @@ Requirements:
     </section>`;
   }
 
-  function openFinancialQuoteCreateDrawer(ticket = null) {
-    if (!els.detailDrawer || !els.detailContent) return;
-    openDetailDrawer();
-    els.detailContent.innerHTML = `<div class="drawer-content document-drawer">
-      <div class="document-drawer-heading"><div><p class="eyebrow">New Quote</p><h3>Prepare customer quote</h3><p>Build the customer-facing scope and price before invoice preparation.</p></div></div>
-      <form class="drawer-form document-edit-form quote-builder-form" data-document-form data-quote-builder data-ticket-id="${escapeHtml(ticket?.id || "")}">
+  function renderFinancialQuoteForm(ticket = null, options = {}) {
+    return `<form class="drawer-form document-edit-form quote-builder-form ${options.embedded ? "is-embedded" : ""}" data-document-form data-quote-builder data-ticket-id="${escapeHtml(ticket?.id || "")}">
         <input type="hidden" name="document_type" value="estimate">
         <label>Client name<input name="client_name" value="${escapeHtml(ticket?.customer || "")}" required></label>
-        <label>Client email<input name="client_email" type="email" value="${escapeHtml(ticket?.email || "")}"></label>
+        <label>Client email<input name="client_email" type="email" value="${escapeHtml(ticket?.contactEmail || ticket?.email || "")}"></label>
         <label class="span-full">Property / project<input name="property_name" value="${escapeHtml(ticket?.property || "")}" placeholder="Service property or project name"></label>
         <label class="span-full">Line items
           <textarea name="line_items_text" rows="6" placeholder="Description | quantity | unit price" required>${escapeHtml(`${ticket?.scopeOfWork || ticket?.detail || ticket?.requestedService || "Landscape service"} | 1 | ${ticket?.proposedPrice || 0}`)}</textarea>
@@ -16187,7 +16664,35 @@ Requirements:
         <label class="span-full">Terms<textarea name="terms" rows="3" placeholder="Scope assumptions, expiration, payment, and change-order terms.">Quote valid for 14 days. Changes outside the listed scope require written approval.</textarea></label>
         <section class="quote-builder-preview span-full" data-quote-builder-preview aria-live="polite"></section>
         <div class="drawer-actions"><button type="submit">${buttonContent("Create Quote", "save")}</button></div>
-      </form>
+      </form>`;
+  }
+
+  function openFinancialQuoteCreateDrawer(ticket = null) {
+    if (!els.detailDrawer || !els.detailContent) return;
+    if (ticket?.id && state.activeTicketDrawerId === ticket.id) {
+      const section = els.detailContent.querySelector('[data-ticket-section="quote"]');
+      if (section) {
+        section.open = true;
+        let builder = section.querySelector("[data-quote-builder]");
+        if (!builder) {
+          const body = section.querySelector(".ticket-workbench-section-body");
+          const completionForm = body?.querySelector("[data-ticket-completion-form]");
+          const markup = `<div class="ticket-quote-revision-builder" data-ticket-quote-revision-builder><div class="ticket-connected-empty"><strong>New quote revision</strong><p>This creates a new connected quote record. The approved quote remains in the audit history.</p></div>${renderFinancialQuoteForm(ticket, { embedded: true })}</div>`;
+          if (completionForm) completionForm.insertAdjacentHTML("beforebegin", markup);
+          else body?.insertAdjacentHTML("beforeend", markup);
+          builder = section.querySelector("[data-quote-builder]");
+        }
+        updateQuoteBuilderPreview(builder);
+        section.scrollIntoView({ behavior: "smooth", block: "start" });
+        updateTicketDrawerRoute(ticket.id, "quote", { replace: true });
+        builder?.querySelector("input, textarea")?.focus();
+      }
+      return;
+    }
+    openDetailDrawer();
+    els.detailContent.innerHTML = `<div class="drawer-content document-drawer">
+      <div class="document-drawer-heading"><div><p class="eyebrow">New Quote</p><h3>Prepare customer quote</h3><p>Build the customer-facing scope and price before invoice preparation.</p></div></div>
+      ${renderFinancialQuoteForm(ticket)}
     </div>`;
     updateQuoteBuilderPreview(els.detailContent.querySelector("[data-quote-builder]"));
     renderDetailDrawerBreadcrumbs();
@@ -19843,6 +20348,8 @@ Requirements:
     if (!els.detailDrawer) return;
     els.detailDrawer.hidden = true;
     els.detailDrawer.classList.remove("is-open", "is-closing");
+    els.detailDrawer.classList.remove("has-unified-ticket");
+    els.detailDrawer.querySelector(":scope > .drawer-panel > .drawer-close")?.style.removeProperty("display");
     els.detailDrawer.setAttribute("aria-hidden", "true");
     if (els.detailContent) els.detailContent.innerHTML = "";
     document.documentElement.classList.remove("is-detail-drawer-open");
@@ -19856,6 +20363,19 @@ Requirements:
   }
 
   function closeSubmissionDrawer(options = {}) {
+    const closingTicketId = state.activeTicketDrawerId;
+    if (closingTicketId && !options.keepRoute) {
+      const route = ticketDrawerRouteState();
+      if (route.ticketId && state.ticketDrawerHistoryOwned && !options.immediate) {
+        history.back();
+        return;
+      }
+      clearTicketDrawerRoute();
+    }
+    state.activeTicketDrawerId = "";
+    state.activeTicketDrawerSection = "overview";
+    state.ticketOverrideReviewId = "";
+    state.ticketDrawerHistoryOwned = false;
     state.selectedSubmissionId = "";
     state.selectedJobId = "";
     if (!els.detailDrawer || els.detailDrawer.hidden) return;
@@ -21947,6 +22467,28 @@ Requirements:
   }
 
   function bindEvents() {
+    document.addEventListener("toggle", (event) => {
+      const section = event.target?.closest?.("[data-ticket-section]");
+      if (!section?.open || !state.activeTicketDrawerId || state.ticketDrawerRendering) return;
+      state.activeTicketDrawerSection = section.dataset.ticketSection || "overview";
+      updateTicketDrawerRoute(state.activeTicketDrawerId, state.activeTicketDrawerSection, { replace: true });
+    }, true);
+
+    window.addEventListener("popstate", async () => {
+      const hashSection = window.location.hash.replace(/^#/, "");
+      if (hashSection) state.activeSection = dashboardSectionForRole(hashSection);
+      const route = ticketDrawerRouteState();
+      if (route.ticketId) {
+        if (!restoreTicketDrawerFromRoute() && state.ticketsReady) {
+          setDashboardState("The linked ticket could not be found.", "error");
+        }
+      } else if (state.activeTicketDrawerId) {
+        closeSubmissionDrawer({ immediate: true, keepRoute: true });
+      }
+      await render();
+      if (route.ticketId) restoreTicketDrawerFromRoute();
+    });
+
     window.addEventListener("hashchange", async () => {
       const hashSection = window.location.hash.replace(/^#/, "");
       if (!hashSection) return;
@@ -22639,22 +23181,20 @@ Requirements:
         return;
       }
 
-      if (target.matches("[data-completion-na]")) {
+      if (target.matches("[data-completion-complete], [data-completion-na], [data-completion-override]")) {
         const item = target.closest("[data-completion-item]");
+        const controls = qsa("[data-completion-complete], [data-completion-na], [data-completion-override]", item);
+        if (target.checked) controls.filter((control) => control !== target).forEach((control) => { control.checked = false; });
         const complete = item?.querySelector("[data-completion-complete]");
-        if (complete) {
-          if (target.checked) complete.checked = false;
-          complete.disabled = target.checked;
+        const hasException = Boolean(item?.querySelector("[data-completion-na]:checked, [data-completion-override]:checked"));
+        if (complete && !complete.hasAttribute("data-required-connection")) complete.disabled = hasException;
+        item?.classList.toggle("is-resolved", controls.some((control) => control.checked));
+        item?.classList.toggle("is-override", Boolean(item?.querySelector("[data-completion-override]:checked")));
+        const form = item?.closest("[data-ticket-completion-form]");
+        if (form && hasException && !form.querySelector("[data-completion-closeout-note]")) {
+          const row = form.querySelector(".ticket-section-save-row");
+          row?.insertAdjacentHTML("beforebegin", `<label class="ticket-completion-closeout-note">Exception or override explanation<textarea data-completion-closeout-note rows="2" placeholder="Required for N/A or Owner Override."></textarea></label>`);
         }
-        item?.classList.toggle("is-resolved", target.checked || Boolean(complete?.checked));
-        return;
-      }
-
-      if (target.matches("[data-completion-complete]")) {
-        const item = target.closest("[data-completion-item]");
-        const notApplicable = item?.querySelector("[data-completion-na]");
-        if (target.checked && notApplicable) notApplicable.checked = false;
-        item?.classList.toggle("is-resolved", target.checked || Boolean(notApplicable?.checked));
         return;
       }
 
@@ -23149,6 +23689,132 @@ Requirements:
       if (action !== "toggle-global-add") setGlobalAddOpen(false);
       if (target.closest("[data-global-search-panel]")) closeGlobalSearchPanel();
 
+      if (action === "focus-ticket-section") {
+        const sectionKey = target.dataset.section || "overview";
+        const section = els.detailContent?.querySelector(`[data-ticket-section="${cssEscape(sectionKey)}"]`);
+        if (section) {
+          section.open = true;
+          state.activeTicketDrawerSection = sectionKey;
+          updateTicketDrawerRoute(state.activeTicketDrawerId || id, sectionKey, { replace: true });
+          section.scrollIntoView({ behavior: "smooth", block: "start" });
+          section.querySelector("input:not([type='hidden']), textarea, select, button")?.focus({ preventScroll: true });
+        }
+        return;
+      }
+
+      if (action === "copy-ticket-link") {
+        const url = new URL(window.location.href);
+        url.searchParams.set("ticket", id || state.activeTicketDrawerId);
+        url.searchParams.set("ticketSection", state.activeTicketDrawerSection || "overview");
+        try {
+          await navigator.clipboard.writeText(url.toString());
+          setDashboardState("Ticket link copied.");
+        } catch {
+          window.prompt("Copy ticket link", url.toString());
+        }
+        return;
+      }
+
+      if (action === "review-complete-all-parts") {
+        if (currentSessionRole() !== "owner") {
+          setDashboardState("Only the Owner can review all incomplete requirements.", "error");
+          return;
+        }
+        const ticket = findTicketForDrawer("ticket", id);
+        const slot = els.detailContent?.querySelector("[data-ticket-override-modal-slot]");
+        if (ticket && slot) {
+          state.ticketOverrideReviewId = ticket.id;
+          slot.innerHTML = renderTicketOverrideReview(ticket);
+          slot.querySelector("textarea")?.focus();
+        }
+        return;
+      }
+
+      if (action === "cancel-complete-all-parts") {
+        state.ticketOverrideReviewId = "";
+        els.detailContent?.querySelector("[data-ticket-override-modal-slot]")?.replaceChildren();
+        return;
+      }
+
+      if (action === "focus-ticket-task") {
+        const task = ticketWorkComponents(findTicketForDrawer("ticket", target.dataset.ticketId || state.activeTicketDrawerId) || {})
+          .find((item) => item.key === target.dataset.componentKey);
+        const row = target.closest("[data-task-key]");
+        if (task && row) {
+          row.classList.toggle("is-editing");
+          let editor = row.querySelector("[data-task-editor]");
+          if (!editor) {
+            row.insertAdjacentHTML("beforeend", `<div class="ticket-task-editor" data-task-editor>
+              <label>Status<select data-task-edit-status>${ownerKanbanColumns.map((column) => `<option value="${escapeHtml(column.key)}"${column.key === task.status ? " selected" : ""}>${escapeHtml(column.label)}</option>`).join("")}</select></label>
+              <label>Assigned employee<select data-task-edit-assignee>${workAssignmentOptions(task.assignedUserId, task)}</select></label>
+              <label>Due date<input type="date" data-task-edit-due value="${escapeHtml(task.dueDate || "")}"></label>
+              <label>Blocker / next action<textarea data-task-edit-blocker rows="2">${escapeHtml(task.blockerReason || "")}</textarea></label>
+              <button type="button" data-action="save-ticket-task" data-ticket-id="${escapeHtml(task.ticketId)}" data-component-key="${escapeHtml(task.key)}">Save Task</button>
+            </div>`);
+            editor = row.querySelector("[data-task-editor]");
+          }
+          editor?.querySelector("select")?.focus();
+        }
+        return;
+      }
+
+      if (action === "save-ticket-task") {
+        const editor = target.closest("[data-task-editor]");
+        try {
+          target.disabled = true;
+          await updateWorkComponent(target.dataset.ticketId, target.dataset.componentKey, {
+            status: editor?.querySelector("[data-task-edit-status]")?.value,
+            assignedUserId: editor?.querySelector("[data-task-edit-assignee]")?.value || "",
+            dueDate: editor?.querySelector("[data-task-edit-due]")?.value || "",
+            blockerReason: editor?.querySelector("[data-task-edit-blocker]")?.value || ""
+          }, { refresh: false });
+          rerenderOpenTicketDrawer(target.dataset.ticketId, { section: "tasks" });
+          setDashboardState("Task saved.");
+        } catch (error) {
+          target.disabled = false;
+          setDashboardState(error.message || "Task could not be saved.", "error");
+        }
+        return;
+      }
+
+      if (action === "load-ticket-financial-invoice") {
+        try {
+          target.disabled = true;
+          setDashboardState("Loading connected invoice...");
+          const detail = await dashboardFinancialRequest("invoice-detail", { invoiceId: id });
+          if (detail?.invoice) {
+            state.data.financial.invoices = [detail.invoice, ...(state.data.financial?.invoices || []).filter((item) => item.id !== detail.invoice.id)];
+          }
+          rerenderOpenTicketDrawer(target.dataset.ticketId || state.activeTicketDrawerId, { section: "invoice" });
+          setDashboardState("Connected invoice loaded.");
+        } catch (error) {
+          target.disabled = false;
+          setDashboardState(error.message || "Connected invoice could not be loaded.", "error");
+        }
+        return;
+      }
+
+      let linkedRecordSection = {
+        "open-submission": ["quote", "quote"],
+        "edit-job": ["job", "scheduling"],
+        "open-document": ["document", "documents"],
+        "open-financial-invoice": ["invoice", "invoice"],
+        "open-money-expense": ["expense", "costs"],
+        "open-money-document": ["document", "documents"]
+      }[action];
+      if (action === "open-document") {
+        const documentRecord = (state.data.documents || []).find((item) => item.id === id);
+        if (documentRecord?.type === "estimate") linkedRecordSection = ["document", "quote"];
+        if (documentRecord?.type === "invoice") linkedRecordSection = ["document", "invoice"];
+      }
+      if (linkedRecordSection) {
+        const linkedTicket = findTicketForDrawer(linkedRecordSection[0], id);
+        if (linkedTicket?.source === "ticket") {
+          openTicketDrawer("ticket", linkedTicket.id, { section: linkedRecordSection[1] });
+          return;
+        }
+      }
+
       if (target.dataset.export) {
         exportData(target.dataset.export);
         return;
@@ -23412,6 +24078,13 @@ Requirements:
           return;
         }
         try {
+          if (findInvoiceForTicket(ticket)) {
+            rerenderOpenTicketDrawer(ticket.id, { section: "invoice" });
+            setDashboardState("This ticket already has a connected invoice. No duplicate was created.");
+            return;
+          }
+          target.disabled = true;
+          target.dataset.pending = "true";
           const result = await dashboardFinancialRequest("create-invoice", {
             issueDate: todayKey(),
             dueDate: addDaysKey(todayKey(), 30),
@@ -23436,10 +24109,12 @@ Requirements:
               notes: `Invoice ${invoice.invoice_number || invoice.id} was created and connected from the ticket.`,
               newValue: { invoiceId: invoice.id, invoiceNumber: invoice.invoice_number || "" }
             });
-            await openFinancialInvoiceDrawer(invoice.id);
+            rerenderOpenTicketDrawer(ticket.id, { section: "invoice" });
           }
-          setDashboardState("Draft invoice created from the ticket. Review it before saving or sending.");
+          setDashboardState("Draft invoice created and connected. Review it inside the ticket before sending.");
         } catch (error) {
+          target.disabled = false;
+          delete target.dataset.pending;
           setDashboardState(error.message || "Draft invoice could not be created.", "error");
         }
         return;
@@ -25219,31 +25894,69 @@ Requirements:
         const payload = ticketCompletionFormPayload(form);
         const workbenchUpdate = form.matches("[data-ticket-workbench-form]") ? ticketWorkbenchUpdatePayload(form) : {};
         payload.ticket = { ...workbenchUpdate, ...payload.ticket };
-        if (Object.keys(payload.notApplicable).length && !payload.notes) {
-          setDashboardState("Add a closeout note explaining why the N/A items do not apply.", "error");
+        if ((Object.keys(payload.notApplicable).length || Object.keys(payload.overrides).length) && !payload.notes) {
+          setDashboardState("Add an explanation for every N/A or Owner Override decision.", "error");
           form.querySelector("[data-completion-closeout-note]")?.focus();
           return;
         }
+        if (Object.keys(payload.overrides).length && currentSessionRole() !== "owner") {
+          setDashboardState("Only the Owner can override a ticket requirement.", "error");
+          return;
+        }
         try {
-          setDashboardState("Saving ticket workbench...");
+          target.disabled = true;
+          const saveState = form.querySelector("[data-ticket-save-state]");
+          if (saveState) saveState.textContent = navigator.onLine ? "Saving..." : "Offline";
+          setDashboardState("Saving ticket section...");
           let ticketId = id;
           if ((form.dataset.ticketSource || "ticket") !== "ticket") {
             const canonical = await ensureJobTicketForSourceRecord(form.dataset.ticketSource, id, workbenchUpdate);
             if (!canonical?.id) throw new Error("The unified Job Ticket could not be created for this record.");
             ticketId = canonical.id;
           }
-          const ticket = await updateJobTicket(ticketId, payload.ticket);
-          await insertJobTicketEvent(ticketId, {
-            event_type: "ticket_completion_checklist_saved",
-            notes: payload.notes || "Ticket Workbench fields and completion checks saved.",
-            new_value: { completed: payload.completed, notApplicable: payload.notApplicable, fieldsUpdated: Object.keys(workbenchUpdate) }
-          });
+          let ticket = Object.keys(payload.ticket).length ? await updateJobTicket(ticketId, payload.ticket) : findTicketForDrawer("ticket", ticketId);
+          if (form.dataset.ticketSectionForm === "scheduling" && payload.ticket.scheduled_date && payload.ticket.assigned_user_id) {
+            const assignmentForm = document.createElement("form");
+            assignmentForm.dataset.ticketId = ticketId;
+            assignmentForm.dataset.ticketSource = "ticket";
+            assignmentForm.dataset.jobId = ticketLinkedScheduledJob(ticket || {})?.id || "";
+            [["visit_date", payload.ticket.scheduled_date], ["visit_window", payload.ticket.work_window || ""], ["assigned_user_id", payload.ticket.assigned_user_id]].forEach(([name, value]) => {
+              const input = document.createElement("input");
+              input.name = name;
+              input.value = value || "";
+              assignmentForm.append(input);
+            });
+            const assignmentResult = await saveTicketWorkAssignment(assignmentForm);
+            ticket = findTicketForDrawer("ticket", assignmentResult.ticketId) || ticket;
+          }
+          if (Object.keys(payload.overrides).length && !isDemoMode()) {
+            const result = await dashboardTicketRequest("owner-override-requirements", {
+              id: ticketId,
+              overrides: payload.overrides,
+              completed: payload.completed,
+              notApplicable: payload.notApplicable,
+              notes: payload.notes,
+              fieldsUpdated: Object.keys(workbenchUpdate)
+            });
+            (result.events || []).map(normalizeJobTicketEvent).forEach((savedEvent) => {
+              state.data.ticketEvents = [savedEvent, ...(state.data.ticketEvents || []).filter((item) => item.id !== savedEvent.id)];
+            });
+          } else {
+            await insertJobTicketEvent(ticketId, {
+              event_type: "ticket_completion_checklist_saved",
+              notes: payload.notes || "Ticket section fields and completion checks saved.",
+              new_value: { completed: payload.completed, notApplicable: payload.notApplicable, overrides: payload.overrides, fieldsUpdated: Object.keys(workbenchUpdate) }
+            });
+          }
           clearTicketWorkbenchDraft(ticketId);
-          await refreshDashboard();
-          openTicketDrawer("ticket", ticket?.id || ticketId);
-          setDashboardState("Ticket Workbench saved.");
+          if (saveState) saveState.textContent = "Saved";
+          rerenderOpenTicketDrawer(ticket?.id || ticketId, { section: form.dataset.ticketSectionForm || state.activeTicketDrawerSection });
+          setDashboardState("Ticket section saved.");
         } catch (error) {
-          setDashboardState(error.message || "Unable to save the Ticket Workbench.", "error");
+          target.disabled = false;
+          const saveState = form.querySelector("[data-ticket-save-state]");
+          if (saveState) saveState.textContent = /conflict|version/i.test(error.message || "") ? "Conflict detected" : "Sync failed";
+          setDashboardState(error.message || "Unable to save the ticket section.", "error");
         }
         return;
       } else if (action === "owner-finalize-ticket") {
@@ -25257,7 +25970,7 @@ Requirements:
         if (form.matches("[data-ticket-workbench-form]")) {
           payload.ticket = { ...ticketWorkbenchUpdatePayload(form), ...payload.ticket };
         }
-        const unresolved = ticketCompletionChecklistItems.filter((item) => !payload.completed.includes(item.key) && !payload.notApplicable[item.key]);
+        const unresolved = ticketCompletionChecklistItems.filter((item) => !payload.completed.includes(item.key) && !payload.notApplicable[item.key] && !payload.overrides[item.key]);
         if (unresolved.length) {
           setDashboardState(`Resolve every completion item first: ${unresolved.map((item) => item.label).join(", ")}.`, "error");
           return;
@@ -25282,8 +25995,12 @@ Requirements:
             ? { ticket: await updateJobTicket(id, { ...payload.ticket, stage: "closed", status: "completed", next_action: "Completed from unified checklist" }) }
             : await dashboardTicketRequest("owner-finalize-ticket", { id, ...payload });
           state.ticketBoardMode = "completed";
-          await refreshDashboard();
-          openTicketDrawer("ticket", result.ticket?.id || id);
+          if (result.ticket) {
+            const normalized = normalizeCanonicalTicket(result.ticket);
+            const index = state.data.tickets.findIndex((item) => item.id === normalized.id);
+            if (index >= 0) state.data.tickets[index] = normalized;
+          }
+          rerenderOpenTicketDrawer(result.ticket?.id || id, { section: "closeout" });
           showDashboardUndo("Ticket completed from the unified checklist.", async () => {
             await updateJobTicket(result.ticket?.id || id, {
               stage: "completion_review",
@@ -25320,8 +26037,7 @@ Requirements:
             notes: noteInput?.value || "",
             nextAction: nextActionInput?.value || target.dataset.nextAction || ticketNextAction(nextStage)
           });
-          await refreshDashboard();
-          openTicketDrawer("ticket", ticket?.id || id);
+          rerenderOpenTicketDrawer(ticket?.id || id, { section: "owner-controls" });
           showDashboardUndo(`Ticket moved to ${ticketStageLabel(normalizeTicketStageForDashboard(nextStage))}.`, previousStage ? async () => {
             await updateJobTicket(ticket?.id || id, {
               stage: previousStage,
@@ -25333,8 +26049,7 @@ Requirements:
               to_stage: previousStage,
               notes: "Most recent stage change was undone."
             });
-            await refreshDashboard();
-            openTicketDrawer("ticket", ticket?.id || id);
+            rerenderOpenTicketDrawer(ticket?.id || id, { section: "owner-controls" });
             setDashboardState("Ticket stage change undone.");
           } : null);
         } catch (error) {
@@ -25368,8 +26083,12 @@ Requirements:
             notes: overrideReason,
             nextAction: nextActionInput?.value || target.dataset.nextAction || ticketNextAction(nextStage)
           });
-          await refreshDashboard();
-          openTicketDrawer("ticket", result.ticket?.id || id);
+          if (result.ticket) {
+            const normalized = normalizeCanonicalTicket(result.ticket);
+            const index = state.data.tickets.findIndex((item) => item.id === normalized.id);
+            if (index >= 0) state.data.tickets[index] = normalized;
+          }
+          rerenderOpenTicketDrawer(result.ticket?.id || id, { section: "owner-controls" });
           setDashboardState(`Owner override moved ticket to ${ticketStageLabel(normalizeTicketStageForDashboard(nextStage))}.`);
         } catch (error) {
           setDashboardState(error.message || "Unable to apply Owner override.", "error");
@@ -25422,8 +26141,16 @@ Requirements:
         const control = target.closest(".ticket-rent-deduction-control");
         const entered = control?.querySelector("[data-rent-deduction-amount]")?.value || "";
         const amount = Number(String(entered).replace(/[$,\s]/g, ""));
+        const rentPeriod = control?.querySelector("[data-rent-credit-period]")?.value || "";
+        const reason = control?.querySelector("[data-rent-credit-reason]")?.value?.trim() || "";
+        const accountingNote = control?.querySelector("[data-rent-credit-accounting-note]")?.value?.trim() || "";
+        const supportingAgreement = Boolean(control?.querySelector("[data-rent-credit-agreement]")?.checked);
         if (!Number.isFinite(amount) || amount <= 0 || amount > 350) {
-          setDashboardState("Enter a rent deduction amount between $0.01 and $350.00.", "error");
+          setDashboardState("Enter a rent-credit amount between $0.01 and $350.00.", "error");
+          return;
+        }
+        if (!rentPeriod || !reason || !accountingNote || !supportingAgreement) {
+          setDashboardState("Add the rent period, reason, accounting note, and confirm the supporting agreement.", "error");
           return;
         }
         try {
@@ -25436,26 +26163,23 @@ Requirements:
               next_action: "Close as rent deduction"
             });
           }
-          if (!canonicalTicket?.id && ticketSource === "job") {
-            await updateStatus("scheduled_jobs", id, "Completed");
-            await insertJobNote(
-              `Rent deduction: ${ticket?.title || "Completed visit"}`,
-              `$${amount.toFixed(2)} rent deduction recorded by the Owner instead of an invoice. Source visit: ${id}.`
-            );
-            await refreshDashboard();
-            closeSubmissionDrawer();
-            setDashboardState(`Visit closed as a $${amount.toFixed(2)} rent deduction.`);
-            return;
-          }
-          if (!canonicalTicket?.id) throw new Error("The unified ticket could not be created for this completed record.");
+          if (!canonicalTicket?.id) throw new Error("The unified ticket could not be created. Rent credit cannot be recorded on a disconnected visit.");
           const result = await dashboardTicketRequest("owner-close-rent-deduction", {
             id: canonicalTicket.id,
             amount,
-            notes: `Owner closed ${ticket?.number || "ticket"} as a rent deduction instead of invoicing.`
+            rentPeriod,
+            reason,
+            accountingNote,
+            supportingAgreement,
+            notes: `Owner closed ${ticket?.number || "ticket"} as a rent credit for ${rentPeriod}. ${reason}`
           });
-          await refreshDashboard();
-          openTicketDrawer("ticket", result.ticket?.id || canonicalTicket.id);
-          setDashboardState(`Ticket closed as a $${amount.toFixed(2)} rent deduction. $${Number(result.monthlyRemaining || 0).toFixed(2)} remains this month.`);
+          if (result.ticket) {
+            const normalized = normalizeCanonicalTicket(result.ticket);
+            const index = state.data.tickets.findIndex((item) => item.id === normalized.id);
+            if (index >= 0) state.data.tickets[index] = normalized;
+          }
+          rerenderOpenTicketDrawer(result.ticket?.id || canonicalTicket.id, { section: "closeout" });
+          setDashboardState(`Ticket Closed as Rent Credit for $${amount.toFixed(2)}. $${Number(result.monthlyRemaining || 0).toFixed(2)} remains this month.`);
         } catch (error) {
           setDashboardState(error.message || "Unable to close this ticket as a rent deduction.", "error");
         }
@@ -25474,8 +26198,7 @@ Requirements:
             event_type: "ticket_note_saved",
             notes: noteInput?.value || "Ticket note updated."
           });
-          await refreshDashboard();
-          openTicketDrawer("ticket", ticket?.id || id);
+          rerenderOpenTicketDrawer(ticket?.id || id, { section: "owner-controls" });
           setDashboardState("Ticket note saved.");
         } catch (error) {
           setDashboardState(error.message || "Unable to save ticket note.", "error");
@@ -25489,9 +26212,24 @@ Requirements:
         }
         openTicketCreateDrawer(ticketType);
       } else if (action === "open-ticket") {
-        openTicketDrawer(target.dataset.ticketSource, id);
+        const source = target.dataset.ticketSource || "ticket";
+        let ticket = findTicketForDrawer(source, id);
+        if (ticket && ticket.source !== "ticket" && ["quote", "job"].includes(ticket.sourceType || ticket.source)) {
+          try {
+            ticket = await ensureJobTicketForSourceRecord(ticket.sourceType || ticket.source, ticket.sourceId || ticket.id, {
+              stage: ticketStage(ticket),
+              internal_notes: ticket.internalNotes || "Unified from the existing dashboard source record."
+            }) || ticket;
+          } catch (error) {
+            setDashboardState(error.message || "The unified ticket could not be created.", "error");
+            return;
+          }
+        }
+        openTicketDrawer(ticket?.source === "ticket" ? "ticket" : source, ticket?.id || id, { section: target.dataset.ticketSection || "overview" });
       } else if (action === "open-submission") {
-        openSubmissionDrawer(id);
+        const linkedTicket = findTicketForDrawer("quote", id);
+        if (linkedTicket?.source === "ticket") openTicketDrawer("ticket", linkedTicket.id, { section: "quote" });
+        else openSubmissionDrawer(id);
       } else if (action === "open-contact") {
         openContactDrawer(id);
       } else if (action === "reschedule-job") {
@@ -26312,7 +27050,9 @@ Requirements:
           setDashboardState(error.message || "Unable to create document.", "error");
         }
       } else if (action === "edit-job") {
-        openJobDrawer(id);
+        const linkedTicket = findTicketForDrawer("job", id);
+        if (linkedTicket?.source === "ticket") openTicketDrawer("ticket", linkedTicket.id, { section: "scheduling" });
+        else openJobDrawer(id);
       } else if (action === "complete-job") {
         try {
           setDashboardState("Marking visit complete...");
@@ -26339,7 +27079,9 @@ Requirements:
           setDashboardState(error.message || "Unable to cancel visit.", "error");
         }
       } else if (action === "open-document") {
-        openDocumentDrawer(id);
+        const linkedTicket = findTicketForDrawer("document", id);
+        if (linkedTicket?.source === "ticket") openTicketDrawer("ticket", linkedTicket.id, { section: state.activeTicketDrawerId === linkedTicket.id ? state.activeTicketDrawerSection : "documents" });
+        else openDocumentDrawer(id);
       } else if (action === "delete-document") {
         const ok = window.confirm("Delete this document record? Square invoices are not deleted.");
         if (!ok) return;
@@ -26391,8 +27133,11 @@ Requirements:
               });
             }
           }
-          await refreshDashboard();
-          openDocumentDrawer(id);
+          if (ticket?.id && state.activeTicketDrawerId === ticket.id) rerenderOpenTicketDrawer(ticket.id, { section: "quote" });
+          else {
+            await refreshDashboard();
+            openDocumentDrawer(id);
+          }
           setDashboardState("Customer quote approval recorded and connected ticket updated.");
         } catch (error) {
           setDashboardState(error.message || "Customer quote approval could not be recorded.", "error");
@@ -26622,7 +27367,119 @@ Requirements:
     });
 
   els.appView.addEventListener("submit", async (event) => {
-      if (event.target.matches("[data-ai-memory-form]")) {
+      if (event.target.matches("[data-complete-all-parts-form]")) {
+        event.preventDefault();
+        const form = event.target;
+        const ticketId = form.dataset.ticketId || "";
+        const ticket = findTicketForDrawer("ticket", ticketId);
+        const reason = String(new FormData(form).get("reason") || "").trim();
+        const confirmed = new FormData(form).get("confirmed") === "on";
+        if (!ticket || !reason || !confirmed) {
+          setDashboardState("Add the override explanation and explicitly confirm the review.", "error");
+          return;
+        }
+        const saved = ticketCompletionChecklistState(ticket);
+        const incomplete = ticketCompletionChecklistItems.filter((item) => !ticketCompletionItemComplete(ticket, item.key, saved.completed) && !saved.notApplicable[item.key] && !saved.overrides[item.key]);
+        const overrides = { ...saved.overrides, ...Object.fromEntries(incomplete.map((item) => [item.key, reason])) };
+        try {
+          const submit = form.querySelector("button[type='submit']");
+          if (submit) submit.disabled = true;
+          setDashboardState("Recording owner overrides...");
+          const result = isDemoMode() ? { events: [] } : await dashboardTicketRequest("owner-override-requirements", {
+            id: ticketId,
+            overrides,
+            completed: saved.completed,
+            notApplicable: saved.notApplicable,
+            notes: reason,
+            source: "complete_all_parts"
+          });
+          (result.events || []).map(normalizeJobTicketEvent).forEach((savedEvent) => {
+            state.data.ticketEvents = [savedEvent, ...(state.data.ticketEvents || []).filter((item) => item.id !== savedEvent.id)];
+          });
+          state.ticketOverrideReviewId = "";
+          rerenderOpenTicketDrawer(ticketId, { section: "closeout" });
+          setDashboardState(`${incomplete.length} requirement${incomplete.length === 1 ? "" : "s"} marked Owner Override. No evidence or payment was fabricated.`);
+        } catch (error) {
+          form.querySelector("button[type='submit']")?.removeAttribute("disabled");
+          setDashboardState(error.message || "Owner overrides could not be saved.", "error");
+        }
+      } else if (event.target.matches("[data-ticket-task-manager]")) {
+        event.preventDefault();
+        const form = event.target;
+        const data = new FormData(form);
+        const ticketId = form.dataset.ticketId || "";
+        const assignedUserId = String(data.get("rapid_assignee") || "");
+        const componentKeys = data.getAll("selected_tasks").map(String);
+        if (!assignedUserId || !componentKeys.length) {
+          setDashboardState("Choose an employee and at least one eligible task.", "error");
+          return;
+        }
+        try {
+          const submit = form.querySelector("button[type='submit']");
+          if (submit) submit.disabled = true;
+          for (const componentKey of componentKeys) {
+            const component = ticketWorkComponents(findTicketForDrawer("ticket", ticketId) || {}).find((item) => item.key === componentKey);
+            const result = await dashboardTicketRequest("component-assign", {
+              id: ticketId,
+              componentKey,
+              status: component?.status === "todo" ? "assigned" : component?.status || "assigned",
+              assignedUserId,
+              dueDate: component?.dueDate || "",
+              blockerReason: component?.blockerReason || ""
+            });
+            mergeWorkComponentResult(result);
+          }
+          rerenderOpenTicketDrawer(ticketId, { section: "tasks" });
+          setDashboardState(`${componentKeys.length} task${componentKeys.length === 1 ? "" : "s"} assigned without refreshing the dashboard.`);
+        } catch (error) {
+          form.querySelector("button[type='submit']")?.removeAttribute("disabled");
+          setDashboardState(error.message || "Selected tasks could not be assigned.", "error");
+        }
+      } else if (event.target.matches("[data-ticket-inline-invoice-form]")) {
+        event.preventDefault();
+        const form = event.target;
+        const data = new FormData(form);
+        const invoiceId = form.dataset.id;
+        const ticketId = form.dataset.ticketId;
+        const invoice = (state.data.financial?.invoices || []).find((item) => item.id === invoiceId);
+        const payload = {
+          deposit: Number(data.get("deposit") || 0),
+          amount_paid: Number(data.get("amount_paid") || 0),
+          status: String(data.get("status") || "Draft"),
+          due_date: String(data.get("due_date") || "") || null
+        };
+        const projected = { ...(invoice || {}), ...payload };
+        if (/^paid$/i.test(payload.status) && financialCalculator().invoiceSummary(projected).balance > 0) {
+          setDashboardState("An invoice cannot be marked Paid while a balance remains. Record the actual payment first.", "error");
+          return;
+        }
+        try {
+          form.querySelector("button[type='submit']")?.setAttribute("disabled", "");
+          form.querySelector("[data-ticket-save-state]").textContent = "Saving...";
+          const rows = await supabaseRestRequest(`invoices?id=eq.${encodeURIComponent(invoiceId)}`, {
+            method: "PATCH", headers: { Prefer: "return=representation" }, body: JSON.stringify(payload)
+          });
+          const savedInvoice = rows?.[0] || projected;
+          state.data.financial.invoices = [savedInvoice, ...(state.data.financial?.invoices || []).filter((item) => item.id !== invoiceId)];
+          await updateJobTicket(ticketId, {
+            invoice_id: invoiceId,
+            invoice_finalized: !/^draft$/i.test(payload.status),
+            payment_status: /^paid$/i.test(payload.status) ? "paid" : /^partially paid$/i.test(payload.status) ? "partially_paid" : "unpaid"
+          });
+          await insertJobTicketEvent(ticketId, {
+            eventType: "ticket_invoice_status_saved",
+            notes: `Invoice status saved as ${payload.status}.`,
+            newValue: { invoiceId, status: payload.status, amountPaid: payload.amount_paid, deposit: payload.deposit }
+          });
+          rerenderOpenTicketDrawer(ticketId, { section: "invoice" });
+          setDashboardState("Invoice saved without leaving the ticket.");
+        } catch (error) {
+          form.querySelector("button[type='submit']")?.removeAttribute("disabled");
+          const status = form.querySelector("[data-ticket-save-state]");
+          if (status) status.textContent = "Sync failed";
+          setDashboardState(error.message || "Invoice could not be saved.", "error");
+        }
+      } else if (event.target.matches("[data-ai-memory-form]")) {
         event.preventDefault();
         const data = new FormData(event.target);
         const scopeKey = String(data.get("scope_key") || "");
@@ -27115,8 +27972,9 @@ Requirements:
           const uploads = await uploadJobSitePhotos(jobId, files, photoStage);
           await syncJobTicketPhotoProof(jobId, photoStage);
           event.target.reset();
-          await refreshDashboard();
-          openJobDrawer(jobId);
+          const ticketId = event.target.dataset.ticketId || findJobTicketForScheduledJob(jobId)?.id || "";
+          if (ticketId && state.activeTicketDrawerId === ticketId) rerenderOpenTicketDrawer(ticketId, { section: photoStage === "arrival" ? "arrival-photos" : "completion-photos" });
+          else openJobDrawer(jobId);
           setDashboardState(`${stageLabel} photo${uploads.length === 1 ? "" : "s"} uploaded.`);
         } catch (error) {
           setDashboardState(error.message || "Unable to upload job site photo.", "error");
@@ -27150,13 +28008,23 @@ Requirements:
               customer_approval_recorded: false,
               next_action: "Send quote and record customer approval"
             });
+            await insertJobTicketEvent(ticketId, {
+              eventType: "ticket_quote_connected",
+              notes: `Quote ${document.number || document.id} created and connected to the ticket.`,
+              newValue: { quoteId: document.id, quoteNumber: document.number || "", total: document.total || 0 }
+            });
           } else {
             await ensureJobTicketForSalesDocument(document);
           }
-          event.target.reset();
-          await refreshDashboard();
-          openDocumentDrawer(document.id);
-          setDashboardState("");
+          if (ticketId && state.activeTicketDrawerId === ticketId) {
+            rerenderOpenTicketDrawer(ticketId, { section: "quote" });
+            setDashboardState("Quote created and connected without leaving the ticket.");
+          } else {
+            event.target.reset();
+            await refreshDashboard();
+            openDocumentDrawer(document.id);
+            setDashboardState("");
+          }
         } catch (error) {
           setDashboardState(error.message || "Unable to create document.", "error");
         }

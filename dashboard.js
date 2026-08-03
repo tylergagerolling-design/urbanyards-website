@@ -13999,12 +13999,15 @@
   }
 
   const ownerKanbanColumns = [
-    { key: "todo", label: "To Do", detail: "Visible work awaiting assignment" },
-    { key: "assigned", label: "Assigned", detail: "Owned and ready to begin", limit: 18 },
-    { key: "in_progress", label: "In Progress", detail: "Work actively being completed", limit: 8 },
-    { key: "blocked", label: "Blocked", detail: "Waiting on a decision or dependency" },
-    { key: "review", label: "Review", detail: "Ready for a second set of eyes", limit: 8 },
+    { key: "todo", label: "To Do", detail: "Unassigned and assigned work ready to start" },
+    { key: "in_progress", label: "In Progress", detail: "Active, blocked, and review work", limit: 12 },
     { key: "done", label: "Done", detail: "Completed with an audit trail" }
+  ];
+  const ownerKanbanPersistedStatuses = new Set(["todo", "assigned", "in_progress", "blocked", "review", "done"]);
+  const ownerKanbanFilterStatuses = [
+    ...ownerKanbanColumns,
+    { key: "blocked", label: "Blocked (In Progress)" },
+    { key: "review", label: "Needs Review (In Progress)" }
   ];
 
   const workComponentMeta = {
@@ -14025,8 +14028,30 @@
     paymentStatus: { group: "Money", owner: "Money", proof: "Paid status required", boardManaged: false, blockedLabel: "Record payment in the ticket" }
   };
 
+  function ownerKanbanColumnKey(value) {
+    const status = String(value || "todo");
+    if (status === "done") return "done";
+    if (["in_progress", "blocked", "review"].includes(status)) return "in_progress";
+    return "todo";
+  }
+
+  function ownerKanbanStatusForColumn(component = {}, columnKey = "todo") {
+    if (columnKey === "done") return "done";
+    if (columnKey === "in_progress") return "in_progress";
+    return component.assignedUserId ? "assigned" : "todo";
+  }
+
+  function ownerKanbanColumnIncludes(columnKey, status) {
+    return ownerKanbanColumnKey(status) === columnKey;
+  }
+
   function ownerKanbanColumnLabel(value) {
-    return ownerKanbanColumns.find((column) => column.key === value)?.label || titleCase(value);
+    return ownerKanbanColumns.find((column) => column.key === ownerKanbanColumnKey(value))?.label || titleCase(value);
+  }
+
+  function ownerKanbanStatusOptions(component = {}) {
+    const selectedColumn = ownerKanbanColumnKey(component.status);
+    return ownerKanbanColumns.map((column) => `<option value="${escapeHtml(column.key)}"${column.key === selectedColumn ? " selected" : ""}${column.key === "done" && !component.boardManaged && component.status !== "done" ? " disabled" : ""}>${escapeHtml(column.label)}</option>`).join("");
   }
 
   function loadOwnerKanbanFilters() {
@@ -14042,7 +14067,11 @@
       state.ownerKanbanTypeFilter = stored.type || "All";
       state.ownerKanbanClientFilter = stored.client || "";
       state.ownerKanbanDateFilter = "All";
-      state.ownerKanbanStatusFilter = ownerKanbanColumns.some((column) => column.key === stored.status) ? stored.status : "All";
+      state.ownerKanbanStatusFilter = ownerKanbanFilterStatuses.some((status) => status.key === stored.status)
+        ? stored.status
+        : stored.status === "assigned"
+          ? "todo"
+          : "All";
       state.ownerKanbanSort = stored.sort || "priority";
       state.ownerKanbanGroupBy = ["none", "ticket", "person", "due"].includes(stored.groupBy) ? stored.groupBy : "none";
       state.ownerKanbanActiveOnly = stored.activeOnly !== false;
@@ -14132,7 +14161,7 @@
         ? optimistic.assignedUserId
         : savedAssignedUserId;
       const statusValue = optimistic?.status || snapshot.status;
-      const savedStatus = ownerKanbanColumns.some((column) => column.key === statusValue) ? statusValue : "";
+      const savedStatus = ownerKanbanPersistedStatuses.has(statusValue) ? statusValue : "";
       const status = resolvedByTicket || naReason || overrideReason
         ? "done"
         : savedStatus && savedStatus !== "done"
@@ -14202,7 +14231,12 @@
     if ((state.ownerKanbanDateStart || state.ownerKanbanDateEnd) && !component.dueDate) return false;
     if (state.ownerKanbanDateStart && component.dueDate < state.ownerKanbanDateStart) return false;
     if (state.ownerKanbanDateEnd && component.dueDate > state.ownerKanbanDateEnd) return false;
-    if (state.ownerKanbanStatusFilter !== "All" && component.status !== state.ownerKanbanStatusFilter) return false;
+    if (state.ownerKanbanStatusFilter !== "All") {
+      const statusMatches = ["blocked", "review"].includes(state.ownerKanbanStatusFilter)
+        ? component.status === state.ownerKanbanStatusFilter
+        : ownerKanbanColumnIncludes(state.ownerKanbanStatusFilter, component.status);
+      if (!statusMatches) return false;
+    }
     const clientFilter = String(state.ownerKanbanClientFilter || "").trim().toLowerCase();
     if (clientFilter && ![component.customer, component.property, component.ticketNumber].some((value) => String(value || "").toLowerCase().includes(clientFilter))) return false;
     const query = String(state.ownerKanbanSearch || "").trim().toLowerCase();
@@ -14289,7 +14323,7 @@
         <div>
           <p class="eyebrow">Execution Board</p>
           <h3>Ticket Work Board</h3>
-          <p>Each ticket stays together while its requirements move through the six work stages.</p>
+          <p>Each ticket stays together while its requirements move through To Do, In Progress, and Done.</p>
         </div>
         <div class="owner-kanban-toolbar-actions">
           <span>${escapeHtml(shownTickets)} ticket${shownTickets === 1 ? "" : "s"} / ${escapeHtml(filteredComponents.length)} steps</span>
@@ -14332,7 +14366,7 @@
         <label>Status
           <select data-owner-kanban-filter="status">
             <option value="All">All statuses</option>
-            ${ownerKanbanColumns.map((column) => `<option value="${escapeHtml(column.key)}"${column.key === state.ownerKanbanStatusFilter ? " selected" : ""}>${escapeHtml(column.label)}</option>`).join("")}
+            ${ownerKanbanFilterStatuses.map((status) => `<option value="${escapeHtml(status.key)}"${status.key === state.ownerKanbanStatusFilter ? " selected" : ""}>${escapeHtml(status.label)}</option>`).join("")}
           </select>
         </label>
         <label>Sort
@@ -14381,7 +14415,7 @@
       ${completionDetail ? `<p class="component-kanban-completion">${escapeHtml(completionDetail)}</p>` : ""}
       <div class="component-kanban-actions">
         <select data-work-component-status aria-label="Status for ${escapeHtml(component.label)}" data-id="${escapeHtml(component.ticketId)}" data-component-key="${escapeHtml(component.key)}">
-          ${ownerKanbanColumns.map((column) => `<option value="${escapeHtml(column.key)}"${column.key === component.status ? " selected" : ""}${column.key === "done" && !component.boardManaged && component.status !== "done" ? " disabled" : ""}>${escapeHtml(column.label)}</option>`).join("")}
+          ${ownerKanbanStatusOptions(component)}
         </select>
         ${component.status !== "done"
           ? component.boardManaged
@@ -14421,8 +14455,8 @@
       ${renderOwnerKanbanToolbar(components, filteredComponents)}
       <div class="owner-kanban-scroll" role="list" aria-label="Ticket workflow columns">
         ${ownerKanbanColumns.map((column) => {
-          const totalComponents = components.filter((component) => component.status === column.key);
-          const shownComponents = sortOwnerKanbanComponents(filteredComponents.filter((component) => component.status === column.key));
+          const totalComponents = components.filter((component) => ownerKanbanColumnIncludes(column.key, component.status));
+          const shownComponents = sortOwnerKanbanComponents(filteredComponents.filter((component) => ownerKanbanColumnIncludes(column.key, component.status)));
           const overLimit = column.limit && shownComponents.length > column.limit;
           return `<section class="owner-kanban-column owner-kanban-column--${escapeHtml(column.key)}${overLimit ? " is-over-limit" : ""}" data-owner-kanban-column="${escapeHtml(column.key)}" aria-label="${escapeHtml(column.label)} column">
             <div class="owner-kanban-column-head">
@@ -14489,7 +14523,7 @@
           </label>
           <label>Status
             <select data-work-component-status aria-label="Status for ${escapeHtml(component.label)}" data-id="${escapeHtml(component.ticketId)}" data-component-key="${escapeHtml(component.key)}">
-              ${ownerKanbanColumns.map((column) => `<option value="${escapeHtml(column.key)}"${column.key === component.status ? " selected" : ""}${column.key === "done" && !component.boardManaged && component.status !== "done" ? " disabled" : ""}>${escapeHtml(column.label)}</option>`).join("")}
+              ${ownerKanbanStatusOptions(component)}
             </select>
           </label>
         </div>
@@ -14546,7 +14580,7 @@
       </header>
       ${collapsed ? "" : `<div class="component-ticket-swimlane-grid">
         ${ownerKanbanColumns.map((column) => {
-          const columnComponents = visibleComponents.filter((component) => component.status === column.key);
+          const columnComponents = visibleComponents.filter((component) => ownerKanbanColumnIncludes(column.key, component.status));
           const shownComponents = column.key === "done" && !doneExpanded ? columnComponents.slice(0, 2) : columnComponents;
           const hiddenDone = columnComponents.length - shownComponents.length;
           return `<section class="component-ticket-status-cell owner-kanban-column--${escapeHtml(column.key)}" data-owner-kanban-column="${escapeHtml(column.key)}" data-column-label="${escapeHtml(column.label)}" aria-label="${escapeHtml(`${column.label} for ${first.ticketNumber || "ticket"}`)}">
@@ -14577,8 +14611,8 @@
         <div class="owner-kanban-track">
           <div class="owner-kanban-column-guide" role="row" aria-label="Work stages">
             ${ownerKanbanColumns.map((column) => {
-              const totalComponents = components.filter((component) => component.status === column.key);
-              const shownComponents = filteredComponents.filter((component) => component.status === column.key);
+              const totalComponents = components.filter((component) => ownerKanbanColumnIncludes(column.key, component.status));
+              const shownComponents = filteredComponents.filter((component) => ownerKanbanColumnIncludes(column.key, component.status));
               const overLimit = column.limit && shownComponents.length > column.limit;
               return `<section class="owner-kanban-stage-head owner-kanban-column--${escapeHtml(column.key)}${overLimit ? " is-over-limit" : ""}" role="columnheader">
                 <div class="owner-kanban-column-head">
@@ -23364,10 +23398,13 @@ Requirements:
       if (target.matches("[data-work-component-status]")) {
         const ticketId = target.dataset.id || "";
         const componentKey = target.dataset.componentKey || "";
+        const component = dashboardWorkComponents().find((item) => item.ticketId === ticketId && item.key === componentKey);
+        if (!component) return;
+        const nextStatus = ownerKanbanStatusForColumn(component, target.value);
         try {
-          setDashboardState(`Moving component to ${ownerKanbanColumnLabel(target.value)}...`);
-          await updateWorkComponent(ticketId, componentKey, { status: target.value });
-          setDashboardState(`Component moved to ${ownerKanbanColumnLabel(target.value)}.`);
+          setDashboardState(`Moving component to ${ownerKanbanColumnLabel(nextStatus)}...`);
+          await updateWorkComponent(ticketId, componentKey, { status: nextStatus });
+          setDashboardState(`Component moved to ${ownerKanbanColumnLabel(nextStatus)}.`);
         } catch (error) {
           renderWorkComponentBoardWorkspaces();
           setDashboardState(error.message || "Unable to change the component status.", "error");
@@ -23745,7 +23782,7 @@ Requirements:
           let editor = row.querySelector("[data-task-editor]");
           if (!editor) {
             row.insertAdjacentHTML("beforeend", `<div class="ticket-task-editor" data-task-editor>
-              <label>Status<select data-task-edit-status>${ownerKanbanColumns.map((column) => `<option value="${escapeHtml(column.key)}"${column.key === task.status ? " selected" : ""}>${escapeHtml(column.label)}</option>`).join("")}</select></label>
+              <label>Status<select data-task-edit-status>${ownerKanbanStatusOptions(task)}</select></label>
               <label>Assigned employee<select data-task-edit-assignee>${workAssignmentOptions(task.assignedUserId, task)}</select></label>
               <label>Due date<input type="date" data-task-edit-due value="${escapeHtml(task.dueDate || "")}"></label>
               <label>Blocker / next action<textarea data-task-edit-blocker rows="2">${escapeHtml(task.blockerReason || "")}</textarea></label>
@@ -23760,11 +23797,15 @@ Requirements:
 
       if (action === "save-ticket-task") {
         const editor = target.closest("[data-task-editor]");
+        const component = dashboardWorkComponents().find((item) => item.ticketId === target.dataset.ticketId && item.key === target.dataset.componentKey);
+        if (!component) return;
+        const assignedUserId = editor?.querySelector("[data-task-edit-assignee]")?.value || "";
+        const statusComponent = { ...component, assignedUserId };
         try {
           target.disabled = true;
           await updateWorkComponent(target.dataset.ticketId, target.dataset.componentKey, {
-            status: editor?.querySelector("[data-task-edit-status]")?.value,
-            assignedUserId: editor?.querySelector("[data-task-edit-assignee]")?.value || "",
+            status: ownerKanbanStatusForColumn(statusComponent, editor?.querySelector("[data-task-edit-status]")?.value),
+            assignedUserId,
             dueDate: editor?.querySelector("[data-task-edit-due]")?.value || "",
             blockerReason: editor?.querySelector("[data-task-edit-blocker]")?.value || ""
           }, { refresh: false });
@@ -27348,17 +27389,23 @@ Requirements:
         clearOwnerKanbanPointerDrag();
         return;
       }
-      if (nextColumn === status) {
+      const component = dashboardWorkComponents().find((item) => item.ticketId === ticketId && item.key === componentKey);
+      const nextStatus = component ? ownerKanbanStatusForColumn(component, nextColumn) : "";
+      if (!component || !nextStatus) {
+        clearOwnerKanbanPointerDrag();
+        return;
+      }
+      if (nextStatus === status) {
         clearOwnerKanbanPointerDrag();
         setDashboardState("Component stayed in the same column.");
         return;
       }
       try {
-        setDashboardState(`Moving component to ${ownerKanbanColumnLabel(nextColumn)}...`);
-        await updateWorkComponent(ticketId, componentKey, { status: nextColumn });
+        setDashboardState(`Moving component to ${ownerKanbanColumnLabel(nextStatus)}...`);
+        await updateWorkComponent(ticketId, componentKey, { status: nextStatus });
         clearOwnerKanbanPointerDrag();
         renderWorkComponentBoardWorkspaces();
-        setDashboardState(`Component moved to ${ownerKanbanColumnLabel(nextColumn)}.`);
+        setDashboardState(`Component moved to ${ownerKanbanColumnLabel(nextStatus)}.`);
       } catch (error) {
         clearOwnerKanbanPointerDrag();
         renderWorkComponentBoardWorkspaces();

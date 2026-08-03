@@ -26,8 +26,8 @@ test("live workspace polish contains long records and management cards", () => {
   assert.match(css, /\.call-queue-row > span:first-child :is\(strong, small\)[\s\S]*overflow-wrap: anywhere/);
   assert.match(css, /\.groundskeeper-operation-card[\s\S]*white-space: normal !important/);
   assert.match(css, /\.dashboard-health-item strong[\s\S]*word-break: break-all/);
-  assert.match(html, /dashboard\.css\?v=20260803-unified-ticket-5/);
-  assert.match(html, /dashboard\.js\?v=20260803-unified-ticket-5/);
+  assert.match(html, /dashboard\.css\?v=20260803-kanban-three-lanes-1/);
+  assert.match(html, /dashboard\.js\?v=20260803-kanban-three-lanes-1/);
 });
 
 test("authenticated assistant prompt suppresses public quote calls to action", () => {
@@ -655,7 +655,10 @@ test("component Work Board assigns, tracks, completes, and audits ticket require
   const css = read("dashboard.css");
   const backend = read("netlify/functions/dashboard-tickets.js");
 
-  assert.match(js, /\{ key: "todo", label: "To Do"[\s\S]*\{ key: "assigned", label: "Assigned"[\s\S]*\{ key: "in_progress", label: "In Progress"[\s\S]*\{ key: "blocked", label: "Blocked"[\s\S]*\{ key: "review", label: "Review"[\s\S]*\{ key: "done", label: "Done"/);
+  assert.match(js, /const ownerKanbanColumns = \[[\s\S]*\{ key: "todo", label: "To Do"[\s\S]*\{ key: "in_progress", label: "In Progress"[\s\S]*\{ key: "done", label: "Done"/);
+  assert.match(js, /ownerKanbanPersistedStatuses = new Set\(\["todo", "assigned", "in_progress", "blocked", "review", "done"\]\)/);
+  assert.match(js, /function ownerKanbanColumnKey[\s\S]*\["in_progress", "blocked", "review"\][\s\S]*return "todo"/);
+  assert.match(js, /function ownerKanbanStatusForColumn[\s\S]*component\.assignedUserId \? "assigned" : "todo"/);
   assert.match(js, /function ticketWorkComponents[\s\S]*ticketCompletionChecklistItems\.map/);
   assert.match(js, /function latestWorkComponentSnapshots[\s\S]*ticket_work_component_updated/);
   assert.match(js, /data-work-component-assignee/);
@@ -683,7 +686,7 @@ test("component Work Board assigns, tracks, completes, and audits ticket require
   assert.match(js, /cloneNode\(true\)[\s\S]*owner-kanban-drag-ghost[\s\S]*document\.body\.appendChild/);
   assert.match(css, /owner-kanban-drag-ghost[\s\S]*position: fixed[\s\S]*opacity: \.82[\s\S]*pointer-events: none/);
   assert.match(css, /@keyframes owner-kanban-card-lift/);
-  assert.match(js, /addEventListener\("pointerup"[\s\S]*updateWorkComponent\(ticketId, componentKey, \{ status: nextColumn \}\)/);
+  assert.match(js, /addEventListener\("pointerup"[\s\S]*ownerKanbanStatusForColumn\(component, nextColumn\)[\s\S]*updateWorkComponent\(ticketId, componentKey, \{ status: nextStatus \}\)/);
   assert.doesNotMatch(js, /draggable="true" data-owner-kanban-card/);
   assert.doesNotMatch(js, /data-owner-kanban-move/);
   assert.doesNotMatch(js, /data-action="clear-owner-kanban-leads"/);
@@ -709,13 +712,13 @@ test("component Work Board assigns, tracks, completes, and audits ticket require
   assert.match(js, /WIP\$\{overLimit \? " \/ reduce load" : ""\}/);
   assert.match(js, /owner-kanban-empty[\s\S]*No matching ticket work/);
   assert.match(css, /Ticket swimlane Work Board/);
-  assert.match(css, /owner-kanban-column-guide,[\s\S]*component-ticket-swimlane-grid[\s\S]*grid-template-columns: repeat\(6, minmax\(190px, 1fr\)\)/);
+  assert.match(css, /owner-kanban-column-guide,[\s\S]*component-ticket-swimlane-grid[\s\S]*grid-template-columns: repeat\(3, minmax\(220px, 1fr\)\)/);
   assert.match(css, /owner-kanban-card\.component-kanban-row[\s\S]*padding: 8px 8px 8px 9px/);
   assert.match(css, /component-kanban-row-main strong[\s\S]*text-overflow: ellipsis[\s\S]*white-space: nowrap/);
   assert.match(css, /component-kanban-editor[\s\S]*component-kanban-editor-fields/);
   assert.match(css, /@media \(max-width: 760px\)[\s\S]*component-ticket-swimlane-grid[\s\S]*grid-template-columns: minmax\(0, 1fr\)/);
   assert.match(css, /Work Board compact aesthetic pass/);
-  assert.match(css, /\[data-owner-kanban-board\][\s\S]*component-ticket-swimlane[\s\S]*min-width: 1080px !important/);
+  assert.match(css, /\[data-owner-kanban-board\][\s\S]*component-ticket-swimlane[\s\S]*min-width: 720px !important/);
   assert.match(css, /\[data-owner-kanban-board\][\s\S]*component-kanban-row-toggle[\s\S]*height: 24px !important/);
   assert.match(css, /\[data-owner-kanban-board\][\s\S]*component-kanban-chip[\s\S]*height: 21px !important[\s\S]*border-radius: 999px !important/);
   assert.match(css, /\[data-owner-kanban-board\][\s\S]*component-kanban-editor :is\(select, input\)[\s\S]*height: 32px !important/);

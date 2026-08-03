@@ -25106,7 +25106,7 @@ body:not(.is-login-screen) .owner-kanban-board {
 
 body:not(.is-login-screen) .owner-kanban-scroll {
   display: grid !important;
-  grid-template-columns: repeat(6, minmax(270px, 1fr)) !important;
+  grid-template-columns: repeat(3, minmax(270px, 1fr)) !important;
   gap: 12px !important;
   align-items: start;
   overflow-x: auto !important;
@@ -25360,13 +25360,13 @@ body:not(.is-login-screen) .owner-kanban-scroll {
 body:not(.is-login-screen) .owner-kanban-track {
   display: grid;
   gap: 10px;
-  min-width: 1220px;
+  min-width: 720px;
 }
 
 body:not(.is-login-screen) .owner-kanban-column-guide,
 body:not(.is-login-screen) .component-ticket-swimlane-grid {
   display: grid;
-  grid-template-columns: repeat(6, minmax(190px, 1fr));
+  grid-template-columns: repeat(3, minmax(220px, 1fr));
 }
 
 body:not(.is-login-screen) .owner-kanban-column-guide {
@@ -26153,7 +26153,7 @@ body:not(.is-login-screen) .app-view .dashboard-main :is(#overview, #calendar) [
 body:not(.is-login-screen) .app-view .dashboard-main :is(#overview, #calendar) [data-owner-kanban-board] .owner-kanban-track,
 body:not(.is-login-screen) .app-view .dashboard-main :is(#overview, #calendar) [data-owner-kanban-board] .component-ticket-swimlanes,
 body:not(.is-login-screen) .app-view .dashboard-main :is(#overview, #calendar) [data-owner-kanban-board] .component-ticket-swimlane {
-  min-width: 1080px !important;
+  min-width: 720px !important;
 }
 
 body:not(.is-login-screen) .app-view .dashboard-main :is(#overview, #calendar) [data-owner-kanban-board] .owner-kanban-track {
@@ -26164,7 +26164,7 @@ body:not(.is-login-screen) .app-view .dashboard-main :is(#overview, #calendar) [
   .owner-kanban-column-guide,
   .component-ticket-swimlane-grid
 ) {
-  grid-template-columns: repeat(6, minmax(170px, 1fr));
+  grid-template-columns: repeat(3, minmax(220px, 1fr));
 }
 
 body:not(.is-login-screen) .app-view .dashboard-main :is(#overview, #calendar) [data-owner-kanban-board] .owner-kanban-column-guide {

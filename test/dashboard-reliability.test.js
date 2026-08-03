@@ -26,8 +26,8 @@ test("live workspace polish contains long records and management cards", () => {
   assert.match(css, /\.call-queue-row > span:first-child :is\(strong, small\)[\s\S]*overflow-wrap: anywhere/);
   assert.match(css, /\.groundskeeper-operation-card[\s\S]*white-space: normal !important/);
   assert.match(css, /\.dashboard-health-item strong[\s\S]*word-break: break-all/);
-  assert.match(html, /dashboard\.css\?v=20260803-kanban-three-lanes-1/);
-  assert.match(html, /dashboard\.js\?v=20260803-kanban-three-lanes-1/);
+  assert.match(html, /dashboard\.css\?v=20260803-kanban-team-breakdown-1/);
+  assert.match(html, /dashboard\.js\?v=20260803-kanban-team-breakdown-1/);
 });
 
 test("authenticated assistant prompt suppresses public quote calls to action", () => {
@@ -659,6 +659,10 @@ test("component Work Board assigns, tracks, completes, and audits ticket require
   assert.match(js, /ownerKanbanPersistedStatuses = new Set\(\["todo", "assigned", "in_progress", "blocked", "review", "done"\]\)/);
   assert.match(js, /function ownerKanbanColumnKey[\s\S]*\["in_progress", "blocked", "review"\][\s\S]*return "todo"/);
   assert.match(js, /function ownerKanbanStatusForColumn[\s\S]*component\.assignedUserId \? "assigned" : "todo"/);
+  assert.match(js, /const ownerKanbanTeams = \["Leads", "Money", "Work"\]/);
+  assert.match(js, /function ownerKanbanTeamLabel[\s\S]*"money", "customer"[\s\S]*return "Leads"/);
+  assert.match(js, /function renderOwnerKanbanTeamGroups[\s\S]*component-kanban-team-group/);
+  assert.match(js, /component-ticket-team-summary[\s\S]*ownerKanbanTeams\.map/);
   assert.match(js, /function ticketWorkComponents[\s\S]*ticketCompletionChecklistItems\.map/);
   assert.match(js, /function latestWorkComponentSnapshots[\s\S]*ticket_work_component_updated/);
   assert.match(js, /data-work-component-assignee/);
@@ -725,6 +729,7 @@ test("component Work Board assigns, tracks, completes, and audits ticket require
   assert.match(css, /owner-kanban-assignee-roster[\s\S]*owner-kanban-assignee\.is-active/);
   assert.match(css, /component-kanban-row\.is-rapid-eligible[\s\S]*component-kanban-row\.is-rapid-assigned[\s\S]*component-kanban-row\.is-rapid-ineligible/);
   assert.match(css, /component-kanban-assignment-check\.is-assigned/);
+  assert.match(css, /component-ticket-team-summary[\s\S]*component-kanban-team-group\.is-money[\s\S]*component-kanban-team-group\.is-work/);
   assert.match(backend, /WORK_COMPONENT_STATUSES[\s\S]*"todo"[\s\S]*"assigned"[\s\S]*"done"/);
   assert.match(backend, /WORK_COMPONENT_ASSIGNMENT_AREAS/);
   assert.match(backend, /async function validateWorkComponentAssignee/);

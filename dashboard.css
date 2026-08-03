@@ -25498,6 +25498,44 @@ body:not(.is-login-screen) .component-ticket-next {
   white-space: nowrap;
 }
 
+body:not(.is-login-screen) .component-ticket-team-summary {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin-top: 3px;
+}
+
+body:not(.is-login-screen) .component-ticket-team-summary span {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  min-height: 20px;
+  padding: 2px 6px;
+  border: 1px solid rgba(20, 67, 48, .11);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, .72);
+  color: #52695b;
+  font-size: .61rem;
+  font-weight: 820;
+  line-height: 1;
+}
+
+body:not(.is-login-screen) .component-ticket-team-summary span::before {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #2f8155;
+  content: "";
+}
+
+body:not(.is-login-screen) .component-ticket-team-summary span.is-money::before {
+  background: #287a74;
+}
+
+body:not(.is-login-screen) .component-ticket-team-summary span.is-work::before {
+  background: #6957a1;
+}
+
 body:not(.is-login-screen) .component-ticket-next {
   display: grid;
   gap: 2px;
@@ -25590,6 +25628,59 @@ body:not(.is-login-screen) .component-ticket-status-cell.is-drag-over {
 body:not(.is-login-screen) .component-ticket-status-list {
   display: grid;
   gap: 7px;
+}
+
+body:not(.is-login-screen) .component-kanban-team-group {
+  display: grid;
+  gap: 5px;
+  min-width: 0;
+  padding: 6px;
+  border: 1px solid rgba(20, 67, 48, .1);
+  border-radius: 10px;
+  background: rgba(255, 255, 255, .5);
+}
+
+body:not(.is-login-screen) .component-kanban-team-group > header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  min-height: 20px;
+  padding: 0 2px;
+  color: #2f8155;
+  font-size: .63rem;
+  font-weight: 900;
+  letter-spacing: .055em;
+  text-transform: uppercase;
+}
+
+body:not(.is-login-screen) .component-kanban-team-group > header span {
+  display: grid;
+  min-width: 18px;
+  height: 18px;
+  place-items: center;
+  border-radius: 999px;
+  background: rgba(47, 129, 85, .11);
+}
+
+body:not(.is-login-screen) .component-kanban-team-group.is-money > header {
+  color: #287a74;
+}
+
+body:not(.is-login-screen) .component-kanban-team-group.is-money > header span {
+  background: rgba(40, 122, 116, .11);
+}
+
+body:not(.is-login-screen) .component-kanban-team-group.is-work > header {
+  color: #6957a1;
+}
+
+body:not(.is-login-screen) .component-kanban-team-group.is-work > header span {
+  background: rgba(105, 87, 161, .11);
+}
+
+body:not(.is-login-screen) .component-kanban-team-group > div {
+  display: grid;
+  gap: 5px;
 }
 
 body:not(.is-login-screen) .component-ticket-empty {
@@ -26294,6 +26385,17 @@ body:not(.is-login-screen) .app-view .dashboard-main :is(#overview, #calendar) [
 
 body:not(.is-login-screen) .app-view .dashboard-main :is(#overview, #calendar) [data-owner-kanban-board] .component-ticket-status-list {
   gap: 5px;
+}
+
+body:not(.is-login-screen) .app-view .dashboard-main :is(#overview, #calendar) [data-owner-kanban-board] .component-kanban-team-group {
+  gap: 4px;
+  padding: 5px;
+  border-radius: 8px;
+}
+
+body:not(.is-login-screen) .app-view .dashboard-main :is(#overview, #calendar) [data-owner-kanban-board] .component-kanban-team-group > header {
+  min-height: 18px;
+  font-size: .58rem;
 }
 
 body:not(.is-login-screen) .app-view .dashboard-main :is(#overview, #calendar) [data-owner-kanban-board] .component-ticket-empty {

@@ -14009,6 +14009,7 @@
     { key: "blocked", label: "Blocked (In Progress)" },
     { key: "review", label: "Needs Review (In Progress)" }
   ];
+  const ownerKanbanTeams = ["Leads", "Money", "Work"];
 
   const workComponentMeta = {
     scopeComplete: { group: "Leads", owner: "Leads", proof: "Scope saved in the ticket" },
@@ -14052,6 +14053,17 @@
   function ownerKanbanStatusOptions(component = {}) {
     const selectedColumn = ownerKanbanColumnKey(component.status);
     return ownerKanbanColumns.map((column) => `<option value="${escapeHtml(column.key)}"${column.key === selectedColumn ? " selected" : ""}${column.key === "done" && !component.boardManaged && component.status !== "done" ? " disabled" : ""}>${escapeHtml(column.label)}</option>`).join("");
+  }
+
+  function ownerKanbanTeamLabel(component = {}) {
+    const group = String(component.group || "").toLowerCase();
+    if (group === "work") return "Work";
+    if (["money", "customer"].includes(group)) return "Money";
+    return "Leads";
+  }
+
+  function ownerKanbanTeamCounts(components = []) {
+    return Object.fromEntries(ownerKanbanTeams.map((team) => [team, components.filter((component) => ownerKanbanTeamLabel(component) === team).length]));
   }
 
   function loadOwnerKanbanFilters() {
@@ -14478,6 +14490,7 @@
 
   function renderOwnerWorkComponentRow(component = {}) {
     const dateState = workComponentDateState(component);
+    const teamLabel = ownerKanbanTeamLabel(component);
     const assignmentProfile = assignmentProfileForId(state.ownerKanbanAssignmentUserId);
     const assignmentMode = Boolean(assignmentProfile);
     const assignmentEligible = assignmentMode && workProfileCanTakeComponent(assignmentProfile, component);
@@ -14494,11 +14507,11 @@
     const proofState = component.status === "done" ? (component.completionMode || "Complete") : "Proof";
     const rapidAction = assignmentMode ? `data-action="rapid-assign-work-component" data-id="${escapeHtml(component.ticketId)}" data-component-key="${escapeHtml(component.key)}"` : "";
     const rowAction = assignmentMode ? "rapid-assign-work-component" : "toggle-work-component-editor";
-    return `<article class="owner-kanban-card component-kanban-row is-team-${escapeHtml(slug(component.group))} ${dateState === "overdue" ? "is-overdue" : ""} ${component.status === "blocked" ? "is-blocked" : ""} ${editing ? "is-editing" : ""} ${saving ? "is-saving" : ""} ${assignmentMode ? "is-rapid-mode" : ""} ${assignmentEligible ? "is-rapid-eligible" : ""} ${assignedToSelected ? "is-rapid-assigned" : ""} ${assignmentMode && !assignmentEligible ? "is-rapid-ineligible" : ""}" ${dragAttrs} ${rapidAction} aria-busy="${saving ? "true" : "false"}">
+    return `<article class="owner-kanban-card component-kanban-row is-team-${escapeHtml(slug(teamLabel))} ${dateState === "overdue" ? "is-overdue" : ""} ${component.status === "blocked" ? "is-blocked" : ""} ${editing ? "is-editing" : ""} ${saving ? "is-saving" : ""} ${assignmentMode ? "is-rapid-mode" : ""} ${assignmentEligible ? "is-rapid-eligible" : ""} ${assignedToSelected ? "is-rapid-assigned" : ""} ${assignmentMode && !assignmentEligible ? "is-rapid-ineligible" : ""}" ${dragAttrs} ${rapidAction} aria-busy="${saving ? "true" : "false"}">
       <div class="component-kanban-row-summary">
         <button type="button" class="component-kanban-row-main" data-action="${rowAction}" data-id="${escapeHtml(component.ticketId)}" data-component-key="${escapeHtml(component.key)}"${assignmentMode ? ` aria-pressed="${assignedToSelected}"` : ` aria-expanded="${editing}" aria-controls="${escapeHtml(editorId)}"`}>
           <strong>${escapeHtml(component.label)}</strong>
-          <small>${escapeHtml(component.group)}</small>
+          <small>${escapeHtml(teamLabel)}</small>
         </button>
         ${assignmentMode
           ? `<span class="component-kanban-assignment-check${assignedToSelected ? " is-assigned" : ""}${assignmentEligible ? "" : " is-ineligible"}" aria-hidden="true">${assignmentPending ? "..." : assignmentEligible ? assignedToSelected ? "&#10003;" : "+" : "Locked"}</span>`
@@ -14545,6 +14558,17 @@
     </article>`;
   }
 
+  function renderOwnerKanbanTeamGroups(components = []) {
+    return ownerKanbanTeams.map((team) => {
+      const teamComponents = components.filter((component) => ownerKanbanTeamLabel(component) === team);
+      if (!teamComponents.length) return "";
+      return `<section class="component-kanban-team-group is-${escapeHtml(slug(team))}" aria-label="${escapeHtml(`${team} tasks`)}">
+        <header><strong>${escapeHtml(team)}</strong><span>${escapeHtml(teamComponents.length)}</span></header>
+        <div>${teamComponents.map(renderOwnerWorkComponentRow).join("")}</div>
+      </section>`;
+    }).join("");
+  }
+
   function renderOwnerKanbanTicketSwimlane(allComponents = [], visibleComponents = []) {
     const first = allComponents[0] || visibleComponents[0] || {};
     const ticketId = first.ticketId || "";
@@ -14560,6 +14584,7 @@
         : "All work components complete";
     const customerProperty = [first.customer, first.property].filter(Boolean).join(" / ") || "Customer or property not set";
     const priority = String(first.priority || "Normal");
+    const teamCounts = ownerKanbanTeamCounts(allComponents);
     return `<section class="component-ticket-swimlane${collapsed ? " is-collapsed" : ""}" data-ticket-swimlane data-ticket-id="${escapeHtml(ticketId)}" role="listitem">
       <header class="component-ticket-swimlane-head">
         <button type="button" class="component-ticket-collapse" data-action="toggle-work-ticket-swimlane" data-id="${escapeHtml(ticketId)}" aria-expanded="${!collapsed}" aria-label="${collapsed ? "Expand" : "Collapse"} ${escapeHtml(first.ticketNumber || "ticket")}">${collapsed ? "&#8250;" : "&#8964;"}</button>
@@ -14567,6 +14592,9 @@
           <span>${escapeHtml(first.ticketNumber || "Ticket")}${priority.toLowerCase() !== "normal" ? ` / ${escapeHtml(priority)}` : ""}</span>
           <strong>${escapeHtml(first.ticketTitle || "Untitled ticket")}</strong>
           <small>${escapeHtml(customerProperty)}</small>
+          <div class="component-ticket-team-summary" aria-label="Ticket task teams">
+            ${ownerKanbanTeams.map((team) => `<span class="is-${escapeHtml(slug(team))}">${escapeHtml(team)} <b>${escapeHtml(teamCounts[team] || 0)}</b></span>`).join("")}
+          </div>
         </div>
         <div class="component-ticket-next${blocked.length ? " is-blocked" : ""}">
           <span>${escapeHtml(nextAction)}</span>
@@ -14585,7 +14613,7 @@
           const hiddenDone = columnComponents.length - shownComponents.length;
           return `<section class="component-ticket-status-cell owner-kanban-column--${escapeHtml(column.key)}" data-owner-kanban-column="${escapeHtml(column.key)}" data-column-label="${escapeHtml(column.label)}" aria-label="${escapeHtml(`${column.label} for ${first.ticketNumber || "ticket"}`)}">
             <div class="component-ticket-status-list">
-              ${shownComponents.map(renderOwnerWorkComponentRow).join("")}
+              ${renderOwnerKanbanTeamGroups(shownComponents)}
               ${columnComponents.length === 0 ? `<span class="component-ticket-empty" aria-hidden="true">-</span>` : ""}
               ${hiddenDone > 0 ? `<button type="button" class="component-ticket-done-toggle" data-action="toggle-work-ticket-completed" data-id="${escapeHtml(ticketId)}">+${escapeHtml(hiddenDone)} more complete</button>` : ""}
               ${column.key === "done" && doneExpanded && columnComponents.length > 2 ? `<button type="button" class="component-ticket-done-toggle" data-action="toggle-work-ticket-completed" data-id="${escapeHtml(ticketId)}">Show fewer</button>` : ""}

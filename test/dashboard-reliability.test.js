@@ -41,8 +41,8 @@ test("archived workspace polish remains available with current dashboard assets"
   assert.match(css, /\.call-queue-row > span:first-child :is\(strong, small\)[\s\S]*overflow-wrap: anywhere/);
   assert.match(css, /\.groundskeeper-operation-card[\s\S]*white-space: normal !important/);
   assert.match(css, /\.dashboard-health-item strong[\s\S]*word-break: break-all/);
-  assert.match(html, /dashboard\.css\?v=20260804-client-detail-3/);
-  assert.match(html, /dashboard\.js\?v=20260804-client-detail-3/);
+  assert.match(html, /dashboard\.css\?v=20260804-voice-companion-2/);
+  assert.match(html, /dashboard\.js\?v=20260804-voice-companion-2/);
 });
 
 test("authenticated assistant prompt suppresses public quote calls to action", () => {
@@ -1424,7 +1424,11 @@ test("Call Queue matches the approved Google Voice fallback and entry-table work
   const css = read("dashboard.css");
 
   assert.match(js, /Manage your inbound call queue and caller data/);
-  assert.match(js, /Google Voice opens in a secure window/);
+  assert.match(js, /Google Voice opens in a companion window/);
+  assert.match(js, /function calculateGoogleVoiceWindowPlacement\(\)/);
+  assert.match(js, /"urbanYardsGoogleVoice"/);
+  assert.match(js, /data-action="reposition-google-voice"/);
+  assert.match(js, /data-action="copy-open-google-voice"/);
   assert.match(js, /href="https:\/\/voice\.google\.com\/" target="_blank" rel="noopener noreferrer"/);
   assert.match(js, /Call Queue Entries/);
   assert.match(js, /<th>Name<\/th><th>Phone Number<\/th><th>Address<\/th><th>Source<\/th><th>Status<\/th><th>Last Contact<\/th><th>Added On<\/th><th>Actions<\/th>/);

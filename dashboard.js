@@ -2910,10 +2910,6 @@
       </button>
       <section class="dashboard-copilot-panel" aria-label="Groundskeeper dashboard assistant" ${state.copilotOpen ? "" : "hidden"}>
         <header class="copilot-landscape">
-          <span class="copilot-mountain is-back" aria-hidden="true"></span>
-          <span class="copilot-mountain is-front" aria-hidden="true"></span>
-          <span class="copilot-birds" aria-hidden="true">⌁⌁</span>
-          <span class="copilot-tree-line" aria-hidden="true"></span>
           <button type="button" data-action="toggle-dashboard-copilot" aria-label="Close Groundskeeper AI">×</button>
         </header>
         <div class="copilot-identity">

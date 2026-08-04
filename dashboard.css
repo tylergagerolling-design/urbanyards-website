@@ -22979,7 +22979,7 @@ body:not(.is-login-screen) .money-grid select {
 .dashboard-copilot-panel {
   width: min(430px, calc(100vw - 28px));
   height: min(720px, calc(100vh - 96px));
-  grid-template-rows: 158px auto minmax(96px, 1fr) auto auto auto;
+  grid-template-rows: 52px auto minmax(96px, 1fr) auto auto auto;
   border: 2px solid #456b5d;
   border-radius: 30px;
   background:
@@ -22992,22 +22992,7 @@ body:not(.is-login-screen) .money-grid select {
   position: relative;
   display: block;
   padding: 0;
-  overflow: hidden;
-  background:
-    linear-gradient(180deg, rgba(248,243,232,.9) 0%, rgba(224,228,210,.9) 100%);
   color: #12372a;
-}
-
-.copilot-landscape::after {
-  content: "";
-  position: absolute;
-  left: -8%;
-  right: -8%;
-  bottom: -22px;
-  height: 64px;
-  border-radius: 50% 50% 0 0;
-  background: #f8f3e8;
-  z-index: 5;
 }
 
 .copilot-landscape > button {
@@ -23026,50 +23011,10 @@ body:not(.is-login-screen) .money-grid select {
   line-height: 1;
 }
 
-.copilot-mountain {
-  position: absolute;
-  left: 7%;
-  bottom: 33px;
-  width: 72%;
-  height: 90px;
-  clip-path: polygon(0 100%, 12% 61%, 23% 76%, 42% 22%, 54% 55%, 66% 31%, 79% 69%, 91% 42%, 100% 100%);
-}
-
-.copilot-mountain.is-back { background: #cbd3bd; opacity: .82; }
-.copilot-mountain.is-front {
-  left: 28%;
-  bottom: 21px;
-  width: 78%;
-  height: 82px;
-  background: #9caf98;
-  opacity: .78;
-}
-
-.copilot-birds {
-  position: absolute;
-  top: 39px;
-  right: 24%;
-  color: #315e50;
-  letter-spacing: 12px;
-  font-size: 25px;
-  transform: rotate(-5deg);
-}
-
-.copilot-tree-line {
-  position: absolute;
-  inset: auto 0 20px;
-  height: 100px;
-  z-index: 3;
-  background:
-    linear-gradient(150deg, transparent 48%, #184b3b 49% 61%, transparent 62%) 2% 100% / 45px 82px repeat-x,
-    linear-gradient(210deg, transparent 48%, #184b3b 49% 61%, transparent 62%) 24px 100% / 45px 82px repeat-x;
-  filter: drop-shadow(0 10px 0 #12372a);
-}
-
 .copilot-identity {
   position: relative;
   z-index: 7;
-  margin-top: -57px;
+  margin-top: 0;
   padding: 0 34px 8px;
   text-align: center;
   color: #12372a;

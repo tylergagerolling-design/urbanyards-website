@@ -15852,6 +15852,20 @@ Requirements:
     </div>`;
   }
 
+  function renderReferenceCallQueueWorkspace(target) {
+    const queue = filteredCallQueue();
+    const rows = queue.slice(0, state.callQueueVisibleCount);
+    const selected = queue.find((item) => item.id === state.callQueueSelectedId) || queue[0] || null;
+    const selectedPhone = phoneInfo(selected?.phone || "");
+    if (!state.leadIntakeLoaded && !state.leadIntakeLoading) queueMicrotask(() => loadLeadIntakeBatches());
+    target.innerHTML = `<div class="call-queue-reference" data-call-queue-root>
+      <header class="cq-page-header"><div><h2>Call Queue</h2><p>Manage your inbound call queue and caller data</p></div><div><button type="button" class="secondary-action" data-action="call-queue-settings">Queue Settings</button><button type="button" data-action="lead-intake-import">Import CSV</button></div></header>
+      <section class="cq-voice-card" aria-labelledby="cq-voice-title"><header><strong id="cq-voice-title">Google Voice — Urban Yards</strong><a class="secondary-action" href="https://voice.google.com/" target="_blank" rel="noopener noreferrer">Open in New Window</a></header><div class="cq-voice-fallback"><div class="cq-voice-icon" aria-hidden="true">☎</div><div><span class="cq-connection"><i></i> Secure-window connection</span><h3>Google Voice opens in a secure window</h3><p>Google prevents its authenticated calling interface from being embedded here. Keep this dashboard open while using Google Voice in its own protected browser window.</p><div><a class="button" href="https://voice.google.com/" target="_blank" rel="noopener noreferrer">Open Google Voice</a>${selectedPhone.valid ? `<button type="button" class="secondary-action" data-action="copy-phone" data-phone="${escapeHtml(selectedPhone.e164)}">Copy selected phone number</button>` : ""}</div></div></div></section>
+      <div class="cq-lower-grid"><section class="cq-entries-card"><header><div><h3>Call Queue Entries</h3><p>View, add, edit, and manage your call queue entries.</p></div><div class="cq-entry-tools"><input type="search" data-call-queue-search placeholder="Search entries..." value="${escapeHtml(state.callQueueSearch)}" aria-label="Search entries"><label class="cq-filter-control"><span>Filter</span><select data-call-queue-filter="status" aria-label="Filter entries by status"><option>Active</option><option>All</option><option>Completed</option>${OUTREACH_STATUSES.map((status) => `<option${state.callQueueStatusFilter === status ? " selected" : ""}>${escapeHtml(status)}</option>`).join("")}</select></label><button type="button" data-action="new-outreach-prospect">+ Add Entry</button></div></header>
+      <div class="cq-table-wrap"><table><thead><tr><th>Name</th><th>Phone Number</th><th>Address</th><th>Source</th><th>Status</th><th>Last Contact</th><th>Added On</th><th>Actions</th></tr></thead><tbody>${rows.length ? rows.map((item) => { const phone = phoneInfo(item.phone || ""); const status = item.status || "New"; return `<tr data-action="open-outreach-prospect" data-id="${escapeHtml(item.id)}"><td><strong>${escapeHtml(outreachTitle(item))}</strong></td><td>${escapeHtml(phone.display || "—")}</td><td>${escapeHtml([item.address,item.city].filter(Boolean).join(", ") || "—")}</td><td>${escapeHtml(item.source || "Manual")}</td><td><span class="cq-status is-${escapeHtml(slug(status))}">${escapeHtml(status)}</span></td><td>${escapeHtml(item.lastContactedAt || "—")}</td><td>${escapeHtml(item.createdAtRaw ? formatDate(item.createdAtRaw) : "—")}</td><td><div class="cq-row-actions"><button type="button" data-action="open-outreach-prospect" data-id="${escapeHtml(item.id)}" aria-label="Edit ${escapeHtml(outreachTitle(item))}">✎</button><button type="button" data-action="call-lead" data-id="${escapeHtml(item.id)}" data-lead-type="outreach_prospect" data-phone="${escapeHtml(phone.e164)}" aria-label="Call ${escapeHtml(outreachTitle(item))}"${phone.valid ? "" : " disabled"}>☎</button><details><summary aria-label="More actions for ${escapeHtml(outreachTitle(item))}">⋮</summary><div><button type="button" data-action="call-queue-add-note" data-id="${escapeHtml(item.id)}">Add note</button><button type="button" data-action="call-queue-mark-contacted" data-id="${escapeHtml(item.id)}">Mark contacted</button><button type="button" data-action="call-queue-follow-up" data-id="${escapeHtml(item.id)}">Schedule callback</button><button type="button" data-action="create-ticket-from-prospect" data-id="${escapeHtml(item.id)}">Create ticket</button></div></details></div></td></tr>`; }).join("") : `<tr><td colspan="8">${emptyState("No call queue entries match these filters.")}</td></tr>`}</tbody></table></div><footer><span>Showing ${rows.length ? 1 : 0} to ${rows.length} of ${queue.length} entries</span><div><button type="button" class="is-active">1</button>${rows.length < queue.length ? `<button type="button" data-action="load-more-call-queue">Next ›</button>` : ""}</div></footer></section>
+      <aside class="cq-import-card"><h3>Import Call Queue (CSV)</h3><p>Import new call queue entries from a CSV file.</p><button type="button" class="cq-drop-zone" data-action="lead-intake-import"><span>⇧</span><strong>Drag and drop your CSV file here</strong><small>or</small><b>Choose File</b></button><h4>CSV Requirements</h4><p>Your CSV file must include the following columns:</p><ul><li>Name (required)</li><li>Phone Number (required)</li><li>Address (optional)</li><li>Notes (optional)</li></ul><button type="button" class="cq-template-link" data-action="lead-intake-template">↓ Download CSV Template</button><input type="file" accept=".csv,text/csv" data-lead-intake-file hidden></aside></div></div>`;
+  }
+
   function renderCallQueueWorkspace() {
     const target = qs("[data-call-queue-workspace]");
     if (!target) return;
@@ -15863,6 +15877,8 @@ Requirements:
       target.innerHTML = `<div class="panel call-queue-access-state">${emptyState("Call Queue could not load lead records. Refresh the dashboard to retry.")}</div>`;
       return;
     }
+    renderReferenceCallQueueWorkspace(target);
+    return;
     const queue = filteredCallQueue();
     if (!queue.some((item) => item.id === state.callQueueSelectedId)) state.callQueueSelectedId = queue[0]?.id || "";
     const selected = queue.find((item) => item.id === state.callQueueSelectedId) || null;
@@ -27845,6 +27861,19 @@ Requirements:
       } else if (action === "select-call-queue-lead") {
         state.callQueueSelectedId = id;
         renderCallQueueWorkspace();
+      } else if (action === "call-queue-settings") {
+        openDetailDrawer();
+        els.detailContent.innerHTML = `<div class="drawer-content"><p class="eyebrow">Call Queue</p><h3>Queue Settings</h3><p>These settings control Urban Yards queue behavior only. Google Voice account settings remain in Google Voice.</p><form class="drawer-form" data-call-queue-settings-form><label>Default queue status<select name="default_status"><option>New</option><option>Contacted</option><option>Callback</option></select></label><label>Duplicate import behavior<select name="duplicate_behavior"><option value="skip">Skip duplicates</option><option value="update">Update existing</option><option value="warn">Import with warning</option></select></label><label>Default CSV source label<input name="source_label" value="Imported CSV"></label><label>Phone-number formatting<select name="phone_format"><option value="national">(503) 555-0100</option><option value="e164">+15035550100</option></select></label><label class="span-full"><input type="checkbox" name="archive_on_convert"> Archive queue entry after converting to a lead</label><div class="drawer-actions span-full"><button type="submit">Save Settings</button><a class="button secondary-action" href="https://voice.google.com/settings" target="_blank" rel="noopener noreferrer">Open Google Voice Settings</a></div></form></div>`;
+        renderDetailDrawerBreadcrumbs();
+      } else if (action === "call-queue-mark-contacted") {
+        try {
+          setDashboardState("Updating queue entry...");
+          await updateOutreachProspect(id, { status: "Contacted", last_contacted_at: new Date().toISOString() });
+          await refreshDashboard();
+          setDashboardState("Queue entry marked contacted.");
+        } catch (error) {
+          setDashboardState(error.message || "Queue entry could not be updated.", "error");
+        }
       } else if (action === "lead-intake-import") {
         const input = qs("[data-lead-intake-file]");
         if (input) input.click();
@@ -29265,6 +29294,13 @@ Requirements:
         } catch (error) {
           setDashboardState(error.message || "Invoice could not be saved.", "error");
         }
+      } else if (event.target.matches("[data-call-queue-settings-form]")) {
+        event.preventDefault();
+        const settings = Object.fromEntries(new FormData(event.target).entries());
+        settings.archive_on_convert = Boolean(event.target.elements.archive_on_convert?.checked);
+        localStorage.setItem("urban-yards-call-queue-settings", JSON.stringify(settings));
+        closeSubmissionDrawer({ immediate: true });
+        setDashboardState("Call Queue settings saved in this browser.");
       } else if (event.target.matches("[data-call-queue-outcome-form]")) {
         event.preventDefault();
         const id = event.target.dataset.id || "";

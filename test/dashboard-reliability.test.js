@@ -41,8 +41,8 @@ test("archived workspace polish remains available with current dashboard assets"
   assert.match(css, /\.call-queue-row > span:first-child :is\(strong, small\)[\s\S]*overflow-wrap: anywhere/);
   assert.match(css, /\.groundskeeper-operation-card[\s\S]*white-space: normal !important/);
   assert.match(css, /\.dashboard-health-item strong[\s\S]*word-break: break-all/);
-  assert.match(html, /dashboard\.css\?v=20260804-ticket-trash-1/);
-  assert.match(html, /dashboard\.js\?v=20260804-ticket-trash-1/);
+  assert.match(html, /dashboard\.css\?v=20260804-call-queue-1/);
+  assert.match(html, /dashboard\.js\?v=20260804-call-queue-1/);
 });
 
 test("authenticated assistant prompt suppresses public quote calls to action", () => {
@@ -1417,4 +1417,21 @@ test("ticket trash is recoverable and permanent clearing is owner guarded", () =
   assert.match(backend, /Only an owner or admin can manage ticket trash/);
   assert.match(backend, /confirmation \|\| ""\) !== "EMPTY TICKET TRASH"/);
   assert.match(backend, /ticket_trash_emptied/);
+});
+
+test("Call Queue matches the approved Google Voice fallback and entry-table workspace", () => {
+  const js = read("dashboard.js");
+  const css = read("dashboard.css");
+
+  assert.match(js, /Manage your inbound call queue and caller data/);
+  assert.match(js, /Google Voice opens in a secure window/);
+  assert.match(js, /href="https:\/\/voice\.google\.com\/" target="_blank" rel="noopener noreferrer"/);
+  assert.match(js, /Call Queue Entries/);
+  assert.match(js, /<th>Name<\/th><th>Phone Number<\/th><th>Address<\/th><th>Source<\/th><th>Status<\/th><th>Last Contact<\/th><th>Added On<\/th><th>Actions<\/th>/);
+  assert.match(js, /Import Call Queue \(CSV\)/);
+  assert.match(js, /Download CSV Template/);
+  assert.match(js, /data-action="call-queue-settings"/);
+  assert.match(js, /data-action="call-queue-mark-contacted"/);
+  assert.match(css, /\.cq-lower-grid\{display:grid;grid-template-columns:minmax\(0,3fr\) minmax\(280px,1fr\)/);
+  assert.match(css, /@media\(max-width:720px\)[\s\S]*\.cq-table-wrap table/);
 });

@@ -41,8 +41,8 @@ test("archived workspace polish remains available with current dashboard assets"
   assert.match(css, /\.call-queue-row > span:first-child :is\(strong, small\)[\s\S]*overflow-wrap: anywhere/);
   assert.match(css, /\.groundskeeper-operation-card[\s\S]*white-space: normal !important/);
   assert.match(css, /\.dashboard-health-item strong[\s\S]*word-break: break-all/);
-  assert.match(html, /dashboard\.css\?v=20260804-dashboard-qa-1/);
-  assert.match(html, /dashboard\.js\?v=20260804-dashboard-qa-1/);
+  assert.match(html, /dashboard\.css\?v=20260804-functional-qa-1/);
+  assert.match(html, /dashboard\.js\?v=20260804-functional-qa-1/);
 });
 
 test("authenticated assistant prompt suppresses public quote calls to action", () => {
@@ -1372,4 +1372,21 @@ test("Work Detail persists assignments, tasks, notes, photos, documents, and his
   assert.doesNotMatch(js, /\[\["Site Notes","Added by John D\."/);
   assert.match(auth, /job_ticket_crew_assignments: \{ GET: "operations:read", POST: "operations:write", PATCH: "operations:write"/);
   assert.match(auth, /job_ticket_equipment_assignments: \{ GET: "operations:read", POST: "operations:write", PATCH: "operations:write"/);
+});
+
+test("functional QA safeguards route transitions, demo edits, and visible feedback", () => {
+  const html = read("dashboard.html");
+  const js = read("dashboard.js");
+  const css = read("dashboard.css");
+
+  assert.match(html, /data-dashboard-state role="status" aria-live="polite"/);
+  assert.match(css, /\.dashboard-global-state\{position:fixed/);
+  assert.match(js, /previousSection !== state\.activeSection[\s\S]*closeSubmissionDrawer\(\{ immediate: true \}\)/);
+  assert.match(js, /setActiveSection\(dashboardSectionForRole\(hashSection\), \{ keepDetailDrawer: Boolean\(route\.ticketId\) \}\)/);
+  assert.match(js, /return state\.routeWeekStart === routePlannerMonday\(\) \? `This Week \(\$\{rangeLabel\}\)` : rangeLabel/);
+  assert.match(js, /if \(isDemoMode\(\)\) \{[\s\S]*Demo view refreshed\. Changes remain in this browser session\./);
+  assert.match(js, /async function loadMoneyView[\s\S]*if \(isDemoMode\(\)\) \{[\s\S]*state\.moneyLoadedViews\.add\(view\)/);
+  assert.match(js, /Demo draft invoice created\. No production data was changed\./);
+  assert.match(js, /Demo expense \$\{id \? "saved" : "added"\}\. No production data was changed\./);
+  assert.match(js, /Demo payment recorded\. No production data was changed\./);
 });

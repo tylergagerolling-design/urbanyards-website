@@ -16563,6 +16563,9 @@ body:not(.is-login-screen) .owner-kanban-drag-ghost {
   animation: owner-kanban-card-lift .14s ease-out both;
 }
 
+.dashboard-global-state{position:fixed;top:16px;right:20px;z-index:180;width:min(440px,calc(100vw - 40px));margin:0;box-shadow:0 12px 30px rgba(16,36,26,.18)}
+@media(max-width:720px){.dashboard-global-state{top:12px;right:12px;width:calc(100vw - 24px)}}
+
 @keyframes owner-kanban-card-lift {
   from {
     opacity: .42;

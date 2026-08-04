@@ -9706,9 +9706,13 @@
   }
 
   function setActiveSection(section, options = {}) {
+    const previousSection = state.activeSection;
     const requestedSection = dashboardSectionForRole(section);
     const hasSection = Boolean(qs(`[data-section="${cssEscape(requestedSection)}"]`));
     state.activeSection = hasSection ? requestedSection : dashboardDefaultSectionForRole();
+    if (previousSection !== state.activeSection && !options.keepDetailDrawer && els.detailDrawer && !els.detailDrawer.hidden) {
+      closeSubmissionDrawer({ immediate: true });
+    }
     syncDashboardNavAccess();
     qsa("[data-section]").forEach((node) => {
       node.classList.toggle("is-active", node.dataset.section === state.activeSection);
@@ -16446,6 +16450,11 @@ Requirements:
   async function loadMoneyView(view = state.moneyView, { force = false } = {}) {
     if (state.moneyLoading || (!force && state.moneyLoadedViews.has(view))) return;
     state.data.financial = state.data.financial || {};
+    if (isDemoMode()) {
+      state.moneyLoadedViews.add(view);
+      renderMoneyWorkspace();
+      return;
+    }
     state.moneyLoading = true;
     state.moneyError = "";
     renderMoneyWorkspace();
@@ -17736,7 +17745,8 @@ Requirements:
     const end = new Date(`${days[6]}T12:00:00`);
     const startLabel = start.toLocaleDateString("en-US", { month: "short", day: "numeric" });
     const endLabel = end.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
-    return `${state.routeWeekStart === routePlannerMonday() ? "This Week " : ""}(${startLabel} – ${endLabel})`;
+    const rangeLabel = `${startLabel} – ${endLabel}`;
+    return state.routeWeekStart === routePlannerMonday() ? `This Week (${rangeLabel})` : rangeLabel;
   }
 
   function openRouteStopDrawer(day = state.routeSelectedDate || todayKey()) {
@@ -23383,6 +23393,13 @@ Requirements:
       setDashboardState("Refreshing current view...");
     }
 
+    if (isDemoMode()) {
+      state.lastRefreshAt = new Date().toISOString();
+      await render();
+      if (!options.quiet) setDashboardState("Demo view refreshed. Changes remain in this browser session.");
+      return;
+    }
+
     try {
       await hydrateDashboardSection(section, {
         phase,
@@ -23511,8 +23528,8 @@ Requirements:
 
     window.addEventListener("popstate", async () => {
       const hashSection = window.location.hash.replace(/^#/, "");
-      if (hashSection) state.activeSection = dashboardSectionForRole(hashSection);
       const route = ticketDrawerRouteState();
+      if (hashSection) setActiveSection(dashboardSectionForRole(hashSection), { keepDetailDrawer: Boolean(route.ticketId) });
       if (route.ticketId) {
         if (!restoreTicketDrawerFromRoute() && state.ticketsReady) {
           setDashboardState("The linked ticket could not be found.", "error");
@@ -25424,6 +25441,32 @@ Requirements:
 
       if (action === "create-financial-invoice") {
         try {
+          if (isDemoMode()) {
+            const invoice = {
+              id: nextDemoId("invoice"),
+              invoice_number: `DEMO-${Date.now().toString().slice(-6)}`,
+              status: "Draft",
+              issue_date: todayKey(),
+              due_date: addDaysKey(todayKey(), 30),
+              subtotal: 100,
+              tax: 0,
+              discount: 0,
+              deposit: 0,
+              amount_paid: 0,
+              client_id: null,
+              property_id: null,
+              ticket_id: null
+            };
+            state.data.financial.invoices ||= [];
+            state.data.financial.invoices.unshift(invoice);
+            state.moneyInvoiceDetail = { invoice, lineItems: [], payments: [], attachments: [], activity: [] };
+            renderMoneyWorkspace();
+            openDetailDrawer();
+            els.detailContent.innerHTML = renderUnifiedFinancialInvoiceDrawer(state.moneyInvoiceDetail);
+            renderDetailDrawerBreadcrumbs();
+            setDashboardState("Demo draft invoice created. No production data was changed.");
+            return;
+          }
           const result = await dashboardFinancialRequest("create-invoice", {
             issueDate: todayKey(),
             dueDate: addDaysKey(todayKey(), 30)
@@ -28985,6 +29028,19 @@ Requirements:
         const payload = { expense_date: String(data.get("expense_date")||todayKey()), vendor_name: String(data.get("vendor_name")||"").trim()||null, category: String(data.get("category")||"Other"), description: String(data.get("description")||"").trim(), ticket_id: String(data.get("ticket_id")||"").trim()||null, payment_method: String(data.get("payment_method")||"").trim()||null, total: Math.round(total*100)/100, status: String(data.get("status")||"Recorded"), notes: String(data.get("notes")||"").trim()||null };
         try {
           form.querySelector('button[type="submit"]').disabled = true;
+          if (isDemoMode()) {
+            const saved = normalizeExpense({ id: id || nextDemoId("expense"), ...payload, created_at: new Date().toISOString(), updated_at: new Date().toISOString() });
+            state.data.financial.expenses ||= [];
+            const existingIndex = state.data.financial.expenses.findIndex((item) => item.id === saved.id);
+            if (existingIndex >= 0) state.data.financial.expenses.splice(existingIndex, 1, saved);
+            else state.data.financial.expenses.unshift(saved);
+            closeSubmissionDrawer({ immediate: true });
+            state.moneyView = "expenses";
+            updateMoneyViewRoute("expenses");
+            renderMoneyWorkspace();
+            setDashboardState(`Demo expense ${id ? "saved" : "added"}. No production data was changed.`);
+            return;
+          }
           let saved;
           if (id) {
             const rows = await supabaseRestRequest(`expenses?id=eq.${encodeURIComponent(id)}`, { method:"PATCH", headers:{Prefer:"return=representation"}, body:JSON.stringify(payload) });
@@ -29021,6 +29077,22 @@ Requirements:
         }
         try {
           form.querySelector('button[type="submit"]').disabled = true;
+          if (isDemoMode()) {
+            const nextPaidCents = moneyCents(invoice.amount_paid) + moneyCents(amount);
+            const totalCents = moneyCents(summary.total) - moneyCents(invoice.deposit);
+            const nextStatus = nextPaidCents >= totalCents ? "Paid" : "Partially Paid";
+            invoice.amount_paid = nextPaidCents / 100;
+            invoice.status = nextStatus;
+            invoice.payment_method = String(data.get("payment_method")||"Other");
+            state.data.financial.payments ||= [];
+            state.data.financial.payments.unshift({ id: nextDemoId("payment"), invoice_id: invoiceId, payment_date: String(data.get("payment_date")||todayKey()), amount: Math.round(amount*100)/100, payment_method: invoice.payment_method, external_reference: String(data.get("external_reference")||"").trim()||null, notes: String(data.get("notes")||"").trim()||null, invoices: invoice });
+            closeSubmissionDrawer({ immediate: true });
+            state.moneyView = "payments";
+            updateMoneyViewRoute("payments");
+            renderMoneyWorkspace();
+            setDashboardState("Demo payment recorded. No production data was changed.");
+            return;
+          }
           await supabaseRestRequest("invoice_payments", { method:"POST", headers:{Prefer:"return=representation"}, body:JSON.stringify({ invoice_id:invoiceId, payment_date:String(data.get("payment_date")||todayKey()), amount:Math.round(amount*100)/100, payment_method:String(data.get("payment_method")||"Other"), external_reference:String(data.get("external_reference")||"").trim()||null, notes:String(data.get("notes")||"").trim()||null }) });
           const nextPaidCents = moneyCents(invoice.amount_paid) + moneyCents(amount);
           const totalCents = moneyCents(summary.total) - moneyCents(invoice.deposit);

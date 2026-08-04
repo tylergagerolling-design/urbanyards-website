@@ -12,11 +12,11 @@
     <link rel="icon" href="/favicon.ico" sizes="any">
     <link rel="apple-touch-icon" href="/apple-touch-icon.png">
     <link rel="manifest" href="/dashboard.webmanifest">
-    <link rel="stylesheet" href="dashboard.css?v=20260804-dashboard-qa-1">
+    <link rel="stylesheet" href="dashboard.css?v=20260804-functional-qa-1">
     <script src="dashboard-config.js?v=20260716-loader-1" defer></script>
     <script src="scripts/budget-calculations.js?v=20260716-loader-1" defer></script>
     <script src="scripts/financial-calculations.js?v=20260723-invoice-status-1" defer></script>
-    <script src="dashboard.js?v=20260804-dashboard-qa-1" defer></script>
+    <script src="dashboard.js?v=20260804-functional-qa-1" defer></script>
   </head>
   <body>
     <main class="dashboard-shell" aria-labelledby="dashboard-title">
@@ -108,6 +108,7 @@
         </aside>
 
         <div class="dashboard-main">
+          <p class="dashboard-state dashboard-global-state" data-dashboard-state role="status" aria-live="polite" hidden></p>
           <section class="dashboard-section unified-ticket-page" id="tickets" data-section="tickets"><div data-unified-ticket-workspace></div></section>
           <section class="dashboard-section home-focus-page" id="overview" data-section="overview"><div data-home-focus-work></div></section>
           <section class="dashboard-section uy-standard-page leads-page" id="outreach" data-section="outreach"><div data-leads-workspace></div></section>

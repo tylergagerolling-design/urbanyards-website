@@ -2164,9 +2164,15 @@
       essential: false,
       timeoutMs: 2500,
       recordErrors: false
-    }).then((profile) => {
+    }).then(async (profile) => {
       if (profile) {
         upsertUserProfileRecord(profile);
+        const requestedSection = normalizeDashboardSection(window.location.hash.replace(/^#/, ""));
+        const authorizedSection = dashboardSectionForRole(requestedSection);
+        if (authorizedSection === requestedSection && state.activeSection !== requestedSection) {
+          state.activeSection = requestedSection;
+          await render();
+        }
       } else {
         renderCurrentProfileAvatar(state.data);
       }

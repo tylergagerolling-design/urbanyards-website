@@ -28965,3 +28965,4 @@ body:not(.is-login-screen) .dashboard-main .work-operations-page{min-height:calc
 .wod-panel>header{padding-right:78px}
 @media(max-width:720px){.wod-panel>header{padding-right:68px}}
 .wod-panel{box-shadow:none!important}
+.wod-scrim{background:transparent!important}

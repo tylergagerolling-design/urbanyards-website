@@ -22726,7 +22726,7 @@ Requirements:
       ["Edge all hardscapes","8:50 AM"],["Hedge trimming",""],["Blow & clean up",""],["Final walkthrough",""]
     ];
     const tabButtons = ["Overview","Work","Schedule","Tasks","Photos","Documents","Notes","History"].map(label=>`<button type="button" style="background:transparent!important;box-shadow:none!important;border:0!important;border-bottom:2px solid ${activeTab===label.toLowerCase()?"#276fca":"transparent"}!important" class="${activeTab===label.toLowerCase()?"is-active":""}" data-action="work-detail-tab" data-section="${label.toLowerCase()}">${label}</button>`).join("");
-    return `<div class="wod-overlay" data-work-detail-overlay><button type="button" style="background:rgba(25,30,37,.48)!important;box-shadow:none!important;border:0!important" class="wod-scrim" data-action="close-work-detail" aria-label="Close work details"></button><aside class="wod-panel" aria-label="Work details for ${job.job}">
+    return `<div class="wod-overlay" data-work-detail-overlay><button type="button" style="background:transparent!important;box-shadow:none!important;border:0!important" class="wod-scrim" data-action="close-work-detail" aria-label="Close work details"></button><aside class="wod-panel" aria-label="Work details for ${job.job}">
       <header><div><h2 style="color:#10141a!important">#${job.id}&nbsp;&nbsp; ${job.job}</h2><span class="wol-status is-${job.status.toLowerCase().replaceAll(" ","-")}">${job.status}</span></div><button type="button" style="background:transparent!important;box-shadow:none!important;border:0!important" class="wod-close" data-action="close-work-detail" aria-label="Close work detail">×</button></header>
       <nav aria-label="Work detail sections">${tabButtons}</nav>
       <div class="wod-content">

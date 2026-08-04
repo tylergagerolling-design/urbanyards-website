@@ -415,6 +415,9 @@
     selectedOutreachIds: new Set(),
     selectedOutreachPropertyIds: new Set(),
     pendingOutreachImport: null,
+    homeFocusDate: "This Week",
+    homeFocusLocation: "All Locations",
+    homeFocusStatus: "All Status",
     routeDate: todayKey(),
     routeWeekStart: "",
     routeSelectedDate: "",
@@ -22688,8 +22691,8 @@ Requirements:
     return `<svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">${paths[name] || paths.check}</svg>`;
   }
 
-  function renderFocusMetric(icon, value, label, support = "") {
-    return `<article class="focus-metric"><span class="focus-metric-icon">${homeFocusIcon(icon)}</span><div><strong>${escapeHtml(value)}</strong><span>${escapeHtml(label)}</span>${support ? `<small>${escapeHtml(support)}</small>` : ""}</div></article>`;
+  function renderFocusMetric(icon, value, label, support = "", filter = "") {
+    return `<button type="button" class="focus-metric" data-action="home-focus-metric" data-filter="${escapeHtml(filter)}" aria-label="Show ${escapeHtml(label)}"><span class="focus-metric-icon">${homeFocusIcon(icon)}</span><div><strong>${escapeHtml(value)}</strong><span>${escapeHtml(label)}</span>${support ? `<small>${escapeHtml(support)}</small>` : ""}</div></button>`;
   }
 
   function renderFocusJobRow(job, index) {
@@ -22701,7 +22704,7 @@ Requirements:
       <td><div class="focus-crew"><span class="focus-inline-icon">${homeFocusIcon("crew")}</span><span>${escapeHtml(job.crew)}<small>+1</small></span></div></td>
       <td><span class="focus-status ${statusClass}">${escapeHtml(job.status)}</span></td>
       <td>${escapeHtml(job.duration)}</td>
-      <td><button class="focus-row-menu" type="button" aria-label="More options for ${escapeHtml(job.address)}">⋮</button></td>
+      <td><button class="focus-row-menu" type="button" data-action="unified-ticket-open" data-id="${escapeHtml(job.ticketId || job.id)}" aria-label="Open ticket for ${escapeHtml(job.address)}">›</button></td>
     </tr>`;
   }
 
@@ -22715,7 +22718,7 @@ Requirements:
     const focusJobs = homeFocusRows();
     const locationCounts = focusJobs.reduce((map, job) => map.set(job.address, (map.get(job.address) || 0) + 1), new Map());
     const topLocations = [...locationCounts.entries()].sort((a, b) => b[1] - a[1]).slice(0, 4);
-    const homeTasks = focusJobs.flatMap((job) => (job.checklistItems || []).map((item) => ({ ...item, address: job.address, time: job.time }))).slice(0, 3);
+    const homeTasks = focusJobs.flatMap((job) => (job.checklistItems || []).map((item) => ({ ...item, jobId: job.id, address: job.address, time: job.time }))).slice(0, 3);
     const completedCount = focusJobs.filter((job) => job.status === "Completed").length;
     const inProgressCount = focusJobs.filter((job) => job.status === "In Progress").length;
     const scheduledCount = focusJobs.filter((job) => job.status === "Scheduled").length;
@@ -22724,25 +22727,25 @@ Requirements:
     host.innerHTML = `<div class="focus-work-page">
       <header class="focus-work-heading"><h2>Focus on Work</h2><p>List + Summary</p></header>
       <section class="focus-metrics" aria-label="Work metrics">
-        ${renderFocusMetric("calendar", String(focusJobs.filter((job) => job.dateRaw === todayKey()).length), "Jobs Today")}
-        ${renderFocusMetric("pin", String(locationCounts.size), "Locations")}
-        ${renderFocusMetric("clock", "Derived", "Est. Work Time", "This Week")}
-        ${renderFocusMetric("check", String(completedCount), "Completed", "This Week")}
-        ${renderFocusMetric("warning", String(attentionCount), "Needs Attention", "View")}
+        ${renderFocusMetric("calendar", String(focusJobs.filter((job) => job.dateRaw === todayKey()).length), "Jobs Today", "", "today")}
+        ${renderFocusMetric("pin", String(locationCounts.size), "Locations", "", "locations")}
+        ${renderFocusMetric("clock", "Derived", "Est. Work Time", "This Week", "week")}
+        ${renderFocusMetric("check", String(completedCount), "Completed", "This Week", "completed")}
+        ${renderFocusMetric("warning", String(attentionCount), "Needs Attention", "View", "attention")}
       </section>
       <div class="focus-primary-grid">
         <section class="focus-card focus-jobs-card">
           <div class="focus-card-header"><h3>Jobs List</h3><div class="focus-job-controls">
-            <label><span class="focus-control-icon">${homeFocusIcon("calendar")}</span><select aria-label="Job date"><option>Today</option><option>Tomorrow</option><option>This Week</option></select></label>
-            <label><span class="focus-control-icon">${homeFocusIcon("pin")}</span><select aria-label="Job location"><option>All Locations</option><option>Portland, OR</option></select></label>
-            <label><span class="focus-control-icon">${homeFocusIcon("briefcase")}</span><select aria-label="Job status"><option>All Status</option><option>In Progress</option><option>Scheduled</option></select></label>
+            <label><span class="focus-control-icon">${homeFocusIcon("calendar")}</span><select data-home-focus-filter="date" aria-label="Job date"><option${state.homeFocusDate==="Today"?" selected":""}>Today</option><option${state.homeFocusDate==="Tomorrow"?" selected":""}>Tomorrow</option><option${state.homeFocusDate==="This Week"?" selected":""}>This Week</option></select></label>
+            <label><span class="focus-control-icon">${homeFocusIcon("pin")}</span><select data-home-focus-filter="location" aria-label="Job location"><option>All Locations</option>${[...new Set(workOperationsRows().map((job)=>job.city).filter(Boolean))].map((value)=>`<option${state.homeFocusLocation===value?" selected":""}>${escapeHtml(value)}</option>`).join("")}</select></label>
+            <label><span class="focus-control-icon">${homeFocusIcon("briefcase")}</span><select data-home-focus-filter="status" aria-label="Job status"><option>All Status</option><option${state.homeFocusStatus==="In Progress"?" selected":""}>In Progress</option><option${state.homeFocusStatus==="Scheduled"?" selected":""}>Scheduled</option><option${state.homeFocusStatus==="Completed"?" selected":""}>Completed</option></select></label>
             <button class="focus-new-job" type="button" data-action="open-ticket-create" data-ticket-type="field"><span>+</span> New Job</button>
           </div></div>
           <div class="focus-jobs-table-wrap"><table class="focus-jobs-table"><thead><tr><th>Time</th><th>Job / Customer</th><th>Location</th><th>Crew</th><th>Status</th><th>Est. Time</th><th><span class="sr-only">Menu</span></th></tr></thead><tbody>${focusJobs.length ? focusJobs.map(renderFocusJobRow).join("") : '<tr><td colspan="7">No scheduled work matches this period.</td></tr>'}</tbody></table></div>
           <div class="focus-card-footer"><span>Showing ${focusJobs.length} of ${focusJobs.length} jobs</span><a href="#tickets">View full list <span aria-hidden="true">→</span></a></div>
         </section>
         <div class="focus-right-stack">
-          <section class="focus-card focus-summary-card"><div class="focus-card-header"><h3>Work Summary</h3><label class="focus-summary-select"><select aria-label="Summary period"><option>This Week</option><option>Today</option><option>This Month</option></select></label></div><div class="focus-summary-list">
+          <section class="focus-card focus-summary-card"><div class="focus-card-header"><h3>Work Summary</h3><label class="focus-summary-select"><select data-home-summary-period aria-label="Summary period"><option>This Week</option><option>Today</option><option>This Month</option></select></label></div><div class="focus-summary-list">
             <div class="focus-summary-row is-total"><span class="focus-inline-icon">${homeFocusIcon("calendar")}</span><span>Total Jobs</span><strong>${focusJobs.length}</strong></div>
             <div class="focus-summary-row"><span class="focus-inline-icon">${homeFocusIcon("check")}</span><span>Completed</span><i><b style="width:${summaryPercent(completedCount)}%"></b></i><strong>${completedCount} (${summaryPercent(completedCount)}%)</strong></div>
             <div class="focus-summary-row is-progress"><span class="focus-inline-icon">${homeFocusIcon("check")}</span><span>In Progress</span><i><b style="width:${summaryPercent(inProgressCount)}%"></b></i><strong>${inProgressCount} (${summaryPercent(inProgressCount)}%)</strong></div>
@@ -22754,7 +22757,7 @@ Requirements:
       </div>
       <div class="focus-bottom-grid">
         <section class="focus-card focus-schedule-card"><div class="focus-card-header"><h3>Upcoming Schedule</h3><a href="#calendar">View full schedule <span aria-hidden="true">→</span></a></div><div class="focus-schedule-list">${focusJobs.map(renderFocusScheduleItem).join("")}</div></section>
-        <section class="focus-card focus-tasks-card"><div class="focus-card-header"><h3>My Tasks</h3><a class="focus-small-button" href="#calendar">View all</a></div>${homeTasks.map((item)=>`<label class="focus-task ${item.checked?"is-complete":""}"><input type="checkbox" ${item.checked?"checked":""} disabled><span><strong>${escapeHtml(item.label || "Task")}</strong><small>${escapeHtml(item.address)}</small></span><em>${item.checked?"Completed":`Due ${escapeHtml(item.time)}`}</em></label>`).join("") || '<small>No assigned tasks.</small>'}</section>
+        <section class="focus-card focus-tasks-card"><div class="focus-card-header"><h3>My Tasks</h3><a class="focus-small-button" href="#calendar">View all</a></div>${homeTasks.map((item)=>`<label class="focus-task ${item.checked?"is-complete":""}"><input type="checkbox" data-work-checklist-item data-id="${escapeHtml(item.jobId)}" data-item-id="${escapeHtml(item.id || "")}" ${item.checked?"checked":""}><span><strong>${escapeHtml(item.label || "Task")}</strong><small>${escapeHtml(item.address)}</small></span><em>${item.checked?"Completed":`Due ${escapeHtml(item.time)}`}</em></label>`).join("") || '<small>No assigned tasks.</small>'}</section>
       </div>
     </div>`;
   }
@@ -22947,7 +22950,12 @@ Requirements:
   }
 
   function homeFocusRows() {
-    const rows = workOperationsRows().filter((job) => !job.dateRaw || job.dateRaw <= addDaysKey(todayKey(), 6));
+    const rows = workOperationsRows().filter((job) => {
+      const dateMatch = state.homeFocusDate === "Today" ? job.dateRaw === todayKey() : state.homeFocusDate === "Tomorrow" ? job.dateRaw === addDaysKey(todayKey(), 1) : state.homeFocusDate === "This Month" ? (!job.dateRaw || job.dateRaw <= addDaysKey(todayKey(), 30)) : (!job.dateRaw || job.dateRaw <= addDaysKey(todayKey(), 6));
+      const locationMatch = state.homeFocusLocation === "All Locations" || job.city === state.homeFocusLocation;
+      const statusMatch = state.homeFocusStatus === "All Status" || job.status === state.homeFocusStatus;
+      return dateMatch && locationMatch && statusMatch;
+    });
     return rows.map((job) => ({
       ...job,
       service: job.type || job.service || "Service not set",
@@ -23039,7 +23047,7 @@ Requirements:
         <article class="is-completed"><span>${unifiedTicketIcon("check")}</span><strong>${countByStatus("Completed")}<small>Completed</small></strong></article>
         <article><strong>${allJobs.length}<small>Total Jobs</small></strong></article>
       </section>
-      <section class="wol-table-card"><div class="wol-table-wrap"><table><thead><tr><th>Next Visit</th><th>Job / Customer</th><th>Location</th><th>Crew</th><th>Status</th><th>Progress</th><th>Est. Time</th><th>Priority</th><th>Attention</th><th></th></tr></thead><tbody>${jobs.map(renderWorkOperationsRow).join("")}</tbody></table></div><footer><span>Showing 1 to ${jobs.length} of 11 jobs</span><nav><button class="is-active">1</button><button>2</button><button>›</button></nav></footer></section>
+      <section class="wol-table-card"><div class="wol-table-wrap"><table><thead><tr><th>Next Visit</th><th>Job / Customer</th><th>Location</th><th>Crew</th><th>Status</th><th>Progress</th><th>Est. Time</th><th>Priority</th><th>Attention</th><th></th></tr></thead><tbody>${jobs.map(renderWorkOperationsRow).join("")}</tbody></table></div><footer><span>Showing ${jobs.length} of ${allJobs.length} matching jobs</span></footer></section>
       ${renderWorkDetailPanel(selected)}
     </div>`;
   }
@@ -23061,7 +23069,7 @@ Requirements:
   function renderVisualResetWorkspaces() {
     qsa(".dashboard-main > .dashboard-section[data-section]").forEach((section) => {
       const key = normalizeDashboardSection(section.dataset.section || section.id);
-      if (key === "overview" || key === "tickets" || key === "calendar" || key === "route-planner") return;
+      if (["overview", "tickets", "calendar", "route-planner", "outreach", "call-queue", "documents", "settings", "ai-memory", "equipment", "documentation", "contacts", "groundskeeper-ai", "import-export"].includes(key)) return;
       const title = DASHBOARD_VISUAL_RESET_TITLES[key] || "Workspace";
       section.className = "dashboard-section workspace-reset-canvas";
       section.innerHTML = `<small>${escapeHtml(title)} Wireframe Canvas</small>`;
@@ -23080,6 +23088,16 @@ Requirements:
     if (active === "tickets") safeRender("unified ticket overview", () => renderUnifiedTicketOverview());
     if (active === "calendar") safeRender("work operations", () => renderWorkOperationsWorkspace());
     if (active === "route-planner") safeRender("weekly route planner", () => renderRoutePlanner());
+    if (active === "outreach") safeRender("leads workspace", () => renderLeadsWorkspace(data));
+    if (active === "call-queue") safeRender("call queue", () => renderCallQueueWorkspace());
+    if (active === "documents") safeRender("money workspace", () => renderMoneyWorkspace(data));
+    if (active === "settings") safeRender("tools workspace", () => renderToolsWorkspace(data));
+    if (active === "ai-memory") safeRender("AI memory workspace", () => renderAiMemoryWorkspace());
+    if (active === "equipment") safeRender("equipment workspace", () => renderEquipment(data));
+    if (active === "documentation") safeRender("documentation workspace", () => renderDocumentation(data));
+    if (active === "contacts") safeRender("contacts workspace", () => renderContacts(data));
+    if (active === "groundskeeper-ai") safeRender("Groundskeeper AI workspace", () => renderGroundskeeperAi(data));
+    if (active === "import-export") safeRender("import and export workspace", () => renderImportExport(data));
     safeRender("contextual Groundskeeper tools", () => renderContextualGroundskeeperTools(active));
     safeRender("dashboard Groundskeeper", () => renderDashboardCopilot());
     safeRender("avatar fallbacks", () => bindAvatarFallbacks());
@@ -23883,6 +23901,21 @@ Requirements:
     els.appView.addEventListener("change", async (event) => {
       const target = event.target;
       if (!target) return;
+
+      if (target.matches("[data-home-focus-filter]")) {
+        const key = target.dataset.homeFocusFilter;
+        if (key === "date") state.homeFocusDate = target.value;
+        if (key === "location") state.homeFocusLocation = target.value;
+        if (key === "status") state.homeFocusStatus = target.value;
+        renderFocusOnWorkHome();
+        return;
+      }
+
+      if (target.matches("[data-home-summary-period]")) {
+        state.homeFocusDate = target.value;
+        renderFocusOnWorkHome();
+        return;
+      }
 
       if (target.matches("[data-route-week-input]")) {
         state.routeWeekStart = routePlannerMonday(target.value || todayKey());
@@ -27817,6 +27850,20 @@ Requirements:
         state.calendarView = "thirty";
         state.calendarRangeOffset += 1;
         await render();
+      } else if (action === "home-focus-metric") {
+        const filter = target.closest("[data-filter]")?.dataset.filter || "";
+        if (filter === "today") state.homeFocusDate = "Today";
+        if (filter === "week") state.homeFocusDate = "This Week";
+        if (filter === "completed") state.homeFocusStatus = "Completed";
+        if (filter === "attention") {
+          state.workAttentionOnly = true;
+          setActiveSection("calendar");
+          replaceDashboardHash("calendar");
+          renderWorkOperationsWorkspace();
+          return;
+        }
+        renderFocusOnWorkHome();
+        if (filter === "locations") qs("[data-home-focus-filter='location']")?.focus();
       } else if (action === "route-previous-week" || action === "route-next-week") {
         state.routeWeekStart = addDaysKey(state.routeWeekStart || routePlannerMonday(), action === "route-previous-week" ? -7 : 7);
         state.routeSelectedDate = addDaysKey(state.routeSelectedDate || state.routeWeekStart, action === "route-previous-week" ? -7 : 7);

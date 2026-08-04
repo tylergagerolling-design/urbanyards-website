@@ -124,7 +124,7 @@ test("dashboard uses a controlled action bus and inspectable memory page", () =>
   assert.match(dashboard, /data-ai-memory-form/);
   assert.doesNotMatch(dashboard, /copilot-rate-outcome|Was this useful\?/);
   assert.match(html, /data-dashboard-link="ai-memory"/);
-  assert.match(html, /id="ai-memory" data-section="ai-memory"><small>AI Memory Wireframe Canvas<\/small>/);
-  assert.doesNotMatch(html, /data-ai-memory-workspace/);
+  assert.match(html, /id="ai-memory" data-section="ai-memory"><div data-ai-memory-workspace><\/div>/);
+  assert.match(html, /data-ai-memory-workspace/);
   assert.match(archivedHtml, /data-ai-memory-workspace/);
 });

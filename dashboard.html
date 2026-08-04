@@ -12,11 +12,11 @@
     <link rel="icon" href="/favicon.ico" sizes="any">
     <link rel="apple-touch-icon" href="/apple-touch-icon.png">
     <link rel="manifest" href="/dashboard.webmanifest">
-    <link rel="stylesheet" href="dashboard.css?v=20260804-route-planner-2">
+    <link rel="stylesheet" href="dashboard.css?v=20260804-function-audit-1">
     <script src="dashboard-config.js?v=20260716-loader-1" defer></script>
     <script src="scripts/budget-calculations.js?v=20260716-loader-1" defer></script>
     <script src="scripts/financial-calculations.js?v=20260723-invoice-status-1" defer></script>
-    <script src="dashboard.js?v=20260804-route-planner-2" defer></script>
+    <script src="dashboard.js?v=20260804-function-audit-1" defer></script>
   </head>
   <body>
     <main class="dashboard-shell" aria-labelledby="dashboard-title">
@@ -110,18 +110,248 @@
         <div class="dashboard-main">
           <section class="dashboard-section unified-ticket-page" id="tickets" data-section="tickets"><div data-unified-ticket-workspace></div></section>
           <section class="dashboard-section home-focus-page" id="overview" data-section="overview"><div data-home-focus-work></div></section>
-          <section class="dashboard-section workspace-reset-canvas" id="outreach" data-section="outreach"><small>Leads Wireframe Canvas</small></section>
-          <section class="dashboard-section workspace-reset-canvas" id="call-queue" data-section="call-queue"><small>Call Queue Wireframe Canvas</small></section>
+          <section class="dashboard-section uy-standard-page leads-page" id="outreach" data-section="outreach"><div data-leads-workspace></div></section>
+          <section class="dashboard-section uy-standard-page call-queue-page" id="call-queue" data-section="call-queue"><div data-call-queue-workspace></div></section>
           <section class="dashboard-section work-operations-page" id="calendar" data-section="calendar"><div data-work-operations-workspace></div></section>
           <section class="dashboard-section route-planner-page" id="route-planner" data-section="route-planner"><div data-route-week-planner></div></section>
-          <section class="dashboard-section workspace-reset-canvas" id="equipment" data-section="equipment"><small>Equipment Wireframe Canvas</small></section>
-          <section class="dashboard-section workspace-reset-canvas" id="documents" data-section="documents"><small>Money Wireframe Canvas</small></section>
-          <section class="dashboard-section workspace-reset-canvas" id="documentation" data-section="documentation"><small>Documentation Wireframe Canvas</small></section>
-          <section class="dashboard-section workspace-reset-canvas" id="contacts" data-section="contacts"><small>Clients Wireframe Canvas</small></section>
-          <section class="dashboard-section workspace-reset-canvas" id="groundskeeper-ai" data-section="groundskeeper-ai"><small>Groundskeeper AI Wireframe Canvas</small></section>
-          <section class="dashboard-section workspace-reset-canvas" id="import-export" data-section="import-export"><small>Import &amp; Export Wireframe Canvas</small></section>
-          <section class="dashboard-section workspace-reset-canvas" id="settings" data-section="settings"><small>Tools Wireframe Canvas</small></section>
-          <section class="dashboard-section workspace-reset-canvas" id="ai-memory" data-section="ai-memory"><small>AI Memory Wireframe Canvas</small></section>
+          <section class="dashboard-section equipment-section uy-standard-page" id="equipment" data-section="equipment">
+            <div class="equipment-hero uy-page-header">
+              <div>
+                <p class="eyebrow">Equipment</p>
+                <h3>Tools, maintenance, and buying plan</h3>
+                <p>Track owned equipment, service needs, replacement priorities, and recommended hardware links.</p>
+              </div>
+              <div class="equipment-tabs" role="tablist" aria-label="Equipment views">
+                <button type="button" data-equipment-view="inventory">Current Inventory</button>
+                <button type="button" data-equipment-view="maintenance">Maintenance</button>
+                <button type="button" data-equipment-view="guide">Hardware Guide</button>
+                <button type="button" data-equipment-view="wishlist">Wishlist</button>
+              </div>
+            </div>
+
+            <div class="equipment-toolbar">
+              <input data-equipment-search type="search" aria-label="Search equipment" placeholder="Search name, brand, model, notes...">
+              <select data-equipment-category-filter aria-label="Filter equipment by category"><option value="All">All Categories</option></select>
+              <select data-equipment-status-filter aria-label="Filter equipment by status"><option value="All">All Statuses</option></select>
+              <select data-equipment-condition-filter aria-label="Filter equipment by condition"><option value="All">All Conditions</option></select>
+              <select data-equipment-priority-filter aria-label="Filter equipment by priority"><option value="All">All Priorities</option></select>
+            </div>
+
+            <div class="equipment-layout">
+              <section class="panel equipment-form-panel">
+                <div class="panel-heading"><h3>Add / Edit Equipment</h3><p>Save owned tools, supplies, and replacement details.</p></div>
+                <form class="equipment-form" data-equipment-form>
+                  <input name="id" type="hidden">
+                  <input name="name" placeholder="Item name" required>
+                  <select name="category" data-equipment-category-options required></select>
+                  <input name="brand" placeholder="Brand">
+                  <input name="model" placeholder="Model">
+                  <input name="serial_number" placeholder="Serial #">
+                  <input name="quantity" type="number" min="1" step="1" placeholder="Qty">
+                  <select name="condition"></select>
+                  <select name="status"></select>
+                  <input name="storage_location" placeholder="Storage location">
+                  <input name="purchase_date" type="date" aria-label="Purchase date">
+                  <input name="purchase_price" type="number" min="0" step="0.01" placeholder="Purchase price">
+                  <input name="supplier" placeholder="Supplier / store">
+                  <input name="product_url" type="url" placeholder="Product link">
+                  <input name="image_url" type="url" placeholder="Photo / image URL">
+                  <input name="last_maintenance_date" type="date" aria-label="Last maintenance date">
+                  <input name="next_maintenance_date" type="date" aria-label="Next maintenance date">
+                  <select name="replacement_priority"></select>
+                  <textarea name="notes" rows="3" placeholder="Notes, repairs, receipt info, or condition details"></textarea>
+                  <div class="equipment-form-actions">
+                    <button type="submit"><span class="button-icon" aria-hidden="true">+</span><span>Save Item</span></button>
+                    <button class="inline-action" type="button" data-action="clear-equipment-form">Clear</button>
+                  </div>
+                </form>
+              </section>
+
+              <section class="panel equipment-main-panel" data-equipment-panel="inventory">
+                <div class="panel-heading"><h3>Current Inventory</h3><p>Owned equipment, condition, storage, and replacement priority.</p></div>
+                <div class="equipment-table-wrap"><table><thead><tr><th>Item</th><th>Category</th><th>Condition</th><th>Status</th><th>Next Maintenance</th><th>Priority</th><th>Link</th><th>Actions</th></tr></thead><tbody data-equipment-table></tbody></table></div>
+                <div class="equipment-card-list" data-equipment-cards></div>
+              </section>
+
+              <section class="panel equipment-main-panel" data-equipment-panel="maintenance" hidden>
+                <div class="panel-heading"><h3>Maintenance</h3><p>Items due soon, repair needs, and maintenance history.</p></div>
+                <form class="equipment-maintenance-form" data-equipment-maintenance-form>
+                  <select name="equipment_id" required data-equipment-maintenance-item-options></select>
+                  <input name="maintenance_date" type="date" required aria-label="Maintenance date">
+                  <input name="maintenance_type" placeholder="Type">
+                  <input name="cost" type="number" min="0" step="0.01" placeholder="Cost">
+                  <input name="performed_by" placeholder="Performed by">
+                  <input name="next_maintenance_date" type="date" aria-label="Next maintenance date">
+                  <textarea name="notes" rows="2" placeholder="Notes"></textarea>
+                  <button type="submit"><span class="button-icon" aria-hidden="true">+</span><span>Add Maintenance</span></button>
+                </form>
+                <div class="equipment-card-list" data-equipment-maintenance-list></div>
+              </section>
+
+              <section class="panel equipment-main-panel" data-equipment-panel="guide" hidden>
+                <div class="panel-heading"><h3>Hardware Guide</h3><p>Recommended equipment links and buying research. Prices are manually entered.</p></div>
+                <form class="hardware-guide-form" data-hardware-guide-form>
+                  <input name="id" type="hidden">
+                  <input name="name" placeholder="Item name" required>
+                  <select name="category" data-hardware-category-options required></select>
+                  <input name="recommended_use" placeholder="Recommended use">
+                  <input name="brand" placeholder="Brand">
+                  <input name="model" placeholder="Model">
+                  <input name="estimated_price" type="number" min="0" step="0.01" placeholder="Estimated price">
+                  <select name="priority"></select>
+                  <input name="supplier" placeholder="Supplier / store">
+                  <input name="product_url" type="url" placeholder="Product link">
+                  <input name="good_for" placeholder="Good for">
+                  <select name="status"></select>
+                  <textarea name="notes" rows="3" placeholder="Notes"></textarea>
+                  <div class="equipment-form-actions">
+                    <button type="submit"><span class="button-icon" aria-hidden="true">+</span><span>Save Guide Item</span></button>
+                    <button class="inline-action" type="button" data-action="clear-hardware-form">Clear</button>
+                  </div>
+                </form>
+                <div class="equipment-card-list" data-hardware-guide-list></div>
+              </section>
+
+              <section class="panel equipment-main-panel" data-equipment-panel="wishlist" hidden>
+                <div class="panel-heading"><h3>Wishlist / Needed Soon</h3><p>High-priority guide items and owned equipment marked replace soon.</p></div>
+                <div class="equipment-card-list" data-equipment-wishlist></div>
+              </section>
+            </div>
+          </section>
+
+          <section class="dashboard-section uy-standard-page money-page" id="documents" data-section="documents"><div data-money-workspace></div></section>
+          <section class="dashboard-section documentation-center uy-standard-page" id="documentation" data-section="documentation">
+            <div class="documentation-hero uy-page-header">
+              <div>
+                <p class="eyebrow">Documentation</p>
+                <h3>Forms, checklists, inspections, and reports</h3>
+                <p>Assign required forms, review submitted paperwork, manage reusable templates, and keep a clean audit trail for properties, jobs, equipment, and staff records.</p>
+              </div>
+              <div class="documentation-actions">
+                <button type="button" data-action="refresh-documentation"><span class="button-icon" aria-hidden="true">R</span><span>Refresh</span></button>
+                <button type="button" data-action="manage-documentation-templates" data-documentation-template-admin><span class="button-icon" aria-hidden="true">+</span><span>Upload Form</span></button>
+              </div>
+            </div>
+            <div class="documentation-status" data-documentation-status></div>
+            <div class="documentation-tabs" role="tablist" aria-label="Documentation views">
+              <button type="button" data-action="set-documentation-view" data-documentation-view="archive">Forms Archive</button>
+              <button type="button" data-action="set-documentation-view" data-documentation-view="upload" data-documentation-template-admin>Upload Form</button>
+              <button type="button" data-action="set-documentation-view" data-documentation-view="assign">Assign Forms</button>
+              <button type="button" data-action="set-documentation-view" data-documentation-view="submitted">Submitted Forms</button>
+              <button type="button" data-action="set-documentation-view" data-documentation-view="templates">Template Library</button>
+              <button type="button" data-action="set-documentation-view" data-documentation-view="audit">Audit History</button>
+            </div>
+            <div class="documentation-toolbar">
+              <input data-documentation-search type="search" aria-label="Search documentation" placeholder="Search forms, property, job, person, type, status...">
+              <select data-documentation-type-filter aria-label="Filter documentation by file type">
+                <option value="All">All Types</option>
+                <option>Template</option>
+                <option>Submission</option>
+                <option>Attachment</option>
+              </select>
+              <select data-documentation-status-filter aria-label="Filter documentation by status">
+                <option value="All">All Statuses</option>
+                <option>Active</option>
+                <option>Inactive</option>
+                <option>Not Started</option>
+                <option>In Progress</option>
+                <option>Submitted</option>
+                <option>Needs Correction</option>
+                <option>Approved</option>
+                <option>Overdue</option>
+                <option>Archived</option>
+              </select>
+              <select data-documentation-category-filter aria-label="Filter documentation by category">
+                <option value="All">All Categories</option>
+                <option>Property Cleaning</option>
+                <option>Property Inspection</option>
+                <option>Grounds Maintenance</option>
+                <option>Equipment Inspection</option>
+                <option>Incident Report</option>
+                <option>Job Completion</option>
+                <option>Employee Documentation</option>
+                <option>Customer Authorization</option>
+                <option>Safety Documentation</option>
+                <option>Custom Forms</option>
+              </select>
+            </div>
+            <div class="documentation-main" data-documentation-main></div>
+          </section>
+
+          <section class="dashboard-section uy-standard-page" id="contacts" data-section="contacts">
+            <div class="panel uy-page-intro-panel">
+              <div class="panel-heading">
+                <div>
+                  <h3>Client / Property Profiles</h3>
+                  <p>One place per client with contact info, property details, notes, jobs, quotes, invoices, route history, and follow-ups.</p>
+                </div>
+                <button class="inline-action" type="button" data-action="quick-add-client">Add Client</button>
+              </div>
+              <div class="toolbar">
+                <input data-client-search type="search" aria-label="Search client profiles" placeholder="Search clients, properties, email, phone...">
+                <button type="button" data-export="contacts"><span class="button-icon" aria-hidden="true">CSV</span><span>Export Contacts</span></button>
+              </div>
+              <form class="client-form" data-client-form data-duplicate-scope="contact">
+                <div class="duplicate-warning span-full" data-duplicate-warning data-duplicate-scope="contact" hidden></div>
+                <input name="name" placeholder="Client name" required>
+                <input name="email" type="email" placeholder="Email">
+                <input name="phone" placeholder="Phone">
+                <input name="city" placeholder="Property address / area" autocomplete="street-address" data-address-autocomplete>
+                <input name="contact_type" placeholder="Client type">
+                <button type="submit"><span class="button-icon" aria-hidden="true">+</span><span>Add Client</span></button>
+              </form>
+              <div class="contact-grid" data-contacts></div>
+            </div>
+          </section>
+
+          <section class="dashboard-section uy-standard-page" id="groundskeeper-ai" data-section="groundskeeper-ai">
+            <div class="groundskeeper-ai-hero groundskeeper-ai-command-header uy-page-header">
+              <div>
+                <p class="eyebrow">Groundskeeper Training Studio</p>
+                <h3>AI Helper Training</h3>
+                <p>Train, test, and publish how the website helper responds to visitors.</p>
+              </div>
+              <div class="groundskeeper-ai-toolbar">
+                <input data-ai-search type="search" aria-label="Search AI knowledge" placeholder="Search AI knowledge...">
+                <button type="button" data-action="refresh-groundskeeper-ai"><span class="button-icon" aria-hidden="true">R</span><span>Refresh AI</span></button>
+                <button type="button" data-action="focus-helper-preview"><span class="button-icon" aria-hidden="true">?</span><span>Preview Website Helper</span></button>
+                <button type="button" data-action="publish-groundskeeper-ai"><span class="button-icon" aria-hidden="true">OK</span><span>Push to Live</span></button>
+              </div>
+            </div>
+
+            <div class="groundskeeper-ai-status" data-groundskeeper-ai-status></div>
+
+            <div class="groundskeeper-ai-workspace">
+              <aside class="groundskeeper-ai-sidebar" aria-label="Groundskeeper AI sections" data-ai-nav></aside>
+              <main class="groundskeeper-ai-main" data-ai-main></main>
+            </div>
+          </section>
+
+          <section class="dashboard-section import-export-center uy-standard-page" id="import-export" data-section="import-export">
+            <div class="import-export-hero uy-page-header">
+              <div>
+                <p class="eyebrow">Data Center</p>
+                <h3>Import, Export &amp; Google Sheets</h3>
+                <p>Safely move dashboard records through Excel, CSV, Google Sheets, PDF reports, and full JSON backups.</p>
+              </div>
+              <div class="import-export-actions">
+                <button type="button" data-action="refresh-import-export"><span class="button-icon" aria-hidden="true">R</span><span>Refresh</span></button>
+                <button type="button" data-action="download-json-backup"><span class="button-icon" aria-hidden="true">JSON</span><span>Full Backup</span></button>
+              </div>
+            </div>
+            <div class="import-export-status" data-import-export-status></div>
+            <div class="import-export-tabs" role="tablist" aria-label="Import and export tools">
+              <button type="button" data-action="set-import-export-view" data-import-export-view="import">Import Data</button>
+              <button type="button" data-action="set-import-export-view" data-import-export-view="export">Export Data</button>
+              <button type="button" data-action="set-import-export-view" data-import-export-view="sheets">Google Sheets</button>
+              <button type="button" data-action="set-import-export-view" data-import-export-view="history">Backups &amp; History</button>
+            </div>
+            <div class="import-export-main" data-import-export-main></div>
+            <input data-import-export-file type="file" accept=".csv,.xlsx,text/csv,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" hidden>
+          </section>
+
+          <section class="dashboard-section uy-standard-page tools-page" id="settings" data-section="settings"><div data-tools-workspace></div><div data-tools-runtime hidden><input data-import-backup type="file" accept="application/json" hidden><input data-user-avatar-upload type="file" accept=".jpg,.jpeg,.png,.webp,image/jpeg,image/png,image/webp" hidden></div></section>
+          <section class="dashboard-section uy-standard-page" id="ai-memory" data-section="ai-memory"><div data-ai-memory-workspace></div></section>
         </div>
         <nav class="mobile-tabbar" aria-label="Mobile dashboard navigation">
           <a href="#overview" data-dashboard-link="overview">Home</a>

@@ -29,7 +29,7 @@ test("Route Planner renders the approved weekly card workspace from shared sched
   assert.match(js, /state\.data\.jobs/);
   assert.match(js, /Optimize All Routes/);
   assert.match(js, /route-add-stop/);
-  assert.match(js, /key === "route-planner"\) return/);
+  assert.match(js, /"route-planner"[\s\S]*\.includes\(key\)\) return/);
   assert.match(css, /grid-template-columns:repeat\(7,minmax\(188px,1fr\)\)/);
 });
 
@@ -40,8 +40,8 @@ test("archived workspace polish remains available with current dashboard assets"
   assert.match(css, /\.call-queue-row > span:first-child :is\(strong, small\)[\s\S]*overflow-wrap: anywhere/);
   assert.match(css, /\.groundskeeper-operation-card[\s\S]*white-space: normal !important/);
   assert.match(css, /\.dashboard-health-item strong[\s\S]*word-break: break-all/);
-  assert.match(html, /dashboard\.css\?v=20260804-route-planner-2/);
-  assert.match(html, /dashboard\.js\?v=20260804-route-planner-2/);
+  assert.match(html, /dashboard\.css\?v=20260804-function-audit-1/);
+  assert.match(html, /dashboard\.js\?v=20260804-function-audit-1/);
 });
 
 test("authenticated assistant prompt suppresses public quote calls to action", () => {
@@ -653,8 +653,8 @@ test("Leads flyout adds Call Queue without changing existing items", () => {
   const css = read("dashboard.css");
 
   assert.match(html, /data-sidebar-subnav="outreach"[\s\S]*>Lead Pipeline<\/span>[\s\S]*#contacts[\s\S]*>Clients<\/span>[\s\S]*#call-queue[\s\S]*>Call Queue<\/span>/);
-  assert.match(html, /id="call-queue" data-section="call-queue"><small>Call Queue Wireframe Canvas<\/small>/);
-  assert.doesNotMatch(html, /data-call-queue-workspace/);
+  assert.match(html, /id="call-queue" data-section="call-queue"><div data-call-queue-workspace><\/div>/);
+  assert.match(html, /data-call-queue-workspace/);
   assert.match(archivedHtml, /id="call-queue" data-section="call-queue"[\s\S]*data-call-queue-workspace/);
   assert.match(js, /"call-queue": "outreach"/);
   assert.match(js, /"call-queue": \["outreachProspects", "leadActivity", "tickets", "contacts"\]/);

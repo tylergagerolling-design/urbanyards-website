@@ -41,8 +41,8 @@ test("archived workspace polish remains available with current dashboard assets"
   assert.match(css, /\.call-queue-row > span:first-child :is\(strong, small\)[\s\S]*overflow-wrap: anywhere/);
   assert.match(css, /\.groundskeeper-operation-card[\s\S]*white-space: normal !important/);
   assert.match(css, /\.dashboard-health-item strong[\s\S]*word-break: break-all/);
-  assert.match(html, /dashboard\.css\?v=20260804-money-workspace-3/);
-  assert.match(html, /dashboard\.js\?v=20260804-money-workspace-3/);
+  assert.match(html, /dashboard\.css\?v=20260804-dashboard-qa-1/);
+  assert.match(html, /dashboard\.js\?v=20260804-dashboard-qa-1/);
 });
 
 test("authenticated assistant prompt suppresses public quote calls to action", () => {
@@ -780,6 +780,18 @@ test("component Work Board assigns, tracks, completes, and audits ticket require
   assert.match(js, /if \(options\.refresh !== false\) await refreshDashboard\(\);[\s\S]*mergeWorkComponentResult\(result\)/);
   assert.match(js, /function nextDocumentNumber\(type\)[\s\S]*randomUUID[\s\S]*return `\$\{prefix\}-\$\{clock\}-\$\{unique\}`/);
   assert.doesNotMatch(js, /const count = state\.data\.documents\.filter\(\(doc\) => doc\.type === type\)\.length \+ 1/);
+});
+
+test("unified Ticket and Work detail tabs render distinct visible bodies", () => {
+  const js = read("dashboard.js");
+  const css = read("dashboard.css");
+
+  assert.match(js, /unified-ticket-shell is-section-\$\{escapeHtml\(active\)\}/);
+  assert.match(js, /ut-active-section-summary/);
+  assert.match(css, /unified-ticket-shell\.is-section-work[\s\S]*ut-property-card/);
+  assert.match(js, /wod-content is-tab-\$\{escapeHtml\(activeTab\)\}/);
+  assert.match(css, /wod-content\.is-tab-schedule[\s\S]*wod-checklist/);
+  assert.match(css, /wod-content\.is-tab-history/);
 });
 
 test("dashboard creates canonical job tickets without removing source fallbacks", () => {

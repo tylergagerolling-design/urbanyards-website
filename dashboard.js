@@ -23086,10 +23086,12 @@ Requirements:
       checklistItems:selectedChecklist.items || [], events:selectedEvents
     } : UNIFIED_TICKET_REFERENCE;
     const active = state.unifiedTicketSection || "overview";
+    const activeLabel = UNIFIED_TICKET_NAV.find(([key]) => key === active)?.[1] || "Overview";
     const nav = UNIFIED_TICKET_NAV.map(([key, label, icon]) => `<button type="button" class="ut-nav-item ${active === key ? "is-active" : ""}" data-action="unified-ticket-section" data-section="${key}" aria-pressed="${active === key}"><span>${unifiedTicketIcon(icon)}</span>${label}</button>`).join("");
     const summaryRows = [["Type",ticket.type],["Priority",ticket.priority],["Due Date",ticket.dueDate],["Status",ticket.status],["Lead",ticket.lead],["Crew",ticket.crew],["Est. Time",ticket.duration || "Not set"],["Created",ticket.created],["Customer",ticket.customer],["Phone",ticket.phone],["Email",ticket.email]].map(([a,b])=>`<div><span>${a}</span><strong>${b}</strong></div>`).join("");
     const quickActions = [["Edit Job","edit","work"],["Add Task","plus","tasks"],["Upload Photo","upload","photos"],["Add Note","note","notes"],["Create Document","document","documents"]].map(([label,icon,section])=>`<button type="button" data-action="unified-ticket-quick" data-section="${section}"><span>${unifiedTicketIcon(icon)}</span><strong>${label}</strong><b>›</b></button>`).join("");
-    host.innerHTML = `<div class="unified-ticket-shell">
+    const sectionActivity = selectedEvents.length ? selectedEvents.slice(0, 20).map((event) => `<article><strong>${escapeHtml(String(event.eventType || "Ticket updated").replaceAll("_", " "))}</strong><p>${escapeHtml(event.notes || "Ticket activity recorded.")}</p><small>${escapeHtml(event.createdAtRaw ? formatDateTime(event.createdAtRaw) : "")}</small></article>`).join("") : `<article><strong>No activity recorded</strong><p>Ticket history will appear here as work is completed.</p></article>`;
+    host.innerHTML = `<div class="unified-ticket-shell is-section-${escapeHtml(active)}">
       <nav class="ut-internal-nav" aria-label="Ticket sections">${nav}</nav>
       <main class="ut-main">
         <button type="button" class="ut-back" data-action="unified-ticket-back">←&nbsp; Back to Tickets</button>
@@ -23097,6 +23099,7 @@ Requirements:
           <div class="ut-metadata">${[["Type",ticket.type,"document"],["Priority",ticket.priority,"upload"],["Due Date",ticket.dueDate,"calendar"],["Lead",ticket.lead,"crew"],["Location",ticket.location,"pin"]].map(([label,value,icon])=>`<div><span>${unifiedTicketIcon(icon)}${label}</span><strong>${value}</strong></div>`).join("")}</div>
           <div class="ut-overflow-menu" data-unified-ticket-menu hidden><button type="button" data-action="unified-ticket-quick" data-section="work">Edit Job</button><button type="button" data-action="unified-ticket-section" data-section="history">View History</button></div>
         </header>
+        ${active !== "overview" ? `<section class="ut-active-section-summary"><h3>${escapeHtml(activeLabel)}</h3><p>${escapeHtml(active === "details" ? "Customer, property, scope, and ticket details." : active === "work" ? "Scope, checklist, and field notes for this ticket." : active === "schedule" ? "Upcoming visit and scheduling details." : active === "tasks" ? "Checklist items connected to this ticket." : active === "photos" ? "Arrival, progress, and completion photos." : active === "documents" ? "Documents connected to this ticket." : active === "notes" ? "Operational notes connected to this ticket." : "Recorded ticket activity and lifecycle history.")}</p>${active === "history" ? `<div class="ut-section-activity">${sectionActivity}</div>` : ""}</section>` : ""}
         <div class="ut-main-top">
           <div class="ut-property-stack">
             ${unifiedTicketCard("Property", `<div class="ut-property"><div class="ut-property-image"><button type="button" aria-label="View property location">${unifiedTicketIcon("pin")}</button></div><div class="ut-property-copy"><strong>${ticket.title}</strong><span>${ticket.address}</span><span>${ticket.city}</span><hr><b>Property Contact</b><span>${ticket.customer}</span><div class="ut-contact"><span>${unifiedTicketIcon("phone")}${ticket.phone}</span><span>${unifiedTicketIcon("mail")}${ticket.email}</span></div></div></div>`, "ut-property-card")}
@@ -23201,11 +23204,22 @@ Requirements:
     const ticketNotes = (state.data.notes || [])
       .filter((item) => String(item.ticketId || "") === String(job.id))
       .sort((a, b) => String(b.createdAtRaw || "").localeCompare(String(a.createdAtRaw || "")));
+    const workTabDescriptions = {
+      overview: "Crew, equipment, and core job details.",
+      work: "Checklist, crew, equipment, proof, documents, and field notes.",
+      schedule: "Timing, duration, priority, and service location.",
+      tasks: "Checklist items connected to this job.",
+      photos: "Arrival and completion proof connected to this job.",
+      documents: "Documentation connected to this job.",
+      notes: "Operational notes connected to this job.",
+      history: "Recorded job activity is available in the unified ticket history."
+    };
     const tabButtons = ["Overview","Work","Schedule","Tasks","Photos","Documents","Notes","History"].map(label=>`<button type="button" style="background:transparent!important;box-shadow:none!important;border:0!important;border-bottom:2px solid ${activeTab===label.toLowerCase()?"#276fca":"transparent"}!important" class="${activeTab===label.toLowerCase()?"is-active":""}" data-action="work-detail-tab" data-section="${label.toLowerCase()}">${label}</button>`).join("");
     return `<div class="wod-overlay" data-work-detail-overlay><button type="button" style="background:transparent!important;box-shadow:none!important;border:0!important" class="wod-scrim" data-action="close-work-detail" aria-label="Close work details"></button><aside class="wod-panel" aria-label="Work details for ${job.job}">
       <header><div><h2 style="color:#10141a!important">#${job.displayNumber || job.id}&nbsp;&nbsp; ${job.job}</h2><span class="wol-status is-${job.status.toLowerCase().replaceAll(" ","-")}">${job.status}</span></div><button type="button" style="background:transparent!important;box-shadow:none!important;border:0!important" class="wod-close" data-action="close-work-detail" aria-label="Close work detail">×</button></header>
       <nav aria-label="Work detail sections">${tabButtons}</nav>
-      <div class="wod-content">
+      <div class="wod-content is-tab-${escapeHtml(activeTab)}">
+        ${activeTab !== "work" ? `<section class="wod-tab-summary"><h3>${escapeHtml(activeTab[0].toUpperCase() + activeTab.slice(1))}</h3><p>${escapeHtml(workTabDescriptions[activeTab] || "Connected work details.")}</p></section>` : ""}
         <section class="wod-card wod-checklist"><h3>Work Checklist</h3><p><span>${done} of ${job.total} completed</span></p><i class="wod-progress"><b style="width:${job.total ? Math.round((done/job.total)*100) : 0}%"></b></i><div>${checklist.map(([label,time,itemId,checked])=>`<label><input type="checkbox" data-work-checklist-item data-id="${job.id}" data-item-id="${itemId}" ${checked?"checked":""}><span>${escapeHtml(label)}</span><time>${escapeHtml(time)}</time></label>`).join("") || '<small>No checklist tasks yet.</small>'}</div><button type="button" data-action="work-add-task">+ Add Task</button></section>
         <div class="wod-middle-top">
           <section class="wod-card"><h3>Crew</h3><ul>${crewAssignments.length ? crewAssignments.map((item)=>`<li>${unifiedTicketIcon("crew")}<span>${escapeHtml(item.employee_name || assignmentProfileForId(item.user_id)?.displayName || "Crew member")}${item.is_lead ? " (Lead)" : ""}</span><button type="button" data-action="work-remove-assignment" data-kind="crew" data-id="${item.id}" aria-label="Remove crew member">×</button></li>`).join("") : `<li>${unifiedTicketIcon("crew")}${escapeHtml(job.crewName || "Unassigned")}</li>`}</ul><button type="button" data-action="work-add-assignment" data-kind="crew" data-ticket-id="${job.id}">+&nbsp; Add Crew</button></section>

@@ -22540,10 +22540,93 @@ Requirements:
     </div>`;
   }
 
+  const UNIFIED_TICKET_REFERENCE = Object.freeze({
+    id: "10024", title: "Johnson Residence", status: "Scheduled", type: "Maintenance", priority: "Medium",
+    dueDate: "Jul 25, 2026", lead: "John D.", location: "Portland, OR", address: "123 Main St",
+    city: "Portland, OR 97201", customer: "Sarah Johnson", phone: "(503) 555-1234", email: "sarah@email.com",
+    crew: "John D., Mike L.", duration: "2 hours", created: "Jul 20, 2026"
+  });
+
+  const UNIFIED_TICKET_NAV = Object.freeze([
+    ["overview", "Overview", "home"], ["details", "Details", "info"], ["work", "Work", "work"],
+    ["schedule", "Schedule", "calendar"], ["tasks", "Tasks", "check"], ["photos", "Photos", "photo"],
+    ["documents", "Documents", "document"], ["notes", "Notes", "note"], ["history", "History", "clock"]
+  ]);
+
+  function unifiedTicketIcon(name) {
+    const paths = {
+      home: '<path d="M3 11.5 12 4l9 7.5"></path><path d="M5.5 10v10h13V10M9.5 20v-6h5v6"></path>',
+      info: '<circle cx="12" cy="12" r="9"></circle><path d="M12 11v6M12 7h.01"></path>',
+      work: '<path d="m14.5 6.5 3-3 3 3-3 3"></path><path d="M14.5 6.5 5 16l-1 4 4-1 9.5-9.5"></path>',
+      calendar: '<rect x="3" y="5" width="18" height="16" rx="2"></rect><path d="M8 3v4M16 3v4M3 10h18"></path>',
+      check: '<rect x="4" y="3" width="16" height="18" rx="2"></rect><path d="m8 12 3 3 5-6"></path>',
+      photo: '<rect x="3" y="4" width="18" height="16" rx="2"></rect><circle cx="9" cy="9" r="2"></circle><path d="m3 17 5-5 4 4 3-3 6 6"></path>',
+      document: '<path d="M6 3h8l4 4v14H6z"></path><path d="M14 3v5h5"></path>',
+      note: '<path d="M5 3h14v18H5z"></path><path d="M8 8h8M8 12h8M8 16h5"></path>',
+      clock: '<circle cx="12" cy="12" r="9"></circle><path d="M12 7v6l4 2"></path>',
+      pin: '<path d="M20 10c0 5-8 11-8 11S4 15 4 10a8 8 0 1 1 16 0Z"></path><circle cx="12" cy="10" r="2.5"></circle>',
+      phone: '<path d="M5 4h3l2 5-2 2a15 15 0 0 0 5 5l2-2 5 2v3c0 1-1 2-2 2C10 20 4 14 3 6c0-1 1-2 2-2Z"></path>',
+      mail: '<rect x="3" y="5" width="18" height="14" rx="2"></rect><path d="m3 7 9 7 9-7"></path>',
+      crew: '<circle cx="9" cy="8" r="3"></circle><path d="M3 20v-2a5 5 0 0 1 10 0v2M16 11a3 3 0 0 1 5 2v2"></path>',
+      edit: '<path d="M4 20h4L19 9l-4-4L4 16zM13 7l4 4"></path>',
+      upload: '<path d="M12 16V4M7 9l5-5 5 5M4 20h16"></path>',
+      plus: '<path d="M12 5v14M5 12h14"></path>'
+    };
+    return `<svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">${paths[name] || paths.info}</svg>`;
+  }
+
+  function unifiedTicketCard(title, body, className = "") {
+    return `<section class="ut-card ${className}"><h3>${escapeHtml(title)}</h3>${body}</section>`;
+  }
+
+  function renderUnifiedTicketOverview() {
+    const host = qs("[data-unified-ticket-workspace]");
+    if (!host) return;
+    if (state.unifiedTicketVisible === false) {
+      host.innerHTML = '<div class="workspace-reset-canvas ut-returned-list"><small>Tickets Wireframe Canvas</small></div>';
+      return;
+    }
+    const ticket = UNIFIED_TICKET_REFERENCE;
+    const active = state.unifiedTicketSection || "overview";
+    const nav = UNIFIED_TICKET_NAV.map(([key, label, icon]) => `<button type="button" class="ut-nav-item ${active === key ? "is-active" : ""}" data-action="unified-ticket-section" data-section="${key}" aria-pressed="${active === key}"><span>${unifiedTicketIcon(icon)}</span>${label}</button>`).join("");
+    const summaryRows = [["Type",ticket.type],["Priority",ticket.priority],["Due Date",ticket.dueDate],["Status",ticket.status],["Lead",ticket.lead],["Crew",ticket.crew],["Est. Time","2h"],["Created",ticket.created],["Customer",ticket.customer],["Phone",ticket.phone],["Email",ticket.email]].map(([a,b])=>`<div><span>${a}</span><strong>${b}</strong></div>`).join("");
+    const quickActions = [["Edit Job","edit","work"],["Add Task","plus","tasks"],["Upload Photo","upload","photos"],["Add Note","note","notes"],["Create Document","document","documents"]].map(([label,icon,section])=>`<button type="button" data-action="unified-ticket-quick" data-section="${section}"><span>${unifiedTicketIcon(icon)}</span><strong>${label}</strong><b>›</b></button>`).join("");
+    host.innerHTML = `<div class="unified-ticket-shell">
+      <nav class="ut-internal-nav" aria-label="Ticket sections">${nav}</nav>
+      <main class="ut-main">
+        <button type="button" class="ut-back" data-action="unified-ticket-back">←&nbsp; Back to Tickets</button>
+        <header class="ut-header"><div class="ut-title-line"><h2>#${ticket.id}&nbsp;&nbsp; ${ticket.title}</h2><span>${ticket.status}</span><button type="button" data-action="unified-ticket-menu" aria-label="Ticket actions">⋮</button></div>
+          <div class="ut-metadata">${[["Type",ticket.type,"document"],["Priority",ticket.priority,"upload"],["Due Date",ticket.dueDate,"calendar"],["Lead",ticket.lead,"crew"],["Location",ticket.location,"pin"]].map(([label,value,icon])=>`<div><span>${unifiedTicketIcon(icon)}${label}</span><strong>${value}</strong></div>`).join("")}</div>
+          <div class="ut-overflow-menu" data-unified-ticket-menu hidden><button type="button" data-action="unified-ticket-quick" data-section="work">Edit Job</button><button type="button" data-action="unified-ticket-section" data-section="history">View History</button></div>
+        </header>
+        <div class="ut-main-top">
+          <div class="ut-property-stack">
+            ${unifiedTicketCard("Property", `<div class="ut-property"><div class="ut-property-image"><button type="button" aria-label="View property location">${unifiedTicketIcon("pin")}</button></div><div class="ut-property-copy"><strong>${ticket.title}</strong><span>${ticket.address}</span><span>${ticket.city}</span><hr><b>Property Contact</b><span>${ticket.customer}</span><div class="ut-contact"><span>${unifiedTicketIcon("phone")}${ticket.phone}</span><span>${unifiedTicketIcon("mail")}${ticket.email}</span></div></div></div>`, "ut-property-card")}
+            ${unifiedTicketCard("Job Summary", `<p>Routine landscape maintenance including lawn mowing, edging, hedge trimming, and cleanup of front and back yard.</p><div class="ut-copy-lines"><i></i><i></i><i></i></div>`, "ut-job-summary")}
+          </div>
+          ${unifiedTicketCard("Summary", `<div class="ut-summary-rows">${summaryRows}</div>`, "ut-summary-card")}
+        </div>
+        ${unifiedTicketCard("", `<div class="ut-next-visit"><span>${unifiedTicketIcon("calendar")}</span><div><b>Next Visit</b><strong>Jul 25, 2026 at 8:00 AM</strong><small>Estimated: 2 hours</small></div><button type="button" data-action="unified-ticket-schedule">View / Edit Schedule</button></div>`, "ut-next-card")}
+        <div class="ut-lower-grid">
+          ${unifiedTicketCard("Tasks (3)", `<div class="ut-task-lines">${[1,2,3].map(()=>'<label><input type="checkbox"><i></i></label>').join("")}</div><button class="ut-small-btn" type="button" data-action="unified-ticket-section" data-section="tasks">View all tasks</button>`, "ut-tasks-card")}
+          ${unifiedTicketCard("Photos (4)", `<div class="ut-thumbnails">${[1,2,3,4].map(()=>'<i></i>').join("")}</div><button class="ut-small-btn" type="button" data-action="unified-ticket-section" data-section="photos">View all photos</button>`, "ut-photos-card")}
+          ${unifiedTicketCard("Documents (2)", `<div class="ut-documents">${[1,2].map(()=>`<button type="button"><span>${unifiedTicketIcon("document")}</span><i></i><b>›</b></button>`).join("")}</div><button class="ut-small-btn" type="button" data-action="unified-ticket-section" data-section="documents">View all documents</button>`, "ut-documents-card")}
+        </div>
+        ${unifiedTicketCard("Notes", `<form class="ut-note-form" data-unified-ticket-note-form><textarea placeholder="Type a note here..." aria-label="Ticket note"></textarea><button type="submit">Add Note</button></form><p class="ut-note-status" data-unified-ticket-note-status aria-live="polite"></p>`, "ut-notes-card")}
+      </main>
+      <aside class="ut-sidebar">
+        ${unifiedTicketCard("Progress", `<div class="ut-progress">${[["Created","check"],["Scheduled","calendar"],["On Site","pin"],["In Progress","clock"],["Complete","check"]].map(([label,icon],i)=>`<div class="${i===0?"is-done":i===1?"is-active":""}"><span>${unifiedTicketIcon(icon)}</span><small>${label}</small></div>`).join("")}</div>`, "ut-progress-card")}
+        ${unifiedTicketCard("Schedule", `<div class="ut-schedule-rows"><div><span>${unifiedTicketIcon("calendar")}Scheduled</span><strong>Jul 25, 2026 at 8:00 AM</strong></div><div><span>${unifiedTicketIcon("clock")}Estimated Duration</span><strong>2 hours</strong></div><div><span>${unifiedTicketIcon("crew")}Crew</span><strong>${ticket.crew}</strong></div></div><button class="ut-small-btn" type="button" data-action="unified-ticket-schedule">View Full Schedule</button>`, "ut-schedule-card")}
+        ${unifiedTicketCard("Recent Activity", `<div class="ut-activity">${[["Job scheduled","by Tyler G.","Jul 21, 8:15 AM"],["Estimate approved by customer","by Sarah Johnson","Jul 20, 4:32 PM"],["Quote sent to customer","by Tyler G.","Jul 20, 2:10 PM"]].map(([title,by,date])=>`<div><i></i><span><strong>${title}</strong><small>${by}</small></span><time>${date}</time></div>`).join("")}</div><button class="ut-small-btn" type="button" data-action="unified-ticket-section" data-section="history">View all history</button>`, "ut-activity-card")}
+        ${unifiedTicketCard("Quick Actions", `<div class="ut-quick-actions">${quickActions}</div>`, "ut-quick-card")}
+      </aside>
+    </div>`;
+  }
+
   function renderVisualResetWorkspaces() {
     qsa(".dashboard-main > .dashboard-section[data-section]").forEach((section) => {
       const key = normalizeDashboardSection(section.dataset.section || section.id);
-      if (key === "overview") return;
+      if (key === "overview" || key === "tickets") return;
       const title = DASHBOARD_VISUAL_RESET_TITLES[key] || "Workspace";
       section.className = "dashboard-section workspace-reset-canvas";
       section.innerHTML = `<small>${escapeHtml(title)} Wireframe Canvas</small>`;
@@ -22559,6 +22642,7 @@ Requirements:
     const active = normalizeDashboardSection(state.activeSection);
     safeRender("wireframe canvases", () => renderVisualResetWorkspaces());
     if (active === "overview") safeRender("Focus on Work home", () => renderFocusOnWorkHome());
+    if (active === "tickets") safeRender("unified ticket overview", () => renderUnifiedTicketOverview());
     safeRender("contextual Groundskeeper tools", () => renderContextualGroundskeeperTools(active));
     safeRender("dashboard Groundskeeper", () => renderDashboardCopilot());
     safeRender("avatar fallbacks", () => bindAvatarFallbacks());
@@ -23974,6 +24058,33 @@ Requirements:
       const id = target.dataset.id;
       if (action !== "toggle-global-add") setGlobalAddOpen(false);
       if (target.closest("[data-global-search-panel]")) closeGlobalSearchPanel();
+
+      if (action === "unified-ticket-back") {
+        state.unifiedTicketVisible = false;
+        renderUnifiedTicketOverview();
+        return;
+      }
+
+      if (action === "unified-ticket-menu") {
+        const menu = qs("[data-unified-ticket-menu]");
+        if (menu) menu.hidden = !menu.hidden;
+        return;
+      }
+
+      if (action === "unified-ticket-schedule") {
+        setActiveSection("calendar");
+        return;
+      }
+
+      if (action === "unified-ticket-section" || action === "unified-ticket-quick") {
+        const sectionKey = target.dataset.section || "overview";
+        state.unifiedTicketSection = sectionKey;
+        renderUnifiedTicketOverview();
+        const selector = { tasks: ".ut-tasks-card", photos: ".ut-photos-card", documents: ".ut-documents-card", notes: ".ut-notes-card", history: ".ut-activity-card", schedule: ".ut-schedule-card", work: ".ut-job-summary", details: ".ut-property-card" }[sectionKey];
+        if (selector) qs(selector)?.scrollIntoView({ behavior: "smooth", block: "center" });
+        if (sectionKey === "notes") qs("[data-unified-ticket-note-form] textarea")?.focus({ preventScroll: true });
+        return;
+      }
 
       if (action === "focus-ticket-section") {
         const sectionKey = target.dataset.section || "overview";
@@ -27666,6 +27777,19 @@ Requirements:
     });
 
   els.appView.addEventListener("submit", async (event) => {
+      if (event.target?.matches?.("[data-unified-ticket-note-form]")) {
+        event.preventDefault();
+        const note = event.target.querySelector("textarea")?.value.trim();
+        const status = qs("[data-unified-ticket-note-status]");
+        if (!note) {
+          if (status) status.textContent = "Enter a note before saving.";
+          return;
+        }
+        // TODO: replace this non-destructive UI acknowledgement with the canonical ticket-note service when the Overview is connected to a selected live ticket.
+        event.target.reset();
+        if (status) status.textContent = "Note captured for this session. Live ticket persistence is not connected yet.";
+        return;
+      }
       if (event.target.matches("[data-complete-all-parts-form]")) {
         event.preventDefault();
         const form = event.target;

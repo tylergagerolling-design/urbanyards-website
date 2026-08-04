@@ -5545,6 +5545,8 @@
       },
       { key: "tickets", name: "canonical tickets", loader: loadCanonicalTickets, fallback: [] },
       { key: "ticketEvents", name: "canonical ticket events", loader: loadCanonicalTicketEvents, fallback: [] },
+      { key: "connectedOps", name: "ticket operations", loader: loadConnectedOperations, fallback: normalizeConnectedOpsBundle },
+      { key: "ticketRelations", name: "ticket assignments", loader: loadTicketOperationalRelations, fallback: () => ({ crew: [], equipment: [] }) },
       {
         key: "notes",
         name: "job notes",
@@ -5590,9 +5592,9 @@
   function dashboardInitialModuleKeys(section = state.activeSection) {
     const normalized = normalizeDashboardSection(section);
     const keysBySection = {
-      overview: ["submissions", "jobs", "reminders", "notes"],
-      tickets: ["tickets", "ticketEvents", "submissions", "jobs", "documents", "notes", "userProfiles"],
-      calendar: ["jobs", "tickets"],
+      overview: ["tickets", "ticketEvents", "jobs", "notes", "documents", "connectedOps", "ticketRelations", "userProfiles"],
+      tickets: ["tickets", "ticketEvents", "submissions", "jobs", "documents", "notes", "connectedOps", "ticketRelations", "userProfiles"],
+      calendar: ["jobs", "tickets", "ticketEvents", "notes", "documents", "connectedOps", "ticketRelations", "equipmentItems", "userProfiles"],
       outreach: ["outreachProspects", "tickets", "submissions"],
       "call-queue": ["outreachProspects", "leadActivity", "tickets", "contacts"],
       contacts: ["contacts", "jobs", "documents", "routeStops", "reminders"],
@@ -22456,6 +22458,93 @@ Requirements:
     </section>`;
   }
 
+  function approvedTicketStatus(ticket = {}) {
+    if (["closed", "paid"].includes(ticket.stage) || ticket.status === "completed") return "Completed";
+    if (["in_progress", "field_work_complete", "completion_review"].includes(ticket.stage)) return "In Progress";
+    return ticket.scheduledDate ? "Scheduled" : ticket.stageLabel || "Unscheduled";
+  }
+
+  async function loadTicketOperationalRelations({ signal } = {}) {
+    const read = async (table) => {
+      try {
+        return await supabaseRestRequest(`${table}?select=*&removed_at=is.null&limit=1000`, { method: "GET", signal });
+      } catch (error) {
+        if (!isMissingOptionalTableError(error)) recordModuleError(table, error, { scope: "support" });
+        return [];
+      }
+    };
+    const [crew, equipment] = await Promise.all([
+      read("job_ticket_crew_assignments"),
+      read("job_ticket_equipment_assignments")
+    ]);
+    return { crew, equipment };
+  }
+
+  function approvedTicketJob(ticket = {}) {
+    return (state.data.jobs || []).find((job) => String(job.id) === String(ticket.jobId || (ticket.sourceType === "job" ? ticket.sourceId : ""))) || null;
+  }
+
+  function approvedTicketProfile(ticket = {}) {
+    return (state.data.userProfiles || []).find((profile) => String(profile.userId || profile.id) === String(ticket.assignedUserId || "")) || null;
+  }
+
+  function approvedTicketChecklist(ticket = {}, job = null) {
+    const ops = state.data.connectedOps || normalizeConnectedOpsBundle();
+    const checklist = (ops.checklists || []).find((item) =>
+      String(item.jobId || "") === String(ticket.id || "") ||
+      String(item.jobId || "") === String(job?.id || "") ||
+      String(item.scheduledJobId || "") === String(job?.id || "")
+    );
+    const items = checklist ? (ops.checklistItems || []).filter((item) => String(item.checklist_id || item.checklistId || "") === String(checklist.id)) : [];
+    return { checklist, items, done: items.filter((item) => Boolean(item.checked)).length, total: items.length };
+  }
+
+  function approvedTicketAttention(ticket = {}, job = null, checklist = {}) {
+    const ops = state.data.connectedOps || normalizeConnectedOpsBundle();
+    const date = job?.dateRaw || ticket.scheduledDate || "";
+    if (date && date < todayKey() && approvedTicketStatus(ticket) !== "Completed") return "Visit Overdue";
+    if (!ticket.assignedUserId) return "No Crew Assigned";
+    const relatedPhotos = (ops.sitePhotos || []).filter((photo) => [ticket.id, job?.id].includes(photo.job_id || photo.jobId || photo.scheduled_job_id || photo.scheduledJobId));
+    if (["In Progress", "Completed"].includes(approvedTicketStatus(ticket)) && !relatedPhotos.some((photo) => (photo.photo_type || photo.photoType) === "arrival")) return "Arrival Photo Missing";
+    if (approvedTicketStatus(ticket) === "Completed" && !relatedPhotos.some((photo) => (photo.photo_type || photo.photoType) === "completion")) return "Completion Photo Missing";
+    if (checklist.total && checklist.done < checklist.total && date && date < todayKey()) return "Checklist Incomplete";
+    return "";
+  }
+
+  function approvedOperationalRows() {
+    if (isDemoMode()) return [];
+    return (state.data.tickets || []).map((ticket) => {
+      const job = approvedTicketJob(ticket);
+      const profile = approvedTicketProfile(ticket);
+      const checklist = approvedTicketChecklist(ticket, job);
+      const crewAssignments = (state.data.ticketRelations?.crew || []).filter((item) => String(item.ticket_id || item.ticketId) === String(ticket.id));
+      const dateRaw = job?.dateRaw || ticket.scheduledDate || ticket.dueDate || "";
+      const date = dateRaw ? new Date(`${dateRaw}T12:00:00`) : null;
+      const tomorrow = addDaysKey(todayKey(), 1);
+      const visit = dateRaw === todayKey() ? "Today" : dateRaw === tomorrow ? "Tomorrow" : date ? date.toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric" }) : "Unscheduled";
+      const group = dateRaw === todayKey() ? "Today" : dateRaw === tomorrow ? "Tomorrow" : date ? (dateRaw <= addDaysKey(todayKey(), 6) ? date.toLocaleDateString("en-US", { weekday: "short" }) : "Later") : "Later";
+      const displayNumber = String(ticket.number || ticket.id || "").replace(/^TKT-?/i, "");
+      const crewNames = crewAssignments.map((item) => item.employee_name || assignmentProfileForId(item.user_id)?.displayName || item.user_id).filter(Boolean);
+      const crewName = crewNames.join(", ") || profile?.displayName || profile?.name || profile?.email || ticket.ownerLabel || "Unassigned";
+      const initials = crewName === "Unassigned" ? ["—"] : crewName.split(/[,\s]+/).slice(0, 3).map((part) => part[0]?.toUpperCase()).filter(Boolean);
+      return {
+        ticketId: ticket.id, id: ticket.id, displayNumber, visit, group,
+        date: dateRaw ? formatDate(dateRaw) : "Unscheduled", dateRaw,
+        time: job?.window || ticket.workWindow || "Time not set",
+        job: ticket.property || ticket.title, name: ticket.property || ticket.title,
+        customer: ticket.customer, type: ticket.requestedService || ticket.title,
+        address: ticket.propertyAddress || ticket.property || "Address not set",
+        city: job?.city || ticket.property || "Location not set",
+        crew: initials, crewName, crewAssignments, extra: crewNames.length > 1 ? `+${crewNames.length - 1}` : "", status: approvedTicketStatus(ticket),
+        done: checklist.done, total: checklist.total, checklistItems: checklist.items,
+        estimate: ticket.workWindow || job?.window || "Not set",
+        priority: ["High", "Medium", "Low"].includes(ticket.priority) ? ticket.priority : "Medium",
+        attention: approvedTicketAttention(ticket, job, checklist), range: dateRaw && dateRaw <= addDaysKey(todayKey(), 6) ? "week" : "later",
+        ticket, sourceJob: job
+      };
+    }).sort((a, b) => String(a.dateRaw || "9999").localeCompare(String(b.dateRaw || "9999")));
+  }
+
   const HOME_FOCUS_JOBS = Object.freeze([
     { time: "8:00 AM", address: "123 Main St", service: "Lawn Maintenance", crew: "John D.", status: "In Progress", duration: "1h 30m" },
     { time: "10:00 AM", address: "456 Oak Ave", service: "Landscape Maintenance", crew: "Mike L.", status: "In Progress", duration: "1h 15m" },
@@ -22502,14 +22591,23 @@ Requirements:
   function renderFocusOnWorkHome() {
     const host = qs("[data-home-focus-work]");
     if (!host) return;
+    const focusJobs = homeFocusRows();
+    const locationCounts = focusJobs.reduce((map, job) => map.set(job.address, (map.get(job.address) || 0) + 1), new Map());
+    const topLocations = [...locationCounts.entries()].sort((a, b) => b[1] - a[1]).slice(0, 4);
+    const homeTasks = focusJobs.flatMap((job) => (job.checklistItems || []).map((item) => ({ ...item, address: job.address, time: job.time }))).slice(0, 3);
+    const completedCount = focusJobs.filter((job) => job.status === "Completed").length;
+    const inProgressCount = focusJobs.filter((job) => job.status === "In Progress").length;
+    const scheduledCount = focusJobs.filter((job) => job.status === "Scheduled").length;
+    const attentionCount = focusJobs.filter((job) => job.attention).length;
+    const summaryPercent = (value) => focusJobs.length ? Math.round((value / focusJobs.length) * 100) : 0;
     host.innerHTML = `<div class="focus-work-page">
       <header class="focus-work-heading"><h2>Focus on Work</h2><p>List + Summary</p></header>
       <section class="focus-metrics" aria-label="Work metrics">
-        ${renderFocusMetric("calendar", "8", "Jobs Today")}
-        ${renderFocusMetric("pin", "6", "Locations")}
-        ${renderFocusMetric("clock", "24h 15m", "Est. Work Time", "This Week")}
-        ${renderFocusMetric("check", "2", "Completed", "This Week")}
-        ${renderFocusMetric("warning", "1", "Needs Attention", "View")}
+        ${renderFocusMetric("calendar", String(focusJobs.filter((job) => job.dateRaw === todayKey()).length), "Jobs Today")}
+        ${renderFocusMetric("pin", String(locationCounts.size), "Locations")}
+        ${renderFocusMetric("clock", "Derived", "Est. Work Time", "This Week")}
+        ${renderFocusMetric("check", String(completedCount), "Completed", "This Week")}
+        ${renderFocusMetric("warning", String(attentionCount), "Needs Attention", "View")}
       </section>
       <div class="focus-primary-grid">
         <section class="focus-card focus-jobs-card">
@@ -22519,23 +22617,23 @@ Requirements:
             <label><span class="focus-control-icon">${homeFocusIcon("briefcase")}</span><select aria-label="Job status"><option>All Status</option><option>In Progress</option><option>Scheduled</option></select></label>
             <button class="focus-new-job" type="button" data-action="open-ticket-create" data-ticket-type="field"><span>+</span> New Job</button>
           </div></div>
-          <div class="focus-jobs-table-wrap"><table class="focus-jobs-table"><thead><tr><th>Time</th><th>Job / Customer</th><th>Location</th><th>Crew</th><th>Status</th><th>Est. Time</th><th><span class="sr-only">Menu</span></th></tr></thead><tbody>${HOME_FOCUS_JOBS.map(renderFocusJobRow).join("")}</tbody></table></div>
-          <div class="focus-card-footer"><span>Showing 6 of 6 jobs</span><a href="#tickets">View full list <span aria-hidden="true">→</span></a></div>
+          <div class="focus-jobs-table-wrap"><table class="focus-jobs-table"><thead><tr><th>Time</th><th>Job / Customer</th><th>Location</th><th>Crew</th><th>Status</th><th>Est. Time</th><th><span class="sr-only">Menu</span></th></tr></thead><tbody>${focusJobs.length ? focusJobs.map(renderFocusJobRow).join("") : '<tr><td colspan="7">No scheduled work matches this period.</td></tr>'}</tbody></table></div>
+          <div class="focus-card-footer"><span>Showing ${focusJobs.length} of ${focusJobs.length} jobs</span><a href="#tickets">View full list <span aria-hidden="true">→</span></a></div>
         </section>
         <div class="focus-right-stack">
           <section class="focus-card focus-summary-card"><div class="focus-card-header"><h3>Work Summary</h3><label class="focus-summary-select"><select aria-label="Summary period"><option>This Week</option><option>Today</option><option>This Month</option></select></label></div><div class="focus-summary-list">
-            <div class="focus-summary-row is-total"><span class="focus-inline-icon">${homeFocusIcon("calendar")}</span><span>Total Jobs</span><strong>8</strong></div>
-            <div class="focus-summary-row"><span class="focus-inline-icon">${homeFocusIcon("check")}</span><span>Completed</span><i><b style="width:25%"></b></i><strong>2 (25%)</strong></div>
-            <div class="focus-summary-row is-progress"><span class="focus-inline-icon">${homeFocusIcon("check")}</span><span>In Progress</span><i><b style="width:38%"></b></i><strong>3 (38%)</strong></div>
-            <div class="focus-summary-row"><span class="focus-inline-icon">${homeFocusIcon("calendar")}</span><span>Scheduled</span><i><b style="width:25%"></b></i><strong>2 (25%)</strong></div>
-            <div class="focus-summary-row is-attention"><span class="focus-inline-icon">${homeFocusIcon("warning")}</span><span>Needs Attention</span><i><b style="width:12%"></b></i><strong>1 (12%)</strong></div>
+            <div class="focus-summary-row is-total"><span class="focus-inline-icon">${homeFocusIcon("calendar")}</span><span>Total Jobs</span><strong>${focusJobs.length}</strong></div>
+            <div class="focus-summary-row"><span class="focus-inline-icon">${homeFocusIcon("check")}</span><span>Completed</span><i><b style="width:${summaryPercent(completedCount)}%"></b></i><strong>${completedCount} (${summaryPercent(completedCount)}%)</strong></div>
+            <div class="focus-summary-row is-progress"><span class="focus-inline-icon">${homeFocusIcon("check")}</span><span>In Progress</span><i><b style="width:${summaryPercent(inProgressCount)}%"></b></i><strong>${inProgressCount} (${summaryPercent(inProgressCount)}%)</strong></div>
+            <div class="focus-summary-row"><span class="focus-inline-icon">${homeFocusIcon("calendar")}</span><span>Scheduled</span><i><b style="width:${summaryPercent(scheduledCount)}%"></b></i><strong>${scheduledCount} (${summaryPercent(scheduledCount)}%)</strong></div>
+            <div class="focus-summary-row is-attention"><span class="focus-inline-icon">${homeFocusIcon("warning")}</span><span>Needs Attention</span><i><b style="width:${summaryPercent(attentionCount)}%"></b></i><strong>${attentionCount} (${summaryPercent(attentionCount)}%)</strong></div>
           </div></section>
-          <section class="focus-card focus-locations-card"><div class="focus-card-header"><h3>Top Locations</h3><a class="focus-small-button" href="#calendar">View all</a></div><div class="focus-location-list">${[["123 Main St","2 jobs"],["456 Oak Ave","2 jobs"],["789 Pine Rd","1 job"],["321 Cedar Ln","1 job"]].map(([name,count])=>`<div><span class="focus-inline-icon">${homeFocusIcon("pin")}</span><span>${name}</span><small>${count}</small></div>`).join("")}</div></section>
+          <section class="focus-card focus-locations-card"><div class="focus-card-header"><h3>Top Locations</h3><a class="focus-small-button" href="#calendar">View all</a></div><div class="focus-location-list">${topLocations.map(([name,count])=>`<div><span class="focus-inline-icon">${homeFocusIcon("pin")}</span><span>${escapeHtml(name)}</span><small>${count} job${count===1?"":"s"}</small></div>`).join("") || '<small>No scheduled locations.</small>'}</div></section>
         </div>
       </div>
       <div class="focus-bottom-grid">
-        <section class="focus-card focus-schedule-card"><div class="focus-card-header"><h3>Upcoming Schedule</h3><a href="#calendar">View full schedule <span aria-hidden="true">→</span></a></div><div class="focus-schedule-list">${HOME_FOCUS_JOBS.map(renderFocusScheduleItem).join("")}</div></section>
-        <section class="focus-card focus-tasks-card"><div class="focus-card-header"><h3>My Tasks</h3><a class="focus-small-button" href="#calendar">View all</a></div><label class="focus-task"><input type="checkbox"><span><strong>Follow up on proposal</strong><small>123 Main St</small></span><em>Due 10:00 AM</em></label><label class="focus-task"><input type="checkbox"><span><strong>Upload before photos</strong><small>456 Oak Ave</small></span><em>Due 12:00 PM</em></label><label class="focus-task is-complete"><input type="checkbox" checked><span><strong>Order mulch for 321 Cedar Ln</strong></span><em>Completed</em></label></section>
+        <section class="focus-card focus-schedule-card"><div class="focus-card-header"><h3>Upcoming Schedule</h3><a href="#calendar">View full schedule <span aria-hidden="true">→</span></a></div><div class="focus-schedule-list">${focusJobs.map(renderFocusScheduleItem).join("")}</div></section>
+        <section class="focus-card focus-tasks-card"><div class="focus-card-header"><h3>My Tasks</h3><a class="focus-small-button" href="#calendar">View all</a></div>${homeTasks.map((item)=>`<label class="focus-task ${item.checked?"is-complete":""}"><input type="checkbox" ${item.checked?"checked":""} disabled><span><strong>${escapeHtml(item.label || "Task")}</strong><small>${escapeHtml(item.address)}</small></span><em>${item.checked?"Completed":`Due ${escapeHtml(item.time)}`}</em></label>`).join("") || '<small>No assigned tasks.</small>'}</section>
       </div>
     </div>`;
   }
@@ -22593,7 +22691,7 @@ Requirements:
     return `<article class="ttl-row" data-action="unified-ticket-open" data-id="${ticket.id}" tabindex="0" role="button" aria-label="Open ticket ${ticket.id} ${ticket.name}">
       <span class="ttl-marker ${ticket.group === "Later" ? "is-later" : ""}" aria-hidden="true"></span>
       <strong class="ttl-time">${ticket.time}</strong>
-      <button type="button" class="ttl-number" data-action="unified-ticket-open" data-id="${ticket.id}">#${ticket.id}</button>
+      <button type="button" class="ttl-number" data-action="unified-ticket-open" data-id="${ticket.id}">#${ticket.displayNumber || ticket.id}</button>
       <span class="ttl-name"><strong>${ticket.name}</strong><small>${ticket.type}</small></span>
       <span class="ttl-location"><strong>${ticket.address}</strong><small>${ticket.city}</small></span>
       <span class="ttl-status ${ticket.status === "In Progress" ? "is-progress" : "is-scheduled"}">${ticket.status}</span>
@@ -22611,13 +22709,15 @@ Requirements:
     const type = state.ticketTimelineType || "All";
     const location = state.ticketTimelineLocation || "All";
     const range = state.ticketTimelineRange || "week-plus";
-    const rows = TICKET_TIMELINE_FIXTURE.filter((ticket) =>
+    const allRows = ticketTimelineRows();
+    const rows = allRows.filter((ticket) =>
       (status === "All" || ticket.status === status) &&
       (type === "All" || ticket.type === type) &&
       (location === "All" || ticket.city === location) &&
       (range === "week-plus" || ticket.range === "week")
     );
-    const groups = ["Today","Tomorrow","Fri","Sat","Later"].map((label) => {
+    const orderedGroups = [...new Set(rows.map((ticket) => ticket.group))];
+    const groups = orderedGroups.map((label) => {
       const tickets = rows.filter((ticket) => ticket.group === label);
       if (!tickets.length) return "";
       return `<section class="ttl-group"><div class="ttl-date"><strong>${label}</strong><span>${tickets[0].date}</span></div><div class="ttl-group-rows">${tickets.map(renderTicketTimelineRow).join("")}</div></section>`;
@@ -22625,8 +22725,8 @@ Requirements:
     host.innerHTML = `<div class="tickets-timeline-page">
       <header class="ttl-header"><div><h2 style="color:#0e1116!important">Tickets</h2><p>Focus on what’s coming up</p></div><div class="ttl-filters">
         <label>${unifiedTicketIcon("check")}<select data-ticket-timeline-filter="status" aria-label="Ticket status"><option value="All">Status</option><option${status==="In Progress"?" selected":""}>In Progress</option><option${status==="Scheduled"?" selected":""}>Scheduled</option></select></label>
-        <label>${unifiedTicketIcon("document")}<select data-ticket-timeline-filter="type" aria-label="Ticket type"><option value="All">Types</option>${["Maintenance","Seasonal","Grounds"].map(v=>`<option${type===v?" selected":""}>${v}</option>`).join("")}</select></label>
-        <label>${unifiedTicketIcon("pin")}<select data-ticket-timeline-filter="location" aria-label="Ticket location"><option value="All">All Locations</option>${["Portland, OR","Beaverton, OR","Happy Valley, OR"].map(v=>`<option${location===v?" selected":""}>${v}</option>`).join("")}</select></label>
+        <label>${unifiedTicketIcon("document")}<select data-ticket-timeline-filter="type" aria-label="Ticket type"><option value="All">Types</option>${[...new Set(allRows.map((item) => item.type).filter(Boolean))].map(v=>`<option${type===v?" selected":""}>${v}</option>`).join("")}</select></label>
+        <label>${unifiedTicketIcon("pin")}<select data-ticket-timeline-filter="location" aria-label="Ticket location"><option value="All">All Locations</option>${[...new Set(allRows.map((item) => item.city).filter(Boolean))].map(v=>`<option${location===v?" selected":""}>${v}</option>`).join("")}</select></label>
         <label>${unifiedTicketIcon("calendar")}<select data-ticket-timeline-filter="range" aria-label="Ticket date range"><option value="week-plus"${range==="week-plus"?" selected":""}>This Week</option><option value="week"${range==="week"?" selected":""}>Through Sat</option></select></label>
         <button type="button" class="ttl-new-ticket" style="background:#343a45!important;color:#fff!important" data-action="open-ticket-create" data-ticket-type="field"><span>+</span> New Ticket</button>
       </div></header>
@@ -22642,16 +22742,28 @@ Requirements:
       renderTicketsTimeline();
       return;
     }
-    const selectedTimelineTicket = TICKET_TIMELINE_FIXTURE.find((item) => item.id === state.unifiedTicketSelectedId);
+    const selectedTimelineTicket = ticketTimelineRows().find((item) => item.id === state.unifiedTicketSelectedId);
+    const sourceTicket = selectedTimelineTicket?.ticket || (state.data.tickets || []).find((item) => item.id === state.unifiedTicketSelectedId);
+    const selectedEvents = (state.data.ticketEvents || []).filter((item) => item.ticketId === sourceTicket?.id);
+    const selectedChecklist = sourceTicket ? approvedTicketChecklist(sourceTicket, selectedTimelineTicket?.sourceJob) : { items: [] };
     const ticket = selectedTimelineTicket ? {
       ...UNIFIED_TICKET_REFERENCE,
-      id:selectedTimelineTicket.id, title:selectedTimelineTicket.name, status:selectedTimelineTicket.status,
+      id:selectedTimelineTicket.displayNumber || selectedTimelineTicket.id, recordId:selectedTimelineTicket.id,
+      title:selectedTimelineTicket.name, status:selectedTimelineTicket.status,
       type:selectedTimelineTicket.type, priority:selectedTimelineTicket.priority, location:selectedTimelineTicket.city,
-      address:selectedTimelineTicket.address, city:selectedTimelineTicket.city, crew:`${selectedTimelineTicket.crew}${selectedTimelineTicket.extra ? `, ${selectedTimelineTicket.extra} crew` : ""}`
+      address:selectedTimelineTicket.address, city:selectedTimelineTicket.city,
+      customer:sourceTicket?.customer || selectedTimelineTicket.customer,
+      phone:sourceTicket?.contactPhone || "Not provided", email:sourceTicket?.contactEmail || "Not provided",
+      lead:selectedTimelineTicket.crewName || "Unassigned", crew:selectedTimelineTicket.crewName || "Unassigned",
+      dueDate:formatDate(sourceTicket?.dueDate || selectedTimelineTicket.dateRaw) || "Not set",
+      created:formatDate(sourceTicket?.createdAtRaw) || "Not set",
+      duration:selectedTimelineTicket.estimate || "Not set", scope:sourceTicket?.scopeOfWork || sourceTicket?.detail || "No scope of work has been recorded.",
+      nextVisit:selectedTimelineTicket.dateRaw ? `${formatDate(selectedTimelineTicket.dateRaw)} at ${selectedTimelineTicket.time}` : "Not scheduled",
+      checklistItems:selectedChecklist.items || [], events:selectedEvents
     } : UNIFIED_TICKET_REFERENCE;
     const active = state.unifiedTicketSection || "overview";
     const nav = UNIFIED_TICKET_NAV.map(([key, label, icon]) => `<button type="button" class="ut-nav-item ${active === key ? "is-active" : ""}" data-action="unified-ticket-section" data-section="${key}" aria-pressed="${active === key}"><span>${unifiedTicketIcon(icon)}</span>${label}</button>`).join("");
-    const summaryRows = [["Type",ticket.type],["Priority",ticket.priority],["Due Date",ticket.dueDate],["Status",ticket.status],["Lead",ticket.lead],["Crew",ticket.crew],["Est. Time","2h"],["Created",ticket.created],["Customer",ticket.customer],["Phone",ticket.phone],["Email",ticket.email]].map(([a,b])=>`<div><span>${a}</span><strong>${b}</strong></div>`).join("");
+    const summaryRows = [["Type",ticket.type],["Priority",ticket.priority],["Due Date",ticket.dueDate],["Status",ticket.status],["Lead",ticket.lead],["Crew",ticket.crew],["Est. Time",ticket.duration || "Not set"],["Created",ticket.created],["Customer",ticket.customer],["Phone",ticket.phone],["Email",ticket.email]].map(([a,b])=>`<div><span>${a}</span><strong>${b}</strong></div>`).join("");
     const quickActions = [["Edit Job","edit","work"],["Add Task","plus","tasks"],["Upload Photo","upload","photos"],["Add Note","note","notes"],["Create Document","document","documents"]].map(([label,icon,section])=>`<button type="button" data-action="unified-ticket-quick" data-section="${section}"><span>${unifiedTicketIcon(icon)}</span><strong>${label}</strong><b>›</b></button>`).join("");
     host.innerHTML = `<div class="unified-ticket-shell">
       <nav class="ut-internal-nav" aria-label="Ticket sections">${nav}</nav>
@@ -22664,17 +22776,17 @@ Requirements:
         <div class="ut-main-top">
           <div class="ut-property-stack">
             ${unifiedTicketCard("Property", `<div class="ut-property"><div class="ut-property-image"><button type="button" aria-label="View property location">${unifiedTicketIcon("pin")}</button></div><div class="ut-property-copy"><strong>${ticket.title}</strong><span>${ticket.address}</span><span>${ticket.city}</span><hr><b>Property Contact</b><span>${ticket.customer}</span><div class="ut-contact"><span>${unifiedTicketIcon("phone")}${ticket.phone}</span><span>${unifiedTicketIcon("mail")}${ticket.email}</span></div></div></div>`, "ut-property-card")}
-            ${unifiedTicketCard("Job Summary", `<p>Routine landscape maintenance including lawn mowing, edging, hedge trimming, and cleanup of front and back yard.</p><div class="ut-copy-lines"><i></i><i></i><i></i></div>`, "ut-job-summary")}
+            ${unifiedTicketCard("Job Summary", `<p>${escapeHtml(ticket.scope || "No scope of work has been recorded.")}</p>`, "ut-job-summary")}
           </div>
           ${unifiedTicketCard("Summary", `<div class="ut-summary-rows">${summaryRows}</div>`, "ut-summary-card")}
         </div>
-        ${unifiedTicketCard("", `<div class="ut-next-visit"><span>${unifiedTicketIcon("calendar")}</span><div><b>Next Visit</b><strong>Jul 25, 2026 at 8:00 AM</strong><small>Estimated: 2 hours</small></div><button type="button" data-action="unified-ticket-schedule">View / Edit Schedule</button></div>`, "ut-next-card")}
+        ${unifiedTicketCard("", `<div class="ut-next-visit"><span>${unifiedTicketIcon("calendar")}</span><div><b>Next Visit</b><strong>${escapeHtml(ticket.nextVisit || "Not scheduled")}</strong><small>Estimated: ${escapeHtml(ticket.duration || "Not set")}</small></div><button type="button" data-action="unified-ticket-schedule">View / Edit Schedule</button></div>`, "ut-next-card")}
         <div class="ut-lower-grid">
-          ${unifiedTicketCard("Tasks (3)", `<div class="ut-task-lines">${[1,2,3].map(()=>'<label><input type="checkbox"><i></i></label>').join("")}</div><button class="ut-small-btn" type="button" data-action="unified-ticket-section" data-section="tasks">View all tasks</button>`, "ut-tasks-card")}
+          ${unifiedTicketCard(`Tasks (${ticket.checklistItems?.length || 0})`, `<div class="ut-task-lines">${(ticket.checklistItems || []).slice(0,3).map((item)=>`<label title="${escapeHtml(item.label || "Task")}"><input type="checkbox" ${item.checked ? "checked" : ""} disabled><i></i></label>`).join("") || '<small>No checklist tasks yet.</small>'}</div><button class="ut-small-btn" type="button" data-action="unified-ticket-section" data-section="tasks">View all tasks</button>`, "ut-tasks-card")}
           ${unifiedTicketCard("Photos (4)", `<div class="ut-thumbnails">${[1,2,3,4].map(()=>'<i></i>').join("")}</div><button class="ut-small-btn" type="button" data-action="unified-ticket-section" data-section="photos">View all photos</button>`, "ut-photos-card")}
           ${unifiedTicketCard("Documents (2)", `<div class="ut-documents">${[1,2].map(()=>`<button type="button"><span>${unifiedTicketIcon("document")}</span><i></i><b>›</b></button>`).join("")}</div><button class="ut-small-btn" type="button" data-action="unified-ticket-section" data-section="documents">View all documents</button>`, "ut-documents-card")}
         </div>
-        ${unifiedTicketCard("Notes", `<form class="ut-note-form" data-unified-ticket-note-form><textarea placeholder="Type a note here..." aria-label="Ticket note"></textarea><button type="submit">Add Note</button></form><p class="ut-note-status" data-unified-ticket-note-status aria-live="polite"></p>`, "ut-notes-card")}
+        ${unifiedTicketCard("Notes", `<form class="ut-note-form" data-unified-ticket-note-form data-ticket-id="${ticket.recordId || state.unifiedTicketSelectedId}"><textarea placeholder="Type a note here..." aria-label="Ticket note"></textarea><button type="submit">Add Note</button></form><p class="ut-note-status" data-unified-ticket-note-status aria-live="polite"></p>`, "ut-notes-card")}
       </main>
       <aside class="ut-sidebar">
         ${unifiedTicketCard("Progress", `<div class="ut-progress">${[["Created","check"],["Scheduled","calendar"],["On Site","pin"],["In Progress","clock"],["Complete","check"]].map(([label,icon],i)=>`<div class="${i===0?"is-done":i===1?"is-active":""}"><span>${unifiedTicketIcon(icon)}</span><small>${label}</small></div>`).join("")}</div>`, "ut-progress-card")}
@@ -22695,6 +22807,34 @@ Requirements:
     {visit:"Mon, Jul 28",time:"8:30 AM",id:"10026",job:"Sunset Office Building",customer:"Lisa Brown",address:"555 Sunset Blvd",city:"Portland, OR",crew:["JD"],extra:"+1",status:"Scheduled",done:0,total:6,estimate:"2h",priority:"Medium",attention:""}
   ]);
 
+  function workOperationsRows() {
+    const live = approvedOperationalRows();
+    return live.length || !isDemoMode() ? live : WORK_OPERATIONS_FIXTURE.map((job) => ({ ...job, displayNumber: job.id, ticketId: job.id }));
+  }
+
+  function ticketTimelineRows() {
+    const live = workOperationsRows();
+    if (live.length || !isDemoMode()) return live.map((job) => ({
+      ...job,
+      id: job.ticketId || job.id,
+      displayNumber: job.displayNumber || job.id,
+      name: job.name || job.job,
+      crew: job.crewName || (Array.isArray(job.crew) ? job.crew.join(", ") : job.crew),
+      extra: job.extra || ""
+    }));
+    return TICKET_TIMELINE_FIXTURE;
+  }
+
+  function homeFocusRows() {
+    const rows = workOperationsRows().filter((job) => !job.dateRaw || job.dateRaw <= addDaysKey(todayKey(), 6));
+    return rows.map((job) => ({
+      ...job,
+      service: job.type || job.service || "Service not set",
+      crew: job.crewName || (Array.isArray(job.crew) ? job.crew.join(", ") : job.crew),
+      duration: job.estimate || job.duration || "Not set"
+    }));
+  }
+
   function workRowProgress(job) {
     const saved = state.workChecklistProgress?.[job.id];
     return Number.isFinite(saved) ? saved : job.done;
@@ -22705,7 +22845,7 @@ Requirements:
     const progress = Math.round((done / job.total) * 100);
     return `<tr style="background:#fff!important" data-action="open-work-detail" data-id="${job.id}" tabindex="0">
       <td><strong>${job.visit}</strong><small class="${job.id === "10024" ? "is-overdue" : ""}">${job.time}</small></td>
-      <td><strong>#${job.id}&nbsp;&nbsp; ${job.job}</strong><small>${job.customer}</small></td>
+      <td><strong>#${job.displayNumber || job.id}&nbsp;&nbsp; ${job.job}</strong><small>${job.customer}</small></td>
       <td><strong>${job.address}</strong><small>${job.city}</small></td>
       <td><span class="wol-crew-chips">${job.crew.map(initial=>`<i>${initial}</i>`).join("")}<i>${job.extra}</i></span></td>
       <td><span class="wol-status is-${job.status.toLowerCase().replaceAll(" ","-")}">${job.status}</span></td>
@@ -22721,24 +22861,32 @@ Requirements:
     if (!job) return "";
     const activeTab = state.workDetailTab || "work";
     const done = workRowProgress(job);
-    const checklist = [
+    const fallbackChecklist = [
       ["Arrive on site","8:02 AM"],["Safety check & site walk","8:05 AM"],["Lawn mowing","8:25 AM"],
       ["Edge all hardscapes","8:50 AM"],["Hedge trimming",""],["Blow & clean up",""],["Final walkthrough",""]
     ];
+    const checklist = job.checklistItems?.length
+      ? job.checklistItems.map((item) => [item.label || "Task", item.completed_at ? formatDateTime(item.completed_at) : "", item.id, Boolean(item.checked)])
+      : fallbackChecklist.map(([label, time], index) => [label, time, "", index < done]);
+    const crewAssignments = job.crewAssignments || [];
+    const equipmentAssignments = (state.data.ticketRelations?.equipment || []).filter((item) => String(item.ticket_id || item.ticketId) === String(job.id));
+    const ticketAttachments = (state.data.documentation?.attachments || []).filter((item) => String(item.metadata?.ticketId || item.targetId || "") === String(job.id));
+    const arrivalPhotos = ticketAttachments.filter((item) => item.metadata?.photoStage === "arrival");
+    const completionPhotos = ticketAttachments.filter((item) => item.metadata?.photoStage === "completion");
     const tabButtons = ["Overview","Work","Schedule","Tasks","Photos","Documents","Notes","History"].map(label=>`<button type="button" style="background:transparent!important;box-shadow:none!important;border:0!important;border-bottom:2px solid ${activeTab===label.toLowerCase()?"#276fca":"transparent"}!important" class="${activeTab===label.toLowerCase()?"is-active":""}" data-action="work-detail-tab" data-section="${label.toLowerCase()}">${label}</button>`).join("");
     return `<div class="wod-overlay" data-work-detail-overlay><button type="button" style="background:transparent!important;box-shadow:none!important;border:0!important" class="wod-scrim" data-action="close-work-detail" aria-label="Close work details"></button><aside class="wod-panel" aria-label="Work details for ${job.job}">
       <header><div><h2 style="color:#10141a!important">#${job.id}&nbsp;&nbsp; ${job.job}</h2><span class="wol-status is-${job.status.toLowerCase().replaceAll(" ","-")}">${job.status}</span></div><button type="button" style="background:transparent!important;box-shadow:none!important;border:0!important" class="wod-close" data-action="close-work-detail" aria-label="Close work detail">×</button></header>
       <nav aria-label="Work detail sections">${tabButtons}</nav>
       <div class="wod-content">
-        <section class="wod-card wod-checklist"><h3>Work Checklist</h3><p><span>${done} of ${job.total} completed</span></p><i class="wod-progress"><b style="width:${Math.round((done/job.total)*100)}%"></b></i><div>${checklist.slice(0,job.total).map(([label,time],index)=>`<label><input type="checkbox" data-work-checklist-item data-id="${job.id}" ${index<done?"checked":""}><span>${label}</span><time>${time}</time></label>`).join("")}</div><button type="button" data-action="work-add-task">+ Add Task</button></section>
+        <section class="wod-card wod-checklist"><h3>Work Checklist</h3><p><span>${done} of ${job.total} completed</span></p><i class="wod-progress"><b style="width:${job.total ? Math.round((done/job.total)*100) : 0}%"></b></i><div>${checklist.map(([label,time,itemId,checked])=>`<label><input type="checkbox" data-work-checklist-item data-id="${job.id}" data-item-id="${itemId}" ${checked?"checked":""}><span>${escapeHtml(label)}</span><time>${escapeHtml(time)}</time></label>`).join("") || '<small>No checklist tasks yet.</small>'}</div><button type="button" data-action="work-add-task">+ Add Task</button></section>
         <div class="wod-middle-top">
-          <section class="wod-card"><h3>Crew</h3><ul><li>${unifiedTicketIcon("crew")}John D. (Lead)</li><li>${unifiedTicketIcon("crew")}Mike L.</li></ul><button type="button" data-action="work-assignment-placeholder" data-kind="crew">+&nbsp; Add Crew</button></section>
-          <section class="wod-card"><h3>Equipment</h3><ul><li>${unifiedTicketIcon("work")}Truck #1</li><li>${unifiedTicketIcon("work")}Toro Mower</li><li>${unifiedTicketIcon("work")}Stihl Trimmer</li></ul><button type="button" data-action="work-assignment-placeholder" data-kind="equipment">+&nbsp; Add Equipment</button></section>
+          <section class="wod-card"><h3>Crew</h3><ul>${crewAssignments.length ? crewAssignments.map((item)=>`<li>${unifiedTicketIcon("crew")}<span>${escapeHtml(item.employee_name || assignmentProfileForId(item.user_id)?.displayName || "Crew member")}${item.is_lead ? " (Lead)" : ""}</span><button type="button" data-action="work-remove-assignment" data-kind="crew" data-id="${item.id}" aria-label="Remove crew member">×</button></li>`).join("") : `<li>${unifiedTicketIcon("crew")}${escapeHtml(job.crewName || "Unassigned")}</li>`}</ul><button type="button" data-action="work-add-assignment" data-kind="crew" data-ticket-id="${job.id}">+&nbsp; Add Crew</button></section>
+          <section class="wod-card"><h3>Equipment</h3><ul>${equipmentAssignments.length ? equipmentAssignments.map((item)=>`<li>${unifiedTicketIcon("work")}<span>${escapeHtml(item.equipment_name || "Equipment")}</span><button type="button" data-action="work-remove-assignment" data-kind="equipment" data-id="${item.id}" aria-label="Remove equipment">×</button></li>`).join("") : `<li>${unifiedTicketIcon("work")}No equipment assigned</li>`}</ul><button type="button" data-action="work-add-assignment" data-kind="equipment" data-ticket-id="${job.id}">+&nbsp; Add Equipment</button></section>
         </div>
         <section class="wod-card wod-details"><h3>Work Details</h3><dl><dt>Type</dt><dd>Maintenance</dd><dt>Priority</dt><dd><span class="wol-priority is-${job.priority.toLowerCase()}"><i></i>${job.priority}</span></dd><dt>Est. Time</dt><dd>${job.estimate}</dd><dt>Start Time</dt><dd>${job.time}</dd><dt>Location</dt><dd>${job.address}<br>${job.city}</dd></dl><button type="button" data-action="work-detail-tab" data-section="overview">Edit Details</button></section>
-        <section class="wod-card wod-photos"><h3>Photos</h3><label>Arrival Photo</label><div class="wod-arrival-photo"><img src="images/urban-yards-lawn-care-mower.jpeg" alt="Arrival condition"><time>8:02 AM</time><span>${unifiedTicketIcon("photo")}</span></div><div class="wod-photo-heading"><label>Completion Photo</label><span>${unifiedTicketIcon("upload")} ⋮</span></div><label class="wod-photo-upload">${unifiedTicketIcon("photo")}<span>Upload Completion Photo</span><input type="file" accept="image/*" data-work-photo-upload data-category="completion" hidden></label><label class="wod-more-photos">+&nbsp; Upload More Photos<input type="file" accept="image/*" multiple data-work-photo-upload data-category="additional" hidden></label><p data-work-upload-status></p></section>
+        <section class="wod-card wod-photos"><h3>Photos</h3><label>Arrival Photos (${arrivalPhotos.length})</label><label class="wod-photo-upload">${unifiedTicketIcon("photo")}<span>Upload Arrival Photo</span><input type="file" accept="image/*" multiple data-work-photo-upload data-category="arrival" hidden></label><div class="wod-photo-heading"><label>Completion Photos (${completionPhotos.length})</label><span>${unifiedTicketIcon("upload")} ⋮</span></div><label class="wod-photo-upload">${unifiedTicketIcon("photo")}<span>Upload Completion Photo</span><input type="file" accept="image/*" multiple data-work-photo-upload data-category="completion" hidden></label><label class="wod-more-photos">+&nbsp; Upload Additional Photos<input type="file" accept="image/*" multiple data-work-photo-upload data-category="additional" hidden></label><p data-work-upload-status></p></section>
         <section class="wod-card wod-docs"><h3>Documentation</h3><div>${[["Site Notes","Added by John D.","8:15 AM"],["Customer Instructions","Added by Sarah J.","Jul 22"],["Irrigation Map","Added by Tyler G.","Jul 18"]].map(([title,by,date])=>`<span>${unifiedTicketIcon("document")}<b>${title}<small>${by}</small></b><time>${date}</time></span>`).join("")}</div><label class="wod-add-document">+&nbsp; Add Document<input type="file" data-work-document-upload hidden></label></section>
-        <section class="wod-card wod-notes"><h3>Notes</h3><form data-work-note-form><textarea placeholder="Type a note..."></textarea><button type="submit">Add Note</button></form><p data-work-note-status></p></section>
+        <section class="wod-card wod-notes"><h3>Notes</h3><form data-work-note-form data-ticket-id="${job.id}"><textarea placeholder="Type a note..."></textarea><button type="submit">Add Note</button></form><p data-work-note-status></p></section>
       </div><p class="wod-action-status" data-work-action-status aria-live="polite"></p>
     </aside></div>`;
   }
@@ -22751,26 +22899,42 @@ Requirements:
     const location = state.workListLocation || "All";
     const range = state.workListRange || "week";
     const attentionOnly = Boolean(state.workAttentionOnly);
-    const jobs = WORK_OPERATIONS_FIXTURE.filter(job => (status==="All"||job.status===status)&&(priority==="All"||job.priority===priority)&&(location==="All"||job.city===location)&&(!attentionOnly||job.attention));
-    const selected = WORK_OPERATIONS_FIXTURE.find(job=>job.id===state.selectedWorkJobId);
+    const allJobs = workOperationsRows();
+    const jobs = allJobs.filter(job => (status==="All"||job.status===status)&&(priority==="All"||job.priority===priority)&&(location==="All"||job.city===location)&&(!attentionOnly||job.attention));
+    const selected = allJobs.find(job=>job.id===state.selectedWorkJobId);
+    const countByStatus = (value) => allJobs.filter((job) => job.status === value).length;
     host.innerHTML = `<div class="work-operations-list ${selected?"has-detail-open":""}">
       <header class="wol-header"><div><h2 style="color:#0e1116!important">Work</h2><p>All jobs and visits across your schedule</p></div><div class="wol-filters">
         <label>${unifiedTicketIcon("document")}<select data-work-list-filter="status" aria-label="Work status"><option value="All">All Status</option>${["In Progress","Scheduled","Completed"].map(v=>`<option${status===v?" selected":""}>${v}</option>`).join("")}</select></label>
         <label>${unifiedTicketIcon("check")}<select data-work-list-filter="priority" aria-label="Work priority"><option value="All">All Priority</option>${["High","Medium","Low"].map(v=>`<option${priority===v?" selected":""}>${v}</option>`).join("")}</select></label>
-        <label>${unifiedTicketIcon("pin")}<select data-work-list-filter="location" aria-label="Work location"><option value="All">All Locations</option>${[...new Set(WORK_OPERATIONS_FIXTURE.map(j=>j.city))].map(v=>`<option${location===v?" selected":""}>${v}</option>`).join("")}</select></label>
+        <label>${unifiedTicketIcon("pin")}<select data-work-list-filter="location" aria-label="Work location"><option value="All">All Locations</option>${[...new Set(allJobs.map(j=>j.city))].map(v=>`<option${location===v?" selected":""}>${v}</option>`).join("")}</select></label>
         <label>${unifiedTicketIcon("calendar")}<select data-work-list-filter="range" aria-label="Work date range"><option value="week"${range==="week"?" selected":""}>This Week</option><option value="all"${range==="all"?" selected":""}>All Upcoming</option></select></label>
         <button type="button" class="wol-new-job" style="background:#343a45!important;color:#fff!important" data-action="open-ticket-create" data-ticket-type="field"><span>+</span> New Job</button>
       </div></header>
       <section class="wol-summary" aria-label="Work summary">
-        <button type="button" class="is-attention ${attentionOnly?"is-active":""}" data-action="work-toggle-attention"><span>${unifiedTicketIcon("warning")}</span><strong>1<small>Needs Attention</small></strong><em>View</em></button>
-        <article class="is-progress"><span>${unifiedTicketIcon("clock")}</span><strong>3<small>In Progress</small></strong></article>
-        <article><span>${unifiedTicketIcon("calendar")}</span><strong>5<small>Scheduled</small></strong></article>
-        <article class="is-completed"><span>${unifiedTicketIcon("check")}</span><strong>2<small>Completed</small></strong></article>
-        <article><strong>11<small>Total Jobs</small></strong></article>
+        <button type="button" class="is-attention ${attentionOnly?"is-active":""}" data-action="work-toggle-attention"><span>${unifiedTicketIcon("warning")}</span><strong>${allJobs.filter((job) => job.attention).length}<small>Needs Attention</small></strong><em>View</em></button>
+        <article class="is-progress"><span>${unifiedTicketIcon("clock")}</span><strong>${countByStatus("In Progress")}<small>In Progress</small></strong></article>
+        <article><span>${unifiedTicketIcon("calendar")}</span><strong>${countByStatus("Scheduled")}<small>Scheduled</small></strong></article>
+        <article class="is-completed"><span>${unifiedTicketIcon("check")}</span><strong>${countByStatus("Completed")}<small>Completed</small></strong></article>
+        <article><strong>${allJobs.length}<small>Total Jobs</small></strong></article>
       </section>
       <section class="wol-table-card"><div class="wol-table-wrap"><table><thead><tr><th>Next Visit</th><th>Job / Customer</th><th>Location</th><th>Crew</th><th>Status</th><th>Progress</th><th>Est. Time</th><th>Priority</th><th>Attention</th><th></th></tr></thead><tbody>${jobs.map(renderWorkOperationsRow).join("")}</tbody></table></div><footer><span>Showing 1 to ${jobs.length} of 11 jobs</span><nav><button class="is-active">1</button><button>2</button><button>›</button></nav></footer></section>
       ${renderWorkDetailPanel(selected)}
     </div>`;
+  }
+
+  async function saveApprovedTicketNote(ticketId, body) {
+    if (!ticketId || !body) throw new Error("A ticket and note are required.");
+    if (isDemoMode()) return { id: nextDemoId("note"), ticket_id: ticketId, body };
+    const rows = await supabaseRestRequest("job_notes", {
+      method: "POST",
+      headers: { Prefer: "return=representation" },
+      body: JSON.stringify({ ticket_id: ticketId, title: "Operational note", body })
+    });
+    const note = rows?.[0];
+    if (note) state.data.notes.unshift(normalizeNote(note));
+    await insertJobTicketEvent(ticketId, { eventType: "ticket_note_added", notes: "Operational note added.", newValue: { noteId: note?.id || null } });
+    return note;
   }
 
   function renderVisualResetWorkspaces() {
@@ -23618,22 +23782,74 @@ Requirements:
         const panel = target.closest(".wod-panel");
         const checked = panel ? panel.querySelectorAll("[data-work-checklist-item]:checked").length : 0;
         state.workChecklistProgress = {...(state.workChecklistProgress || {}), [target.dataset.id]:checked};
-        renderWorkOperationsWorkspace();
+        const itemId = target.dataset.itemId || "";
+        try {
+          target.disabled = true;
+          if (!isDemoMode() && itemId) {
+            const completedAt = target.checked ? new Date().toISOString() : null;
+            await supabaseRestRequest(`job_checklist_items?id=eq.${encodeURIComponent(itemId)}`, {
+              method: "PATCH",
+              headers: { Prefer: "return=representation" },
+              body: JSON.stringify({ checked: target.checked, completed_at: completedAt })
+            });
+            const opsItem = (state.data.connectedOps?.checklistItems || []).find((item) => String(item.id) === String(itemId));
+            if (opsItem) Object.assign(opsItem, { checked: target.checked, completed_at: completedAt });
+            await insertJobTicketEvent(target.dataset.id, {
+              eventType: target.checked ? "ticket_task_completed" : "ticket_task_reopened",
+              notes: `${target.checked ? "Completed" : "Reopened"} checklist task ${opsItem?.label || itemId}.`,
+              newValue: { checklistItemId: itemId, checked: target.checked }
+            });
+          }
+          renderWorkOperationsWorkspace();
+        } catch (error) {
+          target.checked = !target.checked;
+          target.disabled = false;
+          setDashboardState(error.message || "Unable to update the checklist task.", "error");
+        }
         return;
       }
 
       if (target.matches("[data-work-photo-upload]")) {
         const status = qs("[data-work-upload-status]");
         const count = target.files?.length || 0;
-        // TODO: hand selected files to the canonical categorized ticket-photo upload service.
-        if (status) status.textContent = count ? `${count} ${target.dataset.category} photo${count===1?"":"s"} selected for this session.` : "";
+        if (!count) return;
+        const selected = workOperationsRows().find((job) => job.id === state.selectedWorkJobId);
+        if (!selected?.sourceJob?.id) { if (status) status.textContent = "Schedule a visit before uploading job photos."; return; }
+        try {
+          target.disabled = true;
+          if (status) status.textContent = `Uploading ${count} photo${count===1?"":"s"}…`;
+          const category = target.dataset.category === "additional" ? "progress" : target.dataset.category;
+          const uploads = await uploadJobSitePhotos(selected.sourceJob.id, Array.from(target.files), category);
+          await insertJobTicketEvent(selected.id, { eventType: "ticket_photo_uploaded", notes: `${uploads.length} ${category} photo${uploads.length===1?"":"s"} uploaded.`, newValue: { category, count: uploads.length } });
+          if (category === "arrival") await updateJobTicket(selected.id, { beforePhotosUploaded: true });
+          if (category === "completion") await updateJobTicket(selected.id, { afterPhotosUploaded: true });
+          if (status) status.textContent = `${uploads.length} photo${uploads.length===1?"":"s"} uploaded.`;
+          target.value = "";
+          target.disabled = false;
+        } catch (error) {
+          target.disabled = false;
+          if (status) status.textContent = error.message || "Unable to upload photos.";
+        }
         return;
       }
 
       if (target.matches("[data-work-document-upload]")) {
         const status = qs("[data-work-action-status]");
-        // TODO: connect this selection to the existing unified-ticket document storage service.
-        if (status) status.textContent = target.files?.[0] ? `${target.files[0].name} selected for this session.` : "";
+        const file = target.files?.[0];
+        if (!file) return;
+        try {
+          target.disabled = true;
+          if (status) status.textContent = `Uploading ${file.name}…`;
+          const upload = await uploadDocumentationFile(file, { kind: "submission", assignmentId: state.selectedWorkJobId });
+          const attachment = await insertDocumentationAttachment({ attachment_type: "ticket_document", file_bucket: upload.bucket, file_path: upload.path, file_name: upload.fileName || file.name, mime_type: upload.mimeType || file.type || "", file_size_bytes: upload.size || file.size || null, metadata: { ticketId: state.selectedWorkJobId, targetType: "ticket", targetId: state.selectedWorkJobId, category: "Work Document" } });
+          await insertJobTicketEvent(state.selectedWorkJobId, { eventType: "ticket_document_uploaded", notes: `${file.name} uploaded.`, newValue: { attachmentId: attachment?.id || null } });
+          if (status) status.textContent = `${file.name} uploaded.`;
+          target.value = "";
+          target.disabled = false;
+        } catch (error) {
+          target.disabled = false;
+          if (status) status.textContent = error.message || "Unable to upload the document.";
+        }
         return;
       }
 
@@ -24283,7 +24499,81 @@ Requirements:
         return;
       }
 
-      if (action === "work-assignment-placeholder" || action === "work-add-task") {
+      if (action === "work-add-assignment") {
+        const kind = target.dataset.kind;
+        const ticketId = target.dataset.ticketId || state.selectedWorkJobId;
+        const choices = kind === "crew"
+          ? (state.data.userProfiles || []).map((item) => ({ id: item.userId || item.id, name: item.displayName || item.name || item.email })).filter((item) => item.id && item.name)
+          : (state.data.equipmentItems || []).map((item) => ({ id: item.id, name: item.name || item.title })).filter((item) => item.id && item.name);
+        if (!choices.length) {
+          setDashboardState(`No ${kind === "crew" ? "crew members" : "equipment"} are available to assign.`, "error");
+          return;
+        }
+        const answer = window.prompt(`Assign ${kind === "crew" ? "crew" : "equipment"}:\n${choices.map((item, index) => `${index + 1}. ${item.name}`).join("\n")}`, "1");
+        const selected = choices[Number(answer) - 1] || choices.find((item) => item.name.toLowerCase() === String(answer || "").trim().toLowerCase());
+        if (!selected) return;
+        const table = kind === "crew" ? "job_ticket_crew_assignments" : "job_ticket_equipment_assignments";
+        const duplicate = (state.data.ticketRelations?.[kind] || []).some((item) => String(item.ticket_id) === String(ticketId) && String(item[kind === "crew" ? "user_id" : "equipment_id"]) === String(selected.id));
+        if (duplicate) {
+          setDashboardState(`${selected.name} is already assigned to this ticket.`, "error");
+          return;
+        }
+        try {
+          const payload = kind === "crew"
+            ? { ticket_id: ticketId, user_id: selected.id, employee_name: selected.name, is_lead: !(state.data.ticketRelations?.crew || []).some((item) => String(item.ticket_id) === String(ticketId)) }
+            : { ticket_id: ticketId, equipment_id: selected.id, equipment_name: selected.name };
+          const rows = await supabaseRestRequest(table, { method: "POST", headers: { Prefer: "return=representation" }, body: JSON.stringify(payload) });
+          state.data.ticketRelations ||= { crew: [], equipment: [] };
+          state.data.ticketRelations[kind].push(rows?.[0] || payload);
+          await insertJobTicketEvent(ticketId, { eventType: `ticket_${kind}_assigned`, notes: `${selected.name} assigned.`, newValue: payload });
+          renderWorkOperationsWorkspace();
+          setDashboardState(`${selected.name} assigned.`);
+        } catch (error) {
+          setDashboardState(error.message || `Unable to assign ${kind}.`, "error");
+        }
+        return;
+      }
+
+      if (action === "work-remove-assignment") {
+        const kind = target.dataset.kind;
+        const table = kind === "crew" ? "job_ticket_crew_assignments" : "job_ticket_equipment_assignments";
+        const relation = (state.data.ticketRelations?.[kind] || []).find((item) => String(item.id) === String(id));
+        if (!relation || !window.confirm(`Remove this ${kind} assignment?`)) return;
+        try {
+          await supabaseRestRequest(`${table}?id=eq.${encodeURIComponent(id)}`, { method: "PATCH", headers: { Prefer: "return=minimal" }, body: JSON.stringify({ removed_at: new Date().toISOString() }) });
+          state.data.ticketRelations[kind] = state.data.ticketRelations[kind].filter((item) => String(item.id) !== String(id));
+          await insertJobTicketEvent(relation.ticket_id, { eventType: `ticket_${kind}_removed`, notes: `${relation.employee_name || relation.equipment_name || kind} removed.` });
+          renderWorkOperationsWorkspace();
+        } catch (error) {
+          setDashboardState(error.message || `Unable to remove ${kind}.`, "error");
+        }
+        return;
+      }
+
+      if (action === "work-add-task") {
+        const ticketId = state.selectedWorkJobId;
+        const label = window.prompt("Task name");
+        if (!ticketId || !String(label || "").trim()) return;
+        try {
+          const selectedJob = workOperationsRows().find((job) => job.id === ticketId);
+          let checklist = approvedTicketChecklist(selectedJob?.ticket || {}, selectedJob?.sourceJob).checklist;
+          if (!checklist) {
+            const rows = await supabaseRestRequest("job_checklists", { method: "POST", headers: { Prefer: "return=representation" }, body: JSON.stringify({ ticket_id: ticketId, job_id: selectedJob?.sourceJob?.id || null, title: `${selectedJob?.job || "Ticket"} checklist`, status: "Not Started" }) });
+            checklist = normalizeJobChecklist(rows?.[0] || {});
+            state.data.connectedOps.checklists.push(checklist);
+          }
+          const sortOrder = (state.data.connectedOps.checklistItems || []).filter((item) => String(item.checklist_id) === String(checklist.id)).length;
+          const rows = await supabaseRestRequest("job_checklist_items", { method: "POST", headers: { Prefer: "return=representation" }, body: JSON.stringify({ checklist_id: checklist.id, label: String(label).trim(), sort_order: sortOrder, checked: false }) });
+          if (rows?.[0]) state.data.connectedOps.checklistItems.push(rows[0]);
+          await insertJobTicketEvent(ticketId, { eventType: "ticket_task_added", notes: `Task added: ${String(label).trim()}`, newValue: { checklistItemId: rows?.[0]?.id || null } });
+          renderWorkOperationsWorkspace();
+        } catch (error) {
+          setDashboardState(error.message || "Unable to add the task.", "error");
+        }
+        return;
+      }
+
+      if (action === "work-assignment-placeholder") {
         const status = qs("[data-work-action-status]");
         if (status) status.textContent = `${target.dataset.kind === "equipment" ? "Equipment" : target.dataset.kind === "crew" ? "Crew" : "Task"} assignment remains non-destructive until the selected ticket is connected to the canonical service.`;
         return;
@@ -28028,9 +28318,16 @@ Requirements:
         const note = event.target.querySelector("textarea")?.value.trim();
         const status = qs("[data-work-note-status]");
         if (!note) { if (status) status.textContent = "Enter a note before saving."; return; }
-        // TODO: persist through the canonical unified-ticket note service when a live ticket replaces the fixture.
-        event.target.reset();
-        if (status) status.textContent = "Note captured for this session.";
+        try {
+          const submit = event.target.querySelector("button[type='submit']");
+          if (submit) submit.disabled = true;
+          await saveApprovedTicketNote(event.target.dataset.ticketId, note);
+          event.target.reset();
+          if (status) status.textContent = "Note saved.";
+          if (submit) submit.disabled = false;
+        } catch (error) {
+          if (status) status.textContent = error.message || "Unable to save the note.";
+        }
         return;
       }
       if (event.target?.matches?.("[data-unified-ticket-note-form]")) {
@@ -28041,9 +28338,16 @@ Requirements:
           if (status) status.textContent = "Enter a note before saving.";
           return;
         }
-        // TODO: replace this non-destructive UI acknowledgement with the canonical ticket-note service when the Overview is connected to a selected live ticket.
-        event.target.reset();
-        if (status) status.textContent = "Note captured for this session. Live ticket persistence is not connected yet.";
+        try {
+          const submit = event.target.querySelector("button[type='submit']");
+          if (submit) submit.disabled = true;
+          await saveApprovedTicketNote(event.target.dataset.ticketId, note);
+          event.target.reset();
+          if (status) status.textContent = "Note saved.";
+          if (submit) submit.disabled = false;
+        } catch (error) {
+          if (status) status.textContent = error.message || "Unable to save the note.";
+        }
         return;
       }
       if (event.target.matches("[data-complete-all-parts-form]")) {

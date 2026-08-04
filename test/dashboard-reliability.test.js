@@ -26,8 +26,8 @@ test("archived workspace polish remains available while blank-canvas assets are 
   assert.match(css, /\.call-queue-row > span:first-child :is\(strong, small\)[\s\S]*overflow-wrap: anywhere/);
   assert.match(css, /\.groundskeeper-operation-card[\s\S]*white-space: normal !important/);
   assert.match(css, /\.dashboard-health-item strong[\s\S]*word-break: break-all/);
-  assert.match(html, /dashboard\.css\?v=20260804-work-list-4/);
-  assert.match(html, /dashboard\.js\?v=20260804-work-list-4/);
+  assert.match(html, /dashboard\.css\?v=20260804-unified-data-1/);
+  assert.match(html, /dashboard\.js\?v=20260804-unified-data-1/);
 });
 
 test("authenticated assistant prompt suppresses public quote calls to action", () => {
@@ -1010,7 +1010,7 @@ test("Owner can close completed non-landscaping tickets as audited monthly rent 
   assert.match(js, /ensureJobTicketForSourceRecord\(ticketSource, id,[\s\S]*stage: ticketStage\(ticket\)/);
   assert.doesNotMatch(js, /Rent deduction: \$\{ticket\?\.title/);
   assert.match(js, /rentDeductionCloseouts/);
-  assert.match(js, /tickets: \["tickets", "ticketEvents", "submissions", "jobs", "documents", "notes", "userProfiles"\]/);
+  assert.match(js, /tickets: \["tickets", "ticketEvents", "submissions", "jobs", "documents", "notes", "connectedOps", "ticketRelations", "userProfiles"\]/);
   assert.match(js, /data-rent-deduction-amount/);
   assert.match(js, /data-rent-credit-period/);
   assert.match(js, /data-rent-credit-accounting-note/);
@@ -1297,4 +1297,25 @@ test("the persistent dashboard copilot replaces duplicate page-level AI tool str
   assert.match(css, /\.copilot-landscape/);
   assert.match(css, /\.copilot-shortcuts/);
   assert.match(css, /@media \(max-width: 700px\)[\s\S]*position: fixed/);
+});
+
+test("approved operational views share canonical ticket and visit data", () => {
+  const js = read("dashboard.js");
+  assert.match(js, /function approvedOperationalRows\(\)/);
+  assert.match(js, /const allRows = ticketTimelineRows\(\)/);
+  assert.match(js, /const allJobs = workOperationsRows\(\)/);
+  assert.match(js, /const focusJobs = homeFocusRows\(\)/);
+  assert.match(js, /selectedTimelineTicket\?\.ticket/);
+  assert.match(js, /loader: loadTicketOperationalRelations/);
+});
+
+test("Work Detail persists assignments, tasks, notes, photos, documents, and history", () => {
+  const js = read("dashboard.js");
+  assert.match(js, /job_ticket_crew_assignments/);
+  assert.match(js, /job_ticket_equipment_assignments/);
+  assert.match(js, /ticket_task_completed/);
+  assert.match(js, /saveApprovedTicketNote/);
+  assert.match(js, /uploadJobSitePhotos/);
+  assert.match(js, /ticket_document_uploaded/);
+  assert.match(js, /insertJobTicketEvent/);
 });

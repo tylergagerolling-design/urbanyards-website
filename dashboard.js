@@ -22501,9 +22501,10 @@ Requirements:
 
   function approvedTicketAttention(ticket = {}, job = null, checklist = {}) {
     const ops = state.data.connectedOps || normalizeConnectedOpsBundle();
+    const hasCrewAssignment = (state.data.ticketRelations?.crew || []).some((item) => String(item.ticket_id || item.ticketId || "") === String(ticket.id || ""));
     const date = job?.dateRaw || ticket.scheduledDate || "";
     if (date && date < todayKey() && approvedTicketStatus(ticket) !== "Completed") return "Visit Overdue";
-    if (!ticket.assignedUserId) return "No Crew Assigned";
+    if (!ticket.assignedUserId && !hasCrewAssignment) return "No Crew Assigned";
     const relatedPhotos = (ops.sitePhotos || []).filter((photo) => [ticket.id, job?.id].includes(photo.job_id || photo.jobId || photo.scheduled_job_id || photo.scheduledJobId));
     if (["In Progress", "Completed"].includes(approvedTicketStatus(ticket)) && !relatedPhotos.some((photo) => (photo.photo_type || photo.photoType) === "arrival")) return "Arrival Photo Missing";
     if (approvedTicketStatus(ticket) === "Completed" && !relatedPhotos.some((photo) => (photo.photo_type || photo.photoType) === "completion")) return "Completion Photo Missing";
@@ -22875,7 +22876,7 @@ Requirements:
     const completionPhotos = ticketAttachments.filter((item) => item.metadata?.photoStage === "completion");
     const tabButtons = ["Overview","Work","Schedule","Tasks","Photos","Documents","Notes","History"].map(label=>`<button type="button" style="background:transparent!important;box-shadow:none!important;border:0!important;border-bottom:2px solid ${activeTab===label.toLowerCase()?"#276fca":"transparent"}!important" class="${activeTab===label.toLowerCase()?"is-active":""}" data-action="work-detail-tab" data-section="${label.toLowerCase()}">${label}</button>`).join("");
     return `<div class="wod-overlay" data-work-detail-overlay><button type="button" style="background:transparent!important;box-shadow:none!important;border:0!important" class="wod-scrim" data-action="close-work-detail" aria-label="Close work details"></button><aside class="wod-panel" aria-label="Work details for ${job.job}">
-      <header><div><h2 style="color:#10141a!important">#${job.id}&nbsp;&nbsp; ${job.job}</h2><span class="wol-status is-${job.status.toLowerCase().replaceAll(" ","-")}">${job.status}</span></div><button type="button" style="background:transparent!important;box-shadow:none!important;border:0!important" class="wod-close" data-action="close-work-detail" aria-label="Close work detail">×</button></header>
+      <header><div><h2 style="color:#10141a!important">#${job.displayNumber || job.id}&nbsp;&nbsp; ${job.job}</h2><span class="wol-status is-${job.status.toLowerCase().replaceAll(" ","-")}">${job.status}</span></div><button type="button" style="background:transparent!important;box-shadow:none!important;border:0!important" class="wod-close" data-action="close-work-detail" aria-label="Close work detail">×</button></header>
       <nav aria-label="Work detail sections">${tabButtons}</nav>
       <div class="wod-content">
         <section class="wod-card wod-checklist"><h3>Work Checklist</h3><p><span>${done} of ${job.total} completed</span></p><i class="wod-progress"><b style="width:${job.total ? Math.round((done/job.total)*100) : 0}%"></b></i><div>${checklist.map(([label,time,itemId,checked])=>`<label><input type="checkbox" data-work-checklist-item data-id="${job.id}" data-item-id="${itemId}" ${checked?"checked":""}><span>${escapeHtml(label)}</span><time>${escapeHtml(time)}</time></label>`).join("") || '<small>No checklist tasks yet.</small>'}</div><button type="button" data-action="work-add-task">+ Add Task</button></section>

@@ -26,8 +26,8 @@ test("archived workspace polish remains available while blank-canvas assets are 
   assert.match(css, /\.call-queue-row > span:first-child :is\(strong, small\)[\s\S]*overflow-wrap: anywhere/);
   assert.match(css, /\.groundskeeper-operation-card[\s\S]*white-space: normal !important/);
   assert.match(css, /\.dashboard-health-item strong[\s\S]*word-break: break-all/);
-  assert.match(html, /dashboard\.css\?v=20260804-unified-data-1/);
-  assert.match(html, /dashboard\.js\?v=20260804-unified-data-1/);
+  assert.match(html, /dashboard\.css\?v=20260804-unified-data-2/);
+  assert.match(html, /dashboard\.js\?v=20260804-unified-data-2/);
 });
 
 test("authenticated assistant prompt suppresses public quote calls to action", () => {
@@ -1311,6 +1311,7 @@ test("approved operational views share canonical ticket and visit data", () => {
 
 test("Work Detail persists assignments, tasks, notes, photos, documents, and history", () => {
   const js = read("dashboard.js");
+  const auth = read("netlify/functions/lib/dashboard-auth.js");
   assert.match(js, /job_ticket_crew_assignments/);
   assert.match(js, /job_ticket_equipment_assignments/);
   assert.match(js, /ticket_task_completed/);
@@ -1318,4 +1319,6 @@ test("Work Detail persists assignments, tasks, notes, photos, documents, and his
   assert.match(js, /uploadJobSitePhotos/);
   assert.match(js, /ticket_document_uploaded/);
   assert.match(js, /insertJobTicketEvent/);
+  assert.match(auth, /job_ticket_crew_assignments: \{ GET: "operations:read", POST: "operations:write", PATCH: "operations:write"/);
+  assert.match(auth, /job_ticket_equipment_assignments: \{ GET: "operations:read", POST: "operations:write", PATCH: "operations:write"/);
 });

@@ -6346,7 +6346,6 @@
 
   function renderWorkComponentBoardWorkspaces() {
     renderHomeWorkspace(state.data);
-    renderWorkWorkspace(state.data);
   }
 
   function renderWorkComponentBoardsOnly() {
@@ -14668,6 +14667,7 @@
   }
 
   function renderHomeActionQueue(items) {
+    const visibleItems = items.slice(0, 4);
     return `<section class="ticket-lane home-ticket-action-lane my-work-today" aria-label="My Work Today">
       <div class="ticket-lane-heading">
         <div>
@@ -14675,10 +14675,13 @@
           <h3>My Work Today</h3>
           <p>Calls, visits, blocked tickets, approvals, missing proof, overdue invoices, and follow-ups—ordered by urgency.</p>
         </div>
-        <span>${escapeHtml(items.length)}</span>
+        <div class="my-work-today-actions">
+          <span>${escapeHtml(items.length)} total</span>
+          <button type="button" class="secondary-action" data-action="go-work">View full schedule</button>
+        </div>
       </div>
       <div class="ticket-lane-list">
-        ${items.length ? items.map((item) => `
+        ${visibleItems.length ? visibleItems.map((item) => `
           <article class="today-action-item urgency-${escapeHtml(slug(item.status))}">
             <span class="today-action-status">${escapeHtml(item.status)}</span>
             <div>
@@ -14905,9 +14908,24 @@
       </div>
       <div class="owner-scorecard-grid">
         ${items.map(([label, value, detail]) => `<article><span>${escapeHtml(label)}</span><strong>${escapeHtml(String(value))}</strong><small>${escapeHtml(detail)}</small></article>`).join("")}
-        </div>
-      </details>
+      </div>
     </section>`;
+  }
+
+  function homeRevenueThisMonth(data = state.data) {
+    const month = todayKey().slice(0, 7);
+    return dashboardDocuments(data)
+      .filter((item) => {
+        if (item.type !== "invoice" || !["paid", "partially paid"].includes(statusText(item.status))) return false;
+        const paidDate = dateKey(item.paidAt || item.updatedAtRaw || item.createdAtRaw || item.dateRaw);
+        return paidDate && paidDate.slice(0, 7) === month;
+      })
+      .reduce((sum, item) => {
+        if (item.squareAmountPaidCents !== null && item.squareAmountPaidCents !== undefined && Number.isFinite(Number(item.squareAmountPaidCents))) {
+          return sum + (Number(item.squareAmountPaidCents) / 100);
+        }
+        return sum + Number(item.amountPaid || item.total || 0);
+      }, 0);
   }
 
   function renderHomeWorkspace(data = state.data) {
@@ -14947,6 +14965,11 @@
     const actionMetrics = dashboardActionMetrics(data, tickets);
     const notifications = buildNotifications(data);
     const workflowWarnings = dashboardHealthWarnings({ scope: "critical" });
+    const completedThisWeek = tickets.filter((ticket) => {
+      const closed = dateKey(ticket.closedAt || ticket.completedAt || ticket.updatedAtRaw);
+      return ticketStage(ticket) === "closed" && closed >= addDaysKey(today, -6) && closed <= today;
+    }).length;
+    const revenueThisMonth = homeRevenueThisMonth(data);
 
     target.innerHTML = `
       <div class="ticket-workspace uy-page-prototype home-ticket-workspace" data-uy-page-contract="home" data-data-source="tickets,jobs,quotes,notifications">
@@ -14954,7 +14977,7 @@
         <header class="ticket-hero">
           <div>
             <p class="eyebrow">Home</p>
-            <h3>Today&apos;s Command Center</h3>
+            <h3>Home Command Center</h3>
             <p>See what needs attention, which tickets are moving, and where Leads, Work, Money, or Tools need the next handoff.</p>
           </div>
           <div class="ticket-hero-actions">
@@ -14962,10 +14985,11 @@
           </div>
         </header>
         <section class="ticket-metrics" aria-label="Home ticket summary">
-          ${renderTicketMetric(actionMetrics.callsDue, "Calls Due", "Active leads needing a touch")}
-          ${renderTicketMetric(actionMetrics.overdueFollowUps, "Overdue Follow-ups", "Past their due date")}
-          ${renderTicketMetric(actionMetrics.awaitingApproval, "Needs Approval", "Customer, owner, or closeout review")}
-          ${renderTicketMetric(actionMetrics.paymentsAndCloseout, "Closeout / Payment", "Financial records needing action")}
+          ${renderTicketMetric(activeTickets.length, "Open Tickets", `${attentionTickets.length} need attention`)}
+          ${renderTicketMetric(workTickets.length, "In Progress", "Ready, scheduled, or active")}
+          ${renderTicketMetric(todayTickets.length, "Due Today", `${overdueTickets.length} overdue`)}
+          ${renderTicketMetric(completedThisWeek, "Completed This Week", "Closed job tickets")}
+          ${renderTicketMetric(moneyCurrency(revenueThisMonth), "Revenue This Month", "Recorded invoice payments")}
         </section>
         ${renderHomeCommandCenter({ actions, attentionTickets, todayTickets, workTickets, moneyTickets, workflowWarnings, notifications })}
         ${renderOwnerKanbanBoard(activeTickets)}
@@ -15181,6 +15205,7 @@
   function renderWorkDayPlanPanel(stops = [], todayTickets = [], upcomingTickets = [], reviewTickets = []) {
     const openStops = stops.filter((stop) => stop.status !== "Complete");
     const nextStop = openStops[0] || stops[0];
+    const stopTime = (stop) => stop?.scheduledTime || stop?.startTime || stop?.timeWindow || stop?.visitWindow || "Time not set";
     return `<section class="work-day-plan-panel ${stops.length ? "" : "is-empty"}" aria-label="Work day plan">
       <article class="work-day-map-card">
         <div class="ticket-lane-heading">
@@ -15191,7 +15216,16 @@
           </div>
           <span>${escapeHtml(String(openStops.length))}</span>
         </div>
-        ${stops.length ? routePreviewMapShell("work") : `<div class="work-route-empty"><strong>No route to map yet</strong><p>Schedule a visit first, then build the driving order when stops exist.</p><button type="button" data-action="quick-add-job">Add Visit</button></div>`}
+        ${stops.length ? `<div class="work-day-route-layout">
+          <ol class="work-day-stop-list" aria-label="Today's scheduled stops">
+            ${stops.map((stop, index) => `<li class="${index === 0 ? "is-first" : ""} ${stop.status === "Complete" ? "is-complete" : ""}">
+              <span>${escapeHtml(String(index + 1))}</span>
+              <div><strong>${escapeHtml(stopTime(stop))} / ${escapeHtml(stop.clientName || "Scheduled visit")}</strong><small>${escapeHtml([stop.address, stop.serviceType].filter(Boolean).join(" / ") || "Visit details")}</small></div>
+              <em>${escapeHtml(stop.status || (index === 0 ? "First stop" : "Scheduled"))}</em>
+            </li>`).join("")}
+          </ol>
+          <div class="work-day-route-map">${routePreviewMapShell("work")}</div>
+        </div>` : `<div class="work-route-empty"><strong>No route to map yet</strong><p>Schedule a visit first, then build the driving order when stops exist.</p><button type="button" data-action="quick-add-job">Add Visit</button></div>`}
         <div class="work-day-route-footer">
           <span>${escapeHtml(stops.length ? `${openStops.length} open / ${stops.length} total stops` : "Build the route when work is scheduled.")}</span>
         </div>
@@ -15367,8 +15401,8 @@
         <header class="ticket-hero work-hero">
           <div>
             <p class="eyebrow">Work</p>
-            <h3>Work Queue</h3>
-            <p>Open assigned tickets, route stops, site photos, supporting documents, and completion steps from one practical queue.</p>
+            <h3>Work Day</h3>
+            <p>${escapeHtml(formatDate(today) || "Today")} / Plan the route, open assigned visits, and complete field requirements without leaving this workspace.</p>
           </div>
           <div class="ticket-hero-actions">
             ${canCreateTicketType("field") ? `<button type="button" data-action="open-ticket-create" data-ticket-type="field">Add Visit</button>` : ""}
@@ -15380,7 +15414,6 @@
           ${renderTicketMetric(ticketCountBy(workTickets, (ticket) => ticketInLane(ticket, ["review"])), "Needs Proof", "Photos, actuals, forms")}
           ${renderTicketMetric(upcomingTickets.length, "Upcoming", "Scheduled tickets")}
         </section>
-        ${renderOwnerKanbanBoard(tickets.filter(ticketIsOpen))}
         ${renderWorkDayPlanPanel(routeStopsToday, todayTickets, upcomingTickets, reviewTickets)}
         <div class="field-grid work-execution-grid">
           <section class="ticket-lane field-primary-lane" data-work-queue>

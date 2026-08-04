@@ -24150,6 +24150,685 @@ body:not(.is-login-screen) .print-document footer {
   }
 }
 
+/* 2026 operations redesign: main workspace only. The existing navigation
+   drawer is intentionally outside every selector in this section. */
+body:not(.is-login-screen) .dashboard-main,
+body:not(.is-login-screen) .detail-drawer {
+  --ops-canvas: #f4f6f7;
+  --ops-surface: #ffffff;
+  --ops-surface-soft: #f8faf9;
+  --ops-border: #dfe5e2;
+  --ops-border-strong: #d2dbd6;
+  --ops-text: #13211d;
+  --ops-muted: #66756e;
+  --ops-green: #1f753e;
+  --ops-green-dark: #155c30;
+  --ops-green-soft: #e8f4ea;
+  --ops-blue-soft: #eaf2ff;
+  --ops-red: #b63d36;
+  color: var(--ops-text);
+  font-family: Inter, ui-sans-serif, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+}
+
+body:not(.is-login-screen) .dashboard-main {
+  background: var(--ops-canvas) !important;
+}
+
+body:not(.is-login-screen) :is(.dashboard-main, .detail-drawer) :is(button, input, select, textarea) {
+  font-family: inherit;
+}
+
+body:not(.is-login-screen) .dashboard-main .dashboard-topbar {
+  position: sticky;
+  z-index: 30;
+  top: 0;
+  display: flex !important;
+  align-items: center;
+  justify-content: flex-end;
+  min-height: 58px;
+  padding: 9px clamp(14px, 2vw, 24px) !important;
+  border-bottom: 1px solid var(--ops-border) !important;
+  background: rgba(255, 255, 255, .97) !important;
+  box-shadow: none !important;
+  backdrop-filter: blur(12px);
+}
+
+body:not(.is-login-screen) .dashboard-main .dashboard-topbar .topbar-title-group,
+body:not(.is-login-screen) .dashboard-main .dashboard-topbar :is([data-owner-email], .header-user-avatar) {
+  display: none !important;
+}
+
+body:not(.is-login-screen) .dashboard-main .topbar-title-group .eyebrow {
+  margin: 0;
+  color: var(--ops-muted);
+  font-size: .61rem;
+}
+
+body:not(.is-login-screen) .dashboard-main .topbar-title-group h2 {
+  margin: 1px 0 0;
+  color: var(--ops-text);
+  font-size: .92rem;
+  line-height: 1.1;
+}
+
+body:not(.is-login-screen) .app-view .dashboard-main .dashboard-topbar .topbar-actions {
+  display: flex !important;
+  width: auto !important;
+  align-items: center !important;
+  flex-direction: row !important;
+  flex-wrap: nowrap !important;
+  margin-left: auto !important;
+  padding: 0 !important;
+  border: 0 !important;
+  background: transparent !important;
+  box-shadow: none !important;
+  gap: 8px;
+}
+
+body:not(.is-login-screen) .app-view .dashboard-main .dashboard-topbar .global-search-control {
+  flex: 0 1 360px !important;
+  width: min(360px, 34vw) !important;
+  min-width: 220px;
+}
+
+body:not(.is-login-screen) .app-view .dashboard-main .dashboard-topbar .global-add-control {
+  width: auto !important;
+  flex: 0 0 auto !important;
+}
+
+body:not(.is-login-screen) .dashboard-main .global-search-control input {
+  width: 100%;
+  min-height: 36px !important;
+  padding: 7px 11px 7px 34px !important;
+  border: 1px solid var(--ops-border) !important;
+  border-radius: 7px !important;
+  background: #fff !important;
+  box-shadow: none !important;
+  color: var(--ops-text) !important;
+  font-size: .76rem !important;
+}
+
+body:not(.is-login-screen) .dashboard-main .global-add-control > button {
+  min-height: 36px !important;
+  padding: 7px 12px !important;
+  border-radius: 7px !important;
+  box-shadow: none !important;
+}
+
+body:not(.is-login-screen) .dashboard-main .dashboard-section.is-active {
+  min-height: calc(100dvh - 58px);
+  padding: clamp(14px, 1.8vw, 24px) !important;
+  background: var(--ops-canvas) !important;
+}
+
+body:not(.is-login-screen) .dashboard-main .ticket-workspace {
+  display: grid;
+  width: min(1440px, 100%);
+  gap: 12px !important;
+  margin: 0 auto;
+}
+
+body:not(.is-login-screen) .dashboard-main .ticket-hero {
+  min-height: 0 !important;
+  margin: 0 !important;
+  padding: 0 0 2px !important;
+  border: 0 !important;
+  border-radius: 0 !important;
+  background: transparent !important;
+  box-shadow: none !important;
+}
+
+body:not(.is-login-screen) .dashboard-main .ticket-hero > div:first-child {
+  max-width: 760px;
+}
+
+body:not(.is-login-screen) .dashboard-main .ticket-hero .eyebrow {
+  margin-bottom: 3px;
+  color: var(--ops-green);
+  font-size: .62rem;
+  letter-spacing: .09em;
+}
+
+body:not(.is-login-screen) .dashboard-main .ticket-hero h3 {
+  margin: 0;
+  color: var(--ops-text) !important;
+  font-size: clamp(1.42rem, 2vw, 1.82rem) !important;
+  line-height: 1.12;
+}
+
+body:not(.is-login-screen) .dashboard-main .ticket-hero p:not(.eyebrow) {
+  max-width: 760px;
+  margin: 5px 0 0;
+  color: var(--ops-muted) !important;
+  font-size: .78rem !important;
+  line-height: 1.45;
+}
+
+body:not(.is-login-screen) .dashboard-main .ticket-hero-actions {
+  gap: 7px;
+}
+
+body:not(.is-login-screen) .dashboard-main .ticket-hero-actions button {
+  width: auto !important;
+  min-height: 36px !important;
+  padding: 7px 12px !important;
+  border-radius: 7px !important;
+  box-shadow: none !important;
+  font-size: .73rem !important;
+}
+
+body:not(.is-login-screen) .dashboard-main .ticket-metrics {
+  display: grid !important;
+  grid-template-columns: repeat(5, minmax(0, 1fr)) !important;
+  gap: 9px !important;
+  margin: 0 !important;
+}
+
+body:not(.is-login-screen) .dashboard-main .ticket-metric {
+  display: grid;
+  min-width: 0;
+  min-height: 82px !important;
+  gap: 2px;
+  padding: 11px 12px !important;
+  border: 1px solid var(--ops-border) !important;
+  border-radius: 8px !important;
+  background: var(--ops-surface) !important;
+  box-shadow: 0 1px 2px rgba(13, 31, 24, .025) !important;
+}
+
+body:not(.is-login-screen) .dashboard-main .ticket-metric strong {
+  color: var(--ops-text) !important;
+  font-size: 1.18rem !important;
+  line-height: 1.15;
+}
+
+body:not(.is-login-screen) .dashboard-main .ticket-metric span {
+  color: #263730 !important;
+  font-size: .71rem !important;
+  font-weight: 800;
+}
+
+body:not(.is-login-screen) .dashboard-main .ticket-metric small {
+  overflow: hidden;
+  color: var(--ops-muted) !important;
+  font-size: .62rem !important;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+body:not(.is-login-screen) .dashboard-main :is(
+  .ticket-lane,
+  .owner-kanban-board,
+  .owner-scorecard,
+  .dashboard-data-quality,
+  .work-day-map-card,
+  .work-plan-tile
+) {
+  border: 1px solid var(--ops-border) !important;
+  border-radius: 9px !important;
+  background: var(--ops-surface) !important;
+  box-shadow: none !important;
+}
+
+body:not(.is-login-screen) .dashboard-main .ticket-lane-heading {
+  gap: 12px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid #edf0ee;
+}
+
+body:not(.is-login-screen) .dashboard-main .ticket-lane-heading h3,
+body:not(.is-login-screen) .dashboard-main .ticket-flow-heading h3 {
+  color: var(--ops-text) !important;
+  font-size: .9rem !important;
+  line-height: 1.2;
+}
+
+body:not(.is-login-screen) .dashboard-main .ticket-lane-heading p,
+body:not(.is-login-screen) .dashboard-main .ticket-flow-heading p {
+  color: var(--ops-muted) !important;
+  font-size: .68rem !important;
+  line-height: 1.35;
+}
+
+body:not(.is-login-screen) #overview .my-work-today {
+  gap: 9px;
+  padding: 11px !important;
+}
+
+body:not(.is-login-screen) #overview .my-work-today .ticket-lane-heading {
+  align-items: center;
+}
+
+body:not(.is-login-screen) #overview .my-work-today-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+body:not(.is-login-screen) #overview .my-work-today-actions > span {
+  min-height: 24px;
+  padding: 4px 8px;
+  border-radius: 999px;
+  background: var(--ops-green-soft);
+  color: var(--ops-green-dark);
+  font-size: .63rem;
+  font-weight: 800;
+}
+
+body:not(.is-login-screen) #overview .my-work-today-actions button {
+  width: auto !important;
+  min-height: 30px !important;
+  padding: 5px 9px !important;
+  border-radius: 6px !important;
+  font-size: .65rem !important;
+}
+
+body:not(.is-login-screen) #overview .my-work-today .ticket-lane-list {
+  display: grid !important;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 7px !important;
+  max-height: none !important;
+  overflow: visible !important;
+}
+
+body:not(.is-login-screen) #overview .today-action-item {
+  display: grid !important;
+  grid-template-columns: minmax(0, 1fr) auto;
+  min-width: 0;
+  min-height: 78px !important;
+  gap: 6px;
+  padding: 8px 9px !important;
+  border: 1px solid var(--ops-border) !important;
+  border-radius: 7px !important;
+  background: #fff !important;
+  box-shadow: none !important;
+}
+
+body:not(.is-login-screen) #overview .today-action-status {
+  grid-column: 1 / -1;
+  justify-self: start;
+  min-height: 20px;
+  padding: 3px 6px;
+  border-radius: 999px;
+  background: var(--ops-green-soft);
+  color: var(--ops-green-dark);
+  font-size: .56rem;
+  font-weight: 850;
+}
+
+body:not(.is-login-screen) #overview .today-action-item > div {
+  min-width: 0;
+}
+
+body:not(.is-login-screen) #overview .today-action-item strong,
+body:not(.is-login-screen) #overview .today-action-item small {
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+body:not(.is-login-screen) #overview .today-action-item strong {
+  font-size: .69rem;
+}
+
+body:not(.is-login-screen) #overview .today-action-item small {
+  margin-top: 2px;
+  color: var(--ops-muted);
+  font-size: .58rem;
+}
+
+body:not(.is-login-screen) #overview .today-action-item > button {
+  width: auto !important;
+  min-height: 28px !important;
+  align-self: end;
+  padding: 4px 7px !important;
+  border-radius: 6px !important;
+  font-size: .61rem !important;
+}
+
+body:not(.is-login-screen) #overview [data-owner-kanban-board] {
+  gap: 9px !important;
+  padding: 11px !important;
+  border-radius: 9px !important;
+  background: #fff !important;
+  box-shadow: none !important;
+}
+
+body:not(.is-login-screen) #overview [data-owner-kanban-board] .owner-kanban-toolbar-head {
+  padding-bottom: 7px;
+}
+
+body:not(.is-login-screen) #overview [data-owner-kanban-board] .owner-kanban-toolbar h3 {
+  font-size: 1rem !important;
+}
+
+body:not(.is-login-screen) #overview [data-owner-kanban-board] .owner-kanban-stage-head {
+  min-height: 54px !important;
+  border: 1px solid var(--ops-border) !important;
+  border-radius: 7px !important;
+  box-shadow: none !important;
+}
+
+body:not(.is-login-screen) #overview [data-owner-kanban-board] .owner-kanban-column--todo {
+  background: #f2f4f5 !important;
+}
+
+body:not(.is-login-screen) #overview [data-owner-kanban-board] .owner-kanban-column--in_progress {
+  background: var(--ops-blue-soft) !important;
+}
+
+body:not(.is-login-screen) #overview [data-owner-kanban-board] .owner-kanban-column--done {
+  background: var(--ops-green-soft) !important;
+}
+
+body:not(.is-login-screen) #overview [data-owner-kanban-board] .component-ticket-swimlane {
+  border: 1px solid var(--ops-border) !important;
+  border-radius: 8px !important;
+  box-shadow: none !important;
+}
+
+body:not(.is-login-screen) #overview [data-owner-kanban-board] .component-ticket-swimlane-head {
+  min-height: 50px !important;
+  padding: 7px 9px !important;
+  background: #fbfcfb !important;
+}
+
+body:not(.is-login-screen) #overview [data-owner-kanban-board] .owner-kanban-card.component-kanban-row {
+  box-shadow: none !important;
+}
+
+body:not(.is-login-screen) #overview :is(.owner-scorecard, .dashboard-data-quality) {
+  padding: 11px !important;
+}
+
+body:not(.is-login-screen) #overview .owner-scorecard-grid {
+  grid-template-columns: repeat(6, minmax(0, 1fr)) !important;
+  gap: 7px !important;
+}
+
+body:not(.is-login-screen) #overview .owner-scorecard-grid article,
+body:not(.is-login-screen) #overview .dashboard-data-quality-grid button {
+  min-height: 76px !important;
+  padding: 9px !important;
+  border: 1px solid var(--ops-border) !important;
+  border-radius: 7px !important;
+  background: var(--ops-surface-soft) !important;
+  box-shadow: none !important;
+}
+
+body:not(.is-login-screen) #calendar .work-day-plan-panel {
+  display: grid !important;
+  gap: 9px !important;
+  grid-template-columns: minmax(0, 2.3fr) minmax(240px, .8fr) !important;
+}
+
+body:not(.is-login-screen) #calendar .work-day-map-card {
+  min-width: 0;
+  padding: 11px !important;
+}
+
+body:not(.is-login-screen) #calendar .work-day-route-layout {
+  display: grid;
+  grid-template-columns: minmax(240px, .78fr) minmax(0, 1.22fr);
+  gap: 9px;
+  margin-top: 9px;
+}
+
+body:not(.is-login-screen) #calendar .work-day-stop-list {
+  display: grid;
+  align-content: start;
+  gap: 5px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+body:not(.is-login-screen) #calendar .work-day-stop-list li {
+  display: grid;
+  grid-template-columns: 22px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 7px;
+  min-height: 48px;
+  padding: 6px 7px;
+  border: 1px solid var(--ops-border);
+  border-radius: 7px;
+  background: #fff;
+}
+
+body:not(.is-login-screen) #calendar .work-day-stop-list li.is-first {
+  border-color: #4e86e8;
+  background: #f3f7ff;
+  box-shadow: inset 3px 0 0 #3f7ee8;
+}
+
+body:not(.is-login-screen) #calendar .work-day-stop-list li.is-complete {
+  opacity: .68;
+}
+
+body:not(.is-login-screen) #calendar .work-day-stop-list li > span {
+  display: grid;
+  width: 22px;
+  height: 22px;
+  place-items: center;
+  border-radius: 50%;
+  background: #edf1ef;
+  color: #41534b;
+  font-size: .58rem;
+  font-weight: 850;
+}
+
+body:not(.is-login-screen) #calendar .work-day-stop-list :is(strong, small) {
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+body:not(.is-login-screen) #calendar .work-day-stop-list strong {
+  font-size: .65rem;
+}
+
+body:not(.is-login-screen) #calendar .work-day-stop-list small {
+  margin-top: 2px;
+  color: var(--ops-muted);
+  font-size: .56rem;
+}
+
+body:not(.is-login-screen) #calendar .work-day-stop-list em {
+  color: var(--ops-green);
+  font-size: .54rem;
+  font-style: normal;
+  font-weight: 800;
+}
+
+body:not(.is-login-screen) #calendar .work-day-route-map,
+body:not(.is-login-screen) #calendar .work-day-route-map .dashboard-map-preview-shell {
+  min-height: 220px;
+  height: 100% !important;
+  margin: 0 !important;
+  border-radius: 7px !important;
+}
+
+body:not(.is-login-screen) #calendar .work-plan-tile-grid {
+  display: grid !important;
+  grid-template-columns: minmax(0, 1fr) !important;
+  gap: 7px !important;
+}
+
+body:not(.is-login-screen) #calendar .work-plan-tile {
+  min-height: 0 !important;
+  padding: 10px !important;
+}
+
+body:not(.is-login-screen) #calendar .work-plan-tile :is(strong, p) {
+  margin-block: 2px !important;
+}
+
+body:not(.is-login-screen) #calendar .work-plan-tile button {
+  width: auto !important;
+  min-height: 28px !important;
+  padding: 4px 8px !important;
+  border-radius: 6px !important;
+  font-size: .62rem !important;
+}
+
+body:not(.is-login-screen) #calendar .work-day-route-footer {
+  padding-top: 7px;
+  border-top: 1px solid #edf0ee;
+  font-size: .62rem;
+}
+
+body:not(.is-login-screen) #calendar .work-execution-grid {
+  grid-template-columns: minmax(0, 2fr) minmax(260px, .85fr) !important;
+  gap: 9px !important;
+}
+
+body:not(.is-login-screen) #calendar .work-execution-grid .ticket-lane {
+  padding: 11px !important;
+}
+
+body:not(.is-login-screen) #calendar .work-execution-grid .ticket-card {
+  padding: 9px !important;
+  border-radius: 7px !important;
+  box-shadow: none !important;
+}
+
+body:not(.is-login-screen) #calendar .schedule-create-form {
+  gap: 7px !important;
+}
+
+body:not(.is-login-screen) #calendar .schedule-create-form :is(input, select) {
+  min-height: 34px !important;
+  padding: 7px 9px !important;
+  border-radius: 6px !important;
+  font-size: .69rem !important;
+}
+
+body:not(.is-login-screen) .detail-drawer.has-unified-ticket .drawer-panel {
+  width: min(1180px, calc(100vw - 92px)) !important;
+  background: #f7f9f8 !important;
+}
+
+body:not(.is-login-screen) .ticket-unified-header {
+  padding: 11px 16px 10px !important;
+  border-bottom-color: var(--ops-border) !important;
+  box-shadow: 0 1px 0 rgba(11, 35, 27, .02);
+}
+
+body:not(.is-login-screen) .ticket-unified-title-row {
+  margin-top: 7px;
+}
+
+body:not(.is-login-screen) .ticket-unified-meta {
+  margin-top: 9px;
+  border-radius: 7px;
+}
+
+body:not(.is-login-screen) .ticket-unified-layout {
+  grid-template-columns: minmax(0, 1fr) 254px;
+}
+
+body:not(.is-login-screen) .ticket-unified-main {
+  padding: 11px 12px 82px 16px;
+}
+
+body:not(.is-login-screen) .ticket-unified-summary {
+  gap: 8px;
+  padding: 11px 11px 82px;
+  background: #f7f9f8;
+}
+
+body:not(.is-login-screen) .ticket-unified-summary > section {
+  padding: 10px;
+  border-radius: 7px;
+  box-shadow: none;
+}
+
+body:not(.is-login-screen) .ticket-unified-section {
+  border-radius: 7px !important;
+  box-shadow: none !important;
+}
+
+body:not(.is-login-screen) .ticket-unified-section > summary {
+  min-height: 50px;
+  padding: 7px 10px !important;
+}
+
+body:not(.is-login-screen) .ticket-section-number {
+  width: 26px;
+  height: 26px;
+}
+
+body:not(.is-login-screen) .ticket-owner-footer {
+  padding: 8px 14px;
+}
+
+@media (max-width: 1180px) {
+  body:not(.is-login-screen) .dashboard-main .ticket-metrics {
+    grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+  }
+
+  body:not(.is-login-screen) #overview .my-work-today .ticket-lane-list {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  body:not(.is-login-screen) #overview .owner-scorecard-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+  }
+
+  body:not(.is-login-screen) #calendar .work-day-plan-panel,
+  body:not(.is-login-screen) #calendar .work-execution-grid {
+    grid-template-columns: minmax(0, 1fr) !important;
+  }
+
+  body:not(.is-login-screen) #calendar .work-plan-tile-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+  }
+}
+
+@media (max-width: 760px) {
+  body:not(.is-login-screen) .dashboard-main .dashboard-section.is-active {
+    padding: 10px !important;
+  }
+
+  body:not(.is-login-screen) .dashboard-main .dashboard-topbar {
+    min-height: 52px;
+    padding: 7px 10px !important;
+  }
+
+  body:not(.is-login-screen) .dashboard-main .global-search-control {
+    width: min(220px, 44vw);
+  }
+
+  body:not(.is-login-screen) .dashboard-main .ticket-hero {
+    align-items: flex-start;
+    gap: 10px;
+  }
+
+  body:not(.is-login-screen) .dashboard-main .ticket-metrics,
+  body:not(.is-login-screen) #overview .my-work-today .ticket-lane-list,
+  body:not(.is-login-screen) #overview .owner-scorecard-grid,
+  body:not(.is-login-screen) #calendar .work-plan-tile-grid,
+  body:not(.is-login-screen) #calendar .work-day-route-layout {
+    grid-template-columns: minmax(0, 1fr) !important;
+  }
+
+  body:not(.is-login-screen) #overview .my-work-today .ticket-lane-heading {
+    align-items: flex-start;
+  }
+
+  body:not(.is-login-screen) #overview .my-work-today-actions {
+    width: 100%;
+    justify-content: space-between;
+  }
+
+  body:not(.is-login-screen) #calendar .work-day-route-map,
+  body:not(.is-login-screen) #calendar .work-day-route-map .dashboard-map-preview-shell {
+    min-height: 190px;
+  }
+}
+
 /* Unified canonical ticket drawer */
 body:not(.is-login-screen) .detail-drawer.has-unified-ticket {
   padding: 8px !important;

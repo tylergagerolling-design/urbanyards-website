@@ -26,8 +26,8 @@ test("live workspace polish contains long records and management cards", () => {
   assert.match(css, /\.call-queue-row > span:first-child :is\(strong, small\)[\s\S]*overflow-wrap: anywhere/);
   assert.match(css, /\.groundskeeper-operation-card[\s\S]*white-space: normal !important/);
   assert.match(css, /\.dashboard-health-item strong[\s\S]*word-break: break-all/);
-  assert.match(html, /dashboard\.css\?v=20260803-kanban-team-breakdown-1/);
-  assert.match(html, /dashboard\.js\?v=20260803-kanban-team-breakdown-1/);
+  assert.match(html, /dashboard\.css\?v=20260803-operations-redesign-4/);
+  assert.match(html, /dashboard\.js\?v=20260803-operations-redesign-4/);
 });
 
 test("authenticated assistant prompt suppresses public quote calls to action", () => {
@@ -587,6 +587,10 @@ test("primary workspaces omit navigation cards already represented in the drawer
   assert.doesNotMatch(home, /renderHomeFocusPanel|data-action="go-work">Open Work/);
   assert.doesNotMatch(tickets, /renderTicketHandoffPanel/);
   assert.doesNotMatch(work, /renderWorkReadinessPanel|renderWorkFieldPacketPanel|Support Tools|data-action="go-route-planner">Open Route/);
+  assert.match(home, /renderOwnerKanbanBoard/);
+  assert.doesNotMatch(work, /renderOwnerKanbanBoard|data-owner-kanban-board/);
+  assert.match(js, /visibleItems = items\.slice\(0, 4\)/);
+  assert.match(js, /work-day-route-layout[\s\S]*work-day-stop-list/);
   assert.doesNotMatch(leads, /renderLeadsRunwayPanel|renderLeadsHandoffPanel|lead-next-step-stack/);
   assert.doesNotMatch(money, /renderMoneyRunwayPanel|renderMoneyCloseoutPanel|money-next-step-stack/);
   assert.doesNotMatch(tools, /renderToolsRunwayPanel|renderToolsSystemsPanel|tools-control-grid/);
@@ -1045,7 +1049,7 @@ test("dashboard daily workflow prioritizes actions, saved views, and data qualit
   assert.match(html, /data-global-search[\s\S]*Search everything/);
   assert.match(html, /data-action="toggle-global-add"/);
   assert.match(js, /function dashboardActionMetrics/);
-  assert.match(js, /Calls Due[\s\S]*Overdue Follow-ups[\s\S]*Needs Approval[\s\S]*Closeout \/ Payment/);
+  assert.match(js, /Open Tickets[\s\S]*In Progress[\s\S]*Due Today[\s\S]*Completed This Week[\s\S]*Revenue This Month/);
   assert.match(js, /OWNER_KANBAN_SAVED_VIEWS[\s\S]*Due Today[\s\S]*Overdue[\s\S]*Blocked[\s\S]*Needs Review/);
   assert.match(js, /action === "apply-owner-kanban-view"/);
   assert.match(js, /function renderDataQualityPanel/);

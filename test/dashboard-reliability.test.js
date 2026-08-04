@@ -26,8 +26,8 @@ test("archived workspace polish remains available while blank-canvas assets are 
   assert.match(css, /\.call-queue-row > span:first-child :is\(strong, small\)[\s\S]*overflow-wrap: anywhere/);
   assert.match(css, /\.groundskeeper-operation-card[\s\S]*white-space: normal !important/);
   assert.match(css, /\.dashboard-health-item strong[\s\S]*word-break: break-all/);
-  assert.match(html, /dashboard\.css\?v=20260803-blank-canvas-3/);
-  assert.match(html, /dashboard\.js\?v=20260803-blank-canvas-3/);
+  assert.match(html, /dashboard\.css\?v=20260803-home-focus-work-3/);
+  assert.match(html, /dashboard\.js\?v=20260803-home-focus-work-3/);
 });
 
 test("authenticated assistant prompt suppresses public quote calls to action", () => {
@@ -182,8 +182,9 @@ test("dashboard route aliases and new reliability diagnostics are wired", () => 
   assert.doesNotMatch(html, /id="budgets"/);
   assert.doesNotMatch(html, /id="connected-operations"/);
   assert.match(html, /scripts\/budget-calculations\.js/);
-  assert.match(html, /<section class="dashboard-section workspace-reset-canvas" id="overview" data-section="overview"><small>Home Wireframe Canvas<\/small><\/section>/);
+  assert.match(html, /<section class="dashboard-section home-focus-page" id="overview" data-section="overview"><div data-home-focus-work><\/div><\/section>/);
   assert.doesNotMatch(html, /data-home-workspace|data-global-search|dashboard-topbar/);
+  assert.match(js, /function renderFocusOnWorkHome/);
   assert.match(archivedHtml, /<section class="dashboard-section home-ticket-page" id="overview"/);
   assert.match(archivedHtml, /data-home-workspace/);
   const primaryDrawerLabels = [...html.matchAll(/<a href="#[^"]+"(?![^>]*legacy-nav-route)[^>]*data-dashboard-link="[^"]+"[\s\S]*?<span class="nav-label">([^<]+)<\/span><\/a>/g)].map((match) => match[1]);

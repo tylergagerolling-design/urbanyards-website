@@ -22456,9 +22456,94 @@ Requirements:
     </section>`;
   }
 
+  const HOME_FOCUS_JOBS = Object.freeze([
+    { time: "8:00 AM", address: "123 Main St", service: "Lawn Maintenance", crew: "John D.", status: "In Progress", duration: "1h 30m" },
+    { time: "10:00 AM", address: "456 Oak Ave", service: "Landscape Maintenance", crew: "Mike L.", status: "In Progress", duration: "1h 15m" },
+    { time: "12:00 PM", address: "789 Pine Rd", service: "Property Cleanup", crew: "Sarah P.", status: "Scheduled", duration: "1h 00m" },
+    { time: "2:00 PM", address: "321 Cedar Ln", service: "Irrigation Check", crew: "John D.", status: "Scheduled", duration: "1h 00m" },
+    { time: "4:00 PM", address: "654 Maple Dr", service: "Seasonal Maintenance", crew: "Mike L.", status: "In Progress", duration: "1h 15m" },
+    { time: "5:30 PM", address: "987 Birch St", service: "Yard Cleanup", crew: "Sarah P.", status: "Scheduled", duration: "45m" }
+  ]);
+
+  function homeFocusIcon(name) {
+    const paths = {
+      calendar: '<rect x="3" y="5" width="18" height="16" rx="2"></rect><path d="M16 3v4M8 3v4M3 10h18"></path><path d="m8 15 2 2 5-5"></path>',
+      pin: '<path d="M20 10c0 5-8 11-8 11S4 15 4 10a8 8 0 1 1 16 0Z"></path><circle cx="12" cy="10" r="2.5"></circle>',
+      clock: '<circle cx="12" cy="12" r="9"></circle><path d="M12 7v6l4 2"></path>',
+      check: '<circle cx="12" cy="12" r="9"></circle><path d="m8 12 3 3 5-6"></path>',
+      warning: '<path d="M10.3 4.2 2.5 18a2 2 0 0 0 1.7 3h15.6a2 2 0 0 0 1.7-3L13.7 4.2a2 2 0 0 0-3.4 0Z"></path><path d="M12 9v4M12 17h.01"></path>',
+      crew: '<path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M22 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"></path>',
+      briefcase: '<path d="M9 7V5a2 2 0 0 1 2-2h2a2 2 0 0 1 2 2v2"></path><rect x="3" y="7" width="18" height="13" rx="2"></rect><path d="M3 12h18M10 12v2h4v-2"></path>'
+    };
+    return `<svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">${paths[name] || paths.check}</svg>`;
+  }
+
+  function renderFocusMetric(icon, value, label, support = "") {
+    return `<article class="focus-metric"><span class="focus-metric-icon">${homeFocusIcon(icon)}</span><div><strong>${escapeHtml(value)}</strong><span>${escapeHtml(label)}</span>${support ? `<small>${escapeHtml(support)}</small>` : ""}</div></article>`;
+  }
+
+  function renderFocusJobRow(job, index) {
+    const statusClass = job.status === "In Progress" ? "is-progress" : "is-scheduled";
+    return `<tr data-focus-job-row="${index}">
+      <td class="focus-job-time">${escapeHtml(job.time)}</td>
+      <td><div class="focus-job-name"><span class="focus-thumb" aria-hidden="true"></span><span><strong>${escapeHtml(job.address)}</strong><small>${escapeHtml(job.service)}</small></span></div></td>
+      <td><span class="focus-inline-icon">${homeFocusIcon("pin")}</span>Portland, OR</td>
+      <td><div class="focus-crew"><span class="focus-inline-icon">${homeFocusIcon("crew")}</span><span>${escapeHtml(job.crew)}<small>+1</small></span></div></td>
+      <td><span class="focus-status ${statusClass}">${escapeHtml(job.status)}</span></td>
+      <td>${escapeHtml(job.duration)}</td>
+      <td><button class="focus-row-menu" type="button" aria-label="More options for ${escapeHtml(job.address)}">⋮</button></td>
+    </tr>`;
+  }
+
+  function renderFocusScheduleItem(job, index) {
+    return `<article class="focus-schedule-stop"><strong class="focus-schedule-time">${escapeHtml(job.time)}</strong><div class="focus-schedule-visual"><span class="focus-schedule-thumb" aria-hidden="true"></span>${index < HOME_FOCUS_JOBS.length - 1 ? '<span class="focus-schedule-connector" aria-hidden="true"></span>' : ""}</div><strong>${escapeHtml(job.address)}</strong><span>Portland, OR</span><small>${escapeHtml(job.duration)}</small></article>`;
+  }
+
+  function renderFocusOnWorkHome() {
+    const host = qs("[data-home-focus-work]");
+    if (!host) return;
+    host.innerHTML = `<div class="focus-work-page">
+      <header class="focus-work-heading"><h2>Focus on Work</h2><p>List + Summary</p></header>
+      <section class="focus-metrics" aria-label="Work metrics">
+        ${renderFocusMetric("calendar", "8", "Jobs Today")}
+        ${renderFocusMetric("pin", "6", "Locations")}
+        ${renderFocusMetric("clock", "24h 15m", "Est. Work Time", "This Week")}
+        ${renderFocusMetric("check", "2", "Completed", "This Week")}
+        ${renderFocusMetric("warning", "1", "Needs Attention", "View")}
+      </section>
+      <div class="focus-primary-grid">
+        <section class="focus-card focus-jobs-card">
+          <div class="focus-card-header"><h3>Jobs List</h3><div class="focus-job-controls">
+            <label><span class="focus-control-icon">${homeFocusIcon("calendar")}</span><select aria-label="Job date"><option>Today</option><option>Tomorrow</option><option>This Week</option></select></label>
+            <label><span class="focus-control-icon">${homeFocusIcon("pin")}</span><select aria-label="Job location"><option>All Locations</option><option>Portland, OR</option></select></label>
+            <label><span class="focus-control-icon">${homeFocusIcon("briefcase")}</span><select aria-label="Job status"><option>All Status</option><option>In Progress</option><option>Scheduled</option></select></label>
+            <button class="focus-new-job" type="button" data-action="open-ticket-create" data-ticket-type="field"><span>+</span> New Job</button>
+          </div></div>
+          <div class="focus-jobs-table-wrap"><table class="focus-jobs-table"><thead><tr><th>Time</th><th>Job / Customer</th><th>Location</th><th>Crew</th><th>Status</th><th>Est. Time</th><th><span class="sr-only">Menu</span></th></tr></thead><tbody>${HOME_FOCUS_JOBS.map(renderFocusJobRow).join("")}</tbody></table></div>
+          <div class="focus-card-footer"><span>Showing 6 of 6 jobs</span><a href="#tickets">View full list <span aria-hidden="true">→</span></a></div>
+        </section>
+        <div class="focus-right-stack">
+          <section class="focus-card focus-summary-card"><div class="focus-card-header"><h3>Work Summary</h3><label class="focus-summary-select"><select aria-label="Summary period"><option>This Week</option><option>Today</option><option>This Month</option></select></label></div><div class="focus-summary-list">
+            <div class="focus-summary-row is-total"><span class="focus-inline-icon">${homeFocusIcon("calendar")}</span><span>Total Jobs</span><strong>8</strong></div>
+            <div class="focus-summary-row"><span class="focus-inline-icon">${homeFocusIcon("check")}</span><span>Completed</span><i><b style="width:25%"></b></i><strong>2 (25%)</strong></div>
+            <div class="focus-summary-row is-progress"><span class="focus-inline-icon">${homeFocusIcon("check")}</span><span>In Progress</span><i><b style="width:38%"></b></i><strong>3 (38%)</strong></div>
+            <div class="focus-summary-row"><span class="focus-inline-icon">${homeFocusIcon("calendar")}</span><span>Scheduled</span><i><b style="width:25%"></b></i><strong>2 (25%)</strong></div>
+            <div class="focus-summary-row is-attention"><span class="focus-inline-icon">${homeFocusIcon("warning")}</span><span>Needs Attention</span><i><b style="width:12%"></b></i><strong>1 (12%)</strong></div>
+          </div></section>
+          <section class="focus-card focus-locations-card"><div class="focus-card-header"><h3>Top Locations</h3><a class="focus-small-button" href="#calendar">View all</a></div><div class="focus-location-list">${[["123 Main St","2 jobs"],["456 Oak Ave","2 jobs"],["789 Pine Rd","1 job"],["321 Cedar Ln","1 job"]].map(([name,count])=>`<div><span class="focus-inline-icon">${homeFocusIcon("pin")}</span><span>${name}</span><small>${count}</small></div>`).join("")}</div></section>
+        </div>
+      </div>
+      <div class="focus-bottom-grid">
+        <section class="focus-card focus-schedule-card"><div class="focus-card-header"><h3>Upcoming Schedule</h3><a href="#calendar">View full schedule <span aria-hidden="true">→</span></a></div><div class="focus-schedule-list">${HOME_FOCUS_JOBS.map(renderFocusScheduleItem).join("")}</div></section>
+        <section class="focus-card focus-tasks-card"><div class="focus-card-header"><h3>My Tasks</h3><a class="focus-small-button" href="#calendar">View all</a></div><label class="focus-task"><input type="checkbox"><span><strong>Follow up on proposal</strong><small>123 Main St</small></span><em>Due 10:00 AM</em></label><label class="focus-task"><input type="checkbox"><span><strong>Upload before photos</strong><small>456 Oak Ave</small></span><em>Due 12:00 PM</em></label><label class="focus-task is-complete"><input type="checkbox" checked><span><strong>Order mulch for 321 Cedar Ln</strong></span><em>Completed</em></label></section>
+      </div>
+    </div>`;
+  }
+
   function renderVisualResetWorkspaces() {
     qsa(".dashboard-main > .dashboard-section[data-section]").forEach((section) => {
       const key = normalizeDashboardSection(section.dataset.section || section.id);
+      if (key === "overview") return;
       const title = DASHBOARD_VISUAL_RESET_TITLES[key] || "Workspace";
       section.className = "dashboard-section workspace-reset-canvas";
       section.innerHTML = `<small>${escapeHtml(title)} Wireframe Canvas</small>`;
@@ -22473,6 +22558,7 @@ Requirements:
     safeRender("dashboard health", () => renderDashboardHealth());
     const active = normalizeDashboardSection(state.activeSection);
     safeRender("wireframe canvases", () => renderVisualResetWorkspaces());
+    if (active === "overview") safeRender("Focus on Work home", () => renderFocusOnWorkHome());
     safeRender("contextual Groundskeeper tools", () => renderContextualGroundskeeperTools(active));
     safeRender("dashboard Groundskeeper", () => renderDashboardCopilot());
     safeRender("avatar fallbacks", () => bindAvatarFallbacks());

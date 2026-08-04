@@ -22579,14 +22579,75 @@ Requirements:
     return `<section class="ut-card ${className}"><h3>${escapeHtml(title)}</h3>${body}</section>`;
   }
 
+  const TICKET_TIMELINE_FIXTURE = Object.freeze([
+    { group:"Today", date:"Jul 23", time:"8:00 AM", id:"10024", name:"Johnson Residence", type:"Maintenance", address:"123 Main St", city:"Portland, OR", status:"In Progress", crew:"John D.", extra:"+1", priority:"Medium", range:"week" },
+    { group:"Today", date:"Jul 23", time:"1:00 PM", id:"10022", name:"Pinecrest Office Park", type:"Maintenance", address:"789 Pine Rd", city:"Beaverton, OR", status:"In Progress", crew:"Sarah P.", extra:"+2", priority:"Medium", range:"week" },
+    { group:"Tomorrow", date:"Jul 24", time:"9:00 AM", id:"10021", name:"City Center Plaza", type:"Seasonal", address:"321 Cedar Ln", city:"Portland, OR", status:"Scheduled", crew:"John D.", extra:"+1", priority:"Low", range:"week" },
+    { group:"Fri", date:"Jul 25", time:"10:00 AM", id:"10023", name:"Greenway Apartments", type:"Grounds", address:"456 Oak Ave", city:"Portland, OR", status:"Scheduled", crew:"Mike L.", extra:"+2", priority:"High", range:"week" },
+    { group:"Sat", date:"Jul 26", time:"11:00 AM", id:"10025", name:"Mountain View HOA", type:"Maintenance", address:"987 Elm St", city:"Happy Valley, OR", status:"Scheduled", crew:"Mike L.", extra:"+1", priority:"Medium", range:"week" },
+    { group:"Later", date:"Jul 28+", time:"Jul 28", id:"10026", name:"Sunset Office Building", type:"Maintenance", address:"555 Sunset Blvd", city:"Portland, OR", status:"Scheduled", crew:"Sarah P.", extra:"+1", priority:"Low", range:"later" }
+  ]);
+
+  function renderTicketTimelineRow(ticket, index) {
+    return `<article class="ttl-row" data-action="unified-ticket-open" data-id="${ticket.id}" tabindex="0" role="button" aria-label="Open ticket ${ticket.id} ${ticket.name}">
+      <span class="ttl-marker ${ticket.group === "Later" ? "is-later" : ""}" aria-hidden="true"></span>
+      <strong class="ttl-time">${ticket.time}</strong>
+      <button type="button" class="ttl-number" data-action="unified-ticket-open" data-id="${ticket.id}">#${ticket.id}</button>
+      <span class="ttl-name"><strong>${ticket.name}</strong><small>${ticket.type}</small></span>
+      <span class="ttl-location"><strong>${ticket.address}</strong><small>${ticket.city}</small></span>
+      <span class="ttl-status ${ticket.status === "In Progress" ? "is-progress" : "is-scheduled"}">${ticket.status}</span>
+      <span class="ttl-crew">${unifiedTicketIcon("crew")}<span><strong>${ticket.crew}</strong><small>${ticket.extra}</small></span></span>
+      <span class="ttl-priority is-${ticket.priority.toLowerCase()}"><i></i>${ticket.priority}</span>
+      <button type="button" class="ttl-menu" data-action="ticket-timeline-menu" data-id="${ticket.id}" aria-label="Actions for ticket ${ticket.id}">⋮</button>
+      <div class="ttl-row-menu" data-ticket-timeline-menu="${ticket.id}" hidden><button type="button" data-action="unified-ticket-open" data-id="${ticket.id}">Open ticket</button><button type="button" data-action="unified-ticket-schedule">View schedule</button></div>
+    </article>`;
+  }
+
+  function renderTicketsTimeline() {
+    const host = qs("[data-unified-ticket-workspace]");
+    if (!host) return;
+    const status = state.ticketTimelineStatus || "All";
+    const type = state.ticketTimelineType || "All";
+    const location = state.ticketTimelineLocation || "All";
+    const range = state.ticketTimelineRange || "week-plus";
+    const rows = TICKET_TIMELINE_FIXTURE.filter((ticket) =>
+      (status === "All" || ticket.status === status) &&
+      (type === "All" || ticket.type === type) &&
+      (location === "All" || ticket.city === location) &&
+      (range === "week-plus" || ticket.range === "week")
+    );
+    const groups = ["Today","Tomorrow","Fri","Sat","Later"].map((label) => {
+      const tickets = rows.filter((ticket) => ticket.group === label);
+      if (!tickets.length) return "";
+      return `<section class="ttl-group"><div class="ttl-date"><strong>${label}</strong><span>${tickets[0].date}</span></div><div class="ttl-group-rows">${tickets.map(renderTicketTimelineRow).join("")}</div></section>`;
+    }).join("");
+    host.innerHTML = `<div class="tickets-timeline-page">
+      <header class="ttl-header"><div><h2 style="color:#0e1116!important">Tickets</h2><p>Focus on what’s coming up</p></div><div class="ttl-filters">
+        <label>${unifiedTicketIcon("check")}<select data-ticket-timeline-filter="status" aria-label="Ticket status"><option value="All">Status</option><option${status==="In Progress"?" selected":""}>In Progress</option><option${status==="Scheduled"?" selected":""}>Scheduled</option></select></label>
+        <label>${unifiedTicketIcon("document")}<select data-ticket-timeline-filter="type" aria-label="Ticket type"><option value="All">Types</option>${["Maintenance","Seasonal","Grounds"].map(v=>`<option${type===v?" selected":""}>${v}</option>`).join("")}</select></label>
+        <label>${unifiedTicketIcon("pin")}<select data-ticket-timeline-filter="location" aria-label="Ticket location"><option value="All">All Locations</option>${["Portland, OR","Beaverton, OR","Happy Valley, OR"].map(v=>`<option${location===v?" selected":""}>${v}</option>`).join("")}</select></label>
+        <label>${unifiedTicketIcon("calendar")}<select data-ticket-timeline-filter="range" aria-label="Ticket date range"><option value="week-plus"${range==="week-plus"?" selected":""}>This Week</option><option value="week"${range==="week"?" selected":""}>Through Sat</option></select></label>
+        <button type="button" class="ttl-new-ticket" style="background:#343a45!important;color:#fff!important" data-action="open-ticket-create" data-ticket-type="field"><span>+</span> New Ticket</button>
+      </div></header>
+      <div class="ttl-groups">${groups || '<p class="ttl-no-results">No upcoming tickets match these filters.</p>'}</div>
+      <footer class="ttl-footer">${unifiedTicketIcon("calendar")}<span>Showing upcoming tickets for this week and beyond</span><button type="button" data-action="unified-ticket-schedule">View full schedule&nbsp; →</button></footer>
+    </div>`;
+  }
+
   function renderUnifiedTicketOverview() {
     const host = qs("[data-unified-ticket-workspace]");
     if (!host) return;
-    if (state.unifiedTicketVisible === false) {
-      host.innerHTML = '<div class="workspace-reset-canvas ut-returned-list"><small>Tickets Wireframe Canvas</small></div>';
+    if (state.unifiedTicketVisible !== true) {
+      renderTicketsTimeline();
       return;
     }
-    const ticket = UNIFIED_TICKET_REFERENCE;
+    const selectedTimelineTicket = TICKET_TIMELINE_FIXTURE.find((item) => item.id === state.unifiedTicketSelectedId);
+    const ticket = selectedTimelineTicket ? {
+      ...UNIFIED_TICKET_REFERENCE,
+      id:selectedTimelineTicket.id, title:selectedTimelineTicket.name, status:selectedTimelineTicket.status,
+      type:selectedTimelineTicket.type, priority:selectedTimelineTicket.priority, location:selectedTimelineTicket.city,
+      address:selectedTimelineTicket.address, city:selectedTimelineTicket.city, crew:`${selectedTimelineTicket.crew}${selectedTimelineTicket.extra ? `, ${selectedTimelineTicket.extra} crew` : ""}`
+    } : UNIFIED_TICKET_REFERENCE;
     const active = state.unifiedTicketSection || "overview";
     const nav = UNIFIED_TICKET_NAV.map(([key, label, icon]) => `<button type="button" class="ut-nav-item ${active === key ? "is-active" : ""}" data-action="unified-ticket-section" data-section="${key}" aria-pressed="${active === key}"><span>${unifiedTicketIcon(icon)}</span>${label}</button>`).join("");
     const summaryRows = [["Type",ticket.type],["Priority",ticket.priority],["Due Date",ticket.dueDate],["Status",ticket.status],["Lead",ticket.lead],["Crew",ticket.crew],["Est. Time","2h"],["Created",ticket.created],["Customer",ticket.customer],["Phone",ticket.phone],["Email",ticket.email]].map(([a,b])=>`<div><span>${a}</span><strong>${b}</strong></div>`).join("");
@@ -23447,6 +23508,14 @@ Requirements:
       const target = event.target;
       if (!target) return;
 
+      if (target.matches("[data-ticket-timeline-filter]")) {
+        const key = target.dataset.ticketTimelineFilter;
+        const stateKey = { status:"ticketTimelineStatus", type:"ticketTimelineType", location:"ticketTimelineLocation", range:"ticketTimelineRange" }[key];
+        if (stateKey) state[stateKey] = target.value;
+        renderTicketsTimeline();
+        return;
+      }
+
       if (target.matches("[data-ticket-client-select]")) {
         const option = target.selectedOptions?.[0];
         const form = target.closest("[data-ticket-create-form]");
@@ -24058,6 +24127,22 @@ Requirements:
       const id = target.dataset.id;
       if (action !== "toggle-global-add") setGlobalAddOpen(false);
       if (target.closest("[data-global-search-panel]")) closeGlobalSearchPanel();
+
+      if (action === "unified-ticket-open") {
+        state.unifiedTicketVisible = true;
+        state.unifiedTicketSection = "overview";
+        state.unifiedTicketSelectedId = id || "10024";
+        renderUnifiedTicketOverview();
+        qs(".ut-back")?.focus();
+        return;
+      }
+
+      if (action === "ticket-timeline-menu") {
+        event.stopPropagation();
+        const menu = qs(`[data-ticket-timeline-menu="${cssEscape(id)}"]`);
+        if (menu) menu.hidden = !menu.hidden;
+        return;
+      }
 
       if (action === "unified-ticket-back") {
         state.unifiedTicketVisible = false;

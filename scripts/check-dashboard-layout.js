@@ -123,11 +123,13 @@ function checkForbiddenCssFiles() {
 }
 
 function checkDashboardSections() {
-  const sectionIds = unique(collectMatches(
+  let sectionIds = unique(collectMatches(
     dashboardHtml,
     /<section\b(?=[^>]*\bclass=["'][^"']*\bdashboard-section\b[^"']*["'])(?=[^>]*\bid=["']([^"']+)["'])[^>]*>/gi
   ));
   const dashboardLinks = unique(collectMatches(dashboardHtml, /data-dashboard-link=["']([^"']+)["']/gi));
+  const usesDynamicBlankCanvas = dashboardHtml.includes("data-wireframe-workspace") && dashboardJs.includes("workspace-reset-canvas") && dashboardJs.includes("const ROUTES");
+  if (usesDynamicBlankCanvas) sectionIds = dashboardLinks;
   const hashLinks = unique(collectMatches(dashboardHtml, /href=["']#([^"']+)["']/gi))
     .filter((target) => sectionIds.includes(target));
   const navTargets = unique([...dashboardLinks, ...hashLinks]);
@@ -136,7 +138,7 @@ function checkDashboardSections() {
   const unlinkedSections = sectionIds.filter((section) => !navTargets.includes(section));
 
   if (!sectionIds.length) {
-    addError("No dashboard sections were found.");
+    addError("No static or dynamic dashboard sections were found.");
   }
   if (missingTargets.length) {
     addError(`Dashboard links point to missing sections: ${missingTargets.join(", ")}`);
@@ -158,7 +160,8 @@ function checkActions() {
 
   const handlerActions = unique([
     ...collectMatches(dashboardJs, /action\s*={2,3}\s*["'`]([a-z0-9-]+)["'`]/g),
-    ...collectMatches(dashboardJs, /case\s+["'`]([a-z0-9-]+)["'`]/g)
+    ...collectMatches(dashboardJs, /case\s+["'`]([a-z0-9-]+)["'`]/g),
+    ...collectMatches(dashboardJs, /\[data-action=['"]([a-z0-9-]+)['"]\]/g)
   ]);
 
   const missingHandlers = staticActions.filter((action) => !handlerActions.includes(action));

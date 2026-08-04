@@ -590,22 +590,6 @@
     "groundskeeper-ai": "settings",
     "ai-memory": "settings"
   };
-  const DASHBOARD_VISUAL_RESET_TITLES = Object.freeze({
-    overview: "Home",
-    tickets: "Tickets",
-    calendar: "Work",
-    "route-planner": "Route Planner",
-    outreach: "Leads",
-    contacts: "Clients",
-    "call-queue": "Call Queue",
-    documents: "Money",
-    equipment: "Equipment",
-    documentation: "Documentation",
-    "import-export": "Import & Export",
-    "groundskeeper-ai": "Groundskeeper AI",
-    "ai-memory": "AI Memory",
-    settings: "Tools"
-  });
   const dashboardRoutableSections = new Set([
     ...rebuildPrimarySections,
     ...Object.keys(supportSectionParents)
@@ -22489,21 +22473,14 @@ Requirements:
     });
   }
 
-  function renderVisualResetWorkspaces() {
-    qsa(".dashboard-main > .dashboard-section[data-section]").forEach((section) => {
-      const key = normalizeDashboardSection(section.dataset.section || section.id);
-      const title = DASHBOARD_VISUAL_RESET_TITLES[key] || "Workspace";
-      section.className = "dashboard-section workspace-reset-canvas";
-      section.innerHTML = `<small>${escapeHtml(title)} Wireframe Canvas</small>`;
-    });
-  }
-
   async function render() {
     const data = state.data;
     safeRender("notifications", () => renderNotifications(data));
     safeRender("profile avatar", () => renderCurrentProfileAvatar(data));
     safeRender("environment indicator", () => renderEnvironmentIndicator());
     safeRender("dashboard health", () => renderDashboardHealth());
+    safeRender("global add menu", () => renderGlobalAddMenu());
+    safeRender("global search", () => renderGlobalSearchPanel());
     const active = normalizeDashboardSection(state.activeSection);
     safeRender("wireframe canvases", () => renderVisualResetWorkspaces());
     safeRender("contextual Groundskeeper tools", () => renderContextualGroundskeeperTools(active));
@@ -22512,6 +22489,7 @@ Requirements:
     if (els.todayChip) els.todayChip.textContent = new Date().toLocaleDateString("en-US", { weekday: "long", month: "short", day: "numeric" });
     setActiveSection(state.activeSection, { hydrate: false });
   }
+
   function dashboardSupportStatusMessage() {
     if (isDemoMode()) {
       return {

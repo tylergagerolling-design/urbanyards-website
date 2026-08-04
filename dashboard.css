@@ -28687,3 +28687,23 @@ body:not(.is-login-screen) .dashboard-main .tools-advanced-admin-body {
     width: 100%;
   }
 }
+/* Controlled blank wireframe canvases ------------------------------------- */
+body:not(.is-login-screen) .dashboard-main .workspace-reset-canvas {
+  min-height: calc(100vh - 48px);
+  padding: 20px 22px;
+}
+
+body:not(.is-login-screen) .dashboard-main .workspace-reset-canvas small {
+  color: var(--uy-body-muted, #66756d);
+  font-size: .68rem;
+  font-weight: 700;
+  letter-spacing: .04em;
+  text-transform: uppercase;
+}
+
+@media (max-width: 620px) {
+  body:not(.is-login-screen) .dashboard-main .workspace-reset-canvas {
+    min-height: calc(100vh - 74px);
+    padding: 16px;
+  }
+}

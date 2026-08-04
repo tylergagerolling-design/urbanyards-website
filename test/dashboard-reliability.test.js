@@ -1111,6 +1111,23 @@ test("unified tickets provide one validated completion checklist with N/A except
   assert.match(css, /\.ticket-workbench \.ticket-workbench-grid[\s\S]*grid-template-columns: 1fr/);
 });
 
+test("Leads pipeline limits each lane until the user explicitly expands it", () => {
+  const js = read("dashboard.js");
+  assert.match(js, /leadsPipelineExpanded: false/);
+  assert.match(js, /state\.leadsPipelineExpanded \? laneItems : laneItems\.slice\(0, 8\)/);
+  assert.match(js, /data-action="toggle-leads-pipeline"[\s\S]*View All/);
+  assert.match(js, /action === "toggle-leads-pipeline"[\s\S]*leadsPipelineExpanded = !state\.leadsPipelineExpanded[\s\S]*renderLeadsWorkspace/);
+});
+
+test("lead conversion preserves source context and reopens the returned canonical ticket", () => {
+  const js = read("dashboard.js");
+  assert.match(js, /sourceLeadId: item\.id \|\| ""/);
+  assert.match(js, /name="source_lead_id"/);
+  assert.match(js, /internal_notes: sourceLeadId \? `Source outreach lead:/);
+  assert.match(js, /!state\.data\.tickets\.some[\s\S]*state\.data\.tickets\.unshift\(canonicalTicket\)[\s\S]*openTicketDrawer\("ticket", canonicalTicket\.id\)/);
+  assert.match(js, /renderProspectTicketBridge[\s\S]*buttonContent\("Create Job Ticket"/);
+});
+
 test("canonical ticket drawer is route-aware, reusable, auditable, and does not fabricate completion", () => {
   const js = read("dashboard.js");
   const css = read("dashboard.css");

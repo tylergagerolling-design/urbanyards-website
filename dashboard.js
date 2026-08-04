@@ -318,6 +318,7 @@
     callQueueSort: "queue",
     callQueueSelectedId: "",
     leadsContactQueueExpanded: false,
+    leadsPipelineExpanded: false,
     callQueueVisibleCount: 25,
     callQueueSaving: false,
     leadIntakeBatches: [],
@@ -16097,9 +16098,11 @@ Requirements:
     return `<section class="lead-pipeline-board" aria-label="Lead pipeline">
       ${lanes.map((lane) => {
         const laneItems = items.filter((item) => leadPipelineLaneKey(item) === lane.key);
+        const visibleItems = state.leadsPipelineExpanded ? laneItems : laneItems.slice(0, 8);
         return `<section class="lead-pipeline-column is-${escapeHtml(lane.key)}">
           <header><div><h4>${escapeHtml(lane.label)}</h4><p>${escapeHtml(lane.detail)}</p></div><span>${escapeHtml(String(laneItems.length))}</span></header>
-          <div>${laneItems.length ? laneItems.map((item) => renderLeadPipelineCard(item, lane.key)).join("") : `<p class="lead-pipeline-empty">No leads in this stage.</p>`}</div>
+          <div>${visibleItems.length ? visibleItems.map((item) => renderLeadPipelineCard(item, lane.key)).join("") : `<p class="lead-pipeline-empty">No leads in this stage.</p>`}</div>
+          ${laneItems.length > 8 ? `<button type="button" class="secondary-action lead-pipeline-more" data-action="toggle-leads-pipeline" aria-expanded="${state.leadsPipelineExpanded}">${state.leadsPipelineExpanded ? "Show First 8" : `View All ${laneItems.length}`}</button>` : ""}
         </section>`;
       }).join("")}
     </section>`;
@@ -27740,6 +27743,9 @@ Requirements:
         replaceDashboardHash("call-queue");
       } else if (action === "toggle-leads-contact-queue") {
         state.leadsContactQueueExpanded = !state.leadsContactQueueExpanded;
+        renderLeadsWorkspace(state.data);
+      } else if (action === "toggle-leads-pipeline") {
+        state.leadsPipelineExpanded = !state.leadsPipelineExpanded;
         renderLeadsWorkspace(state.data);
       } else if (action === "go-call-queue") {
         setActiveSection("call-queue");

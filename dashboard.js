@@ -13294,6 +13294,7 @@
       savedDraft = {};
     }
     const values = {
+      sourceLeadId: prefill.sourceLeadId || savedDraft.source_lead_id || "",
       customerName: prefill.customerName || savedDraft.customer_name || "",
       email: prefill.email || savedDraft.email || "",
       phone: prefill.phone || savedDraft.phone || "",
@@ -13319,6 +13320,7 @@
           </div>
         </div>
         <form class="drawer-form drawer-ticket-create-form ticket-create-wizard ${safeType === "field" ? "is-field-ticket" : ""}" data-ticket-create-form data-ticket-wizard-step="1" novalidate>
+          <input type="hidden" name="source_lead_id" value="${escapeHtml(values.sourceLeadId)}">
           <div class="ticket-wizard-progress span-full" aria-label="Ticket setup progress">
             <span class="is-active">1. Client</span><span>2. Work</span><span>3. Review</span>
           </div>
@@ -15600,6 +15602,7 @@
       item.source ? `Source: ${item.source}` : ""
     ].filter(Boolean).join("\n\n");
     return {
+      sourceLeadId: item.id || "",
       customerName,
       email: item.email || "",
       phone: item.phone || "",
@@ -18583,7 +18586,6 @@ Requirements:
           <div class="drawer-actions">
             <button type="submit">${buttonContent(item ? "Save Prospect" : "Add Prospect", "new-outreach-prospect")}</button>
             ${item ? `<button type="button" data-action="mark-outreach-contacted" data-id="${escapeHtml(item.id)}">${buttonContent("Mark Contacted", "mark-outreach-contacted")}</button>` : ""}
-            ${item && canCreateTicketType("quote") ? `<button type="button" data-action="create-ticket-from-prospect" data-id="${escapeHtml(item.id)}">${buttonContent("Create Job Ticket", "open-ticket-create")}</button>` : ""}
             ${item ? `<button type="button" data-action="create-outreach-quote" data-id="${escapeHtml(item.id)}"${item.convertedToQuote ? " disabled" : ""}>${buttonContent(item.convertedToQuote ? "Quote Lead Created" : "Create Quote Lead", "create-outreach-quote")}</button>` : ""}
             ${item ? `<button type="button" data-action="route-outreach-prospect" data-id="${escapeHtml(item.id)}"${state.routeStopsReady ? "" : " disabled"}>${buttonContent(item.routeAdded ? "Route Added" : "Add to Route", "route-outreach-prospect")}</button>` : ""}
             ${item && canDeleteLeadRecords() ? `<button type="button" class="danger-action" data-action="delete-outreach-prospect" data-id="${escapeHtml(item.id)}">${buttonContent("Delete Lead", "delete-outreach-prospect")}</button>` : ""}
@@ -28930,6 +28932,7 @@ Requirements:
         event.preventDefault();
         const formData = new FormData(event.target);
         const ticketType = String(formData.get("ticket_type") || "quote");
+        const sourceLeadId = String(formData.get("source_lead_id") || "").trim();
         if (!canCreateTicketType(ticketType)) {
           setDashboardState("Your dashboard role cannot create that type of ticket.", "error");
           return;
@@ -28970,6 +28973,7 @@ Requirements:
               service,
               requested_service: service,
               notes: String(formData.get("notes") || "").trim(),
+              internal_notes: sourceLeadId ? `Source outreach lead: ${sourceLeadId}` : null,
               visit_date: visitDate,
               scheduled_date: visitDate,
               owner_label: "Work",
@@ -28978,6 +28982,14 @@ Requirements:
             await refreshDashboard();
             if (!canonicalTicket?.id) {
               throw new Error("The work visit was created, but its unified Job Ticket was not. Apply the Job Ticket database migration, then open the visit and retry.");
+            }
+            if (!state.data.tickets.some((ticket) => String(ticket.id) === String(canonicalTicket.id))) {
+              state.data.tickets.unshift(canonicalTicket);
+            }
+            if (sourceLeadId) {
+              const convertedLead = await updateOutreachProspect(sourceLeadId, { status: "Won", converted_to_quote: true });
+              const leadIndex = state.data.outreachProspects.findIndex((lead) => String(lead.id) === sourceLeadId);
+              if (convertedLead && leadIndex >= 0) state.data.outreachProspects[leadIndex] = convertedLead;
             }
             openTicketDrawer("ticket", canonicalTicket.id);
             setDashboardState("Work ticket created.");
@@ -29007,12 +29019,21 @@ Requirements:
               service,
               requested_service: service,
               notes: String(formData.get("notes") || "").trim(),
+              internal_notes: sourceLeadId ? `Source outreach lead: ${sourceLeadId}` : null,
               owner_label: "Leads",
               next_action: "Review intake"
             }) : null;
             await refreshDashboard();
             if (!canonicalTicket?.id) {
               throw new Error("The intake record was created, but its unified Job Ticket was not. Apply the Job Ticket database migration, then open the intake record and retry.");
+            }
+            if (!state.data.tickets.some((ticket) => String(ticket.id) === String(canonicalTicket.id))) {
+              state.data.tickets.unshift(canonicalTicket);
+            }
+            if (sourceLeadId) {
+              const convertedLead = await updateOutreachProspect(sourceLeadId, { status: "Won", converted_to_quote: true });
+              const leadIndex = state.data.outreachProspects.findIndex((lead) => String(lead.id) === sourceLeadId);
+              if (convertedLead && leadIndex >= 0) state.data.outreachProspects[leadIndex] = convertedLead;
             }
             openTicketDrawer("ticket", canonicalTicket.id);
             setDashboardState("Intake ticket created.");

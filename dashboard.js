@@ -321,9 +321,6 @@
     leadsPipelineExpanded: false,
     callQueueVisibleCount: 25,
     callQueueSaving: false,
-    googleVoiceStatus: "closed",
-    googleVoiceDimensions: null,
-    callQueueTimerStartedAt: 0,
     clientDetailId: "",
     clientDetailTab: "properties",
     leadIntakeBatches: [],
@@ -3367,121 +3364,13 @@
     }
   }
 
-  let googleVoiceWindowRef = null;
-  let googleVoiceCloseMonitor = 0;
-  let googleVoiceResizeTimer = 0;
-  const GOOGLE_VOICE_WINDOW_PREFS_KEY = "urban_yards_google_voice_window";
-
-  function calculateGoogleVoiceWindowPlacement() {
-    const panel = qs("[data-google-voice-panel]");
-    const panelRect = panel?.getBoundingClientRect() || { left: 40, top: 100, width: 1030, height: 520 };
-    const horizontalChrome = Math.max(0, (window.outerWidth - window.innerWidth) / 2);
-    const verticalChrome = Math.max(0, window.outerHeight - window.innerHeight - horizontalChrome);
-    let saved = {};
-    try { saved = JSON.parse(localStorage.getItem(GOOGLE_VOICE_WINDOW_PREFS_KEY) || "{}"); } catch (error) { saved = {}; }
-    const availLeft = Number(window.screen.availLeft || 0);
-    const availTop = Number(window.screen.availTop || 0);
-    const availWidth = Number(window.screen.availWidth || window.screen.width || 1280);
-    const availHeight = Number(window.screen.availHeight || window.screen.height || 800);
-    const width = Math.min(availWidth, Math.max(500, Math.round(panelRect.width || saved.width || 1030)));
-    const height = Math.min(availHeight, Math.max(420, Math.round(panelRect.height || saved.height || 520)));
-    const desiredLeft = Math.round(window.screenX + panelRect.left + horizontalChrome);
-    const desiredTop = Math.round(window.screenY + panelRect.top + verticalChrome);
-    return {
-      left: Math.max(availLeft, Math.min(desiredLeft, availLeft + availWidth - width)),
-      top: Math.max(availTop, Math.min(desiredTop, availTop + availHeight - height)),
-      width,
-      height
-    };
-  }
-
-  function googleVoiceStatusCopy() {
-    return {
-      closed: "Google Voice closed",
-      opening: "Opening Google Voice…",
-      open: "Google Voice window open",
-      blocked: "Popup blocked — allow popups for this site",
-      "reposition-failed": "Window open, but automatic positioning was prevented"
-    }[state.googleVoiceStatus] || "Google Voice unavailable";
-  }
-
-  function callQueueTimerLabel() {
-    if (!state.callQueueTimerStartedAt) return "00:00";
-    const seconds = Math.max(0, Math.floor((Date.now() - state.callQueueTimerStartedAt) / 1000));
-    return `${String(Math.floor(seconds / 60)).padStart(2, "0")}:${String(seconds % 60).padStart(2, "0")}`;
-  }
-
-  function syncGoogleVoiceCompanionUi() {
-    qsa("[data-google-voice-status]").forEach((node) => {
-      node.textContent = googleVoiceStatusCopy();
-      node.dataset.status = state.googleVoiceStatus;
-    });
-    qsa("[data-google-voice-open-controls]").forEach((node) => { node.hidden = state.googleVoiceStatus !== "open" && state.googleVoiceStatus !== "reposition-failed"; });
-    qsa("[data-google-voice-closed-controls]").forEach((node) => { node.hidden = state.googleVoiceStatus === "open" || state.googleVoiceStatus === "reposition-failed"; });
-    qsa("[data-google-voice-dimensions]").forEach((node) => { node.textContent = state.googleVoiceDimensions ? `${state.googleVoiceDimensions.width} × ${state.googleVoiceDimensions.height}px` : "Not open"; });
-    qsa("[data-call-timer]").forEach((node) => { node.textContent = callQueueTimerLabel(); });
-  }
-
-  function monitorGoogleVoiceWindow() {
-    if (googleVoiceCloseMonitor) window.clearInterval(googleVoiceCloseMonitor);
-    googleVoiceCloseMonitor = window.setInterval(() => {
-      syncGoogleVoiceCompanionUi();
-      if (!googleVoiceWindowRef || googleVoiceWindowRef.closed) {
-        googleVoiceWindowRef = null;
-        window.clearInterval(googleVoiceCloseMonitor);
-        googleVoiceCloseMonitor = 0;
-        state.googleVoiceStatus = "closed";
-        state.googleVoiceDimensions = null;
-        syncGoogleVoiceCompanionUi();
-      }
-    }, 900);
-  }
-
-  function repositionGoogleVoiceWindow() {
-    if (!googleVoiceWindowRef || googleVoiceWindowRef.closed) {
-      state.googleVoiceStatus = "closed";
-      syncGoogleVoiceCompanionUi();
-      return false;
-    }
-    const placement = calculateGoogleVoiceWindowPlacement();
-    try {
-      googleVoiceWindowRef.resizeTo(placement.width, placement.height);
-      googleVoiceWindowRef.moveTo(placement.left, placement.top);
-      googleVoiceWindowRef.focus();
-      state.googleVoiceStatus = "open";
-      state.googleVoiceDimensions = placement;
-      localStorage.setItem(GOOGLE_VOICE_WINDOW_PREFS_KEY, JSON.stringify({ ...placement, enabled: true }));
-      syncGoogleVoiceCompanionUi();
-      return true;
-    } catch (error) {
-      state.googleVoiceStatus = "reposition-failed";
-      syncGoogleVoiceCompanionUi();
-      return false;
-    }
-  }
-
   function openGoogleVoiceWindow(phoneNumber) {
     const voiceUrl = googleVoiceCallUrl(phoneNumber);
-    if (window.innerWidth < 900) {
-      window.open(voiceUrl, "_blank", "noopener");
-      state.googleVoiceStatus = "open";
-      setDashboardState("Google Voice opened in a regular tab. Companion positioning is available on desktop.");
-      syncGoogleVoiceCompanionUi();
-      return true;
-    }
-    if (googleVoiceWindowRef && !googleVoiceWindowRef.closed) {
-      googleVoiceWindowRef.focus();
-      repositionGoogleVoiceWindow();
-      return true;
-    }
-    state.googleVoiceStatus = "opening";
-    syncGoogleVoiceCompanionUi();
-    const placement = calculateGoogleVoiceWindowPlacement();
     const features = [
-      `width=${placement.width}`,
-      `height=${placement.height}`,
-      `left=${placement.left}`,
-      `top=${placement.top}`,
+      "width=1030",
+      "height=810",
+      "left=0",
+      "top=90",
       "resizable=yes",
       "scrollbars=yes",
       "status=no",
@@ -3490,42 +3379,17 @@
       "location=yes"
     ].join(",");
 
-    // This is a separate cross-origin companion window, never an embedded panel.
-    // Browser chrome varies; moveTo/resizeTo may be restricted; direct clicks are
-    // required for popups; multi-monitor coordinates differ; mobile uses a tab.
-    const popup = window.open(voiceUrl, "urbanYardsGoogleVoice", features);
+    // Browsers and operating systems can adjust exact popup bounds, but these
+    // features give Google Voice a consistent preferred call-window size.
+    const popup = window.open(voiceUrl, "UrbanYardsGoogleVoice", features);
     if (popup) {
-      googleVoiceWindowRef = popup;
       popup.focus();
-      state.googleVoiceStatus = "open";
-      state.googleVoiceDimensions = placement;
-      try { localStorage.setItem(GOOGLE_VOICE_WINDOW_PREFS_KEY, JSON.stringify({ ...placement, enabled: true })); } catch (error) { /* preferences are optional */ }
-      monitorGoogleVoiceWindow();
-      syncGoogleVoiceCompanionUi();
       return true;
     }
-    state.googleVoiceStatus = "blocked";
-    syncGoogleVoiceCompanionUi();
+
+    window.open(voiceUrl, "_blank");
     return false;
   }
-
-  function closeGoogleVoiceWindow() {
-    try { googleVoiceWindowRef?.close(); } catch (error) { /* cross-origin close can fail gracefully */ }
-    googleVoiceWindowRef = null;
-    state.googleVoiceStatus = "closed";
-    state.googleVoiceDimensions = null;
-    syncGoogleVoiceCompanionUi();
-  }
-
-  window.addEventListener("resize", () => {
-    if (!googleVoiceWindowRef || googleVoiceWindowRef.closed || window.innerWidth < 900) return;
-    window.clearTimeout(googleVoiceResizeTimer);
-    googleVoiceResizeTimer = window.setTimeout(repositionGoogleVoiceWindow, 450);
-  });
-
-  window.setInterval(() => {
-    if (state.callQueueTimerStartedAt && qs("[data-call-timer]")) syncGoogleVoiceCompanionUi();
-  }, 1000);
 
   function renderPhoneActions(phone, options = {}) {
     const info = phoneInfo(phone);
@@ -15998,8 +15862,7 @@ Requirements:
     if (!state.leadIntakeLoaded && !state.leadIntakeLoading) queueMicrotask(() => loadLeadIntakeBatches());
     target.innerHTML = `<div class="call-queue-reference" data-call-queue-root>
       <header class="cq-page-header"><div><h2>Call Queue</h2><p>Manage your inbound call queue and caller data</p></div><div><button type="button" class="secondary-action" data-action="call-queue-settings">Queue Settings</button><button type="button" data-action="lead-intake-import">Import CSV</button></div></header>
-      <section class="cq-voice-card cq-companion-panel" aria-labelledby="cq-voice-title" data-google-voice-panel><header><strong id="cq-voice-title">Google Voice</strong><span class="cq-companion-status" data-google-voice-status data-status="${escapeHtml(state.googleVoiceStatus)}">${escapeHtml(googleVoiceStatusCopy())}</span></header><div class="cq-voice-fallback"><div class="cq-voice-icon" aria-hidden="true">☎</div><div class="cq-companion-copy"><h3>${state.googleVoiceStatus === "open" || state.googleVoiceStatus === "reposition-failed" ? "Google Voice window is open" : "Google Voice opens in a companion window"}</h3><p>The separate Google Voice window is sized and aligned with this reserved area when your desktop browser permits it. Urban Yards never reads or controls the Google Voice page.</p><div data-google-voice-closed-controls${state.googleVoiceStatus === "open" || state.googleVoiceStatus === "reposition-failed" ? " hidden" : ""}><button type="button" data-action="open-google-voice-call" data-phone="${escapeHtml(selectedPhone.e164)}">Open Google Voice</button><a class="secondary-action" href="https://voice.google.com/" target="_blank" rel="noopener noreferrer">Open in Regular Tab</a></div><div data-google-voice-open-controls${state.googleVoiceStatus === "open" || state.googleVoiceStatus === "reposition-failed" ? "" : " hidden"}><button type="button" data-action="focus-google-voice">Focus Google Voice</button><button type="button" class="secondary-action" data-action="reposition-google-voice">Reposition Window</button><button type="button" class="secondary-action danger-action" data-action="close-google-voice">Close Google Voice</button><span class="cq-popup-size">Popup: <b data-google-voice-dimensions>${state.googleVoiceDimensions ? `${state.googleVoiceDimensions.width} × ${state.googleVoiceDimensions.height}px` : "Not open"}</b></span></div><small>On screens under 900px, Google Voice opens in a normal tab because companion positioning is desktop-only.</small></div></div></section>
-      ${selected ? `<section class="cq-selected-contact"><header><div><span>Selected Contact</span><h3>${escapeHtml(outreachTitle(selected))}</h3><p>${escapeHtml(selectedPhone.display || "No valid phone number")}</p></div><div class="cq-call-timer"><span>Call Timer</span><strong data-call-timer>${callQueueTimerLabel()}</strong></div></header><div class="cq-selected-actions"><button type="button" data-action="copy-phone" data-phone="${escapeHtml(selectedPhone.e164)}"${selectedPhone.valid ? "" : " disabled"}>Copy Number</button><button type="button" class="secondary-action" data-action="focus-or-open-google-voice" data-phone="${escapeHtml(selectedPhone.e164)}">Open / Focus Google Voice</button><button type="button" data-action="copy-open-google-voice" data-phone="${escapeHtml(selectedPhone.e164)}"${selectedPhone.valid ? "" : " disabled"}>Copy & Open Voice</button></div><form class="cq-contact-outcome" data-call-queue-outcome-form data-id="${escapeHtml(selected.id)}"><label>Call notes<textarea name="notes" rows="3" placeholder="What happened on the call?"></textarea></label><label>Call outcome<select name="outcome" required><option value="">Choose outcome</option>${CALL_QUEUE_OUTCOMES.map(([value,label])=>`<option value="${escapeHtml(value)}">${escapeHtml(label)}</option>`).join("")}</select></label><label>Follow-up date<input type="date" name="follow_up_date"></label><input type="hidden" name="follow_up_time"><input type="hidden" name="status" value="${escapeHtml(selected.status)}"><input type="hidden" name="priority" value="${escapeHtml(selected.priority)}"><input type="hidden" name="next_action"><div><button type="button" class="secondary-action" data-action="call-queue-previous-contact">Previous Contact</button><button type="button" class="secondary-action" data-action="call-queue-next-contact">Next Contact</button><button type="button" class="secondary-action" data-action="call-queue-mark-complete" data-id="${escapeHtml(selected.id)}">Mark Complete</button><button type="submit">Save</button></div></form></section>` : ""}
+      <section class="cq-voice-card" aria-labelledby="cq-voice-title"><header><strong id="cq-voice-title">Google Voice — Urban Yards</strong><a class="secondary-action" href="https://voice.google.com/" target="_blank" rel="noopener noreferrer">Open in New Window</a></header><div class="cq-voice-fallback"><div class="cq-voice-icon" aria-hidden="true">☎</div><div><span class="cq-connection"><i></i> Secure-window connection</span><h3>Google Voice opens in a secure window</h3><p>Google prevents its authenticated calling interface from being embedded here. Keep this dashboard open while using Google Voice in its own protected browser window.</p><div><a class="button" href="https://voice.google.com/" target="_blank" rel="noopener noreferrer">Open Google Voice</a>${selectedPhone.valid ? `<button type="button" class="secondary-action" data-action="copy-phone" data-phone="${escapeHtml(selectedPhone.e164)}">Copy selected phone number</button>` : ""}</div></div></div></section>
       <div class="cq-lower-grid"><section class="cq-entries-card"><header><div><h3>Call Queue Entries</h3><p>View, add, edit, and manage your call queue entries.</p></div><div class="cq-entry-tools"><input type="search" data-call-queue-search placeholder="Search entries..." value="${escapeHtml(state.callQueueSearch)}" aria-label="Search entries"><label class="cq-filter-control"><span>Filter</span><select data-call-queue-filter="status" aria-label="Filter entries by status"><option>Active</option><option>All</option><option>Completed</option>${OUTREACH_STATUSES.map((status) => `<option${state.callQueueStatusFilter === status ? " selected" : ""}>${escapeHtml(status)}</option>`).join("")}</select></label><button type="button" data-action="new-outreach-prospect">+ Add Entry</button></div></header>
       <div class="cq-table-wrap"><table><thead><tr><th>Name</th><th>Phone Number</th><th>Address</th><th>Source</th><th>Status</th><th>Last Contact</th><th>Added On</th><th>Actions</th></tr></thead><tbody>${rows.length ? rows.map((item) => { const phone = phoneInfo(item.phone || ""); const status = item.status || "New"; return `<tr data-action="open-outreach-prospect" data-id="${escapeHtml(item.id)}"><td><strong>${escapeHtml(outreachTitle(item))}</strong></td><td>${escapeHtml(phone.display || "—")}</td><td>${escapeHtml([item.address,item.city].filter(Boolean).join(", ") || "—")}</td><td>${escapeHtml(item.source || "Manual")}</td><td><span class="cq-status is-${escapeHtml(slug(status))}">${escapeHtml(status)}</span></td><td>${escapeHtml(item.lastContactedAt || "—")}</td><td>${escapeHtml(item.createdAtRaw ? formatDate(item.createdAtRaw) : "—")}</td><td><div class="cq-row-actions"><button type="button" data-action="open-outreach-prospect" data-id="${escapeHtml(item.id)}" aria-label="Edit ${escapeHtml(outreachTitle(item))}">✎</button><button type="button" data-action="call-lead" data-id="${escapeHtml(item.id)}" data-lead-type="outreach_prospect" data-phone="${escapeHtml(phone.e164)}" aria-label="Call ${escapeHtml(outreachTitle(item))}"${phone.valid ? "" : " disabled"}>☎</button><details><summary aria-label="More actions for ${escapeHtml(outreachTitle(item))}">⋮</summary><div><button type="button" data-action="call-queue-add-note" data-id="${escapeHtml(item.id)}">Add note</button><button type="button" data-action="call-queue-mark-contacted" data-id="${escapeHtml(item.id)}">Mark contacted</button><button type="button" data-action="call-queue-follow-up" data-id="${escapeHtml(item.id)}">Schedule callback</button><button type="button" data-action="create-ticket-from-prospect" data-id="${escapeHtml(item.id)}">Create ticket</button></div></details></div></td></tr>`; }).join("") : `<tr><td colspan="8">${emptyState("No call queue entries match these filters.")}</td></tr>`}</tbody></table></div><footer><span>Showing ${rows.length ? 1 : 0} to ${rows.length} of ${queue.length} entries</span><div><button type="button" class="is-active">1</button>${rows.length < queue.length ? `<button type="button" data-action="load-more-call-queue">Next ›</button>` : ""}</div></footer></section>
       <aside class="cq-import-card"><h3>Import Call Queue (CSV)</h3><p>Import new call queue entries from a CSV file.</p><button type="button" class="cq-drop-zone" data-action="lead-intake-import"><span>⇧</span><strong>Drag and drop your CSV file here</strong><small>or</small><b>Choose File</b></button><h4>CSV Requirements</h4><p>Your CSV file must include the following columns:</p><ul><li>Name (required)</li><li>Phone Number (required)</li><li>Address (optional)</li><li>Notes (optional)</li></ul><button type="button" class="cq-template-link" data-action="lead-intake-template">↓ Download CSV Template</button><input type="file" accept=".csv,text/csv" data-lead-intake-file hidden></aside></div></div>`;
@@ -27278,36 +27141,8 @@ Requirements:
       if (action === "open-google-voice-call") {
         const phone = phoneInfo(target.dataset.phone || "");
         if (phone.valid) await copyPhoneSilently(phone.e164);
-        const opened = openGoogleVoiceWindow(phone.valid ? phone.e164 : "");
-        setDashboardState(opened ? (phone.valid ? "Google Voice opened in the companion window. Phone number copied as backup." : "Google Voice opened.") : "Popup blocked — allow popups for this site, then try again.", opened ? "" : "error");
-        return;
-      }
-
-      if (action === "focus-google-voice" || action === "focus-or-open-google-voice") {
-        if (googleVoiceWindowRef && !googleVoiceWindowRef.closed) googleVoiceWindowRef.focus();
-        else openGoogleVoiceWindow(target.dataset.phone || "");
-        return;
-      }
-
-      if (action === "reposition-google-voice") {
-        const repositioned = repositionGoogleVoiceWindow();
-        setDashboardState(repositioned ? "Google Voice companion window repositioned." : "Your browser prevented automatic repositioning.", repositioned ? "" : "error");
-        return;
-      }
-
-      if (action === "close-google-voice") {
-        closeGoogleVoiceWindow();
-        setDashboardState("Google Voice companion window closed.");
-        return;
-      }
-
-      if (action === "copy-open-google-voice") {
-        const phone = phoneInfo(target.dataset.phone || "");
-        const copied = phone.valid ? await copyPhoneSilently(phone.e164) : false;
-        state.callQueueTimerStartedAt = Date.now();
         openGoogleVoiceWindow(phone.valid ? phone.e164 : "");
-        syncGoogleVoiceCompanionUi();
-        setDashboardState(copied ? "Number copied — paste it into Google Voice." : "Google Voice opened, but the number could not be copied.", copied ? "" : "error");
+        setDashboardState(phone.valid ? "Google Voice opened in the call window. Phone number copied as backup." : "Google Voice opened.");
         return;
       }
 
@@ -28117,37 +27952,10 @@ Requirements:
         closeSubmissionDrawer();
         setDashboardState("Property CSV import canceled.");
       } else if (action === "open-outreach-prospect" || action === "edit-outreach-prospect") {
-        if (target.matches(".cq-table-wrap tr")) {
-          state.callQueueSelectedId = id;
-          state.callQueueTimerStartedAt = 0;
-          renderCallQueueWorkspace();
-        } else {
-          openOutreachDrawer(id);
-        }
+        openOutreachDrawer(id);
       } else if (action === "select-call-queue-lead") {
         state.callQueueSelectedId = id;
         renderCallQueueWorkspace();
-      } else if (action === "call-queue-previous-contact" || action === "call-queue-next-contact") {
-        const queue = filteredCallQueue();
-        const currentIndex = Math.max(0, queue.findIndex((item) => item.id === state.callQueueSelectedId));
-        const offset = action === "call-queue-previous-contact" ? -1 : 1;
-        const next = queue[Math.max(0, Math.min(queue.length - 1, currentIndex + offset))];
-        if (next) {
-          state.callQueueSelectedId = next.id;
-          state.callQueueTimerStartedAt = 0;
-          renderCallQueueWorkspace();
-        }
-      } else if (action === "call-queue-mark-complete") {
-        const prospect = findOutreachProspect(id);
-        if (!prospect || !window.confirm(`Mark ${outreachTitle(prospect)} complete and remove it from the active queue?`)) return;
-        try {
-          await updateOutreachProspect(id, { status: "Lost / No Fit", next_follow_up_at: null, last_contacted_at: new Date().toISOString() });
-          state.callQueueTimerStartedAt = 0;
-          await refreshDashboard();
-          setDashboardState("Call Queue contact marked complete.");
-        } catch (error) {
-          setDashboardState(error.message || "Unable to mark this contact complete.", "error");
-        }
       } else if (action === "call-queue-settings") {
         openDetailDrawer();
         els.detailContent.innerHTML = `<div class="drawer-content"><p class="eyebrow">Call Queue</p><h3>Queue Settings</h3><p>These settings control Urban Yards queue behavior only. Google Voice account settings remain in Google Voice.</p><form class="drawer-form" data-call-queue-settings-form><label>Default queue status<select name="default_status"><option>New</option><option>Contacted</option><option>Callback</option></select></label><label>Duplicate import behavior<select name="duplicate_behavior"><option value="skip">Skip duplicates</option><option value="update">Update existing</option><option value="warn">Import with warning</option></select></label><label>Default CSV source label<input name="source_label" value="Imported CSV"></label><label>Phone-number formatting<select name="phone_format"><option value="national">(503) 555-0100</option><option value="e164">+15035550100</option></select></label><label class="span-full"><input type="checkbox" name="archive_on_convert"> Archive queue entry after converting to a lead</label><div class="drawer-actions span-full"><button type="submit">Save Settings</button><a class="button secondary-action" href="https://voice.google.com/settings" target="_blank" rel="noopener noreferrer">Open Google Voice Settings</a></div></form></div>`;

@@ -29417,8 +29417,8 @@ Requirements:
               const leadIndex = state.data.outreachProspects.findIndex((lead) => String(lead.id) === sourceLeadId);
               if (convertedLead && leadIndex >= 0) state.data.outreachProspects[leadIndex] = convertedLead;
             }
-            openTicketDrawer("ticket", canonicalTicket.id);
-            setDashboardState("Work ticket created.");
+            closeSubmissionDrawer({ immediate: true });
+            setDashboardState("Work ticket created. Open it from Tickets when you are ready.");
           } else {
             const quote = await insertQuoteSubmission({
               name: customerName,
@@ -29461,8 +29461,8 @@ Requirements:
               const leadIndex = state.data.outreachProspects.findIndex((lead) => String(lead.id) === sourceLeadId);
               if (convertedLead && leadIndex >= 0) state.data.outreachProspects[leadIndex] = convertedLead;
             }
-            openTicketDrawer("ticket", canonicalTicket.id);
-            setDashboardState("Intake ticket created.");
+            closeSubmissionDrawer({ immediate: true });
+            setDashboardState("Intake ticket created. Open it from Tickets when you are ready.");
           }
           localStorage.removeItem(TICKET_DRAFT_KEY);
         } catch (error) {

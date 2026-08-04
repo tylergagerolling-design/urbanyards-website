@@ -41,8 +41,8 @@ test("archived workspace polish remains available with current dashboard assets"
   assert.match(css, /\.call-queue-row > span:first-child :is\(strong, small\)[\s\S]*overflow-wrap: anywhere/);
   assert.match(css, /\.groundskeeper-operation-card[\s\S]*white-space: normal !important/);
   assert.match(css, /\.dashboard-health-item strong[\s\S]*word-break: break-all/);
-  assert.match(html, /dashboard\.css\?v=20260804-functional-qa-1/);
-  assert.match(html, /dashboard\.js\?v=20260804-functional-qa-1/);
+  assert.match(html, /dashboard\.css\?v=20260804-ticket-create-1/);
+  assert.match(html, /dashboard\.js\?v=20260804-ticket-create-1/);
 });
 
 test("authenticated assistant prompt suppresses public quote calls to action", () => {
@@ -884,7 +884,8 @@ test("dashboard creates canonical job tickets without removing source fallbacks"
   assert.match(js, /source_type: "job"/);
   assert.match(js, /source_type: "document"/);
   assert.match(js, /ticket_stage_changed/);
-  assert.match(js, /openTicketDrawer\("ticket", canonicalTicket\.id\)/);
+  assert.match(js, /Work ticket created\. Open it from Tickets when you are ready\./);
+  assert.match(js, /Intake ticket created\. Open it from Tickets when you are ready\./);
   assert.match(js, /isMissingOptionalTableError\(error\)\) return null/);
 
   const ticketFunction = read("netlify/functions/dashboard-tickets.js");
@@ -1134,12 +1135,12 @@ test("Leads pipeline limits each lane until the user explicitly expands it", () 
   assert.match(js, /action === "toggle-leads-pipeline"[\s\S]*leadsPipelineExpanded = !state\.leadsPipelineExpanded[\s\S]*renderLeadsWorkspace/);
 });
 
-test("lead conversion preserves source context and reopens the returned canonical ticket", () => {
+test("lead conversion preserves source context and returns without opening the retired ticket detail", () => {
   const js = read("dashboard.js");
   assert.match(js, /sourceLeadId: item\.id \|\| ""/);
   assert.match(js, /name="source_lead_id"/);
   assert.match(js, /internal_notes: sourceLeadId \? `Source outreach lead:/);
-  assert.match(js, /!state\.data\.tickets\.some[\s\S]*state\.data\.tickets\.unshift\(canonicalTicket\)[\s\S]*openTicketDrawer\("ticket", canonicalTicket\.id\)/);
+  assert.match(js, /!state\.data\.tickets\.some[\s\S]*state\.data\.tickets\.unshift\(canonicalTicket\)[\s\S]*closeSubmissionDrawer\(\{ immediate: true \}\)/);
   assert.match(js, /renderProspectTicketBridge[\s\S]*buttonContent\("Create Job Ticket"/);
 });
 
@@ -1389,4 +1390,13 @@ test("functional QA safeguards route transitions, demo edits, and visible feedba
   assert.match(js, /Demo draft invoice created\. No production data was changed\./);
   assert.match(js, /Demo expense \$\{id \? "saved" : "added"\}\. No production data was changed\./);
   assert.match(js, /Demo payment recorded\. No production data was changed\./);
+});
+
+test("new ticket creation returns to the active workspace instead of opening the retired detail", () => {
+  const js = read("dashboard.js");
+  const createHandler = js.slice(js.indexOf('event.target.matches("[data-ticket-create-form]")'), js.indexOf('event.target.matches("[data-submission-edit]")'));
+
+  assert.match(createHandler, /closeSubmissionDrawer\(\{ immediate: true \}\);[\s\S]*Work ticket created\. Open it from Tickets when you are ready\./);
+  assert.match(createHandler, /closeSubmissionDrawer\(\{ immediate: true \}\);[\s\S]*Intake ticket created\. Open it from Tickets when you are ready\./);
+  assert.doesNotMatch(createHandler, /openTicketDrawer\("ticket", canonicalTicket\.id\)/);
 });

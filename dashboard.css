@@ -24150,6 +24150,574 @@ body:not(.is-login-screen) .print-document footer {
   }
 }
 
+/* Reference-led Home and Work layout. Main workspace only; the existing
+   navigation drawer is intentionally not included in these selectors. */
+body:not(.is-login-screen) .app-view .dashboard-main :is(#overview, #calendar).dashboard-section.is-active {
+  background: #fff !important;
+}
+
+body:not(.is-login-screen) .app-view .dashboard-main :is(#overview, #calendar) .ticket-workspace {
+  width: min(1380px, 100%);
+  gap: 10px !important;
+}
+
+body:not(.is-login-screen) .app-view .dashboard-main :is(#overview, #calendar) .ticket-hero .eyebrow {
+  display: none;
+}
+
+body:not(.is-login-screen) .app-view .dashboard-main :is(#overview, #calendar) .ticket-hero h3 {
+  font-size: clamp(1.3rem, 1.9vw, 1.72rem) !important;
+}
+
+body:not(.is-login-screen) .app-view .dashboard-main :is(#overview, #calendar) .ticket-hero p:not(.eyebrow) {
+  max-width: 880px;
+  margin-top: 3px;
+  font-size: .7rem !important;
+}
+
+body:not(.is-login-screen) .app-view .dashboard-main :is(#overview, #calendar) .ticket-metric {
+  min-height: 74px !important;
+  padding: 9px 11px !important;
+  border-radius: 6px !important;
+}
+
+body:not(.is-login-screen) .app-view .dashboard-main #overview .my-work-today {
+  border-radius: 6px !important;
+}
+
+body:not(.is-login-screen) .app-view .dashboard-main #overview .my-work-today .eyebrow,
+body:not(.is-login-screen) .app-view .dashboard-main #overview .my-work-today .ticket-lane-heading p {
+  display: none;
+}
+
+body:not(.is-login-screen) .app-view .dashboard-main #overview [data-owner-kanban-board] {
+  overflow: visible !important;
+  gap: 8px !important;
+  padding: 10px !important;
+  border-radius: 6px !important;
+  background: #fff !important;
+  box-shadow: none !important;
+}
+
+body:not(.is-login-screen) .app-view .dashboard-main #overview [data-owner-kanban-board] .owner-kanban-toolbar {
+  position: relative;
+  gap: 0;
+}
+
+body:not(.is-login-screen) .app-view .dashboard-main #overview [data-owner-kanban-board] .owner-kanban-toolbar-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 0 0 8px;
+  border-bottom: 0;
+}
+
+body:not(.is-login-screen) .app-view .dashboard-main #overview [data-owner-kanban-board] .owner-kanban-toolbar-title {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  min-width: max-content;
+}
+
+body:not(.is-login-screen) .app-view .dashboard-main #overview [data-owner-kanban-board] .owner-kanban-toolbar-title h3 {
+  margin: 0;
+  color: var(--ops-text);
+  font-size: .94rem !important;
+}
+
+body:not(.is-login-screen) .app-view .dashboard-main #overview [data-owner-kanban-board] .owner-kanban-toolbar-title > span {
+  color: var(--ops-muted);
+  font-size: .6rem;
+  font-weight: 750;
+}
+
+body:not(.is-login-screen) .app-view .dashboard-main #overview [data-owner-kanban-board] .owner-kanban-toolbar-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  flex-wrap: nowrap;
+  gap: 6px;
+}
+
+body:not(.is-login-screen) .app-view .dashboard-main #overview [data-owner-kanban-board] .owner-kanban-quick-filter {
+  display: block;
+  margin: 0;
+}
+
+body:not(.is-login-screen) .app-view .dashboard-main #overview [data-owner-kanban-board] .owner-kanban-quick-filter > span {
+  position: absolute;
+  overflow: hidden;
+  width: 1px;
+  height: 1px;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}
+
+body:not(.is-login-screen) .app-view .dashboard-main #overview [data-owner-kanban-board] .owner-kanban-quick-filter select {
+  width: 136px;
+  height: 30px !important;
+  min-height: 30px !important;
+  padding: 4px 26px 4px 8px !important;
+  border: 1px solid var(--ops-border) !important;
+  border-radius: 5px !important;
+  background-color: #fff !important;
+  color: #34443d !important;
+  font-size: .65rem !important;
+}
+
+body:not(.is-login-screen) .app-view .dashboard-main #overview [data-owner-kanban-board] .owner-kanban-more-tools {
+  position: relative;
+  z-index: 20;
+}
+
+body:not(.is-login-screen) .app-view .dashboard-main #overview [data-owner-kanban-board] .owner-kanban-more-tools > summary {
+  width: auto !important;
+  height: 30px !important;
+  min-height: 30px !important;
+  padding: 0 9px !important;
+  border: 1px solid var(--ops-border) !important;
+  border-radius: 5px !important;
+  background: #fff !important;
+  color: #34443d !important;
+  font-size: .65rem !important;
+  line-height: 28px !important;
+}
+
+body:not(.is-login-screen) .app-view .dashboard-main #overview [data-owner-kanban-board] .owner-kanban-more-tools-panel {
+  position: absolute;
+  top: calc(100% + 6px);
+  right: 0;
+  display: grid;
+  width: min(720px, calc(100vw - 60px));
+  gap: 8px;
+  padding: 10px;
+  border: 1px solid var(--ops-border-strong);
+  border-radius: 7px;
+  background: #fff;
+  box-shadow: 0 16px 36px rgba(15, 38, 29, .16);
+}
+
+body:not(.is-login-screen) .app-view .dashboard-main #overview [data-owner-kanban-board] .owner-kanban-more-tools-panel .owner-kanban-filters {
+  grid-template-columns: minmax(180px, 1.4fr) minmax(260px, 1.6fr) minmax(120px, .7fr) minmax(120px, .7fr);
+}
+
+body:not(.is-login-screen) .app-view .dashboard-main #overview [data-owner-kanban-board] .owner-kanban-more-tools-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 6px;
+}
+
+body:not(.is-login-screen) .app-view .dashboard-main #overview [data-owner-kanban-board] .owner-kanban-more-tools-actions button {
+  width: auto;
+  min-height: 29px !important;
+  padding: 5px 8px !important;
+  border-radius: 5px !important;
+  font-size: .63rem !important;
+}
+
+body:not(.is-login-screen) .app-view .dashboard-main #overview [data-owner-kanban-board] .owner-kanban-scroll {
+  display: grid !important;
+  grid-template-columns: repeat(3, minmax(240px, 1fr)) !important;
+  gap: 7px !important;
+  overflow-x: auto !important;
+  padding: 0 0 4px !important;
+}
+
+body:not(.is-login-screen) .app-view .dashboard-main #overview [data-owner-kanban-board] .owner-kanban-column {
+  display: grid;
+  align-content: start;
+  min-width: 240px !important;
+  min-height: 310px;
+  gap: 6px;
+  padding: 7px !important;
+  border: 1px solid var(--ops-border) !important;
+  border-radius: 5px !important;
+  box-shadow: none !important;
+}
+
+body:not(.is-login-screen) .app-view .dashboard-main #overview [data-owner-kanban-board] .owner-kanban-column--todo {
+  background: #f3f4f4 !important;
+}
+
+body:not(.is-login-screen) .app-view .dashboard-main #overview [data-owner-kanban-board] .owner-kanban-column--in_progress {
+  background: #edf4ff !important;
+}
+
+body:not(.is-login-screen) .app-view .dashboard-main #overview [data-owner-kanban-board] .owner-kanban-column--done {
+  background: #edf7ee !important;
+}
+
+body:not(.is-login-screen) .app-view .dashboard-main #overview [data-owner-kanban-board] .owner-kanban-column-head {
+  align-items: center;
+  gap: 5px;
+  min-height: 26px;
+  padding: 0 2px;
+}
+
+body:not(.is-login-screen) .app-view .dashboard-main #overview [data-owner-kanban-board] .owner-kanban-column-head h4 {
+  color: #273832;
+  font-size: .68rem;
+  letter-spacing: .045em;
+  text-transform: uppercase;
+}
+
+body:not(.is-login-screen) .app-view .dashboard-main #overview [data-owner-kanban-board] .owner-kanban-column-head p {
+  display: none;
+}
+
+body:not(.is-login-screen) .app-view .dashboard-main #overview [data-owner-kanban-board] .owner-kanban-column-head > span {
+  min-width: 20px;
+  height: 20px;
+  padding: 0 6px;
+  background: rgba(255, 255, 255, .78);
+  color: #4d5c56;
+  font-size: .59rem;
+}
+
+body:not(.is-login-screen) .app-view .dashboard-main #overview [data-owner-kanban-board] .owner-kanban-limit {
+  display: none;
+}
+
+body:not(.is-login-screen) .app-view .dashboard-main #overview [data-owner-kanban-board] .owner-kanban-column-list,
+body:not(.is-login-screen) .app-view .dashboard-main #overview [data-owner-kanban-board] .component-kanban-team-group > div {
+  gap: 4px;
+}
+
+body:not(.is-login-screen) .app-view .dashboard-main #overview [data-owner-kanban-board] .component-kanban-team-group {
+  gap: 3px;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+}
+
+body:not(.is-login-screen) .app-view .dashboard-main #overview [data-owner-kanban-board] .component-kanban-team-group > header {
+  min-height: 18px;
+  padding: 1px 2px 0;
+  font-size: .53rem;
+}
+
+body:not(.is-login-screen) .app-view .dashboard-main #overview [data-owner-kanban-board] .owner-kanban-card.component-kanban-row {
+  gap: 4px;
+  padding: 6px 7px !important;
+  border: 1px solid #dfe4e1 !important;
+  border-left-width: 1px !important;
+  border-radius: 4px !important;
+  background: #fff !important;
+  box-shadow: 0 1px 2px rgba(18, 40, 31, .035) !important;
+}
+
+body:not(.is-login-screen) .app-view .dashboard-main #overview [data-owner-kanban-board] .component-kanban-row-main strong {
+  font-size: .68rem;
+  line-height: 1.18;
+}
+
+body:not(.is-login-screen) .app-view .dashboard-main #overview [data-owner-kanban-board] .component-kanban-row-main small {
+  overflow: hidden;
+  margin-top: 1px;
+  color: var(--ops-muted);
+  font-size: .53rem;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+body:not(.is-login-screen) .app-view .dashboard-main #overview [data-owner-kanban-board] .component-kanban-chip {
+  height: 19px !important;
+  min-height: 19px !important;
+  padding-inline: 6px !important;
+  font-size: .54rem !important;
+}
+
+body:not(.is-login-screen) .app-view .dashboard-main #overview [data-owner-kanban-board] .component-kanban-proof-chip {
+  flex-basis: 19px;
+  width: 19px;
+  height: 19px;
+}
+
+body:not(.is-login-screen) .app-view .dashboard-main #calendar .work-day-reference-grid {
+  display: grid !important;
+  grid-template-columns: minmax(210px, .9fr) minmax(220px, 1fr) minmax(220px, 1fr) minmax(220px, 1fr) !important;
+  align-items: stretch;
+  gap: 8px !important;
+}
+
+body:not(.is-login-screen) .app-view .dashboard-main #calendar .work-day-reference-card {
+  display: grid;
+  align-content: start;
+  min-width: 0;
+  gap: 8px;
+  padding: 10px;
+  border: 1px solid var(--ops-border);
+  border-radius: 6px;
+  background: #fff;
+  box-shadow: none;
+}
+
+body:not(.is-login-screen) .app-view .dashboard-main #calendar .work-day-reference-card > header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  min-height: 32px;
+  gap: 8px;
+  padding-bottom: 7px;
+  border-bottom: 1px solid #edf0ee;
+}
+
+body:not(.is-login-screen) .app-view .dashboard-main #calendar .work-day-reference-card > header h3,
+body:not(.is-login-screen) .app-view .dashboard-main #calendar .work-day-reference-card > header p {
+  margin: 0;
+}
+
+body:not(.is-login-screen) .app-view .dashboard-main #calendar .work-day-reference-card > header h3 {
+  color: var(--ops-text);
+  font-size: .78rem;
+}
+
+body:not(.is-login-screen) .app-view .dashboard-main #calendar .work-day-reference-card > header p {
+  margin-top: 2px;
+  color: var(--ops-muted);
+  font-size: .56rem;
+}
+
+body:not(.is-login-screen) .app-view .dashboard-main #calendar .work-day-reference-card button {
+  width: auto;
+  min-height: 28px !important;
+  padding: 5px 8px !important;
+  border-radius: 5px !important;
+  font-size: .61rem !important;
+}
+
+body:not(.is-login-screen) .app-view .dashboard-main #calendar .work-day-route-layout {
+  display: block;
+  margin: 0;
+}
+
+body:not(.is-login-screen) .app-view .dashboard-main #calendar .work-day-stop-list {
+  gap: 4px;
+}
+
+body:not(.is-login-screen) .app-view .dashboard-main #calendar .work-day-stop-list li {
+  grid-template-columns: 20px minmax(0, 1fr);
+  gap: 6px;
+  min-height: 58px;
+  padding: 6px;
+  border-radius: 5px;
+}
+
+body:not(.is-login-screen) .app-view .dashboard-main #calendar .work-day-stop-list li > span {
+  width: 20px;
+  height: 20px;
+}
+
+body:not(.is-login-screen) .app-view .dashboard-main #calendar .work-day-stop-list li b {
+  display: block;
+  overflow: hidden;
+  margin-top: 1px;
+  font-size: .61rem;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+body:not(.is-login-screen) .app-view .dashboard-main #calendar .work-day-stop-list li em {
+  grid-column: 2;
+  justify-self: start;
+}
+
+body:not(.is-login-screen) .app-view .dashboard-main #calendar .work-day-reference-card > footer {
+  display: flex;
+  justify-content: space-between;
+  margin-top: auto;
+  padding-top: 7px;
+  border-top: 1px solid #edf0ee;
+  color: var(--ops-muted);
+  font-size: .57rem;
+}
+
+body:not(.is-login-screen) .app-view .dashboard-main #calendar .work-day-location-preview {
+  display: flex;
+  align-items: center;
+  min-height: 78px;
+  gap: 9px;
+  padding: 10px;
+  border-radius: 5px;
+  background: linear-gradient(135deg, #e4eee5, #f4f7f4);
+}
+
+body:not(.is-login-screen) .app-view .dashboard-main #calendar .work-day-location-preview > span {
+  display: grid;
+  flex: 0 0 30px;
+  width: 30px;
+  height: 30px;
+  place-items: center;
+  border-radius: 50%;
+  background: var(--ops-green);
+  color: #fff;
+  font-size: .61rem;
+  font-weight: 900;
+}
+
+body:not(.is-login-screen) .app-view .dashboard-main #calendar .work-day-location-preview strong,
+body:not(.is-login-screen) .app-view .dashboard-main #calendar .work-day-location-preview small {
+  display: block;
+}
+
+body:not(.is-login-screen) .app-view .dashboard-main #calendar .work-day-location-preview strong {
+  font-size: .7rem;
+}
+
+body:not(.is-login-screen) .app-view .dashboard-main #calendar .work-day-location-preview small {
+  margin-top: 3px;
+  color: var(--ops-muted);
+  font-size: .57rem;
+  line-height: 1.3;
+}
+
+body:not(.is-login-screen) .app-view .dashboard-main #calendar .work-day-detail-list {
+  display: grid;
+  gap: 0;
+  margin: 0;
+}
+
+body:not(.is-login-screen) .app-view .dashboard-main #calendar .work-day-detail-list > div {
+  display: grid;
+  grid-template-columns: 72px minmax(0, 1fr);
+  gap: 6px;
+  padding: 6px 0;
+  border-bottom: 1px solid #edf0ee;
+  font-size: .59rem;
+}
+
+body:not(.is-login-screen) .app-view .dashboard-main #calendar .work-day-detail-list dt {
+  color: var(--ops-muted);
+}
+
+body:not(.is-login-screen) .app-view .dashboard-main #calendar .work-day-detail-list dd {
+  margin: 0;
+  color: #24362f;
+  font-weight: 700;
+}
+
+body:not(.is-login-screen) .app-view .dashboard-main #calendar :is(.work-day-task-list, .work-day-requirements ul) {
+  display: grid;
+  gap: 5px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+body:not(.is-login-screen) .app-view .dashboard-main #calendar :is(.work-day-task-list, .work-day-requirements ul) li {
+  display: grid;
+  grid-template-columns: 18px minmax(0, 1fr);
+  align-items: center;
+  gap: 6px;
+  min-height: 28px;
+  color: #33443d;
+  font-size: .6rem;
+}
+
+body:not(.is-login-screen) .app-view .dashboard-main #calendar :is(.work-day-task-list, .work-day-requirements ul) li > span {
+  display: grid;
+  width: 16px;
+  height: 16px;
+  place-items: center;
+  border: 1px solid #aebbb5;
+  border-radius: 50%;
+  color: #fff;
+  font-size: .52rem;
+}
+
+body:not(.is-login-screen) .app-view .dashboard-main #calendar :is(.work-day-task-list, .work-day-requirements ul) li.is-complete > span {
+  border-color: var(--ops-green);
+  background: var(--ops-green);
+}
+
+body:not(.is-login-screen) .app-view .dashboard-main #calendar .work-day-requirements {
+  display: grid;
+  gap: 5px;
+  margin-top: 2px;
+  padding-top: 8px;
+  border-top: 1px solid #edf0ee;
+}
+
+body:not(.is-login-screen) .app-view .dashboard-main #calendar .work-day-requirements h4 {
+  margin: 0;
+  color: #31433b;
+  font-size: .65rem;
+}
+
+body:not(.is-login-screen) .app-view .dashboard-main #calendar .work-day-proof-group {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 7px;
+  padding: 8px;
+  border: 1px solid #e3e8e5;
+  border-radius: 5px;
+  background: #fafbfa;
+}
+
+body:not(.is-login-screen) .app-view .dashboard-main #calendar .work-day-proof-group strong,
+body:not(.is-login-screen) .app-view .dashboard-main #calendar .work-day-proof-group span {
+  display: block;
+}
+
+body:not(.is-login-screen) .app-view .dashboard-main #calendar .work-day-proof-group strong {
+  font-size: .62rem;
+}
+
+body:not(.is-login-screen) .app-view .dashboard-main #calendar .work-day-proof-group span {
+  margin-top: 2px;
+  color: var(--ops-muted);
+  font-size: .54rem;
+}
+
+body:not(.is-login-screen) .app-view .dashboard-main #calendar .work-day-proof-card .work-day-complete-visit {
+  width: 100%;
+  margin-top: auto;
+  background: var(--ops-green) !important;
+  color: #fff !important;
+}
+
+@media (max-width: 1100px) {
+  body:not(.is-login-screen) .app-view .dashboard-main #calendar .work-day-reference-grid {
+    grid-template-columns: repeat(2, minmax(220px, 1fr)) !important;
+  }
+}
+
+@media (max-width: 760px) {
+  body:not(.is-login-screen) .app-view .dashboard-main :is(#overview, #calendar) .ticket-metrics,
+  body:not(.is-login-screen) .app-view .dashboard-main #overview .my-work-today .ticket-lane-list,
+  body:not(.is-login-screen) .app-view .dashboard-main #overview .owner-scorecard-grid,
+  body:not(.is-login-screen) .app-view .dashboard-main #calendar .work-day-reference-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+  }
+
+  body:not(.is-login-screen) .app-view .dashboard-main #overview [data-owner-kanban-board] .owner-kanban-toolbar-head {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  body:not(.is-login-screen) .app-view .dashboard-main #overview [data-owner-kanban-board] .owner-kanban-toolbar-actions {
+    width: 100%;
+    justify-content: flex-start;
+    overflow-x: auto;
+  }
+
+  body:not(.is-login-screen) .app-view .dashboard-main #overview [data-owner-kanban-board] .owner-kanban-quick-filter select {
+    width: 122px;
+  }
+}
+
+@media (max-width: 520px) {
+  body:not(.is-login-screen) .app-view .dashboard-main :is(#overview, #calendar) .ticket-metrics,
+  body:not(.is-login-screen) .app-view .dashboard-main #overview .my-work-today .ticket-lane-list,
+  body:not(.is-login-screen) .app-view .dashboard-main #overview .owner-scorecard-grid,
+  body:not(.is-login-screen) .app-view .dashboard-main #calendar .work-day-reference-grid {
+    grid-template-columns: minmax(0, 1fr) !important;
+  }
+}
+
 /* 2026 operations redesign: main workspace only. The existing navigation
    drawer is intentionally outside every selector in this section. */
 body:not(.is-login-screen) .dashboard-main,
@@ -27310,5 +27878,89 @@ body:not(.is-login-screen) .app-view .dashboard-main :is(#overview, #calendar) [
   body:not(.is-login-screen) .app-view .dashboard-main :is(#overview, #calendar) [data-owner-kanban-board] .component-ticket-status-cell::before {
     padding-top: 5px;
     font-size: .59rem;
+  }
+}
+
+/* Final reference-layout cascade: keeps the Home board in the compact,
+   independent three-column presentation used by the approved mockup. */
+body:not(.is-login-screen) .app-view .dashboard-main #overview [data-owner-kanban-board] {
+  gap: 8px !important;
+  padding: 10px !important;
+  overflow: visible !important;
+  border-radius: 6px !important;
+  background: #fff !important;
+  box-shadow: none !important;
+}
+
+body:not(.is-login-screen) .app-view .dashboard-main #overview [data-owner-kanban-board] .owner-kanban-toolbar-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 0 0 8px;
+  border-bottom: 0;
+}
+
+body:not(.is-login-screen) .app-view .dashboard-main #overview [data-owner-kanban-board] .owner-kanban-scroll {
+  display: grid !important;
+  grid-template-columns: repeat(3, minmax(240px, 1fr)) !important;
+  gap: 7px !important;
+  overflow-x: auto !important;
+  padding: 0 0 4px !important;
+}
+
+body:not(.is-login-screen) .app-view .dashboard-main #overview [data-owner-kanban-board] .owner-kanban-column {
+  display: grid;
+  align-content: start;
+  min-width: 240px !important;
+  min-height: 310px;
+  gap: 6px;
+  padding: 7px !important;
+  border: 1px solid var(--ops-border) !important;
+  border-radius: 5px !important;
+  box-shadow: none !important;
+}
+
+body:not(.is-login-screen) .app-view .dashboard-main #overview [data-owner-kanban-board] .component-kanban-team-group {
+  gap: 3px;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+}
+
+body:not(.is-login-screen) .app-view .dashboard-main #overview [data-owner-kanban-board] .component-kanban-team-group > header {
+  min-height: 18px;
+  padding: 1px 2px 0;
+  font-size: .53rem;
+}
+
+body:not(.is-login-screen) .app-view .dashboard-main #overview [data-owner-kanban-board] .owner-kanban-card.component-kanban-row {
+  gap: 4px;
+  padding: 6px 7px !important;
+  border: 1px solid #dfe4e1 !important;
+  border-left-width: 1px !important;
+  border-radius: 4px !important;
+  background: #fff !important;
+  box-shadow: 0 1px 2px rgba(18, 40, 31, .035) !important;
+}
+
+body:not(.is-login-screen) .app-view .dashboard-main #overview [data-owner-kanban-board] .component-kanban-chip {
+  height: 19px !important;
+  min-height: 19px !important;
+  padding-inline: 6px !important;
+  font-size: .54rem !important;
+}
+
+body:not(.is-login-screen) .app-view .dashboard-main #overview [data-owner-kanban-board] .component-kanban-proof-chip {
+  flex-basis: 19px;
+  width: 19px;
+  height: 19px;
+}
+
+@media (max-width: 760px) {
+  body:not(.is-login-screen) .app-view .dashboard-main #overview [data-owner-kanban-board] .owner-kanban-toolbar-head {
+    align-items: flex-start;
+    flex-direction: column;
   }
 }

@@ -26,8 +26,8 @@ test("live workspace polish contains long records and management cards", () => {
   assert.match(css, /\.call-queue-row > span:first-child :is\(strong, small\)[\s\S]*overflow-wrap: anywhere/);
   assert.match(css, /\.groundskeeper-operation-card[\s\S]*white-space: normal !important/);
   assert.match(css, /\.dashboard-health-item strong[\s\S]*word-break: break-all/);
-  assert.match(html, /dashboard\.css\?v=20260803-operations-redesign-4/);
-  assert.match(html, /dashboard\.js\?v=20260803-operations-redesign-4/);
+  assert.match(html, /dashboard\.css\?v=20260803-reference-layout-1/);
+  assert.match(html, /dashboard\.js\?v=20260803-reference-layout-1/);
 });
 
 test("authenticated assistant prompt suppresses public quote calls to action", () => {
@@ -590,7 +590,8 @@ test("primary workspaces omit navigation cards already represented in the drawer
   assert.match(home, /renderOwnerKanbanBoard/);
   assert.doesNotMatch(work, /renderOwnerKanbanBoard|data-owner-kanban-board/);
   assert.match(js, /visibleItems = items\.slice\(0, 4\)/);
-  assert.match(js, /work-day-route-layout[\s\S]*work-day-stop-list/);
+  assert.match(js, /work-day-reference-grid[\s\S]*work-day-route-layout[\s\S]*work-day-stop-list/);
+  assert.match(js, /work-day-first-stop-card[\s\S]*work-day-assigned-card[\s\S]*work-day-proof-card/);
   assert.doesNotMatch(leads, /renderLeadsRunwayPanel|renderLeadsHandoffPanel|lead-next-step-stack/);
   assert.doesNotMatch(money, /renderMoneyRunwayPanel|renderMoneyCloseoutPanel|money-next-step-stack/);
   assert.doesNotMatch(tools, /renderToolsRunwayPanel|renderToolsSystemsPanel|tools-control-grid/);
@@ -666,6 +667,8 @@ test("component Work Board assigns, tracks, completes, and audits ticket require
   assert.match(js, /const ownerKanbanTeams = \["Leads", "Money", "Work"\]/);
   assert.match(js, /function ownerKanbanTeamLabel[\s\S]*"money", "customer"[\s\S]*return "Leads"/);
   assert.match(js, /function renderOwnerKanbanTeamGroups[\s\S]*component-kanban-team-group/);
+  assert.match(js, /function renderOwnerKanbanBoard\(tickets = \[\]\) \{[\s\S]*return renderOwnerKanbanBoardLegacy\(tickets\)/);
+  assert.match(js, /function renderOwnerKanbanBoardLegacy[\s\S]*renderOwnerKanbanTeamGroups\(shownComponents\)/);
   assert.match(js, /component-ticket-team-summary[\s\S]*ownerKanbanTeams\.map/);
   assert.match(js, /function ticketWorkComponents[\s\S]*ticketCompletionChecklistItems\.map/);
   assert.match(js, /function latestWorkComponentSnapshots[\s\S]*ticket_work_component_updated/);
@@ -882,7 +885,7 @@ test("dashboard navigation and workspace calls to action have working destinatio
   assert.match(js, /setActiveSection\(dashboardSectionForRole\(hashSection\)\)/);
   assert.match(js, /action: "go-call-queue",\s*actionLabel: "Open Queue"/);
   assert.match(js, /action === "go-call-queue"[\s\S]*?setActiveSection\("call-queue"\)/);
-  assert.match(js, /action: "quick-add-job",\s*actionLabel: "Add Visit"/);
+  assert.match(js, /data-action="quick-add-job">Add Visit/);
   assert.match(js, /action: "focus-work-queue",\s*actionLabel: "View Queue"/);
   assert.match(js, /data-work-queue/);
   assert.match(js, /action === "focus-work-queue"[\s\S]*?\[data-work-queue\][\s\S]*?scrollIntoView/);

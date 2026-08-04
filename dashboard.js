@@ -14329,65 +14329,61 @@
     const current = currentUserProfile();
     const canAssignToSelf = Boolean(current?.userId || current?.email)
       && filteredComponents.some((component) => !component.assignedUserId && component.status !== "done");
-    return `<section class="owner-kanban-toolbar" aria-label="Work Board filters">
+    return `<section class="owner-kanban-toolbar" aria-label="Job Tasks Board filters">
       <div class="owner-kanban-toolbar-head">
-        <div>
-          <p class="eyebrow">Execution Board</p>
-          <h3>Ticket Work Board</h3>
-          <p>Each ticket stays together while its requirements move through To Do, In Progress, and Done.</p>
+        <div class="owner-kanban-toolbar-title">
+          <h3>Job Tasks Board</h3>
+          <span>${escapeHtml(shownTickets)} ticket${shownTickets === 1 ? "" : "s"} / ${escapeHtml(filteredComponents.length)} tasks</span>
         </div>
         <div class="owner-kanban-toolbar-actions">
-          <span>${escapeHtml(shownTickets)} ticket${shownTickets === 1 ? "" : "s"} / ${escapeHtml(filteredComponents.length)} steps</span>
-          <button type="button" data-action="refresh-owner-kanban">Refresh</button>
-          ${canManageOwnerWorkflow() ? `<button type="button" data-action="assign-visible-components-to-me"${canAssignToSelf ? "" : " disabled"}>Assign Visible to Me</button>` : ""}
-          <details class="owner-kanban-view-settings">
-            <summary>View Settings</summary>
-            <div>
-              <label><input type="checkbox" data-owner-kanban-toggle="blockedOnly"${state.ownerKanbanBlockedOnly ? " checked" : ""}> Blocked only</label>
-              <label><input type="checkbox" data-owner-kanban-toggle="overdueOnly"${state.ownerKanbanOverdueOnly ? " checked" : ""}> Overdue only</label>
+          <label class="owner-kanban-quick-filter"><span>Assignee</span>
+            <select data-owner-kanban-filter="assignee">${workComponentAssigneeOptions(state.ownerKanbanAssigneeFilter)}</select>
+          </label>
+          <label class="owner-kanban-quick-filter"><span>Priority</span>
+            <select data-owner-kanban-filter="priority">${ownerKanbanOptions(priorities, state.ownerKanbanPriorityFilter, "All priorities")}</select>
+          </label>
+          <label class="owner-kanban-quick-filter"><span>Team</span>
+            <select data-owner-kanban-filter="type">${ownerKanbanOptions(groups, state.ownerKanbanTypeFilter, "All teams")}</select>
+          </label>
+          <details class="owner-kanban-view-settings owner-kanban-more-tools">
+            <summary>Filters</summary>
+            <div class="owner-kanban-more-tools-panel">
+              <div class="owner-kanban-saved-views" aria-label="Saved ticket views">
+                <span>Quick views</span>
+                ${OWNER_KANBAN_SAVED_VIEWS.map((view) => `<button type="button" data-action="apply-owner-kanban-view" data-view="${escapeHtml(view.key)}">${escapeHtml(view.label)}</button>`).join("")}
+              </div>
+              ${renderOwnerKanbanAssigneeRoster(components)}
+              <div class="owner-kanban-filters">
+                <label class="owner-kanban-search">Search
+                  <input type="search" placeholder="Search tasks, tickets, or customers..." value="${escapeHtml(state.ownerKanbanSearch || "")}" data-owner-kanban-search>
+                </label>
+                <fieldset class="owner-kanban-date-range">
+                  <legend>Date range <small>${escapeHtml(ownerKanbanDateRangeLabel())}</small></legend>
+                  <label>From<input type="date" value="${escapeHtml(state.ownerKanbanDateStart)}" data-owner-kanban-date-range="start"></label>
+                  <label>To<input type="date" value="${escapeHtml(state.ownerKanbanDateEnd)}" data-owner-kanban-date-range="end"></label>
+                </fieldset>
+                <label>Status
+                  <select data-owner-kanban-filter="status">
+                    <option value="All">All statuses</option>
+                    ${ownerKanbanFilterStatuses.map((status) => `<option value="${escapeHtml(status.key)}"${status.key === state.ownerKanbanStatusFilter ? " selected" : ""}>${escapeHtml(status.label)}</option>`).join("")}
+                  </select>
+                </label>
+                <label>Sort
+                  <select data-owner-kanban-filter="sort">
+                    ${[["priority", "Priority"], ["due", "Due date"], ["newest", "Newest"], ["oldest", "Oldest"]].map(([value, label]) => `<option value="${value}"${value === state.ownerKanbanSort ? " selected" : ""}>${label}</option>`).join("")}
+                </label>
+                <label class="owner-kanban-toggle"><input type="checkbox" data-owner-kanban-toggle="blockedOnly"${state.ownerKanbanBlockedOnly ? " checked" : ""}> Blocked only</label>
+                <label class="owner-kanban-toggle"><input type="checkbox" data-owner-kanban-toggle="overdueOnly"${state.ownerKanbanOverdueOnly ? " checked" : ""}> Overdue only</label>
+              </div>
+              <div class="owner-kanban-more-tools-actions">
+                <button type="button" data-action="refresh-owner-kanban">Refresh</button>
+                ${canManageOwnerWorkflow() ? `<button type="button" data-action="assign-visible-components-to-me"${canAssignToSelf ? "" : " disabled"}>Assign Visible to Me</button>` : ""}
+                <button type="button" data-action="reset-owner-kanban-filters">Reset Filters</button>
+              </div>
             </div>
           </details>
         </div>
       </div>
-      <div class="owner-kanban-saved-views" aria-label="Saved ticket views">
-        <span>Quick views</span>
-        ${OWNER_KANBAN_SAVED_VIEWS.map((view) => `<button type="button" data-action="apply-owner-kanban-view" data-view="${escapeHtml(view.key)}">${escapeHtml(view.label)}</button>`).join("")}
-      </div>
-      ${renderOwnerKanbanAssigneeRoster(components)}
-      <details class="owner-kanban-advanced-filters">
-        <summary>Advanced filters</summary>
-        <div class="owner-kanban-filters">
-        <label class="owner-kanban-search">Search
-          <input type="search" placeholder="Search components, tickets, clients..." value="${escapeHtml(state.ownerKanbanSearch || "")}" data-owner-kanban-search>
-        </label>
-        <label>Person
-          <select data-owner-kanban-filter="assignee">${workComponentAssigneeOptions(state.ownerKanbanAssigneeFilter)}</select>
-        </label>
-        <label>Priority
-          <select data-owner-kanban-filter="priority">${ownerKanbanOptions(priorities, state.ownerKanbanPriorityFilter, "All priorities")}</select>
-        </label>
-        <label>Team
-          <select data-owner-kanban-filter="type">${ownerKanbanOptions(groups, state.ownerKanbanTypeFilter, "All teams")}</select>
-        </label>
-        <fieldset class="owner-kanban-date-range">
-          <legend>Date range <small>${escapeHtml(ownerKanbanDateRangeLabel())}</small></legend>
-          <label>From<input type="date" value="${escapeHtml(state.ownerKanbanDateStart)}" data-owner-kanban-date-range="start"></label>
-          <label>To<input type="date" value="${escapeHtml(state.ownerKanbanDateEnd)}" data-owner-kanban-date-range="end"></label>
-        </fieldset>
-        <label>Status
-          <select data-owner-kanban-filter="status">
-            <option value="All">All statuses</option>
-            ${ownerKanbanFilterStatuses.map((status) => `<option value="${escapeHtml(status.key)}"${status.key === state.ownerKanbanStatusFilter ? " selected" : ""}>${escapeHtml(status.label)}</option>`).join("")}
-          </select>
-        </label>
-        <label>Sort
-          <select data-owner-kanban-filter="sort">
-            ${[["priority", "Priority"], ["due", "Due date"], ["newest", "Newest"], ["oldest", "Oldest"]].map(([value, label]) => `<option value="${value}"${value === state.ownerKanbanSort ? " selected" : ""}>${label}</option>`).join("")}
-          </select>
-        </label>
-        <button type="button" data-action="reset-owner-kanban-filters">Reset Filters</button>
-      </div>
-      </details>
     </section>`;
   }
 
@@ -14479,7 +14475,7 @@
             </div>
             ${column.limit ? `<p class="owner-kanban-limit${overLimit ? " is-over-limit" : ""}">${escapeHtml(shownComponents.length)}/${escapeHtml(column.limit)} WIP${overLimit ? " / reduce load" : ""}</p>` : ""}
             <div class="owner-kanban-column-list">
-              ${shownComponents.length ? renderOwnerKanbanComponentList(shownComponents) : `<p class="owner-kanban-empty"><strong>Clear for now</strong><span>Move a component here when its work state changes.</span></p>`}
+              ${shownComponents.length ? renderOwnerKanbanTeamGroups(shownComponents) : `<p class="owner-kanban-empty"><strong>No matching ticket work</strong><span>Move a task here when its work state changes.</span></p>`}
             </div>
           </section>`;
         }).join("")}
@@ -14510,7 +14506,7 @@
       <div class="component-kanban-row-summary">
         <button type="button" class="component-kanban-row-main" data-action="${rowAction}" data-id="${escapeHtml(component.ticketId)}" data-component-key="${escapeHtml(component.key)}"${assignmentMode ? ` aria-pressed="${assignedToSelected}"` : ` aria-expanded="${editing}" aria-controls="${escapeHtml(editorId)}"`}>
           <strong>${escapeHtml(component.label)}</strong>
-          <small>${escapeHtml(teamLabel)}</small>
+          <small>${escapeHtml(`${component.ticketNumber} / ${component.ticketTitle}`)}</small>
         </button>
         ${assignmentMode
           ? `<span class="component-kanban-assignment-check${assignedToSelected ? " is-assigned" : ""}${assignmentEligible ? "" : " is-ineligible"}" aria-hidden="true">${assignmentPending ? "..." : assignmentEligible ? assignedToSelected ? "&#10003;" : "+" : "Locked"}</span>`
@@ -14624,46 +14620,7 @@
   }
 
   function renderOwnerKanbanBoard(tickets = []) {
-    const components = dashboardWorkComponents(tickets);
-    const filteredComponents = sortOwnerKanbanComponents(components.filter(ownerKanbanComponentMatches));
-    const visibleTicketIds = [...new Set(filteredComponents.map((component) => component.ticketId))];
-    const componentsByTicket = new Map();
-    components.forEach((component) => {
-      if (!componentsByTicket.has(component.ticketId)) componentsByTicket.set(component.ticketId, []);
-      componentsByTicket.get(component.ticketId).push(component);
-    });
-    return `<section class="owner-kanban-board" aria-label="Ticket component Work Board" data-owner-kanban-board>
-      ${renderOwnerKanbanToolbar(components, filteredComponents)}
-      <div class="owner-kanban-scroll" aria-label="Ticket workflow columns">
-        <div class="owner-kanban-track">
-          <div class="owner-kanban-column-guide" role="row" aria-label="Work stages">
-            ${ownerKanbanColumns.map((column) => {
-              const totalComponents = components.filter((component) => ownerKanbanColumnIncludes(column.key, component.status));
-              const shownComponents = filteredComponents.filter((component) => ownerKanbanColumnIncludes(column.key, component.status));
-              const overLimit = column.limit && shownComponents.length > column.limit;
-              return `<section class="owner-kanban-stage-head owner-kanban-column--${escapeHtml(column.key)}${overLimit ? " is-over-limit" : ""}" role="columnheader">
-                <div class="owner-kanban-column-head">
-                  <div>
-                    <h4>${escapeHtml(column.label)}</h4>
-                    <p>${escapeHtml(column.detail)}</p>
-                  </div>
-                  <span title="${escapeHtml(String(totalComponents.length))} total components">${escapeHtml(String(shownComponents.length))}</span>
-                </div>
-                ${column.limit ? `<p class="owner-kanban-limit${overLimit ? " is-over-limit" : ""}">${escapeHtml(shownComponents.length)}/${escapeHtml(column.limit)} WIP${overLimit ? " / reduce load" : ""}</p>` : ""}
-              </section>`;
-            }).join("")}
-          </div>
-          <div class="component-ticket-swimlanes" role="list" aria-label="Tickets and their work steps">
-            ${visibleTicketIds.length
-              ? visibleTicketIds.map((ticketId) => renderOwnerKanbanTicketSwimlane(
-                componentsByTicket.get(ticketId) || [],
-                filteredComponents.filter((component) => component.ticketId === ticketId)
-              )).join("")
-              : `<div class="owner-kanban-empty"><strong>No matching ticket work</strong><span>Change the filters or refresh the dashboard.</span></div>`}
-          </div>
-        </div>
-      </div>
-    </section>`;
+    return renderOwnerKanbanBoardLegacy(tickets);
   }
 
   function renderHomeActionQueue(items) {
@@ -15205,54 +15162,78 @@
   function renderWorkDayPlanPanel(stops = [], todayTickets = [], upcomingTickets = [], reviewTickets = []) {
     const openStops = stops.filter((stop) => stop.status !== "Complete");
     const nextStop = openStops[0] || stops[0];
+    const selectedTicket = todayTickets[0] || upcomingTickets[0] || reviewTickets[0] || null;
+    const linkedJob = selectedTicket ? ticketLinkedScheduledJob(selectedTicket) : null;
+    const workTasks = selectedTicket
+      ? ticketWorkComponents(selectedTicket).filter((component) => ownerKanbanTeamLabel(component) === "Work").slice(0, 5)
+      : [];
+    const arrivalPhotos = linkedJob ? documentationAttachmentsForJob(linkedJob, "arrival") : [];
+    const completionPhotos = linkedJob ? documentationAttachmentsForJob(linkedJob, "completion") : [];
+    const documents = selectedTicket
+      ? (state.data.documents || []).filter((item) => [item.jobTicketId, item.ticketId, item.jobId].filter(Boolean).includes(selectedTicket.id))
+      : [];
+    const totalMinutes = stops.reduce((sum, stop) => sum + Number(stop.estimatedMinutes || 0), 0);
     const stopTime = (stop) => stop?.scheduledTime || stop?.startTime || stop?.timeWindow || stop?.visitWindow || "Time not set";
-    return `<section class="work-day-plan-panel ${stops.length ? "" : "is-empty"}" aria-label="Work day plan">
-      <article class="work-day-map-card">
-        <div class="ticket-lane-heading">
-          <div>
-            <p class="eyebrow">Route Plan</p>
-            <h3>Today&apos;s route and first stop</h3>
-            <p>${nextStop ? escapeHtml([nextStop.clientName, nextStop.address, nextStop.city].filter(Boolean).join(" / ")) : "No route stops planned for today."}</p>
-          </div>
-          <span>${escapeHtml(String(openStops.length))}</span>
-        </div>
-        ${stops.length ? `<div class="work-day-route-layout">
-          <ol class="work-day-stop-list" aria-label="Today's scheduled stops">
+    const ticketButton = (label, section, className = "secondary-action") => selectedTicket
+      ? `<button type="button" class="${escapeHtml(className)}" data-action="open-ticket" data-ticket-source="ticket" data-id="${escapeHtml(selectedTicket.id)}" data-ticket-section="${escapeHtml(section)}">${escapeHtml(label)}</button>`
+      : `<button type="button" class="${escapeHtml(className)}" data-action="quick-add-job">Add Visit</button>`;
+    const requirementRow = (complete, label) => `<li class="${complete ? "is-complete" : ""}"><span aria-hidden="true">${complete ? "&#10003;" : ""}</span><strong>${escapeHtml(label)}</strong></li>`;
+    return `<section class="work-day-plan-panel work-day-reference-grid ${stops.length ? "" : "is-empty"}" aria-label="Work day plan">
+      <article class="work-day-reference-card work-day-route-card">
+        <header><div><h3>Today&apos;s Route</h3><p>${escapeHtml(String(stops.length))} scheduled stop${stops.length === 1 ? "" : "s"}</p></div><button type="button" class="secondary-action" data-action="go-route-planner">Route</button></header>
+        <div class="work-day-route-layout">
+          ${stops.length ? `<ol class="work-day-stop-list" aria-label="Today's scheduled stops">
             ${stops.map((stop, index) => `<li class="${index === 0 ? "is-first" : ""} ${stop.status === "Complete" ? "is-complete" : ""}">
               <span>${escapeHtml(String(index + 1))}</span>
-              <div><strong>${escapeHtml(stopTime(stop))} / ${escapeHtml(stop.clientName || "Scheduled visit")}</strong><small>${escapeHtml([stop.address, stop.serviceType].filter(Boolean).join(" / ") || "Visit details")}</small></div>
-              <em>${escapeHtml(stop.status || (index === 0 ? "First stop" : "Scheduled"))}</em>
+              <div><strong>${escapeHtml(stopTime(stop))}</strong><b>${escapeHtml(stop.clientName || "Scheduled visit")}</b><small>${escapeHtml([stop.address, stop.serviceType].filter(Boolean).join(" / ") || "Visit details")}</small></div>
+              <em>${escapeHtml(index === 0 && stop.status !== "Complete" ? "First stop" : stop.status || "Scheduled")}</em>
             </li>`).join("")}
-          </ol>
-          <div class="work-day-route-map">${routePreviewMapShell("work")}</div>
-        </div>` : `<div class="work-route-empty"><strong>No route to map yet</strong><p>Schedule a visit first, then build the driving order when stops exist.</p><button type="button" data-action="quick-add-job">Add Visit</button></div>`}
-        <div class="work-day-route-footer">
-          <span>${escapeHtml(stops.length ? `${openStops.length} open / ${stops.length} total stops` : "Build the route when work is scheduled.")}</span>
+          </ol>` : `<div class="work-route-empty"><strong>No route planned</strong><p>Add a visit to build today&apos;s route.</p><button type="button" data-action="quick-add-job">Add Visit</button></div>`}
         </div>
+        <footer><span>Total work time</span><strong>${escapeHtml(totalMinutes ? `${Math.floor(totalMinutes / 60)}h ${totalMinutes % 60}m` : "Not estimated")}</strong></footer>
       </article>
-      <div class="work-plan-tile-grid">
-        ${renderWorkPlanTile({
-          label: "Today",
-          value: todayTickets.length,
-          detail: "Tickets scheduled for today.",
-          action: "quick-add-job",
-          actionLabel: "Add Visit"
-        })}
-        ${renderWorkPlanTile({
-          label: "Proof",
-          value: reviewTickets.length,
-          detail: "Work waiting on photos, forms, actuals, or completion review.",
-          action: "go-tickets",
-          actionLabel: "Review Tickets"
-        })}
-        ${renderWorkPlanTile({
-          label: "Upcoming",
-          value: upcomingTickets.length,
-          detail: "Future scheduled or ready work tickets.",
-          action: "focus-work-queue",
-          actionLabel: "View Queue"
-        })}
-      </div>
+      <article class="work-day-reference-card work-day-first-stop-card">
+        <header><div><h3>First Stop Details</h3><p>${nextStop ? escapeHtml(stopTime(nextStop)) : "Waiting for a scheduled visit"}</p></div></header>
+        <div class="work-day-location-preview"><span>01</span><div><strong>${escapeHtml(nextStop?.clientName || selectedTicket?.customer || "No first stop")}</strong><small>${escapeHtml(nextStop?.address || selectedTicket?.propertyAddress || selectedTicket?.property || "Address not set")}</small></div></div>
+        <dl class="work-day-detail-list">
+          <div><dt>Service</dt><dd>${escapeHtml(nextStop?.serviceType || selectedTicket?.requestedService || selectedTicket?.title || "Not set")}</dd></div>
+          <div><dt>Work window</dt><dd>${escapeHtml(selectedTicket?.workWindow || stopTime(nextStop))}</dd></div>
+          <div><dt>Access</dt><dd>${escapeHtml(selectedTicket?.accessInstructions || "No access instructions")}</dd></div>
+          <div><dt>Notes</dt><dd>${escapeHtml(selectedTicket?.customerNotes || selectedTicket?.internalNotes || nextStop?.notes || "No visit notes")}</dd></div>
+        </dl>
+        ${ticketButton("Open Ticket", "overview")}
+      </article>
+      <article class="work-day-reference-card work-day-assigned-card">
+        <header><div><h3>Assigned Work</h3><p>${escapeHtml(String(workTasks.length))} visible task${workTasks.length === 1 ? "" : "s"}</p></div></header>
+        <ul class="work-day-task-list">
+          ${workTasks.length ? workTasks.map((task) => requirementRow(task.status === "done", task.label)).join("") : `<li class="is-empty"><strong>No work tasks assigned</strong></li>`}
+        </ul>
+        <section class="work-day-requirements">
+          <h4>Arrival Requirements</h4>
+          <ul>
+            ${requirementRow(Boolean(arrivalPhotos.length || selectedTicket?.beforePhotosUploaded), "Take arrival photos")}
+            ${requirementRow(Boolean(selectedTicket?.requiredDocumentsPresent), "Confirm forms and documents")}
+            ${requirementRow(Boolean(selectedTicket?.accessInstructions), "Review access instructions")}
+          </ul>
+        </section>
+        ${ticketButton("Review Work", "tasks")}
+      </article>
+      <article class="work-day-reference-card work-day-proof-card">
+        <header><div><h3>Photos &amp; Forms</h3><p>Complete proof before closeout</p></div></header>
+        <section class="work-day-proof-group">
+          <div><strong>Arrival Photos</strong><span>${escapeHtml(String(arrivalPhotos.length))} uploaded</span></div>
+          ${ticketButton("Add Photos", "arrival-photos")}
+        </section>
+        <section class="work-day-proof-group">
+          <div><strong>Completion Photos</strong><span>${escapeHtml(String(completionPhotos.length))} uploaded</span></div>
+          ${ticketButton("Add Photos", "completion-photos")}
+        </section>
+        <section class="work-day-proof-group">
+          <div><strong>Forms &amp; Documents</strong><span>${escapeHtml(String(documents.length))} connected</span></div>
+          ${ticketButton("Open Forms", "documents")}
+        </section>
+        ${ticketButton("Complete Visit", "closeout", "work-day-complete-visit")}
+      </article>
     </section>`;
   }
 

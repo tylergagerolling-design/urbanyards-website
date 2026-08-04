@@ -41,8 +41,8 @@ test("archived workspace polish remains available with current dashboard assets"
   assert.match(css, /\.call-queue-row > span:first-child :is\(strong, small\)[\s\S]*overflow-wrap: anywhere/);
   assert.match(css, /\.groundskeeper-operation-card[\s\S]*white-space: normal !important/);
   assert.match(css, /\.dashboard-health-item strong[\s\S]*word-break: break-all/);
-  assert.match(html, /dashboard\.css\?v=20260804-ticket-create-1/);
-  assert.match(html, /dashboard\.js\?v=20260804-ticket-create-1/);
+  assert.match(html, /dashboard\.css\?v=20260804-ticket-trash-1/);
+  assert.match(html, /dashboard\.js\?v=20260804-ticket-trash-1/);
 });
 
 test("authenticated assistant prompt suppresses public quote calls to action", () => {
@@ -1399,4 +1399,22 @@ test("new ticket creation returns to the active workspace instead of opening the
   assert.match(createHandler, /closeSubmissionDrawer\(\{ immediate: true \}\);[\s\S]*Work ticket created\. Open it from Tickets when you are ready\./);
   assert.match(createHandler, /closeSubmissionDrawer\(\{ immediate: true \}\);[\s\S]*Intake ticket created\. Open it from Tickets when you are ready\./);
   assert.doesNotMatch(createHandler, /openTicketDrawer\("ticket", canonicalTicket\.id\)/);
+});
+
+test("ticket trash is recoverable and permanent clearing is owner guarded", () => {
+  const js = read("dashboard.js");
+  const css = read("dashboard.css");
+  const backend = read("netlify/functions/dashboard-tickets.js");
+
+  assert.match(js, /function ticketIsTrashed[\s\S]*statusText\(ticket\.status\) === "archived"/);
+  assert.match(js, /data-action="show-ticket-trash"/);
+  assert.match(js, /data-action="trash-ticket"/);
+  assert.match(js, /data-action="restore-ticket"/);
+  assert.match(js, /data-action="empty-ticket-trash"/);
+  assert.match(js, /Type EMPTY TICKET TRASH to continue/);
+  assert.match(css, /\.ticket-trash/);
+  assert.match(backend, /"trash", "restore", "empty-trash"/);
+  assert.match(backend, /Only an owner or admin can manage ticket trash/);
+  assert.match(backend, /confirmation \|\| ""\) !== "EMPTY TICKET TRASH"/);
+  assert.match(backend, /ticket_trash_emptied/);
 });

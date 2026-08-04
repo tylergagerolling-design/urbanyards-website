@@ -782,6 +782,22 @@ async function deleteTicket(id) {
   });
 }
 
+async function setTicketTrashState(id, trashed) {
+  const existing = await getTicket(id);
+  if (!existing?.id) {
+    const error = new Error("Ticket was not found.");
+    error.statusCode = 404;
+    throw error;
+  }
+  const restoredStatus = ["closed", "cancelled"].includes(String(existing.stage || "").toLowerCase())
+    ? (String(existing.stage).toLowerCase() === "closed" ? "completed" : "cancelled")
+    : "active";
+  return updateTicket(id, {
+    status: trashed ? "archived" : restoredStatus,
+    updated_at: new Date().toISOString()
+  });
+}
+
 async function getTicket(id) {
   const rows = await supabaseAdminRequest(`job_tickets?id=eq.${encodeURIComponent(id)}&select=*&limit=1`, {
     method: "GET"
@@ -1063,7 +1079,7 @@ exports.handler = async (event) => {
   try {
     body = parseBody(event);
     const action = String(body.action || "").trim().toLowerCase();
-    if (!["list", "events", "create", "update", "delete", "transition", "component-update", "component-assign", "owner-force-transition", "ai-transition-cancel", "owner-close-rent-deduction", "owner-finalize-ticket", "owner-override-requirements", "event"].includes(action)) {
+    if (!["list", "events", "create", "update", "delete", "trash", "restore", "empty-trash", "transition", "component-update", "component-assign", "owner-force-transition", "ai-transition-cancel", "owner-close-rent-deduction", "owner-finalize-ticket", "owner-override-requirements", "event"].includes(action)) {
       return json(400, { error: "Unsupported ticket action.", requestId });
     }
 
@@ -1179,6 +1195,26 @@ exports.handler = async (event) => {
         module: "tickets"
       });
       return json(200, { ok: true, deleted: true, id, requestId });
+    }
+
+    if (["trash", "restore", "empty-trash"].includes(action)) {
+      if (!canDeleteTicket(actor)) {
+        return json(403, { error: "Only an owner or admin can manage ticket trash.", requestId });
+      }
+      if (action === "empty-trash") {
+        if (String(body.confirmation || "") !== "EMPTY TICKET TRASH") {
+          return json(400, { error: "Type EMPTY TICKET TRASH to permanently clear ticket trash.", requestId });
+        }
+        const trashed = (await listTickets(2000)).filter((ticket) => String(ticket.status || "").toLowerCase() === "archived");
+        for (const ticket of trashed) await deleteTicket(ticket.id);
+        await writeAuditLog({ actor, action: "ticket_trash_emptied", entityType: "job_tickets", metadata: { count: trashed.length }, event, module: "tickets" });
+        return json(200, { ok: true, deleted: trashed.length, requestId });
+      }
+      const id = uuidOrNull(body.id || body.ticketId);
+      if (!id) return json(400, { error: "A valid ticket id is required.", requestId });
+      const ticket = await setTicketTrashState(id, action === "trash");
+      await writeAuditLog({ actor, action: action === "trash" ? "ticket_trashed" : "ticket_restored", entityType: "job_tickets", entityId: id, event, module: "tickets" });
+      return json(200, { ok: true, ticket, requestId });
     }
 
     if (action === "transition") {

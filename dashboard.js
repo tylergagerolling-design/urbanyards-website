@@ -11194,7 +11194,15 @@
   }
 
   function ticketIsOpen(ticket = {}) {
-    return !["closed", "cancelled"].includes(ticketStage(ticket));
+    return !ticketIsTrashed(ticket) && !["closed", "cancelled"].includes(ticketStage(ticket));
+  }
+
+  function ticketIsTrashed(ticket = {}) {
+    return statusText(ticket.status) === "archived";
+  }
+
+  function canManageTicketTrash() {
+    return ["owner", "admin"].includes(currentSessionRole());
   }
 
   function ticketInStage(ticket = {}, stages = []) {
@@ -13658,6 +13666,7 @@
               <button type="button" data-action="focus-ticket-section" data-section="scheduling" data-id="${escapeHtml(ticket.id)}">Reassign owner</button>
               <button type="button" data-action="focus-ticket-section" data-section="owner-controls" data-id="${escapeHtml(ticket.id)}">Change status</button>
               ${["closed", "cancelled"].includes(ticketStage(ticket)) ? `<button type="button" data-action="focus-ticket-section" data-section="owner-controls" data-id="${escapeHtml(ticket.id)}">Reopen ticket</button>` : `<button type="button" class="danger" data-action="focus-ticket-section" data-section="owner-controls" data-id="${escapeHtml(ticket.id)}">Cancel ticket</button>`}
+              ${canManageTicketTrash() ? `<button type="button" class="danger" data-action="trash-ticket" data-id="${escapeHtml(ticket.id)}">Move to Trash</button>` : ""}
             </div>
           </details>
           <button type="button" class="ticket-unified-close" data-action="close-drawer" aria-label="Close ticket">&#215;</button>
@@ -15305,12 +15314,25 @@
     </section>`;
   }
 
+  function renderTicketTrash(tickets = []) {
+    return `<section class="ticket-trash" aria-label="Ticket trash">
+      <div class="ticket-flow-heading">
+        <div><p class="eyebrow">Recovery</p><h3>Ticket Trash</h3><p>Restore tickets here, or permanently clear every trashed ticket. Emptying trash cannot be undone.</p></div>
+        ${tickets.length && canManageTicketTrash() ? `<button type="button" class="danger" data-action="empty-ticket-trash">Empty Trash</button>` : ""}
+      </div>
+      <div class="ticket-directory-table-shell"><table><thead><tr><th>Ticket</th><th>Customer / property</th><th>Moved</th><th><span class="sr-only">Actions</span></th></tr></thead><tbody>
+        ${tickets.length ? tickets.map((ticket) => `<tr><td><strong>${escapeHtml(ticket.number || "Ticket")}</strong><small>${escapeHtml(ticket.title || "Untitled ticket")}</small></td><td><strong>${escapeHtml(ticket.customer || ticket.customerName || "Customer not set")}</strong><small>${escapeHtml(ticket.property || ticket.propertyName || "Property not set")}</small></td><td>${escapeHtml(ticket.updatedAtRaw ? formatDate(ticket.updatedAtRaw) : "Recently")}</td><td><div class="completed-ticket-actions"><button type="button" class="secondary-action" data-action="restore-ticket" data-id="${escapeHtml(ticket.id)}">Restore</button></div></td></tr>`).join("") : `<tr><td colspan="4">${emptyState("Ticket trash is empty.")}</td></tr>`}
+      </tbody></table></div>
+    </section>`;
+  }
+
   function renderJobTicketWorkspace(data = state.data) {
     // Ticket Command Center: the compact directory is the single entry point.
     const target = qs("[data-job-ticket-workspace]");
     if (!target) return;
     const openTickets = dashboardTickets(data).filter(ticketIsOpen);
-    const completedTickets = dashboardTickets(data).filter((ticket) => ticketStage(ticket) === "closed");
+    const completedTickets = dashboardTickets(data).filter((ticket) => !ticketIsTrashed(ticket) && ticketStage(ticket) === "closed");
+    const trashedTickets = dashboardTickets(data).filter(ticketIsTrashed);
     const filteredTickets = openTickets.filter(ticketMatchesBoardFilters);
     const filteredCompletedTickets = completedTickets.filter(ticketMatchesBoardFilters);
     target.innerHTML = `
@@ -15329,8 +15351,11 @@
         <nav class="ticket-history-switcher" aria-label="Ticket views">
           <button type="button" class="${state.ticketBoardMode === "open" ? "is-active" : ""}" data-action="show-open-tickets" aria-pressed="${state.ticketBoardMode === "open"}">Open Tickets <span>${escapeHtml(String(openTickets.length))}</span></button>
           <button type="button" class="${state.ticketBoardMode === "completed" ? "is-active" : ""}" data-action="show-completed-tickets" aria-pressed="${state.ticketBoardMode === "completed"}">Completed Tickets <span>${escapeHtml(String(completedTickets.length))}</span></button>
+          ${canManageTicketTrash() ? `<button type="button" class="${state.ticketBoardMode === "trash" ? "is-active" : ""}" data-action="show-ticket-trash" aria-pressed="${state.ticketBoardMode === "trash"}">Trash <span>${escapeHtml(String(trashedTickets.length))}</span></button>` : ""}
         </nav>
-        ${state.ticketBoardMode === "completed"
+        ${state.ticketBoardMode === "trash"
+          ? renderTicketTrash(trashedTickets)
+          : state.ticketBoardMode === "completed"
           ? `${renderTicketDirectoryControls(completedTickets, filteredCompletedTickets)}${renderTicketDirectory(filteredCompletedTickets, { completed: true })}`
           : `${renderTicketDirectoryControls(openTickets, filteredTickets)}${renderTicketDirectory(filteredTickets)}`}
       </div>`;
@@ -23032,13 +23057,18 @@ Requirements:
       <span class="ttl-crew">${unifiedTicketIcon("crew")}<span><strong>${ticket.crew}</strong><small>${ticket.extra}</small></span></span>
       <span class="ttl-priority is-${ticket.priority.toLowerCase()}"><i></i>${ticket.priority}</span>
       <button type="button" class="ttl-menu" data-action="ticket-timeline-menu" data-id="${ticket.id}" aria-label="Actions for ticket ${ticket.id}">⋮</button>
-      <div class="ttl-row-menu" data-ticket-timeline-menu="${ticket.id}" hidden><button type="button" data-action="unified-ticket-open" data-id="${ticket.id}">Open ticket</button><button type="button" data-action="unified-ticket-schedule">View schedule</button></div>
+      <div class="ttl-row-menu" data-ticket-timeline-menu="${ticket.id}" hidden><button type="button" data-action="unified-ticket-open" data-id="${ticket.id}">Open ticket</button><button type="button" data-action="unified-ticket-schedule">View schedule</button>${canManageTicketTrash() ? `<button type="button" class="danger" data-action="trash-ticket" data-id="${ticket.id}">Move to Trash</button>` : ""}</div>
     </article>`;
   }
 
   function renderTicketsTimeline() {
     const host = qs("[data-unified-ticket-workspace]");
     if (!host) return;
+    const trashedTickets = dashboardTickets().filter(ticketIsTrashed);
+    if (state.ticketBoardMode === "trash") {
+      host.innerHTML = `<div class="tickets-timeline-page"><header class="ttl-header"><div><h2 style="color:#0e1116!important">Ticket Trash</h2><p>Restore tickets or permanently clear the trash.</p></div><button type="button" class="secondary-action" data-action="show-open-tickets">Back to Tickets</button></header>${renderTicketTrash(trashedTickets)}</div>`;
+      return;
+    }
     const status = state.ticketTimelineStatus || "All";
     const type = state.ticketTimelineType || "All";
     const location = state.ticketTimelineLocation || "All";
@@ -23063,6 +23093,7 @@ Requirements:
         <label>${unifiedTicketIcon("pin")}<select data-ticket-timeline-filter="location" aria-label="Ticket location"><option value="All">All Locations</option>${[...new Set(allRows.map((item) => item.city).filter(Boolean))].map(v=>`<option${location===v?" selected":""}>${v}</option>`).join("")}</select></label>
         <label>${unifiedTicketIcon("calendar")}<select data-ticket-timeline-filter="range" aria-label="Ticket date range"><option value="week-plus"${range==="week-plus"?" selected":""}>This Week</option><option value="week"${range==="week"?" selected":""}>Through Sat</option></select></label>
         <button type="button" class="ttl-new-ticket" style="background:#343a45!important;color:#fff!important" data-action="open-ticket-create" data-ticket-type="field"><span>+</span> New Ticket</button>
+        ${canManageTicketTrash() ? `<button type="button" class="secondary-action" data-action="show-ticket-trash">Trash <span>${escapeHtml(String(trashedTickets.length))}</span></button>` : ""}
       </div></header>
       <div class="ttl-groups">${groups || '<p class="ttl-no-results">No upcoming tickets match these filters.</p>'}</div>
       <footer class="ttl-footer">${unifiedTicketIcon("calendar")}<span>Showing upcoming tickets for this week and beyond</span><button type="button" data-action="unified-ticket-schedule">View full schedule&nbsp; →</button></footer>
@@ -23107,7 +23138,7 @@ Requirements:
         <button type="button" class="ut-back" data-action="unified-ticket-back">←&nbsp; Back to Tickets</button>
         <header class="ut-header"><div class="ut-title-line"><h2>#${ticket.id}&nbsp;&nbsp; ${ticket.title}</h2><span>${ticket.status}</span><button type="button" data-action="unified-ticket-menu" aria-label="Ticket actions">⋮</button></div>
           <div class="ut-metadata">${[["Type",ticket.type,"document"],["Priority",ticket.priority,"upload"],["Due Date",ticket.dueDate,"calendar"],["Lead",ticket.lead,"crew"],["Location",ticket.location,"pin"]].map(([label,value,icon])=>`<div><span>${unifiedTicketIcon(icon)}${label}</span><strong>${value}</strong></div>`).join("")}</div>
-          <div class="ut-overflow-menu" data-unified-ticket-menu hidden><button type="button" data-action="unified-ticket-quick" data-section="work">Edit Job</button><button type="button" data-action="unified-ticket-section" data-section="history">View History</button></div>
+          <div class="ut-overflow-menu" data-unified-ticket-menu hidden><button type="button" data-action="unified-ticket-quick" data-section="work">Edit Job</button><button type="button" data-action="unified-ticket-section" data-section="history">View History</button>${canManageTicketTrash() && ticket.recordId ? `<button type="button" class="danger" data-action="trash-ticket" data-id="${escapeHtml(ticket.recordId)}">Move to Trash</button>` : ""}</div>
         </header>
         ${active !== "overview" ? `<section class="ut-active-section-summary"><h3>${escapeHtml(activeLabel)}</h3><p>${escapeHtml(active === "details" ? "Customer, property, scope, and ticket details." : active === "work" ? "Scope, checklist, and field notes for this ticket." : active === "schedule" ? "Upcoming visit and scheduling details." : active === "tasks" ? "Checklist items connected to this ticket." : active === "photos" ? "Arrival, progress, and completion photos." : active === "documents" ? "Documents connected to this ticket." : active === "notes" ? "Operational notes connected to this ticket." : "Recorded ticket activity and lifecycle history.")}</p>${active === "history" ? `<div class="ut-section-activity">${sectionActivity}</div>` : ""}</section>` : ""}
         <div class="ut-main-top">
@@ -27227,14 +27258,83 @@ Requirements:
         return;
       }
 
-      if (action === "show-open-tickets" || action === "show-completed-tickets") {
-        state.ticketBoardMode = action === "show-completed-tickets" ? "completed" : "open";
+      if (action === "show-open-tickets" || action === "show-completed-tickets" || action === "show-ticket-trash") {
+        state.ticketBoardMode = action === "show-ticket-trash" ? "trash" : action === "show-completed-tickets" ? "completed" : "open";
         state.ticketBoardCloseoutOnly = false;
         if (state.activeSection !== "tickets") {
           setActiveSection("tickets");
           replaceDashboardHash("tickets");
         }
-        renderJobTicketWorkspace(state.data);
+        if (qs("[data-unified-ticket-workspace]")) {
+          state.unifiedTicketVisible = false;
+          renderTicketsTimeline();
+        } else {
+          renderJobTicketWorkspace(state.data);
+        }
+        return;
+      }
+
+      if (action === "trash-ticket") {
+        if (!canManageTicketTrash()) {
+          setDashboardState("Only an owner or admin can move tickets to trash.", "error");
+          return;
+        }
+        if (!window.confirm("Move this ticket to Trash? It can be restored later.")) return;
+        try {
+          setDashboardState("Moving ticket to trash...");
+          if (isDemoMode()) await updateJobTicket(id, { status: "archived" });
+          else await dashboardTicketRequest("trash", { id });
+          closeSubmissionDrawer({ immediate: true });
+          state.unifiedTicketVisible = false;
+          state.ticketBoardMode = "trash";
+          await refreshDashboard();
+          setDashboardState("Ticket moved to Trash.");
+        } catch (error) {
+          setDashboardState(error.message || "Ticket could not be moved to trash.", "error");
+        }
+        return;
+      }
+
+      if (action === "restore-ticket") {
+        if (!canManageTicketTrash()) {
+          setDashboardState("Only an owner or admin can restore tickets.", "error");
+          return;
+        }
+        try {
+          setDashboardState("Restoring ticket...");
+          const ticket = dashboardTickets().find((item) => String(item.id) === String(id));
+          const restoredStatus = ["closed", "cancelled"].includes(ticketStage(ticket)) ? (ticketStage(ticket) === "closed" ? "completed" : "cancelled") : "active";
+          if (isDemoMode()) await updateJobTicket(id, { status: restoredStatus });
+          else await dashboardTicketRequest("restore", { id });
+          state.unifiedTicketVisible = false;
+          state.ticketBoardMode = "open";
+          await refreshDashboard();
+          setDashboardState("Ticket restored.");
+        } catch (error) {
+          setDashboardState(error.message || "Ticket could not be restored.", "error");
+        }
+        return;
+      }
+
+      if (action === "empty-ticket-trash") {
+        if (!canManageTicketTrash()) {
+          setDashboardState("Only an owner or admin can empty ticket trash.", "error");
+          return;
+        }
+        const confirmation = String(window.prompt("This permanently deletes every ticket in Trash. Type EMPTY TICKET TRASH to continue.") || "").trim();
+        if (confirmation !== "EMPTY TICKET TRASH") {
+          setDashboardState("Ticket trash was not emptied.");
+          return;
+        }
+        try {
+          setDashboardState("Permanently clearing ticket trash...");
+          if (isDemoMode()) state.data.tickets = state.data.tickets.filter((ticket) => !ticketIsTrashed(ticket));
+          else await dashboardTicketRequest("empty-trash", { confirmation });
+          await refreshDashboard();
+          setDashboardState("Ticket trash emptied.");
+        } catch (error) {
+          setDashboardState(error.message || "Ticket trash could not be emptied.", "error");
+        }
         return;
       }
 

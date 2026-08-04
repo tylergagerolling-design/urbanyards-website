@@ -16566,6 +16566,8 @@ body:not(.is-login-screen) .owner-kanban-drag-ghost {
 .dashboard-global-state{position:fixed;top:16px;right:20px;z-index:180;width:min(440px,calc(100vw - 40px));margin:0;box-shadow:0 12px 30px rgba(16,36,26,.18)}
 @media(max-width:720px){.dashboard-global-state{top:12px;right:12px;width:calc(100vw - 24px)}}
 
+.ticket-trash{display:grid;gap:18px}.ticket-trash .ticket-flow-heading{margin:0}.ticket-trash .danger{background:#fff5f3;border-color:#d8a49a;color:#8d2f20}.ticket-trash .completed-ticket-actions{justify-content:flex-end}
+
 @keyframes owner-kanban-card-lift {
   from {
     opacity: .42;

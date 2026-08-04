@@ -26,8 +26,8 @@ test("archived workspace polish remains available while blank-canvas assets are 
   assert.match(css, /\.call-queue-row > span:first-child :is\(strong, small\)[\s\S]*overflow-wrap: anywhere/);
   assert.match(css, /\.groundskeeper-operation-card[\s\S]*white-space: normal !important/);
   assert.match(css, /\.dashboard-health-item strong[\s\S]*word-break: break-all/);
-  assert.match(html, /dashboard\.css\?v=20260804-ticket-timeline-1/);
-  assert.match(html, /dashboard\.js\?v=20260804-ticket-timeline-1/);
+  assert.match(html, /dashboard\.css\?v=20260804-work-list-2/);
+  assert.match(html, /dashboard\.js\?v=20260804-work-list-2/);
 });
 
 test("authenticated assistant prompt suppresses public quote calls to action", () => {
@@ -184,10 +184,12 @@ test("dashboard route aliases and new reliability diagnostics are wired", () => 
   assert.match(html, /scripts\/budget-calculations\.js/);
   assert.match(html, /<section class="dashboard-section home-focus-page" id="overview" data-section="overview"><div data-home-focus-work><\/div><\/section>/);
   assert.match(html, /<section class="dashboard-section unified-ticket-page" id="tickets" data-section="tickets"><div data-unified-ticket-workspace><\/div><\/section>/);
+  assert.match(html, /<section class="dashboard-section work-operations-page" id="calendar" data-section="calendar"><div data-work-operations-workspace><\/div><\/section>/);
   assert.doesNotMatch(html, /data-home-workspace|data-global-search|dashboard-topbar/);
   assert.match(js, /function renderFocusOnWorkHome/);
   assert.match(js, /function renderUnifiedTicketOverview/);
   assert.match(js, /function renderTicketsTimeline/);
+  assert.match(js, /function renderWorkOperationsWorkspace/);
   assert.match(archivedHtml, /<section class="dashboard-section home-ticket-page" id="overview"/);
   assert.match(archivedHtml, /data-home-workspace/);
   const primaryDrawerLabels = [...html.matchAll(/<a href="#[^"]+"(?![^>]*legacy-nav-route)[^>]*data-dashboard-link="[^"]+"[\s\S]*?<span class="nav-label">([^<]+)<\/span><\/a>/g)].map((match) => match[1]);

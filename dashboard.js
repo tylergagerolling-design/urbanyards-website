@@ -22571,6 +22571,7 @@ Requirements:
       edit: '<path d="M4 20h4L19 9l-4-4L4 16zM13 7l4 4"></path>',
       upload: '<path d="M12 16V4M7 9l5-5 5 5M4 20h16"></path>',
       plus: '<path d="M12 5v14M5 12h14"></path>'
+      ,warning: '<path d="M10.3 4.2 2.5 18a2 2 0 0 0 1.7 3h15.6a2 2 0 0 0 1.7-3L13.7 4.2a2 2 0 0 0-3.4 0Z"></path><path d="M12 9v4M12 17h.01"></path>'
     };
     return `<svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">${paths[name] || paths.info}</svg>`;
   }
@@ -22684,10 +22685,98 @@ Requirements:
     </div>`;
   }
 
+  const WORK_OPERATIONS_FIXTURE = Object.freeze([
+    {visit:"Today",time:"8:00 AM",id:"10024",job:"Johnson Residence",customer:"Sarah Johnson",address:"123 Main St",city:"Portland, OR",crew:["JD","ML"],extra:"+1",status:"In Progress",done:3,total:7,estimate:"2h",priority:"Medium",attention:"Overdue Photo"},
+    {visit:"Today",time:"1:00 PM",id:"10022",job:"Pinecrest Office Park",customer:"Tom Davis",address:"789 Pine Rd",city:"Beaverton, OR",crew:["SP"],extra:"+2",status:"In Progress",done:5,total:7,estimate:"2h 30m",priority:"High",attention:"No Completion Photo"},
+    {visit:"Tomorrow",time:"9:00 AM",id:"10021",job:"City Center Plaza",customer:"Jessica Miller",address:"321 Cedar Ln",city:"Portland, OR",crew:["JD"],extra:"+1",status:"Scheduled",done:0,total:7,estimate:"1h 30m",priority:"Low",attention:""},
+    {visit:"Fri, Jul 25",time:"10:00 AM",id:"10023",job:"Greenway Apartments",customer:"Kim Green",address:"456 Oak Ave",city:"Portland, OR",crew:["ML"],extra:"+2",status:"Scheduled",done:0,total:7,estimate:"2h",priority:"High",attention:""},
+    {visit:"Sat, Jul 26",time:"11:00 AM",id:"10025",job:"Mountain View HOA",customer:"Mark Wilson",address:"987 Elm St",city:"Happy Valley, OR",crew:["ML"],extra:"+1",status:"Scheduled",done:0,total:6,estimate:"2h",priority:"Medium",attention:""},
+    {visit:"Sun, Jul 27",time:"8:00 AM",id:"10027",job:"Lakeside Townhomes",customer:"Brian Clark",address:"654 Lake Dr",city:"Lake Oswego, OR",crew:["SP"],extra:"+1",status:"Completed",done:6,total:6,estimate:"1h 45m",priority:"Low",attention:""},
+    {visit:"Mon, Jul 28",time:"8:30 AM",id:"10026",job:"Sunset Office Building",customer:"Lisa Brown",address:"555 Sunset Blvd",city:"Portland, OR",crew:["JD"],extra:"+1",status:"Scheduled",done:0,total:6,estimate:"2h",priority:"Medium",attention:""}
+  ]);
+
+  function workRowProgress(job) {
+    const saved = state.workChecklistProgress?.[job.id];
+    return Number.isFinite(saved) ? saved : job.done;
+  }
+
+  function renderWorkOperationsRow(job) {
+    const done = workRowProgress(job);
+    const progress = Math.round((done / job.total) * 100);
+    return `<tr style="background:#fff!important" data-action="open-work-detail" data-id="${job.id}" tabindex="0">
+      <td><strong>${job.visit}</strong><small class="${job.id === "10024" ? "is-overdue" : ""}">${job.time}</small></td>
+      <td><strong>#${job.id}&nbsp;&nbsp; ${job.job}</strong><small>${job.customer}</small></td>
+      <td><strong>${job.address}</strong><small>${job.city}</small></td>
+      <td><span class="wol-crew-chips">${job.crew.map(initial=>`<i>${initial}</i>`).join("")}<i>${job.extra}</i></span></td>
+      <td><span class="wol-status is-${job.status.toLowerCase().replaceAll(" ","-")}">${job.status}</span></td>
+      <td><span class="wol-progress-copy">${done} / ${job.total} tasks</span><i class="wol-progress"><b style="width:${progress}%"></b></i></td>
+      <td>${job.estimate}</td>
+      <td><span class="wol-priority is-${job.priority.toLowerCase()}"><i></i>${job.priority}</span></td>
+      <td>${job.attention ? `<span class="wol-attention ${job.attention.includes("Overdue") ? "is-overdue" : ""}">${job.attention}</span>` : "—"}</td>
+      <td><button type="button" class="wol-row-menu" data-action="work-row-menu" data-id="${job.id}" aria-label="Actions for ${job.job}">⋮</button><div class="wol-menu" data-work-row-menu="${job.id}" hidden><button type="button" data-action="open-work-detail" data-id="${job.id}">Open work</button><button type="button" data-action="unified-ticket-open" data-id="${job.id}">Open ticket</button></div></td>
+    </tr>`;
+  }
+
+  function renderWorkDetailPanel(job) {
+    if (!job) return "";
+    const activeTab = state.workDetailTab || "work";
+    const done = workRowProgress(job);
+    const checklist = [
+      ["Arrive on site","8:02 AM"],["Safety check & site walk","8:05 AM"],["Lawn mowing","8:25 AM"],
+      ["Edge all hardscapes","8:50 AM"],["Hedge trimming",""],["Blow & clean up",""],["Final walkthrough",""]
+    ];
+    const tabButtons = ["Overview","Work","Schedule","Tasks","Photos","Documents","Notes","History"].map(label=>`<button type="button" style="background:transparent!important;box-shadow:none!important;border:0!important;border-bottom:2px solid ${activeTab===label.toLowerCase()?"#276fca":"transparent"}!important" class="${activeTab===label.toLowerCase()?"is-active":""}" data-action="work-detail-tab" data-section="${label.toLowerCase()}">${label}</button>`).join("");
+    return `<div class="wod-overlay" data-work-detail-overlay><button type="button" style="background:rgba(25,30,37,.48)!important;box-shadow:none!important;border:0!important" class="wod-scrim" data-action="close-work-detail" aria-label="Close work details"></button><aside class="wod-panel" aria-label="Work details for ${job.job}">
+      <header><div><h2 style="color:#10141a!important">#${job.id}&nbsp;&nbsp; ${job.job}</h2><span class="wol-status is-${job.status.toLowerCase().replaceAll(" ","-")}">${job.status}</span></div><button type="button" style="background:transparent!important;box-shadow:none!important;border:0!important" class="wod-close" data-action="close-work-detail" aria-label="Close work detail">×</button></header>
+      <nav aria-label="Work detail sections">${tabButtons}</nav>
+      <div class="wod-content">
+        <section class="wod-card wod-checklist"><h3>Work Checklist</h3><p><span>${done} of ${job.total} completed</span></p><i class="wod-progress"><b style="width:${Math.round((done/job.total)*100)}%"></b></i><div>${checklist.slice(0,job.total).map(([label,time],index)=>`<label><input type="checkbox" data-work-checklist-item data-id="${job.id}" ${index<done?"checked":""}><span>${label}</span><time>${time}</time></label>`).join("")}</div><button type="button" data-action="work-add-task">+ Add Task</button></section>
+        <div class="wod-middle-top">
+          <section class="wod-card"><h3>Crew</h3><ul><li>${unifiedTicketIcon("crew")}John D. (Lead)</li><li>${unifiedTicketIcon("crew")}Mike L.</li></ul><button type="button" data-action="work-assignment-placeholder" data-kind="crew">+&nbsp; Add Crew</button></section>
+          <section class="wod-card"><h3>Equipment</h3><ul><li>${unifiedTicketIcon("work")}Truck #1</li><li>${unifiedTicketIcon("work")}Toro Mower</li><li>${unifiedTicketIcon("work")}Stihl Trimmer</li></ul><button type="button" data-action="work-assignment-placeholder" data-kind="equipment">+&nbsp; Add Equipment</button></section>
+        </div>
+        <section class="wod-card wod-details"><h3>Work Details</h3><dl><dt>Type</dt><dd>Maintenance</dd><dt>Priority</dt><dd><span class="wol-priority is-${job.priority.toLowerCase()}"><i></i>${job.priority}</span></dd><dt>Est. Time</dt><dd>${job.estimate}</dd><dt>Start Time</dt><dd>${job.time}</dd><dt>Location</dt><dd>${job.address}<br>${job.city}</dd></dl><button type="button" data-action="work-detail-tab" data-section="overview">Edit Details</button></section>
+        <section class="wod-card wod-photos"><h3>Photos</h3><label>Arrival Photo</label><div class="wod-arrival-photo"><img src="images/urban-yards-lawn-care-mower.jpeg" alt="Arrival condition"><time>8:02 AM</time><span>${unifiedTicketIcon("photo")}</span></div><div class="wod-photo-heading"><label>Completion Photo</label><span>${unifiedTicketIcon("upload")} ⋮</span></div><label class="wod-photo-upload">${unifiedTicketIcon("photo")}<span>Upload Completion Photo</span><input type="file" accept="image/*" data-work-photo-upload data-category="completion" hidden></label><label class="wod-more-photos">+&nbsp; Upload More Photos<input type="file" accept="image/*" multiple data-work-photo-upload data-category="additional" hidden></label><p data-work-upload-status></p></section>
+        <section class="wod-card wod-docs"><h3>Documentation</h3><div>${[["Site Notes","Added by John D.","8:15 AM"],["Customer Instructions","Added by Sarah J.","Jul 22"],["Irrigation Map","Added by Tyler G.","Jul 18"]].map(([title,by,date])=>`<span>${unifiedTicketIcon("document")}<b>${title}<small>${by}</small></b><time>${date}</time></span>`).join("")}</div><label class="wod-add-document">+&nbsp; Add Document<input type="file" data-work-document-upload hidden></label></section>
+        <section class="wod-card wod-notes"><h3>Notes</h3><form data-work-note-form><textarea placeholder="Type a note..."></textarea><button type="submit">Add Note</button></form><p data-work-note-status></p></section>
+      </div><p class="wod-action-status" data-work-action-status aria-live="polite"></p>
+    </aside></div>`;
+  }
+
+  function renderWorkOperationsWorkspace() {
+    const host = qs("[data-work-operations-workspace]");
+    if (!host) return;
+    const status = state.workListStatus || "All";
+    const priority = state.workListPriority || "All";
+    const location = state.workListLocation || "All";
+    const range = state.workListRange || "week";
+    const attentionOnly = Boolean(state.workAttentionOnly);
+    const jobs = WORK_OPERATIONS_FIXTURE.filter(job => (status==="All"||job.status===status)&&(priority==="All"||job.priority===priority)&&(location==="All"||job.city===location)&&(!attentionOnly||job.attention));
+    const selected = WORK_OPERATIONS_FIXTURE.find(job=>job.id===state.selectedWorkJobId);
+    host.innerHTML = `<div class="work-operations-list ${selected?"has-detail-open":""}">
+      <header class="wol-header"><div><h2 style="color:#0e1116!important">Work</h2><p>All jobs and visits across your schedule</p></div><div class="wol-filters">
+        <label>${unifiedTicketIcon("document")}<select data-work-list-filter="status" aria-label="Work status"><option value="All">All Status</option>${["In Progress","Scheduled","Completed"].map(v=>`<option${status===v?" selected":""}>${v}</option>`).join("")}</select></label>
+        <label>${unifiedTicketIcon("check")}<select data-work-list-filter="priority" aria-label="Work priority"><option value="All">All Priority</option>${["High","Medium","Low"].map(v=>`<option${priority===v?" selected":""}>${v}</option>`).join("")}</select></label>
+        <label>${unifiedTicketIcon("pin")}<select data-work-list-filter="location" aria-label="Work location"><option value="All">All Locations</option>${[...new Set(WORK_OPERATIONS_FIXTURE.map(j=>j.city))].map(v=>`<option${location===v?" selected":""}>${v}</option>`).join("")}</select></label>
+        <label>${unifiedTicketIcon("calendar")}<select data-work-list-filter="range" aria-label="Work date range"><option value="week"${range==="week"?" selected":""}>This Week</option><option value="all"${range==="all"?" selected":""}>All Upcoming</option></select></label>
+        <button type="button" class="wol-new-job" style="background:#343a45!important;color:#fff!important" data-action="open-ticket-create" data-ticket-type="field"><span>+</span> New Job</button>
+      </div></header>
+      <section class="wol-summary" aria-label="Work summary">
+        <button type="button" class="is-attention ${attentionOnly?"is-active":""}" data-action="work-toggle-attention"><span>${unifiedTicketIcon("warning")}</span><strong>1<small>Needs Attention</small></strong><em>View</em></button>
+        <article class="is-progress"><span>${unifiedTicketIcon("clock")}</span><strong>3<small>In Progress</small></strong></article>
+        <article><span>${unifiedTicketIcon("calendar")}</span><strong>5<small>Scheduled</small></strong></article>
+        <article class="is-completed"><span>${unifiedTicketIcon("check")}</span><strong>2<small>Completed</small></strong></article>
+        <article><strong>11<small>Total Jobs</small></strong></article>
+      </section>
+      <section class="wol-table-card"><div class="wol-table-wrap"><table><thead><tr><th>Next Visit</th><th>Job / Customer</th><th>Location</th><th>Crew</th><th>Status</th><th>Progress</th><th>Est. Time</th><th>Priority</th><th>Attention</th><th></th></tr></thead><tbody>${jobs.map(renderWorkOperationsRow).join("")}</tbody></table></div><footer><span>Showing 1 to ${jobs.length} of 11 jobs</span><nav><button class="is-active">1</button><button>2</button><button>›</button></nav></footer></section>
+      ${renderWorkDetailPanel(selected)}
+    </div>`;
+  }
+
   function renderVisualResetWorkspaces() {
     qsa(".dashboard-main > .dashboard-section[data-section]").forEach((section) => {
       const key = normalizeDashboardSection(section.dataset.section || section.id);
-      if (key === "overview" || key === "tickets") return;
+      if (key === "overview" || key === "tickets" || key === "calendar") return;
       const title = DASHBOARD_VISUAL_RESET_TITLES[key] || "Workspace";
       section.className = "dashboard-section workspace-reset-canvas";
       section.innerHTML = `<small>${escapeHtml(title)} Wireframe Canvas</small>`;
@@ -22704,6 +22793,7 @@ Requirements:
     safeRender("wireframe canvases", () => renderVisualResetWorkspaces());
     if (active === "overview") safeRender("Focus on Work home", () => renderFocusOnWorkHome());
     if (active === "tickets") safeRender("unified ticket overview", () => renderUnifiedTicketOverview());
+    if (active === "calendar") safeRender("work operations", () => renderWorkOperationsWorkspace());
     safeRender("contextual Groundskeeper tools", () => renderContextualGroundskeeperTools(active));
     safeRender("dashboard Groundskeeper", () => renderDashboardCopilot());
     safeRender("avatar fallbacks", () => bindAvatarFallbacks());
@@ -23516,6 +23606,37 @@ Requirements:
         return;
       }
 
+      if (target.matches("[data-work-list-filter]")) {
+        const key = target.dataset.workListFilter;
+        const stateKey = {status:"workListStatus",priority:"workListPriority",location:"workListLocation",range:"workListRange"}[key];
+        if (stateKey) state[stateKey] = target.value;
+        renderWorkOperationsWorkspace();
+        return;
+      }
+
+      if (target.matches("[data-work-checklist-item]")) {
+        const panel = target.closest(".wod-panel");
+        const checked = panel ? panel.querySelectorAll("[data-work-checklist-item]:checked").length : 0;
+        state.workChecklistProgress = {...(state.workChecklistProgress || {}), [target.dataset.id]:checked};
+        renderWorkOperationsWorkspace();
+        return;
+      }
+
+      if (target.matches("[data-work-photo-upload]")) {
+        const status = qs("[data-work-upload-status]");
+        const count = target.files?.length || 0;
+        // TODO: hand selected files to the canonical categorized ticket-photo upload service.
+        if (status) status.textContent = count ? `${count} ${target.dataset.category} photo${count===1?"":"s"} selected for this session.` : "";
+        return;
+      }
+
+      if (target.matches("[data-work-document-upload]")) {
+        const status = qs("[data-work-action-status]");
+        // TODO: connect this selection to the existing unified-ticket document storage service.
+        if (status) status.textContent = target.files?.[0] ? `${target.files[0].name} selected for this session.` : "";
+        return;
+      }
+
       if (target.matches("[data-ticket-client-select]")) {
         const option = target.selectedOptions?.[0];
         const form = target.closest("[data-ticket-create-form]");
@@ -24127,6 +24248,46 @@ Requirements:
       const id = target.dataset.id;
       if (action !== "toggle-global-add") setGlobalAddOpen(false);
       if (target.closest("[data-global-search-panel]")) closeGlobalSearchPanel();
+
+      if (action === "open-work-detail") {
+        state.selectedWorkJobId = id;
+        state.workDetailTab = "work";
+        renderWorkOperationsWorkspace();
+        qs(".wod-close")?.focus();
+        return;
+      }
+
+      if (action === "close-work-detail") {
+        state.selectedWorkJobId = "";
+        renderWorkOperationsWorkspace();
+        qs(`[data-action="open-work-detail"][data-id="${cssEscape(id || "10024")}"]`)?.focus();
+        return;
+      }
+
+      if (action === "work-detail-tab") {
+        state.workDetailTab = target.dataset.section || "work";
+        renderWorkOperationsWorkspace();
+        return;
+      }
+
+      if (action === "work-toggle-attention") {
+        state.workAttentionOnly = !state.workAttentionOnly;
+        renderWorkOperationsWorkspace();
+        return;
+      }
+
+      if (action === "work-row-menu") {
+        event.stopPropagation();
+        const menu = qs(`[data-work-row-menu="${cssEscape(id)}"]`);
+        if (menu) menu.hidden = !menu.hidden;
+        return;
+      }
+
+      if (action === "work-assignment-placeholder" || action === "work-add-task") {
+        const status = qs("[data-work-action-status]");
+        if (status) status.textContent = `${target.dataset.kind === "equipment" ? "Equipment" : target.dataset.kind === "crew" ? "Crew" : "Task"} assignment remains non-destructive until the selected ticket is connected to the canonical service.`;
+        return;
+      }
 
       if (action === "unified-ticket-open") {
         state.unifiedTicketVisible = true;
@@ -27862,6 +28023,16 @@ Requirements:
     });
 
   els.appView.addEventListener("submit", async (event) => {
+      if (event.target?.matches?.("[data-work-note-form]")) {
+        event.preventDefault();
+        const note = event.target.querySelector("textarea")?.value.trim();
+        const status = qs("[data-work-note-status]");
+        if (!note) { if (status) status.textContent = "Enter a note before saving."; return; }
+        // TODO: persist through the canonical unified-ticket note service when a live ticket replaces the fixture.
+        event.target.reset();
+        if (status) status.textContent = "Note captured for this session.";
+        return;
+      }
       if (event.target?.matches?.("[data-unified-ticket-note-form]")) {
         event.preventDefault();
         const note = event.target.querySelector("textarea")?.value.trim();

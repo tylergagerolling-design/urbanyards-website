@@ -27964,3 +27964,726 @@ body:not(.is-login-screen) .app-view .dashboard-main #overview [data-owner-kanba
     flex-direction: column;
   }
 }
+
+/* Simplified operations body release. The navigation drawer is intentionally
+   outside this cascade so its current sizing, behavior, and styling remain intact. */
+body:not(.is-login-screen) .dashboard-main .uy-page-prototype {
+  --uy-body-border: #dfe6e2;
+  --uy-body-muted: #66726c;
+  --uy-body-soft: #f6f8f7;
+  --uy-body-green-soft: #edf7ef;
+  --uy-body-blue-soft: #eef5ff;
+  --uy-body-warn-soft: #fff6e8;
+  gap: 12px;
+}
+
+body:not(.is-login-screen) .dashboard-main .uy-page-prototype > .ticket-hero {
+  margin-bottom: 0;
+  padding: 0 0 4px;
+  border: 0;
+  background: transparent;
+  box-shadow: none;
+}
+
+body:not(.is-login-screen) .dashboard-main .uy-page-prototype > .ticket-hero h3 {
+  margin: 0 0 3px;
+  font-size: clamp(1.35rem, 2vw, 1.8rem);
+  letter-spacing: -.025em;
+}
+
+body:not(.is-login-screen) .dashboard-main .uy-page-prototype > .ticket-hero p {
+  max-width: 720px;
+  color: var(--uy-body-muted);
+}
+
+/* Home: one action per ticket in three calm, scan-friendly states. */
+body:not(.is-login-screen) .dashboard-main #overview .home-needs-attention-board {
+  display: grid;
+  gap: 10px;
+  padding: 12px;
+  border: 1px solid var(--uy-body-border);
+  border-radius: 7px;
+  background: #fff;
+  box-shadow: none;
+}
+
+body:not(.is-login-screen) .dashboard-main #overview .home-needs-attention-board > .ticket-lane-heading {
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+body:not(.is-login-screen) .dashboard-main #overview .home-attention-columns {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+}
+
+body:not(.is-login-screen) .dashboard-main #overview .home-attention-column {
+  min-width: 0;
+  padding: 7px;
+  border: 1px solid var(--uy-body-border);
+  border-radius: 6px;
+  background: #f7f9f8;
+}
+
+body:not(.is-login-screen) .dashboard-main #overview .home-attention-column.is-in_progress {
+  border-top-color: #8eb8ed;
+  background: #f6f9fe;
+}
+
+body:not(.is-login-screen) .dashboard-main #overview .home-attention-column.is-done {
+  border-top-color: #72b57f;
+  background: #f4faf5;
+}
+
+body:not(.is-login-screen) .dashboard-main #overview .home-attention-column > header,
+body:not(.is-login-screen) .dashboard-main .lead-pipeline-column > header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 8px;
+  min-height: 42px;
+  padding: 2px 2px 7px;
+}
+
+body:not(.is-login-screen) .dashboard-main #overview .home-attention-column > header h4,
+body:not(.is-login-screen) .dashboard-main .lead-pipeline-column > header h4 {
+  margin: 0;
+  font-size: .76rem;
+  letter-spacing: .035em;
+  text-transform: uppercase;
+}
+
+body:not(.is-login-screen) .dashboard-main #overview .home-attention-column > header p,
+body:not(.is-login-screen) .dashboard-main .lead-pipeline-column > header p {
+  margin: 2px 0 0;
+  color: var(--uy-body-muted);
+  font-size: .65rem;
+  line-height: 1.3;
+}
+
+body:not(.is-login-screen) .dashboard-main #overview .home-attention-column > header > span,
+body:not(.is-login-screen) .dashboard-main .lead-pipeline-column > header > span {
+  display: grid;
+  flex: 0 0 23px;
+  width: 23px;
+  height: 23px;
+  place-items: center;
+  border: 1px solid var(--uy-body-border);
+  border-radius: 50%;
+  background: #fff;
+  color: #33423b;
+  font-size: .67rem;
+  font-weight: 800;
+}
+
+body:not(.is-login-screen) .dashboard-main #overview .home-attention-column > div,
+body:not(.is-login-screen) .dashboard-main .lead-pipeline-column > div {
+  display: grid;
+  align-content: start;
+  gap: 6px;
+}
+
+body:not(.is-login-screen) .dashboard-main #overview .home-attention-card,
+body:not(.is-login-screen) .dashboard-main .lead-pipeline-card {
+  display: grid;
+  gap: 5px;
+  min-width: 0;
+  padding: 8px;
+  border: 1px solid #e1e7e4;
+  border-radius: 5px;
+  background: #fff;
+  box-shadow: 0 1px 2px rgba(18, 40, 31, .035);
+}
+
+body:not(.is-login-screen) .dashboard-main #overview .home-attention-card.is-blocked,
+body:not(.is-login-screen) .dashboard-main #overview .home-attention-card.is-overdue,
+body:not(.is-login-screen) .dashboard-main .lead-pipeline-card.is-high {
+  border-left: 3px solid #c94a43;
+}
+
+body:not(.is-login-screen) .dashboard-main #overview .home-attention-card-open,
+body:not(.is-login-screen) .dashboard-main .lead-pipeline-card-open {
+  display: grid;
+  gap: 1px;
+  width: 100%;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  text-align: left;
+}
+
+body:not(.is-login-screen) .dashboard-main #overview .home-attention-card .home-attention-card-open,
+body:not(.is-login-screen) .dashboard-main .lead-pipeline-card .lead-pipeline-card-open {
+  min-height: 0 !important;
+  padding: 0 !important;
+  border: 0 !important;
+  border-radius: 0 !important;
+  background: transparent !important;
+  box-shadow: none !important;
+}
+
+body:not(.is-login-screen) .dashboard-main #overview .home-attention-card-open > span {
+  color: #64726b;
+  font-size: .59rem;
+  font-weight: 800;
+  letter-spacing: .05em;
+  text-transform: uppercase;
+}
+
+body:not(.is-login-screen) .dashboard-main #overview .home-attention-card-open strong,
+body:not(.is-login-screen) .dashboard-main .lead-pipeline-card-open strong {
+  overflow: hidden;
+  font-size: .75rem;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+body:not(.is-login-screen) .dashboard-main #overview .home-attention-card-open small,
+body:not(.is-login-screen) .dashboard-main .lead-pipeline-card-open span {
+  overflow: hidden;
+  color: var(--uy-body-muted);
+  font-size: .66rem;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+body:not(.is-login-screen) .dashboard-main #overview .home-attention-card > p,
+body:not(.is-login-screen) .dashboard-main .lead-pipeline-card > p {
+  margin: 0;
+  color: #26352e;
+  font-size: .68rem;
+  line-height: 1.35;
+}
+
+body:not(.is-login-screen) .dashboard-main #overview .home-attention-card-meta,
+body:not(.is-login-screen) .dashboard-main .lead-pipeline-card-meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 4px 8px;
+  color: var(--uy-body-muted);
+  font-size: .61rem;
+}
+
+body:not(.is-login-screen) .dashboard-main #overview .home-attention-card-meta .is-overdue,
+body:not(.is-login-screen) .dashboard-main #overview .home-attention-card-meta .is-blocked {
+  color: #b22f28;
+  font-weight: 800;
+}
+
+body:not(.is-login-screen) .dashboard-main #overview .home-attention-empty,
+body:not(.is-login-screen) .dashboard-main .lead-pipeline-empty {
+  margin: 4px;
+  color: var(--uy-body-muted);
+  font-size: .68rem;
+}
+
+/* Tickets: one searchable operational directory. */
+body:not(.is-login-screen) .dashboard-main .ticket-directory-controls {
+  display: grid;
+  grid-template-columns: minmax(260px, 1fr) 160px 160px auto auto;
+  align-items: end;
+  gap: 8px;
+  padding: 10px;
+  border: 1px solid var(--uy-body-border);
+  border-radius: 7px;
+  background: #fff;
+}
+
+body:not(.is-login-screen) .dashboard-main .ticket-directory-controls label {
+  display: grid;
+  gap: 4px;
+  color: #53615a;
+  font-size: .65rem;
+  font-weight: 700;
+}
+
+body:not(.is-login-screen) .dashboard-main .ticket-directory-controls :is(input, select) {
+  width: 100%;
+  min-height: 36px;
+  padding: 7px 9px;
+  border: 1px solid #d9e1dd;
+  border-radius: 5px;
+  background: #fff;
+  color: #1d2d25;
+}
+
+body:not(.is-login-screen) .dashboard-main .ticket-directory-result-count {
+  align-self: center;
+  color: var(--uy-body-muted);
+  font-size: .68rem;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+body:not(.is-login-screen) .dashboard-main .ticket-directory {
+  overflow: hidden;
+  border: 1px solid var(--uy-body-border);
+  border-radius: 7px;
+  background: #fff;
+}
+
+body:not(.is-login-screen) .dashboard-main .ticket-directory-table-shell {
+  overflow-x: auto;
+}
+
+body:not(.is-login-screen) .dashboard-main .ticket-directory table {
+  width: 100%;
+  min-width: 880px;
+  border-collapse: collapse;
+  font-size: .71rem;
+}
+
+body:not(.is-login-screen) .dashboard-main .ticket-directory th {
+  padding: 8px 10px;
+  border-bottom: 1px solid #d9e1dd;
+  background: #f6f8f7;
+  color: #65726c;
+  font-size: .61rem;
+  letter-spacing: .04em;
+  text-align: left;
+  text-transform: uppercase;
+}
+
+body:not(.is-login-screen) .dashboard-main .ticket-directory td {
+  padding: 9px 10px;
+  border-bottom: 1px solid #edf0ee;
+  color: #33423b;
+  vertical-align: middle;
+}
+
+body:not(.is-login-screen) .dashboard-main .ticket-directory tr:last-child td {
+  border-bottom: 0;
+}
+
+body:not(.is-login-screen) .dashboard-main .ticket-directory td > strong,
+body:not(.is-login-screen) .dashboard-main .ticket-directory td > small {
+  display: block;
+}
+
+body:not(.is-login-screen) .dashboard-main .ticket-directory td > small {
+  max-width: 230px;
+  margin-top: 2px;
+  overflow: hidden;
+  color: var(--uy-body-muted);
+  font-size: .62rem;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+body:not(.is-login-screen) .dashboard-main .ticket-directory-stage {
+  display: inline-flex;
+  align-items: center;
+  min-height: 22px;
+  padding: 3px 7px;
+  border-radius: 999px;
+  background: var(--uy-body-soft);
+  color: #3b4a42;
+  font-size: .61rem;
+  font-weight: 800;
+}
+
+body:not(.is-login-screen) .dashboard-main .ticket-directory-stage.is-closed {
+  background: var(--uy-body-green-soft);
+  color: #237337;
+}
+
+body:not(.is-login-screen) .dashboard-main .ticket-directory-blocked {
+  display: block;
+  margin-top: 3px;
+  color: #b22f28 !important;
+  font-weight: 800;
+}
+
+/* Ticket detail: four visible lifecycle groups with the existing detailed tools nested inside. */
+body:not(.is-login-screen) .dashboard-main .ticket-lifecycle-groups {
+  display: grid;
+  gap: 8px;
+}
+
+body:not(.is-login-screen) .dashboard-main .ticket-lifecycle-group {
+  overflow: clip;
+  border: 1px solid var(--uy-body-border);
+  border-radius: 7px;
+  background: #fff;
+}
+
+body:not(.is-login-screen) .dashboard-main .ticket-lifecycle-group.has-attention {
+  border-left: 3px solid #dd9a33;
+}
+
+body:not(.is-login-screen) .dashboard-main .ticket-lifecycle-group.is-complete {
+  border-left: 3px solid #3d994e;
+}
+
+body:not(.is-login-screen) .dashboard-main .ticket-lifecycle-group > summary {
+  display: grid;
+  grid-template-columns: 30px minmax(0, 1fr) minmax(140px, auto);
+  align-items: center;
+  gap: 10px;
+  min-height: 60px;
+  padding: 9px 12px;
+  cursor: pointer;
+  list-style: none;
+}
+
+body:not(.is-login-screen) .dashboard-main .ticket-lifecycle-group > summary::-webkit-details-marker {
+  display: none;
+}
+
+body:not(.is-login-screen) .dashboard-main .ticket-lifecycle-number {
+  display: grid;
+  width: 28px;
+  height: 28px;
+  place-items: center;
+  border-radius: 50%;
+  background: var(--uy-body-green-soft);
+  color: #176a2a;
+  font-size: .72rem;
+  font-weight: 900;
+}
+
+body:not(.is-login-screen) .dashboard-main .ticket-lifecycle-group > summary h4 {
+  margin: 0;
+  font-size: .88rem;
+}
+
+body:not(.is-login-screen) .dashboard-main .ticket-lifecycle-group > summary p {
+  margin: 2px 0 0;
+  color: var(--uy-body-muted);
+  font-size: .66rem;
+  line-height: 1.35;
+}
+
+body:not(.is-login-screen) .dashboard-main .ticket-lifecycle-summary {
+  display: grid;
+  gap: 2px;
+  justify-items: end;
+  color: #34443c;
+  text-align: right;
+}
+
+body:not(.is-login-screen) .dashboard-main .ticket-lifecycle-summary strong {
+  display: block;
+  font-size: .68rem;
+}
+
+body:not(.is-login-screen) .dashboard-main .ticket-lifecycle-summary small {
+  display: block;
+  margin-top: 2px;
+  color: var(--uy-body-muted);
+  font-size: .59rem;
+}
+
+body:not(.is-login-screen) .dashboard-main .ticket-lifecycle-group-body {
+  display: grid;
+  gap: 7px;
+  padding: 8px;
+  border-top: 1px solid #e7ece9;
+  background: #f7f9f8;
+}
+
+body:not(.is-login-screen) .dashboard-main .ticket-lifecycle-group-body > .ticket-unified-section {
+  margin: 0;
+  border-radius: 5px;
+  background: #fff;
+  box-shadow: none;
+}
+
+/* Leads: a compact lifecycle, not a second ticket system. */
+body:not(.is-login-screen) .dashboard-main .lead-pipeline-board {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(190px, 1fr));
+  gap: 8px;
+}
+
+body:not(.is-login-screen) .dashboard-main .lead-pipeline-column {
+  min-width: 0;
+  min-height: 250px;
+  padding: 7px;
+  border: 1px solid var(--uy-body-border);
+  border-radius: 6px;
+  background: #f7f9f8;
+}
+
+body:not(.is-login-screen) .dashboard-main .lead-pipeline-column.is-ready {
+  border-top-color: #70b37c;
+  background: #f4faf5;
+}
+
+body:not(.is-login-screen) .dashboard-main .lead-pipeline-column.is-lost {
+  background: #fafafa;
+  opacity: .82;
+}
+
+body:not(.is-login-screen) .dashboard-main .lead-pipeline-card-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+}
+
+body:not(.is-login-screen) .dashboard-main .lead-pipeline-card-actions :is(button, a) {
+  min-height: 28px;
+  padding: 5px 8px;
+  border-radius: 4px;
+  font-size: .62rem;
+}
+
+/* Money: four core tabs and one unobtrusive advanced menu. */
+body:not(.is-login-screen) .dashboard-main .money-summary-strip {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+body:not(.is-login-screen) .dashboard-main .money-tabs {
+  position: relative;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 5px;
+  padding: 6px;
+  border: 1px solid var(--uy-body-border);
+  border-radius: 7px;
+  background: #fff;
+}
+
+body:not(.is-login-screen) .dashboard-main .money-tabs > button,
+body:not(.is-login-screen) .dashboard-main .money-tabs-more > summary {
+  min-height: 34px;
+  padding: 7px 11px;
+  border: 1px solid transparent;
+  border-radius: 5px;
+  background: transparent;
+  color: #48564f;
+  font-size: .69rem;
+  font-weight: 800;
+}
+
+body:not(.is-login-screen) .dashboard-main .money-tabs > button.is-active,
+body:not(.is-login-screen) .dashboard-main .money-tabs-more.is-active > summary {
+  border-color: #bcd9c2;
+  background: var(--uy-body-green-soft);
+  color: #176a2a;
+}
+
+body:not(.is-login-screen) .dashboard-main .money-tabs-more {
+  position: relative;
+}
+
+body:not(.is-login-screen) .dashboard-main .money-tabs-more > summary {
+  cursor: pointer;
+  list-style: none;
+}
+
+body:not(.is-login-screen) .dashboard-main .money-tabs-more > summary::-webkit-details-marker {
+  display: none;
+}
+
+body:not(.is-login-screen) .dashboard-main .money-tabs-more > div {
+  position: absolute;
+  z-index: 20;
+  top: calc(100% + 5px);
+  right: 0;
+  display: grid;
+  min-width: 190px;
+  padding: 5px;
+  border: 1px solid var(--uy-body-border);
+  border-radius: 6px;
+  background: #fff;
+  box-shadow: 0 10px 28px rgba(19, 40, 31, .13);
+}
+
+body:not(.is-login-screen) .dashboard-main .money-tabs-more > div button {
+  padding: 8px 9px;
+  border: 0;
+  border-radius: 4px;
+  background: transparent;
+  color: #34443c;
+  font-size: .68rem;
+  text-align: left;
+}
+
+body:not(.is-login-screen) .dashboard-main .money-tabs-more > div button:hover {
+  background: var(--uy-body-soft);
+}
+
+/* Tools: four launch groups with protected diagnostics collapsed below. */
+body:not(.is-login-screen) .dashboard-main .tools-launch-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(190px, 1fr));
+  gap: 9px;
+}
+
+body:not(.is-login-screen) .dashboard-main .tools-launch-group {
+  overflow: hidden;
+  border: 1px solid var(--uy-body-border);
+  border-radius: 7px;
+  background: #fff;
+}
+
+body:not(.is-login-screen) .dashboard-main .tools-launch-group > header {
+  min-height: 82px;
+  padding: 11px;
+  border-bottom: 1px solid #e7ece9;
+  background: #f7f9f8;
+}
+
+body:not(.is-login-screen) .dashboard-main .tools-launch-group > header h3 {
+  margin: 0;
+  font-size: .82rem;
+}
+
+body:not(.is-login-screen) .dashboard-main .tools-launch-group > header p {
+  margin: 3px 0 0;
+  color: var(--uy-body-muted);
+  font-size: .66rem;
+  line-height: 1.35;
+}
+
+body:not(.is-login-screen) .dashboard-main .tools-launch-group > div {
+  display: grid;
+}
+
+body:not(.is-login-screen) .dashboard-main .tools-launch-group > div > :is(a, button) {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  min-height: 55px;
+  padding: 9px 11px;
+  border: 0;
+  border-bottom: 1px solid #edf0ee;
+  border-radius: 0;
+  background: #fff;
+  color: #24342c;
+  text-align: left;
+  text-decoration: none;
+}
+
+body:not(.is-login-screen) .dashboard-main .tools-launch-group > div > :is(a, button):last-child {
+  border-bottom: 0;
+}
+
+body:not(.is-login-screen) .dashboard-main .tools-launch-group > div > :is(a, button):hover {
+  background: #f8faf9;
+}
+
+body:not(.is-login-screen) .dashboard-main .tools-launch-group > div span {
+  display: grid;
+  gap: 2px;
+}
+
+body:not(.is-login-screen) .dashboard-main .tools-launch-group > div strong {
+  font-size: .71rem;
+}
+
+body:not(.is-login-screen) .dashboard-main .tools-launch-group > div small {
+  color: var(--uy-body-muted);
+  font-size: .61rem;
+}
+
+body:not(.is-login-screen) .dashboard-main .tools-launch-group > div b {
+  color: #698078;
+  font-size: 1rem;
+}
+
+body:not(.is-login-screen) .dashboard-main .tools-advanced-admin {
+  overflow: hidden;
+  border: 1px solid var(--uy-body-border);
+  border-radius: 7px;
+  background: #fff;
+}
+
+body:not(.is-login-screen) .dashboard-main .tools-advanced-admin > summary {
+  padding: 11px 13px;
+  color: #44544c;
+  cursor: pointer;
+  font-size: .7rem;
+  font-weight: 800;
+}
+
+body:not(.is-login-screen) .dashboard-main .tools-advanced-admin-body {
+  display: grid;
+  gap: 10px;
+  padding: 10px;
+  border-top: 1px solid #e7ece9;
+  background: #f7f9f8;
+}
+
+@media (max-width: 1180px) {
+  body:not(.is-login-screen) .dashboard-main .ticket-directory-controls {
+    grid-template-columns: minmax(220px, 1fr) 150px 150px auto;
+  }
+
+  body:not(.is-login-screen) .dashboard-main .ticket-directory-controls .secondary-action {
+    grid-column: 4;
+  }
+
+  body:not(.is-login-screen) .dashboard-main .lead-pipeline-board,
+  body:not(.is-login-screen) .dashboard-main .tools-launch-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 860px) {
+  body:not(.is-login-screen) .dashboard-main #overview .home-attention-columns {
+    grid-template-columns: 1fr;
+  }
+
+  body:not(.is-login-screen) .dashboard-main #overview .home-attention-column {
+    min-height: 0;
+  }
+
+  body:not(.is-login-screen) .dashboard-main .ticket-directory-controls {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  body:not(.is-login-screen) .dashboard-main .ticket-directory-search {
+    grid-column: 1 / -1;
+  }
+
+  body:not(.is-login-screen) .dashboard-main .ticket-directory-controls .secondary-action {
+    grid-column: auto;
+  }
+
+  body:not(.is-login-screen) .dashboard-main .money-summary-strip {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 620px) {
+  body:not(.is-login-screen) .dashboard-main .lead-pipeline-board,
+  body:not(.is-login-screen) .dashboard-main .tools-launch-grid,
+  body:not(.is-login-screen) .dashboard-main .money-summary-strip,
+  body:not(.is-login-screen) .dashboard-main .ticket-directory-controls {
+    grid-template-columns: 1fr;
+  }
+
+  body:not(.is-login-screen) .dashboard-main .ticket-lifecycle-group > summary {
+    grid-template-columns: 28px minmax(0, 1fr);
+  }
+
+  body:not(.is-login-screen) .dashboard-main .ticket-lifecycle-summary {
+    grid-column: 2;
+    justify-items: start;
+    text-align: left;
+  }
+
+  body:not(.is-login-screen) .dashboard-main .ticket-directory-controls .secondary-action,
+  body:not(.is-login-screen) .dashboard-main .ticket-directory-search {
+    grid-column: auto;
+  }
+
+  body:not(.is-login-screen) .dashboard-main .money-tabs {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  body:not(.is-login-screen) .dashboard-main .money-tabs-more,
+  body:not(.is-login-screen) .dashboard-main .money-tabs-more > summary {
+    width: 100%;
+  }
+}

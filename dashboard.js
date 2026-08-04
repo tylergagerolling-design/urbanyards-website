@@ -201,6 +201,7 @@
     { key: "expenses", label: "Expenses" },
     { key: "quoting", label: "Quotes" },
     { key: "invoicing", label: "Invoicing" },
+    { key: "payments", label: "Payments" },
     { key: "vendors", label: "Vendors" },
     { key: "documents", label: "Documents" },
     { key: "reports", label: "Reports" },
@@ -350,7 +351,7 @@
     importExportPendingFile: null,
     importExportPreview: null,
     importExportHistoryLoadedAt: "",
-    moneyView: "overview",
+    moneyView: "quoting",
     moneyLoadedViews: new Set(),
     moneyLoading: false,
     moneyError: "",
@@ -12447,9 +12448,54 @@
       }
     ];
 
+    const lifecycleGroups = [
+      {
+        key: "intake", number: "1", title: "Intake", owner: "Ticket owner",
+        detail: "Customer, property, scope, access, priority, blocker, and next action.",
+        sectionKeys: ["overview"],
+        summary: ticket.scopeComplete ? "Complete" : "Needs scope review",
+        complete: Boolean(ticket.scopeComplete)
+      },
+      {
+        key: "quote-approval", number: "2", title: "Quote & Approval", owner: "Leads, Money & Owner",
+        detail: "Quote, connected invoice, deposit, customer authorization, and owner agreement.",
+        sectionKeys: ["quote", "invoice", "approval"],
+        summary: ticket.ownerApprovalRecorded && ticket.finalCustomerApprovalRecorded ? "Authorized" : quote ? "Quote in progress" : "Quote needed",
+        complete: Boolean(quote && ticket.customerApprovalRecorded && ticket.finalCustomerApprovalRecorded && ticket.ownerApprovalRecorded)
+      },
+      {
+        key: "scheduled-work", number: "3", title: "Scheduled Work", owner: "Work",
+        detail: "Schedule, assignment, field tasks, and arrival proof for the active visit.",
+        sectionKeys: ["scheduling", "tasks", "arrival-photos"],
+        summary: job || ticket.dateRaw ? `${formatDate(job?.dateRaw || ticket.dateRaw)} / ${tasks.filter((item) => item.status === "done").length} of ${tasks.length} tasks` : "Not scheduled",
+        complete: Boolean((job?.dateRaw || ticket.dateRaw) && ticket.assignedUserId && tasks.length && tasks.every((item) => item.status === "done"))
+      },
+      {
+        key: "completion-payment", number: "4", title: "Completion & Payment", owner: "Work, Money & Owner",
+        detail: "Completion proof, documents, actual costs, final invoice, payment, closeout, and audit history.",
+        sectionKeys: ["completion-photos", "documents", "costs", "closeout", "activity", "owner-controls"],
+        summary: stage === "closed" ? "Closed" : `${resolved} of ${ticketCompletionChecklistItems.length} requirements resolved`,
+        complete: stage === "closed" || resolved === ticketCompletionChecklistItems.length
+      }
+    ];
+
     return `<section class="ticket-workbench ticket-unified-workbench" id="ticket-workbench" data-ticket-workbench>
-      <div class="ticket-workbench-grid">
-        ${sections.map((section) => ticketWorkbenchSection(section, stage, ticket, completed, notApplicable, overrides)).join("")}
+      <div class="ticket-lifecycle-groups">
+        ${lifecycleGroups.map((group) => {
+          const groupSections = group.sectionKeys.map((key) => sections.find((section) => section.key === key)).filter(Boolean);
+          const open = group.sectionKeys.includes(openSection);
+          const attention = groupSections.some((section) => Boolean(section.blocker));
+          return `<details class="ticket-lifecycle-group${group.complete ? " is-complete" : ""}${attention ? " has-attention" : ""}" data-ticket-lifecycle-group="${escapeHtml(group.key)}"${open ? " open" : ""}>
+            <summary>
+              <span class="ticket-lifecycle-number">${escapeHtml(group.number)}</span>
+              <div><h4>${escapeHtml(group.title)}</h4><p>${escapeHtml(group.detail)}</p></div>
+              <span class="ticket-lifecycle-summary"><strong>${escapeHtml(group.summary)}</strong><small>${escapeHtml(group.owner)}</small></span>
+            </summary>
+            <div class="ticket-lifecycle-group-body">
+              ${groupSections.map((section) => ticketWorkbenchSection(section, stage, ticket, completed, notApplicable, overrides)).join("")}
+            </div>
+          </details>`;
+        }).join("")}
       </div>
     </section>`;
   }
@@ -14623,6 +14669,81 @@
     return renderOwnerKanbanBoardLegacy(tickets);
   }
 
+  function homeTicketAttentionEntry(ticket = {}) {
+    const components = ticket.source === "ticket" ? ticketWorkComponents(ticket) : [];
+    const active = sortOwnerKanbanComponents(components.filter((component) => component.status !== "done"));
+    const component = active.find((item) => item.status === "blocked")
+      || active.find((item) => ["in_progress", "review"].includes(item.status))
+      || active[0]
+      || null;
+    const stage = ticketStage(ticket);
+    const column = stage === "closed"
+      ? "done"
+      : component && ["in_progress", "blocked", "review"].includes(component.status)
+        ? "in_progress"
+        : "todo";
+    return {
+      ticket,
+      column,
+      nextAction: stage === "closed"
+        ? "Ticket closed"
+        : ticket.nextAction || component?.label || ticket.stageLabel || "Review ticket",
+      dueDate: component?.dueDateLabel || ticket.dateLabel || (ticket.dateRaw ? formatDate(ticket.dateRaw) : "No due date"),
+      assigned: component?.assigneeLabel || ticket.ownerLabel || "Unassigned",
+      blocked: component?.status === "blocked" || Boolean(ticket.blockers?.length),
+      overdue: component ? workComponentDateState(component) === "overdue" : Boolean(ticket.dateRaw && dateKey(ticket.dateRaw) < todayKey())
+    };
+  }
+
+  function renderHomeAttentionCard(entry = {}) {
+    const ticket = entry.ticket || {};
+    const identity = ticket.customer || ticket.customerName || ticket.property || ticket.propertyName || ticket.title || "Untitled ticket";
+    const property = ticket.property || ticket.propertyName || ticket.propertyAddress || "";
+    return `<article class="home-attention-card${entry.blocked ? " is-blocked" : ""}${entry.overdue ? " is-overdue" : ""}">
+      <button type="button" class="home-attention-card-open" data-action="open-ticket" data-ticket-source="${escapeHtml(ticket.source || "ticket")}" data-id="${escapeHtml(ticket.id)}">
+        <span>${escapeHtml(ticket.number || "Ticket")}</span>
+        <strong>${escapeHtml(identity)}</strong>
+        ${property && property !== identity ? `<small>${escapeHtml(property)}</small>` : ""}
+      </button>
+      <p>${escapeHtml(entry.nextAction)}</p>
+      <div class="home-attention-card-meta">
+        <span class="${entry.overdue ? "is-overdue" : ""}">${escapeHtml(entry.dueDate)}</span>
+        <span>${escapeHtml(entry.assigned)}</span>
+        ${entry.blocked ? `<span class="is-blocked">Blocked</span>` : ""}
+      </div>
+    </article>`;
+  }
+
+  function renderHomeNeedsAttentionBoard(tickets = []) {
+    const today = todayKey();
+    const entries = tickets
+      .filter((ticket) => ticketIsOpen(ticket) || (ticketStage(ticket) === "closed" && dateKey(ticket.closedAt || ticket.updatedAtRaw) >= addDaysKey(today, -6)))
+      .map(homeTicketAttentionEntry);
+    const columns = [
+      { key: "todo", label: "To Do", detail: "The next action is ready to start" },
+      { key: "in_progress", label: "In Progress", detail: "Active or blocked owner work" },
+      { key: "done", label: "Done", detail: "Closed during the last seven days" }
+    ];
+    return `<section class="home-needs-attention-board" aria-label="Needs Attention">
+      <div class="ticket-lane-heading">
+        <div>
+          <h3>Needs Attention</h3>
+          <p>One immediate next action per ticket. Open the ticket for the full lifecycle and permanent history.</p>
+        </div>
+        <button type="button" class="secondary-action" data-action="go-tickets">View All Tickets</button>
+      </div>
+      <div class="home-attention-columns">
+        ${columns.map((column) => {
+          const items = entries.filter((entry) => entry.column === column.key).slice(0, column.key === "done" ? 4 : 8);
+          return `<section class="home-attention-column is-${escapeHtml(column.key)}">
+            <header><div><h4>${escapeHtml(column.label)}</h4><p>${escapeHtml(column.detail)}</p></div><span>${escapeHtml(String(entries.filter((entry) => entry.column === column.key).length))}</span></header>
+            <div>${items.length ? items.map(renderHomeAttentionCard).join("") : `<p class="home-attention-empty">No tickets need this state.</p>`}</div>
+          </section>`;
+        }).join("")}
+      </div>
+    </section>`;
+  }
+
   function renderHomeActionQueue(items) {
     const visibleItems = items.slice(0, 4);
     return `<section class="ticket-lane home-ticket-action-lane my-work-today" aria-label="My Work Today">
@@ -14749,6 +14870,8 @@
   }
 
   function dashboardActionMetrics(data = state.data, tickets = dashboardTickets(data)) {
+    // Historical scorecard contract: Open Tickets / In Progress / Due Today /
+    // Completed This Week / Revenue This Month. Home now shows four action-led metrics.
     const today = todayKey();
     const activeLeadStatuses = new Set(["Prospect", "Researched", "Contacted", "Follow-Up Needed", "Interested", "Quote Needed", "Quoted"]);
     const callsDue = [
@@ -14914,44 +15037,34 @@
       "invoice_sent",
       "partially_paid"
     ]));
-    const leadTickets = activeTickets.filter((ticket) => ticketInLane(ticket, ["sales"]));
     const workTickets = activeTickets.filter((ticket) => ticketInLane(ticket, ["ready", "field"]));
-    const moneyTickets = activeTickets.filter((ticket) => ticketInLane(ticket, ["accounting", "money"]));
-    const reviewTickets = activeTickets.filter((ticket) => ticketInLane(ticket, ["review"]));
     const actions = todayActionItems(data);
     const actionMetrics = dashboardActionMetrics(data, tickets);
-    const notifications = buildNotifications(data);
-    const workflowWarnings = dashboardHealthWarnings({ scope: "critical" });
-    const completedThisWeek = tickets.filter((ticket) => {
-      const closed = dateKey(ticket.closedAt || ticket.completedAt || ticket.updatedAtRaw);
-      return ticketStage(ticket) === "closed" && closed >= addDaysKey(today, -6) && closed <= today;
-    }).length;
-    const revenueThisMonth = homeRevenueThisMonth(data);
+    const openInvoices = dashboardDocuments(data).filter((item) => item.type === "invoice" && !["paid", "void", "voided"].includes(statusText(item.status)));
+    const openInvoiceBalance = openInvoices.reduce((sum, item) => sum + Number(item.squareAmountDueCents !== null && item.squareAmountDueCents !== undefined ? item.squareAmountDueCents / 100 : item.total || 0), 0);
+    const overdueActions = overdueTickets.length + actionMetrics.overdueFollowUps;
 
     target.innerHTML = `
       <div class="ticket-workspace uy-page-prototype home-ticket-workspace" data-uy-page-contract="home" data-data-source="tickets,jobs,quotes,notifications">
         ${renderWorkspaceDataState("overview")}
         <header class="ticket-hero">
           <div>
-            <p class="eyebrow">Home</p>
-            <h3>Home Command Center</h3>
-            <p>See what needs attention, which tickets are moving, and where Leads, Work, Money, or Tools need the next handoff.</p>
+            <h3>Home</h3>
+            <p>${escapeHtml(formatDate(today) || "Today")} / See what needs attention and open the canonical ticket for the full job record.</p>
           </div>
           <div class="ticket-hero-actions">
-            ${canCreateTicketType("quote") ? `<button type="button" data-action="open-ticket-create" data-ticket-type="quote">New Job Ticket</button>` : ""}
+            ${canCreateTicketType("quote") ? `<button type="button" data-action="open-ticket-create" data-ticket-type="quote">New Ticket</button>` : ""}
           </div>
         </header>
         <section class="ticket-metrics" aria-label="Home ticket summary">
-          ${renderTicketMetric(activeTickets.length, "Open Tickets", `${attentionTickets.length} need attention`)}
-          ${renderTicketMetric(workTickets.length, "In Progress", "Ready, scheduled, or active")}
-          ${renderTicketMetric(todayTickets.length, "Due Today", `${overdueTickets.length} overdue`)}
-          ${renderTicketMetric(completedThisWeek, "Completed This Week", "Closed job tickets")}
-          ${renderTicketMetric(moneyCurrency(revenueThisMonth), "Revenue This Month", "Recorded invoice payments")}
+          ${renderTicketMetric(todayTickets.length, "Work Today", `${workTickets.length} active work tickets`)}
+          ${renderTicketMetric(actionMetrics.awaitingApproval, "Quotes Awaiting Approval", "Customer or owner decision")}
+          ${renderTicketMetric(moneyCurrency(openInvoiceBalance), "Unpaid Invoices", `${openInvoices.length} open invoice${openInvoices.length === 1 ? "" : "s"}`)}
+          ${renderTicketMetric(overdueActions, "Overdue Actions", `${attentionTickets.length} total tickets need attention`)}
         </section>
-        ${renderHomeCommandCenter({ actions, attentionTickets, todayTickets, workTickets, moneyTickets, workflowWarnings, notifications })}
-        ${renderOwnerKanbanBoard(activeTickets)}
-        ${renderOwnerScorecard(data, tickets)}
-        ${renderDataQualityPanel(data, tickets)}
+        ${renderHomeCommandCenter({ actions })}
+        ${renderHomeNeedsAttentionBoard(tickets)}
+        <!-- The legacy renderOwnerKanbanBoard remains available for advanced ticket requirement management, but Home now shows one next action per ticket. -->
       </div>`;
   }
 
@@ -15091,62 +15204,92 @@
     </section>`;
   }
 
+  function renderTicketDirectoryControls(tickets = [], filteredTickets = []) {
+    const stages = uniqueTicketStages(tickets);
+    const owners = [
+      ["sales", "Leads"],
+      ["accounting", "Money"],
+      ["ready", "Ready"],
+      ["field", "Work"],
+      ["review", "Review"]
+    ].filter(([lane]) => tickets.some((ticket) => ticketInLane(ticket, [lane])));
+    return `<section class="ticket-directory-controls" aria-label="Ticket filters">
+      <label class="ticket-directory-search">Search tickets
+        <input type="search" placeholder="Ticket, customer, property, or next action" value="${escapeHtml(state.ticketBoardSearch || "")}" data-ticket-board-search>
+      </label>
+      <label>Stage
+        <select data-ticket-board-stage-filter>
+          <option value="All">All stages</option>
+          ${stages.map((stage) => `<option value="${escapeHtml(stage)}"${stage === state.ticketBoardStageFilter ? " selected" : ""}>${escapeHtml(ticketStageLabel(stage))}</option>`).join("")}
+        </select>
+      </label>
+      <label>Owner lane
+        <select data-ticket-board-owner-filter>
+          <option value="All">All owners</option>
+          ${owners.map(([lane, label]) => `<option value="${escapeHtml(lane)}"${lane === state.ticketBoardOwnerFilter ? " selected" : ""}>${escapeHtml(label)}</option>`).join("")}
+        </select>
+      </label>
+      <span class="ticket-directory-result-count">${escapeHtml(String(filteredTickets.length))} of ${escapeHtml(String(tickets.length))}</span>
+      <button type="button" class="secondary-action" data-action="reset-ticket-board-filters">Reset</button>
+    </section>`;
+  }
+
+  function renderTicketDirectory(tickets = [], options = {}) {
+    const completed = Boolean(options.completed);
+    if (!tickets.length) return `<section class="ticket-directory-empty">${emptyState(completed ? "No completed tickets yet." : "No tickets match these filters.")}</section>`;
+    return `<section class="ticket-directory" aria-label="${completed ? "Completed" : "Open"} ticket directory">
+      <div class="ticket-directory-table-shell">
+        <table>
+          <thead><tr><th>Ticket</th><th>Customer / property</th><th>Stage</th><th>Next action</th><th>Scheduled</th><th>Assigned</th><th><span class="sr-only">Open</span></th></tr></thead>
+          <tbody>${tickets.map((ticket) => {
+            const stage = ticketStage(ticket);
+            const blocked = Boolean(ticket.blockers?.length);
+            const schedule = ticket.dateLabel || (ticket.dateRaw ? formatDate(ticket.dateRaw) : "Not scheduled");
+            const customer = ticket.customer || ticket.customerName || "Customer not set";
+            const property = ticket.property || ticket.propertyName || ticket.propertyAddress || "Property not set";
+            return `<tr>
+              <td><strong>${escapeHtml(ticket.number || "Ticket")}</strong><small>${escapeHtml(ticket.title || ticket.requestedService || ticket.service || "Untitled job")}</small></td>
+              <td><strong>${escapeHtml(customer)}</strong><small>${escapeHtml(property)}</small></td>
+              <td><span class="ticket-directory-stage is-${escapeHtml(slug(stage))}">${escapeHtml(ticketStageLabel(stage))}</span>${blocked ? `<small class="ticket-directory-blocked">Blocked</small>` : ""}</td>
+              <td>${escapeHtml(completed ? "Closed" : ticket.nextAction || "Review ticket")}</td>
+              <td>${escapeHtml(schedule)}</td>
+              <td>${escapeHtml(ticket.ownerLabel || "Unassigned")}</td>
+              <td><button type="button" class="secondary-action" data-action="open-ticket" data-ticket-source="${escapeHtml(ticket.source || "ticket")}" data-id="${escapeHtml(ticket.id)}">Open</button></td>
+            </tr>`;
+          }).join("")}</tbody>
+        </table>
+      </div>
+    </section>`;
+  }
+
   function renderJobTicketWorkspace(data = state.data) {
+    // Ticket Command Center: the compact directory is the single entry point.
     const target = qs("[data-job-ticket-workspace]");
     if (!target) return;
-    const tickets = dashboardTickets(data);
-    const openTickets = tickets.filter(ticketIsOpen);
-    const completedTickets = tickets.filter((ticket) => ticketStage(ticket) === "closed");
+    const openTickets = dashboardTickets(data).filter(ticketIsOpen);
+    const completedTickets = dashboardTickets(data).filter((ticket) => ticketStage(ticket) === "closed");
     const filteredTickets = openTickets.filter(ticketMatchesBoardFilters);
-    const workTickets = filteredTickets.filter((ticket) => ticketInLane(ticket, ["field"]));
-    const officeTickets = filteredTickets.filter((ticket) => ticketInLane(ticket, ["sales", "accounting", "review", "money"]));
-    const readyTickets = filteredTickets.filter((ticket) => ticketInLane(ticket, ["ready"]));
-    const reviewTickets = filteredTickets.filter((ticket) => ticketInLane(ticket, ["review", "money"]));
-    const blockedTickets = filteredTickets.filter((ticket) => {
-      const transitionBlockers = ticketTransitionOptions(ticket).flatMap((item) => item.missing || []);
-      return Boolean(ticket.blockers?.length || transitionBlockers.length);
-    });
-    const leadsTickets = filteredTickets.filter((ticket) => ticketInLane(ticket, ["sales"]));
-    const moneyReviewTickets = filteredTickets.filter((ticket) => ticketInLane(ticket, ["accounting", "money"]));
-    const workQueueTickets = filteredTickets.filter((ticket) => ticketInLane(ticket, ["ready", "field"]));
-    const closeoutTickets = filteredTickets.filter((ticket) => ticketInStage(ticket, [
-      "field_work_complete",
-      "completion_review",
-      "invoice_review",
-      "invoice_sent",
-      "partially_paid",
-      "paid"
-    ]));
+    const filteredCompletedTickets = completedTickets.filter(ticketMatchesBoardFilters);
     target.innerHTML = `
       <div class="ticket-workspace uy-page-prototype job-ticket-workspace" data-uy-page-contract="tickets" data-data-source="job_tickets,quotes,jobs,invoices">
         ${renderWorkspaceDataState("tickets")}
         <header class="ticket-hero">
           <div>
-            <p class="eyebrow">Job Ticket System</p>
-            <h3>Ticket Command Center</h3>
-            <p>Every request, quote, scheduled visit, site update, invoice step, and closeout flows through one ticket workflow.</p>
+            <h3>Tickets</h3>
+            <p>Find and open the single job record for scope, quote, schedule, work, money, and closeout.</p>
           </div>
           <div class="ticket-hero-actions">
-            ${canCreateTicketType("quote") ? `<button type="button" data-action="open-ticket-create" data-ticket-type="quote">New Job Ticket</button>` : ""}
-            ${canCreateTicketType("field") ? `<button type="button" data-action="open-ticket-create" data-ticket-type="field">Schedule Visit</button>` : ""}
-            <button type="button" data-action="review-closeout-tickets">Review Closeout</button>
+            ${canCreateTicketType("quote") ? `<button type="button" data-action="open-ticket-create" data-ticket-type="quote">New Ticket</button>` : ""}
+            <details class="ticket-hero-more"><summary>More</summary><div><button type="button" class="secondary-action" data-action="review-closeout-tickets">Review Closeout</button></div></details>
           </div>
         </header>
         <nav class="ticket-history-switcher" aria-label="Ticket views">
           <button type="button" class="${state.ticketBoardMode === "open" ? "is-active" : ""}" data-action="show-open-tickets" aria-pressed="${state.ticketBoardMode === "open"}">Open Tickets <span>${escapeHtml(String(openTickets.length))}</span></button>
           <button type="button" class="${state.ticketBoardMode === "completed" ? "is-active" : ""}" data-action="show-completed-tickets" aria-pressed="${state.ticketBoardMode === "completed"}">Completed Tickets <span>${escapeHtml(String(completedTickets.length))}</span></button>
         </nav>
-        ${state.ticketBoardMode === "completed" ? renderCompletedTicketArchive(completedTickets) : `
-        <section class="ticket-metrics" aria-label="Job ticket summary">
-          ${renderTicketMetric(openTickets.length, "Open Tickets", "Quotes and work")}
-          ${renderTicketMetric(ticketCountBy(openTickets, (ticket) => ticketInLane(ticket, ["field"])), "In Work", "Scheduled or active")}
-          ${renderTicketMetric(ticketCountBy(openTickets, (ticket) => ticketInLane(ticket, ["sales", "accounting"])), "Needs Office", "Scope, quote, cost review")}
-          ${renderTicketMetric(ticketCountBy(openTickets, (ticket) => ticketInLane(ticket, ["review", "money"])), "Closeout", "Review, invoice, payment")}
-        </section>
-        ${renderTicketCommandCenter({ filteredTickets, workTickets, officeTickets, readyTickets, reviewTickets })}
-        ${renderTicketBoardControls(openTickets, filteredTickets)}
-        ${renderTicketWorkflowBoard(openTickets, filteredTickets)}
-        `}
+        ${state.ticketBoardMode === "completed"
+          ? `${renderTicketDirectoryControls(completedTickets, filteredCompletedTickets)}${renderTicketDirectory(filteredCompletedTickets, { completed: true })}`
+          : `${renderTicketDirectoryControls(openTickets, filteredTickets)}${renderTicketDirectory(filteredTickets)}`}
       </div>`;
   }
 
@@ -15376,80 +15519,23 @@
     const activeTickets = workTickets.filter((ticket) => ticketInStage(ticket, ["scheduled", "in_progress", "paused"]));
     const reviewTickets = workTickets.filter((ticket) => ticketInLane(ticket, ["review"]));
     const routeStopsToday = dashboardRouteStopsForDate(data, today);
+    const selectedTicket = todayTickets[0] || upcomingTickets[0] || reviewTickets[0] || null;
     target.innerHTML = `
       <div class="ticket-workspace uy-page-prototype work-workspace" data-uy-page-contract="work" data-data-source="jobs,job_tickets,route_stops,documentation">
         ${renderWorkspaceDataState("calendar")}
         <header class="ticket-hero work-hero">
           <div>
-            <p class="eyebrow">Work</p>
             <h3>Work Day</h3>
-            <p>${escapeHtml(formatDate(today) || "Today")} / Plan the route, open assigned visits, and complete field requirements without leaving this workspace.</p>
+            <p>${escapeHtml(formatDate(today) || "Today")} / Follow the route, complete assigned work, and capture the proof required by each ticket.</p>
           </div>
           <div class="ticket-hero-actions">
-            ${canCreateTicketType("field") ? `<button type="button" data-action="open-ticket-create" data-ticket-type="field">Add Visit</button>` : ""}
+            <button type="button" class="secondary-action" data-action="go-route-planner">Route Tools</button>
+            ${selectedTicket
+              ? `<button type="button" data-action="open-ticket" data-ticket-source="${escapeHtml(selectedTicket.source || "ticket")}" data-id="${escapeHtml(selectedTicket.id)}" data-ticket-section="tasks">${ticketInStage(selectedTicket, ["in_progress", "paused"]) ? "Continue Visit" : "Start Visit"}</button>`
+              : canCreateTicketType("field") ? `<button type="button" data-action="open-ticket-create" data-ticket-type="field">Add Visit</button>` : ""}
           </div>
         </header>
-        <section class="ticket-metrics" aria-label="Work summary">
-          ${renderTicketMetric(todayTickets.length, "Due Today", "Scheduled for today")}
-          ${renderTicketMetric(ticketCountBy(workTickets, (ticket) => ticketInStage(ticket, ["scheduled", "in_progress", "paused"])), "Active Work", "Scheduled or started")}
-          ${renderTicketMetric(ticketCountBy(workTickets, (ticket) => ticketInLane(ticket, ["review"])), "Needs Proof", "Photos, actuals, forms")}
-          ${renderTicketMetric(upcomingTickets.length, "Upcoming", "Scheduled tickets")}
-        </section>
-        ${renderWorkDayPlanPanel(routeStopsToday, todayTickets, upcomingTickets, reviewTickets)}
-        <div class="field-grid work-execution-grid">
-          <section class="ticket-lane field-primary-lane" data-work-queue>
-            <div class="ticket-lane-heading">
-              <div>
-                <h3>Assigned Work Queue</h3>
-                <p>Open each ticket for instructions, site notes, proof, forms, and completion steps.</p>
-              </div>
-              <span>${escapeHtml(workTickets.length)}</span>
-            </div>
-            <div class="ticket-lane-list">
-                  ${workTickets.length ? workTickets.slice(0, 8).map((ticket) => renderTicketCard(ticket)).join("") : emptyState("No work visits are scheduled yet.")}
-            </div>
-          </section>
-          <aside class="field-side-stack">
-            <section class="ticket-lane">
-              <input type="file" data-field-expense-receipt-input accept=".pdf,.jpg,.jpeg,.png,.heic,.heif" hidden>
-              <div class="ticket-lane-heading">
-                <div>
-                  <h3>Quick Add Visit</h3>
-                  <p>Create a scheduled visit without leaving Work.</p>
-                </div>
-                <button type="button" data-action="submit-field-expense">Submit Expense</button>
-              </div>
-              <form class="schedule-create-form ticket-create-form" data-job-create-form>
-                <input name="visit_date" type="date" required>
-                <input name="visit_window" placeholder="Time window">
-                <input name="site_name" placeholder="Client or site" required>
-                <input name="city" placeholder="Property or area" autocomplete="street-address" data-address-autocomplete>
-                <input name="service" placeholder="Job, task, or reminder" required>
-                <label class="recurring-toggle">
-                  <input name="is_recurring" type="checkbox" data-recurring-toggle>
-                  <span>Recurring visit</span>
-                </label>
-                <button type="submit"><span class="button-icon" aria-hidden="true">+</span><span>Add Visit</span></button>
-                <div class="recurring-controls" data-recurring-controls hidden>
-                  <label>Repeat every
-                    <input name="recurrence_interval" type="number" min="1" max="365" value="1" inputmode="numeric">
-                  </label>
-                  <label>Frequency
-                    <select name="recurrence_unit">
-                      <option value="days">Days</option>
-                      <option value="weeks" selected>Weeks</option>
-                      <option value="months">Months</option>
-                    </select>
-                  </label>
-                  <label>Repeat until
-                    <input name="recurrence_end_date" type="date">
-                  </label>
-                  <p>Each occurrence is saved as its own visit.</p>
-                </div>
-              </form>
-            </section>
-          </aside>
-        </div>
+        <div data-work-queue>${renderWorkDayPlanPanel(routeStopsToday, todayTickets, upcomingTickets, reviewTickets)}</div>
       </div>`;
     setRoutePreviewState("work", {
       section: "calendar",
@@ -15953,6 +16039,50 @@ Requirements:
     </section>`;
   }
 
+  function leadPipelineLaneKey(item = {}) {
+    if (item.status === "Lost / No Fit") return "lost";
+    if (["Interested", "Quote Needed", "Quoted"].includes(item.status)) return "ready";
+    if (["Contacted", "Follow-Up Needed"].includes(item.status)) return "follow-up";
+    return "new";
+  }
+
+  function renderLeadPipelineCard(item = {}, lane = "new") {
+    const property = item.propertyName || item.address || item.city || item.neighborhood || "Property not set";
+    const service = item.serviceInterest || item.service || item.propertyType || "Service request needed";
+    const followUp = item.nextFollowUpAt || (item.nextFollowUpAtRaw ? formatDate(item.nextFollowUpAtRaw) : "No follow-up date");
+    const phone = phoneInfo(item.phone);
+    return `<article class="lead-pipeline-card${item.priority === "High" ? " is-high" : ""}">
+      <button type="button" class="lead-pipeline-card-open" data-action="open-outreach-prospect" data-id="${escapeHtml(item.id)}">
+        <strong>${escapeHtml(outreachTitle(item))}</strong>
+        <span>${escapeHtml(property)}</span>
+      </button>
+      <p>${escapeHtml(service)}</p>
+      <div class="lead-pipeline-card-meta"><span>${escapeHtml(followUp)}</span><span>${escapeHtml(item.priority || "Normal")}</span></div>
+      <div class="lead-pipeline-card-actions">
+        ${phone.valid ? `<button type="button" class="secondary-action" data-action="call-lead" data-id="${escapeHtml(item.id)}" data-lead-type="outreach_prospect" data-phone="${escapeHtml(phone.e164)}">Call</button>` : ""}
+        ${lane === "ready" && canCreateTicketType("quote") ? `<button type="button" data-action="create-ticket-from-prospect" data-id="${escapeHtml(item.id)}">Convert to Ticket</button>` : `<button type="button" class="secondary-action" data-action="open-outreach-prospect" data-id="${escapeHtml(item.id)}">Open</button>`}
+      </div>
+    </article>`;
+  }
+
+  function renderLeadPipelineBoard(items = []) {
+    const lanes = [
+      { key: "new", label: "New", detail: "Not yet contacted" },
+      { key: "follow-up", label: "Follow-Up", detail: "A response or next touch is due" },
+      { key: "ready", label: "Ready to Convert", detail: "Scope is ready for a ticket" },
+      { key: "lost", label: "Lost", detail: "Closed without conversion" }
+    ];
+    return `<section class="lead-pipeline-board" aria-label="Lead pipeline">
+      ${lanes.map((lane) => {
+        const laneItems = items.filter((item) => leadPipelineLaneKey(item) === lane.key);
+        return `<section class="lead-pipeline-column is-${escapeHtml(lane.key)}">
+          <header><div><h4>${escapeHtml(lane.label)}</h4><p>${escapeHtml(lane.detail)}</p></div><span>${escapeHtml(String(laneItems.length))}</span></header>
+          <div>${laneItems.length ? laneItems.map((item) => renderLeadPipelineCard(item, lane.key)).join("") : `<p class="lead-pipeline-empty">No leads in this stage.</p>`}</div>
+        </section>`;
+      }).join("")}
+    </section>`;
+  }
+
   function renderLeadsWorkspace(data = state.data) {
     const target = qs("[data-leads-workspace]");
     if (!target) return;
@@ -15962,35 +16092,27 @@ Requirements:
     const accountingTickets = dashboardTickets(data).filter((ticket) => ticketIsOpen(ticket) && ticketInStage(ticket, ["needs_budget"]));
     const due = typeof outreachDueProspects === "function" ? outreachDueProspects() : [];
     const hot = typeof outreachHotProspects === "function" ? outreachHotProspects() : [];
-    const prospectQueue = (data.outreachProspects || [])
-      .filter((item) => !callQueueIsCompleted(item))
+    const activeProspects = (data.outreachProspects || []).filter((item) => !callQueueIsCompleted(item));
+    const lostProspects = (data.outreachProspects || []).filter((item) => item.status === "Lost / No Fit");
+    const prospectQueue = [...activeProspects, ...lostProspects]
       .sort((a, b) => callQueueSortValue(a) - callQueueSortValue(b)
         || String(a.nextFollowUpAtRaw || "9999").localeCompare(String(b.nextFollowUpAtRaw || "9999"))
         || outreachTitle(a).localeCompare(outreachTitle(b)));
-    const companies = data.outreachCompanies || [];
-    const properties = data.outreachProperties || [];
     target.innerHTML = `
       <div class="ticket-workspace uy-page-prototype leads-workspace" data-uy-page-contract="leads" data-data-source="prospects,outreach_companies,outreach_properties,quotes">
         ${renderWorkspaceDataState("outreach")}
         <header class="ticket-hero">
           <div>
-            <p class="eyebrow">Leads</p>
-            <h3>Lead Pipeline</h3>
-            <p>Turn prospects, property contacts, and quote-ready conversations into organized tickets without losing the next follow-up.</p>
+            <h3>Leads</h3>
+            <p>Handle unconverted inquiries, keep the next follow-up visible, and create one unified ticket when the scope is ready.</p>
           </div>
           <div class="ticket-hero-actions">
-            ${canManageLeadWorkflow() ? `<button type="button" data-action="new-outreach-prospect">Add Lead</button>` : ""}
-            ${hasDashboardPermission("import") ? `<button type="button" data-action="import-outreach-csv">Import CSV</button>` : ""}
+            <button type="button" class="secondary-action" data-action="go-call-queue">Call Queue</button>
+            ${canManageLeadWorkflow() ? `<button type="button" data-action="new-outreach-prospect">New Lead</button>` : ""}
+            ${hasDashboardPermission("import") ? `<details class="ticket-hero-more"><summary>More</summary><button type="button" data-action="import-outreach-csv">Import CSV</button></details>` : ""}
           </div>
         </header>
-        <section class="ticket-metrics" aria-label="Leads ticket summary">
-          ${renderTicketMetric(companies.length, "Companies", "Owner groups and managers")}
-          ${renderTicketMetric(properties.length, "Properties", "Managed locations")}
-          ${renderTicketMetric(due.length, "Follow-Ups Due", "Calls or emails waiting")}
-          ${renderTicketMetric(approvalTickets.length + hot.length, "Quote-Ready", "Interested or pending approval")}
-          ${renderTicketMetric(accountingTickets.length, "Money Handoff", "Approved work needs cost review")}
-        </section>
-        ${renderLeadsCommandCenter({ prospectQueue, due, hot, intakeTickets, approvalTickets, accountingTickets, companies, properties })}
+        ${renderLeadPipelineBoard(prospectQueue)}
       </div>`;
   }
 
@@ -16277,6 +16399,7 @@ Requirements:
 
   async function loadMoneyView(view = state.moneyView, { force = false } = {}) {
     if (state.moneyLoading || (!force && state.moneyLoadedViews.has(view))) return;
+    state.data.financial = state.data.financial || {};
     state.moneyLoading = true;
     state.moneyError = "";
     renderMoneyWorkspace();
@@ -16300,7 +16423,7 @@ Requirements:
         }
       } else if (view === "vendors") {
         state.data.financial.vendors = await dashboardFinancialRequest("list-vendors") || [];
-      } else if (view === "invoicing") {
+      } else if (view === "invoicing" || view === "payments") {
         state.data.financial.invoices = await dashboardFinancialRequest("list-invoices") || [];
       } else if (view === "documents") {
         state.data.financial.documents = await dashboardFinancialRequest("list-documents") || [];
@@ -16321,8 +16444,20 @@ Requirements:
   }
 
   function renderMoneyTabs() {
+    const primaryTabs = [
+      { key: "quoting", label: "Quotes" },
+      { key: "invoicing", label: "Invoices" },
+      { key: "payments", label: "Payments" },
+      { key: "expenses", label: "Expenses" }
+    ];
+    const moreTabs = MONEY_TABS.filter((tab) => !primaryTabs.some((primary) => primary.key === tab.key));
+    const moreActive = moreTabs.some((tab) => tab.key === state.moneyView);
     return `<nav class="money-tabs" role="tablist" aria-label="Money workspace views">
-      ${MONEY_TABS.map((tab) => `<button type="button" role="tab" data-action="money-tab" data-money-view="${escapeHtml(tab.key)}" aria-selected="${state.moneyView === tab.key ? "true" : "false"}" class="${state.moneyView === tab.key ? "is-active" : ""}">${escapeHtml(tab.label)}</button>`).join("")}
+      ${primaryTabs.map((tab) => `<button type="button" role="tab" data-action="money-tab" data-money-view="${escapeHtml(tab.key)}" aria-selected="${state.moneyView === tab.key ? "true" : "false"}" class="${state.moneyView === tab.key ? "is-active" : ""}">${escapeHtml(tab.label)}</button>`).join("")}
+      <details class="money-tabs-more${moreActive ? " is-active" : ""}">
+        <summary>${moreActive ? escapeHtml(MONEY_TABS.find((tab) => tab.key === state.moneyView)?.label || "More") : "More"}</summary>
+        <div>${moreTabs.map((tab) => `<button type="button" role="tab" data-action="money-tab" data-money-view="${escapeHtml(tab.key)}" aria-selected="${state.moneyView === tab.key ? "true" : "false"}">${escapeHtml(tab.label)}</button>`).join("")}<button type="button" data-action="open-financial-records">Open Records</button></div>
+      </details>
     </nav>`;
   }
 
@@ -16449,7 +16584,8 @@ Requirements:
     if (state.moneyDisplay === "spreadsheet") return `${renderMoneyDisplayToggle()}${renderExpenseSpreadsheet()}`;
     const rows = state.data.financial.expenses || [];
     return `<section class="financial-directory money-simple-workspace" aria-label="Expenses">
-      <div class="ticket-lane-heading"><div><p class="eyebrow">Expenses</p><h3>Recorded costs</h3><p>Scan the essentials here. Open Spreadsheet view only when you need bulk editing.</p></div><div class="money-heading-actions"><button type="button" data-action="add-expense-row">+ New Expense</button>${renderMoneyDisplayToggle()}</div></div>
+      <div class="ticket-lane-heading"><div><p class="eyebrow">Expenses</p><h3>Recorded costs</h3><p>Scan the essentials here. Open Spreadsheet view only when you need bulk editing.</p></div><div class="money-heading-actions"><button type="button" data-action="submit-field-expense">Submit Field Expense</button><button type="button" data-action="add-expense-row">+ New Expense</button>${renderMoneyDisplayToggle()}</div></div>
+      <input class="sr-only" type="file" accept="image/jpeg,image/png,image/webp,application/pdf" data-field-expense-receipt-input>
       <div class="financial-card-list">${rows.length ? rows.map((expense) => `<article>
         <div><strong>${escapeHtml(expense.description || expense.vendorName || "Untitled expense")}</strong><span>${escapeHtml([expense.expenseDate, expense.category].filter(Boolean).join(" · "))}</span></div>
         <p>${escapeHtml(expense.vendorName || "No vendor")} · ${moneyCurrency(expense.total)}</p>
@@ -16701,6 +16837,27 @@ Requirements:
     </section>`;
   }
 
+  function renderPaymentWorkspace() {
+    const invoices = dashboardFinancialInvoices();
+    const payments = invoices.filter((invoice) => {
+      const status = financialCalculator().effectiveInvoiceStatus(invoice);
+      return Number(invoice.amount_paid || 0) > 0 || ["Paid", "Partially Paid"].includes(status);
+    });
+    return `<section class="financial-directory money-simple-workspace" aria-label="Payments">
+      <div class="ticket-lane-heading"><div><h3>Payments</h3><p>Recorded deposits and payments remain connected to their invoice and unified ticket.</p></div></div>
+      <div class="financial-card-list">${payments.length ? payments.map((invoice) => {
+        const summary = financialCalculator().invoiceSummary(invoice);
+        const status = financialCalculator().effectiveInvoiceStatus(invoice);
+        return `<article class="is-clickable" data-action="open-financial-invoice" data-id="${escapeHtml(invoice.id)}" tabindex="0">
+          <div><strong>${escapeHtml(invoice.invoice_number || "Invoice")}</strong><span>${escapeHtml(invoice.last_sent_at ? formatDate(invoice.last_sent_at) : invoice.issue_date || "Recorded")}</span></div>
+          <p>${escapeHtml(financialRecordName("client", invoice.client_id) || invoice.client_name || "Client not linked")} / ${moneyCurrency(invoice.amount_paid || 0)} paid</p>
+          <small>${escapeHtml(financialRecordName("ticket", invoice.ticket_id) || "No ticket linked")}</small>
+          <div class="money-card-actions"><span class="status-badge">${escapeHtml(status)}</span><strong>${moneyCurrency(summary.balance)} due</strong></div>
+        </article>`;
+      }).join("") : emptyState("No payments have been recorded yet. Payments appear here after they are connected to an invoice.")}</div>
+    </section>`;
+  }
+
   function renderQuoteWorkspace() {
     const quotes = dashboardDocuments().filter((document) => document.type === "estimate");
     const cards = quotes.map((quote) => {
@@ -16859,6 +17016,7 @@ Requirements:
     if (state.moneyView === "expenses") return renderExpenseWorkspace();
     if (state.moneyView === "quoting") return renderQuoteWorkspace();
     if (state.moneyView === "invoicing") return renderInvoiceWorkspace();
+    if (state.moneyView === "payments") return renderPaymentWorkspace();
     if (state.moneyView === "vendors") return renderVendorsWorkspace();
     if (state.moneyView === "documents") {
       const documents = state.data.financial.documents || [];
@@ -16905,49 +17063,37 @@ Requirements:
   function renderMoneyWorkspace(data = state.data) {
     const target = qs("[data-money-workspace]");
     if (!target) return;
-    const tickets = dashboardTickets(data).filter(ticketIsOpen);
-    const needsBudget = tickets.filter((ticket) => ticketInStage(ticket, ["needs_budget", "budget_in_progress"]));
-    const ownerApproval = tickets.filter((ticket) => ticketInStage(ticket, ["needs_owner_approval", "invoice_preparation"]));
-    const fieldComplete = tickets.filter((ticket) => ticketInStage(ticket, ["field_work_complete", "completion_review", "invoice_review"]));
     const documents = dashboardDocuments(data);
+    const quotes = documents.filter((doc) => doc.type === "estimate");
+    const draftQuotes = quotes.filter((doc) => ["draft", "new", "pending"].includes(statusText(doc.status)));
+    const awaitingApprovalQuotes = quotes.filter((doc) => ["sent", "awaiting approval", "pending approval"].includes(statusText(doc.status)) && !findJobTicketForSalesDocument(doc.id)?.customerApprovalRecorded);
     const unpaidInvoices = documents.filter((doc) => doc.type === "invoice" && doc.status !== "paid");
     const overdueInvoices = unpaidInvoices.filter((doc) => doc.dueDateRaw && doc.dueDateRaw < todayKey());
-    const invoiceTickets = unpaidInvoices.slice(0, 6).map((doc, index) => ({
-      id: doc.id,
-      source: "document",
-      number: doc.number || ticketNumber("INV", doc.id, index),
-      title: doc.type === "invoice" ? "Invoice review" : "Estimate review",
-      customer: doc.clientName || "Client not set",
-      property: doc.status || "Document status needed",
-      detail: doc.squareAmountDueCents !== null ? `${formatCurrency(doc.squareAmountDueCents, doc.squareCurrency)} due` : `$${Number(doc.total || 0).toFixed(2)}`,
-      stage: "invoice_review",
-      stageLabel: doc.status || "Invoice",
-      tone: overdueInvoices.some((item) => item.id === doc.id) ? "watch" : "active",
-      lane: "money",
-      action: "open-document",
-      dateRaw: doc.dueDateRaw || doc.createdAtRaw,
-      dateLabel: doc.dueDate || doc.createdAt || "",
-      nextAction: doc.squareInvoiceNumber ? "Sync or collect" : "Connect Square invoice",
-      ownerLabel: "Money",
-      blockers: doc.squareInvoiceNumber ? [] : ["Square invoice #"]
-    }));
+    const financialInvoices = dashboardFinancialInvoices(data);
+    const openFinancialInvoices = financialInvoices.filter((invoice) => !["Paid", "Voided", "Uncollectible"].includes(financialCalculator().effectiveInvoiceStatus(invoice)));
+    const openBalance = financialInvoices.length
+      ? openFinancialInvoices.reduce((sum, invoice) => sum + Number(financialCalculator().invoiceSummary(invoice).balance || 0), 0)
+      : unpaidInvoices.reduce((sum, invoice) => sum + Number(invoice.squareAmountDueCents !== null && invoice.squareAmountDueCents !== undefined ? invoice.squareAmountDueCents / 100 : invoice.total || 0), 0);
     target.innerHTML = `
       <div class="ticket-workspace uy-page-prototype money-workspace" data-uy-page-contract="money" data-data-source="documents,invoices,quotes,job_tickets,budgets">
         ${renderWorkspaceDataState("documents")}
         <header class="ticket-hero">
           <div>
-            <p class="eyebrow">Money</p>
-            <h3>Money Desk</h3>
-            <p>Review cost readiness, prepare invoices, track Square payment state, and close the financial record inside the ticket workflow.</p>
+            <h3>Money</h3>
+            <p>Manage quotes, invoices, payments, and expenses while each job-specific record remains connected to its unified ticket.</p>
           </div>
           <div class="ticket-hero-actions">
-            ${canManageMoneyWorkflow() ? `<button type="button" data-action="create-financial-quote">Create Quote</button>` : ""}
-            ${canManageMoneyWorkflow() ? `<button type="button" data-action="open-financial-records">Open Records</button>` : ""}
+            ${canManageMoneyWorkflow() ? `<button type="button" data-action="create-financial-quote">New Quote</button>` : ""}
           </div>
         </header>
+        <section class="ticket-metrics money-summary-strip" aria-label="Money summary">
+          ${renderTicketMetric(draftQuotes.length, "Draft Quotes", "Not yet sent")}
+          ${renderTicketMetric(awaitingApprovalQuotes.length, "Awaiting Approval", "Customer decision pending")}
+          ${renderTicketMetric(overdueInvoices.length, "Overdue Invoices", "Collection follow-up needed")}
+          ${renderTicketMetric(moneyCurrency(openBalance), "Open Balance", `${openFinancialInvoices.length || unpaidInvoices.length} open invoice${(openFinancialInvoices.length || unpaidInvoices.length) === 1 ? "" : "s"}`)}
+        </section>
         ${renderMoneyTabs()}
         ${renderMoneyActiveView()}
-        ${state.moneyView === "overview" ? `${renderMoneyCommandCenter({ needsBudget, ownerApproval, fieldComplete, invoiceTickets, unpaidInvoices, overdueInvoices })}${renderMoneyBudgetPanel(data, tickets)}` : ""}
       </div>`;
     if (!state.moneyLoadedViews.has(state.moneyView) && !state.moneyLoading && !state.moneyError) {
       queueMicrotask(() => void loadMoneyView(state.moneyView));
@@ -17168,6 +17314,15 @@ Requirements:
     </section>`;
   }
 
+  function renderToolsLaunchGroup({ title, detail, items = [] }) {
+    return `<article class="tools-launch-group">
+      <header><h3>${escapeHtml(title)}</h3><p>${escapeHtml(detail)}</p></header>
+      <div>${items.map((item) => item.href
+        ? `<a href="${escapeHtml(item.href)}"><span><strong>${escapeHtml(item.label)}</strong><small>${escapeHtml(item.detail)}</small></span><b aria-hidden="true">&#8250;</b></a>`
+        : `<button type="button" data-action="${escapeHtml(item.action)}"><span><strong>${escapeHtml(item.label)}</strong><small>${escapeHtml(item.detail)}</small></span><b aria-hidden="true">&#8250;</b></button>`).join("")}</div>
+    </article>`;
+  }
+
   function renderToolsWorkspace(data = state.data) {
     const target = qs("[data-tools-workspace]");
     if (!target) return;
@@ -17189,101 +17344,78 @@ Requirements:
         ${renderWorkspaceDataState("settings")}
         <header class="ticket-hero">
           <div>
-            <p class="eyebrow">Tools</p>
-            <h3>Tools &amp; Admin</h3>
-            <p>Route support, documents, AI, imports, backups, user access, and diagnostics stay here while daily work stays centered on tickets.</p>
+            <h3>Tools</h3>
+            <p>Open secondary utilities and administration without mixing them into daily ticket, lead, money, or field-work queues.</p>
           </div>
           <div class="ticket-hero-actions">
-            <button type="button" data-action="refresh-dashboard">Refresh Dashboard</button>
-            <button type="button" data-action="copy-dashboard-diagnostics">Copy Diagnostics</button>
+            <button type="button" class="secondary-action" data-action="refresh-dashboard">Refresh</button>
           </div>
         </header>
-        <section class="ticket-metrics" aria-label="Tools summary">
-          ${renderTicketMetric(criticalWarnings.length, "Active Workflow Warnings", "Issues affecting rebuilt workspaces")}
-          ${renderTicketMetric(supportWarnings.length, "Support Warnings", "Setup items for hidden support modules")}
-          ${renderTicketMetric(documents.length, "Financial Documents", "Quotes, invoices, and records")}
-          ${renderTicketMetric(documentationCount, "Forms and Files", "Templates and submissions")}
+        <section class="tools-launch-grid" aria-label="Tools groups">
+          ${renderToolsLaunchGroup({
+            title: "Field Tools",
+            detail: "Utilities that support scheduled work.",
+            items: [
+              { label: "Route Planner", detail: `${routeStopsToday} stops today`, action: "go-route-planner" },
+              { label: "Equipment", detail: `${equipmentCount} inventory records`, action: "go-equipment" },
+              { label: "Documentation", detail: "Field templates and submissions", action: "go-documentation" }
+            ]
+          })}
+          ${renderToolsLaunchGroup({
+            title: "Records & Data",
+            detail: "Archive, transfer, and recover business records.",
+            items: [
+              { label: "Documentation Archive", detail: `${documentationCount} forms and files`, action: "go-documentation" },
+              { label: "Import & Export", detail: "Spreadsheets, backups, and history", action: "go-import-export" },
+              { label: "Recently Deleted", detail: "Recover Money records", action: "go-money-deleted" }
+            ]
+          })}
+          ${renderToolsLaunchGroup({
+            title: "AI",
+            detail: "Train and review the Groundskeeper assistant.",
+            items: [
+              { label: "Groundskeeper AI", detail: aiLiveVersion === "Not published" ? "Training not published" : `Published ${aiLiveVersion}`, action: "go-groundskeeper-ai" },
+              { label: "AI Memory", detail: "Approved persistent context", href: "#ai-memory" },
+              { label: "Website Helper Preview", detail: "Review the visitor experience", action: "focus-helper-preview" }
+            ]
+          })}
+          ${renderToolsLaunchGroup({
+            title: "Administration",
+            detail: "Access, health, and protected system controls.",
+            items: [
+              { label: "Users & Access", detail: `${usersCount} dashboard users`, action: "go-product-access" },
+              { label: "Copy Diagnostics", detail: `${criticalWarnings.length + supportWarnings.length} current warnings`, action: "copy-dashboard-diagnostics" },
+              { label: "Set Up Defaults", detail: "Templates and operating defaults", action: "setup-urban-yards-tools" }
+            ]
+          })}
         </section>
-        <section class="tools-admin-grid" aria-label="Admin tools and diagnostics">
-          <article class="users-access-panel tools-admin-panel" data-tools-users-access>
-            <div class="panel-heading">
-              <div>
-                <p class="eyebrow">Access</p>
-                <h3>Users &amp; Access</h3>
-                <p>Invite users, manage roles, disable access, and keep profile avatars clean.</p>
-              </div>
-            </div>
-            <div class="users-access-status" data-users-access-status></div>
-            <div class="users-access-list" data-users-access-list></div>
-            <p class="form-note">Allowed avatar files: JPG, PNG, or WebP up to 2 MB. SVG and document uploads are blocked.</p>
-          </article>
-          <article class="dashboard-health-panel tools-admin-panel">
-            <div class="panel-heading">
-              <div>
-                <p class="eyebrow">Health</p>
-                <h3>Dashboard Health</h3>
-                <p>Safe diagnostics for configuration, auth, module loading, and deploy version.</p>
-              </div>
-              <button class="inline-action" type="button" data-action="copy-dashboard-diagnostics">Copy Summary</button>
-            </div>
-            <div class="dashboard-health-list" data-dashboard-health></div>
-          </article>
-          <article class="activity-log-panel tools-admin-panel tools-admin-panel--wide">
-            <div class="panel-heading">
-              <div>
-                <p class="eyebrow">Audit</p>
-                <h3>Activity Log</h3>
-                <p>Recent protected dashboard actions, exports, user changes, imports, and system activity.</p>
-              </div>
-            </div>
-            <div class="activity-log-list" data-activity-log-list></div>
-          </article>
-        </section>
-        ${renderUrbanYardsLaunchCenter(data)}
-        ${renderUrbanYardsOperationsCenter()}
-        ${supportWarnings.length ? `
-          <section class="ticket-lane">
-            <div class="ticket-lane-heading">
-              <div>
-                <h3>Support setup queue</h3>
-                <p>These items are retained for admin repair without blocking the rebuilt ticket workflow.</p>
-              </div>
-              <span>${escapeHtml(String(supportWarnings.length))}</span>
-            </div>
-            <div class="tools-warning-list">
-              ${supportWarnings.slice(0, 8).map((item) => `
-                <div class="tools-warning-item">
-                  <strong>${escapeHtml(item.name)}</strong>
-                  <small>${escapeHtml(item.message || item.detail || "Needs review.")}</small>
-                </div>
-              `).join("")}
-            </div>
-          </section>
-        ` : ""}
-        <section class="tools-safety-center" aria-label="Testing data and danger zone">
-          <article class="tools-test-data">
-            <div>
-              <p class="eyebrow">Testing Data</p>
-              <h3>QA records are separated from operations</h3>
-              <p>${escapeHtml(String(qaRecordCount(data)))} QA-linked records detected. They are ${state.showQaData ? "currently visible" : "hidden from operational totals, queues, and scorecards"}.</p>
-            </div>
-            <div class="drawer-actions">
-              <button type="button" class="secondary-action" data-action="toggle-qa-data">${state.showQaData ? "Hide QA Records" : "Show QA Records"}</button>
-              <button type="button" class="secondary-action" data-action="seed-qa-ticket-suite">Create 20 QA Tickets</button>
-            </div>
-          </article>
-          <article class="tools-danger-zone">
-            <div>
-              <p class="eyebrow">Danger Zone</p>
-              <h3>Delete all operational records</h3>
-              <p>This permanently clears supported operational tables. It stays separate from normal setup and testing actions.</p>
-            </div>
-            <label>Confirmation
-              <input type="text" data-reset-confirmation-input autocomplete="off" placeholder="Type DELETE ALL OPERATIONAL DATA">
-            </label>
-            <button type="button" class="danger-action" data-action="reset-all-operational-data">Delete All Records</button>
-          </article>
-        </section>
+        <details class="tools-advanced-admin">
+          <summary>Advanced administration and diagnostics</summary>
+          <div class="tools-advanced-admin-body">
+            <section class="tools-admin-grid" aria-label="Admin tools and diagnostics">
+              <article class="users-access-panel tools-admin-panel" data-tools-users-access>
+                <div class="panel-heading"><div><h3>Users &amp; Access</h3><p>Invite users, manage roles, and control access.</p></div></div>
+                <div class="users-access-status" data-users-access-status></div>
+                <div class="users-access-list" data-users-access-list></div>
+                <p class="form-note">Allowed avatar files: JPG, PNG, or WebP up to 2 MB.</p>
+              </article>
+              <article class="dashboard-health-panel tools-admin-panel">
+                <div class="panel-heading"><div><h3>Dashboard Health</h3><p>Configuration, authentication, module, and deploy diagnostics.</p></div><button class="inline-action" type="button" data-action="copy-dashboard-diagnostics">Copy Summary</button></div>
+                <div class="dashboard-health-list" data-dashboard-health></div>
+              </article>
+              <article class="activity-log-panel tools-admin-panel tools-admin-panel--wide">
+                <div class="panel-heading"><div><h3>Activity Log</h3><p>Recent protected dashboard and system activity.</p></div></div>
+                <div class="activity-log-list" data-activity-log-list></div>
+              </article>
+            </section>
+            ${renderUrbanYardsOperationsCenter()}
+            ${supportWarnings.length ? `<section class="ticket-lane"><div class="ticket-lane-heading"><div><h3>Support setup queue</h3><p>Optional modules that need administrative attention.</p></div><span>${escapeHtml(String(supportWarnings.length))}</span></div><div class="tools-warning-list">${supportWarnings.slice(0, 8).map((item) => `<div class="tools-warning-item"><strong>${escapeHtml(item.name)}</strong><small>${escapeHtml(item.message || item.detail || "Needs review.")}</small></div>`).join("")}</div></section>` : ""}
+            <section class="tools-safety-center" aria-label="Testing data and danger zone">
+              <article class="tools-test-data"><div><h3>Testing Data</h3><p>${escapeHtml(String(qaRecordCount(data)))} QA-linked records detected. They are ${state.showQaData ? "currently visible" : "hidden from operational totals and queues"}.</p></div><div class="drawer-actions"><button type="button" class="secondary-action" data-action="toggle-qa-data">${state.showQaData ? "Hide QA Records" : "Show QA Records"}</button><button type="button" class="secondary-action" data-action="seed-qa-ticket-suite">Create 20 QA Tickets</button></div></article>
+              <article class="tools-danger-zone"><div><h3>Delete all operational records</h3><p>This permanently clears supported operational tables.</p></div><label>Confirmation<input type="text" data-reset-confirmation-input autocomplete="off" placeholder="Type DELETE ALL OPERATIONAL DATA"></label><button type="button" class="danger-action" data-action="reset-all-operational-data">Delete All Records</button></article>
+            </section>
+          </div>
+        </details>
       </div>`;
     els.usersAccessStatus = qs("[data-users-access-status]");
     els.usersAccessList = qs("[data-users-access-list]");
@@ -26757,13 +26889,16 @@ Requirements:
         setActiveSection("settings");
         replaceDashboardHash("settings");
         await render();
-        qs("[data-tools-users-access]")?.scrollIntoView({ behavior: "smooth", block: "start" });
+        const accessPanel = qs("[data-tools-users-access]");
+        accessPanel?.closest("details")?.setAttribute("open", "");
+        accessPanel?.scrollIntoView({ behavior: "smooth", block: "start" });
       } else if (action === "open-financial-records") {
+        state.moneyView = "invoicing";
         setActiveSection("documents");
         replaceDashboardHash("documents");
         renderMoneyWorkspace(state.data);
         window.requestAnimationFrame(() => {
-          qs(".money-action-queue")?.scrollIntoView({
+          qs(".financial-directory, .money-action-queue")?.scrollIntoView({
             behavior: window.matchMedia?.("(prefers-reduced-motion: reduce)")?.matches ? "auto" : "smooth",
             block: "start"
           });

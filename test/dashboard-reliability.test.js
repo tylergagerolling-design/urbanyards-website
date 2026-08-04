@@ -41,8 +41,8 @@ test("archived workspace polish remains available with current dashboard assets"
   assert.match(css, /\.call-queue-row > span:first-child :is\(strong, small\)[\s\S]*overflow-wrap: anywhere/);
   assert.match(css, /\.groundskeeper-operation-card[\s\S]*white-space: normal !important/);
   assert.match(css, /\.dashboard-health-item strong[\s\S]*word-break: break-all/);
-  assert.match(html, /dashboard\.css\?v=20260804-client-detail-3/);
-  assert.match(html, /dashboard\.js\?v=20260804-client-detail-3/);
+  assert.match(html, /dashboard\.css\?v=20260804-remove-voice-panel-1/);
+  assert.match(html, /dashboard\.js\?v=20260804-remove-voice-panel-1/);
 });
 
 test("authenticated assistant prompt suppresses public quote calls to action", () => {
@@ -1419,13 +1419,14 @@ test("ticket trash is recoverable and permanent clearing is owner guarded", () =
   assert.match(backend, /ticket_trash_emptied/);
 });
 
-test("Call Queue matches the approved Google Voice fallback and entry-table workspace", () => {
+test("Call Queue omits the retired Google Voice panel and preserves the entry-table workspace", () => {
   const js = read("dashboard.js");
   const css = read("dashboard.css");
 
   assert.match(js, /Manage your inbound call queue and caller data/);
-  assert.match(js, /Google Voice opens in a secure window/);
-  assert.match(js, /href="https:\/\/voice\.google\.com\/" target="_blank" rel="noopener noreferrer"/);
+  assert.doesNotMatch(js, /Google Voice opens in a secure window/);
+  assert.doesNotMatch(js, /class="cq-voice-card"/);
+  assert.match(js, /function openGoogleVoiceWindow\(phoneNumber\)/);
   assert.match(js, /Call Queue Entries/);
   assert.match(js, /<th>Name<\/th><th>Phone Number<\/th><th>Address<\/th><th>Source<\/th><th>Status<\/th><th>Last Contact<\/th><th>Added On<\/th><th>Actions<\/th>/);
   assert.match(js, /Import Call Queue \(CSV\)/);

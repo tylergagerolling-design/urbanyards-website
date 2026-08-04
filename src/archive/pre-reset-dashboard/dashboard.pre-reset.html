@@ -13,11 +13,11 @@
     <link rel="apple-touch-icon" href="/apple-touch-icon.png">
     <link rel="manifest" href="/dashboard.webmanifest">
   <!-- Release lineage: dashboard.css?v=20260803-reference-layout-1 / dashboard.js?v=20260803-reference-layout-1 -->
-  <link rel="stylesheet" href="dashboard.css?v=20260803-blank-canvas-1">
+  <link rel="stylesheet" href="dashboard.css?v=20260803-simplified-ops-1">
     <script src="dashboard-config.js?v=20260716-loader-1" defer></script>
     <script src="scripts/budget-calculations.js?v=20260716-loader-1" defer></script>
     <script src="scripts/financial-calculations.js?v=20260723-invoice-status-1" defer></script>
-    <script src="dashboard.js?v=20260803-blank-canvas-1" defer></script>
+    <script src="dashboard.js?v=20260803-simplified-ops-1" defer></script>
   </head>
   <body>
     <main class="dashboard-shell" aria-labelledby="dashboard-title">
@@ -109,6 +109,31 @@
         </aside>
 
         <div class="dashboard-main">
+          <header class="dashboard-topbar">
+            <div class="topbar-title-group">
+              <div>
+                <p class="eyebrow">Owner Workspace</p>
+                <h2>Urban Yards</h2>
+              </div>
+            </div>
+            <div class="topbar-actions">
+              <span class="environment-pill" data-environment-indicator hidden></span>
+              <span class="user-avatar header-user-avatar" data-header-user-avatar-wrap>
+                <img data-header-user-avatar alt="" hidden>
+                <span data-header-user-initials>UY</span>
+              </span>
+              <span data-owner-email>team@urbanyards.us</span>
+              <label class="global-search-control">
+                <span class="sr-only">Search dashboard</span>
+                <input data-global-search type="search" aria-label="Search dashboard" placeholder="Search everything...">
+                <div class="global-search-panel" data-global-search-panel hidden></div>
+              </label>
+              <div class="global-add-control">
+                <button type="button" data-action="toggle-global-add" data-global-add-button aria-haspopup="menu" aria-expanded="false" aria-controls="global-add-menu"><span class="button-icon" aria-hidden="true">+</span><span>Add</span></button>
+                <div class="global-add-menu" id="global-add-menu" data-global-add-menu role="menu" hidden></div>
+              </div>
+            </div>
+          </header>
           <div class="dashboard-state" data-dashboard-state role="status" hidden></div>
 
           <section class="dashboard-section job-ticket-page" id="tickets" data-section="tickets">

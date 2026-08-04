@@ -19,15 +19,15 @@ test("Google Maps loads asynchronously to avoid blocking dashboard startup", () 
   assert.match(read("dashboard.js"), /maps\/api\/js\?key=.*&loading=async/);
 });
 
-test("live workspace polish contains long records and management cards", () => {
+test("archived workspace polish remains available while blank-canvas assets are active", () => {
   const css = read("dashboard.css");
   const html = read("dashboard.html");
   assert.match(css, /Live workspace containment and readable long-record polish/);
   assert.match(css, /\.call-queue-row > span:first-child :is\(strong, small\)[\s\S]*overflow-wrap: anywhere/);
   assert.match(css, /\.groundskeeper-operation-card[\s\S]*white-space: normal !important/);
   assert.match(css, /\.dashboard-health-item strong[\s\S]*word-break: break-all/);
-  assert.match(html, /dashboard\.css\?v=20260803-reference-layout-1/);
-  assert.match(html, /dashboard\.js\?v=20260803-reference-layout-1/);
+  assert.match(html, /dashboard\.css\?v=20260803-blank-canvas-2/);
+  assert.match(html, /dashboard\.js\?v=20260803-blank-canvas-2/);
 });
 
 test("authenticated assistant prompt suppresses public quote calls to action", () => {
@@ -174,6 +174,7 @@ test("dashboard architecture inventory protects existing Supabase surfaces", () 
 
 test("dashboard route aliases and new reliability diagnostics are wired", () => {
   const html = read("dashboard.html");
+  const archivedHtml = read("src/archive/pre-reset-dashboard/dashboard.pre-reset.html");
   const css = read("dashboard.css");
   const js = read("dashboard.js");
   const workspaceRegistry = read("src/app/routing/workspace-registry.js");
@@ -181,8 +182,10 @@ test("dashboard route aliases and new reliability diagnostics are wired", () => 
   assert.doesNotMatch(html, /id="budgets"/);
   assert.doesNotMatch(html, /id="connected-operations"/);
   assert.match(html, /scripts\/budget-calculations\.js/);
-  assert.match(html, /<section class="dashboard-section home-ticket-page" id="overview"/);
-  assert.match(html, /data-home-workspace/);
+  assert.match(html, /<section class="dashboard-section workspace-reset-canvas" id="overview" data-section="overview"><small>Home Wireframe Canvas<\/small><\/section>/);
+  assert.doesNotMatch(html, /data-home-workspace|data-global-search|dashboard-topbar/);
+  assert.match(archivedHtml, /<section class="dashboard-section home-ticket-page" id="overview"/);
+  assert.match(archivedHtml, /data-home-workspace/);
   const primaryDrawerLabels = [...html.matchAll(/<a href="#[^"]+"(?![^>]*legacy-nav-route)[^>]*data-dashboard-link="[^"]+"[\s\S]*?<span class="nav-label">([^<]+)<\/span><\/a>/g)].map((match) => match[1]);
   assert.deepEqual(primaryDrawerLabels, ["Home", "Tickets", "Work", "Leads", "Money", "Tools"]);
   const mobileTabLabels = [...html.matchAll(/<nav class="mobile-tabbar"[\s\S]*?<\/nav>/g)][0][0]
@@ -191,7 +194,9 @@ test("dashboard route aliases and new reliability diagnostics are wired", () => 
   assert.match(js, /function loadModule/);
   assert.match(js, /function safeRender/);
   assert.match(js, /function renderHomeWorkspace/);
-  assert.match(js, /safeRender\("home ticket workspace", \(\) => renderHomeWorkspace\(data\)\)/);
+  assert.doesNotMatch(js, /safeRender\("home ticket workspace", \(\) => renderHomeWorkspace\(data\)\)/);
+  assert.match(js, /function renderVisualResetWorkspaces/);
+  assert.match(js, /safeRender\("wireframe canvases", \(\) => renderVisualResetWorkspaces\(\)\)/);
   assert.match(js, /function renderDashboardHealth/);
   assert.match(js, /activeSection: "overview"/);
   assert.match(js, /const DEFAULT_DASHBOARD_SECTION = "overview"/);
@@ -255,16 +260,16 @@ test("dashboard route aliases and new reliability diagnostics are wired", () => 
   assert.doesNotMatch(js, /renderWorkspaceWorkflowRibbon/);
   assert.doesNotMatch(css, /workspace-workflow-ribbon/);
   assert.doesNotMatch(js, /Leads handoff rule/);
-  const overviewSection = html.match(/<section class="dashboard-section home-ticket-page" id="overview"[\s\S]*?<\/section>/)?.[0] || "";
+  const overviewSection = archivedHtml.match(/<section class="dashboard-section home-ticket-page" id="overview"[\s\S]*?<\/section>/)?.[0] || "";
   assert.match(overviewSection, /data-home-workspace/);
   assert.doesNotMatch(overviewSection, /overview-command-header|home-secondary-tools|data-metrics|data-command-deadlines/);
-  const workSection = html.match(/<section class="dashboard-section work-page work-hub-page" id="calendar"[\s\S]*?<\/section>/)?.[0] || "";
+  const workSection = archivedHtml.match(/<section class="dashboard-section work-page work-hub-page" id="calendar"[\s\S]*?<\/section>/)?.[0] || "";
   assert.match(workSection, /data-work-workspace/);
   assert.doesNotMatch(workSection, /work-command-header|work-secondary-tools|data-work-snapshot|data-calendar-list/);
-  const leadsSection = html.match(/<section class="dashboard-section uy-standard-page leads-page" id="outreach"[\s\S]*?<\/section>/)?.[0] || "";
+  const leadsSection = archivedHtml.match(/<section class="dashboard-section uy-standard-page leads-page" id="outreach"[\s\S]*?<\/section>/)?.[0] || "";
   assert.match(leadsSection, /data-leads-workspace/);
   assert.doesNotMatch(leadsSection, /outreach-hero|data-outreach-view-panel|data-outreach-table|data-outreach-company-table/);
-  const moneySection = html.match(/<section class="dashboard-section uy-standard-page money-page" id="documents"[\s\S]*?<\/section>/)?.[0] || "";
+  const moneySection = archivedHtml.match(/<section class="dashboard-section uy-standard-page money-page" id="documents"[\s\S]*?<\/section>/)?.[0] || "";
   assert.match(moneySection, /data-money-workspace/);
   assert.doesNotMatch(moneySection, /data-quote-table|data-pipeline|data-document-form/);
   const moneyWorkspace = js.match(/function renderMoneyWorkspace[\s\S]*?function renderToolsRunwayCard/)?.[0] || "";
@@ -278,12 +283,10 @@ test("dashboard route aliases and new reliability diagnostics are wired", () => 
   assert.match(toolsWorkspace, /renderDashboardHealth\(\)/);
   assert.doesNotMatch(toolsWorkspace, /data-import-backup|data-user-avatar-upload/);
   assert.doesNotMatch(toolsWorkspace, /Tools workspace signals|tools-health-strip/);
-  const toolsSection = html.match(/<section class="dashboard-section uy-standard-page tools-page" id="settings"[\s\S]*?<\/section>/)?.[0] || "";
-  assert.match(toolsSection, /data-tools-workspace/);
-  assert.match(toolsSection, /data-tools-runtime/);
-  assert.match(toolsSection, /data-import-backup/);
-  assert.match(toolsSection, /data-user-avatar-upload/);
-  assert.doesNotMatch(toolsSection, /uy-page-intro-panel|rebuild-tool-grid|settings-grid/);
+  assert.match(archivedHtml, /data-tools-workspace/);
+  assert.match(archivedHtml, /data-tools-runtime/);
+  assert.match(archivedHtml, /data-import-backup/);
+  assert.match(archivedHtml, /data-user-avatar-upload/);
   assert.doesNotMatch(js, /function renderTicketEndToEndFlow/);
   assert.doesNotMatch(js, /data-ticket-lifecycle-map/);
   assert.doesNotMatch(js, /renderTicketEndToEndFlow\(activeTickets/);
@@ -625,11 +628,14 @@ test("Open Records opens the financial closeout records", () => {
 
 test("Leads flyout adds Call Queue without changing existing items", () => {
   const html = read("dashboard.html");
+  const archivedHtml = read("src/archive/pre-reset-dashboard/dashboard.pre-reset.html");
   const js = read("dashboard.js");
   const css = read("dashboard.css");
 
   assert.match(html, /data-sidebar-subnav="outreach"[\s\S]*>Lead Pipeline<\/span>[\s\S]*#contacts[\s\S]*>Clients<\/span>[\s\S]*#call-queue[\s\S]*>Call Queue<\/span>/);
-  assert.match(html, /id="call-queue" data-section="call-queue"[\s\S]*data-call-queue-workspace/);
+  assert.match(html, /id="call-queue" data-section="call-queue"><small>Call Queue Wireframe Canvas<\/small>/);
+  assert.doesNotMatch(html, /data-call-queue-workspace/);
+  assert.match(archivedHtml, /id="call-queue" data-section="call-queue"[\s\S]*data-call-queue-workspace/);
   assert.match(js, /"call-queue": "outreach"/);
   assert.match(js, /"call-queue": \["outreachProspects", "leadActivity", "tickets", "contacts"\]/);
   assert.match(js, /function filteredCallQueue[\s\S]*function renderCallQueueWorkspace/);
@@ -1044,13 +1050,15 @@ test("Leads Contact Queue shows ten records until View All Leads is expanded", (
   assert.match(js, /action === "toggle-leads-contact-queue"[\s\S]*leadsContactQueueExpanded = !state\.leadsContactQueueExpanded[\s\S]*renderLeadsWorkspace/);
 });
 
-test("dashboard daily workflow prioritizes actions, saved views, and data quality", () => {
+test("retired daily workflow stays archived and disconnected from blank canvases", () => {
   const html = read("dashboard.html");
+  const archivedHtml = read("src/archive/pre-reset-dashboard/dashboard.pre-reset.html");
   const js = read("dashboard.js");
   const css = read("dashboard.css");
 
-  assert.match(html, /data-global-search[\s\S]*Search everything/);
-  assert.match(html, /data-action="toggle-global-add"/);
+  assert.doesNotMatch(html, /data-global-search|data-action="toggle-global-add"/);
+  assert.match(archivedHtml, /data-global-search[\s\S]*Search everything/);
+  assert.match(archivedHtml, /data-action="toggle-global-add"/);
   assert.match(js, /function dashboardActionMetrics/);
   assert.match(js, /Open Tickets[\s\S]*In Progress[\s\S]*Due Today[\s\S]*Completed This Week[\s\S]*Revenue This Month/);
   assert.match(js, /OWNER_KANBAN_SAVED_VIEWS[\s\S]*Due Today[\s\S]*Overdue[\s\S]*Blocked[\s\S]*Needs Review/);

@@ -22444,35 +22444,6 @@ Requirements:
     </section>`;
   }
 
-  // Controlled visual reset: legacy workspace renderers remain available only in
-  // the pre-reset restore branch and are intentionally disconnected from routing.
-  const DASHBOARD_VISUAL_RESET_TITLES = Object.freeze({
-    overview: "Home",
-    tickets: "Tickets",
-    calendar: "Work",
-    "route-planner": "Route Planner",
-    outreach: "Leads",
-    contacts: "Clients",
-    "call-queue": "Call Queue",
-    documents: "Money",
-    equipment: "Equipment",
-    documentation: "Documentation",
-    "import-export": "Import & Export",
-    "groundskeeper-ai": "Groundskeeper AI",
-    "ai-memory": "AI Memory",
-    settings: "Tools"
-  });
-
-  function renderVisualResetWorkspaces() {
-    qsa(".dashboard-main > .dashboard-section[data-section]").forEach((section) => {
-      const key = normalizeDashboardSection(section.dataset.section || section.id);
-      const title = DASHBOARD_VISUAL_RESET_TITLES[key] || "Workspace";
-      section.innerHTML = `<div class="workspace-reset-canvas" data-workspace-reset="${escapeHtml(key)}">
-        <small>${escapeHtml(title)} Wireframe Canvas</small>
-      </div>`;
-    });
-  }
-
   async function render() {
     const data = state.data;
     safeRender("notifications", () => renderNotifications(data));
@@ -22482,7 +22453,36 @@ Requirements:
     safeRender("global add menu", () => renderGlobalAddMenu());
     safeRender("global search", () => renderGlobalSearchPanel());
     const active = normalizeDashboardSection(state.activeSection);
-    safeRender("wireframe canvases", () => renderVisualResetWorkspaces());
+    if (active === "overview") {
+      safeRender("home ticket workspace", () => renderHomeWorkspace(data));
+    } else if (active === "tickets") {
+      safeRender("job ticket workspace", () => renderJobTicketWorkspace(data));
+    } else if (active === "calendar") {
+      safeRender("work workspace", () => renderWorkWorkspace(data));
+    } else if (active === "outreach") {
+      safeRender("leads workspace", () => renderLeadsWorkspace(data));
+    } else if (active === "call-queue") {
+      safeRender("call queue workspace", () => renderCallQueueWorkspace());
+    } else if (active === "documents") {
+      safeRender("money workspace", () => renderMoneyWorkspace(data));
+    } else if (active === "settings") {
+      safeRender("tools workspace", () => renderToolsWorkspace(data));
+    } else if (active === "contacts") {
+      safeRender("contacts", () => renderContacts(data));
+    } else if (active === "documentation") {
+      safeRender("documentation", () => renderDocumentation(data));
+    } else if (active === "equipment") {
+      safeRender("equipment", () => renderEquipment(data));
+    } else if (active === "route-planner") {
+      safeRender("route planner", () => renderRoutePlanner(data));
+    } else if (active === "groundskeeper-ai") {
+      safeRender("Groundskeeper AI", () => renderGroundskeeperAi(data));
+    } else if (active === "ai-memory") {
+      if (!state.assistantMemoriesLoading && !state.assistantMemoriesLoaded && !state.assistantMemoriesError) await loadAssistantMemories();
+      safeRender("AI Memory", () => renderAiMemoryWorkspace());
+    } else if (active === "import-export") {
+      safeRender("import/export", () => renderImportExport(data));
+    }
     safeRender("contextual Groundskeeper tools", () => renderContextualGroundskeeperTools(active));
     safeRender("dashboard Groundskeeper", () => renderDashboardCopilot());
     safeRender("avatar fallbacks", () => bindAvatarFallbacks());

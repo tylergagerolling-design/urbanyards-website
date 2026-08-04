@@ -22460,35 +22460,6 @@ Requirements:
     </section>`;
   }
 
-  // Controlled visual reset: legacy workspace renderers remain available only in
-  // the pre-reset restore branch and are intentionally disconnected from routing.
-  const DASHBOARD_VISUAL_RESET_TITLES = Object.freeze({
-    overview: "Home",
-    tickets: "Tickets",
-    calendar: "Work",
-    "route-planner": "Route Planner",
-    outreach: "Leads",
-    contacts: "Clients",
-    "call-queue": "Call Queue",
-    documents: "Money",
-    equipment: "Equipment",
-    documentation: "Documentation",
-    "import-export": "Import & Export",
-    "groundskeeper-ai": "Groundskeeper AI",
-    "ai-memory": "AI Memory",
-    settings: "Tools"
-  });
-
-  function renderVisualResetWorkspaces() {
-    qsa(".dashboard-main > .dashboard-section[data-section]").forEach((section) => {
-      const key = normalizeDashboardSection(section.dataset.section || section.id);
-      const title = DASHBOARD_VISUAL_RESET_TITLES[key] || "Workspace";
-      section.innerHTML = `<div class="workspace-reset-canvas" data-workspace-reset="${escapeHtml(key)}">
-        <small>${escapeHtml(title)} Wireframe Canvas</small>
-      </div>`;
-    });
-  }
-
   function renderVisualResetWorkspaces() {
     qsa(".dashboard-main > .dashboard-section[data-section]").forEach((section) => {
       const key = normalizeDashboardSection(section.dataset.section || section.id);

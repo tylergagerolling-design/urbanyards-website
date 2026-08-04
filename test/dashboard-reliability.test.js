@@ -29,6 +29,7 @@ test("Route Planner renders the approved weekly card workspace from shared sched
   assert.match(js, /state\.data\.jobs/);
   assert.match(js, /Optimize All Routes/);
   assert.match(js, /route-add-stop/);
+  assert.match(js, /key === "route-planner"\) return/);
   assert.match(css, /grid-template-columns:repeat\(7,minmax\(188px,1fr\)\)/);
 });
 

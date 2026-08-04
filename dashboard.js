@@ -23061,7 +23061,7 @@ Requirements:
   function renderVisualResetWorkspaces() {
     qsa(".dashboard-main > .dashboard-section[data-section]").forEach((section) => {
       const key = normalizeDashboardSection(section.dataset.section || section.id);
-      if (key === "overview" || key === "tickets" || key === "calendar") return;
+      if (key === "overview" || key === "tickets" || key === "calendar" || key === "route-planner") return;
       const title = DASHBOARD_VISUAL_RESET_TITLES[key] || "Workspace";
       section.className = "dashboard-section workspace-reset-canvas";
       section.innerHTML = `<small>${escapeHtml(title)} Wireframe Canvas</small>`;

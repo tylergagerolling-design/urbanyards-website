@@ -19,15 +19,28 @@ test("Google Maps loads asynchronously to avoid blocking dashboard startup", () 
   assert.match(read("dashboard.js"), /maps\/api\/js\?key=.*&loading=async/);
 });
 
-test("archived workspace polish remains available while blank-canvas assets are active", () => {
+test("Route Planner renders the approved weekly card workspace from shared schedule data", () => {
+  const html = read("dashboard.html");
+  const js = read("dashboard.js");
+  const css = read("dashboard.css");
+  assert.match(html, /data-route-week-planner/);
+  assert.match(js, /function routePlannerStopsForDay/);
+  assert.match(js, /state\.data\.routeStops/);
+  assert.match(js, /state\.data\.jobs/);
+  assert.match(js, /Optimize All Routes/);
+  assert.match(js, /route-add-stop/);
+  assert.match(css, /grid-template-columns:repeat\(7,minmax\(188px,1fr\)\)/);
+});
+
+test("archived workspace polish remains available with current dashboard assets", () => {
   const css = read("dashboard.css");
   const html = read("dashboard.html");
   assert.match(css, /Live workspace containment and readable long-record polish/);
   assert.match(css, /\.call-queue-row > span:first-child :is\(strong, small\)[\s\S]*overflow-wrap: anywhere/);
   assert.match(css, /\.groundskeeper-operation-card[\s\S]*white-space: normal !important/);
   assert.match(css, /\.dashboard-health-item strong[\s\S]*word-break: break-all/);
-  assert.match(html, /dashboard\.css\?v=20260804-unified-data-2/);
-  assert.match(html, /dashboard\.js\?v=20260804-unified-data-2/);
+  assert.match(html, /dashboard\.css\?v=20260804-route-planner-1/);
+  assert.match(html, /dashboard\.js\?v=20260804-route-planner-1/);
 });
 
 test("authenticated assistant prompt suppresses public quote calls to action", () => {

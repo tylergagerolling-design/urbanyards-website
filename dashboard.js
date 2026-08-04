@@ -416,6 +416,8 @@
     selectedOutreachPropertyIds: new Set(),
     pendingOutreachImport: null,
     routeDate: todayKey(),
+    routeWeekStart: "",
+    routeSelectedDate: "",
     selectedRouteStopId: "",
     search: "",
     propertyFilter: "All",
@@ -17459,61 +17461,179 @@ Requirements:
       </article>`;
   }
 
+  function routePlannerMonday(dateKeyValue = todayKey()) {
+    const date = new Date(`${dateKeyValue}T12:00:00`);
+    const weekday = date.getDay();
+    date.setDate(date.getDate() - (weekday === 0 ? 6 : weekday - 1));
+    return date.toISOString().slice(0, 10);
+  }
+
+  function routePlannerDays() {
+    const monday = state.routeWeekStart || routePlannerMonday();
+    return Array.from({ length: 7 }, (_, index) => addDaysKey(monday, index));
+  }
+
+  function routePlannerTimeLabel(stop, index) {
+    const raw = String(stop.arrivalTime || stop.window || "").trim();
+    const match = raw.match(/\b(\d{1,2})(?::(\d{2}))?\s*(AM|PM)\b/i);
+    if (match) return `${match[1]}:${match[2] || "00"} ${match[3].toUpperCase()}`;
+    const base = 8 * 60 + index * 90;
+    const hour = Math.floor(base / 60);
+    return `${hour > 12 ? hour - 12 : hour}:${String(base % 60).padStart(2, "0")} ${hour >= 12 ? "PM" : "AM"}`;
+  }
+
+  function routePlannerStopsForDay(day) {
+    const routeStops = visibleOperationalRecords(state.data.routeStops || [])
+      .filter((stop) => stop.routeDate === day && stop.status !== "Cancelled")
+      .sort((a, b) => a.stopOrder - b.stopOrder || String(a.createdAt).localeCompare(String(b.createdAt)));
+    const existingNames = new Set(routeStops.map((stop) => String(stop.clientName).toLowerCase()));
+    const scheduled = visibleOperationalRecords(state.data.jobs || [])
+      .filter((job) => job.dateRaw === day && !["Cancelled", "Canceled"].includes(job.status) && !existingNames.has(String(job.site).toLowerCase()))
+      .map((job, index) => ({
+        id: `scheduled-${job.id}`,
+        routeDate: day,
+        clientName: job.site,
+        address: job.city,
+        serviceType: job.service,
+        estimatedMinutes: 60,
+        status: job.status,
+        stopOrder: routeStops.length + index + 1,
+        window: job.window,
+        sourceJobId: job.id,
+        latitude: null,
+        longitude: null
+      }));
+    return [...routeStops, ...scheduled];
+  }
+
+  function routePlannerDuration(stops) {
+    const service = stops.reduce((sum, stop) => sum + Number(stop.estimatedMinutes || 60), 0);
+    const drive = Math.max(0, stops.length - 1) * 18;
+    const total = service + drive;
+    return `${Math.floor(total / 60)}h ${String(total % 60).padStart(2, "0")}m`;
+  }
+
+  function routePlannerDistance(stops) {
+    if (!stops.length) return 0;
+    const pinned = stops.filter(hasRouteCoordinates);
+    if (pinned.length < 2) return Math.max(0, Math.round((stops.length - 1) * 5.4));
+    let miles = 0;
+    for (let index = 1; index < pinned.length; index += 1) {
+      const a = pinned[index - 1];
+      const b = pinned[index];
+      const latMiles = (b.latitude - a.latitude) * 69;
+      const lngMiles = (b.longitude - a.longitude) * 47;
+      miles += Math.sqrt(latMiles ** 2 + lngMiles ** 2) * 1.22;
+    }
+    return Math.max(1, Math.round(miles));
+  }
+
+  function routePlannerWeekLabel(days) {
+    const start = new Date(`${days[0]}T12:00:00`);
+    const end = new Date(`${days[6]}T12:00:00`);
+    const startLabel = start.toLocaleDateString("en-US", { month: "short", day: "numeric" });
+    const endLabel = end.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
+    return `${state.routeWeekStart === routePlannerMonday() ? "This Week " : ""}(${startLabel} – ${endLabel})`;
+  }
+
+  function openRouteStopDrawer(day = state.routeSelectedDate || todayKey()) {
+    state.routeDate = day;
+    state.routeSelectedDate = day;
+    els.detailContent.innerHTML = `
+      <section class="route-stop-drawer">
+        <div class="panel-heading"><div><p class="eyebrow">Route Planner</p><h3>Add Stop</h3><p>${escapeHtml(formatDate(day))}</p></div></div>
+        <form class="route-stop-form" data-route-form>
+          <input type="hidden" name="route_stop_id" value="">
+          <label>Property or customer<input name="client_name" required autocomplete="off"></label>
+          <label>Address<input name="address" data-route-address-input required autocomplete="street-address"></label>
+          <label>Service<input name="service_type" required value="Groundskeeping"></label>
+          <label>Estimated service time<input name="estimated_minutes" type="number" min="1" step="5" value="60"></label>
+          <label>Status<select name="status">${ROUTE_STATUSES.map((status) => `<option>${escapeHtml(status)}</option>`).join("")}</select></label>
+          <label>Notes<textarea name="notes" rows="4"></textarea></label>
+          <div class="route-form-actions"><button type="submit" data-route-submit>Save Stop</button><button class="secondary-action" type="button" data-action="close-drawer">Cancel</button></div>
+        </form>
+      </section>`;
+    els.routeForm = qs("[data-route-form]");
+    els.routeAddressInput = qs("[data-route-address-input]");
+    els.routeSubmit = qs("[data-route-submit]");
+    openDetailDrawer();
+    initAddressAutocomplete(els.routeAddressInput);
+  }
+
+  async function optimizeRoutePlannerWeek() {
+    const dayGroups = routePlannerDays().map((day) => ({ day, stops: selectedRouteStopsForDay(day) })).filter((group) => group.stops.length > 2);
+    if (!dayGroups.length) {
+      setDashboardState("No multi-stop saved routes are available to optimize.");
+      return;
+    }
+    const ok = window.confirm(`Optimize stop order within ${dayGroups.length} day${dayGroups.length === 1 ? "" : "s"}? Dates will not change.`);
+    if (!ok) return;
+    setDashboardState("Optimizing routes...");
+    for (const group of dayGroups) {
+      const pinned = group.stops.filter(hasRouteCoordinates);
+      const unpinned = group.stops.filter((stop) => !hasRouteCoordinates(stop));
+      const ordered = [];
+      if (pinned.length) {
+        ordered.push(pinned.shift());
+        while (pinned.length) {
+          const current = ordered[ordered.length - 1];
+          pinned.sort((a, b) => ((a.latitude - current.latitude) ** 2 + (a.longitude - current.longitude) ** 2) - ((b.latitude - current.latitude) ** 2 + (b.longitude - current.longitude) ** 2));
+          ordered.push(pinned.shift());
+        }
+      }
+      ordered.push(...unpinned);
+      for (let index = 0; index < ordered.length; index += 1) {
+        await supabaseRestRequest(`route_stops?id=eq.${encodeURIComponent(ordered[index].id)}`, { method: "PATCH", body: JSON.stringify({ stop_order: index + 1 }) });
+      }
+    }
+    await refreshDashboard();
+    setActiveSection("route-planner");
+    setDashboardState("Routes optimized within their existing days.");
+  }
+
+  function selectedRouteStopsForDay(day) {
+    return visibleOperationalRecords(state.data.routeStops || []).filter((stop) => stop.routeDate === day).sort((a, b) => a.stopOrder - b.stopOrder);
+  }
+
   function renderRoutePlanner() {
-    if (!els.routeDate || !els.routeStops || !els.routeSummary) return;
-    els.routeDate.value = state.routeDate;
-
-    if (!state.routeStopsReady) {
-      els.routeSummary.textContent = "Route Planner needs the route_stops table.";
-      els.routeStops.innerHTML = emptyState("Create the route_stops table in Supabase, then refresh this dashboard.");
-      return;
+    if (!els.routeWeekPlanner) return;
+    if (!state.routeWeekStart) state.routeWeekStart = routePlannerMonday();
+    const days = routePlannerDays();
+    if (!state.routeSelectedDate || !days.includes(state.routeSelectedDate)) {
+      state.routeSelectedDate = days.includes(todayKey()) ? todayKey() : days[2];
     }
-
-    const stops = filteredRouteStops(selectedRouteStops());
-    const minutes = stops.reduce((sum, stop) => sum + (stop.estimatedMinutes || 0), 0);
-    els.routeSummary.textContent = stops.length
-      ? `${stops.length} stop${stops.length === 1 ? "" : "s"} / ${minutes || 0} min estimated`
-      : "No stops planned for this date.";
-
-    if (!stops.length) {
-      els.routeStops.innerHTML = emptyState("No route stops yet. Add the first property for this day.");
-      renderRouteMap(stops);
-      return;
-    }
-
-    els.routeStops.innerHTML = stops.map((stop, index) => {
-      const isFindingPin = routeGeocodingIds.has(stop.id);
-      const needsPin = stop.address && !hasRouteCoordinates(stop);
-      return `
-      <article class="route-stop-card route-stop-${slug(stop.status)} ${state.selectedRouteStopId === stop.id ? "is-selected" : ""} ${isFindingPin ? "is-finding-pin" : ""}" data-route-stop-card data-action="select-route-stop" data-id="${escapeHtml(stop.id)}">
-        <div class="route-stop-order">
-          <span>${index + 1}</span>
-        </div>
-        <div class="route-stop-body">
-          <div class="item-topline">
-            <div>
-              <h4>${escapeHtml(stop.clientName)}</h4>
-              <div class="meta">${escapeHtml(stop.serviceType)} / ${stop.estimatedMinutes ? `${escapeHtml(stop.estimatedMinutes)} min` : "Time not set"}</div>
-            </div>
-            ${routeStatusSelect(stop.id, stop.status)}
+    routePreviewState.clear();
+    els.routeWeekPlanner.innerHTML = `
+      <div class="route-week-shell">
+        <header class="route-week-header">
+          <div><h1>Route Planner</h1><p>Plan your week, optimize each day</p></div>
+          <div class="route-week-controls">
+            <div class="route-week-arrows"><button type="button" data-action="route-previous-week" aria-label="Previous week">‹</button><button type="button" data-action="route-next-week" aria-label="Next week">›</button></div>
+            <label class="route-week-selector"><span aria-hidden="true">▣</span><input type="date" value="${escapeHtml(days[0])}" data-route-week-input aria-label="Choose route week"><strong>${escapeHtml(routePlannerWeekLabel(days))}</strong><span aria-hidden="true">⌄</span></label>
+            <button class="route-optimize-button" type="button" data-action="route-optimize-week">Optimize All Routes</button>
+            <button class="route-new-button" type="button" data-action="route-new-stop"><span>＋</span> New Route</button>
           </div>
-          <p class="route-address">${escapeHtml(stop.address)}</p>
-          ${isFindingPin ? `<p class="route-pin-needed route-pin-loading">Finding map pin...</p>` : ""}
-          ${needsPin && !isFindingPin ? `<p class="route-pin-needed">Map pin needed.</p>` : ""}
-          <p class="small">${escapeHtml(stop.notes || "No notes yet.")}</p>
-          <div class="route-stop-actions">
-            <button class="inline-action" type="button" data-action="move-route-up" data-id="${escapeHtml(stop.id)}"${index === 0 ? " disabled" : ""}>${buttonContent("Up", "move-route-up")}</button>
-            <button class="inline-action" type="button" data-action="move-route-down" data-id="${escapeHtml(stop.id)}"${index === stops.length - 1 ? " disabled" : ""}>${buttonContent("Down", "move-route-down")}</button>
-            <button class="inline-action" type="button" data-action="mark-route-complete" data-id="${escapeHtml(stop.id)}">${buttonContent("Mark Complete", "mark-route-complete")}</button>
-            ${needsPin ? `<button class="inline-action" type="button" data-action="retry-stop-map" data-id="${escapeHtml(stop.id)}"${isFindingPin ? " disabled" : ""}>${buttonContent(isFindingPin ? "Finding..." : "Retry Map Lookup", "open-route-map")}</button>` : ""}
-            <button class="inline-action" type="button" data-action="edit-route-stop" data-id="${escapeHtml(stop.id)}">${buttonContent("Edit", "edit-route-stop")}</button>
-            <button class="inline-action danger-action" type="button" data-action="delete-route-stop" data-id="${escapeHtml(stop.id)}">${buttonContent("Delete", "delete-route-stop")}</button>
-          </div>
+        </header>
+        ${state.routeStopsReady ? "" : `<p class="route-week-notice">Route data is temporarily unavailable. Scheduled visits are still shown.</p>`}
+        <div class="route-week-cards" role="list" aria-label="Routes for ${escapeHtml(routePlannerWeekLabel(days))}">
+          ${days.map((day) => {
+            const stops = routePlannerStopsForDay(day);
+            const selected = day === state.routeSelectedDate;
+            const date = new Date(`${day}T12:00:00`);
+            const dateLabel = date.toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric" });
+            const mapKey = `route-week-${day}`;
+            const visibleStops = stops.slice(0, 6);
+            const hiddenStops = Math.max(0, stops.length - visibleStops.length);
+            if (stops.length) setRoutePreviewState(mapKey, { section: "route-planner", stops, emptyText: "No mapped stops yet." });
+            return `<article class="route-day-card${selected ? " is-selected" : ""}" data-action="route-select-day" data-date="${escapeHtml(day)}" role="listitem" tabindex="0" aria-current="${selected ? "date" : "false"}">
+              <header><h2>${escapeHtml(dateLabel)}</h2><p><span>${stops.length} stop${stops.length === 1 ? "" : "s"}</span><span>${routePlannerDistance(stops)} mi</span></p></header>
+              ${stops.length ? `${routePreviewMapShell(mapKey)}<ol class="route-day-stops">${visibleStops.map((stop, index) => `<li><span>${index + 1}</span><strong title="${escapeHtml(stop.clientName)}">${escapeHtml(stop.clientName)}</strong><time>${escapeHtml(routePlannerTimeLabel(stop, index))}</time></li>`).join("")}${hiddenStops ? `<li class="route-more-stops"><span>＋</span><strong>${hiddenStops} more stop${hiddenStops === 1 ? "" : "s"}</strong></li>` : ""}</ol><button type="button" class="route-add-stop" data-action="route-add-stop" data-date="${escapeHtml(day)}"><span>＋</span> Add Stop</button>` : `<div class="route-empty-day"><span aria-hidden="true">▣</span><strong>No stops scheduled</strong><p>Enjoy your day!</p></div>`}
+              <footer><span aria-hidden="true">◷</span><strong>Est.</strong> ${escapeHtml(routePlannerDuration(stops))}</footer>
+            </article>`;
+          }).join("")}
         </div>
-      </article>
-    `;
-    }).join("");
-    renderRouteMap(stops);
+      </div>`;
+    requestAnimationFrame(renderActiveRoutePreviews);
   }
 
   function documentStatusBadge(doc) {
@@ -22959,6 +23079,7 @@ Requirements:
     if (active === "overview") safeRender("Focus on Work home", () => renderFocusOnWorkHome());
     if (active === "tickets") safeRender("unified ticket overview", () => renderUnifiedTicketOverview());
     if (active === "calendar") safeRender("work operations", () => renderWorkOperationsWorkspace());
+    if (active === "route-planner") safeRender("weekly route planner", () => renderRoutePlanner());
     safeRender("contextual Groundskeeper tools", () => renderContextualGroundskeeperTools(active));
     safeRender("dashboard Groundskeeper", () => renderDashboardCopilot());
     safeRender("avatar fallbacks", () => bindAvatarFallbacks());
@@ -23762,6 +23883,14 @@ Requirements:
     els.appView.addEventListener("change", async (event) => {
       const target = event.target;
       if (!target) return;
+
+      if (target.matches("[data-route-week-input]")) {
+        state.routeWeekStart = routePlannerMonday(target.value || todayKey());
+        state.routeSelectedDate = state.routeWeekStart;
+        state.routeDate = state.routeSelectedDate;
+        renderRoutePlanner();
+        return;
+      }
 
       if (target.matches("[data-ticket-timeline-filter]")) {
         const key = target.dataset.ticketTimelineFilter;
@@ -27688,6 +27817,23 @@ Requirements:
         state.calendarView = "thirty";
         state.calendarRangeOffset += 1;
         await render();
+      } else if (action === "route-previous-week" || action === "route-next-week") {
+        state.routeWeekStart = addDaysKey(state.routeWeekStart || routePlannerMonday(), action === "route-previous-week" ? -7 : 7);
+        state.routeSelectedDate = addDaysKey(state.routeSelectedDate || state.routeWeekStart, action === "route-previous-week" ? -7 : 7);
+        renderRoutePlanner();
+      } else if (action === "route-select-day") {
+        state.routeSelectedDate = target.closest("[data-date]")?.dataset.date || state.routeSelectedDate;
+        state.routeDate = state.routeSelectedDate;
+        renderRoutePlanner();
+      } else if (action === "route-add-stop" || action === "route-new-stop") {
+        const day = target.closest("[data-date]")?.dataset.date || state.routeSelectedDate || todayKey();
+        openRouteStopDrawer(day);
+      } else if (action === "route-optimize-week") {
+        try {
+          await optimizeRoutePlannerWeek();
+        } catch (error) {
+          setDashboardState(error.message || "Unable to optimize routes.", "error");
+        }
       } else if (action === "select-route-stop") {
         state.selectedRouteStopId = id;
         renderRoutePlanner();
@@ -29572,6 +29718,7 @@ Requirements:
     els.commandDeadlines = qs("[data-command-deadlines]");
     els.commandEquipment = qs("[data-command-equipment]");
     els.routeDate = qs("[data-route-date]");
+    els.routeWeekPlanner = qs("[data-route-week-planner]");
     els.routeForm = qs("[data-route-form]");
     els.routeAddressInput = qs("[data-route-address-input]");
     els.routeSubmit = qs("[data-route-submit]");

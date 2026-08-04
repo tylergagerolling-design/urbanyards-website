@@ -321,6 +321,8 @@
     leadsPipelineExpanded: false,
     callQueueVisibleCount: 25,
     callQueueSaving: false,
+    clientDetailId: "",
+    clientDetailTab: "properties",
     leadIntakeBatches: [],
     leadIntakeLoaded: false,
     leadIntakeLoading: false,
@@ -18363,6 +18365,17 @@ Requirements:
   }
 
   function renderContacts(data) {
+    const host = els.contacts.parentElement;
+    if (state.clientDetailId) {
+      const selected = data.contacts.find((contact) => String(contact.id) === String(state.clientDetailId));
+      if (selected) {
+        host?.classList.add("client-detail-host");
+        renderClientDetailPage(selected, data);
+        return;
+      }
+      state.clientDetailId = "";
+    }
+    host?.classList.remove("client-detail-host");
     const contacts = filteredContacts();
     if (!contacts.length) {
       els.contacts.innerHTML = emptyState("No client/property profiles yet.");
@@ -20427,7 +20440,7 @@ Requirements:
     `;
   }
 
-  function openContactDrawer(id) {
+  function openContactEditDrawer(id) {
     const contact = state.data.contacts.find((item) => item.id === id);
     if (!contact || !els.detailDrawer || !els.detailContent) return;
     const profile = clientProfile(contact);
@@ -22836,6 +22849,88 @@ Requirements:
     if (["closed", "paid"].includes(ticket.stage) || ticket.status === "completed") return "Completed";
     if (["in_progress", "field_work_complete", "completion_review"].includes(ticket.stage)) return "In Progress";
     return ticket.scheduledDate ? "Scheduled" : ticket.stageLabel || "Unscheduled";
+  }
+
+  function openContactDrawer(id) {
+    const contact = state.data.contacts.find((item) => String(item.id) === String(id));
+    if (!contact) return;
+    closeSubmissionDrawer();
+    state.clientDetailId = contact.id;
+    state.clientDetailTab = "properties";
+    setActiveSection("contacts");
+    replaceDashboardHash("contacts");
+    renderContacts(state.data);
+  }
+
+  function clientDetailMatches(value, contact) {
+    const needle = normalizeDedupeKey(contact.name);
+    return Boolean(needle && normalizeDedupeKey(value).includes(needle));
+  }
+
+  function clientDetailProperties(contact, profile) {
+    const managed = (state.data.outreachProperties || []).filter((property) =>
+      [property.company, property.propertyName, property.contactName].some((value) => clientDetailMatches(value, contact))
+    ).map((property) => ({
+      id: property.id,
+      name: property.propertyName || contact.name,
+      address: [property.address, property.city, property.state, property.zip].filter(Boolean).join(", "),
+      type: property.propertyType || property.service || "Property",
+      last: property.lastContactAt || "",
+      next: property.nextFollowUpAtRaw || "",
+      status: property.status || "Active",
+      source: "managed"
+    }));
+    const seen = new Set(managed.map((item) => normalizeDedupeKey(item.address || item.name)));
+    const visits = (profile.jobs || []).map((job) => ({
+      id: job.id,
+      name: job.customer || job.client || contact.name,
+      address: job.address || job.city || contact.city,
+      type: job.propertyType || job.service || "Property",
+      last: job.status === "Completed" ? (job.dateRaw || job.date) : "",
+      next: job.status !== "Completed" ? (job.dateRaw || job.date) : "",
+      status: "Active",
+      source: "job"
+    })).filter((item) => {
+      const key = normalizeDedupeKey(item.address || item.name);
+      if (!key || seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    });
+    return [...managed, ...visits];
+  }
+
+  function clientDetailInvoices(contact, profile) {
+    const financial = dashboardFinancialInvoices().filter((invoice) =>
+      [invoice.customer_name, invoice.customer, invoice.client_name, invoice.contact_name].some((value) => clientDetailMatches(value, contact))
+    );
+    return financial.length ? financial : (profile.documents || []).filter((document) => /invoice/i.test(document.type || document.number || ""));
+  }
+
+  function clientDetailTableEmpty(message, columns) {
+    return `<tr><td colspan="${columns}">${emptyState(message)}</td></tr>`;
+  }
+
+  function renderClientDetailTab(contact, profile, properties, invoices) {
+    const tab = state.clientDetailTab || "properties";
+    if (tab === "properties") return `<div class="client-detail-table-wrap"><table class="client-detail-table"><thead><tr><th>Property Name</th><th>Address</th><th>Type</th><th>Last Service</th><th>Next Service</th><th>Status</th></tr></thead><tbody>${properties.length ? properties.map((property) => `<tr${property.source === "managed" ? ` data-action="open-outreach-property" data-id="${escapeHtml(property.id)}" tabindex="0"` : ` data-action="edit-job" data-id="${escapeHtml(property.id)}" tabindex="0"`}><td><strong>${escapeHtml(property.name)}</strong></td><td>${escapeHtml(property.address || "—")}</td><td>${escapeHtml(property.type)}</td><td>${escapeHtml(property.last ? formatDate(property.last) : "—")}</td><td>${escapeHtml(property.next ? formatDate(property.next) : "—")}</td><td><span class="client-status-chip">${escapeHtml(property.status)}</span></td></tr>`).join("") : clientDetailTableEmpty("No properties have been added for this client yet.", 6)}</tbody></table><button class="client-detail-add" type="button" data-action="client-add-property" data-id="${escapeHtml(contact.id)}">+ Add Property</button></div>`;
+    if (tab === "service-history") return `<div class="client-detail-table-wrap"><table class="client-detail-table"><thead><tr><th>Date</th><th>Service</th><th>Property</th><th>Status</th></tr></thead><tbody>${profile.jobs.length ? profile.jobs.map((job) => `<tr data-action="edit-job" data-id="${escapeHtml(job.id)}" tabindex="0"><td>${escapeHtml(job.date || job.dateRaw || "—")}</td><td><strong>${escapeHtml(job.service || "Groundskeeping")}</strong></td><td>${escapeHtml(job.address || job.city || contact.city)}</td><td>${escapeHtml(job.status)}</td></tr>`).join("") : clientDetailTableEmpty("No service history is available yet.", 4)}</tbody></table></div>`;
+    if (tab === "invoices") return `<div class="client-detail-table-wrap"><table class="client-detail-table"><thead><tr><th>Invoice</th><th>Date</th><th>Total</th><th>Status</th></tr></thead><tbody>${invoices.length ? invoices.map((invoice) => { const financial = Boolean(invoice.invoice_number); const summary = financial ? financialCalculator().invoiceSummary(invoice) : null; return `<tr data-action="${financial ? "open-financial-invoice" : "open-document"}" data-id="${escapeHtml(invoice.id)}" tabindex="0"><td><strong>${escapeHtml(invoice.invoice_number || invoice.number || "Invoice")}</strong></td><td>${escapeHtml(invoice.issue_date ? formatDate(invoice.issue_date) : invoice.createdAt || "—")}</td><td>${financial ? moneyCurrency(summary.total) : escapeHtml(`$${Number(invoice.total || 0).toFixed(2)}`)}</td><td>${escapeHtml(financial ? financialCalculator().effectiveInvoiceStatus(invoice) : invoice.squareStatus || invoice.status || "Draft")}</td></tr>`; }).join("") : clientDetailTableEmpty("No invoices are connected to this client yet.", 4)}</tbody></table><button class="client-detail-add" type="button" data-action="add-client-document" data-id="${escapeHtml(contact.id)}">+ New Invoice</button></div>`;
+    if (tab === "contacts") return `<div class="client-detail-contact-list"><article><div class="client-avatar">${escapeHtml(contact.name.split(/\s+/).map((part) => part[0]).slice(0, 2).join("").toUpperCase())}</div><div><strong>${escapeHtml(contact.name)}</strong><span>${escapeHtml(contact.type || "Primary Contact")}</span><a href="tel:${escapeHtml(contact.phone)}">${escapeHtml(contact.phone)}</a><a href="mailto:${escapeHtml(contact.email)}">${escapeHtml(contact.email)}</a></div><button type="button" data-action="client-detail-edit" data-id="${escapeHtml(contact.id)}">Edit</button></article></div>`;
+    if (tab === "notes") return `<div class="client-detail-notes">${profile.notes.length ? profile.notes.map((note) => `<article><strong>${escapeHtml(note.title)}</strong><p>${escapeHtml(note.body)}</p></article>`).join("") : emptyState("No client notes yet.")}<button class="client-detail-add" type="button" data-action="add-client-follow-up" data-id="${escapeHtml(contact.id)}">+ Add Follow-Up</button></div>`;
+    return `<div class="client-detail-files">${profile.documents.length ? profile.documents.map((document) => `<button type="button" data-action="open-document" data-id="${escapeHtml(document.id)}"><strong>${escapeHtml(document.number || "Document")}</strong><span>${escapeHtml(document.type || "File")}</span></button>`).join("") : emptyState("No files are connected to this client yet.")}<button class="client-detail-add" type="button" data-action="add-client-document" data-id="${escapeHtml(contact.id)}">+ Add File</button></div>`;
+  }
+
+  function renderClientDetailPage(contact, data) {
+    const profile = clientProfile(contact, data);
+    const properties = clientDetailProperties(contact, profile);
+    const invoices = clientDetailInvoices(contact, profile);
+    const financialInvoices = invoices.filter((invoice) => invoice.invoice_number);
+    const revenue = financialInvoices.reduce((sum, invoice) => sum + Number(financialCalculator().invoiceSummary(invoice).total || 0), 0);
+    const openBalance = financialInvoices.reduce((sum, invoice) => sum + Number(financialCalculator().invoiceSummary(invoice).balance || 0), 0);
+    const completedJobs = profile.jobs.filter((job) => /complete/i.test(job.status || ""));
+    const lastService = completedJobs.map((job) => job.dateRaw || job.date).filter(Boolean).sort().at(-1);
+    const tabs = [["properties", "Properties"], ["service-history", "Service History"], ["invoices", "Invoices"], ["contacts", "Contacts"], ["notes", "Notes"], ["files", "Files"]];
+    els.contacts.innerHTML = `<section class="client-detail-page"><header class="client-detail-header"><div><button class="client-detail-back" type="button" data-action="client-detail-back">‹ Back to Clients</button><div class="client-detail-title"><h2>${escapeHtml(contact.name)}</h2><span class="client-status-chip">${escapeHtml(contact.status || "Active")}</span><button class="client-favorite" type="button" data-action="client-detail-favorite" aria-label="Favorite client">☆</button></div><p>${escapeHtml(contact.type || "Client")}</p><div class="client-detail-chips"><span>${escapeHtml(contact.type || "Property Management")}</span><span>${properties.length} ${properties.length === 1 ? "Property" : "Properties"}</span></div></div><div class="client-detail-actions"><button type="button" data-action="client-detail-edit" data-id="${escapeHtml(contact.id)}">✎ Edit Client</button><details><summary aria-label="More client actions">•••</summary><div><button type="button" data-action="client-add-property" data-id="${escapeHtml(contact.id)}">Add Property</button><button type="button" data-action="add-client-document" data-id="${escapeHtml(contact.id)}">Quote / Invoice</button><button type="button" data-action="add-client-follow-up" data-id="${escapeHtml(contact.id)}">Follow-Up</button></div></details></div></header><div class="client-detail-overview"><article><h3>Primary Contact</h3><div class="client-primary"><div class="client-avatar">${escapeHtml(contact.name.split(/\s+/).map((part) => part[0]).slice(0, 2).join("").toUpperCase())}</div><div><strong>${escapeHtml(contact.name)}</strong><span>${escapeHtml(contact.type || "Primary Contact")}</span></div></div><a href="tel:${escapeHtml(contact.phone)}">⌕ ${escapeHtml(contact.phone)}</a><a href="mailto:${escapeHtml(contact.email)}">✉ ${escapeHtml(contact.email)}</a><p>⌖ ${escapeHtml(contact.city)}</p></article><article class="client-account-summary"><h3>Account Summary</h3><div><section><span>Total Revenue</span><strong>${moneyCurrency(revenue)}</strong><small>(Connected invoices)</small></section><section><span>Open Invoices</span><strong>${moneyCurrency(openBalance)}</strong><small>${financialInvoices.length} invoices</small></section><section><span>Total Services</span><strong>${completedJobs.length}</strong><small>(Completed)</small></section></div><footer><span>Last Service</span><strong>${lastService ? formatDate(lastService) : "No completed service"}</strong></footer></article></div><nav class="client-detail-tabs" aria-label="Client details">${tabs.map(([key, label]) => `<button type="button" data-action="client-detail-tab" data-tab="${key}"${state.clientDetailTab === key ? ` class="is-active" aria-current="page"` : ""}>${label}</button>`).join("")}</nav><div class="client-detail-tab-body">${renderClientDetailTab(contact, profile, properties, invoices)}</div></section>`;
   }
 
   async function loadTicketOperationalRelations({ signal } = {}) {
@@ -28087,6 +28182,23 @@ Requirements:
         } catch (error) {
           setDashboardState(error.message || "Unable to find property map pin.", "error");
         }
+      } else if (action === "client-detail-back") {
+        state.clientDetailId = "";
+        state.clientDetailTab = "properties";
+        renderContacts(state.data);
+      } else if (action === "client-detail-tab") {
+        state.clientDetailTab = target.dataset.tab || "properties";
+        renderContacts(state.data);
+      } else if (action === "client-detail-edit") {
+        openContactEditDrawer(id);
+      } else if (action === "client-add-property") {
+        const contact = state.data.contacts.find((item) => String(item.id) === String(id));
+        const company = (state.data.outreachCompanies || []).find((item) => clientDetailMatches(item.company, contact));
+        if (company) openOutreachCompanyDrawer(company.id);
+        else setDashboardState("Add this client as a company in Leads first, then its properties can be connected here.", "error");
+      } else if (action === "client-detail-favorite") {
+        target.classList.toggle("is-active");
+        target.textContent = target.classList.contains("is-active") ? "★" : "☆";
       } else if (action === "add-client-job") {
         const contact = state.data.contacts.find((item) => item.id === id);
         if (!contact) return;

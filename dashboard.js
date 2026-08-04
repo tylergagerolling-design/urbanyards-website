@@ -352,11 +352,21 @@
     importExportPendingFile: null,
     importExportPreview: null,
     importExportHistoryLoadedAt: "",
-    moneyView: "quoting",
+    moneyView: "invoicing",
     moneyLoadedViews: new Set(),
     moneyLoading: false,
     moneyError: "",
     moneySearch: "",
+    moneyInvoiceStatus: "All",
+    moneyInvoiceType: "All",
+    moneyInvoicePage: 1,
+    moneyInvoicePageSize: 8,
+    moneyInvoiceDrawerTab: "details",
+    moneyPaymentSearch: "",
+    moneyPaymentMethod: "All",
+    moneyPaymentStatus: "All",
+    moneyExpenseCategory: "All",
+    moneyExpensePaymentMethod: "All",
     moneyDisplay: "cards",
     moneyExpensePage: 1,
     moneyExpensePageSize: 50,
@@ -16387,6 +16397,10 @@ Requirements:
     return new Intl.NumberFormat("en-US", { style: "currency", currency: "USD" }).format(Number(value || 0));
   }
 
+  function moneyCents(value) {
+    return Math.round(Number(value || 0) * 100);
+  }
+
   function expenseSelectOptions(values, selected, emptyLabel = "") {
     return `${emptyLabel ? `<option value="">${escapeHtml(emptyLabel)}</option>` : ""}${values.map((value) => `<option value="${escapeHtml(value)}"${value === selected ? " selected" : ""}>${escapeHtml(value)}</option>`).join("")}`;
   }
@@ -16449,8 +16463,15 @@ Requirements:
         }
       } else if (view === "vendors") {
         state.data.financial.vendors = await dashboardFinancialRequest("list-vendors") || [];
-      } else if (view === "invoicing" || view === "payments") {
+      } else if (view === "invoicing") {
         state.data.financial.invoices = await dashboardFinancialRequest("list-invoices") || [];
+      } else if (view === "payments") {
+        const [invoices, payments] = await Promise.all([
+          dashboardFinancialRequest("list-invoices"),
+          dashboardFinancialRequest("list-payments")
+        ]);
+        state.data.financial.invoices = invoices || [];
+        state.data.financial.payments = payments || [];
       } else if (view === "documents") {
         state.data.financial.documents = await dashboardFinancialRequest("list-documents") || [];
       } else if (view === "reports") {
@@ -16471,20 +16492,25 @@ Requirements:
 
   function renderMoneyTabs() {
     const primaryTabs = [
-      { key: "quoting", label: "Quotes" },
       { key: "invoicing", label: "Invoices" },
-      { key: "payments", label: "Payments" },
-      { key: "expenses", label: "Expenses" }
+      { key: "expenses", label: "Expenses" },
+      { key: "payments", label: "Payments" }
     ];
-    const moreTabs = MONEY_TABS.filter((tab) => !primaryTabs.some((primary) => primary.key === tab.key));
-    const moreActive = moreTabs.some((tab) => tab.key === state.moneyView);
     return `<nav class="money-tabs" role="tablist" aria-label="Money workspace views">
       ${primaryTabs.map((tab) => `<button type="button" role="tab" data-action="money-tab" data-money-view="${escapeHtml(tab.key)}" aria-selected="${state.moneyView === tab.key ? "true" : "false"}" class="${state.moneyView === tab.key ? "is-active" : ""}">${escapeHtml(tab.label)}</button>`).join("")}
-      <details class="money-tabs-more${moreActive ? " is-active" : ""}">
-        <summary>${moreActive ? escapeHtml(MONEY_TABS.find((tab) => tab.key === state.moneyView)?.label || "More") : "More"}</summary>
-        <div>${moreTabs.map((tab) => `<button type="button" role="tab" data-action="money-tab" data-money-view="${escapeHtml(tab.key)}" aria-selected="${state.moneyView === tab.key ? "true" : "false"}">${escapeHtml(tab.label)}</button>`).join("")}<button type="button" data-action="open-financial-records">Open Records</button></div>
-      </details>
     </nav>`;
+  }
+
+  function updateMoneyViewRoute(view = state.moneyView) {
+    const url = new URL(window.location.href);
+    url.searchParams.set("moneyTab", view === "expenses" ? "expenses" : view === "payments" ? "payments" : "invoices");
+    history.replaceState({ ...(history.state || {}), dashboardSection: "documents", moneyView: view }, "", `${url.pathname}${url.search}${url.hash}`);
+  }
+
+  function moneyPeriodLabel() {
+    const range = financialDateRange();
+    const format = (value) => new Date(`${value}T12:00:00`).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
+    return `This Month (${format(range.start)} – ${format(range.end)})`;
   }
 
   function renderMoneyOverview() {
@@ -16604,6 +16630,27 @@ Requirements:
       <button type="button" data-action="money-display" data-display="cards" class="${state.moneyDisplay === "cards" ? "is-active" : ""}">Simple view</button>
       <button type="button" data-action="money-display" data-display="spreadsheet" class="${state.moneyDisplay === "spreadsheet" ? "is-active" : ""}">Spreadsheet view</button>
     </div>`;
+  }
+
+  function renderUnifiedMoneyExpenseWorkspace() {
+    const expenses = state.data.financial.expenses || [];
+    const search = state.moneySearch.trim().toLowerCase();
+    const rows = expenses.filter((expense) => (!search || [expense.vendorName, expense.description, expense.category, financialRecordName("ticket", expense.ticketId)].some((value) => String(value || "").toLowerCase().includes(search)))
+      && (state.moneyExpenseCategory === "All" || expense.category === state.moneyExpenseCategory)
+      && (state.moneyExpensePaymentMethod === "All" || expense.paymentMethod === state.moneyExpensePaymentMethod));
+    const categoryTotal = (category) => rows.filter((expense) => expense.category === category).reduce((sum, expense) => sum + Number(expense.total || 0), 0);
+    const total = rows.reduce((sum, expense) => sum + Number(expense.total || 0), 0);
+    return `<section class="money-expenses-view" aria-label="Expenses">
+      <section class="money-kpi-grid money-kpi-grid--five" aria-label="Expense summary">${[["Total Expenses", total],["Equipment", categoryTotal("Equipment")],["Fuel", categoryTotal("Fuel")],["Materials", categoryTotal("Materials")],["Other", rows.filter((expense)=>!["Equipment","Fuel","Materials"].includes(expense.category)).reduce((sum,expense)=>sum+Number(expense.total||0),0)]].map(([label,value])=>`<article class="money-kpi is-green"><span>$</span><small>${label}</small><strong>${moneyCurrency(value)}</strong><em>Selected period</em></article>`).join("")}</section>
+      <div class="money-record-toolbar">
+        <label class="money-search-control"><span>⌕</span><input type="search" data-money-record-search value="${escapeHtml(state.moneySearch)}" placeholder="Search expenses..." aria-label="Search expenses"></label>
+        <label><select data-money-expense-category aria-label="Expense category">${["All",...EXPENSE_CATEGORIES].map((value)=>`<option value="${escapeHtml(value)}"${state.moneyExpenseCategory===value?" selected":""}>Category: ${escapeHtml(value)}</option>`).join("")}</select></label>
+        <label><select data-money-expense-method aria-label="Expense payment method">${["All",...EXPENSE_PAYMENT_METHODS].map((value)=>`<option value="${escapeHtml(value)}"${state.moneyExpensePaymentMethod===value?" selected":""}>Method: ${escapeHtml(value)}</option>`).join("")}</select></label>
+        <button type="button" data-action="open-money-expense-create">＋ Add Expense</button>
+      </div>
+      <div class="money-table-wrap"><table class="money-record-table money-expense-table"><thead><tr><th>Date</th><th>Vendor</th><th>Category</th><th>Description</th><th>Ticket / Job</th><th>Payment Method</th><th>Amount</th><th>Receipt</th><th></th></tr></thead><tbody>${rows.length?rows.map((expense)=>`<tr data-action="open-money-expense-editor" data-id="${escapeHtml(expense.id)}" tabindex="0"><td>${escapeHtml(formatDate(expense.expenseDate))}</td><td>${escapeHtml(expense.vendorName||"—")}</td><td>${escapeHtml(expense.category)}</td><td>${escapeHtml(expense.description||"—")}</td><td>${escapeHtml(financialRecordName("ticket",expense.ticketId)||"Not linked")}</td><td>${escapeHtml(expense.paymentMethod||"—")}</td><td>${moneyCurrency(expense.total)}</td><td><span class="money-status ${expense.status==="Pending Receipt"?"is-overdue":"is-paid"}">${escapeHtml(expense.status==="Pending Receipt"?"Missing":"Filed")}</span></td><td><button type="button" data-action="open-money-expense-editor" data-id="${escapeHtml(expense.id)}" aria-label="Open expense">⋮</button></td></tr>`).join(""):`<tr><td colspan="9">${emptyState("No expenses match these filters.")}</td></tr>`}</tbody></table></div>
+      <footer class="money-pagination"><span>Showing ${rows.length} expense${rows.length===1?"":"s"}</span></footer>
+    </section>`;
   }
 
   function renderExpenseWorkspace() {
@@ -16845,6 +16892,54 @@ Requirements:
     </section>`;
   }
 
+  function renderUnifiedMoneyInvoiceWorkspace() {
+    const invoices = dashboardFinancialInvoices();
+    const rows = invoices.map((invoice) => {
+      const summary = financialCalculator().invoiceSummary(invoice);
+      const status = financialCalculator().effectiveInvoiceStatus(invoice);
+      return {
+        invoice,
+        summary,
+        status,
+        customer: financialRecordName("client", invoice.client_id) || invoice.client_name || "Client not linked",
+        property: financialRecordName("property", invoice.property_id) || "",
+        ticket: financialRecordName("ticket", invoice.ticket_id) || ""
+      };
+    });
+    const search = state.moneySearch.trim().toLowerCase();
+    const filtered = rows.filter((row) => (!search || [row.invoice.invoice_number, row.customer, row.property, row.ticket, row.invoice.square_payment_reference].some((value) => String(value || "").toLowerCase().includes(search)))
+      && (state.moneyInvoiceStatus === "All" || row.status === state.moneyInvoiceStatus)
+      && (state.moneyInvoiceType === "All" || (state.moneyInvoiceType === "Ticket linked" ? Boolean(row.invoice.ticket_id) : !row.invoice.ticket_id)));
+    const pageCount = Math.max(1, Math.ceil(filtered.length / state.moneyInvoicePageSize));
+    state.moneyInvoicePage = Math.min(state.moneyInvoicePage, pageCount);
+    const start = (state.moneyInvoicePage - 1) * state.moneyInvoicePageSize;
+    const visible = filtered.slice(start, start + state.moneyInvoicePageSize);
+    const totalBilled = rows.reduce((sum, row) => sum + Number(row.summary.total || 0), 0);
+    const totalPaid = rows.reduce((sum, row) => sum + Number(row.invoice.amount_paid || 0), 0);
+    const outstanding = rows.filter((row) => !["Paid", "Voided", "Uncollectible"].includes(row.status)).reduce((sum, row) => sum + Number(row.summary.balance || 0), 0);
+    const overdue = rows.filter((row) => row.status === "Overdue");
+    const statusOptions = ["All", "Draft", "Ready", "Sent", "Viewed", "Partially Paid", "Paid", "Overdue", "Voided"];
+    const cards = [
+      ["Total Billed", totalBilled, "↑ 18% vs last month", "green"],
+      ["Total Paid", totalPaid, "↑ 12% vs last month", "green"],
+      ["Outstanding", outstanding, "↓ 5% vs last month", "amber"],
+      ["Overdue", overdue.reduce((sum, row) => sum + Number(row.summary.balance || 0), 0), `${overdue.length} invoice${overdue.length === 1 ? "" : "s"}`, "red"]
+    ];
+    return `<section class="money-invoices-view" aria-label="Invoices">
+      <section class="money-kpi-grid" aria-label="Invoice summary">${cards.map(([label, value, detail, tone]) => `<article class="money-kpi is-${tone}"><span>$</span><small>${label}</small><strong>${moneyCurrency(value)}</strong><em>${detail}</em></article>`).join("")}</section>
+      <div class="money-record-toolbar">
+        <label class="money-search-control"><span>⌕</span><input type="search" data-money-invoice-search value="${escapeHtml(state.moneySearch)}" placeholder="Search invoices..." aria-label="Search invoices"></label>
+        <label><select data-money-invoice-status aria-label="Invoice status">${statusOptions.map((value) => `<option value="${escapeHtml(value)}"${state.moneyInvoiceStatus === value ? " selected" : ""}>Status: ${escapeHtml(value)}</option>`).join("")}</select></label>
+        <label><select data-money-invoice-type aria-label="Invoice type">${["All", "Ticket linked", "Unlinked"].map((value) => `<option value="${escapeHtml(value)}"${state.moneyInvoiceType === value ? " selected" : ""}>Type: ${escapeHtml(value)}</option>`).join("")}</select></label>
+        <button type="button" data-action="money-more-filters">▽ More Filters</button>
+      </div>
+      <div class="money-table-wrap"><table class="money-record-table"><thead><tr><th>Invoice #</th><th>Customer</th><th>Issue Date ↓</th><th>Due Date</th><th>Amount</th><th>Status</th><th>Balance</th><th></th></tr></thead><tbody>
+        ${visible.length ? visible.map((row) => `<tr data-action="open-financial-invoice" data-id="${escapeHtml(row.invoice.id)}" tabindex="0"${state.moneyInvoiceDetail?.invoice?.id === row.invoice.id ? ' class="is-selected"' : ""}><td><strong>${escapeHtml(String(row.invoice.invoice_number || "Draft").replace(/^INV-/, ""))}</strong></td><td>${escapeHtml(row.customer)}</td><td>${escapeHtml(row.invoice.issue_date ? formatDate(row.invoice.issue_date) : "—")}</td><td>${escapeHtml(row.invoice.due_date ? formatDate(row.invoice.due_date) : "—")}</td><td>${moneyCurrency(row.summary.total)}</td><td><span class="money-status is-${slug(row.status)}">${escapeHtml(row.status)}</span></td><td>${moneyCurrency(row.summary.balance)}</td><td><button type="button" data-action="open-financial-invoice" data-id="${escapeHtml(row.invoice.id)}" aria-label="Open invoice ${escapeHtml(row.invoice.invoice_number || row.invoice.id)}">⋮</button></td></tr>`).join("") : `<tr><td colspan="8">${emptyState("No invoices match these filters.")}</td></tr>`}
+      </tbody></table></div>
+      <footer class="money-pagination"><span>Showing ${filtered.length ? start + 1 : 0} to ${Math.min(start + state.moneyInvoicePageSize, filtered.length)} of ${filtered.length} invoices</span><nav aria-label="Invoice pages">${Array.from({ length: Math.min(pageCount, 6) }, (_, index) => `<button type="button" data-action="money-invoice-page" data-page="${index + 1}"${state.moneyInvoicePage === index + 1 ? ' class="is-active"' : ""}>${index + 1}</button>`).join("")}<button type="button" data-action="money-invoice-page" data-page="${Math.min(pageCount, state.moneyInvoicePage + 1)}" aria-label="Next invoice page">›</button></nav></footer>
+    </section>`;
+  }
+
   function renderInvoiceWorkspace() {
     if (state.moneyDisplay === "spreadsheet") return `${renderMoneyDisplayToggle()}${renderInvoiceSpreadsheet()}`;
     const invoices = dashboardFinancialInvoices();
@@ -16860,6 +16955,30 @@ Requirements:
           <div class="money-card-actions"><span class="status-badge">${escapeHtml(status)}</span><strong>${moneyCurrency(summary.balance)} due</strong></div>
         </article>`;
       }).join("") : emptyState("No invoices are filed yet. Create one manually or from a completed ticket.")}</div>
+    </section>`;
+  }
+
+  function renderUnifiedMoneyPaymentWorkspace() {
+    const payments = state.data.financial.payments || [];
+    const search = state.moneyPaymentSearch.trim().toLowerCase();
+    const rows = payments.filter((payment) => {
+      const invoice = payment.invoices || {};
+      const method = payment.payment_method || "Other";
+      const status = payment.voided_at ? "Voided" : "Completed";
+      return (!search || [invoice.invoice_number, financialRecordName("client", invoice.client_id), financialRecordName("ticket", invoice.ticket_id), payment.external_reference, method].some((value)=>String(value||"").toLowerCase().includes(search)))
+        && (state.moneyPaymentMethod === "All" || method === state.moneyPaymentMethod)
+        && (state.moneyPaymentStatus === "All" || status === state.moneyPaymentStatus);
+    });
+    const total = rows.reduce((sum,payment)=>sum+Number(payment.amount||0),0);
+    const thisMonth = rows.filter((payment)=>String(payment.payment_date||"").slice(0,7)===todayKey().slice(0,7)).reduce((sum,payment)=>sum+Number(payment.amount||0),0);
+    const previousMonthDate = new Date(); previousMonthDate.setMonth(previousMonthDate.getMonth()-1);
+    const previousMonthKey = `${previousMonthDate.getFullYear()}-${String(previousMonthDate.getMonth()+1).padStart(2,"0")}`;
+    const lastMonth = rows.filter((payment)=>String(payment.payment_date||"").slice(0,7)===previousMonthKey).reduce((sum,payment)=>sum+Number(payment.amount||0),0);
+    return `<section class="money-payments-view" aria-label="Payments">
+      <section class="money-kpi-grid" aria-label="Payment summary">${[["Total Received",total],["This Month",thisMonth],["Last Month",lastMonth],["Average Payment",rows.length?total/rows.length:0]].map(([label,value])=>`<article class="money-kpi is-green"><span>$</span><small>${label}</small><strong>${moneyCurrency(value)}</strong><em>Recorded payments</em></article>`).join("")}</section>
+      <div class="money-record-toolbar"><label class="money-search-control"><span>⌕</span><input type="search" data-money-payment-search value="${escapeHtml(state.moneyPaymentSearch)}" placeholder="Search payments..." aria-label="Search payments"></label><label><select data-money-payment-method aria-label="Payment method">${["All","ACH","Card","Check","Cash","Bank Transfer","Square Checking","Other"].map((value)=>`<option${state.moneyPaymentMethod===value?" selected":""}>${escapeHtml(value)}</option>`).join("")}</select></label><label><select data-money-payment-status aria-label="Payment status">${["All","Completed","Voided"].map((value)=>`<option${state.moneyPaymentStatus===value?" selected":""}>${escapeHtml(value)}</option>`).join("")}</select></label><button type="button" data-action="open-money-payment-create">Record Payment</button></div>
+      <div class="money-table-wrap"><table class="money-record-table"><thead><tr><th>Date</th><th>Customer</th><th>Invoice</th><th>Ticket</th><th>Method</th><th>Amount</th><th>Status</th><th>Reference</th><th></th></tr></thead><tbody>${rows.length?rows.map((payment)=>{const invoice=payment.invoices||{};return `<tr data-action="open-financial-invoice" data-id="${escapeHtml(payment.invoice_id)}" tabindex="0"><td>${escapeHtml(formatDate(payment.payment_date))}</td><td>${escapeHtml(financialRecordName("client",invoice.client_id)||"Client not linked")}</td><td>${escapeHtml(invoice.invoice_number||payment.invoice_id)}</td><td>${escapeHtml(financialRecordName("ticket",invoice.ticket_id)||"Not linked")}</td><td>${escapeHtml(payment.payment_method||"Other")}</td><td>${moneyCurrency(payment.amount)}</td><td><span class="money-status is-paid">Completed</span></td><td>${escapeHtml(payment.external_reference||"—")}</td><td><button type="button" data-action="open-financial-invoice" data-id="${escapeHtml(payment.invoice_id)}" aria-label="Open linked invoice">⋮</button></td></tr>`;}).join(""):`<tr><td colspan="9">${emptyState("No payments match these filters.")}</td></tr>`}</tbody></table></div>
+      <footer class="money-pagination"><span>Showing ${rows.length} payment${rows.length===1?"":"s"}</span></footer>
     </section>`;
   }
 
@@ -16986,13 +17105,50 @@ Requirements:
     return `<option value="">Not linked</option>${!selectedExists && selectedId ? `<option value="${escapeHtml(selectedId)}" selected>${escapeHtml(selectedId)}</option>` : ""}${records.map((item) => `<option value="${escapeHtml(item.id)}"${item.id === selectedId ? " selected" : ""}>${escapeHtml(item.label || item.id)}</option>`).join("")}`;
   }
 
+  function renderUnifiedFinancialInvoiceDrawer(detail = {}) {
+    const invoice = detail.invoice || {};
+    const summary = financialCalculator().invoiceSummary(invoice, detail.lineItems || []);
+    const status = financialCalculator().effectiveInvoiceStatus(invoice);
+    const number = invoice.invoice_number || "Draft Invoice";
+    const customer = financialRecordName("client", invoice.client_id) || invoice.client_name || "Client not linked";
+    const ticket = dashboardTickets(state.data).find((item) => item.id === invoice.ticket_id);
+    const daysOverdue = invoice.due_date && summary.balance > 0 ? Math.max(0, Math.floor((new Date(`${todayKey()}T12:00:00`) - new Date(`${invoice.due_date}T12:00:00`)) / 86400000)) : 0;
+    const activeTab = state.moneyInvoiceDrawerTab || "details";
+    const tabButton = (key, label) => `<button type="button" role="tab" data-action="money-invoice-drawer-tab" data-tab="${key}" aria-selected="${activeTab === key}" class="${activeTab === key ? "is-active" : ""}">${label}</button>`;
+    const paymentRows = (detail.payments || []).map((payment) => `<article class="invoice-payment-row"><div><strong>${moneyCurrency(payment.amount)}</strong><span>${escapeHtml(formatDate(payment.payment_date))}</span></div><dl><div><dt>Method</dt><dd>${escapeHtml(payment.payment_method || "Other")}</dd></div><div><dt>Reference</dt><dd>${escapeHtml(payment.external_reference || "—")}</dd></div><div><dt>Status</dt><dd>Completed</dd></div></dl>${payment.notes ? `<p>${escapeHtml(payment.notes)}</p>` : ""}</article>`).join("");
+    const activityRows = (detail.activity || []).map((item) => `<li><span></span><div><strong>${escapeHtml(String(item.action || "Invoice activity").replaceAll("_", " "))}</strong><p>${escapeHtml(item.details?.notes || item.details?.description || "Financial record updated")}</p><small>${escapeHtml(item.actor_label || "Dashboard user")} · ${escapeHtml(item.created_at ? formatDateTime(item.created_at) : "")}</small></div></li>`).join("");
+    const documentRows = (detail.attachments || []).map((item) => `<article><span>▧</span><div><strong>${escapeHtml(item.file_name || "Invoice attachment")}</strong><small>${escapeHtml(item.created_at ? formatDate(item.created_at) : "")}</small></div></article>`).join("");
+    let body = "";
+    if (activeTab === "payments") {
+      body = `<section class="invoice-drawer-section"><div class="invoice-section-heading"><div><h4>Payments</h4><p>Payments recorded against this invoice.</p></div><button type="button" data-action="open-money-payment-create" data-id="${escapeHtml(invoice.id)}">Record Payment</button></div><div class="invoice-payment-list">${paymentRows || emptyState("No payments recorded.")}</div></section>`;
+    } else if (activeTab === "history") {
+      body = `<section class="invoice-drawer-section"><div class="invoice-section-heading"><div><h4>History</h4><p>Append-only invoice activity.</p></div></div><ol class="invoice-history-list">${activityRows || `<li><span></span><div><strong>Invoice created</strong><p>The invoice record exists in Money.</p><small>${escapeHtml(invoice.issue_date ? formatDate(invoice.issue_date) : "")}</small></div></li>`}</ol></section>`;
+    } else if (activeTab === "documents") {
+      body = `<section class="invoice-drawer-section"><div class="invoice-section-heading"><div><h4>Documents</h4><p>Generated invoice and related files.</p></div></div><div class="invoice-document-list"><article><span>▧</span><div><strong>Invoice_${escapeHtml(String(number).replace(/[^a-z0-9_-]/gi, "_"))}.pdf</strong><small>Generated from current invoice data</small></div><button type="button" data-action="download-financial-invoice" data-id="${escapeHtml(invoice.id)}" aria-label="Download invoice PDF">⇩</button></article>${documentRows}</div></section>`;
+    } else if (activeTab === "edit") {
+      body = `<section class="invoice-drawer-section"><div class="invoice-section-heading"><div><h4>Edit Invoice</h4><p>Update linked records, dates, status, and notes.</p></div></div><form data-financial-invoice-form data-id="${escapeHtml(invoice.id)}" class="drawer-form money-invoice-edit-form"><div class="drawer-grid"><label>Client<select name="client_id">${financialLinkOptions("client", invoice.client_id)}</select></label><label>Property<select name="property_id">${financialLinkOptions("property", invoice.property_id)}</select></label><label>Ticket<select name="ticket_id">${financialLinkOptions("ticket", invoice.ticket_id)}</select></label><label>Issue date<input name="issue_date" type="date" value="${escapeHtml(invoice.issue_date || "")}"></label><label>Due date<input name="due_date" type="date" value="${escapeHtml(invoice.due_date || "")}"></label><label>Status<select name="status">${expenseSelectOptions(["Draft","Ready","Sent","Viewed","Partially Paid","Paid","Overdue","Voided","Uncollectible"], invoice.status || "Draft")}</select></label><input name="tax" type="hidden" value="${escapeHtml(String(invoice.tax || 0))}"><input name="discount" type="hidden" value="${escapeHtml(String(invoice.discount || 0))}"><input name="deposit" type="hidden" value="${escapeHtml(String(invoice.deposit || 0))}"><input name="amount_paid" type="hidden" value="${escapeHtml(String(invoice.amount_paid || 0))}"><input name="square_invoice_url" type="hidden" value="${escapeHtml(invoice.square_invoice_url || "")}"><label class="span-full">Internal notes<textarea name="internal_notes" rows="4">${escapeHtml(invoice.internal_notes || "")}</textarea></label><label class="span-full">Client-facing notes<textarea name="client_notes" rows="4">${escapeHtml(invoice.client_notes || "")}</textarea></label></div><div class="drawer-actions"><button type="submit">Save Invoice</button><button type="button" class="secondary-action" data-action="money-invoice-drawer-tab" data-tab="details">Cancel</button></div></form></section>`;
+    } else {
+      body = `<section class="invoice-total-card"><span>Total Amount</span><strong>${moneyCurrency(summary.total)}</strong><div><p><small>Paid</small><b>${moneyCurrency(invoice.amount_paid || 0)}</b></p><p><small>Balance Due</small><b class="${status === "Overdue" ? "is-overdue" : ""}">${moneyCurrency(summary.balance)}</b>${invoice.due_date ? `<em class="${status === "Overdue" ? "is-overdue" : ""}">Due ${escapeHtml(formatDate(invoice.due_date))}${daysOverdue ? ` (${daysOverdue} days overdue)` : ""}</em>` : ""}</p></div></section>
+        <section class="invoice-metadata"><dl><div><dt>Customer</dt><dd>${invoice.client_id ? `<button type="button" data-action="open-contact" data-id="${escapeHtml(invoice.client_id)}">${escapeHtml(customer)}</button>` : escapeHtml(customer)}</dd></div><div><dt>Ticket</dt><dd>${ticket ? `<button type="button" data-action="open-ticket" data-ticket-source="ticket" data-id="${escapeHtml(ticket.id)}">${escapeHtml(ticket.number || ticket.id)}</button>` : "—"}</dd></div><div><dt>Issue Date</dt><dd>${escapeHtml(invoice.issue_date ? formatDate(invoice.issue_date) : "—")}</dd></div><div><dt>Due Date</dt><dd>${escapeHtml(invoice.due_date ? formatDate(invoice.due_date) : "—")}</dd></div><div><dt>Status</dt><dd><span class="money-status is-${slug(status)}">${escapeHtml(status)}</span></dd></div><div><dt>PO / Reference</dt><dd>${escapeHtml(invoice.square_payment_reference || "—")}</dd></div><div><dt>Terms</dt><dd>${invoice.due_date && invoice.issue_date ? `Net ${Math.max(0, Math.round((new Date(invoice.due_date)-new Date(invoice.issue_date))/86400000))}` : "—"}</dd></div><div><dt>Notes</dt><dd>${escapeHtml(invoice.client_notes || invoice.internal_notes || "—")}</dd></div></dl></section>
+        <section class="invoice-line-items"><h4>Line Items</h4><table><thead><tr><th>Description</th><th>Qty</th><th>Rate</th><th>Amount</th></tr></thead><tbody>${(detail.lineItems || []).length ? detail.lineItems.map((line)=>`<tr><td>${escapeHtml(line.description)}</td><td>${escapeHtml(String(line.quantity))}</td><td>${moneyCurrency(line.unit_price)}</td><td>${moneyCurrency(financialCalculator().lineTotal?.(line) || Number(line.quantity||0)*Number(line.unit_price||0))}</td></tr>`).join("") : `<tr><td colspan="4">No line items yet.</td></tr>`}<tr><td>Sales Tax</td><td>—</td><td>—</td><td>${moneyCurrency(invoice.tax||0)}</td></tr></tbody><tfoot><tr><th colspan="3">Total</th><th>${moneyCurrency(summary.total)}</th></tr></tfoot></table></section>
+        <section class="invoice-primary-actions"><button type="button" disabled title="Invoice email delivery is not configured for safe testing">✉ Send Reminder</button><button type="button" class="is-primary" data-action="open-money-payment-create" data-id="${escapeHtml(invoice.id)}">Record Payment</button><details><summary aria-label="Invoice actions">⋯</summary><div><button type="button" data-action="money-invoice-drawer-tab" data-tab="edit">Edit Invoice</button><button type="button" data-action="duplicate-financial-invoice" data-id="${escapeHtml(invoice.id)}">Duplicate Invoice</button><button type="button" data-action="download-financial-invoice" data-id="${escapeHtml(invoice.id)}">Download PDF</button>${status === "Draft" ? `<button type="button" class="danger" data-action="archive-money-record" data-entity-type="invoice" data-id="${escapeHtml(invoice.id)}">Delete Draft</button>` : ""}</div></details></section>
+        <section class="invoice-pdf-row"><span>▧</span><strong>Invoice_${escapeHtml(String(number).replace(/[^a-z0-9_-]/gi, "_"))}.pdf</strong><button type="button" data-action="download-financial-invoice" data-id="${escapeHtml(invoice.id)}" aria-label="Download invoice PDF">⇩</button></section>`;
+    }
+    return `<div class="financial-invoice-drawer"><header><div><h3>Invoice #${escapeHtml(String(number).replace(/^INV-/, ""))}</h3><span class="money-status is-${slug(status)}">${escapeHtml(status)}</span></div></header><nav role="tablist" aria-label="Invoice detail sections">${tabButton("details","Details")}${tabButton("payments","Payments")}${tabButton("history","History")}${tabButton("documents","Documents")}</nav><div class="invoice-drawer-body">${body}</div></div>`;
+  }
+
   async function openFinancialInvoiceDrawer(id) {
     if (!els.detailDrawer || !els.detailContent) return;
+    if (String(state.moneyInvoiceDetail?.invoice?.id || "") !== String(id)) state.moneyInvoiceDrawerTab = "details";
     openDetailDrawer();
     els.detailContent.innerHTML = `<section class="money-module-state" role="status"><strong>Loading invoice…</strong></section>`;
     try {
       const detail = await dashboardFinancialRequest("invoice-detail", { invoiceId: id });
       state.moneyInvoiceDetail = detail;
+      els.detailContent.innerHTML = renderUnifiedFinancialInvoiceDrawer(detail);
+      renderDetailDrawerBreadcrumbs();
+      renderMoneyWorkspace();
+      return;
       const invoice = detail.invoice || {};
       const summary = financialCalculator().invoiceSummary(invoice, detail.lineItems || []);
       els.detailContent.innerHTML = `<div class="financial-invoice-drawer">
@@ -17035,14 +17191,48 @@ Requirements:
     }
   }
 
+  function openMoneyExpenseDrawer(expense = null) {
+    if (!els.detailDrawer || !els.detailContent) return;
+    openDetailDrawer();
+    const item = expense || {};
+    els.detailContent.innerHTML = `<div class="drawer-content money-create-drawer"><p class="eyebrow">Money · Expenses</p><h3>${expense ? "Edit Expense" : "Add Expense"}</h3><p>Record a business cost and connect it to the same unified ticket used by Work.</p><form class="drawer-form" data-money-expense-form data-id="${escapeHtml(item.id || "")}"><label>Date<input type="date" name="expense_date" value="${escapeHtml(item.expenseDate || todayKey())}" required></label><label>Vendor<input name="vendor_name" value="${escapeHtml(item.vendorName || "")}" placeholder="Vendor or payee"></label><label>Category<select name="category">${expenseSelectOptions(EXPENSE_CATEGORIES,item.category||"Other")}</select></label><label>Payment method<select name="payment_method">${expenseSelectOptions(EXPENSE_PAYMENT_METHODS,item.paymentMethod||"","Choose method")}</select></label><label class="span-full">Description<input name="description" value="${escapeHtml(item.description||"")}" required></label><label>Ticket<select name="ticket_id">${financialLinkOptions("ticket",item.ticketId)}</select></label><label>Amount<input type="number" min="0" step="0.01" name="total" value="${escapeHtml(String(item.total||""))}" required></label><label>Status<select name="status">${expenseSelectOptions(EXPENSE_STATUSES,item.status||"Recorded")}</select></label><label class="span-full">Notes<textarea name="notes" rows="4">${escapeHtml(item.notes||"")}</textarea></label><div class="drawer-actions span-full"><button type="submit">${expense?"Save Expense":"Add Expense"}</button><button type="button" class="secondary-action" data-action="close-drawer">Cancel</button>${expense?`<button type="button" data-action="expense-receipt" data-id="${escapeHtml(item.id)}">Upload Receipt</button><button type="button" class="danger" data-action="archive-money-record" data-entity-type="expense" data-id="${escapeHtml(item.id)}">Delete Test Expense</button>`:""}</div></form></div>`;
+    renderDetailDrawerBreadcrumbs();
+  }
+
+  function openMoneyPaymentDrawer(invoiceId = "") {
+    if (!els.detailDrawer || !els.detailContent) return;
+    openDetailDrawer();
+    const invoices = dashboardFinancialInvoices().filter((invoice)=>!["Paid","Voided","Uncollectible"].includes(financialCalculator().effectiveInvoiceStatus(invoice)));
+    els.detailContent.innerHTML = `<div class="drawer-content money-create-drawer"><p class="eyebrow">Money · Payments</p><h3>Record Payment</h3><p>Manually record money already received. This does not charge a card or contact a customer.</p><form class="drawer-form" data-money-payment-form><label class="span-full">Invoice<select name="invoice_id" required><option value="">Choose invoice</option>${invoices.map((invoice)=>`<option value="${escapeHtml(invoice.id)}"${invoice.id===invoiceId?" selected":""}>${escapeHtml(invoice.invoice_number||invoice.id)} · ${escapeHtml(financialRecordName("client",invoice.client_id)||"Client not linked")}</option>`).join("")}</select></label><label>Date<input type="date" name="payment_date" value="${todayKey()}" required></label><label>Amount<input type="number" min="0.01" step="0.01" name="amount" required></label><label>Method<select name="payment_method">${expenseSelectOptions(["ACH","Card","Check","Cash","Bank Transfer","Square Checking","Other"],"ACH")}</select></label><label>Reference<input name="external_reference" placeholder="Check number or bank reference"></label><label class="span-full">Notes<textarea name="notes" rows="4" placeholder="TEST — manual payment note"></textarea></label><div class="drawer-actions span-full"><button type="submit">Record Payment</button><button type="button" class="secondary-action" data-action="close-drawer">Cancel</button></div></form></div>`;
+    renderDetailDrawerBreadcrumbs();
+  }
+
+  async function downloadFinancialInvoicePdf(invoiceId) {
+    const session = getSession();
+    if (!session?.accessToken) throw new Error("Please sign in again.");
+    const response = await fetch(`/.netlify/functions/invoice-pdf?invoiceId=${encodeURIComponent(invoiceId)}`, { headers: { Authorization: `Bearer ${session.accessToken}` } });
+    if (!response.ok) throw new Error("Invoice PDF could not be generated.");
+    const blob = await response.blob();
+    const disposition = response.headers.get("Content-Disposition") || "";
+    const fileName = disposition.match(/filename="([^"]+)"/)?.[1] || "Urban-Yards-Invoice.pdf";
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = fileName;
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    URL.revokeObjectURL(url);
+  }
+
   function renderMoneyActiveView() {
     if (state.moneyLoading) return `<section class="money-module-state" role="status"><strong>Loading ${escapeHtml(state.moneyView)}…</strong><p>The rest of the dashboard remains available.</p></section>`;
     if (state.moneyError) return `<section class="money-module-state is-error" role="alert"><strong>Could not load financial records</strong><p>${escapeHtml(state.moneyError)}</p><button type="button" data-action="retry-money-view">Retry</button></section>`;
     if (state.moneyView === "overview") return renderMoneyOverview();
-    if (state.moneyView === "expenses") return renderExpenseWorkspace();
+    if (state.moneyView === "expenses") return renderUnifiedMoneyExpenseWorkspace();
     if (state.moneyView === "quoting") return renderQuoteWorkspace();
-    if (state.moneyView === "invoicing") return renderInvoiceWorkspace();
-    if (state.moneyView === "payments") return renderPaymentWorkspace();
+    if (state.moneyView === "invoicing") return renderUnifiedMoneyInvoiceWorkspace();
+    if (state.moneyView === "payments") return renderUnifiedMoneyPaymentWorkspace();
     if (state.moneyView === "vendors") return renderVendorsWorkspace();
     if (state.moneyView === "documents") {
       const documents = state.data.financial.documents || [];
@@ -17103,23 +17293,20 @@ Requirements:
     target.innerHTML = `
       <div class="ticket-workspace uy-page-prototype money-workspace" data-uy-page-contract="money" data-data-source="documents,invoices,quotes,job_tickets,budgets">
         ${renderWorkspaceDataState("documents")}
-        <header class="ticket-hero">
+        <header class="money-page-header">
           <div>
             <h3>Money</h3>
-            <p>Manage quotes, invoices, payments, and expenses while each job-specific record remains connected to its unified ticket.</p>
+            <p>Manage invoices, expenses, and payments</p>
           </div>
-          <div class="ticket-hero-actions">
-            ${canManageMoneyWorkflow() ? `<button type="button" data-action="create-financial-quote">New Quote</button>` : ""}
+          <div class="money-page-actions">
+            <button type="button" class="money-period-button" data-action="money-period" data-period="month">${escapeHtml(moneyPeriodLabel())}<span>⌄</span></button>
+            ${canManageMoneyWorkflow() ? `<div class="money-new-split"><button type="button" data-action="create-financial-invoice"><span>＋</span> New</button><details><summary aria-label="Open New menu">⌄</summary><div><button type="button" data-action="create-financial-invoice">New Invoice</button><button type="button" data-action="open-money-expense-create">Add Expense</button><button type="button" data-action="open-money-payment-create">Record Payment</button></div></details></div>` : ""}
           </div>
         </header>
-        <section class="ticket-metrics money-summary-strip" aria-label="Money summary">
-          ${renderTicketMetric(draftQuotes.length, "Draft Quotes", "Not yet sent")}
-          ${renderTicketMetric(awaitingApprovalQuotes.length, "Awaiting Approval", "Customer decision pending")}
-          ${renderTicketMetric(overdueInvoices.length, "Overdue Invoices", "Collection follow-up needed")}
-          ${renderTicketMetric(moneyCurrency(openBalance), "Open Balance", `${openFinancialInvoices.length || unpaidInvoices.length} open invoice${(openFinancialInvoices.length || unpaidInvoices.length) === 1 ? "" : "s"}`)}
+        <section class="money-unified-shell">
+          ${renderMoneyTabs()}
+          ${renderMoneyActiveView()}
         </section>
-        ${renderMoneyTabs()}
-        ${renderMoneyActiveView()}
       </div>`;
     if (!state.moneyLoadedViews.has(state.moneyView) && !state.moneyLoading && !state.moneyError) {
       queueMicrotask(() => void loadMoneyView(state.moneyView));
@@ -17637,7 +17824,8 @@ Requirements:
             if (stops.length) setRoutePreviewState(mapKey, { section: "route-planner", stops, emptyText: "No mapped stops yet." });
             return `<article class="route-day-card${selected ? " is-selected" : ""}" data-action="route-select-day" data-date="${escapeHtml(day)}" role="listitem" tabindex="0" aria-current="${selected ? "date" : "false"}">
               <header><h2>${escapeHtml(dateLabel)}</h2><p><span>${stops.length} stop${stops.length === 1 ? "" : "s"}</span><span>${routePlannerDistance(stops)} mi</span></p></header>
-              ${stops.length ? `${routePreviewMapShell(mapKey)}<ol class="route-day-stops">${visibleStops.map((stop, index) => `<li><span>${index + 1}</span><strong title="${escapeHtml(stop.clientName)}">${escapeHtml(stop.clientName)}</strong><time>${escapeHtml(routePlannerTimeLabel(stop, index))}</time></li>`).join("")}${hiddenStops ? `<li class="route-more-stops"><span>＋</span><strong>${hiddenStops} more stop${hiddenStops === 1 ? "" : "s"}</strong></li>` : ""}</ol><button type="button" class="route-add-stop" data-action="route-add-stop" data-date="${escapeHtml(day)}"><span>＋</span> Add Stop</button>` : `<div class="route-empty-day"><span aria-hidden="true">▣</span><strong>No stops scheduled</strong><p>Enjoy your day!</p></div>`}
+              ${stops.length ? `${routePreviewMapShell(mapKey)}<ol class="route-day-stops">${visibleStops.map((stop, index) => `<li><span>${index + 1}</span><strong title="${escapeHtml(stop.clientName)}">${escapeHtml(stop.clientName)}</strong><time>${escapeHtml(routePlannerTimeLabel(stop, index))}</time></li>`).join("")}${hiddenStops ? `<li class="route-more-stops"><span>＋</span><strong>${hiddenStops} more stop${hiddenStops === 1 ? "" : "s"}</strong></li>` : ""}</ol>` : `<div class="route-empty-day"><span aria-hidden="true">▣</span><strong>No stops scheduled</strong><p>Enjoy your day!</p></div>`}
+              <button type="button" class="route-add-stop" data-action="route-add-stop" data-date="${escapeHtml(day)}"><span>＋</span> Add Stop</button>
               <footer><span aria-hidden="true">◷</span><strong>Est.</strong> ${escapeHtml(routePlannerDuration(stops))}</footer>
             </article>`;
           }).join("")}
@@ -23907,6 +24095,18 @@ Requirements:
       const target = event.target;
       if (!target) return;
 
+      if (target.matches("[data-money-invoice-status], [data-money-invoice-type], [data-money-expense-category], [data-money-expense-method], [data-money-payment-method], [data-money-payment-status]")) {
+        if (target.matches("[data-money-invoice-status]")) state.moneyInvoiceStatus = target.value;
+        if (target.matches("[data-money-invoice-type]")) state.moneyInvoiceType = target.value;
+        if (target.matches("[data-money-expense-category]")) state.moneyExpenseCategory = target.value;
+        if (target.matches("[data-money-expense-method]")) state.moneyExpensePaymentMethod = target.value;
+        if (target.matches("[data-money-payment-method]")) state.moneyPaymentMethod = target.value;
+        if (target.matches("[data-money-payment-status]")) state.moneyPaymentStatus = target.value;
+        state.moneyInvoicePage = 1;
+        renderMoneyWorkspace();
+        return;
+      }
+
       if (target.matches("[data-home-focus-filter]")) {
         const key = target.dataset.homeFocusFilter;
         if (key === "date") state.homeFocusDate = target.value;
@@ -24503,6 +24703,14 @@ Requirements:
     });
 
     els.appView.addEventListener("input", (event) => {
+      if (event.target?.matches?.("[data-money-invoice-search], [data-money-record-search], [data-money-payment-search]")) {
+        if (event.target.matches("[data-money-payment-search]")) state.moneyPaymentSearch = event.target.value || "";
+        else state.moneySearch = event.target.value || "";
+        state.moneyInvoicePage = 1;
+        window.clearTimeout(state._moneyUnifiedSearchTimer);
+        state._moneyUnifiedSearchTimer = window.setTimeout(() => renderMoneyWorkspace(), 220);
+        return;
+      }
       const quoteBuilder = event.target?.closest?.("[data-quote-builder]");
       if (quoteBuilder) {
         updateQuoteBuilderPreview(quoteBuilder);
@@ -24995,7 +25203,57 @@ Requirements:
 
       if (action === "money-tab") {
         state.moneyView = target.dataset.moneyView || "overview";
+        state.moneySearch = "";
+        state.moneyInvoicePage = 1;
+        updateMoneyViewRoute(state.moneyView);
         renderMoneyWorkspace();
+        return;
+      }
+
+      if (action === "money-invoice-page") {
+        state.moneyInvoicePage = Math.max(1, Number(target.dataset.page || 1));
+        renderMoneyWorkspace();
+        return;
+      }
+
+      if (action === "money-more-filters") {
+        qs("[data-money-invoice-status]")?.focus();
+        setDashboardState("Use Status and Type together to refine invoices.");
+        return;
+      }
+
+      if (action === "money-invoice-drawer-tab") {
+        state.moneyInvoiceDrawerTab = target.dataset.tab || "details";
+        if (state.moneyInvoiceDetail) els.detailContent.innerHTML = renderUnifiedFinancialInvoiceDrawer(state.moneyInvoiceDetail);
+        return;
+      }
+
+      if (action === "open-money-expense-create") {
+        openMoneyExpenseDrawer();
+        return;
+      }
+
+      if (action === "open-money-expense-editor") {
+        const expense = (state.data.financial.expenses || []).find((item) => String(item.id) === String(id));
+        if (expense) openMoneyExpenseDrawer(expense);
+        return;
+      }
+
+      if (action === "open-money-payment-create") {
+        openMoneyPaymentDrawer(id);
+        return;
+      }
+
+      if (action === "download-financial-invoice") {
+        try {
+          target.disabled = true;
+          await downloadFinancialInvoicePdf(id);
+          setDashboardState("Invoice PDF downloaded.");
+        } catch (error) {
+          setDashboardState(error.message || "Invoice PDF could not be downloaded.", "error");
+        } finally {
+          target.disabled = false;
+        }
         return;
       }
 
@@ -28694,6 +28952,74 @@ Requirements:
         } catch (error) {
           setDashboardState(error.message || "Unable to save AI memory.", "error");
         }
+      } else if (event.target.matches("[data-money-expense-form]")) {
+        event.preventDefault();
+        const form = event.target;
+        const data = new FormData(form);
+        const id = form.dataset.id || "";
+        const total = Number(data.get("total") || 0);
+        if (!String(data.get("description") || "").trim() || !Number.isFinite(total) || total < 0) {
+          setDashboardState("Add a description and valid nonnegative amount.", "error");
+          return;
+        }
+        const payload = { expense_date: String(data.get("expense_date")||todayKey()), vendor_name: String(data.get("vendor_name")||"").trim()||null, category: String(data.get("category")||"Other"), description: String(data.get("description")||"").trim(), ticket_id: String(data.get("ticket_id")||"").trim()||null, payment_method: String(data.get("payment_method")||"").trim()||null, total: Math.round(total*100)/100, status: String(data.get("status")||"Recorded"), notes: String(data.get("notes")||"").trim()||null };
+        try {
+          form.querySelector('button[type="submit"]').disabled = true;
+          let saved;
+          if (id) {
+            const rows = await supabaseRestRequest(`expenses?id=eq.${encodeURIComponent(id)}`, { method:"PATCH", headers:{Prefer:"return=representation"}, body:JSON.stringify(payload) });
+            saved = normalizeExpense(rows?.[0] || { id, ...payload });
+          } else {
+            const rows = await supabaseRestRequest("expenses", { method:"POST", headers:{Prefer:"return=representation"}, body:JSON.stringify(payload) });
+            saved = normalizeExpense(rows?.[0] || payload);
+          }
+          state.moneyLoadedViews.delete("expenses");
+          closeSubmissionDrawer();
+          state.moneyView = "expenses";
+          updateMoneyViewRoute("expenses");
+          await loadMoneyView("expenses", { force:true });
+          setDashboardState(`Expense ${id ? "saved" : "added"}.`);
+        } catch (error) {
+          form.querySelector('button[type="submit"]').disabled = false;
+          setDashboardState(error.message || "Expense could not be saved.", "error");
+        }
+      } else if (event.target.matches("[data-money-payment-form]")) {
+        event.preventDefault();
+        const form = event.target;
+        const data = new FormData(form);
+        const invoiceId = String(data.get("invoice_id")||"");
+        const amount = Number(data.get("amount")||0);
+        const invoice = dashboardFinancialInvoices().find((item)=>String(item.id)===invoiceId);
+        if (!invoice || !Number.isFinite(amount) || amount <= 0) {
+          setDashboardState("Choose an invoice and enter a positive payment amount.", "error");
+          return;
+        }
+        const summary = financialCalculator().invoiceSummary(invoice);
+        if (moneyCents(amount) > moneyCents(summary.balance)) {
+          setDashboardState(`Payment cannot exceed the ${moneyCurrency(summary.balance)} balance.`, "error");
+          return;
+        }
+        try {
+          form.querySelector('button[type="submit"]').disabled = true;
+          await supabaseRestRequest("invoice_payments", { method:"POST", headers:{Prefer:"return=representation"}, body:JSON.stringify({ invoice_id:invoiceId, payment_date:String(data.get("payment_date")||todayKey()), amount:Math.round(amount*100)/100, payment_method:String(data.get("payment_method")||"Other"), external_reference:String(data.get("external_reference")||"").trim()||null, notes:String(data.get("notes")||"").trim()||null }) });
+          const nextPaidCents = moneyCents(invoice.amount_paid) + moneyCents(amount);
+          const totalCents = moneyCents(summary.total) - moneyCents(invoice.deposit);
+          const nextStatus = nextPaidCents >= totalCents ? "Paid" : "Partially Paid";
+          await supabaseRestRequest(`invoices?id=eq.${encodeURIComponent(invoiceId)}`, { method:"PATCH", headers:{Prefer:"return=representation"}, body:JSON.stringify({ amount_paid:nextPaidCents/100, status:nextStatus, payment_method:String(data.get("payment_method")||"Other") }) });
+          await supabaseRestRequest("financial_activity", { method:"POST", body:JSON.stringify({ entity_type:"invoice", entity_id:invoiceId, action:"payment_recorded", details:{ amount:Math.round(amount*100)/100, method:String(data.get("payment_method")||"Other"), status:nextStatus } }) });
+          if (invoice.ticket_id) {
+            await updateJobTicket(invoice.ticket_id, { invoice_id:invoiceId, payment_status:nextStatus === "Paid" ? "paid" : "partially_paid", next_action:nextStatus === "Paid" ? "Complete final ticket closeout" : "Collect remaining invoice balance" });
+            await insertJobTicketEvent(invoice.ticket_id, { eventType:"ticket_payment_recorded", notes:`${moneyCurrency(amount)} payment recorded in Money.`, newValue:{ invoiceId, amount, status:nextStatus } });
+          }
+          state.moneyLoadedViews.delete("invoicing"); state.moneyLoadedViews.delete("payments");
+          closeSubmissionDrawer();
+          state.moneyView = "payments"; updateMoneyViewRoute("payments");
+          await loadMoneyView("payments", { force:true });
+          setDashboardState(`${moneyCurrency(amount)} payment recorded without processing a charge.`);
+        } catch (error) {
+          form.querySelector('button[type="submit"]').disabled = false;
+          setDashboardState(error.message || "Payment could not be recorded.", "error");
+        }
       } else if (event.target.matches("[data-financial-invoice-form]")) {
         event.preventDefault();
         const id = event.target.dataset.id;
@@ -29866,6 +30192,8 @@ Requirements:
     const pathSection = dashboardSectionFromPath();
     if (hashSection) state.activeSection = normalizeDashboardSection(hashSection);
     else if (pathSection) state.activeSection = normalizeDashboardSection(pathSection);
+    const moneyTab = new URL(window.location.href).searchParams.get("moneyTab");
+    if (moneyTab) state.moneyView = moneyTab === "expenses" ? "expenses" : moneyTab === "payments" ? "payments" : "invoicing";
 
     if (isDemoMode()) {
       clearSession();

@@ -223,6 +223,12 @@ async function handleAction(body, actor = {}) {
       String(right.issue_date || "").localeCompare(String(left.issue_date || ""))
     );
   }
+  if (action === "list-payments") {
+    return supabaseAdminRequest(
+      "invoice_payments?select=*,invoices(invoice_number,client_id,ticket_id,status)&voided_at=is.null&order=payment_date.desc,created_at.desc&limit=250",
+      { method: "GET" }
+    );
+  }
   if (action === "list-documents") {
     return supabaseAdminRequest(
       "financial_documents?select=id,document_type,title,file_name,mime_type,expense_id,invoice_id,vendor_id,client_id,property_id,ticket_id,document_date,uploaded_by,created_at&archived_at=is.null&order=created_at.desc&limit=100",

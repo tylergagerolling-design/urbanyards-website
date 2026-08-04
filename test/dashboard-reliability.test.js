@@ -29,6 +29,7 @@ test("Route Planner renders the approved weekly card workspace from shared sched
   assert.match(js, /state\.data\.jobs/);
   assert.match(js, /Optimize All Routes/);
   assert.match(js, /route-add-stop/);
+  assert.match(js, /No stops scheduled[\s\S]*data-action="route-add-stop"/);
   assert.match(js, /"route-planner"[\s\S]*\.includes\(key\)\) return/);
   assert.match(css, /grid-template-columns:repeat\(7,minmax\(188px,1fr\)\)/);
 });
@@ -638,12 +639,14 @@ test("closeout Review Tickets opens a focused, visible ticket queue", () => {
   assert.match(js, /reset-ticket-board-filters[\s\S]*ticketBoardCloseoutOnly = false/);
 });
 
-test("Open Records opens the financial closeout records", () => {
+test("Money opens the unified invoice records by default", () => {
   const js = read("dashboard.js");
 
   assert.doesNotMatch(js, /action: "go-documents"/);
-  assert.match(js, /data-action="open-financial-records">Open Records/);
-  assert.match(js, /action === "open-financial-records"[\s\S]*setActiveSection\("documents"\)[\s\S]*renderMoneyWorkspace[\s\S]*money-action-queue[\s\S]*scrollIntoView/);
+  assert.match(js, /moneyView: "invoicing"/);
+  assert.match(js, /Manage invoices, expenses, and payments/);
+  assert.match(js, /renderUnifiedMoneyInvoiceWorkspace/);
+  assert.match(js, /Invoices[\s\S]*Expenses[\s\S]*Payments/);
 });
 
 test("Leads flyout adds Call Queue without changing existing items", () => {

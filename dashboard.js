@@ -3888,6 +3888,7 @@
   function normalizeNote(row) {
     return {
       id: row.id,
+      ticketId: row.ticket_id || row.ticketId || "",
       title: row.title || "Untitled note",
       body: row.body || "",
       date: formatDate(row.created_at),
@@ -22995,18 +22996,17 @@ Requirements:
     if (!job) return "";
     const activeTab = state.workDetailTab || "work";
     const done = workRowProgress(job);
-    const fallbackChecklist = [
-      ["Arrive on site","8:02 AM"],["Safety check & site walk","8:05 AM"],["Lawn mowing","8:25 AM"],
-      ["Edge all hardscapes","8:50 AM"],["Hedge trimming",""],["Blow & clean up",""],["Final walkthrough",""]
-    ];
     const checklist = job.checklistItems?.length
       ? job.checklistItems.map((item) => [item.label || "Task", item.completed_at ? formatDateTime(item.completed_at) : "", item.id, Boolean(item.checked)])
-      : fallbackChecklist.map(([label, time], index) => [label, time, "", index < done]);
+      : [];
     const crewAssignments = job.crewAssignments || [];
     const equipmentAssignments = (state.data.ticketRelations?.equipment || []).filter((item) => String(item.ticket_id || item.ticketId) === String(job.id));
     const ticketAttachments = (state.data.documentation?.attachments || []).filter((item) => String(item.metadata?.ticketId || item.targetId || "") === String(job.id));
     const arrivalPhotos = ticketAttachments.filter((item) => item.metadata?.photoStage === "arrival");
     const completionPhotos = ticketAttachments.filter((item) => item.metadata?.photoStage === "completion");
+    const ticketNotes = (state.data.notes || [])
+      .filter((item) => String(item.ticketId || "") === String(job.id))
+      .sort((a, b) => String(b.createdAtRaw || "").localeCompare(String(a.createdAtRaw || "")));
     const tabButtons = ["Overview","Work","Schedule","Tasks","Photos","Documents","Notes","History"].map(label=>`<button type="button" style="background:transparent!important;box-shadow:none!important;border:0!important;border-bottom:2px solid ${activeTab===label.toLowerCase()?"#276fca":"transparent"}!important" class="${activeTab===label.toLowerCase()?"is-active":""}" data-action="work-detail-tab" data-section="${label.toLowerCase()}">${label}</button>`).join("");
     return `<div class="wod-overlay" data-work-detail-overlay><button type="button" style="background:transparent!important;box-shadow:none!important;border:0!important" class="wod-scrim" data-action="close-work-detail" aria-label="Close work details"></button><aside class="wod-panel" aria-label="Work details for ${job.job}">
       <header><div><h2 style="color:#10141a!important">#${job.displayNumber || job.id}&nbsp;&nbsp; ${job.job}</h2><span class="wol-status is-${job.status.toLowerCase().replaceAll(" ","-")}">${job.status}</span></div><button type="button" style="background:transparent!important;box-shadow:none!important;border:0!important" class="wod-close" data-action="close-work-detail" aria-label="Close work detail">×</button></header>
@@ -23019,8 +23019,8 @@ Requirements:
         </div>
         <section class="wod-card wod-details"><h3>Work Details</h3><dl><dt>Type</dt><dd>Maintenance</dd><dt>Priority</dt><dd><span class="wol-priority is-${job.priority.toLowerCase()}"><i></i>${job.priority}</span></dd><dt>Est. Time</dt><dd>${job.estimate}</dd><dt>Start Time</dt><dd>${job.time}</dd><dt>Location</dt><dd>${job.address}<br>${job.city}</dd></dl><button type="button" data-action="work-detail-tab" data-section="overview">Edit Details</button></section>
         <section class="wod-card wod-photos"><h3>Photos</h3><label>Arrival Photos (${arrivalPhotos.length})</label><label class="wod-photo-upload">${unifiedTicketIcon("photo")}<span>Upload Arrival Photo</span><input type="file" accept="image/*" multiple data-work-photo-upload data-category="arrival" hidden></label><div class="wod-photo-heading"><label>Completion Photos (${completionPhotos.length})</label><span>${unifiedTicketIcon("upload")} ⋮</span></div><label class="wod-photo-upload">${unifiedTicketIcon("photo")}<span>Upload Completion Photo</span><input type="file" accept="image/*" multiple data-work-photo-upload data-category="completion" hidden></label><label class="wod-more-photos">+&nbsp; Upload Additional Photos<input type="file" accept="image/*" multiple data-work-photo-upload data-category="additional" hidden></label><p data-work-upload-status></p></section>
-        <section class="wod-card wod-docs"><h3>Documentation</h3><div>${[["Site Notes","Added by John D.","8:15 AM"],["Customer Instructions","Added by Sarah J.","Jul 22"],["Irrigation Map","Added by Tyler G.","Jul 18"]].map(([title,by,date])=>`<span>${unifiedTicketIcon("document")}<b>${title}<small>${by}</small></b><time>${date}</time></span>`).join("")}</div><label class="wod-add-document">+&nbsp; Add Document<input type="file" data-work-document-upload hidden></label></section>
-        <section class="wod-card wod-notes"><h3>Notes</h3><form data-work-note-form data-ticket-id="${job.id}"><textarea placeholder="Type a note..."></textarea><button type="submit">Add Note</button></form><p data-work-note-status></p></section>
+        <section class="wod-card wod-docs"><h3>Documentation</h3><div>${ticketAttachments.length ? ticketAttachments.map((item)=>`<span>${unifiedTicketIcon("document")}<b>${escapeHtml(item.fileName || item.category || "Document")}<small>${escapeHtml(item.completedBy || "Dashboard user")}</small></b><time>${escapeHtml(item.createdAt || "")}</time></span>`).join("") : "<small>No documents attached.</small>"}</div><label class="wod-add-document">+&nbsp; Add Document<input type="file" data-work-document-upload hidden></label></section>
+        <section class="wod-card wod-notes"><h3>Notes</h3><div class="wod-note-list">${ticketNotes.length ? ticketNotes.map((item)=>`<article><strong>${escapeHtml(item.title)}</strong><p>${escapeHtml(item.body)}</p><small>${escapeHtml(item.date || "")}</small></article>`).join("") : "<small>No notes added.</small>"}</div><form data-work-note-form data-ticket-id="${job.id}"><textarea placeholder="Type a note..."></textarea><button type="submit">Add Note</button></form><p data-work-note-status></p></section>
       </div><p class="wod-action-status" data-work-action-status aria-live="polite"></p>
     </aside></div>`;
   }
@@ -28525,7 +28525,9 @@ Requirements:
           if (submit) submit.disabled = true;
           await saveApprovedTicketNote(event.target.dataset.ticketId, note);
           event.target.reset();
-          if (status) status.textContent = "Note saved.";
+          renderWorkOperationsWorkspace();
+          const refreshedStatus = qs("[data-work-note-status]");
+          if (refreshedStatus) refreshedStatus.textContent = "Note saved.";
           if (submit) submit.disabled = false;
         } catch (error) {
           if (status) status.textContent = error.message || "Unable to save the note.";

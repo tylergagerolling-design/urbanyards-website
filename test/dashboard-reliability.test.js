@@ -1347,9 +1347,14 @@ test("Work Detail persists assignments, tasks, notes, photos, documents, and his
   assert.match(js, /job_ticket_equipment_assignments/);
   assert.match(js, /ticket_task_completed/);
   assert.match(js, /saveApprovedTicketNote/);
+  assert.match(js, /ticketId: row\.ticket_id \|\| row\.ticketId/);
+  assert.match(js, /const ticketNotes = \(state\.data\.notes \|\| \[\]\)[\s\S]*String\(item\.ticketId/);
+  assert.match(js, /renderWorkOperationsWorkspace\(\);[\s\S]*Note saved\./);
   assert.match(js, /uploadJobSitePhotos/);
   assert.match(js, /ticket_document_uploaded/);
   assert.match(js, /insertJobTicketEvent/);
+  assert.doesNotMatch(js, /const fallbackChecklist =/);
+  assert.doesNotMatch(js, /\[\["Site Notes","Added by John D\."/);
   assert.match(auth, /job_ticket_crew_assignments: \{ GET: "operations:read", POST: "operations:write", PATCH: "operations:write"/);
   assert.match(auth, /job_ticket_equipment_assignments: \{ GET: "operations:read", POST: "operations:write", PATCH: "operations:write"/);
 });

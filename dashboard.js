@@ -6068,7 +6068,13 @@
 
   async function loadOutreachProspects({ signal } = {}) {
     try {
-      const rows = await supabaseRestRequest("outreach_prospects?select=*&limit=250", { method: "GET", signal });
+      const rows = [];
+      const pageSize = 1000;
+      for (let offset = 0; offset < 10000; offset += pageSize) {
+        const page = await supabaseRestRequest(`outreach_prospects?select=*&order=next_follow_up_at.asc.nullslast,updated_at.desc&limit=${pageSize}&offset=${offset}`, { method: "GET", signal });
+        rows.push(...page);
+        if (page.length < pageSize) break;
+      }
       state.outreachReady = true;
       return rows.map(normalizeOutreachProspect).sort((a, b) => String(a.nextFollowUpAtRaw || "9999").localeCompare(String(b.nextFollowUpAtRaw || "9999")) || String(b.updatedAtRaw || "").localeCompare(String(a.updatedAtRaw || "")));
     } catch (error) {

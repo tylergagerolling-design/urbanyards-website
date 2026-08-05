@@ -42,7 +42,7 @@ test("archived workspace polish remains available with current dashboard assets"
   assert.match(css, /\.groundskeeper-operation-card[\s\S]*white-space: normal !important/);
   assert.match(css, /\.dashboard-health-item strong[\s\S]*word-break: break-all/);
   assert.match(html, /dashboard\.css\?v=20260804-quote-requests-leads-1/);
-  assert.match(html, /dashboard\.js\?v=20260805-call-queue-followup-1/);
+  assert.match(html, /dashboard\.js\?v=20260805-call-queue-followup-2/);
 });
 
 test("authenticated assistant prompt suppresses public quote calls to action", () => {
@@ -1434,6 +1434,9 @@ test("Call Queue omits the retired Google Voice panel and preserves the entry-ta
   assert.match(js, /Download CSV Template/);
   assert.match(js, /data-action="call-queue-settings"/);
   assert.match(js, /data-action="call-queue-mark-contacted"/);
+  assert.match(js, /const pageSize = 1000/);
+  assert.match(js, /order=next_follow_up_at\.asc\.nullslast,updated_at\.desc/);
+  assert.match(js, /rows\.push\(\.\.\.page\)/);
   assert.match(js, /function openAuthenticatedCallQueueForImport\(\)/);
   assert.match(js, /DEMO_QUERY_KEYS\.forEach\(\(key\) => liveUrl\.searchParams\.delete\(key\)\)/);
   assert.match(js, /Please sign in before importing a Call Queue CSV/);

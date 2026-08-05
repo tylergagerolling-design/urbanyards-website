@@ -27394,6 +27394,11 @@ Requirements:
             outcome: "not_set",
             notes: ""
           });
+          const callQueueDrawerOpen = Boolean(qs(".cq-lead-drawer"));
+          if (callQueueDrawerOpen) {
+            setDashboardState(copied ? "Google Voice opened in the call window. Phone number copied as backup. Call attempt logged." : "Google Voice opened. Call attempt logged.");
+            return;
+          }
           const panel = renderCallOutcomePanel(activity);
           const existingPanel = qs(`[data-call-panel-slot][data-lead-id="${cssEscape(activity.leadId)}"][data-lead-type="${cssEscape(activity.leadType)}"]`);
           const existingOutcomePanel = qs("[data-call-outcome-panel]");
@@ -27405,8 +27410,7 @@ Requirements:
             return;
           }
           let outcomeSlot = slot;
-          const callQueueDrawerOpen = Boolean(qs(".cq-lead-drawer"));
-          if (!outcomeSlot || (els.detailDrawer?.hidden && !callQueueDrawerOpen)) {
+          if (!outcomeSlot || els.detailDrawer?.hidden) {
             openLeadDrawerByType(activity.leadType, activity.leadId);
             outcomeSlot = qs("[data-call-outcome-slot]");
           }

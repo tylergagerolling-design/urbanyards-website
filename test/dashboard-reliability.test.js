@@ -42,7 +42,7 @@ test("archived workspace polish remains available with current dashboard assets"
   assert.match(css, /\.groundskeeper-operation-card[\s\S]*white-space: normal !important/);
   assert.match(css, /\.dashboard-health-item strong[\s\S]*word-break: break-all/);
   assert.match(html, /dashboard\.css\?v=20260804-quote-requests-leads-1/);
-  assert.match(html, /dashboard\.js\?v=20260805-call-queue-followup-3/);
+  assert.match(html, /dashboard\.js\?v=20260805-call-queue-followup-4/);
 });
 
 test("authenticated assistant prompt suppresses public quote calls to action", () => {
@@ -1437,8 +1437,7 @@ test("Call Queue omits the retired Google Voice panel and preserves the entry-ta
   assert.match(js, /const pageSize = 1000/);
   assert.match(js, /order=next_follow_up_at\.asc\.nullslast,updated_at\.desc/);
   assert.match(js, /rows\.push\(\.\.\.page\)/);
-  assert.match(js, /const callQueueDrawerOpen = Boolean\(qs\("\.cq-lead-drawer"\)\)/);
-  assert.match(js, /els\.detailDrawer\?\.hidden && !callQueueDrawerOpen/);
+  assert.match(js, /const callQueueDrawerOpen = Boolean\(qs\("\.cq-lead-drawer"\)\);[\s\S]{0,500}if \(callQueueDrawerOpen\) \{[\s\S]{0,500}return;[\s\S]{0,200}const panel = renderCallOutcomePanel\(activity\)/);
   assert.match(js, /function openAuthenticatedCallQueueForImport\(\)/);
   assert.match(js, /DEMO_QUERY_KEYS\.forEach\(\(key\) => liveUrl\.searchParams\.delete\(key\)\)/);
   assert.match(js, /Please sign in before importing a Call Queue CSV/);

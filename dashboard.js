@@ -615,7 +615,7 @@
     tickets: "Tickets",
     calendar: "Work",
     "route-planner": "Route Planner",
-    outreach: "Leads",
+    outreach: "Online Quote Requests & Leads",
     contacts: "Clients",
     "call-queue": "Call Queue",
     documents: "Money",
@@ -15681,6 +15681,10 @@
     return ["not_interested", "wrong_number"].includes(callQueueHistory(item)[0]?.queueOutcome || "");
   }
 
+  function callQueueIsLead(item = {}) {
+    return ["Interested", "Quote Needed", "Quoted"].includes(item.status);
+  }
+
   function callQueueSortValue(item = {}) {
     const today = todayKey();
     const followUp = item.nextFollowUpAtRaw || "";
@@ -15873,6 +15877,24 @@ Requirements:
       <div class="cq-lower-grid"><section class="cq-entries-card"><header><div><h3>Call Queue Entries</h3><p>View, add, edit, and manage your call queue entries.</p></div><div class="cq-entry-tools"><input type="search" data-call-queue-search placeholder="Search entries..." value="${escapeHtml(state.callQueueSearch)}" aria-label="Search entries"><label class="cq-filter-control"><span>Filter</span><select data-call-queue-filter="status" aria-label="Filter entries by status"><option>Active</option><option>All</option><option>Completed</option>${OUTREACH_STATUSES.map((status) => `<option${state.callQueueStatusFilter === status ? " selected" : ""}>${escapeHtml(status)}</option>`).join("")}</select></label><button type="button" data-action="new-outreach-prospect">+ Add Entry</button></div></header>
       <div class="cq-table-wrap"><table><thead><tr><th>Name</th><th>Phone Number</th><th>Address</th><th>Source</th><th>Status</th><th>Last Contact</th><th>Added On</th><th>Actions</th></tr></thead><tbody>${rows.length ? rows.map((item) => { const phone = phoneInfo(item.phone || ""); const status = item.status || "New"; return `<tr data-action="open-outreach-prospect" data-id="${escapeHtml(item.id)}"><td><strong>${escapeHtml(outreachTitle(item))}</strong></td><td>${escapeHtml(phone.display || "—")}</td><td>${escapeHtml([item.address,item.city].filter(Boolean).join(", ") || "—")}</td><td>${escapeHtml(item.source || "Manual")}</td><td><span class="cq-status is-${escapeHtml(slug(status))}">${escapeHtml(status)}</span></td><td>${escapeHtml(item.lastContactedAt || "—")}</td><td>${escapeHtml(item.createdAtRaw ? formatDate(item.createdAtRaw) : "—")}</td><td><div class="cq-row-actions"><button type="button" data-action="open-outreach-prospect" data-id="${escapeHtml(item.id)}" aria-label="Edit ${escapeHtml(outreachTitle(item))}">✎</button><button type="button" data-action="call-lead" data-id="${escapeHtml(item.id)}" data-lead-type="outreach_prospect" data-phone="${escapeHtml(phone.e164)}" aria-label="Call ${escapeHtml(outreachTitle(item))}"${phone.valid ? "" : " disabled"}>☎</button><details><summary aria-label="More actions for ${escapeHtml(outreachTitle(item))}">⋮</summary><div><button type="button" data-action="call-queue-add-note" data-id="${escapeHtml(item.id)}">Add note</button><button type="button" data-action="call-queue-mark-contacted" data-id="${escapeHtml(item.id)}">Mark contacted</button><button type="button" data-action="call-queue-follow-up" data-id="${escapeHtml(item.id)}">Schedule callback</button><button type="button" data-action="create-ticket-from-prospect" data-id="${escapeHtml(item.id)}">Create ticket</button></div></details></div></td></tr>`; }).join("") : `<tr><td colspan="8">${emptyState("No call queue entries match these filters.")}</td></tr>`}</tbody></table></div><footer><span>Showing ${rows.length ? 1 : 0} to ${rows.length} of ${queue.length} entries</span><div><button type="button" class="is-active">1</button>${rows.length < queue.length ? `<button type="button" data-action="load-more-call-queue">Next ›</button>` : ""}</div></footer></section>
       <aside class="cq-import-card"><h3>Import Call Queue (CSV)</h3><p>Import new call queue entries from a CSV file.</p><button type="button" class="cq-drop-zone" data-action="lead-intake-import"><span>⇧</span><strong>Drag and drop your CSV file here</strong><small>or</small><b>Choose File</b></button><h4>CSV Requirements</h4><p>Your CSV file must include the following columns:</p><ul><li>Name (required)</li><li>Phone Number (required)</li><li>Address (optional)</li><li>Notes (optional)</li></ul><button type="button" class="cq-template-link" data-action="lead-intake-template">↓ Download CSV Template</button><input type="file" accept=".csv,text/csv" data-lead-intake-file hidden></aside></div></div>`;
+    const headingCopy = target.querySelector(".cq-entries-card > header p");
+    if (headingCopy) headingCopy.textContent = "View, classify, and manage callers before adding qualified prospects to Leads.";
+    target.querySelectorAll("tbody tr[data-id]").forEach((row) => {
+      const item = queue.find((candidate) => candidate.id === row.dataset.id);
+      const menu = row.querySelector("details > div");
+      if (!item || !menu) return;
+      const button = document.createElement("button");
+      button.type = "button";
+      button.dataset.id = item.id;
+      if (callQueueIsLead(item)) {
+        button.textContent = "Added to Leads";
+        button.disabled = true;
+      } else {
+        button.dataset.action = "call-queue-promote-lead";
+        button.textContent = "Add to Leads";
+      }
+      menu.prepend(button);
+    });
   }
 
   function renderCallQueueWorkspace() {
@@ -16222,12 +16244,30 @@ Requirements:
       return matchesStatus && matchesText;
     });
     const countStatus = (status) => (data.submissions || []).filter((item) => item.status === status).length;
+    const leads = (data.outreachProspects || []).filter(callQueueIsLead)
+      .sort((a, b) => String(b.updatedAtRaw || b.createdAtRaw || "").localeCompare(String(a.updatedAtRaw || a.createdAtRaw || "")));
     target.innerHTML = `<div class="online-quote-workspace" data-online-quote-workspace>
       <header class="online-quote-header"><div><p class="eyebrow">Website inquiries</p><h2>Online Quote Requests</h2><p>Requests submitted through “Request a Free Quote” on the Urban Yards website.</p></div><button type="button" class="secondary-action" data-action="refresh-dashboard">Refresh</button></header>
       <section class="online-quote-metrics" aria-label="Online quote request summary"><article><span>All Requests</span><strong>${data.submissions.length}</strong></article><article><span>New</span><strong>${countStatus("New")}</strong></article><article><span>Contacted</span><strong>${countStatus("Contacted")}</strong></article><article><span>Scheduled</span><strong>${countStatus("Scheduled")}</strong></article></section>
       <section class="online-quote-card"><header><div><h3>Quote Requests</h3><p>Open a request to review contact details, notes, follow-up, estimates, invoices, and scheduling.</p></div><div class="online-quote-filters"><input type="search" data-online-quote-search value="${escapeHtml(state.onlineQuoteSearch)}" placeholder="Search requests…" aria-label="Search online quote requests"><select data-online-quote-status aria-label="Filter online quote requests by status"><option>All</option>${STATUSES.map((status) => `<option${state.onlineQuoteStatus === status ? " selected" : ""}>${status}</option>`).join("")}</select></div></header>
       <div class="online-quote-table-wrap"><table><thead><tr><th>Received</th><th>Customer</th><th>Contact</th><th>Property</th><th>Requested Service</th><th>Status</th><th>Source</th><th></th></tr></thead><tbody>${requests.length ? requests.map((item) => `<tr data-action="open-submission" data-id="${escapeHtml(item.id)}" tabindex="0"><td>${escapeHtml(item.receivedAt || item.createdAt || "—")}</td><td><strong>${escapeHtml(item.name)}</strong><small>${escapeHtml(item.city)}</small></td><td><span>${escapeHtml(item.email)}</span><small>${escapeHtml(phoneInfo(item.phone).display)}</small></td><td>${escapeHtml(item.propertyType)}</td><td>${escapeHtml(item.service)}</td><td>${statusBadge(item.status)}</td><td>${escapeHtml(item.source || "Quote form")}</td><td><button type="button" data-action="open-submission" data-id="${escapeHtml(item.id)}" aria-label="Open quote request from ${escapeHtml(item.name)}">›</button></td></tr>`).join("") : `<tr><td colspan="8">${emptyState(search || state.onlineQuoteStatus !== "All" ? "No online quote requests match these filters." : "No online quote requests have arrived yet.")}</td></tr>`}</tbody></table></div><footer>Showing ${requests.length} of ${data.submissions.length} online quote requests</footer></section>
     </div>`;
+    const header = target.querySelector(".online-quote-header");
+    if (header) {
+      const eyebrow = header.querySelector(".eyebrow");
+      const title = header.querySelector("h2");
+      const copy = header.querySelector("p:not(.eyebrow)");
+      if (eyebrow) eyebrow.textContent = "Website inquiries and qualified callers";
+      if (title) title.textContent = "Online Quote Requests & Leads";
+      if (copy) copy.textContent = "Review website quote requests and callers classified as leads from the Call Queue.";
+    }
+    const metrics = target.querySelector(".online-quote-metrics");
+    if (metrics) {
+      metrics.setAttribute("aria-label", "Online quote request and lead summary");
+      metrics.innerHTML = `<article><span>Quote Requests</span><strong>${data.submissions.length}</strong></article><article><span>New Requests</span><strong>${countStatus("New")}</strong></article><article><span>Call Queue Leads</span><strong>${leads.length}</strong></article><article><span>Scheduled</span><strong>${countStatus("Scheduled")}</strong></article>`;
+    }
+    const quoteCard = target.querySelector(".online-quote-card");
+    if (quoteCard) quoteCard.insertAdjacentHTML("beforebegin", `<section class="online-quote-card online-quote-leads"><header><div><h3>Leads from Call Queue</h3><p>Callers appear here after you choose Add to Leads in the Call Queue.</p></div><button type="button" class="secondary-action" data-action="go-call-queue">Open Call Queue</button></header><div class="lead-queue-list">${leads.length ? leads.map((item) => renderLeadQueueItem(item)).join("") : emptyState("No callers have been added to Leads yet.")}</div></section>`);
   }
 
   function findTicketForBudget(budget = {}, tickets = dashboardTickets()) {
@@ -28009,6 +28049,21 @@ Requirements:
           setDashboardState("Queue entry marked contacted.");
         } catch (error) {
           setDashboardState(error.message || "Queue entry could not be updated.", "error");
+        }
+      } else if (action === "call-queue-promote-lead") {
+        try {
+          const prospect = findOutreachProspect(id);
+          if (!prospect) throw new Error("This Call Queue entry is no longer available.");
+          setDashboardState("Adding caller to Leads...");
+          await updateOutreachProspect(id, {
+            status: "Interested",
+            notes: [prospect.notes, `${todayKey()} classified as a lead from Call Queue.`].filter(Boolean).join("\n\n")
+          });
+          if (isDemoMode()) renderCallQueueWorkspace();
+          else await refreshDashboard();
+          setDashboardState(`${outreachTitle(prospect)} was added to Online Quote Requests & Leads.`);
+        } catch (error) {
+          setDashboardState(error.message || "Caller could not be added to Leads.", "error");
         }
       } else if (action === "lead-intake-import") {
         if (isDemoMode()) {

@@ -41,8 +41,8 @@ test("archived workspace polish remains available with current dashboard assets"
   assert.match(css, /\.call-queue-row > span:first-child :is\(strong, small\)[\s\S]*overflow-wrap: anywhere/);
   assert.match(css, /\.groundskeeper-operation-card[\s\S]*white-space: normal !important/);
   assert.match(css, /\.dashboard-health-item strong[\s\S]*word-break: break-all/);
-  assert.match(html, /dashboard\.css\?v=20260804-online-quote-requests-1/);
-  assert.match(html, /dashboard\.js\?v=20260804-online-quote-requests-1/);
+  assert.match(html, /dashboard\.css\?v=20260804-quote-requests-leads-1/);
+  assert.match(html, /dashboard\.js\?v=20260804-quote-requests-leads-1/);
 });
 
 test("authenticated assistant prompt suppresses public quote calls to action", () => {
@@ -655,7 +655,7 @@ test("Leads flyout adds Call Queue without changing existing items", () => {
   const js = read("dashboard.js");
   const css = read("dashboard.css");
 
-  assert.match(html, /data-sidebar-subnav="outreach"[\s\S]*>Online Quote Requests<\/span>[\s\S]*#contacts[\s\S]*>Clients<\/span>[\s\S]*#call-queue[\s\S]*>Call Queue<\/span>/);
+  assert.match(html, /data-sidebar-subnav="outreach"[\s\S]*>Online Quote Requests &amp; Leads<\/span>[\s\S]*#contacts[\s\S]*>Clients<\/span>[\s\S]*#call-queue[\s\S]*>Call Queue<\/span>/);
   assert.match(html, /id="call-queue" data-section="call-queue"><div data-call-queue-workspace><\/div>/);
   assert.match(html, /data-call-queue-workspace/);
   assert.match(archivedHtml, /id="call-queue" data-section="call-queue"[\s\S]*data-call-queue-workspace/);
@@ -1438,4 +1438,14 @@ test("Call Queue omits the retired Google Voice panel and preserves the entry-ta
   assert.match(js, /Please sign in before importing a Call Queue CSV/);
   assert.match(css, /\.cq-lower-grid\{display:grid;grid-template-columns:minmax\(0,3fr\) minmax\(280px,1fr\)/);
   assert.match(css, /@media\(max-width:720px\)[\s\S]*\.cq-table-wrap table/);
+});
+
+test("Call Queue can classify callers for Online Quote Requests and Leads", () => {
+  const html = read("dashboard.html");
+  const js = read("dashboard.js");
+  assert.match(html, /Online Quote Requests &amp; Leads/);
+  assert.match(js, /function callQueueIsLead[\s\S]*Interested[\s\S]*Quote Needed[\s\S]*Quoted/);
+  assert.match(js, /dataset\.action = "call-queue-promote-lead"[\s\S]*Add to Leads/);
+  assert.match(js, /action === "call-queue-promote-lead"[\s\S]*status: "Interested"[\s\S]*classified as a lead from Call Queue/);
+  assert.match(js, /Leads from Call Queue[\s\S]*renderLeadQueueItem/);
 });

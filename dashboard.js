@@ -27405,7 +27405,8 @@ Requirements:
             return;
           }
           let outcomeSlot = slot;
-          if (!outcomeSlot || els.detailDrawer?.hidden) {
+          const callQueueDrawerOpen = Boolean(qs(".cq-lead-drawer"));
+          if (!outcomeSlot || (els.detailDrawer?.hidden && !callQueueDrawerOpen)) {
             openLeadDrawerByType(activity.leadType, activity.leadId);
             outcomeSlot = qs("[data-call-outcome-slot]");
           }

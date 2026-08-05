@@ -1428,8 +1428,9 @@ test("Call Queue omits the retired Google Voice panel and preserves the entry-ta
   assert.doesNotMatch(js, /class="cq-voice-card"/);
   assert.match(js, /function openGoogleVoiceWindow\(phoneNumber\)/);
   assert.match(js, /Call Queue Entries/);
-  assert.match(js, /<th>Name<\/th><th>Phone Number<\/th><th>Address<\/th><th>Source<\/th><th>Status<\/th><th>Last Contact<\/th><th>Added On<\/th><th>Actions<\/th>/);
-  assert.match(js, /Import Call Queue \(CSV\)/);
+  assert.match(js, /<th>Name<\/th><th>Phone Number<\/th><th>Address<\/th><th>Website<\/th><th>Status<\/th><th>Last Contact<\/th><th>Added On<\/th><th>Actions<\/th>/);
+  assert.doesNotMatch(js, /<aside class="cq-import-card">/);
+  assert.match(js, /data-action="lead-intake-import">Import CSV/);
   assert.match(js, /Download CSV Template/);
   assert.match(js, /data-action="call-queue-settings"/);
   assert.match(js, /data-action="call-queue-mark-contacted"/);

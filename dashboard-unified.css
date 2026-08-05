@@ -199,3 +199,40 @@ body:not(.is-login-screen) :is(.empty-state,.clean-empty-state,.ttl-no-results){
   body:not(.is-login-screen) :is(.ttl-header,.wol-header,.money-page-header,.online-quote-header,.uy-page-header,.cq-page-header,.route-week-header,.clean-page-header){margin-bottom:14px!important;padding-bottom:13px!important}
   body:not(.is-login-screen) table th,body:not(.is-login-screen) table td{font-size:.74rem}
 }
+
+/* Frontend website palette, scoped to the content canvas only. */
+body:not(.is-login-screen) .dashboard-main{
+  --clean-bg:#fff;
+  --clean-surface:#fff;
+  --clean-subtle:#fffdf7;
+  --clean-border:rgba(18,63,49,.15);
+  --clean-border-strong:rgba(18,63,49,.22);
+  --clean-text:#273a34;
+  --clean-muted:#60736b;
+  --clean-green:#123f31;
+  --clean-green-hover:#0a3027;
+  --clean-green-soft:#e3eadb;
+  --clean-amber:#e2aa21;
+  --clean-amber-soft:#fff6dc;
+  --uy-green:var(--clean-green);
+  --uy-green-2:var(--clean-green-hover);
+  --uy-green-3:var(--clean-green-soft);
+  --color-bg:var(--clean-bg);
+  --color-surface:var(--clean-surface);
+  --color-surface-solid:var(--clean-surface);
+  --color-surface-soft:var(--clean-subtle);
+  --color-primary:var(--clean-green);
+  --color-primary-hover:var(--clean-green-hover);
+  --color-primary-soft:var(--clean-green-soft);
+  --color-border:var(--clean-border);
+  --color-border-strong:var(--clean-border-strong);
+  --color-text:var(--clean-text);
+  --color-muted:var(--clean-muted);
+  background:#fff!important;
+}
+html body:not(.is-login-screen) .dashboard-main .dashboard-section h1{color:#0a3027!important}
+body:not(.is-login-screen) .dashboard-main :is(.panel,.focus-card,.ttl-group,.wol-table-card,.money-unified-shell,.online-quote-card,.client-detail-page,.ut-card,.wod-card,.route-day-card,.cq-entries-card,.cq-import-card,.equipment-main-panel,.equipment-form-panel){background:#fff!important}
+
+/* Keep Needs Attention readable at every breakpoint. */
+body:not(.is-login-screen) .dashboard-main :is(.clean-summary-strip [data-filter="attention"],#calendar .wol-summary .is-attention){flex:0 0 180px!important;min-width:180px!important;max-width:180px!important;writing-mode:horizontal-tb!important}
+body:not(.is-login-screen) .dashboard-main :is(.clean-summary-strip [data-filter="attention"],#calendar .wol-summary .is-attention) :is(strong,span,small,em){writing-mode:horizontal-tb!important;white-space:nowrap!important;word-break:keep-all!important}

@@ -41,8 +41,8 @@ test("archived workspace polish remains available with current dashboard assets"
   assert.match(css, /\.call-queue-row > span:first-child :is\(strong, small\)[\s\S]*overflow-wrap: anywhere/);
   assert.match(css, /\.groundskeeper-operation-card[\s\S]*white-space: normal !important/);
   assert.match(css, /\.dashboard-health-item strong[\s\S]*word-break: break-all/);
-  assert.match(html, /dashboard\.css\?v=20260804-remove-voice-panel-1/);
-  assert.match(html, /dashboard\.js\?v=20260804-remove-voice-panel-1/);
+  assert.match(html, /dashboard\.css\?v=20260804-call-queue-import-auth-1/);
+  assert.match(html, /dashboard\.js\?v=20260804-call-queue-import-auth-1/);
 });
 
 test("authenticated assistant prompt suppresses public quote calls to action", () => {
@@ -1433,6 +1433,9 @@ test("Call Queue omits the retired Google Voice panel and preserves the entry-ta
   assert.match(js, /Download CSV Template/);
   assert.match(js, /data-action="call-queue-settings"/);
   assert.match(js, /data-action="call-queue-mark-contacted"/);
+  assert.match(js, /function openAuthenticatedCallQueueForImport\(\)/);
+  assert.match(js, /DEMO_QUERY_KEYS\.forEach\(\(key\) => liveUrl\.searchParams\.delete\(key\)\)/);
+  assert.match(js, /Please sign in before importing a Call Queue CSV/);
   assert.match(css, /\.cq-lower-grid\{display:grid;grid-template-columns:minmax\(0,3fr\) minmax\(280px,1fr\)/);
   assert.match(css, /@media\(max-width:720px\)[\s\S]*\.cq-table-wrap table/);
 });

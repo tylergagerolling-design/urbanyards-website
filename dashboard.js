@@ -2504,6 +2504,14 @@
     return result;
   }
 
+  function openAuthenticatedCallQueueForImport() {
+    const liveUrl = new URL(window.location.href);
+    DEMO_QUERY_KEYS.forEach((key) => liveUrl.searchParams.delete(key));
+    liveUrl.hash = "call-queue";
+    setDashboardState("Opening the authenticated Call Queue for CSV import…");
+    window.location.assign(liveUrl.toString());
+  }
+
   function filenameFromDisposition(disposition, fallback) {
     const match = String(disposition || "").match(/filename="?([^";]+)"?/i);
     return match ? match[1] : fallback;
@@ -24529,6 +24537,10 @@ Requirements:
         const file = target.files && target.files[0];
         target.value = "";
         if (!file) return;
+        if (isDemoMode()) {
+          openAuthenticatedCallQueueForImport();
+          return;
+        }
         if (!/\.csv$/i.test(file.name)) {
           setDashboardState("Lead Intake accepts .csv files only.", "error");
           return;
@@ -27967,6 +27979,14 @@ Requirements:
           setDashboardState(error.message || "Queue entry could not be updated.", "error");
         }
       } else if (action === "lead-intake-import") {
+        if (isDemoMode()) {
+          openAuthenticatedCallQueueForImport();
+          return;
+        }
+        if (!getSession()?.accessToken) {
+          setDashboardState("Please sign in before importing a Call Queue CSV.", "error");
+          return;
+        }
         const input = qs("[data-lead-intake-file]");
         if (input) input.click();
       } else if (action === "lead-intake-template") {

@@ -23324,7 +23324,7 @@ Requirements:
       return `<section class="ttl-group"><div class="ttl-date"><strong>${label}</strong><span>${tickets[0].date}</span></div><div class="ttl-group-rows">${tickets.map(renderTicketTimelineRow).join("")}</div></section>`;
     }).join("");
     host.innerHTML = `<div class="tickets-timeline-page">
-      <header class="ttl-header"><div><h2 style="color:#0e1116!important">Tickets</h2><p>Focus on what’s coming up</p></div><div class="ttl-filters">
+      <header class="ttl-header"><div><p class="clean-workspace-label">Tickets</p><h1>Tickets</h1><p>Upcoming tickets, visits, and work requiring attention.</p></div><div class="ttl-filters">
         <label>${unifiedTicketIcon("check")}<select data-ticket-timeline-filter="status" aria-label="Ticket status"><option value="All">Status</option><option${status==="In Progress"?" selected":""}>In Progress</option><option${status==="Scheduled"?" selected":""}>Scheduled</option></select></label>
         <label>${unifiedTicketIcon("document")}<select data-ticket-timeline-filter="type" aria-label="Ticket type"><option value="All">Types</option>${[...new Set(allRows.map((item) => item.type).filter(Boolean))].map(v=>`<option${type===v?" selected":""}>${v}</option>`).join("")}</select></label>
         <label>${unifiedTicketIcon("pin")}<select data-ticket-timeline-filter="location" aria-label="Ticket location"><option value="All">All Locations</option>${[...new Set(allRows.map((item) => item.city).filter(Boolean))].map(v=>`<option${location===v?" selected":""}>${v}</option>`).join("")}</select></label>
@@ -23534,7 +23534,7 @@ Requirements:
     const selected = allJobs.find(job=>job.id===state.selectedWorkJobId);
     const countByStatus = (value) => allJobs.filter((job) => job.status === value).length;
     host.innerHTML = `<div class="work-operations-list ${selected?"has-detail-open":""}">
-      <header class="wol-header"><div><h2 style="color:#0e1116!important">Work</h2><p>All jobs and visits across your schedule</p></div><div class="wol-filters">
+      <header class="wol-header"><div><p class="clean-workspace-label">Work</p><h1>Work</h1><p>Scheduled visits and active work across the operation.</p></div><div class="wol-filters">
         <label>${unifiedTicketIcon("document")}<select data-work-list-filter="status" aria-label="Work status"><option value="All">All Status</option>${["In Progress","Scheduled","Completed"].map(v=>`<option${status===v?" selected":""}>${v}</option>`).join("")}</select></label>
         <label>${unifiedTicketIcon("check")}<select data-work-list-filter="priority" aria-label="Work priority"><option value="All">All Priority</option>${["High","Medium","Low"].map(v=>`<option${priority===v?" selected":""}>${v}</option>`).join("")}</select></label>
         <label>${unifiedTicketIcon("pin")}<select data-work-list-filter="location" aria-label="Work location"><option value="All">All Locations</option>${[...new Set(allJobs.map(j=>j.city))].map(v=>`<option${location===v?" selected":""}>${v}</option>`).join("")}</select></label>
@@ -24439,13 +24439,13 @@ Requirements:
         if (key === "date") state.homeFocusDate = target.value;
         if (key === "location") state.homeFocusLocation = target.value;
         if (key === "status") state.homeFocusStatus = target.value;
-        renderFocusOnWorkHome();
+        renderCleanOperationsHome();
         return;
       }
 
       if (target.matches("[data-home-summary-period]")) {
         state.homeFocusDate = target.value;
-        renderFocusOnWorkHome();
+        renderCleanOperationsHome();
         return;
       }
 
@@ -28645,7 +28645,7 @@ Requirements:
           renderWorkOperationsWorkspace();
           return;
         }
-        renderFocusOnWorkHome();
+        renderCleanOperationsHome();
         if (filter === "locations") qs("[data-home-focus-filter='location']")?.focus();
       } else if (action === "route-previous-week" || action === "route-next-week") {
         state.routeWeekStart = addDaysKey(state.routeWeekStart || routePlannerMonday(), action === "route-previous-week" ? -7 : 7);

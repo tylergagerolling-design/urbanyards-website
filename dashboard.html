@@ -13,11 +13,11 @@
     <link rel="apple-touch-icon" href="/apple-touch-icon.png">
     <link rel="manifest" href="/dashboard.webmanifest">
     <link rel="stylesheet" href="dashboard.css?v=20260804-quote-requests-leads-1">
-    <link rel="stylesheet" href="dashboard-unified.css?v=20260804-clean-operations-1">
+    <link rel="stylesheet" href="dashboard-unified.css?v=20260804-clean-operations-redesign-1">
     <script src="dashboard-config.js?v=20260716-loader-1" defer></script>
     <script src="scripts/budget-calculations.js?v=20260716-loader-1" defer></script>
     <script src="scripts/financial-calculations.js?v=20260723-invoice-status-1" defer></script>
-    <script src="dashboard.js?v=20260804-quote-requests-leads-1" defer></script>
+    <script src="dashboard.js?v=20260804-clean-operations-redesign-1" defer></script>
   </head>
   <body>
     <main class="dashboard-shell" aria-labelledby="dashboard-title">
@@ -119,9 +119,9 @@
           <section class="dashboard-section equipment-section uy-standard-page" id="equipment" data-section="equipment">
             <div class="equipment-hero uy-page-header">
               <div>
-                <p class="eyebrow">Equipment</p>
-                <h1>Tools, maintenance, and buying plan</h1>
-                <p>Track owned equipment, service needs, replacement priorities, and recommended hardware links.</p>
+                <p class="eyebrow">Tools / Equipment</p>
+                <h1>Equipment</h1>
+                <p>Track inventory, maintenance needs, replacement priorities, and buying research.</p>
               </div>
               <div class="equipment-tabs" role="tablist" aria-label="Equipment views">
                 <button type="button" data-equipment-view="inventory">Current Inventory</button>
@@ -227,9 +227,9 @@
           <section class="dashboard-section documentation-center uy-standard-page" id="documentation" data-section="documentation">
             <div class="documentation-hero uy-page-header">
               <div>
-                <p class="eyebrow">Documentation</p>
-                <h1>Forms, checklists, inspections, and reports</h1>
-                <p>Assign required forms, review submitted paperwork, manage reusable templates, and keep a clean audit trail for properties, jobs, equipment, and staff records.</p>
+                <p class="eyebrow">Tools / Documentation</p>
+                <h1>Documentation</h1>
+                <p>Manage operational forms, assignments, submissions, templates, and audit history.</p>
               </div>
               <div class="documentation-actions">
                 <button type="button" data-action="refresh-documentation"><span class="button-icon" aria-hidden="true">R</span><span>Refresh</span></button>
@@ -286,8 +286,9 @@
             <div class="panel uy-page-intro-panel">
               <div class="panel-heading">
                 <div>
-                  <h1>Client / Property Profiles</h1>
-                  <p>One place per client with contact info, property details, notes, jobs, quotes, invoices, route history, and follow-ups.</p>
+                  <p class="eyebrow">Leads / Clients</p>
+                  <h1>Clients</h1>
+                  <p>Manage confirmed client relationships, contacts, properties, and service history.</p>
                 </div>
                 <button class="inline-action" type="button" data-action="quick-add-client">Add Client</button>
               </div>
@@ -312,9 +313,9 @@
           <section class="dashboard-section uy-standard-page" id="groundskeeper-ai" data-section="groundskeeper-ai">
             <div class="groundskeeper-ai-hero groundskeeper-ai-command-header uy-page-header">
               <div>
-                <p class="eyebrow">Groundskeeper Training Studio</p>
-                <h1>AI Helper Training</h1>
-                <p>Train, test, and publish how the website helper responds to visitors.</p>
+                <p class="eyebrow">Tools / AI</p>
+                <h1>Groundskeeper AI</h1>
+                <p>Operate, train, govern, and review the dashboard assistant from one workspace.</p>
               </div>
               <div class="groundskeeper-ai-toolbar">
                 <input data-ai-search type="search" aria-label="Search AI knowledge" placeholder="Search AI knowledge...">
@@ -335,9 +336,9 @@
           <section class="dashboard-section import-export-center uy-standard-page" id="import-export" data-section="import-export">
             <div class="import-export-hero uy-page-header">
               <div>
-                <p class="eyebrow">Data Center</p>
-                <h3>Import, Export &amp; Google Sheets</h3>
-                <p>Safely move dashboard records through Excel, CSV, Google Sheets, PDF reports, and full JSON backups.</p>
+                <p class="eyebrow">Tools / Records &amp; Data</p>
+                <h1>Import &amp; Export</h1>
+                <p>Move dashboard records through verified imports, exports, reports, and backups.</p>
               </div>
               <div class="import-export-actions">
                 <button type="button" data-action="refresh-import-export"><span class="button-icon" aria-hidden="true">R</span><span>Refresh</span></button>

@@ -252,6 +252,12 @@ body:not(.is-login-screen) :is(.empty-state,.clean-empty-state,.ttl-no-results){
 #call-queue .cq-drawer-tabs button{min-height:46px!important;padding:0 6px!important;border:0!important;border-bottom:2px solid transparent!important;border-radius:0!important;background:#fff!important;color:#60736b!important;font-size:.73rem!important}
 #call-queue .cq-drawer-tabs button.is-active{border-bottom-color:#123f31!important;color:#123f31!important}
 #call-queue .cq-drawer-scroll{overflow-y:auto;overscroll-behavior:contain;padding:0 12px 18px}
+#call-queue .cq-call-outcome-slot:empty{display:none}
+#call-queue .cq-call-outcome-slot:not(:empty){margin:12px 0 0}
+#call-queue .cq-call-outcome-slot .call-helper-panel{margin:0;padding:14px;border:1px solid rgba(18,63,49,.14);border-radius:10px;background:#f7f1e3;box-shadow:none}
+#call-queue .cq-call-outcome-slot .call-helper-head,#call-queue .cq-call-outcome-slot .call-helper-phone-row{gap:10px;flex-wrap:wrap}
+#call-queue .cq-call-outcome-slot .call-helper-number{display:none}
+#call-queue .cq-call-outcome-slot .call-helper-note{font-size:.7rem;line-height:1.4}
 #call-queue .cq-drawer-section{margin-top:0;padding:16px 0;border-bottom:1px solid rgba(18,63,49,.12)}
 #call-queue .cq-drawer-section h3{margin:0 0 14px!important;font-family:Arial,sans-serif!important;font-size:.86rem!important;letter-spacing:0!important}
 #call-queue .cq-section-heading{display:flex;align-items:center;justify-content:space-between}

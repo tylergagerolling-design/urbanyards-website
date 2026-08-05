@@ -29838,13 +29838,14 @@ Requirements:
         const leadId = event.target.dataset.leadId || "";
         const leadType = event.target.dataset.leadType || "";
         const phone = phoneInfo(event.target.dataset.phone || "");
+        const followUpDate = String(formData.get("follow_up_date") || "");
         try {
           setDashboardState("Saving call note...");
           if (activityId) {
             await updateLeadActivity(activityId, {
               outcome: String(formData.get("outcome") || "not_set"),
               notes: String(formData.get("notes") || ""),
-              follow_up_date: String(formData.get("follow_up_date") || "") || null
+              follow_up_date: followUpDate || null
             });
           } else {
             if (!phone.valid) throw new Error("No valid phone number.");
@@ -29855,12 +29856,27 @@ Requirements:
               type: "call_attempt",
               outcome: String(formData.get("outcome") || "not_set"),
               notes: String(formData.get("notes") || ""),
-              follow_up_date: String(formData.get("follow_up_date") || "") || null
+              follow_up_date: followUpDate || null
+            });
+          }
+          if (leadType === "outreach_prospect" && leadId) {
+            const prospect = findOutreachProspect(leadId);
+            await updateOutreachProspect(leadId, {
+              next_follow_up_at: followUpDate || null,
+              status: followUpDate && ["Prospect", "Researched", "Contacted"].includes(prospect?.status)
+                ? "Follow-Up Needed"
+                : prospect?.status || "Prospect"
             });
           }
           await refreshDashboard();
-          openLeadDrawerByType(leadType, leadId);
-          setDashboardState("Call note saved.");
+          if (leadType === "outreach_prospect" && state.activeSection === "call-queue") {
+            state.callQueueSelectedId = leadId;
+            state.callQueueDrawerTab = "follow-up";
+            renderCallQueueWorkspace();
+          } else {
+            openLeadDrawerByType(leadType, leadId);
+          }
+          setDashboardState(followUpDate ? "Call note and follow-up saved." : "Call note saved.");
         } catch (error) {
           setDashboardState(error.message || "Unable to save call note.", "error");
         }
@@ -29870,19 +29886,33 @@ Requirements:
         const activityId = event.target.dataset.id || "";
         const leadId = event.target.dataset.leadId || "";
         const leadType = event.target.dataset.leadType || "";
+        const followUpDate = String(formData.get("follow_up_date") || "");
         try {
           setDashboardState("Saving call outcome...");
           await updateLeadActivity(activityId, {
             outcome: String(formData.get("outcome") || "not_set"),
             notes: String(formData.get("notes") || ""),
-            follow_up_date: String(formData.get("follow_up_date") || "") || null
+            follow_up_date: followUpDate || null
           });
+          if (leadType === "outreach_prospect" && leadId) {
+            const prospect = findOutreachProspect(leadId);
+            await updateOutreachProspect(leadId, {
+              next_follow_up_at: followUpDate || null,
+              status: followUpDate && ["Prospect", "Researched", "Contacted"].includes(prospect?.status)
+                ? "Follow-Up Needed"
+                : prospect?.status || "Prospect"
+            });
+          }
           await refreshDashboard();
-          if (leadType === "quote_submission") openSubmissionDrawer(leadId);
+          if (leadType === "outreach_prospect" && state.activeSection === "call-queue") {
+            state.callQueueSelectedId = leadId;
+            state.callQueueDrawerTab = "follow-up";
+            renderCallQueueWorkspace();
+          } else if (leadType === "quote_submission") openSubmissionDrawer(leadId);
           else if (leadType === "contact") openContactDrawer(leadId);
           else if (leadType === "outreach_prospect") openOutreachDrawer(leadId);
           else if (leadType === "outreach_company") openOutreachCompanyDrawer(leadId);
-          setDashboardState("Call outcome saved.");
+          setDashboardState(followUpDate ? "Call outcome and follow-up saved." : "Call outcome saved.");
         } catch (error) {
           setDashboardState(error.message || "Unable to save call outcome.", "error");
         }

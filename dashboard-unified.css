@@ -10,6 +10,14 @@
   --clean-red:#bd2934;--clean-red-soft:#fff0f1;
   --clean-radius-sm:6px;--clean-radius:9px;--clean-radius-lg:12px;
   --clean-control:40px;--clean-gutter:24px;--clean-max:1600px;
+  --uy-green:var(--clean-green);--uy-green-2:#123b2b;--uy-green-3:var(--clean-green-soft);
+  --uy-paper:var(--clean-bg);--uy-surface:var(--clean-surface);--uy-card:var(--clean-surface);
+  --uy-line:var(--clean-border);--uy-ink:var(--clean-text);--uy-muted:var(--clean-muted);
+  --color-bg:var(--clean-bg);--color-surface:var(--clean-surface);--color-surface-solid:var(--clean-surface);
+  --color-surface-soft:var(--clean-subtle);--color-primary:var(--clean-green);--color-primary-hover:var(--clean-green-hover);
+  --color-primary-soft:var(--clean-green-soft);--color-border:var(--clean-border);--color-border-strong:var(--clean-border-strong);
+  --color-text:var(--clean-text);--color-muted:var(--clean-muted);--shadow-card:none;--shadow-panel:none;--shadow-button:none;
+  --font-ui:Inter,ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
 }
 body:not(.is-login-screen),body:not(.is-login-screen) .dashboard-main{background:var(--clean-bg);color:var(--clean-text)}
 body:not(.is-login-screen) .dashboard-main{min-width:0}
@@ -124,3 +132,70 @@ body:not(.is-login-screen) :is(.ut-title-line,.online-quote-header,.uy-page-head
 }
 @media(max-width:640px){body:not(.is-login-screen) :is(.ttl-filters,.wol-filters,.money-record-toolbar,.equipment-toolbar,.documentation-toolbar){display:grid;grid-template-columns:1fr 1fr}body:not(.is-login-screen) :is(.ttl-filters,.wol-filters,.money-record-toolbar,.equipment-toolbar,.documentation-toolbar)>:first-child{grid-column:1/-1}body:not(.is-login-screen) :is(.ttl-filters,.wol-filters,.equipment-toolbar,.documentation-toolbar) :is(label,input,select,button){width:100%;min-width:0!important}body:not(.is-login-screen) :is(.ticket-metrics,.wol-summary,.money-kpi-grid,.online-quote-metrics){display:flex;overflow-x:auto}body:not(.is-login-screen) :is(.ticket-metrics,.wol-summary,.money-kpi-grid,.online-quote-metrics)>*{min-width:150px}#route-planner .route-week-header{display:grid!important;grid-template-columns:minmax(0,1fr)!important}#route-planner .route-week-header>*{min-width:0}#route-planner .route-week-controls{width:100%;display:grid!important;grid-template-columns:minmax(0,1fr) minmax(0,1fr)!important;min-width:0}#route-planner .route-week-arrows{grid-column:1/-1}#route-planner .route-week-selector{grid-column:1/-1;width:100%!important;min-width:0!important;max-width:100%;overflow:hidden}#route-planner .route-week-selector strong{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}#route-planner .route-week-controls :is(button,label){min-width:0!important;max-width:100%}#route-planner .route-week-cards{display:block!important;width:100%;min-width:0;overflow:hidden!important}#route-planner .route-week-cards>.route-day-card{display:none!important;width:100%!important;min-width:0!important;max-width:100%;overflow:hidden}#route-planner .route-week-cards>.route-day-card.is-selected{display:flex!important}#route-planner .route-day-card>*{max-width:100%}.call-queue-reference{max-width:100%;overflow:hidden;overscroll-behavior-inline:contain}}
 @media(prefers-reduced-motion:reduce){*,*:before,*:after{scroll-behavior:auto!important;transition-duration:.01ms!important;animation-duration:.01ms!important;animation-iteration-count:1!important}}
+
+/* Visual-only dashboard overhaul. No layout contracts, actions, or state logic. */
+body:not(.is-login-screen){font-family:var(--font-ui);font-size:14px;line-height:1.45;color:var(--clean-text);background:var(--clean-bg)}
+body:not(.is-login-screen) .dashboard-main{background:var(--clean-bg)!important}
+body:not(.is-login-screen) .dashboard-section{color:var(--clean-text)}
+body:not(.is-login-screen) :is(h1,h2,h3,h4,strong){font-family:var(--font-ui);color:var(--clean-text)}
+body:not(.is-login-screen) h1{font-size:2rem!important;font-weight:760!important;line-height:1.12!important;letter-spacing:-.04em!important}
+html body:not(.is-login-screen) .dashboard-main .dashboard-section h1{color:#14211c!important}
+body:not(.is-login-screen) h2{font-size:1.08rem!important;font-weight:740!important;line-height:1.25!important;letter-spacing:-.02em!important}
+body:not(.is-login-screen) h3{font-size:.94rem!important;font-weight:720!important;line-height:1.3!important;letter-spacing:-.012em!important}
+body:not(.is-login-screen) :is(p,small,time,.eyebrow){font-family:var(--font-ui)}
+body:not(.is-login-screen) :is(.eyebrow,.clean-workspace-label,.clean-section-label){color:var(--clean-green)!important;font-size:.69rem!important;font-weight:800!important;letter-spacing:.09em!important;text-transform:uppercase}
+
+body:not(.is-login-screen) :is(button,.button,.inline-action,.secondary-action,.clean-primary-action,.clean-secondary-action){min-height:40px;border-radius:7px;font-family:var(--font-ui);font-size:.78rem;font-weight:700;box-shadow:none;transition:border-color .14s ease,background-color .14s ease,color .14s ease}
+body:not(.is-login-screen) :is(button,.button,.inline-action,.secondary-action,.clean-secondary-action):not(.ttl-new-ticket):not(.wol-new-job):not(.money-new-main):not(.clean-primary-action):not(.danger){border-color:var(--clean-border-strong);background:var(--clean-surface);color:var(--clean-text)}
+body:not(.is-login-screen) :is(button,.button,.inline-action,.secondary-action,.clean-secondary-action):not(.ttl-new-ticket):not(.wol-new-job):not(.money-new-main):not(.clean-primary-action):not(.danger):hover{border-color:#9fb2a7;background:var(--clean-subtle);color:var(--clean-text)}
+body:not(.is-login-screen) :is(.ttl-new-ticket,.wol-new-job,.money-new-main,.clean-primary-action,.toolbar button[type=submit],form button[type=submit]){border-color:var(--clean-green)!important;background:var(--clean-green)!important;color:#fff!important;box-shadow:none!important}
+body:not(.is-login-screen) :is(.ttl-new-ticket,.wol-new-job,.money-new-main,.clean-primary-action,.toolbar button[type=submit],form button[type=submit]):hover{border-color:var(--clean-green-hover)!important;background:var(--clean-green-hover)!important}
+body:not(.is-login-screen) :is(button.danger,.danger button,.danger-zone button){border-color:var(--clean-red)!important;background:#fff!important;color:var(--clean-red)!important}
+
+body:not(.is-login-screen) :is(input:not([type=checkbox]):not([type=radio]),select,textarea){border:1px solid var(--clean-border-strong)!important;border-radius:7px!important;background:#fff!important;color:var(--clean-text)!important;box-shadow:none!important}
+body:not(.is-login-screen) :is(input:not([type=checkbox]):not([type=radio]),select){height:40px;min-height:40px;padding-inline:11px}
+body:not(.is-login-screen) textarea{padding:10px 11px;line-height:1.5}
+body:not(.is-login-screen) :is(input,select,textarea)::placeholder{color:#87958e;opacity:1}
+body:not(.is-login-screen) :is(input,select,textarea):hover{border-color:#a9b9b0!important}
+body:not(.is-login-screen) :is(input,select,textarea):focus{border-color:var(--clean-green)!important;outline:3px solid rgba(8,127,67,.12)!important;outline-offset:0!important}
+
+body:not(.is-login-screen) :is(.panel,.focus-card,.ttl-group,.wol-table-card,.money-unified-shell,.online-quote-card,.client-detail-page,.ut-card,.wod-card,.route-day-card,.cq-entries-card,.cq-import-card,.equipment-main-panel,.equipment-form-panel){border:1px solid var(--clean-border)!important;border-radius:10px!important;background:var(--clean-surface)!important;box-shadow:none!important}
+body:not(.is-login-screen) .dashboard-section :is(.panel,.focus-card,.ttl-group,.wol-table-card,.money-unified-shell,.online-quote-card,.client-detail-page,.ut-card,.wod-card,.route-day-card,.cq-entries-card,.cq-import-card,.equipment-main-panel,.equipment-form-panel){border-color:var(--clean-border)!important}
+body:not(.is-login-screen) :is(.panel-heading,.focus-card-header,.ut-card>header,.wod-card>header){border-bottom-color:var(--clean-border)!important;background:transparent!important}
+body:not(.is-login-screen) :is(.panel-heading,.focus-card-header) h2,body:not(.is-login-screen) :is(.panel-heading,.focus-card-header) h3{margin:0}
+body:not(.is-login-screen) :is(.panel-heading,.focus-card-header) p{color:var(--clean-muted)}
+
+body:not(.is-login-screen) table{border-collapse:collapse;background:#fff;color:var(--clean-text)}
+body:not(.is-login-screen) table thead{background:#f7f9f7}
+body:not(.is-login-screen) table th{height:42px;padding:10px 12px;border-bottom:1px solid var(--clean-border)!important;color:#63736b!important;font-size:.68rem!important;font-weight:800!important;letter-spacing:.055em!important;text-transform:uppercase!important}
+body:not(.is-login-screen) table td{padding:12px;border-bottom:1px solid #e9eeeb!important;color:var(--clean-text);font-size:.78rem;vertical-align:middle}
+body:not(.is-login-screen) table tbody tr:last-child td{border-bottom:0!important}
+body:not(.is-login-screen) table tbody tr:hover{background:#f8faf8!important}
+
+body:not(.is-login-screen) :is(.ttl-status,.wol-status,.money-status,.status-badge,.focus-status,[class*=status-badge]){min-height:24px;padding:4px 9px;border:0!important;border-radius:999px!important;font-size:.68rem!important;font-weight:750!important;line-height:1.15!important;box-shadow:none!important}
+body:not(.is-login-screen) :is(.is-scheduled,.status-scheduled){background:var(--clean-blue-soft)!important;color:var(--clean-blue)!important}
+body:not(.is-login-screen) :is(.is-progress,.is-in-progress,.status-in-progress){background:#e9f2fd!important;color:#1769b0!important}
+body:not(.is-login-screen) :is(.is-completed,.status-completed,.is-paid){background:var(--clean-green-soft)!important;color:var(--clean-green)!important}
+body:not(.is-login-screen) :is(.is-attention,.is-overdue,.status-overdue){background:var(--clean-red-soft)!important;color:var(--clean-red)!important}
+
+body:not(.is-login-screen) :is(.ttl-header,.wol-header,.money-page-header,.online-quote-header,.uy-page-header,.cq-page-header,.route-week-header,.clean-page-header){margin:0 0 18px!important;padding-bottom:16px!important;border-bottom:1px solid var(--clean-border)!important}
+body:not(.is-login-screen) :is(.ttl-header,.wol-header,.money-page-header,.online-quote-header,.uy-page-header,.cq-page-header,.route-week-header,.clean-page-header) p{color:var(--clean-muted)!important}
+body:not(.is-login-screen) :is(.ttl-filters,.wol-filters,.money-record-toolbar,.equipment-toolbar,.documentation-toolbar,.toolbar,.cq-entry-tools){border:1px solid var(--clean-border)!important;border-radius:9px!important;background:#fff!important;box-shadow:none!important}
+
+body:not(.is-login-screen) :is(.documentation-tabs,.import-export-tabs,.equipment-tabs,.money-tabs,.client-detail-tabs,.ut-internal-nav){border-bottom:1px solid var(--clean-border)!important;background:transparent!important}
+body:not(.is-login-screen) :is(.documentation-tabs,.import-export-tabs,.equipment-tabs,.money-tabs,.client-detail-tabs,.ut-internal-nav) button{border:0!important;border-bottom:2px solid transparent!important;border-radius:0!important;background:transparent!important;color:var(--clean-muted)!important;box-shadow:none!important}
+body:not(.is-login-screen) :is(.documentation-tabs,.import-export-tabs,.equipment-tabs,.money-tabs,.client-detail-tabs,.ut-internal-nav) button:is(.is-active,[aria-selected=true]){border-bottom-color:var(--clean-green)!important;color:var(--clean-green)!important}
+
+body:not(.is-login-screen) .detail-drawer .drawer-panel{border-left:1px solid var(--clean-border);background:#fff!important;box-shadow:-10px 0 26px rgba(18,35,26,.08)!important}
+body:not(.is-login-screen) :is(.drawer-header,.drawer-footer){border-color:var(--clean-border)!important;background:#fff!important}
+body:not(.is-login-screen) .drawer-footer{box-shadow:0 -1px 0 var(--clean-border)}
+body:not(.is-login-screen) :is(.empty-state,.clean-empty-state,.ttl-no-results){color:var(--clean-muted);background:transparent;box-shadow:none}
+
+@media(max-width:760px){
+  body:not(.is-login-screen){font-size:14px}
+  body:not(.is-login-screen) h1{font-size:1.5rem!important;line-height:1.16!important}
+  body:not(.is-login-screen) h2{font-size:1rem!important}
+  body:not(.is-login-screen) :is(button,.button,.inline-action,.secondary-action,.clean-primary-action,.clean-secondary-action,input:not([type=checkbox]):not([type=radio]),select){min-height:44px}
+  body:not(.is-login-screen) :is(.ttl-header,.wol-header,.money-page-header,.online-quote-header,.uy-page-header,.cq-page-header,.route-week-header,.clean-page-header){margin-bottom:14px!important;padding-bottom:13px!important}
+  body:not(.is-login-screen) table th,body:not(.is-login-screen) table td{font-size:.74rem}
+}

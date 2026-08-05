@@ -236,3 +236,79 @@ body:not(.is-login-screen) .dashboard-main :is(.panel,.focus-card,.ttl-group,.wo
 /* Keep Needs Attention readable at every breakpoint. */
 body:not(.is-login-screen) .dashboard-main :is(.clean-summary-strip [data-filter="attention"],#calendar .wol-summary .is-attention){flex:0 0 180px!important;min-width:180px!important;max-width:180px!important;writing-mode:horizontal-tb!important}
 body:not(.is-login-screen) .dashboard-main :is(.clean-summary-strip [data-filter="attention"],#calendar .wol-summary .is-attention) :is(strong,span,small,em){writing-mode:horizontal-tb!important;white-space:nowrap!important;word-break:keep-all!important}
+
+/* Full tab-body visual implementation. Scoped away from the existing drawer. */
+body:not(.is-login-screen) .dashboard-main{
+  font-family:Arial,sans-serif!important;
+  color:#273a34!important;
+  background:#fff!important;
+}
+body:not(.is-login-screen) .dashboard-main :is(button,input,select,textarea,table){font-family:Arial,sans-serif!important}
+body:not(.is-login-screen) .dashboard-main :is(h1,h2,h3,h4){font-family:Georgia,serif!important;color:#0a3027!important}
+body:not(.is-login-screen) .dashboard-main h1{font-size:clamp(2.15rem,3vw,3.15rem)!important;font-weight:700!important;line-height:1!important;letter-spacing:-.055em!important}
+body:not(.is-login-screen) .dashboard-main h2{font-size:clamp(1.25rem,1.7vw,1.65rem)!important;font-weight:700!important;line-height:1.08!important;letter-spacing:-.035em!important}
+body:not(.is-login-screen) .dashboard-main h3{font-size:1.08rem!important;font-weight:700!important;line-height:1.15!important;letter-spacing:-.018em!important}
+body:not(.is-login-screen) .dashboard-main :is(.eyebrow,.clean-workspace-label,.clean-section-label){color:#78956f!important;font-family:Arial,sans-serif!important;font-size:.7rem!important;font-weight:700!important;letter-spacing:.13em!important;text-transform:uppercase!important}
+
+body:not(.is-login-screen) .dashboard-main>.dashboard-section{max-width:1600px;margin-inline:auto;background:#fff!important}
+body:not(.is-login-screen) .dashboard-main :is(.home-focus-page,.unified-ticket-page,.work-operations-page,.route-planner-page,.uy-standard-page){padding:24px!important;border:0!important;border-radius:0!important;background:#fff!important;box-shadow:none!important}
+body:not(.is-login-screen) .dashboard-main :is(.ttl-header,.wol-header,.money-page-header,.online-quote-header,.uy-page-header,.cq-page-header,.route-week-header,.clean-page-header){position:relative;margin:0 0 22px!important;padding:0 0 20px!important;border:0!important;border-bottom:1px solid rgba(18,63,49,.15)!important;background:#fff!important}
+body:not(.is-login-screen) .dashboard-main :is(.ttl-header,.wol-header,.money-page-header,.online-quote-header,.uy-page-header,.cq-page-header,.route-week-header,.clean-page-header):after{content:"";position:absolute;bottom:-1px;left:0;width:68px;height:3px;border-radius:3px;background:#e2aa21}
+body:not(.is-login-screen) .dashboard-main :is(.ttl-header,.wol-header,.money-page-header,.online-quote-header,.uy-page-header,.cq-page-header,.route-week-header,.clean-page-header)>div:first-child>p:last-child{max-width:700px;color:#60736b!important;font-size:.92rem!important;line-height:1.55!important}
+
+body:not(.is-login-screen) .dashboard-main :is(button,.button,.inline-action,.secondary-action,.clean-primary-action,.clean-secondary-action){min-height:42px;border-radius:9px!important;font-size:.79rem!important;font-weight:700!important;box-shadow:none!important}
+body:not(.is-login-screen) .dashboard-main :is(.ttl-new-ticket,.wol-new-job,.money-new-main,.clean-primary-action,.toolbar button[type=submit],form button[type=submit]){border:1px solid #123f31!important;background:#123f31!important;color:#fff!important}
+body:not(.is-login-screen) .dashboard-main :is(.ttl-new-ticket,.wol-new-job,.money-new-main,.clean-primary-action,.toolbar button[type=submit],form button[type=submit]):hover{border-color:#0a3027!important;background:#0a3027!important}
+body:not(.is-login-screen) .dashboard-main :is(.secondary-action,.inline-action,.clean-secondary-action,button:not(.danger):not([type=submit])){border-color:rgba(18,63,49,.18)!important;background:#fffdf7!important;color:#123f31!important}
+body:not(.is-login-screen) .dashboard-main :is(.secondary-action,.inline-action,.clean-secondary-action,button:not(.danger):not([type=submit])):hover{border-color:rgba(18,63,49,.3)!important;background:#f7f1e3!important}
+
+body:not(.is-login-screen) .dashboard-main :is(input:not([type=checkbox]):not([type=radio]),select,textarea){border:1px solid rgba(18,63,49,.18)!important;border-radius:9px!important;background:#fffdf7!important;color:#273a34!important;box-shadow:none!important}
+body:not(.is-login-screen) .dashboard-main :is(input:not([type=checkbox]):not([type=radio]),select){height:42px!important;min-height:42px!important}
+body:not(.is-login-screen) .dashboard-main :is(input,select,textarea):focus{border-color:#78956f!important;outline:3px solid rgba(226,170,33,.25)!important;outline-offset:1px!important}
+
+body:not(.is-login-screen) .dashboard-main :is(.panel,.focus-card,.ttl-group,.wol-table-card,.money-unified-shell,.online-quote-card,.client-detail-page,.ut-card,.wod-card,.route-day-card,.cq-entries-card,.cq-import-card,.equipment-main-panel,.equipment-form-panel,.documentation-main,.import-export-main){border:1px solid rgba(18,63,49,.14)!important;border-radius:15px!important;background:#fff!important;box-shadow:0 12px 26px rgba(25,59,42,.07)!important}
+body:not(.is-login-screen) .dashboard-main :is(.panel-heading,.focus-card-header,.ut-card>header,.wod-card>header,.cq-entries-card>header){padding:16px 18px!important;border-bottom:1px solid rgba(18,63,49,.12)!important;background:#fffdf7!important}
+body:not(.is-login-screen) .dashboard-main :is(.panel-heading,.focus-card-header) p{color:#60736b!important}
+
+body:not(.is-login-screen) .dashboard-main :is(.toolbar,.ttl-filters,.wol-filters,.money-record-toolbar,.equipment-toolbar,.documentation-toolbar,.cq-entry-tools){gap:9px!important;padding:11px!important;border:1px solid rgba(18,63,49,.14)!important;border-radius:12px!important;background:#f7f1e3!important;box-shadow:none!important}
+body:not(.is-login-screen) .dashboard-main :is(.documentation-tabs,.import-export-tabs,.equipment-tabs,.money-tabs,.client-detail-tabs,.ut-internal-nav){gap:2px!important;border-bottom:1px solid rgba(18,63,49,.15)!important;background:#fff!important}
+body:not(.is-login-screen) .dashboard-main :is(.documentation-tabs,.import-export-tabs,.equipment-tabs,.money-tabs,.client-detail-tabs,.ut-internal-nav) button{padding-inline:13px!important;border:0!important;border-bottom:3px solid transparent!important;border-radius:0!important;background:transparent!important;color:#60736b!important}
+body:not(.is-login-screen) .dashboard-main :is(.documentation-tabs,.import-export-tabs,.equipment-tabs,.money-tabs,.client-detail-tabs,.ut-internal-nav) button:is(.is-active,[aria-selected=true]){border-bottom-color:#e2aa21!important;color:#0a3027!important}
+
+body:not(.is-login-screen) .dashboard-main table{width:100%;border-collapse:collapse;background:#fff!important}
+body:not(.is-login-screen) .dashboard-main table thead{background:#e3eadb!important}
+body:not(.is-login-screen) .dashboard-main table th{height:44px;padding:11px 13px!important;border-bottom:1px solid rgba(18,63,49,.15)!important;color:#123f31!important;font-size:.68rem!important;font-weight:700!important;letter-spacing:.07em!important;text-transform:uppercase!important}
+body:not(.is-login-screen) .dashboard-main table td{padding:13px!important;border-bottom:1px solid rgba(18,63,49,.1)!important;color:#273a34!important;font-size:.8rem!important}
+body:not(.is-login-screen) .dashboard-main table tbody tr:hover{background:#fffdf7!important}
+
+body:not(.is-login-screen) .dashboard-main :is(.focus-status,.ttl-status,.wol-status,.money-status,.status-badge,[class*=status-badge]){padding:5px 10px!important;border:0!important;border-radius:999px!important;font-family:Arial,sans-serif!important;font-size:.69rem!important;font-weight:700!important;line-height:1.1!important;box-shadow:none!important}
+body:not(.is-login-screen) .dashboard-main :is(.is-scheduled,.status-scheduled){background:#e7eef4!important;color:#315d78!important}
+body:not(.is-login-screen) .dashboard-main :is(.is-progress,.is-in-progress,.status-in-progress){background:#e3eadb!important;color:#123f31!important}
+body:not(.is-login-screen) .dashboard-main :is(.is-completed,.status-completed,.is-paid){background:#edf3e9!important;color:#426b39!important}
+body:not(.is-login-screen) .dashboard-main :is(.is-attention,.is-overdue,.status-overdue){background:#fff3d6!important;color:#8a6417!important}
+
+body:not(.is-login-screen) .dashboard-main .clean-summary-strip{gap:14px!important}
+body:not(.is-login-screen) .dashboard-main .clean-summary-strip .focus-metric{min-height:102px;padding:18px!important;border:1px solid rgba(18,63,49,.14)!important;border-radius:15px!important;background:#fffdf7!important;box-shadow:0 12px 26px rgba(25,59,42,.06)!important}
+body:not(.is-login-screen) .dashboard-main .clean-summary-strip .focus-metric-icon{background:#e3eadb!important;color:#123f31!important}
+body:not(.is-login-screen) .dashboard-main .clean-summary-strip .focus-metric strong{font-family:Georgia,serif!important;color:#0a3027!important;font-size:1.75rem!important}
+body:not(.is-login-screen) .dashboard-main .clean-home-grid{gap:16px!important}
+body:not(.is-login-screen) .dashboard-main :is(.clean-schedule-row,.clean-attention-list>button,.clean-recent-list>button){min-height:68px!important;padding:12px 18px!important;border-bottom-color:rgba(18,63,49,.1)!important;background:#fff!important}
+body:not(.is-login-screen) .dashboard-main :is(.clean-schedule-row,.clean-attention-list>button,.clean-recent-list>button):hover{background:#fffdf7!important}
+
+body:not(.is-login-screen) .dashboard-main .ttl-group{overflow:hidden!important}
+body:not(.is-login-screen) .dashboard-main .ttl-date{background:#f7f1e3!important}
+body:not(.is-login-screen) .dashboard-main .ttl-row{min-height:76px!important;border-bottom-color:rgba(18,63,49,.1)!important;background:#fff!important}
+body:not(.is-login-screen) .dashboard-main .ttl-row:hover{background:#fffdf7!important}
+body:not(.is-login-screen) .dashboard-main .wol-summary>*{border:1px solid rgba(18,63,49,.14)!important;border-radius:13px!important;background:#fffdf7!important;box-shadow:none!important}
+body:not(.is-login-screen) .dashboard-main .route-day-card.is-selected{border-color:#78956f!important;box-shadow:0 0 0 2px rgba(120,149,111,.18)!important}
+
+body:not(.is-login-screen) .dashboard-main .detail-drawer .drawer-panel{background:#fff!important}
+body:not(.is-login-screen) .dashboard-main :is(.drawer-header,.drawer-footer){border-color:rgba(18,63,49,.14)!important;background:#fffdf7!important}
+
+@media(max-width:760px){
+  body:not(.is-login-screen) .dashboard-main :is(.home-focus-page,.unified-ticket-page,.work-operations-page,.route-planner-page,.uy-standard-page){padding:14px 12px 88px!important}
+  body:not(.is-login-screen) .dashboard-main h1{font-size:2rem!important;line-height:1.02!important}
+  body:not(.is-login-screen) .dashboard-main h2{font-size:1.3rem!important}
+  body:not(.is-login-screen) .dashboard-main :is(.ttl-header,.wol-header,.money-page-header,.online-quote-header,.uy-page-header,.cq-page-header,.route-week-header,.clean-page-header){margin-bottom:16px!important;padding-bottom:16px!important}
+  body:not(.is-login-screen) .dashboard-main :is(button,input:not([type=checkbox]):not([type=radio]),select){min-height:44px!important}
+}

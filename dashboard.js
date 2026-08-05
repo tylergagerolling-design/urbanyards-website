@@ -30576,6 +30576,7 @@ Requirements:
   async function init() {
     applyDashboardPreferences();
     cacheElements();
+    installDashboardDesignSystem();
     bindEvents();
     const hashSection = window.location.hash.replace("#", "");
     const pathSection = dashboardSectionFromPath();
@@ -30605,6 +30606,46 @@ Requirements:
       showLogin();
       setLoginStatus("Please sign in again.");
     }
+  }
+
+  function installDashboardDesignSystem() {
+    const root = document.querySelector(".app-view");
+    if (!root || root.dataset.designSystemReady === "true") return;
+
+    const classify = (scope) => {
+      const element = scope?.nodeType === Node.ELEMENT_NODE ? scope : root;
+      const candidates = [element, ...element.querySelectorAll("*")];
+      candidates.forEach((node) => {
+        if (!(node instanceof HTMLElement)) return;
+        if (node.matches(".dashboard-section")) node.classList.add("dashboard-page");
+        if (node.matches(".detail-drawer")) node.classList.add("dashboard-drawer");
+        if (node.matches(".drawer-panel")) node.classList.add("dashboard-drawer__panel");
+        if (node.matches(".uy-page-header, [class$='-page-header'], [class*=' page-header'], [class$='-command-header']")) node.classList.add("page-header");
+        if (node.matches(".panel, [class$='-card'], [class*='-card '], [class$='-panel']:not(.drawer-panel), [class*='-panel ']:not(.drawer-panel)")) node.classList.add("dashboard-card");
+        if (node.matches(".toolbar, [class$='-toolbar'], [class*='-toolbar ']")) node.classList.add("dashboard-toolbar");
+        if (node.matches("[role='tablist'], [class$='-tabs'], [class*='-tabs ']")) node.classList.add("dashboard-tabs");
+        if (node.matches("table")) node.classList.add("dashboard-table");
+        if (node.matches("input:not([type='hidden']):not([type='checkbox']):not([type='radio'])")) node.classList.add("dashboard-input");
+        if (node.matches("select")) node.classList.add("dashboard-select");
+        if (node.matches("textarea")) node.classList.add("dashboard-input", "dashboard-textarea");
+        if (node.matches("button, a.button, a.inline-action")) {
+          node.classList.add("dashboard-button");
+          if (node.matches("[data-action*='delete'], [data-action*='remove'], [data-action*='void'], [data-action*='empty-trash'], .danger, .danger-action")) node.classList.add("dashboard-button--danger");
+          else if (node.matches("button[type='submit'], [data-action*='create'], [data-action*='add'], [data-action*='save'], [data-action*='schedule'], [data-action*='upload'], [data-action*='import'], [data-action*='connect'], [data-action*='assign'], .overview-primary-action, .work-primary-action, .outreach-primary-action")) node.classList.add("dashboard-button--primary");
+          else if (node.matches(".drawer-close, [data-close-detail], [data-action*='close'], [data-action*='cancel'], [data-action*='dismiss']")) node.classList.add("dashboard-button--icon");
+          else node.classList.add("dashboard-button--secondary");
+        }
+        if (node.matches(".status-badge, .status-pill, .badge, .priority-pill, .cq-status, .money-status, .work-status, .ticket-status, .invoice-status, [class$='-status-badge'], [class$='-status-pill']")) node.classList.add("dashboard-badge");
+        if (node.matches("[class*='empty-state'], [class$='-empty'], [class*='-empty ']")) node.classList.add("dashboard-empty-state");
+      });
+    };
+
+    classify(root);
+    const observer = new MutationObserver((records) => records.forEach((record) => record.addedNodes.forEach((node) => {
+      if (node.nodeType === Node.ELEMENT_NODE) classify(node);
+    })));
+    observer.observe(root, { childList: true, subtree: true });
+    root.dataset.designSystemReady = "true";
   }
 
   document.addEventListener("DOMContentLoaded", init);

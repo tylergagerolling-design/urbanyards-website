@@ -13,6 +13,7 @@
     <link rel="apple-touch-icon" href="/apple-touch-icon.png">
     <link rel="manifest" href="/dashboard.webmanifest">
     <link rel="stylesheet" href="dashboard.css?v=20260804-quote-requests-leads-1">
+    <link rel="stylesheet" href="dashboard-unified.css?v=20260804-clean-operations-1">
     <script src="dashboard-config.js?v=20260716-loader-1" defer></script>
     <script src="scripts/budget-calculations.js?v=20260716-loader-1" defer></script>
     <script src="scripts/financial-calculations.js?v=20260723-invoice-status-1" defer></script>
@@ -119,7 +120,7 @@
             <div class="equipment-hero uy-page-header">
               <div>
                 <p class="eyebrow">Equipment</p>
-                <h3>Tools, maintenance, and buying plan</h3>
+                <h1>Tools, maintenance, and buying plan</h1>
                 <p>Track owned equipment, service needs, replacement priorities, and recommended hardware links.</p>
               </div>
               <div class="equipment-tabs" role="tablist" aria-label="Equipment views">
@@ -128,6 +129,7 @@
                 <button type="button" data-equipment-view="guide">Hardware Guide</button>
                 <button type="button" data-equipment-view="wishlist">Wishlist</button>
               </div>
+              <button class="clean-primary-action equipment-mobile-add" type="button" data-action="quick-add-equipment">Add Equipment</button>
             </div>
 
             <div class="equipment-toolbar">
@@ -164,6 +166,7 @@
                   <div class="equipment-form-actions">
                     <button type="submit"><span class="button-icon" aria-hidden="true">+</span><span>Save Item</span></button>
                     <button class="inline-action" type="button" data-action="clear-equipment-form">Clear</button>
+                    <button class="inline-action mobile-form-cancel" type="button" data-action="close-mobile-equipment-form">Cancel</button>
                   </div>
                 </form>
               </section>
@@ -225,7 +228,7 @@
             <div class="documentation-hero uy-page-header">
               <div>
                 <p class="eyebrow">Documentation</p>
-                <h3>Forms, checklists, inspections, and reports</h3>
+                <h1>Forms, checklists, inspections, and reports</h1>
                 <p>Assign required forms, review submitted paperwork, manage reusable templates, and keep a clean audit trail for properties, jobs, equipment, and staff records.</p>
               </div>
               <div class="documentation-actions">
@@ -283,7 +286,7 @@
             <div class="panel uy-page-intro-panel">
               <div class="panel-heading">
                 <div>
-                  <h3>Client / Property Profiles</h3>
+                  <h1>Client / Property Profiles</h1>
                   <p>One place per client with contact info, property details, notes, jobs, quotes, invoices, route history, and follow-ups.</p>
                 </div>
                 <button class="inline-action" type="button" data-action="quick-add-client">Add Client</button>
@@ -300,6 +303,7 @@
                 <input name="city" placeholder="Property address / area" autocomplete="street-address" data-address-autocomplete>
                 <input name="contact_type" placeholder="Client type">
                 <button type="submit"><span class="button-icon" aria-hidden="true">+</span><span>Add Client</span></button>
+                <button class="inline-action mobile-form-cancel" type="button" data-action="close-mobile-client-form">Cancel</button>
               </form>
               <div class="contact-grid" data-contacts></div>
             </div>
@@ -309,7 +313,7 @@
             <div class="groundskeeper-ai-hero groundskeeper-ai-command-header uy-page-header">
               <div>
                 <p class="eyebrow">Groundskeeper Training Studio</p>
-                <h3>AI Helper Training</h3>
+                <h1>AI Helper Training</h1>
                 <p>Train, test, and publish how the website helper responds to visitors.</p>
               </div>
               <div class="groundskeeper-ai-toolbar">

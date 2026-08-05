@@ -68,6 +68,7 @@ function isLiteralAction(value) {
 const dashboardHtml = readFile("dashboard.html");
 const dashboardJs = readFile("dashboard.js");
 const dashboardCss = readFile("dashboard.css");
+const dashboardUnifiedCss = readFile("dashboard-unified.css");
 const dashboardStyleSystem = readFile("DASHBOARD_STYLE_SYSTEM.md");
 
 function checkStylesheets() {
@@ -86,12 +87,13 @@ function checkStylesheets() {
     addError(`Forbidden dashboard hotfix stylesheet linked from dashboard.html: ${forbiddenLinks.join(", ")}`);
   }
 
-  if (dashboardCssLinks.filter((href) => cssBasename(href) !== "dashboard.css").length) {
+  const allowedDashboardStyles = new Set(["dashboard.css", "dashboard-unified.css"]);
+  if (dashboardCssLinks.filter((href) => !allowedDashboardStyles.has(cssBasename(href))).length) {
     addError(`Dashboard should not load extra dashboard CSS layers: ${dashboardCssLinks.join(", ")}`);
   }
 
-  if (!forbiddenLinks.length && dashboardCssLinks.some((href) => cssBasename(href) === "dashboard.css")) {
-    addPass("dashboard.html loads one dashboard source stylesheet and no hotfix layers.");
+  if (!forbiddenLinks.length && dashboardCssLinks.every((href) => allowedDashboardStyles.has(cssBasename(href)))) {
+    addPass("dashboard.html loads the dashboard source and approved shared foundation with no hotfix layers.");
   }
 }
 
@@ -282,6 +284,28 @@ function checkDesignSystemDocs() {
   addPass("Dashboard design system documentation covers all six workspaces and the end-to-end ticket workflow.");
 }
 
+function checkCleanOperationsCorrectionContracts() {
+  const jsContracts = [
+    ["shared missing-value formatter", "function cleanDisplayValue("],
+    ["ticket type fallback", "function ticketTypeLabel("],
+    ["Unified Ticket mobile selector", "data-unified-ticket-section-select"],
+    ["Groundskeeper AI category selector", "data-ai-mobile-category"],
+    ["Groundskeeper AI destination selector", "data-ai-mobile-destination"]
+  ];
+  const cssContracts = [
+    ["Work horizontal mobile metrics", "#calendar .wol-summary{display:flex!important"],
+    ["Call Queue drawer blur removal", "backdrop-filter:none!important"],
+    ["Clients mobile form gating", "#contacts [data-client-form]{display:none!important"],
+    ["Equipment mobile form gating", ".equipment-form-panel{display:none!important"],
+    ["Groundskeeper compact mobile navigation", ".groundskeeper-ai-mobile-nav{display:grid!important"]
+  ];
+  const duplicateEquipmentEmpty = /equipmentTable\.innerHTML\s*=\s*`<tr><td[^;]+emptyState/.test(dashboardJs);
+  const missing = jsContracts.filter(([, snippet]) => !dashboardJs.includes(snippet)).concat(cssContracts.filter(([, snippet]) => !dashboardUnifiedCss.includes(snippet)));
+  if (duplicateEquipmentEmpty) addError("Equipment renders an empty state in both the table and card container.");
+  if (missing.length) addError(`Clean Operations correction contracts are missing: ${missing.map(([label]) => label).join(", ")}`);
+  if (!duplicateEquipmentEmpty && !missing.length) addPass("Clean Operations correction contracts are present without duplicate Equipment empty rendering.");
+}
+
 checkStylesheets();
 checkForbiddenCssFiles();
 checkDashboardSections();
@@ -290,6 +314,7 @@ checkCssTokens();
 checkDesktopSidebarSystem();
 checkLegacyMarkers();
 checkDesignSystemDocs();
+checkCleanOperationsCorrectionContracts();
 
 console.log("Dashboard layout guardrail audit");
 passes.forEach((message) => console.log(`PASS ${message}`));

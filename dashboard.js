@@ -15873,7 +15873,7 @@ Requirements:
     const rows = queue.slice(0, state.callQueueVisibleCount);
     if (!state.leadIntakeLoaded && !state.leadIntakeLoading) queueMicrotask(() => loadLeadIntakeBatches());
     target.innerHTML = `<div class="call-queue-reference" data-call-queue-root>
-      <header class="cq-page-header"><div><h2>Call Queue</h2><p>Manage your inbound call queue and caller data</p></div><div><button type="button" class="secondary-action" data-action="call-queue-settings">Queue Settings</button><button type="button" data-action="lead-intake-import">Import CSV</button></div></header>
+      <header class="cq-page-header"><div><h1>Call Queue</h1><p>Manage your inbound call queue and caller data</p></div><div><button type="button" class="secondary-action" data-action="call-queue-settings">Queue Settings</button><button type="button" data-action="lead-intake-import">Import CSV</button></div></header>
       <div class="cq-lower-grid"><section class="cq-entries-card"><header><div><h3>Call Queue Entries</h3><p>View, add, edit, and manage your call queue entries.</p></div><div class="cq-entry-tools"><input type="search" data-call-queue-search placeholder="Search entries..." value="${escapeHtml(state.callQueueSearch)}" aria-label="Search entries"><label class="cq-filter-control"><span>Filter</span><select data-call-queue-filter="status" aria-label="Filter entries by status"><option>Active</option><option>All</option><option>Completed</option>${OUTREACH_STATUSES.map((status) => `<option${state.callQueueStatusFilter === status ? " selected" : ""}>${escapeHtml(status)}</option>`).join("")}</select></label><button type="button" data-action="new-outreach-prospect">+ Add Entry</button></div></header>
       <div class="cq-table-wrap"><table><thead><tr><th>Name</th><th>Phone Number</th><th>Address</th><th>Source</th><th>Status</th><th>Last Contact</th><th>Added On</th><th>Actions</th></tr></thead><tbody>${rows.length ? rows.map((item) => { const phone = phoneInfo(item.phone || ""); const status = item.status || "New"; return `<tr data-action="open-outreach-prospect" data-id="${escapeHtml(item.id)}"><td><strong>${escapeHtml(outreachTitle(item))}</strong></td><td>${escapeHtml(phone.display || "—")}</td><td>${escapeHtml([item.address,item.city].filter(Boolean).join(", ") || "—")}</td><td>${escapeHtml(item.source || "Manual")}</td><td><span class="cq-status is-${escapeHtml(slug(status))}">${escapeHtml(status)}</span></td><td>${escapeHtml(item.lastContactedAt || "—")}</td><td>${escapeHtml(item.createdAtRaw ? formatDate(item.createdAtRaw) : "—")}</td><td><div class="cq-row-actions"><button type="button" data-action="open-outreach-prospect" data-id="${escapeHtml(item.id)}" aria-label="Edit ${escapeHtml(outreachTitle(item))}">✎</button><button type="button" data-action="call-lead" data-id="${escapeHtml(item.id)}" data-lead-type="outreach_prospect" data-phone="${escapeHtml(phone.e164)}" aria-label="Call ${escapeHtml(outreachTitle(item))}"${phone.valid ? "" : " disabled"}>☎</button><details><summary aria-label="More actions for ${escapeHtml(outreachTitle(item))}">⋮</summary><div><button type="button" data-action="call-queue-add-note" data-id="${escapeHtml(item.id)}">Add note</button><button type="button" data-action="call-queue-mark-contacted" data-id="${escapeHtml(item.id)}">Mark contacted</button><button type="button" data-action="call-queue-follow-up" data-id="${escapeHtml(item.id)}">Schedule callback</button><button type="button" data-action="create-ticket-from-prospect" data-id="${escapeHtml(item.id)}">Create ticket</button></div></details></div></td></tr>`; }).join("") : `<tr><td colspan="8">${emptyState("No call queue entries match these filters.")}</td></tr>`}</tbody></table></div><footer><span>Showing ${rows.length ? 1 : 0} to ${rows.length} of ${queue.length} entries</span><div><button type="button" class="is-active">1</button>${rows.length < queue.length ? `<button type="button" data-action="load-more-call-queue">Next ›</button>` : ""}</div></footer></section>
       <aside class="cq-import-card"><h3>Import Call Queue (CSV)</h3><p>Import new call queue entries from a CSV file.</p><button type="button" class="cq-drop-zone" data-action="lead-intake-import"><span>⇧</span><strong>Drag and drop your CSV file here</strong><small>or</small><b>Choose File</b></button><h4>CSV Requirements</h4><p>Your CSV file must include the following columns:</p><ul><li>Name (required)</li><li>Phone Number (required)</li><li>Address (optional)</li><li>Notes (optional)</li></ul><button type="button" class="cq-template-link" data-action="lead-intake-template">↓ Download CSV Template</button><input type="file" accept=".csv,text/csv" data-lead-intake-file hidden></aside></div></div>`;
@@ -21282,13 +21282,13 @@ Requirements:
     if (!els.equipmentTable || !els.equipmentCards) return;
     if (!state.equipmentReady) {
       const setup = "Create the equipment_items table with DASHBOARD_EQUIPMENT_SQL.md, then refresh.";
-      els.equipmentTable.innerHTML = `<tr><td colspan="8">${emptyState(setup)}</td></tr>`;
+      els.equipmentTable.innerHTML = "";
       els.equipmentCards.innerHTML = emptyState(setup);
       return;
     }
     const items = filteredEquipmentItems();
     if (!items.length) {
-      els.equipmentTable.innerHTML = `<tr><td colspan="8">${emptyState("No equipment matches this view yet.")}</td></tr>`;
+      els.equipmentTable.innerHTML = "";
       els.equipmentCards.innerHTML = emptyState("No equipment matches this view yet.");
       return;
     }
@@ -21611,7 +21611,14 @@ Requirements:
 
   function renderAiNav(ai) {
     if (!els.aiNav) return;
-    els.aiNav.innerHTML = AI_SECTIONS.map((section) => {
+    const categories = [
+      ["operations", "Operations", ["operations", "assistant"]],
+      ["knowledge", "Knowledge & Training", ["training", "landscaping", "settings", "knowledge", "faqs", "savedAnswers"]],
+      ["governance", "Governance", ["rules", "logs"]]
+    ];
+    const currentCategory = categories.find(([, , ids]) => ids.includes(state.groundskeeperAiView)) || categories[0];
+    const mobileSelectors = `<div class="groundskeeper-ai-mobile-nav"><label>Category<select data-ai-mobile-category>${categories.map(([id,label])=>`<option value="${id}"${currentCategory[0] === id ? " selected" : ""}>${escapeHtml(label)}</option>`).join("")}</select></label><label>Destination<select data-ai-mobile-destination>${currentCategory[2].map((id)=>{const section=aiSectionById(id);return `<option value="${escapeHtml(id)}"${state.groundskeeperAiView === id ? " selected" : ""}>${escapeHtml(section?.title || id)}</option>`}).join("")}</select></label></div>`;
+    els.aiNav.innerHTML = mobileSelectors + AI_SECTIONS.map((section) => {
       const count = section.id === "operations" ? GROUNDSKEEPER_OPERATIONS.length : section.id === "assistant" ? state.groundskeeperMessages.length : aiItemsForSection(ai, section).length;
       const active = state.groundskeeperAiView === section.id ? " is-active" : "";
       return `<button type="button" class="ai-nav-item${active}" data-ai-view="${escapeHtml(section.id)}">
@@ -22887,7 +22894,7 @@ Requirements:
       ["conversation", "Conversation memory"]
     ];
     target.innerHTML = `<section class="ai-memory-workspace">
-      <div class="ticket-lane-heading"><div><p class="eyebrow">Groundskeeper AI</p><h2>AI Memory</h2><p>Review exactly what Groundskeeper can remember. Permanent memories are saved only after approval.</p></div><button type="button" data-action="refresh-ai-memory">Refresh</button></div>
+      <div class="ticket-lane-heading"><div><p class="eyebrow">Groundskeeper AI</p><h1>AI Memory</h1><p>Review exactly what Groundskeeper can remember. Permanent memories are saved only after approval.</p></div><button type="button" data-action="refresh-ai-memory">Refresh</button></div>
       <form class="ai-memory-form" data-ai-memory-form>
         <label>Memory type<select name="memory_type"><option value="business_rule">Business rule</option><option value="record">Record memory</option><option value="user_preference">User preference</option><option value="outcome">Outcome</option><option value="conversation">Conversation</option></select></label>
         <label class="span-full">Statement<textarea name="statement" rows="3" maxlength="2000" required placeholder="Write one clear fact, rule, preference, or outcome."></textarea></label>
@@ -22897,7 +22904,7 @@ Requirements:
         <button type="submit">Save approved memory</button>
       </form>
       ${state.assistantMemoriesError ? `<div class="dashboard-state is-error"><strong>Memory storage needs setup.</strong><span>${escapeHtml(state.assistantMemoriesError)}</span><small>Run the 20260724 Groundskeeper memory migration in Supabase, then refresh.</small></div>` : ""}
-      ${state.assistantMemoriesLoading ? `<div class="loading-state">Loading AI memory…</div>` : groups.map(([type, label]) => {
+      ${state.assistantMemoriesLoading ? `<div class="loading-state">Loading AI memory…</div>` : !state.assistantMemories.length ? `<div class="ai-memory-empty-groups"><section><h3>Approved persistent memories</h3>${emptyState("No approved persistent memories yet.")}</section><section><h3>Transient conversation memories</h3>${emptyState("No transient conversation memories yet.")}</section></div>` : groups.map(([type, label]) => {
         const items = state.assistantMemories.filter((memory) => memory.memory_type === type);
         return `<section class="ai-memory-group"><div class="ticket-lane-heading"><div><h3>${escapeHtml(label)}</h3><p>${items.length} saved</p></div></div><div class="ai-memory-list">${items.length ? items.map((memory) => `
           <article class="ai-memory-card${memory.is_active ? "" : " is-disabled"}">
@@ -23173,6 +23180,46 @@ Requirements:
     </div>`;
   }
 
+  function renderCleanOperationsHome() {
+    const host = qs("[data-home-focus-work]");
+    if (!host) return;
+    const jobs = homeFocusRows();
+    const tickets = dashboardTickets();
+    const openTickets = tickets.filter(ticketIsOpen);
+    const attentionJobs = jobs.filter((job) => job.attention).slice(0, 5);
+    const todayJobs = jobs.filter((job) => job.dateRaw === todayKey()).slice(0, 6);
+    const visibleSchedule = todayJobs.length ? todayJobs : jobs.slice(0, 6);
+    const recentTickets = [...tickets]
+      .sort((a, b) => String(b.updatedAtRaw || b.createdAtRaw || "").localeCompare(String(a.updatedAtRaw || a.createdAtRaw || "")))
+      .slice(0, 4);
+    const identity = (ticket) => ticket.customer || ticket.customerName || ticket.property || ticket.propertyName || ticket.title || "Untitled ticket";
+    host.innerHTML = `<div class="focus-work-page clean-home-page">
+      <header class="clean-page-header">
+        <div><p class="clean-workspace-label">Home</p><h1>Home</h1><p>Today&rsquo;s scheduled work and items that need attention.</p></div>
+        <div class="clean-page-actions"><a class="clean-secondary-action" href="#calendar">Open Work</a><button class="clean-primary-action" type="button" data-action="open-ticket-create" data-ticket-type="field"><span>+</span> New Ticket</button></div>
+      </header>
+      <section class="clean-summary-strip" aria-label="Home summary">
+        ${renderFocusMetric("calendar", String(visibleSchedule.length), "Visits Today", "", "today")}
+        ${renderFocusMetric("warning", String(attentionJobs.length), "Needs Attention", "", "attention")}
+        ${renderFocusMetric("briefcase", String(openTickets.length), "Open Tickets", "", "open")}
+      </section>
+      <div class="clean-home-grid">
+        <section class="focus-card clean-schedule-card">
+          <div class="focus-card-header"><div><p class="clean-section-label">Today</p><h2>Today&rsquo;s Schedule</h2></div><a href="#calendar">Open Work</a></div>
+          <div class="clean-schedule-list">${visibleSchedule.length ? visibleSchedule.map((job) => `<button type="button" class="clean-schedule-row" data-action="go-work"><time>${escapeHtml(job.time)}</time><span><strong>${escapeHtml(job.address)}</strong><small>${escapeHtml(job.service)} &middot; ${escapeHtml(job.crew || "Unassigned")}</small></span><em class="focus-status ${job.status === "In Progress" ? "is-progress" : "is-scheduled"}">${escapeHtml(job.status)}</em></button>`).join("") : `<div class="clean-empty-state"><strong>No visits scheduled for today.</strong><span>Create a ticket or open Work to plan the day.</span></div>`}</div>
+        </section>
+        <section class="focus-card clean-attention-card">
+          <div class="focus-card-header"><div><p class="clean-section-label">Exceptions</p><h2>Needs Attention</h2></div><a href="#tickets">View all</a></div>
+          <div class="clean-attention-list">${attentionJobs.length ? attentionJobs.map((job) => `<button type="button" data-action="unified-ticket-open" data-id="${escapeHtml(job.ticketId || job.id)}"><span><strong>${escapeHtml(job.address)}</strong><small>${escapeHtml(job.attention || job.service || "Review ticket")}</small></span><b>Open</b></button>`).join("") : `<div class="clean-empty-state"><strong>No immediate exceptions.</strong><span>Open tickets remain available below.</span></div>`}</div>
+        </section>
+      </div>
+      <section class="focus-card clean-recent-card">
+        <div class="focus-card-header"><div><p class="clean-section-label">Latest</p><h2>Recent Tickets</h2></div><a href="#tickets">View all tickets</a></div>
+        <div class="clean-recent-list">${recentTickets.length ? recentTickets.map((ticket) => `<button type="button" data-action="unified-ticket-open" data-ticket-source="${escapeHtml(ticket.source || "ticket")}" data-id="${escapeHtml(ticket.id)}"><strong>${escapeHtml(ticket.number || "Ticket")}</strong><span>${escapeHtml(identity(ticket))}</span><em class="focus-status">${escapeHtml(ticket.stageLabel || ticket.status || "Open")}</em></button>`).join("") : `<div class="clean-empty-state"><strong>No tickets yet.</strong><span>Create the first ticket when work comes in.</span></div>`}</div>
+      </section>
+    </div>`;
+  }
+
   const UNIFIED_TICKET_REFERENCE = Object.freeze({
     id: "10024", title: "Johnson Residence", status: "Scheduled", type: "Maintenance", priority: "Medium",
     dueDate: "Jul 25, 2026", lead: "John D.", location: "Portland, OR", address: "123 Main St",
@@ -23185,6 +23232,16 @@ Requirements:
     ["schedule", "Schedule", "calendar"], ["tasks", "Tasks", "check"], ["photos", "Photos", "photo"],
     ["documents", "Documents", "document"], ["notes", "Notes", "note"], ["history", "History", "clock"]
   ]);
+
+  function cleanDisplayValue(value, fallback = "") {
+    if (value === null || value === undefined || typeof value === "object") return fallback;
+    const text = String(value).trim();
+    return !text || /^(undefined|null|\[object Object\])$/i.test(text) ? fallback : text;
+  }
+
+  function ticketTypeLabel(ticket = {}) {
+    return cleanDisplayValue(ticket.type || ticket.service, "Type not set");
+  }
 
   function unifiedTicketIcon(name) {
     const paths = {
@@ -23223,15 +23280,19 @@ Requirements:
   ]);
 
   function renderTicketTimelineRow(ticket, index) {
-    return `<article class="ttl-row" data-action="unified-ticket-open" data-id="${ticket.id}" tabindex="0" role="button" aria-label="Open ticket ${ticket.id} ${ticket.name}">
+    const id = cleanDisplayValue(ticket.id, "Ticket");
+    const name = cleanDisplayValue(ticket.name || ticket.job, "Property not set");
+    const priority = cleanDisplayValue(ticket.priority, "Normal");
+    const extra = cleanDisplayValue(ticket.extra);
+    return `<article class="ttl-row" data-action="unified-ticket-open" data-id="${escapeHtml(id)}" tabindex="0" role="button" aria-label="Open ticket ${escapeHtml(id)} ${escapeHtml(name)}">
       <span class="ttl-marker ${ticket.group === "Later" ? "is-later" : ""}" aria-hidden="true"></span>
-      <strong class="ttl-time">${ticket.time}</strong>
-      <button type="button" class="ttl-number" data-action="unified-ticket-open" data-id="${ticket.id}">#${ticket.displayNumber || ticket.id}</button>
-      <span class="ttl-name"><strong>${ticket.name}</strong><small>${ticket.type}</small></span>
-      <span class="ttl-location"><strong>${ticket.address}</strong><small>${ticket.city}</small></span>
-      <span class="ttl-status ${ticket.status === "In Progress" ? "is-progress" : "is-scheduled"}">${ticket.status}</span>
-      <span class="ttl-crew">${unifiedTicketIcon("crew")}<span><strong>${ticket.crew}</strong><small>${ticket.extra}</small></span></span>
-      <span class="ttl-priority is-${ticket.priority.toLowerCase()}"><i></i>${ticket.priority}</span>
+      <strong class="ttl-time">${escapeHtml(cleanDisplayValue(ticket.time, "Not scheduled"))}</strong>
+      <button type="button" class="ttl-number" data-action="unified-ticket-open" data-id="${escapeHtml(id)}">#${escapeHtml(cleanDisplayValue(ticket.displayNumber || ticket.id, "Ticket"))}</button>
+      <span class="ttl-name"><strong>${escapeHtml(name)}</strong><small>${escapeHtml(ticketTypeLabel(ticket))}</small></span>
+      <span class="ttl-location"><strong>${escapeHtml(cleanDisplayValue(ticket.address, "Address not set"))}</strong><small>${escapeHtml(cleanDisplayValue(ticket.city, "Location not set"))}</small></span>
+      <span class="ttl-status ${ticket.status === "In Progress" ? "is-progress" : "is-scheduled"}">${escapeHtml(cleanDisplayValue(ticket.status, "Unscheduled"))}</span>
+      <span class="ttl-crew">${unifiedTicketIcon("crew")}<span><strong>${escapeHtml(cleanDisplayValue(ticket.crew, "Unassigned"))}</strong>${extra ? `<small>${escapeHtml(extra)}</small>` : ""}</span></span>
+      <span class="ttl-priority is-${escapeHtml(priority.toLowerCase())}"><i></i>${escapeHtml(priority)}</span>
       <button type="button" class="ttl-menu" data-action="ticket-timeline-menu" data-id="${ticket.id}" aria-label="Actions for ticket ${ticket.id}">⋮</button>
       <div class="ttl-row-menu" data-ticket-timeline-menu="${ticket.id}" hidden><button type="button" data-action="unified-ticket-open" data-id="${ticket.id}">Open ticket</button><button type="button" data-action="unified-ticket-schedule">View schedule</button>${canManageTicketTrash() ? `<button type="button" class="danger" data-action="trash-ticket" data-id="${ticket.id}">Move to Trash</button>` : ""}</div>
     </article>`;
@@ -23291,9 +23352,9 @@ Requirements:
       ...UNIFIED_TICKET_REFERENCE,
       id:selectedTimelineTicket.displayNumber || selectedTimelineTicket.id, recordId:selectedTimelineTicket.id,
       title:selectedTimelineTicket.name, status:selectedTimelineTicket.status,
-      type:selectedTimelineTicket.type, priority:selectedTimelineTicket.priority, location:selectedTimelineTicket.city,
+      type:ticketTypeLabel(selectedTimelineTicket), priority:cleanDisplayValue(selectedTimelineTicket.priority, "Normal"), location:cleanDisplayValue(selectedTimelineTicket.city, "Location not set"),
       address:selectedTimelineTicket.address, city:selectedTimelineTicket.city,
-      customer:sourceTicket?.customer || selectedTimelineTicket.customer,
+      customer:cleanDisplayValue(sourceTicket?.customer || selectedTimelineTicket.customer, "Client not set"),
       phone:sourceTicket?.contactPhone || "Not provided", email:sourceTicket?.contactEmail || "Not provided",
       lead:selectedTimelineTicket.crewName || "Unassigned", crew:selectedTimelineTicket.crewName || "Unassigned",
       dueDate:formatDate(sourceTicket?.dueDate || selectedTimelineTicket.dateRaw) || "Not set",
@@ -23305,21 +23366,23 @@ Requirements:
     const active = state.unifiedTicketSection || "overview";
     const activeLabel = UNIFIED_TICKET_NAV.find(([key]) => key === active)?.[1] || "Overview";
     const nav = UNIFIED_TICKET_NAV.map(([key, label, icon]) => `<button type="button" class="ut-nav-item ${active === key ? "is-active" : ""}" data-action="unified-ticket-section" data-section="${key}" aria-pressed="${active === key}"><span>${unifiedTicketIcon(icon)}</span>${label}</button>`).join("");
-    const summaryRows = [["Type",ticket.type],["Priority",ticket.priority],["Due Date",ticket.dueDate],["Status",ticket.status],["Lead",ticket.lead],["Crew",ticket.crew],["Est. Time",ticket.duration || "Not set"],["Created",ticket.created],["Customer",ticket.customer],["Phone",ticket.phone],["Email",ticket.email]].map(([a,b])=>`<div><span>${a}</span><strong>${b}</strong></div>`).join("");
+    ticket.type = ticketTypeLabel(ticket);
+    const summaryRows = [["Type",ticket.type],["Priority",ticket.priority],["Due Date",ticket.dueDate],["Status",ticket.status],["Lead",ticket.lead],["Crew",ticket.crew],["Est. Time",ticket.duration || "Not set"],["Created",ticket.created],["Customer",ticket.customer],["Phone",ticket.phone],["Email",ticket.email]].map(([a,b])=>`<div><span>${escapeHtml(a)}</span><strong>${escapeHtml(cleanDisplayValue(b, "Not set"))}</strong></div>`).join("");
     const quickActions = [["Edit Job","edit","work"],["Add Task","plus","tasks"],["Upload Photo","upload","photos"],["Add Note","note","notes"],["Create Document","document","documents"]].map(([label,icon,section])=>`<button type="button" data-action="unified-ticket-quick" data-section="${section}"><span>${unifiedTicketIcon(icon)}</span><strong>${label}</strong><b>›</b></button>`).join("");
     const sectionActivity = selectedEvents.length ? selectedEvents.slice(0, 20).map((event) => `<article><strong>${escapeHtml(String(event.eventType || "Ticket updated").replaceAll("_", " "))}</strong><p>${escapeHtml(event.notes || "Ticket activity recorded.")}</p><small>${escapeHtml(event.createdAtRaw ? formatDateTime(event.createdAtRaw) : "")}</small></article>`).join("") : `<article><strong>No activity recorded</strong><p>Ticket history will appear here as work is completed.</p></article>`;
     host.innerHTML = `<div class="unified-ticket-shell is-section-${escapeHtml(active)}">
       <nav class="ut-internal-nav" aria-label="Ticket sections">${nav}</nav>
       <main class="ut-main">
         <button type="button" class="ut-back" data-action="unified-ticket-back">←&nbsp; Back to Tickets</button>
-        <header class="ut-header"><div class="ut-title-line"><h2>#${ticket.id}&nbsp;&nbsp; ${ticket.title}</h2><span>${ticket.status}</span><button type="button" data-action="unified-ticket-menu" aria-label="Ticket actions">⋮</button></div>
-          <div class="ut-metadata">${[["Type",ticket.type,"document"],["Priority",ticket.priority,"upload"],["Due Date",ticket.dueDate,"calendar"],["Lead",ticket.lead,"crew"],["Location",ticket.location,"pin"]].map(([label,value,icon])=>`<div><span>${unifiedTicketIcon(icon)}${label}</span><strong>${value}</strong></div>`).join("")}</div>
+        <header class="ut-header"><div class="ut-title-line"><h1>#${escapeHtml(cleanDisplayValue(ticket.id, "Ticket"))}&nbsp;&nbsp; ${escapeHtml(cleanDisplayValue(ticket.title, "Property not set"))}</h1><span>${escapeHtml(cleanDisplayValue(ticket.status, "Unscheduled"))}</span><button type="button" data-action="unified-ticket-menu" aria-label="Ticket actions">⋮</button></div>
+          <div class="ut-metadata">${[["Type",ticket.type,"document"],["Priority",ticket.priority,"upload"],["Due Date",ticket.dueDate,"calendar"],["Lead",ticket.lead,"crew"],["Location",ticket.location,"pin"]].map(([label,value,icon])=>`<div><span>${unifiedTicketIcon(icon)}${label}</span><strong>${escapeHtml(cleanDisplayValue(value, "Not set"))}</strong></div>`).join("")}</div>
           <div class="ut-overflow-menu" data-unified-ticket-menu hidden><button type="button" data-action="unified-ticket-quick" data-section="work">Edit Job</button><button type="button" data-action="unified-ticket-section" data-section="history">View History</button>${canManageTicketTrash() && ticket.recordId ? `<button type="button" class="danger" data-action="trash-ticket" data-id="${escapeHtml(ticket.recordId)}">Move to Trash</button>` : ""}</div>
         </header>
+        <label class="ut-mobile-section-selector">Section<select data-unified-ticket-section-select aria-label="Ticket section">${UNIFIED_TICKET_NAV.map(([key,label])=>`<option value="${escapeHtml(key)}"${active === key ? " selected" : ""}>${escapeHtml(label)}</option>`).join("")}</select></label>
         ${active !== "overview" ? `<section class="ut-active-section-summary"><h3>${escapeHtml(activeLabel)}</h3><p>${escapeHtml(active === "details" ? "Customer, property, scope, and ticket details." : active === "work" ? "Scope, checklist, and field notes for this ticket." : active === "schedule" ? "Upcoming visit and scheduling details." : active === "tasks" ? "Checklist items connected to this ticket." : active === "photos" ? "Arrival, progress, and completion photos." : active === "documents" ? "Documents connected to this ticket." : active === "notes" ? "Operational notes connected to this ticket." : "Recorded ticket activity and lifecycle history.")}</p>${active === "history" ? `<div class="ut-section-activity">${sectionActivity}</div>` : ""}</section>` : ""}
         <div class="ut-main-top">
           <div class="ut-property-stack">
-            ${unifiedTicketCard("Property", `<div class="ut-property"><div class="ut-property-image"><button type="button" aria-label="View property location">${unifiedTicketIcon("pin")}</button></div><div class="ut-property-copy"><strong>${ticket.title}</strong><span>${ticket.address}</span><span>${ticket.city}</span><hr><b>Property Contact</b><span>${ticket.customer}</span><div class="ut-contact"><span>${unifiedTicketIcon("phone")}${ticket.phone}</span><span>${unifiedTicketIcon("mail")}${ticket.email}</span></div></div></div>`, "ut-property-card")}
+            ${unifiedTicketCard("Property", `<div class="ut-property"><div class="ut-property-image"><button type="button" aria-label="View property location">${unifiedTicketIcon("pin")}</button></div><div class="ut-property-copy"><strong>${escapeHtml(cleanDisplayValue(ticket.title, "Property not set"))}</strong><span>${escapeHtml(cleanDisplayValue(ticket.address, "Address not set"))}</span><span>${escapeHtml(cleanDisplayValue(ticket.city, "Location not set"))}</span><hr><b>Property Contact</b><span>${escapeHtml(cleanDisplayValue(ticket.customer, "Client not set"))}</span><div class="ut-contact"><span>${unifiedTicketIcon("phone")}${escapeHtml(cleanDisplayValue(ticket.phone, "Not provided"))}</span><span>${unifiedTicketIcon("mail")}${escapeHtml(cleanDisplayValue(ticket.email, "Not provided"))}</span></div></div></div>`, "ut-property-card")}
             ${unifiedTicketCard("Job Summary", `<p>${escapeHtml(ticket.scope || "No scope of work has been recorded.")}</p>`, "ut-job-summary")}
           </div>
           ${unifiedTicketCard("Summary", `<div class="ut-summary-rows">${summaryRows}</div>`, "ut-summary-card")}
@@ -23362,7 +23425,15 @@ Requirements:
       ...job,
       id: job.ticketId || job.id,
       displayNumber: job.displayNumber || job.id,
-      name: job.name || job.job,
+      name: cleanDisplayValue(job.name || job.job, "Property not set"),
+      type: ticketTypeLabel(job),
+      group: cleanDisplayValue(job.group || job.visit, job.dateRaw ? formatDate(job.dateRaw) : "Unscheduled"),
+      date: cleanDisplayValue(job.date || (job.dateRaw ? formatDate(job.dateRaw) : ""), "Not scheduled"),
+      time: cleanDisplayValue(job.time, "Not scheduled"),
+      address: cleanDisplayValue(job.address, "Address not set"),
+      city: cleanDisplayValue(job.city, "Location not set"),
+      status: cleanDisplayValue(job.status, "Unscheduled"),
+      priority: cleanDisplayValue(job.priority, "Normal"),
       crew: job.crewName || (Array.isArray(job.crew) ? job.crew.join(", ") : job.crew),
       extra: job.extra || ""
     }));
@@ -23506,6 +23577,17 @@ Requirements:
     });
   }
 
+  function normalizeActiveRouteHeading(sectionName = state.activeSection) {
+    const section = qs(`.dashboard-section[data-section="${cssEscape(normalizeDashboardSection(sectionName))}"]`);
+    if (!section || section.querySelector("h1")) return;
+    const heading = section.querySelector("h2, h3");
+    if (!heading) return;
+    const pageHeading = document.createElement("h1");
+    [...heading.attributes].forEach((attribute) => pageHeading.setAttribute(attribute.name, attribute.value));
+    pageHeading.innerHTML = heading.innerHTML;
+    heading.replaceWith(pageHeading);
+  }
+
   async function render() {
     const data = state.data;
     safeRender("notifications", () => renderNotifications(data));
@@ -23514,7 +23596,7 @@ Requirements:
     safeRender("dashboard health", () => renderDashboardHealth());
     const active = normalizeDashboardSection(state.activeSection);
     safeRender("wireframe canvases", () => renderVisualResetWorkspaces());
-    if (active === "overview") safeRender("Focus on Work home", () => renderFocusOnWorkHome());
+    if (active === "overview") safeRender("Clean Operations home", () => renderCleanOperationsHome());
     if (active === "tickets") safeRender("unified ticket overview", () => renderUnifiedTicketOverview());
     if (active === "calendar") safeRender("work operations", () => renderWorkOperationsWorkspace());
     if (active === "route-planner") safeRender("weekly route planner", () => renderRoutePlanner());
@@ -23528,6 +23610,7 @@ Requirements:
     if (active === "contacts") safeRender("contacts workspace", () => renderContacts(data));
     if (active === "groundskeeper-ai") safeRender("Groundskeeper AI workspace", () => renderGroundskeeperAi(data));
     if (active === "import-export") safeRender("import and export workspace", () => renderImportExport(data));
+    safeRender("active route heading", () => normalizeActiveRouteHeading(active));
     safeRender("contextual Groundskeeper tools", () => renderContextualGroundskeeperTools(active));
     safeRender("dashboard Groundskeeper", () => renderDashboardCopilot());
     safeRender("avatar fallbacks", () => bindAvatarFallbacks());
@@ -24379,6 +24462,24 @@ Requirements:
         const stateKey = { status:"ticketTimelineStatus", type:"ticketTimelineType", location:"ticketTimelineLocation", range:"ticketTimelineRange" }[key];
         if (stateKey) state[stateKey] = target.value;
         renderTicketsTimeline();
+        return;
+      }
+
+      if (target.matches("[data-unified-ticket-section-select]")) {
+        state.unifiedTicketSection = target.value || "overview";
+        renderUnifiedTicketOverview();
+        return;
+      }
+
+      if (target.matches("[data-ai-mobile-category]")) {
+        state.groundskeeperAiView = ({ operations: "operations", knowledge: "training", governance: "rules" })[target.value] || "operations";
+        await render();
+        return;
+      }
+
+      if (target.matches("[data-ai-mobile-destination]")) {
+        state.groundskeeperAiView = target.value || "operations";
+        await render();
         return;
       }
 
@@ -28001,13 +28102,21 @@ Requirements:
         setActiveSection("equipment");
         replaceDashboardHash("equipment");
         await render();
+        qs(".equipment-form-panel")?.classList.add("is-mobile-open");
         const input = qs("[data-equipment-form] input[name='name']");
         if (input) input.focus();
       } else if (action === "quick-add-client") {
         setActiveSection("contacts");
         replaceDashboardHash("contacts");
+        qs("[data-client-form]")?.classList.add("is-mobile-open");
         const input = qs("[data-client-form] input[name='name']");
         if (input) input.focus();
+      } else if (action === "close-mobile-client-form") {
+        qs("[data-client-form]")?.classList.remove("is-mobile-open");
+        qs('[data-action="quick-add-client"]')?.focus();
+      } else if (action === "close-mobile-equipment-form") {
+        qs(".equipment-form-panel")?.classList.remove("is-mobile-open");
+        qs('[data-action="quick-add-equipment"]')?.focus();
       } else if (action === "new-outreach-prospect") {
         if (!canManageLeadWorkflow()) {
           setDashboardState("Your dashboard role cannot manage leads.", "error");
@@ -29601,6 +29710,7 @@ Requirements:
             role: String(formData.get("role") || "viewer")
           });
           event.target.reset();
+          event.target.classList.remove("is-mobile-open");
           await refreshDashboard();
           setActiveSection("settings");
           setDashboardState("Dashboard invite saved.");
@@ -30288,6 +30398,7 @@ Requirements:
             await insertEquipmentItem(payload);
           }
           event.target.reset();
+          event.target.closest(".equipment-form-panel")?.classList.remove("is-mobile-open");
           state.equipmentView = "inventory";
           await refreshDashboard();
           setActiveSection("equipment");

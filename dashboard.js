@@ -307,6 +307,8 @@
     outreachPriorityFilter: "All",
     outreachSearch: "",
     outreachView: "pipeline",
+    onlineQuoteSearch: "",
+    onlineQuoteStatus: "All",
     outreachCompanyFilter: "All",
     outreachCityFilter: "All",
     outreachNeighborhoodFilter: "All",
@@ -16210,6 +16212,24 @@ Requirements:
       </div>`;
   }
 
+  function renderOnlineQuoteRequestsWorkspace(data = state.data) {
+    const target = qs("[data-leads-workspace]");
+    if (!target) return;
+    const search = state.onlineQuoteSearch.trim().toLowerCase();
+    const requests = (data.submissions || []).filter((item) => {
+      const matchesStatus = state.onlineQuoteStatus === "All" || item.status === state.onlineQuoteStatus;
+      const matchesText = !search || [item.name, item.email, item.phone, item.city, item.propertyType, item.service, item.source].some((value) => String(value || "").toLowerCase().includes(search));
+      return matchesStatus && matchesText;
+    });
+    const countStatus = (status) => (data.submissions || []).filter((item) => item.status === status).length;
+    target.innerHTML = `<div class="online-quote-workspace" data-online-quote-workspace>
+      <header class="online-quote-header"><div><p class="eyebrow">Website inquiries</p><h2>Online Quote Requests</h2><p>Requests submitted through “Request a Free Quote” on the Urban Yards website.</p></div><button type="button" class="secondary-action" data-action="refresh-dashboard">Refresh</button></header>
+      <section class="online-quote-metrics" aria-label="Online quote request summary"><article><span>All Requests</span><strong>${data.submissions.length}</strong></article><article><span>New</span><strong>${countStatus("New")}</strong></article><article><span>Contacted</span><strong>${countStatus("Contacted")}</strong></article><article><span>Scheduled</span><strong>${countStatus("Scheduled")}</strong></article></section>
+      <section class="online-quote-card"><header><div><h3>Quote Requests</h3><p>Open a request to review contact details, notes, follow-up, estimates, invoices, and scheduling.</p></div><div class="online-quote-filters"><input type="search" data-online-quote-search value="${escapeHtml(state.onlineQuoteSearch)}" placeholder="Search requests…" aria-label="Search online quote requests"><select data-online-quote-status aria-label="Filter online quote requests by status"><option>All</option>${STATUSES.map((status) => `<option${state.onlineQuoteStatus === status ? " selected" : ""}>${status}</option>`).join("")}</select></div></header>
+      <div class="online-quote-table-wrap"><table><thead><tr><th>Received</th><th>Customer</th><th>Contact</th><th>Property</th><th>Requested Service</th><th>Status</th><th>Source</th><th></th></tr></thead><tbody>${requests.length ? requests.map((item) => `<tr data-action="open-submission" data-id="${escapeHtml(item.id)}" tabindex="0"><td>${escapeHtml(item.receivedAt || item.createdAt || "—")}</td><td><strong>${escapeHtml(item.name)}</strong><small>${escapeHtml(item.city)}</small></td><td><span>${escapeHtml(item.email)}</span><small>${escapeHtml(phoneInfo(item.phone).display)}</small></td><td>${escapeHtml(item.propertyType)}</td><td>${escapeHtml(item.service)}</td><td>${statusBadge(item.status)}</td><td>${escapeHtml(item.source || "Quote form")}</td><td><button type="button" data-action="open-submission" data-id="${escapeHtml(item.id)}" aria-label="Open quote request from ${escapeHtml(item.name)}">›</button></td></tr>`).join("") : `<tr><td colspan="8">${emptyState(search || state.onlineQuoteStatus !== "All" ? "No online quote requests match these filters." : "No online quote requests have arrived yet.")}</td></tr>`}</tbody></table></div><footer>Showing ${requests.length} of ${data.submissions.length} online quote requests</footer></section>
+    </div>`;
+  }
+
   function findTicketForBudget(budget = {}, tickets = dashboardTickets()) {
     const pairs = [
       ["job", budget.jobId],
@@ -23458,7 +23478,7 @@ Requirements:
     if (active === "tickets") safeRender("unified ticket overview", () => renderUnifiedTicketOverview());
     if (active === "calendar") safeRender("work operations", () => renderWorkOperationsWorkspace());
     if (active === "route-planner") safeRender("weekly route planner", () => renderRoutePlanner());
-    if (active === "outreach") safeRender("leads workspace", () => renderLeadsWorkspace(data));
+    if (active === "outreach") safeRender("online quote requests", () => renderOnlineQuoteRequestsWorkspace(data));
     if (active === "call-queue") safeRender("call queue", () => renderCallQueueWorkspace());
     if (active === "documents") safeRender("money workspace", () => renderMoneyWorkspace(data));
     if (active === "settings") safeRender("tools workspace", () => renderToolsWorkspace(data));
@@ -24533,6 +24553,12 @@ Requirements:
         return;
       }
 
+      if (target.matches("[data-online-quote-status]")) {
+        state.onlineQuoteStatus = target.value || "All";
+        renderOnlineQuoteRequestsWorkspace(state.data);
+        return;
+      }
+
       if (target.matches("[data-lead-intake-file]")) {
         const file = target.files && target.files[0];
         target.value = "";
@@ -24949,6 +24975,12 @@ Requirements:
         state.callQueueVisibleCount = 25;
         window.clearTimeout(state._callQueueSearchTimer);
         state._callQueueSearchTimer = window.setTimeout(() => renderCallQueueWorkspace(), 120);
+        return;
+      }
+      if (event.target?.matches?.("[data-online-quote-search]")) {
+        state.onlineQuoteSearch = event.target.value || "";
+        window.clearTimeout(state._onlineQuoteSearchTimer);
+        state._onlineQuoteSearchTimer = window.setTimeout(() => renderOnlineQuoteRequestsWorkspace(state.data), 120);
         return;
       }
       if (event.target?.matches?.("[data-lead-intake-search]")) {

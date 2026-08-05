@@ -41,8 +41,8 @@ test("archived workspace polish remains available with current dashboard assets"
   assert.match(css, /\.call-queue-row > span:first-child :is\(strong, small\)[\s\S]*overflow-wrap: anywhere/);
   assert.match(css, /\.groundskeeper-operation-card[\s\S]*white-space: normal !important/);
   assert.match(css, /\.dashboard-health-item strong[\s\S]*word-break: break-all/);
-  assert.match(html, /dashboard\.css\?v=20260804-call-queue-import-auth-1/);
-  assert.match(html, /dashboard\.js\?v=20260804-call-queue-import-auth-1/);
+  assert.match(html, /dashboard\.css\?v=20260804-online-quote-requests-1/);
+  assert.match(html, /dashboard\.js\?v=20260804-online-quote-requests-1/);
 });
 
 test("authenticated assistant prompt suppresses public quote calls to action", () => {
@@ -655,7 +655,7 @@ test("Leads flyout adds Call Queue without changing existing items", () => {
   const js = read("dashboard.js");
   const css = read("dashboard.css");
 
-  assert.match(html, /data-sidebar-subnav="outreach"[\s\S]*>Lead Pipeline<\/span>[\s\S]*#contacts[\s\S]*>Clients<\/span>[\s\S]*#call-queue[\s\S]*>Call Queue<\/span>/);
+  assert.match(html, /data-sidebar-subnav="outreach"[\s\S]*>Online Quote Requests<\/span>[\s\S]*#contacts[\s\S]*>Clients<\/span>[\s\S]*#call-queue[\s\S]*>Call Queue<\/span>/);
   assert.match(html, /id="call-queue" data-section="call-queue"><div data-call-queue-workspace><\/div>/);
   assert.match(html, /data-call-queue-workspace/);
   assert.match(archivedHtml, /id="call-queue" data-section="call-queue"[\s\S]*data-call-queue-workspace/);
@@ -982,7 +982,7 @@ test("Call Queue contains staged Lead Intake without changing Leads navigation",
   const backend = read("netlify/functions/dashboard-import-export.js");
   const migration = read("supabase/migrations/20260721_lead_intake.sql");
 
-  assert.match(html, /Lead Pipeline[\s\S]*Clients[\s\S]*Call Queue/);
+  assert.match(html, /Online Quote Requests[\s\S]*Clients[\s\S]*Call Queue/);
   assert.doesNotMatch(html, /data-dashboard-link="lead-intake"/);
   assert.match(js, /Lead Intake[\s\S]*Import CSV[\s\S]*Download CSV Template[\s\S]*Review Imports/);
   assert.match(js, /LEAD_INTAKE_FORMAT_PROMPT[\s\S]*business,type,location,phone_number,source/);

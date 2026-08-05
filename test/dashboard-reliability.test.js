@@ -41,8 +41,8 @@ test("archived workspace polish remains available with current dashboard assets"
   assert.match(css, /\.call-queue-row > span:first-child :is\(strong, small\)[\s\S]*overflow-wrap: anywhere/);
   assert.match(css, /\.groundskeeper-operation-card[\s\S]*white-space: normal !important/);
   assert.match(css, /\.dashboard-health-item strong[\s\S]*word-break: break-all/);
-  assert.match(html, /dashboard\.css\?v=20260804-dashboard-system-1/);
-  assert.match(html, /dashboard\.js\?v=20260804-dashboard-system-1/);
+  assert.match(html, /dashboard\.css\?v=20260804-online-quote-requests-1/);
+  assert.match(html, /dashboard\.js\?v=20260804-online-quote-requests-1/);
 });
 
 test("authenticated assistant prompt suppresses public quote calls to action", () => {

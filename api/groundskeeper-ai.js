@@ -31,10 +31,10 @@ function hasStrictSearchPermission(role, permission) {
 }
 
 const BUSINESS_CONTEXT = `
-You are Groundkeeper — ChatGPT, the practical operations persona inside Groundkeeper & Lawnmower Man AI for Urban Yards Groundskeeping. Lawnmower Man — Gemini is the separate reviewing persona when tandem collaboration is used.
+You are Groundkeeper — ChatGPT, the practical operations persona within The Lawnmower Man for Urban Yards Groundskeeping. Lawnmower Man — Gemini is the separate reviewing persona when tandem collaboration is used.
 
 You power both:
-- Groundkeeper & Lawnmower Man AI on the public Urban Yards website, where you answer visitor questions and guide people toward Request a Free Quote.
+- The Lawnmower Man on the public Urban Yards website, where you answer visitor questions and guide people toward Request a Free Quote.
 - The private Urban Yards dashboard helper, where you may help Tyler draft follow-ups, summarize notes, improve copy, review leads, and plan outreach.
 
 Use the provided Urban Yards knowledge source first. Do not invent services, prices, guarantees, certifications, service areas, availability, portfolio projects, or policies that are not in the knowledge.
@@ -75,7 +75,7 @@ You are responding inside the authenticated Urban Yards owner dashboard.
 - Address the authenticated operator by their provided first name when it sounds natural, without repeating their name in every response.
 `;
 
-const UNAVAILABLE_REPLY = "Sorry, Groundkeeper & Lawnmower Man AI is not available right now. You can still request a free quote.";
+const UNAVAILABLE_REPLY = "Sorry, The Lawnmower Man is not available right now. You can still request a free quote.";
 const PUBLIC_TABLES = ["ai_settings", "ai_knowledge", "ai_faqs", "ai_rules", "ai_saved_answers"];
 const ADMIN_TABLES = [...PUBLIC_TABLES, "ai_conversation_logs", "ai_feedback", "ai_training_rules", "ai_helper_versions"];
 const TRAINING_CATEGORIES = new Set([
@@ -93,7 +93,7 @@ const TRAINING_CATEGORIES = new Set([
 const TRAINING_STATUSES = new Set(["draft", "approved", "live", "archived"]);
 
 const TRAINING_ROOM_CONTEXT = `
-You are helping Tyler train Groundkeeper & Lawnmower Man AI for the Urban Yards public website.
+You are helping Tyler train The Lawnmower Man for the Urban Yards public website.
 
 Your job is to turn plain-language instructions into clean, usable assistant guidance.
 Respond conversationally first, then propose structured training rules Tyler can save.
@@ -105,14 +105,14 @@ Return JSON only in this shape:
     {
       "title": "Short title",
       "category": "tone | services | service_area | pricing | faq | lead_capture | escalation | do_dont | website_reference | other",
-      "content": "The exact guidance Groundkeeper & Lawnmower Man AI should follow.",
+      "content": "The exact guidance The Lawnmower Man should follow.",
       "visibility": "public",
       "priority": 50
     }
   ]
 }
 
-Keep training suggestions specific, business-safe, and ready for Groundkeeper & Lawnmower Man AI on the public website after approval.
+Keep training suggestions specific, business-safe, and ready for The Lawnmower Man on the public website after approval.
 Do not mark anything live. New suggestions are draft until Tyler approves and publishes them.
 `;
 
@@ -226,7 +226,7 @@ async function adminSnapshot() {
 
 function buildDynamicContext(ai, mode) {
   const lines = [
-    `Groundkeeper & Lawnmower Man AI mode: ${mode}.`,
+    `The Lawnmower Man mode: ${mode}.`,
     "Knowledge publication rules: public mode may use only Published + Public Website records; dashboard mode may use draft, internal-only, and public records."
   ];
   const groups = [
@@ -310,7 +310,7 @@ async function openAiChat(messages, { mode = "dashboard", json = false, maxToken
   if (!response.ok) throw new Error(`OpenAI request failed (${response.status})`);
   const data = await response.json();
   const reply = data?.choices?.[0]?.message?.content?.trim();
-  if (!reply) throw new Error(`Groundkeeper & Lawnmower Man AI returned an empty ${mode} response.`);
+  if (!reply) throw new Error(`The Lawnmower Man returned an empty ${mode} response.`);
   return reply;
 }
 
@@ -463,7 +463,7 @@ async function previewHelperAction(payload) {
   const siteContext = buildSiteContext(userMessage, payload.page || "Dashboard preview");
   const reply = await openAiChat([
     { role: "system", content: BUSINESS_CONTEXT },
-    { role: "system", content: "You are previewing exactly how Groundkeeper & Lawnmower Man AI should answer a visitor on the public website. Do not mention internal dashboard tools, drafts, or training workflow." },
+    { role: "system", content: "You are previewing exactly how The Lawnmower Man should answer a visitor on the public website. Do not mention internal dashboard tools, drafts, or training workflow." },
     { role: "system", content: siteContext },
     { role: "system", content: buildDynamicContext(aiKnowledge, "public-preview") },
     ...cleanMessages(payload.history),
@@ -485,7 +485,7 @@ async function publishTrainingRules() {
   const liveRules = asArray(await tableRows("ai_training_rules", "select=*&status=eq.live&order=priority.asc,updated_at.desc"));
   const systemPromptSnapshot = [
     BUSINESS_CONTEXT,
-    "Live Groundkeeper & Lawnmower Man AI Training Rules:",
+    "Live Training Rules for The Lawnmower Man:",
     ...liveRules.map((rule) => `- ${rule.title} [${rule.category}]: ${rule.content}`)
   ].join("\n");
 
@@ -745,19 +745,19 @@ async function handler(req, res) {
       return await adminAction(req, res, id, action, payload);
     } catch (error) {
       console.error(JSON.stringify({ event: "groundskeeper_admin_error", requestId: id, message: error.message }));
-      return res.status(error.statusCode || 500).json({ error: error.message || "Unable to manage Groundkeeper & Lawnmower Man AI.", requestId: id });
+      return res.status(error.statusCode || 500).json({ error: error.message || "Unable to manage The Lawnmower Man.", requestId: id });
     }
   }
 
   const limit = rateLimit(`groundskeeper:${mode}:${clientIp(req)}`, mode === "dashboard" ? 40 : 12, 10 * 60 * 1000);
   if (!limit.allowed) {
     res.setHeader("Retry-After", String(limit.retryAfter));
-    return res.status(429).json({ error: "Too many Groundkeeper & Lawnmower Man AI requests. Please try again shortly.", requestId: id });
+    return res.status(429).json({ error: "Too many requests to The Lawnmower Man. Please try again shortly.", requestId: id });
   }
   const dailyLimit = rateLimit(`groundskeeper-daily:${mode}:${clientIp(req)}`, Number(process.env.AI_HELPER_DAILY_LIMIT || (mode === "dashboard" ? 240 : 80)), 24 * 60 * 60 * 1000);
   if (!dailyLimit.allowed) {
     res.setHeader("Retry-After", String(dailyLimit.retryAfter));
-    return res.status(429).json({ error: "Too many Groundkeeper & Lawnmower Man AI requests today. Please try again later.", requestId: id });
+    return res.status(429).json({ error: "Too many requests to The Lawnmower Man today. Please try again later.", requestId: id });
   }
 
   const userMessage = text(message, 1400);

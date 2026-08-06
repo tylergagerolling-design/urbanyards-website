@@ -5,12 +5,12 @@ function createPermissionGuard({ hasPermission }) {
   return {
     assert(actor, permission) {
       if (!actor) {
-        const error = new Error("Sign in again before Groundkeeper & Lawnmower Man AI accesses dashboard records.");
+        const error = new Error("Sign in again before The Lawnmower Man accesses dashboard records.");
         error.statusCode = 401;
         throw error;
       }
       if (!hasPermission(actor.role, permission)) {
-        const error = new Error("You do not have permission to use this Groundkeeper & Lawnmower Man AI tool.");
+        const error = new Error("You do not have permission to use this tool from The Lawnmower Man.");
         error.statusCode = 403;
         throw error;
       }

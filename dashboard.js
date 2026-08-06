@@ -645,7 +645,7 @@
     equipment: "Equipment",
     documentation: "Documentation",
     "import-export": "Import & Export",
-    "groundskeeper-ai": "Groundkeeper & Lawnmower Man AI",
+    "groundskeeper-ai": "The Lawnmower Man",
     "ai-memory": "AI Memory",
     settings: "Tools"
   });
@@ -660,7 +660,7 @@
     "equipment",
     "equipment maintenance",
     "hardware guide",
-    "Groundkeeper & Lawnmower Man AI",
+    "The Lawnmower Man",
     "Documentation",
     "Import & Export",
     "import/export",
@@ -1763,7 +1763,7 @@
       });
     });
     if (!state.groundskeeperAiReady && state.groundskeeperAiError) {
-      warnings.push({ name: "Groundkeeper & Lawnmower Man AI", message: state.groundskeeperAiError, detail: state.groundskeeperAiError, scope: "support" });
+      warnings.push({ name: "The Lawnmower Man", message: state.groundskeeperAiError, detail: state.groundskeeperAiError, scope: "support" });
     }
     if (!state.documentationReady && state.documentationError) {
       warnings.push({ name: "Documentation", message: state.documentationError, detail: state.documentationError, scope: "support" });
@@ -2536,7 +2536,7 @@
       })
     });
     const result = await response.json().catch(() => ({}));
-    if (!response.ok) throw new Error(result.error || "Groundkeeper & Lawnmower Man AI request failed.");
+    if (!response.ok) throw new Error(result.error || "The Lawnmower Man request failed.");
     return result;
   }
 
@@ -2875,7 +2875,7 @@
       })
     });
     const result = await response.json().catch(() => ({}));
-    if (!response.ok) throw new Error(result.error || "Groundkeeper & Lawnmower Man AI is unavailable.");
+    if (!response.ok) throw new Error(result.error || "The Lawnmower Man is unavailable.");
     state.groundskeeperLastMeta = result;
     return result.reply;
   }
@@ -3091,7 +3091,7 @@
     const webHtml = webResults.length ? `<section class="copilot-web-results" aria-label="Public web sources"><strong>Public web sources</strong><ul>${webResults.slice(0, 8).map((source) => `<li><a href="${escapeHtml(source.url || "#")}" target="_blank" rel="noopener noreferrer">${escapeHtml(source.title || "Public web source")}</a></li>`).join("")}</ul></section>` : "";
     if (!meta.used || !Array.isArray(meta.providers) || meta.providers.length < 2) return webHtml;
     if (meta.mode !== "persona" || !Array.isArray(meta.personaContributions) || meta.personaContributions.length < 2) {
-      return `<div class="copilot-collaboration-review" aria-label="AI collaboration review"><strong>Groundkeeper &amp; Lawnmower Man AI</strong><span>Powered by ChatGPT + Gemini</span></div>${webHtml}`;
+      return `<div class="copilot-collaboration-review" aria-label="AI collaboration review"><strong>The Lawnmower Man</strong><span>Powered by ChatGPT + Gemini</span></div>${webHtml}`;
     }
     const identity = {
       groundskeeper: ["Groundkeeper", "ChatGPT"],
@@ -3102,7 +3102,7 @@
         const labels = identity[contribution.persona] || ["Assistant", contribution.provider || "AI"];
         return `<article><header><strong>${escapeHtml(labels[0])}</strong><span>— ${escapeHtml(labels[1])}</span></header><p>${escapeHtml(contribution.text || "")}</p>${contribution.optionalComment ? `<small>${escapeHtml(contribution.optionalComment)}</small>` : ""}</article>`;
       }).join("")}
-      </section><div class="copilot-collaboration-review" aria-label="AI collaboration review"><strong>Groundkeeper &amp; Lawnmower Man AI</strong><span>Powered by ChatGPT + Gemini</span></div>${webHtml}`;
+      </section><div class="copilot-collaboration-review" aria-label="AI collaboration review"><strong>The Lawnmower Man</strong><span>Powered by ChatGPT + Gemini</span></div>${webHtml}`;
   }
 
   async function saveCopilotMemory(memoryType) {
@@ -3143,7 +3143,7 @@
     };
     return citations.map((citation) => ({
       title: citation.displayId || citation.title || "Source record",
-      detail: citation.title && citation.title !== citation.displayId ? citation.title : "Groundkeeper & Lawnmower Man AI source",
+      detail: citation.title && citation.title !== citation.displayId ? citation.title : "The Lawnmower Man source",
       group: "Source",
       action: actionByType[citation.recordType] || "",
       id: citation.recordId,
@@ -3237,20 +3237,20 @@
     const greetingName = groundskeeperGreetingFirstName();
     shell.className = `dashboard-copilot${state.copilotOpen ? " is-open" : ""}`;
     shell.innerHTML = `
-      <button class="dashboard-copilot-launcher" type="button" data-action="toggle-dashboard-copilot" aria-expanded="${state.copilotOpen ? "true" : "false"}" aria-label="Open Groundkeeper &amp; Lawnmower Man AI" title="Open Groundkeeper &amp; Lawnmower Man AI">
+      <button class="dashboard-copilot-launcher" type="button" data-action="toggle-dashboard-copilot" aria-expanded="${state.copilotOpen ? "true" : "false"}" aria-label="Open The Lawnmower Man" title="Open The Lawnmower Man">
         <img src="images/groundskeeper-ai/groundskeeper-ai-keaton-mask.png" alt="" aria-hidden="true">
-        <span class="sr-only">Open Groundkeeper &amp; Lawnmower Man AI</span>
+        <span class="sr-only">Open The Lawnmower Man</span>
       </button>
       <section class="dashboard-copilot-panel${hasConversation ? " has-conversation" : " is-welcome"}" aria-labelledby="groundskeeper-copilot-title" ${state.copilotOpen ? "" : "hidden"}>
         <header class="copilot-header">
           <div class="copilot-header-identity">
             <img class="copilot-header-mask" src="images/groundskeeper-ai/groundskeeper-ai-keaton-mask.png" alt="" aria-hidden="true">
             <div>
-              <h2 id="groundskeeper-copilot-title">Groundkeeper &amp; Lawnmower Man AI</h2>
+              <h2 id="groundskeeper-copilot-title">The Lawnmower Man</h2>
               <p>Two minds. One landscaping operation.</p>
             </div>
           </div>
-          <button type="button" data-action="toggle-dashboard-copilot" aria-label="Close Groundkeeper &amp; Lawnmower Man AI">
+          <button type="button" data-action="toggle-dashboard-copilot" aria-label="Close The Lawnmower Man">
             <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 5l14 14M19 5 5 19"/></svg>
           </button>
         </header>
@@ -3259,18 +3259,18 @@
             <div class="dashboard-copilot-messages" data-copilot-messages aria-live="polite">
               ${state.copilotMessages.map((message) => `
                 <article class="copilot-message is-${escapeHtml(message.role)}">
-                  <span class="copilot-message-label">${message.role === "user" ? "You" : "Groundkeeper &amp; Lawnmower Man AI"}</span>
+                  <span class="copilot-message-label">${message.role === "user" ? "You" : "The Lawnmower Man"}</span>
                   <p>${escapeHtml(message.content).replace(/\n/g, "<br>")}</p>
                   ${message.extraHtml || copilotSearchResultsHtml(message.results || [])}
                 </article>
               `).join("")}
-              ${state.copilotLoading ? `<article class="copilot-message is-assistant is-loading" role="status"><span class="copilot-message-label">Groundkeeper &amp; Lawnmower Man AI</span><p>${state.copilotResearchLoading ? "Searching public sources and checking Urban Yards…" : state.copilotConsultationRequest ? "ChatGPT + Gemini are reviewing your request…" : "Checking your dashboard…"}</p></article>` : ""}
+              ${state.copilotLoading ? `<article class="copilot-message is-assistant is-loading" role="status"><span class="copilot-message-label">The Lawnmower Man</span><p>${state.copilotResearchLoading ? "Searching public sources and checking Urban Yards…" : state.copilotConsultationRequest ? "ChatGPT + Gemini are reviewing your request…" : "Checking your dashboard…"}</p></article>` : ""}
             </div>
           ` : `
-            <section class="copilot-welcome" aria-label="Groundkeeper &amp; Lawnmower Man AI welcome">
+            <section class="copilot-welcome" aria-label="The Lawnmower Man welcome">
               <img class="copilot-welcome-mask" src="images/groundskeeper-ai/groundskeeper-ai-keaton-mask.png" alt="" aria-hidden="true">
               <h3>Hi ${escapeHtml(greetingName)}!</h3>
-              <p class="copilot-welcome-intro">I’m Groundkeeper &amp; Lawnmower Man AI.</p>
+              <p class="copilot-welcome-intro">I’m The Lawnmower Man.</p>
               <p class="copilot-welcome-description">Here to help with your landscaping jobs, plants, routes, equipment, and more.</p>
               <p class="copilot-welcome-question">What can I help you with today?</p>
             </section>
@@ -3286,8 +3286,8 @@
           </select></label>
         </div>
         <form data-dashboard-copilot-form class="${state.copilotLoading ? "is-loading" : ""}">
-          <label class="sr-only" for="groundskeeper-copilot-message">Message Groundkeeper &amp; Lawnmower Man AI</label>
-          <textarea id="groundskeeper-copilot-message" name="message" rows="1" maxlength="700" placeholder="Ask me anything..." aria-label="Message Groundkeeper &amp; Lawnmower Man AI"${state.copilotLoading ? " disabled" : ""} required></textarea>
+          <label class="sr-only" for="groundskeeper-copilot-message">Message The Lawnmower Man</label>
+          <textarea id="groundskeeper-copilot-message" name="message" rows="1" maxlength="700" placeholder="Ask me anything..." aria-label="Message The Lawnmower Man"${state.copilotLoading ? " disabled" : ""} required></textarea>
           <button type="submit" data-copilot-send aria-label="${state.copilotLoading ? "Sending message" : "Send message"}" disabled>
             <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 19V5M6.5 10.5 12 5l5.5 5.5"/></svg>
           </button>
@@ -3543,7 +3543,7 @@
       message,
       history,
       version: state.trainingPreviewMode,
-      page: "Groundkeeper & Lawnmower Man AI training preview"
+      page: "The Lawnmower Man training preview"
     });
   }
 
@@ -6199,7 +6199,7 @@
       { key: "equipmentItems", name: "equipment", loader: loadEquipmentItems, fallback: [] },
       { key: "equipmentMaintenance", name: "equipment maintenance", loader: loadEquipmentMaintenance, fallback: [] },
       { key: "hardwareGuide", name: "hardware guide", loader: loadHardwareGuide, fallback: [] },
-      { key: "groundskeeperAi", name: "Groundkeeper & Lawnmower Man AI", loader: loadGroundskeeperAi, fallback: emptyGroundskeeperAiBundle },
+      { key: "groundskeeperAi", name: "The Lawnmower Man", loader: loadGroundskeeperAi, fallback: emptyGroundskeeperAiBundle },
       { key: "documentation", name: "documentation", loader: loadDocumentation, fallback: () => normalizeDocumentationBundle() },
       {
         key: "importExport",
@@ -6436,7 +6436,7 @@
       };
     } catch (error) {
       state.groundskeeperAiReady = false;
-      state.groundskeeperAiError = error.message || "Groundkeeper & Lawnmower Man AI could not load.";
+      state.groundskeeperAiError = error.message || "The Lawnmower Man could not load.";
       return {
         settings: [],
         knowledge: [],
@@ -18345,7 +18345,7 @@ Requirements:
         ${renderToolsSystemCard({
           label: "Records + AI",
           value: documentationCount,
-          detail: "Documentation, templates, submissions, and Groundkeeper & Lawnmower Man AI training stay in one admin lane.",
+          detail: "Documentation, templates, submissions, and The Lawnmower Man training stay in one admin lane.",
           rows: [
             { label: "Forms and files", value: documentationCount },
             { label: "AI live version", value: aiLiveVersion || "Not published" }
@@ -18438,9 +18438,9 @@ Requirements:
           })}
           ${renderToolsLaunchGroup({
             title: "AI",
-            detail: "Train and review Groundkeeper & Lawnmower Man AI.",
+            detail: "Train and review The Lawnmower Man.",
             items: [
-              { label: "Groundkeeper & Lawnmower Man AI", detail: aiLiveVersion === "Not published" ? "Training not published" : `Published ${aiLiveVersion}`, action: "go-groundskeeper-ai" },
+              { label: "The Lawnmower Man", detail: aiLiveVersion === "Not published" ? "Training not published" : `Published ${aiLiveVersion}`, action: "go-groundskeeper-ai" },
               { label: "AI Memory", detail: "Approved persistent context", href: "#ai-memory" },
               { label: "AI Website Preview", detail: "Review the visitor experience", action: "focus-helper-preview" }
             ]
@@ -22222,7 +22222,7 @@ Requirements:
   function renderAiLogs(logs) {
     if (!els.aiLogsList) return;
     if (!logs.length) {
-      els.aiLogsList.innerHTML = emptyState(state.groundskeeperAiReady ? "No Groundkeeper & Lawnmower Man AI questions logged yet." : (state.groundskeeperAiError || "Groundkeeper & Lawnmower Man AI logs could not load."));
+      els.aiLogsList.innerHTML = emptyState(state.groundskeeperAiReady ? "No questions for The Lawnmower Man have been logged yet." : (state.groundskeeperAiError || "The Lawnmower Man logs could not load."));
       return;
     }
     const visibleLogs = logs.slice(0, 6);
@@ -22280,12 +22280,12 @@ Requirements:
 
   const AI_SECTIONS = [
     { id: "operations", icon: "OP", title: "Operations", table: "", type: "", description: "Review daily work, tickets, leads, estimates, schedules, closeout, Money, and client communication with live dashboard context." },
-    { id: "training", icon: "TR", title: "Groundkeeper & Lawnmower Man AI Training", table: "ai_training_rules", type: "trainingRules", description: "Train, test, approve, and publish how Groundkeeper & Lawnmower Man AI responds to website visitors." },
-    { id: "landscaping", icon: "LK", title: "Landscaping Knowledge", table: "", type: "landscapingKnowledge", description: "Versioned general, Pacific Northwest, Urban Yards, and safety knowledge used by Groundkeeper & Lawnmower Man AI." },
-    { id: "assistant", icon: "AI", title: "Groundkeeper & Lawnmower Man AI", table: "", type: "", description: "Ask for follow-up drafts, lead summaries, copy ideas, or outreach planning. Dashboard mode can use internal AI knowledge." },
+    { id: "training", icon: "TR", title: "The Lawnmower Man Training", table: "ai_training_rules", type: "trainingRules", description: "Train, test, approve, and publish how The Lawnmower Man responds to website visitors." },
+    { id: "landscaping", icon: "LK", title: "Landscaping Knowledge", table: "", type: "landscapingKnowledge", description: "Versioned general, Pacific Northwest, Urban Yards, and safety knowledge used by The Lawnmower Man." },
+    { id: "assistant", icon: "AI", title: "The Lawnmower Man", table: "", type: "", description: "Ask for follow-up drafts, lead summaries, copy ideas, or outreach planning. Dashboard mode can use internal AI knowledge." },
     { id: "settings", icon: "BF", title: "Business Facts", table: "ai_settings", type: "settings", description: "Settings, service area, contact info, tone, quote process, and payment process." },
     { id: "knowledge", icon: "SK", title: "Services & Knowledge", table: "ai_knowledge", type: "knowledge", description: "Published and draft knowledge entries for services, site content, and business context." },
-    { id: "faqs", icon: "FAQ", title: "Website FAQ", table: "ai_faqs", type: "faqs", description: "Visitor-facing questions and approved answers for Groundkeeper & Lawnmower Man AI." },
+    { id: "faqs", icon: "FAQ", title: "Website FAQ", table: "ai_faqs", type: "faqs", description: "Visitor-facing questions and approved answers for The Lawnmower Man." },
     { id: "rules", icon: "R", title: "AI Rules", table: "ai_rules", type: "rules", description: "Behavior rules, boundaries, tone, fallback guidance, and safety instructions." },
     { id: "savedAnswers", icon: "SA", title: "Saved Answers", table: "ai_saved_answers", type: "savedAnswers", description: "Reusable answers that can become official knowledge after review." },
     { id: "logs", icon: "IN", title: "Visitor Question Logs", table: "", type: "logs", description: "Review recent questions and turn good answers into official AI knowledge." }
@@ -22456,7 +22456,7 @@ Requirements:
       <section class="panel groundskeeper-ai-chat-panel ai-command-panel">
         <div class="panel-heading">
           <div>
-            <h3>Groundkeeper &amp; Lawnmower Man AI</h3>
+            <h3>The Lawnmower Man</h3>
             <p>Internal workspace for follow-ups, lead summaries, website copy, and AI knowledge cleanup.</p>
           </div>
         </div>
@@ -22465,7 +22465,7 @@ Requirements:
         </div>
         <div class="groundskeeper-ai-chat" data-groundskeeper-chat></div>
         <form class="groundskeeper-ai-chat-form ai-command-chat-form" data-groundskeeper-chat-form>
-          <textarea name="message" rows="5" placeholder="Ask Groundkeeper &amp; Lawnmower Man AI to draft a follow-up, summarize a lead, improve website copy, or turn a visitor question into reusable knowledge..."></textarea>
+          <textarea name="message" rows="5" placeholder="Ask The Lawnmower Man to draft a follow-up, summarize a lead, improve website copy, or turn a visitor question into reusable knowledge..."></textarea>
           <button type="submit"><span class="button-icon" aria-hidden="true">AI</span><span>Ask</span></button>
         </form>
       </section>`;
@@ -22480,7 +22480,7 @@ Requirements:
     els.aiMain.innerHTML = `
       <section class="groundskeeper-operations">
         <div class="ai-workspace-heading">
-          <div><p class="eyebrow">Owner Operations</p><h3>Groundkeeper &amp; Lawnmower Man AI Operations</h3><p>Choose a focused review. Groundkeeper &amp; Lawnmower Man AI uses a bounded dashboard snapshot and prepares recommendations or drafts for you to approve.</p></div>
+          <div><p class="eyebrow">Owner Operations</p><h3>The Lawnmower Man Operations</h3><p>Choose a focused review. The Lawnmower Man uses a bounded dashboard snapshot and prepares recommendations or drafts for you to approve.</p></div>
           <span class="ai-review-badge">Review before applying</span>
         </div>
         <div class="groundskeeper-operation-groups">
@@ -22490,7 +22490,7 @@ Requirements:
         </div>
         <section class="groundskeeper-operation-runner">
           <div><p class="eyebrow">${escapeHtml(selected.group)}</p><h3>${escapeHtml(selected.title)}</h3><p>${escapeHtml(selected.detail)}</p></div>
-          ${selected.needsQuestion ? `<label>Details or question<textarea rows="4" maxlength="800" data-ai-operation-question placeholder="${escapeHtml(selected.placeholder || "Add the details Groundkeeper & Lawnmower Man AI should review…")}"></textarea></label>` : ""}
+          ${selected.needsQuestion ? `<label>Details or question<textarea rows="4" maxlength="800" data-ai-operation-question placeholder="${escapeHtml(selected.placeholder || "Add the details The Lawnmower Man should review…")}"></textarea></label>` : ""}
           <button type="button" data-action="run-ai-operation" data-operation="${escapeHtml(selected.key)}"${state.groundskeeperOperationLoading ? " disabled" : ""}>${state.groundskeeperOperationLoading ? "Reviewing…" : "Run Review"}</button>
         </section>
         <section class="groundskeeper-operation-result" aria-live="polite">
@@ -22518,7 +22518,7 @@ Requirements:
     state.groundskeeperOperationKey = operation.key;
     openDetailDrawer();
     els.detailContent.innerHTML = `<div class="drawer-content contextual-ai-drawer">
-      <p class="eyebrow">Groundkeeper &amp; Lawnmower Man AI · ${escapeHtml(detailDrawerSectionLabel())}</p>
+      <p class="eyebrow">The Lawnmower Man · ${escapeHtml(detailDrawerSectionLabel())}</p>
       <div class="ticket-drawer-heading"><div><h3>${escapeHtml(operation.title)}</h3><p>${escapeHtml(operation.detail)}</p></div><span class="ai-review-badge">Review before applying</span></div>
       <div class="contextual-ai-page-tools">${groundskeeperToolsForPage().map((tool) => `<button type="button" data-action="switch-contextual-ai" data-operation="${escapeHtml(tool.key)}" class="${tool.key === operation.key ? "is-active" : ""}">${escapeHtml(tool.title)}</button>`).join("")}</div>
       ${operation.needsQuestion ? `<label>Details or question<textarea rows="5" maxlength="800" data-contextual-ai-question placeholder="${escapeHtml(operation.placeholder || "Add details…")}"></textarea></label>` : ""}
@@ -22586,7 +22586,7 @@ Requirements:
                 <button class="inline-action" type="button" data-action="dismiss-ai-log" data-id="${escapeHtml(log.id)}">Dismiss</button>
               </div>
             </article>
-          `).join("") : emptyState(state.groundskeeperAiSearch ? "No logs match that search." : "No Groundkeeper & Lawnmower Man AI questions logged yet.")}
+          `).join("") : emptyState(state.groundskeeperAiSearch ? "No logs match that search." : "No questions for The Lawnmower Man have been logged yet.")}
         </div>
       </section>`;
   }
@@ -22663,7 +22663,7 @@ Requirements:
     const messages = state.trainingMessages;
     if (!messages.length) {
       return `<article class="training-message is-assistant">
-        <p>Tell me how Groundkeeper &amp; Lawnmower Man AI should behave on the website. I will turn your instruction into clean training rules you can save, approve, test, and push live.</p>
+        <p>Tell me how The Lawnmower Man should behave on the website. I will turn your instruction into clean training rules you can save, approve, test, and push live.</p>
       </article>`;
     }
     return messages.map((message, messageIndex) => `
@@ -22730,7 +22730,7 @@ Requirements:
 
   function renderTrainingPreviewMessages() {
     if (!state.trainingPreviewMessages.length) {
-      return `<article class="training-preview-message is-assistant">Ask a sample visitor question to see how Groundkeeper &amp; Lawnmower Man AI would respond on the website.</article>`;
+      return `<article class="training-preview-message is-assistant">Ask a sample visitor question to see how The Lawnmower Man would respond on the website.</article>`;
     }
     return state.trainingPreviewMessages.map((message) => (
       `<article class="training-preview-message is-${escapeHtml(message.role)}">${escapeHtml(message.content)}</article>`
@@ -22779,7 +22779,7 @@ Requirements:
   function renderPublishModal(ai) {
     if (!state.trainingPublishModalOpen) return "";
     const approved = (ai.trainingRules || []).filter((rule) => String(rule.status || "").toLowerCase() === "approved");
-    return `<div class="ai-training-modal" role="dialog" aria-modal="true" aria-label="Push Groundkeeper &amp; Lawnmower Man AI training live">
+    return `<div class="ai-training-modal" role="dialog" aria-modal="true" aria-label="Push The Lawnmower Man training live">
       <div class="ai-training-modal-card">
         <div class="ai-training-modal-head">
           <div>
@@ -22788,7 +22788,7 @@ Requirements:
           </div>
           <button class="inline-action" type="button" data-action="close-training-modal">Close</button>
         </div>
-        <p class="training-publish-copy">This will publish ${escapeHtml(approved.length)} approved training item${approved.length === 1 ? "" : "s"} to Groundkeeper &amp; Lawnmower Man AI on the public website. Draft items will stay private.</p>
+        <p class="training-publish-copy">This will publish ${escapeHtml(approved.length)} approved training item${approved.length === 1 ? "" : "s"} to The Lawnmower Man on the public website. Draft items will stay private.</p>
         <div class="training-publish-list">
           ${approved.length ? approved.map((rule) => `<span>${escapeHtml(rule.title || "Training rule")}</span>`).join("") : "<span>No approved items are ready to publish.</span>"}
         </div>
@@ -22838,7 +22838,7 @@ Requirements:
         <section class="panel ai-training-preview-panel" data-helper-preview-panel>
           <div class="ai-training-panel-head">
             <div>
-              <p class="eyebrow">Groundkeeper &amp; Lawnmower Man AI Website Preview</p>
+              <p class="eyebrow">The Lawnmower Man Website Preview</p>
               <h3>Test Visitor Questions</h3>
               <p>Preview the public website experience with live rules or with drafts included before publishing.</p>
             </div>
@@ -22867,8 +22867,8 @@ Requirements:
     const approvedRules = (ai.trainingRules || []).filter((rule) => String(rule.status || "").toLowerCase() === "approved").length;
     if (els.groundskeeperAiStatus) {
       els.groundskeeperAiStatus.innerHTML = state.groundskeeperAiReady
-        ? `<span>${aiBadge("Secure Backend", "Secure Backend")} Groundkeeper &amp; Lawnmower Man AI uses live training through <code>/.netlify/functions/groundskeeper-ai</code>.</span><span>${escapeHtml(liveTrainingVersion(ai).label)} / ${escapeHtml(liveRules)} live / ${escapeHtml(approvedRules)} approved</span>`
-        : `<span>${aiBadge("Needs Attention", "Needs Attention")} Groundkeeper &amp; Lawnmower Man AI could not load from the secure backend.</span><span>${escapeHtml(state.groundskeeperAiError || "Refresh the dashboard, then check Netlify function logs or Supabase/RLS if it stays down.")}</span>`;
+        ? `<span>${aiBadge("Secure Backend", "Secure Backend")} The Lawnmower Man uses live training through <code>/.netlify/functions/groundskeeper-ai</code>.</span><span>${escapeHtml(liveTrainingVersion(ai).label)} / ${escapeHtml(liveRules)} live / ${escapeHtml(approvedRules)} approved</span>`
+        : `<span>${aiBadge("Needs Attention", "Needs Attention")} The Lawnmower Man could not load from the secure backend.</span><span>${escapeHtml(state.groundskeeperAiError || "Refresh the dashboard, then check Netlify function logs or Supabase/RLS if it stays down.")}</span>`;
     }
     if (els.aiSearch && els.aiSearch.value !== state.groundskeeperAiSearch) els.aiSearch.value = state.groundskeeperAiSearch;
     renderAiWorkspace(ai);
@@ -23629,7 +23629,7 @@ Requirements:
       ["conversation", "Conversation memory"]
     ];
     target.innerHTML = `<section class="ai-memory-workspace">
-      <div class="ticket-lane-heading"><div><p class="eyebrow">Groundkeeper &amp; Lawnmower Man AI</p><h1>AI Memory</h1><p>Review exactly what Groundkeeper &amp; Lawnmower Man AI can remember. Permanent memories are saved only after approval.</p></div><button type="button" data-action="refresh-ai-memory">Refresh</button></div>
+      <div class="ticket-lane-heading"><div><p class="eyebrow">The Lawnmower Man</p><h1>AI Memory</h1><p>Review exactly what The Lawnmower Man can remember. Permanent memories are saved only after approval.</p></div><button type="button" data-action="refresh-ai-memory">Refresh</button></div>
       <form class="ai-memory-form" data-ai-memory-form>
         <label>Memory type<select name="memory_type"><option value="business_rule">Business rule</option><option value="record">Record memory</option><option value="user_preference">User preference</option><option value="outcome">Outcome</option><option value="conversation">Conversation</option></select></label>
         <label class="span-full">Statement<textarea name="statement" rows="3" maxlength="2000" required placeholder="Write one clear fact, rule, preference, or outcome."></textarea></label>
@@ -24769,11 +24769,11 @@ Requirements:
     if (active === "equipment") safeRender("equipment workspace", () => renderEquipment(data));
     if (active === "documentation") safeRender("documentation workspace", () => renderDocumentation(data));
     if (active === "contacts") safeRender("contacts workspace", () => renderContacts(data));
-    if (active === "groundskeeper-ai") safeRender("Groundkeeper & Lawnmower Man AI workspace", () => renderGroundskeeperAi(data));
+    if (active === "groundskeeper-ai") safeRender("The Lawnmower Man workspace", () => renderGroundskeeperAi(data));
     if (active === "import-export") safeRender("import and export workspace", () => renderImportExport(data));
     safeRender("active route heading", () => normalizeActiveRouteHeading(active));
-    safeRender("contextual Groundkeeper & Lawnmower Man AI tools", () => renderContextualGroundskeeperTools(active));
-    safeRender("dashboard Groundkeeper & Lawnmower Man AI", () => renderDashboardCopilot());
+    safeRender("The Lawnmower Man contextual tools", () => renderContextualGroundskeeperTools(active));
+    safeRender("The Lawnmower Man dashboard", () => renderDashboardCopilot());
     safeRender("avatar fallbacks", () => bindAvatarFallbacks());
     if (els.todayChip) els.todayChip.textContent = new Date().toLocaleDateString("en-US", { weekday: "long", month: "short", day: "numeric" });
     setActiveSection(state.activeSection, { hydrate: false });
@@ -28309,7 +28309,7 @@ Requirements:
           state.trainingPublishModalOpen = false;
           state.data.groundskeeperAi = await loadGroundskeeperAi();
           await render();
-          setDashboardState("Approved training rules are now live in Groundkeeper & Lawnmower Man AI on the website.");
+          setDashboardState("Approved training rules are now live in The Lawnmower Man on the website.");
         } catch (error) {
           setDashboardState(error.message || "Unable to push AI training live.", "error");
         }
@@ -28357,7 +28357,7 @@ Requirements:
         if (!operation) return;
         const question = qs("[data-contextual-ai-question]")?.value?.trim() || "";
         if (operation.needsQuestion && !question) {
-          setDashboardState("Add the details or question Groundkeeper & Lawnmower Man AI should review.", "error");
+          setDashboardState("Add the details or question The Lawnmower Man should review.", "error");
           qs("[data-contextual-ai-question]")?.focus();
           return;
         }
@@ -28368,7 +28368,7 @@ Requirements:
           state.groundskeeperOperationResult = await runGroundskeeperOperation(operation, question);
           setDashboardState(`${operation.title} review is ready.`);
         } catch (error) {
-          state.groundskeeperOperationResult = error.message || "Groundkeeper & Lawnmower Man AI could not complete this review.";
+          state.groundskeeperOperationResult = error.message || "The Lawnmower Man could not complete this review.";
           setDashboardState(state.groundskeeperOperationResult, "error");
         } finally {
           state.groundskeeperOperationLoading = false;
@@ -28389,7 +28389,7 @@ Requirements:
         if (!operation) return;
         const question = qs("[data-ai-operation-question]")?.value?.trim() || "";
         if (operation.needsQuestion && !question) {
-          setDashboardState("Add the details or question Groundkeeper & Lawnmower Man AI should review.", "error");
+          setDashboardState("Add the details or question The Lawnmower Man should review.", "error");
           qs("[data-ai-operation-question]")?.focus();
           return;
         }
@@ -28401,7 +28401,7 @@ Requirements:
           state.groundskeeperOperationResult = await runGroundskeeperOperation(operation, question);
           setDashboardState(`${operation.title} review is ready.`);
         } catch (error) {
-          state.groundskeeperOperationResult = error.message || "Groundkeeper & Lawnmower Man AI could not complete this review.";
+          state.groundskeeperOperationResult = error.message || "The Lawnmower Man could not complete this review.";
           setDashboardState(state.groundskeeperOperationResult, "error");
         } finally {
           state.groundskeeperOperationLoading = false;
@@ -28417,7 +28417,7 @@ Requirements:
           "Improve website copy": "Improve this Urban Yards website copy while keeping the tone practical, local, owner-operated, and clear.",
           "Create FAQ answer": "Create a public website FAQ answer using Urban Yards service area, quote process, and brand voice.",
           "Review visitor question": "Review this visitor question and suggest whether it should become a FAQ, rule, or knowledge entry.",
-          "Add service rule": "Draft a clear AI rule for how Groundkeeper & Lawnmower Man AI should answer service-related questions."
+          "Add service rule": "Draft a clear AI rule for how The Lawnmower Man should answer service-related questions."
         };
         const textarea = qs("[data-groundskeeper-chat-form] textarea[name='message']");
         if (textarea) {
@@ -30148,20 +30148,20 @@ Requirements:
         await refreshDashboard();
       } else if (action === "refresh-groundskeeper-ai") {
         try {
-          setDashboardState("Refreshing Groundkeeper & Lawnmower Man AI...");
+          setDashboardState("Refreshing The Lawnmower Man...");
           state.data.groundskeeperAi = await loadGroundskeeperAi();
           await render();
-          setDashboardState("Groundkeeper & Lawnmower Man AI refreshed.");
+          setDashboardState("The Lawnmower Man refreshed.");
         } catch (error) {
-          setDashboardState(error.message || "Unable to refresh Groundkeeper & Lawnmower Man AI.", "error");
+          setDashboardState(error.message || "Unable to refresh The Lawnmower Man.", "error");
         }
       } else if (action === "publish-groundskeeper-ai") {
         try {
-          setDashboardState("Publishing Groundkeeper & Lawnmower Man AI updates...");
+          setDashboardState("Publishing The Lawnmower Man updates...");
           await groundskeeperRequest("publish");
           state.data.groundskeeperAi = await loadGroundskeeperAi();
           await render();
-          setDashboardState("Groundkeeper & Lawnmower Man AI updates published.");
+          setDashboardState("The Lawnmower Man updates published.");
         } catch (error) {
           setDashboardState(error.message || "Unable to publish AI updates.", "error");
         }
@@ -31611,9 +31611,9 @@ Requirements:
           await render();
           setDashboardState("");
         } catch (error) {
-          state.trainingMessages.push({ role: "assistant", content: error.message || "Groundkeeper & Lawnmower Man AI training is unavailable right now." });
+          state.trainingMessages.push({ role: "assistant", content: error.message || "The Lawnmower Man training is unavailable right now." });
           renderGroundskeeperAi(state.data);
-          setDashboardState(error.message || "Unable to train Groundkeeper & Lawnmower Man AI.", "error");
+          setDashboardState(error.message || "Unable to train The Lawnmower Man.", "error");
         }
       } else if (event.target.matches("[data-training-preview-form]")) {
         event.preventDefault();
@@ -31657,7 +31657,7 @@ Requirements:
       } else if (event.target.matches("[data-groundskeeper-entry-form]")) {
         event.preventDefault();
         try {
-          setDashboardState("Saving Groundkeeper & Lawnmower Man AI entry...");
+          setDashboardState("Saving The Lawnmower Man entry...");
           const requestedStatus = event.submitter?.dataset.aiSaveStatus;
           if (requestedStatus && event.target.elements.status) event.target.elements.status.value = requestedStatus;
           const payload = aiEntryPayloadFromForm(event.target);
@@ -31665,7 +31665,7 @@ Requirements:
           event.target.reset();
           state.data.groundskeeperAi = await loadGroundskeeperAi();
           await render();
-          setDashboardState("Groundkeeper & Lawnmower Man AI entry saved. Publish when it should affect the public assistant.");
+          setDashboardState("The Lawnmower Man entry saved. Publish when it should affect the public assistant.");
         } catch (error) {
           setDashboardState(error.message || "Unable to save AI entry.", "error");
         }
@@ -31690,9 +31690,9 @@ Requirements:
           await render();
           setDashboardState("");
         } catch (error) {
-          state.groundskeeperMessages.push({ role: "assistant", content: error.message || "Groundkeeper & Lawnmower Man AI is unavailable." });
+          state.groundskeeperMessages.push({ role: "assistant", content: error.message || "The Lawnmower Man is unavailable." });
           renderGroundskeeperChat();
-          setDashboardState(error.message || "Unable to ask Groundkeeper & Lawnmower Man AI.", "error");
+          setDashboardState(error.message || "Unable to ask The Lawnmower Man.", "error");
         }
       } else if (event.target.matches("[data-job-create-form]")) {
         event.preventDefault();

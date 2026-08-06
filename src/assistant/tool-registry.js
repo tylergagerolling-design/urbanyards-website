@@ -195,7 +195,7 @@ function previewTicketStageTransition({ ticketId, newStage, snapshot, actor }) {
     throw error;
   }
   if (ticket.source !== "ticket" || !/^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(String(ticket.id || ""))) {
-    const error = new Error("Only canonical job tickets can be moved by Groundkeeper & Lawnmower Man AI.");
+    const error = new Error("Only canonical job tickets can be moved by The Lawnmower Man.");
     error.code = "TICKET_NOT_CANONICAL";
     throw error;
   }
@@ -269,7 +269,7 @@ function createToolRegistry({ permissionGuard }) {
     async execute(name, input, runtime) {
       const tool = definitions.get(name);
       if (!tool) {
-        const error = new Error(`Groundkeeper & Lawnmower Man AI does not have a registered tool named ${name}.`);
+        const error = new Error(`The Lawnmower Man does not have a registered tool named ${name}.`);
         error.code = "TOOL_NOT_FOUND";
         throw error;
       }

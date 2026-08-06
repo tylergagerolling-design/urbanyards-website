@@ -141,7 +141,7 @@ test("both provider failures leave normal dashboard use available", async () => 
     groundskeeperTask: async () => { throw new Error("OpenAI unavailable"); },
     lawnmowerTask: async () => { throw new Error("Gemini unavailable"); }
   });
-  assert.match(result.reply, /Groundkeeper & Lawnmower Man AI is unavailable/i);
+  assert.match(result.reply, /The Lawnmower Man is unavailable/i);
   assert.match(result.reply, /dashboard is still available/i);
   assert.deepEqual(result.finalActions, []);
 });

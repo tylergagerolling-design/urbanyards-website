@@ -42,7 +42,7 @@ test("archived workspace polish remains available with current dashboard assets"
   assert.match(css, /\.groundskeeper-operation-card[\s\S]*white-space: normal !important/);
   assert.match(css, /\.dashboard-health-item strong[\s\S]*word-break: break-all/);
   assert.match(html, /dashboard\.css\?v=20260806-controlled-research-1/);
-  assert.match(html, /dashboard\.js\?v=20260806-weather-alerts-1/);
+  assert.match(html, /dashboard\.js\?v=20260806-lawnmower-man-1/);
 });
 
 test("Tickets Leads and Money use the same flat white page canvas as Home and Work", () => {
@@ -85,15 +85,15 @@ test("combined AI product uses the local Keaton Mask launcher and monochrome pop
   assert.deepEqual([...maskPng.subarray(0, 8)], [137, 80, 78, 71, 13, 10, 26, 10]);
   assert.equal(maskPng.readUInt32BE(16), 512);
   assert.equal(maskPng.readUInt32BE(20), 512);
-  assert.match(html, /<h1>Groundkeeper &amp; Lawnmower Man AI<\/h1>/);
+  assert.match(html, /<h1>The Lawnmower Man<\/h1>/);
   assert.match(html, /Two minds\. One landscaping operation\./);
-  assert.match(publicAssistant, /<h2 id="uy-assistant-title">Groundkeeper &amp; Lawnmower Man AI<\/h2>/);
+  assert.match(publicAssistant, /<h2 id="uy-assistant-title">The Lawnmower Man<\/h2>/);
   assert.match(publicAssistant, /Two minds\. One landscaping operation\./);
-  assert.match(js, /dashboard-copilot-launcher[\s\S]{0,500}aria-label="Open Groundkeeper &amp; Lawnmower Man AI"/);
+  assert.match(js, /dashboard-copilot-launcher[\s\S]{0,500}aria-label="Open The Lawnmower Man"/);
   assert.match(js, /dashboard-copilot-launcher[\s\S]{0,500}images\/groundskeeper-ai\/groundskeeper-ai-keaton-mask\.png/);
   assert.match(js, /Two minds\. One landscaping operation\./);
   assert.match(js, /Hi \$\{escapeHtml\(greetingName\)\}!/);
-  assert.match(js, /I’m Groundkeeper &amp; Lawnmower Man AI\./);
+  assert.match(js, /I’m The Lawnmower Man\./);
   assert.match(js, /Here to help with your landscaping jobs, plants, routes, equipment, and more\./);
   assert.match(js, /placeholder="Ask me anything\.\.\."/);
   const copilotRenderer = js.slice(js.indexOf("function renderDashboardCopilot"), js.indexOf("function copilotTicketRows"));
@@ -106,8 +106,8 @@ test("combined AI product uses the local Keaton Mask launcher and monochrome pop
   assert.match(js, /Powered by ChatGPT \+ Gemini/);
   assert.match(js, /copilotLauncher && \["Enter", " "\]\.includes\(event\.key\)[\s\S]{0,160}copilotLauncher\.click\(\)/);
   assert.match(js, /copilotInput && event\.key === "Enter" && !event\.shiftKey/);
-  assert.match(css, /Groundkeeper & Lawnmower Man AI — monochrome Keaton Mask popup/);
-  const monochromeCss = css.slice(css.indexOf("Groundkeeper & Lawnmower Man AI — monochrome Keaton Mask popup"));
+  assert.match(css, /The Lawnmower Man — monochrome Keaton Mask popup/);
+  const monochromeCss = css.slice(css.indexOf("The Lawnmower Man — monochrome Keaton Mask popup"));
   assert.match(css, /\.dashboard-copilot-panel \{[\s\S]{0,500}width: min\(460px,[\s\S]{0,500}border: 2px solid #171717;[\s\S]{0,500}background: #fff;/);
   assert.match(css, /\.copilot-header-mask \{[\s\S]{0,240}width: 56px;[\s\S]{0,240}object-fit: cover/);
   assert.match(css, /\.copilot-welcome-mask \{[\s\S]{0,240}width: 108px;[\s\S]{0,240}object-fit: cover/);
@@ -663,7 +663,7 @@ test("dashboard sidebar exposes a secondary drawer for multi-workspace sections"
 
   assert.match(html, /data-sidebar-nav-group="calendar"[\s\S]*Route Planner/);
   assert.match(html, /data-sidebar-nav-group="outreach"[\s\S]*Clients/);
-  assert.match(html, /data-sidebar-nav-group="settings"[\s\S]*Equipment[\s\S]*Documentation[\s\S]*Import &amp; Export[\s\S]*Groundkeeper &amp; Lawnmower Man AI/);
+  assert.match(html, /data-sidebar-nav-group="settings"[\s\S]*Equipment[\s\S]*Documentation[\s\S]*Import &amp; Export[\s\S]*The Lawnmower Man/);
   assert.doesNotMatch(html, /data-sidebar-subnav-toggle/);
   assert.match(js, /function setSidebarSubnavOpen[\s\S]*data-sidebar-nav-group[\s\S]*classList\.toggle\("is-open"/);
   assert.match(js, /function setSidebarOpen[\s\S]*if \(shouldOpen\)[\s\S]*setSidebarSubnavOpen\(activeGroup, true\)[\s\S]*else \{[\s\S]*setSidebarSubnavOpen\("", false\)/);
@@ -1415,7 +1415,7 @@ test("ticket closeout uses a completion review and reversible actions offer Undo
   assert.match(css, /\[data-dashboard-state\]\[data-tone="undo"\]/);
 });
 
-test("Groundkeeper & Lawnmower Man AI exposes the selected owner operations suite with review safeguards", () => {
+test("The Lawnmower Man exposes the selected owner operations suite with review safeguards", () => {
   const js = read("dashboard.js");
   const css = read("dashboard.css");
   const api = read("api/groundskeeper-ai.js");
@@ -1469,11 +1469,11 @@ test("the persistent dashboard copilot replaces duplicate page-level AI tool str
   const renderer = js.slice(js.indexOf("function renderDashboardCopilot"), js.indexOf("function copilotTicketRows"));
   assert.doesNotMatch(renderer, /raccoon|data-copilot-section|copilot-shortcuts/);
   assert.match(js, /event\.key !== "Escape"/);
-  assert.match(js, /safeRender\("dashboard Groundkeeper & Lawnmower Man AI"/);
-  assert.match(js, /safeRender\("contextual Groundkeeper & Lawnmower Man AI tools"/);
+  assert.match(js, /safeRender\("The Lawnmower Man dashboard"/);
+  assert.match(js, /safeRender\("The Lawnmower Man contextual tools"/);
   assert.match(css, /\.dashboard-copilot[\s\S]*top: 18px/);
   assert.match(css, /\.dashboard-copilot-panel/);
-  assert.match(css, /Groundkeeper & Lawnmower Man AI — monochrome Keaton Mask popup/);
+  assert.match(css, /The Lawnmower Man — monochrome Keaton Mask popup/);
   assert.match(css, /\.copilot-welcome/);
   assert.match(css, /@media \(max-width: 700px\)[\s\S]*position: fixed/);
 });

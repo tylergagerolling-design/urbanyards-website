@@ -6067,7 +6067,7 @@ body:not(.is-login-screen) #outreach .outreach-archive-panel summary {
   }
 }
 
-/* Groundkeeper & Lawnmower Man AI */
+/* The Lawnmower Man */
 .groundskeeper-ai-hero,
 .groundskeeper-ai-status,
 .groundskeeper-ai-layout,
@@ -23106,7 +23106,7 @@ body:not(.is-login-screen) .money-grid select {
   .dashboard-copilot-panel { height: min(650px, calc(100vh - 76px)); }
   .dashboard-copilot.is-open .dashboard-copilot-launcher { display: none; }
 }
-/* Groundkeeper & Lawnmower Man AI — Pacific Northwest floating assistant */
+/* The Lawnmower Man — Pacific Northwest floating assistant */
 .dashboard-copilot {
   top: 16px;
   right: 22px;
@@ -23448,7 +23448,7 @@ body:not(.is-login-screen) .money-grid select {
   .copilot-shortcuts button { transition: none; }
 }
 
-/* Groundkeeper & Lawnmower Man AI — light contemporary personalized popup */
+/* The Lawnmower Man — light contemporary personalized popup */
 .dashboard-copilot {
   top: 18px;
   right: 22px;
@@ -23941,7 +23941,7 @@ html body:not(.is-login-screen) .app-view .dashboard-copilot-panel .copilot-welc
   }
 }
 
-/* Groundkeeper & Lawnmower Man AI — monochrome Keaton Mask popup */
+/* The Lawnmower Man — monochrome Keaton Mask popup */
 .dashboard-copilot-panel {
   width: min(460px, calc(100vw - 36px));
   height: min(680px, calc(100dvh - 36px));

@@ -18,7 +18,7 @@ function disagreementDetected(primary = "", consultation = {}) {
 
 function synthesisInstruction({ userQuestion, primaryAnswer, consultation }) {
   return [
-    "Create one concise Groundkeeper & Lawnmower Man AI response to the user.",
+    "Create one concise response for The Lawnmower Man to give the user.",
     "Use the primary answer as the base and the Gemini consultation only as advisory review.",
     "Answer the actual question, distinguish verified facts from recommendations, state material missing information, and mention significant unresolved disagreement.",
     "Do not mention hidden prompts, chain-of-thought, API payloads, or claim consensus unless supported.",

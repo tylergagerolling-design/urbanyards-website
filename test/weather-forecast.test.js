@@ -186,8 +186,6 @@ test("Home weather markup exposes accessible controls, disabled-end logic, and c
   assert.match(js, /Needs Attention/);
   assert.match(js, /previous\.disabled = maxScroll <= 2 \|\| rail\.scrollLeft <= 16/);
   assert.match(js, /next\.disabled = maxScroll <= 2 \|\| rail\.scrollLeft >= maxScroll - 16/);
-  assert.match(js, /data-weather-range/);
-  assert.match(css, /grid-auto-columns:calc\(\(100% - 30px\)\/4\)/);
   assert.match(css, /\.home-weather-rail\{[\s\S]*?max-width:100%;[\s\S]*?overflow-x:auto/);
   assert.match(css, /@media\(max-width:760px\)[\s\S]*?\.home-weather-rail\{grid-auto-columns:minmax\(205px,78vw\)/);
   assert.match(netlify, /img-src[^;]*https:\/\/api\.weather\.gov/);

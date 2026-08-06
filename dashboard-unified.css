@@ -390,6 +390,7 @@ body:not(.is-login-screen) .dashboard-main :is(.home-focus-page,.unified-ticket-
    page bodies flat and white like Home and Work without changing the cards,
    tables, toolbars, or drawers inside them. */
 html body:not(.is-login-screen) .dashboard-main > :is(#tickets,#outreach,#documents).dashboard-section.is-active{
+  padding:0!important;
   background:#fff!important;
 }
 html body:not(.is-login-screen) .dashboard-main :is(#tickets .tickets-timeline-page,#outreach .online-quote-workspace,#documents .money-workspace){

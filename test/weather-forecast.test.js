@@ -210,6 +210,7 @@ test("Home weather markup exposes accessible controls, disabled-end logic, and c
   assert.match(js, /previous\.disabled = maxScroll <= 2 \|\| rail\.scrollLeft <= 16/);
   assert.match(js, /next\.disabled = maxScroll <= 2 \|\| rail\.scrollLeft >= maxScroll - 16/);
   assert.match(css, /\.home-weather-icon img\{[\s\S]*?object-fit:contain/);
+  assert.match(css, /\.home-weather-icon\{[\s\S]*?justify-self:center/);
   assert.match(css, /@media\(max-width:760px\)[\s\S]*?\.home-weather-icon\{width:44px;height:44px\}/);
   assert.match(css, /\.home-weather-rail\{[\s\S]*?max-width:100%;[\s\S]*?overflow-x:auto/);
   assert.match(css, /@media\(max-width:760px\)[\s\S]*?\.home-weather-rail\{grid-auto-columns:minmax\(205px,78vw\)/);

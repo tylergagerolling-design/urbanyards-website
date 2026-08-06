@@ -750,6 +750,7 @@ body:not(.is-login-screen) .dashboard-main .home-weather-icon{
   height:52px;
   display:grid;
   place-items:center;
+  justify-self:center;
   overflow:hidden;
   border-radius:8px;
   color:var(--clean-green);

@@ -41,8 +41,83 @@ test("archived workspace polish remains available with current dashboard assets"
   assert.match(css, /\.call-queue-row > span:first-child :is\(strong, small\)[\s\S]*overflow-wrap: anywhere/);
   assert.match(css, /\.groundskeeper-operation-card[\s\S]*white-space: normal !important/);
   assert.match(css, /\.dashboard-health-item strong[\s\S]*word-break: break-all/);
-  assert.match(html, /dashboard\.css\?v=20260804-quote-requests-leads-1/);
-  assert.match(html, /dashboard\.js\?v=20260805-call-queue-followup-4/);
+  assert.match(html, /dashboard\.css\?v=20260805-groundskeeper-monochrome-1/);
+  assert.match(html, /dashboard\.js\?v=20260805-groundskeeper-monochrome-1/);
+});
+
+test("dashboard Groundskeeper uses the local Keaton Mask launcher and monochrome popup", () => {
+  const js = read("dashboard.js");
+  const css = read("dashboard.css");
+  const maskPath = path.join(root, "images", "groundskeeper-ai", "groundskeeper-ai-keaton-mask.png");
+  assert.equal(fs.existsSync(maskPath), true);
+  const maskPng = fs.readFileSync(maskPath);
+  assert.deepEqual([...maskPng.subarray(0, 8)], [137, 80, 78, 71, 13, 10, 26, 10]);
+  assert.equal(maskPng.readUInt32BE(16), 512);
+  assert.equal(maskPng.readUInt32BE(20), 512);
+  assert.match(js, /dashboard-copilot-launcher[\s\S]{0,500}aria-label="Open Groundskeeper AI"/);
+  assert.match(js, /dashboard-copilot-launcher[\s\S]{0,500}images\/groundskeeper-ai\/groundskeeper-ai-keaton-mask\.png/);
+  assert.match(js, /Your Landscaping Assistant/);
+  assert.match(js, /Hi \$\{escapeHtml\(greetingName\)\}!/);
+  assert.match(js, /I’m Groundskeeper AI\./);
+  assert.match(js, /Here to help with your landscaping jobs, plants, routes, equipment, and more\./);
+  assert.match(js, /placeholder="Ask me anything\.\.\."/);
+  const copilotRenderer = js.slice(js.indexOf("function renderDashboardCopilot"), js.indexOf("function copilotTicketRows"));
+  assert.doesNotMatch(copilotRenderer, /raccoon|copilot-shortcuts|copilot-organic-accent|copilot-botanical-line|groundskeeper-leaf-mark/);
+  assert.match(copilotRenderer, /copilot-header-mask[\s\S]{0,220}groundskeeper-ai-keaton-mask\.png/);
+  assert.match(copilotRenderer, /copilot-welcome-mask[\s\S]{0,220}groundskeeper-ai-keaton-mask\.png/);
+  assert.match(copilotRenderer, /copilot-message-label/);
+  assert.match(js, /copilotLauncher && \["Enter", " "\]\.includes\(event\.key\)[\s\S]{0,160}copilotLauncher\.click\(\)/);
+  assert.match(js, /copilotInput && event\.key === "Enter" && !event\.shiftKey/);
+  assert.match(css, /Groundskeeper AI — monochrome Keaton Mask popup/);
+  assert.match(css, /\.dashboard-copilot-panel \{[\s\S]{0,500}width: min\(460px,[\s\S]{0,500}border: 2px solid #171717;[\s\S]{0,500}background: #fff;/);
+  assert.match(css, /\.copilot-header-mask \{[\s\S]{0,240}width: 56px;[\s\S]{0,240}object-fit: cover/);
+  assert.match(css, /\.copilot-welcome-mask \{[\s\S]{0,240}width: 108px;[\s\S]{0,240}object-fit: cover/);
+  assert.match(css, /\.dashboard-copilot-panel form button \{[\s\S]{0,260}background: #111;[\s\S]{0,260}color: #fff/);
+  assert.match(css, /body:not\(\.is-login-screen\) \.dashboard-copilot-panel form button\[type="submit"\] \{[\s\S]{0,220}background: #111 !important;/);
+  assert.match(css, /\.dashboard-shell \.app-view \.dashboard-copilot-launcher \{[\s\S]{0,400}width: 64px !important;[\s\S]{0,400}border: 1px solid #245640 !important;[\s\S]{0,400}overflow: visible !important;/);
+  assert.match(css, /\.dashboard-shell \.app-view \.dashboard-copilot-launcher:hover \{[\s\S]{0,180}scale\(1\.03\)/);
+  assert.match(css, /@media \(min-width: 701px\) and \(max-width: 900px\) \{[\s\S]{0,140}\.dashboard-copilot \{[\s\S]{0,80}top: 100px;/);
+  assert.match(css, /@media \(max-width: 700px\)[\s\S]{0,600}\.dashboard-shell \.app-view \.dashboard-copilot-launcher \{[\s\S]{0,220}width: 58px !important;/);
+  assert.match(css, /@media \(max-width: 700px\)[\s\S]*\.dashboard-copilot-panel \{[\s\S]{0,260}position: fixed;[\s\S]{0,260}inset: max\(8px, env\(safe-area-inset-top\)\)/);
+});
+
+test("Groundskeeper greeting follows profile, auth metadata, email, and safe fallback order", () => {
+  const js = read("dashboard.js");
+  const helperStart = js.indexOf("function usableGroundskeeperName");
+  const start = js.indexOf("function groundskeeperGreetingFirstName", helperStart);
+  const end = js.indexOf("function renderCurrentProfileAvatar", start);
+  const resolver = js.slice(start, end);
+  assert.ok(start > 0 && end > start);
+  const displayIndex = resolver.indexOf("profileDisplayName");
+  const fullIndex = resolver.indexOf("profileFullName");
+  const authFullIndex = resolver.indexOf("sessionProfile.authFullName");
+  const authNameIndex = resolver.indexOf("sessionProfile.authName");
+  const emailIndex = resolver.indexOf("emailGreetingName(session.email)");
+  assert.ok(displayIndex < fullIndex && fullIndex < authFullIndex && authFullIndex < authNameIndex && authNameIndex < emailIndex);
+  assert.match(resolver, /return firstGreetingName\(resolved\) \|\| "there"/);
+  assert.match(js, /function resetCopilotUserState\(\)[\s\S]{0,700}state\.copilotMessages = \[\]/);
+
+  const helperSource = js.slice(helperStart, end);
+  const resolveName = (profile, session) => {
+    const profileText = (value) => String(value || "").trim();
+    const firstProfileText = (...values) => values.map(profileText).find(Boolean) || "";
+    const factory = new Function(
+      "profileText",
+      "firstProfileText",
+      "getSession",
+      "isDemoMode",
+      "currentUserProfile",
+      "state",
+      `${helperSource}; return groundskeeperGreetingFirstName;`
+    );
+    return factory(profileText, firstProfileText, () => session, () => false, () => profile, { data: { userProfiles: [] } })();
+  };
+  assert.equal(resolveName({ display_name: "Tyler Gage", full_name: "Wrong Name" }, { profile: { authFullName: "Auth Name" }, email: "tyler@example.com" }), "Tyler");
+  assert.equal(resolveName({ full_name: "Sarah Peterson" }, { profile: {}, email: "sarah@example.com" }), "Sarah");
+  assert.equal(resolveName({}, { profile: { authFullName: "Jordan Lee" }, email: "jordan@example.com" }), "Jordan");
+  assert.equal(resolveName({}, { profile: {}, email: "alex.morgan@example.com" }), "Alex");
+  assert.equal(resolveName({}, { profile: {}, email: "info@example.com" }), "there");
+  assert.equal(resolveName({}, null), "there");
 });
 
 test("authenticated assistant prompt suppresses public quote calls to action", () => {
@@ -1330,19 +1405,18 @@ test("the persistent dashboard copilot replaces duplicate page-level AI tool str
   assert.match(js, /document\.querySelectorAll\("\[data-contextual-ai-tools\]"\)/);
   assert.doesNotMatch(js, /host\.prepend\(panel\)/);
   assert.match(js, /function renderDashboardCopilot/);
-  assert.match(js, /Groundskeeper AI raccoon mascot/);
-  assert.match(js, /Your smart helper for jobs, clients, and everything in between\./);
-  assert.match(js, /How can I help you today\?/);
-  assert.match(js, /data-copilot-section="tickets"/);
-  assert.match(js, /data-copilot-section="outreach"/);
-  assert.match(js, /data-copilot-section="reports"/);
+  assert.match(js, /groundskeeper-ai-keaton-mask\.png/);
+  assert.match(js, /Your Landscaping Assistant/);
+  assert.match(js, /Ask me anything\.\.\./);
+  const renderer = js.slice(js.indexOf("function renderDashboardCopilot"), js.indexOf("function copilotTicketRows"));
+  assert.doesNotMatch(renderer, /raccoon|data-copilot-section|copilot-shortcuts/);
   assert.match(js, /event\.key !== "Escape"/);
   assert.match(js, /safeRender\("dashboard Groundskeeper"/);
   assert.match(js, /safeRender\("contextual Groundskeeper tools"/);
   assert.match(css, /\.dashboard-copilot[\s\S]*top: 18px/);
   assert.match(css, /\.dashboard-copilot-panel/);
-  assert.match(css, /\.copilot-landscape/);
-  assert.match(css, /\.copilot-shortcuts/);
+  assert.match(css, /Groundskeeper AI — monochrome Keaton Mask popup/);
+  assert.match(css, /\.copilot-welcome/);
   assert.match(css, /@media \(max-width: 700px\)[\s\S]*position: fixed/);
 });
 

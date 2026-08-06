@@ -1930,6 +1930,13 @@
   function authProfileFromUser(user = {}, email = "") {
     const userMetadata = user.user_metadata || {};
     const appMetadata = user.app_metadata || {};
+    const authFullName = firstProfileText(
+      userMetadata.full_name,
+      userMetadata.fullName,
+      [userMetadata.first_name, userMetadata.last_name].map(profileText).filter(Boolean).join(" "),
+      [userMetadata.firstName, userMetadata.lastName].map(profileText).filter(Boolean).join(" ")
+    );
+    const authName = firstProfileText(userMetadata.name);
     const name = firstProfileText(
       profileFullName(userMetadata),
       profileFullName(appMetadata),
@@ -1937,7 +1944,7 @@
       email
     );
     const role = normalizeDashboardRole(firstProfileText(profileRole(userMetadata), profileRole(user), appMetadata.role));
-    return { name, role };
+    return { name, role, authFullName, authName };
   }
 
   function displayProfileFromSession(session, profileRecord = null) {
@@ -1963,6 +1970,13 @@
         ...(session.profile || {}),
         role,
         name: firstProfileText(profileFullName(profileRecord), session.profile?.name, session.email),
+        profileDisplayName: firstProfileText(profileRecord.display_name, profileRecord.displayName, profileRecord.preferred_name, profileRecord.preferredName),
+        profileFullName: firstProfileText(
+          profileRecord.full_name,
+          profileRecord.fullName,
+          [profileRecord.first_name, profileRecord.last_name].map(profileText).filter(Boolean).join(" "),
+          [profileRecord.firstName, profileRecord.lastName].map(profileText).filter(Boolean).join(" ")
+        ),
         avatar_url: firstProfileText(profileAvatarUrl(profileRecord), session.profile?.avatar_url, session.profile?.avatarUrl)
       }
     };
@@ -2227,6 +2241,7 @@
     renderCurrentProfileAvatar(state.data);
     renderUsersAccess(state.data);
     bindAvatarFallbacks();
+    if (qs("[data-dashboard-copilot]")) renderDashboardCopilot();
     return profile;
   }
 
@@ -2938,41 +2953,56 @@
       shell.dataset.dashboardCopilot = "";
       (els.appView || document.body).append(shell);
     }
+    const hasConversation = Boolean(state.copilotMessages.length || state.copilotLoading);
+    const greetingName = groundskeeperGreetingFirstName();
     shell.className = `dashboard-copilot${state.copilotOpen ? " is-open" : ""}`;
     shell.innerHTML = `
-      <button class="dashboard-copilot-launcher" type="button" data-action="toggle-dashboard-copilot" aria-expanded="${state.copilotOpen ? "true" : "false"}">
-        <img src="images/groundskeeper-ai/raccoon-mascot.webp" alt="" aria-hidden="true">
-        <span class="sr-only">Ask Groundskeeper AI</span>
+      <button class="dashboard-copilot-launcher" type="button" data-action="toggle-dashboard-copilot" aria-expanded="${state.copilotOpen ? "true" : "false"}" aria-label="Open Groundskeeper AI" title="Open Groundskeeper AI">
+        <img src="images/groundskeeper-ai/groundskeeper-ai-keaton-mask.png" alt="" aria-hidden="true">
+        <span class="sr-only">Open Groundskeeper AI</span>
       </button>
-      <section class="dashboard-copilot-panel" aria-label="Groundskeeper dashboard assistant" ${state.copilotOpen ? "" : "hidden"}>
-        <header class="copilot-landscape">
-          <button type="button" data-action="toggle-dashboard-copilot" aria-label="Close Groundskeeper AI">×</button>
+      <section class="dashboard-copilot-panel${hasConversation ? " has-conversation" : " is-welcome"}" aria-labelledby="groundskeeper-copilot-title" ${state.copilotOpen ? "" : "hidden"}>
+        <header class="copilot-header">
+          <div class="copilot-header-identity">
+            <img class="copilot-header-mask" src="images/groundskeeper-ai/groundskeeper-ai-keaton-mask.png" alt="" aria-hidden="true">
+            <div>
+              <h2 id="groundskeeper-copilot-title">Groundskeeper AI</h2>
+              <p>Your Landscaping Assistant</p>
+            </div>
+          </div>
+          <button type="button" data-action="toggle-dashboard-copilot" aria-label="Close Groundskeeper AI">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 5l14 14M19 5 5 19"/></svg>
+          </button>
         </header>
-        <div class="copilot-identity">
-          <span class="copilot-avatar"><img src="images/groundskeeper-ai/raccoon-mascot.webp" alt="Groundskeeper AI raccoon mascot"></span>
-          <h3>Groundskeeper AI</h3>
-          <p>Your smart helper for jobs, clients, and everything in between.</p>
+        <div class="copilot-stage">
+          ${hasConversation ? `
+            <div class="dashboard-copilot-messages" data-copilot-messages aria-live="polite">
+              ${state.copilotMessages.map((message) => `
+                <article class="copilot-message is-${escapeHtml(message.role)}">
+                  <span class="copilot-message-label">${message.role === "user" ? "You" : "Groundskeeper AI"}</span>
+                  <p>${escapeHtml(message.content).replace(/\n/g, "<br>")}</p>
+                  ${message.extraHtml || ""}
+                </article>
+              `).join("")}
+              ${state.copilotLoading ? `<article class="copilot-message is-assistant is-loading" role="status"><span class="copilot-message-label">Groundskeeper AI</span><p>${state.copilotConsultationRequest ? "Consulting Gemini for a second opinion…" : "Checking your dashboard…"}</p></article>` : ""}
+            </div>
+          ` : `
+            <section class="copilot-welcome" aria-label="Groundskeeper AI welcome">
+              <img class="copilot-welcome-mask" src="images/groundskeeper-ai/groundskeeper-ai-keaton-mask.png" alt="" aria-hidden="true">
+              <h3>Hi ${escapeHtml(greetingName)}!</h3>
+              <p class="copilot-welcome-intro">I’m Groundskeeper AI.</p>
+              <p class="copilot-welcome-description">Here to help with your landscaping jobs, plants, routes, equipment, and more.</p>
+              <p class="copilot-welcome-question">What can I help you with today?</p>
+            </section>
+          `}
         </div>
-        <div class="dashboard-copilot-messages" data-copilot-messages aria-live="polite">
-          ${state.copilotMessages.length ? state.copilotMessages.map((message) => `
-            <article class="copilot-message is-${escapeHtml(message.role)}">
-              <p>${escapeHtml(message.content).replace(/\n/g, "<br>")}</p>
-              ${message.extraHtml || ""}
-            </article>
-          `).join("") : `<article class="copilot-message is-assistant"><p>I can search the whole dashboard, open records, explain exactly what a ticket still needs, and prepare visits for your approval. Try “Find Kennedy tickets” or “What can I complete today?”</p></article>`}
-          ${state.copilotLoading ? `<article class="copilot-message is-assistant is-loading"><p>${state.copilotConsultationRequest ? "Consulting Gemini for a second opinion…" : "Checking your dashboard…"}</p></article>` : ""}
-        </div>
-        <form data-dashboard-copilot-form>
+        <form data-dashboard-copilot-form class="${state.copilotLoading ? "is-loading" : ""}">
           <label class="sr-only" for="groundskeeper-copilot-message">Message Groundskeeper AI</label>
-          <textarea id="groundskeeper-copilot-message" name="message" rows="1" maxlength="700" placeholder="How can I help you today?" required></textarea>
-          <button type="submit" aria-label="Send message"${state.copilotLoading ? " disabled" : ""}><span aria-hidden="true">➤</span></button>
+          <textarea id="groundskeeper-copilot-message" name="message" rows="1" maxlength="700" placeholder="Ask me anything..." aria-label="Message Groundskeeper AI"${state.copilotLoading ? " disabled" : ""} required></textarea>
+          <button type="submit" data-copilot-send aria-label="${state.copilotLoading ? "Sending message" : "Send message"}" disabled>
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 19V5M6.5 10.5 12 5l5.5 5.5"/></svg>
+          </button>
         </form>
-        <nav class="copilot-shortcuts" aria-label="Groundskeeper shortcuts">
-          <button type="button" data-action="copilot-shortcut" data-copilot-section="tickets"><span aria-hidden="true">✓</span><strong>Tickets</strong></button>
-          <button type="button" data-action="copilot-shortcut" data-copilot-section="outreach"><span aria-hidden="true">♙</span><strong>Leads</strong></button>
-          <button type="button" data-action="copilot-shortcut" data-copilot-section="reports"><span aria-hidden="true">▥</span><strong>Reports</strong></button>
-        </nav>
-        <small class="dashboard-copilot-trust">Changes are made only after you approve a preview.</small>
       </section>`;
     const messages = shell.querySelector("[data-copilot-messages]");
     if (messages) messages.scrollTop = messages.scrollHeight;
@@ -9524,16 +9554,35 @@
     }
   }
 
+  function resetCopilotUserState() {
+    state.copilotOpen = false;
+    state.copilotLoading = false;
+    state.copilotMessages = [];
+    state.copilotLastResults = [];
+    state.copilotScheduleDraft = null;
+    state.copilotConversationMemories = [];
+    state.copilotPendingMemory = null;
+    state.copilotPendingTransition = null;
+    state.copilotConsultationRequest = null;
+    state.copilotFilters = {};
+    state.copilotHighlightIds = [];
+  }
+
   function setSession(session) {
     if (!session || !session.accessToken) {
       clearSession();
       return;
     }
+    const previousSession = getSession();
+    const previousIdentity = firstProfileText(previousSession?.userId, previousSession?.email).toLowerCase();
+    const nextIdentity = firstProfileText(session.userId, session.email).toLowerCase();
+    if (previousIdentity && nextIdentity && previousIdentity !== nextIdentity) resetCopilotUserState();
     sessionStorage.setItem(SESSION_KEY, JSON.stringify(session));
   }
 
   function clearSession() {
     sessionStorage.removeItem(SESSION_KEY);
+    resetCopilotUserState();
   }
 
   function syncPanelGroup({ buttonSelector, panelSelector, stateKey, fallback, buttonDatasetKey, panelDatasetKey }) {
@@ -10522,6 +10571,59 @@
     return profiles.find((profile) => profile.userId && profile.userId === session.userId)
       || profiles.find((profile) => profile.email && profile.email.toLowerCase() === String(session.email || "").toLowerCase())
       || normalizeUserProfile({ id: session.userId, email: session.email, ...session.profile });
+  }
+
+  function usableGroundskeeperName(value) {
+    const cleaned = profileText(value).replace(/\s+/g, " ");
+    if (!cleaned || /^(?:undefined|null|unknown|n\/a)$/i.test(cleaned) || cleaned.includes("@")) return "";
+    return cleaned;
+  }
+
+  function emailGreetingName(email) {
+    const localPart = profileText(email).split("@")[0].toLowerCase();
+    if (!localPart || /\d/.test(localPart)) return "";
+    const genericAliases = new Set(["admin", "billing", "contact", "hello", "help", "info", "office", "owner", "sales", "support", "team"]);
+    const words = localPart.split(/[._-]+/).map((word) => word.trim()).filter(Boolean);
+    if (!words.length || genericAliases.has(words[0]) || words[0].length < 2) return "";
+    return words.join(" ");
+  }
+
+  function firstGreetingName(value) {
+    const name = usableGroundskeeperName(value);
+    if (!name) return "";
+    const first = name.split(" ")[0].replace(/^[^a-z]+|[^a-z'-]+$/gi, "");
+    if (!first) return "";
+    return `${first.charAt(0).toUpperCase()}${first.slice(1).toLowerCase()}`;
+  }
+
+  function groundskeeperGreetingFirstName(data = state.data) {
+    const session = getSession() || {};
+    const sessionProfile = session.profile || {};
+    const profile = isDemoMode()
+      ? (data.userProfiles || [])[0] || {}
+      : currentUserProfile(data);
+    const profileDisplayName = firstProfileText(
+      profile.display_name,
+      profile.displayName,
+      profile.preferred_name,
+      profile.preferredName,
+      sessionProfile.profileDisplayName
+    );
+    const profileFullName = firstProfileText(
+      profile.full_name,
+      profile.fullName,
+      [profile.first_name, profile.last_name].map(profileText).filter(Boolean).join(" "),
+      [profile.firstName, profile.lastName].map(profileText).filter(Boolean).join(" "),
+      sessionProfile.profileFullName
+    );
+    const resolved = firstProfileText(
+      usableGroundskeeperName(profileDisplayName),
+      usableGroundskeeperName(profileFullName),
+      usableGroundskeeperName(sessionProfile.authFullName),
+      usableGroundskeeperName(sessionProfile.authName),
+      emailGreetingName(session.email)
+    );
+    return firstGreetingName(resolved) || "there";
   }
 
   function renderCurrentProfileAvatar(data = state.data) {
@@ -23919,20 +24021,6 @@ Requirements:
         await handleDashboardCopilotMessage(copilotTarget.dataset.prompt || "");
         return;
       }
-      if (action === "copilot-shortcut") {
-        const section = copilotTarget.dataset.copilotSection || "overview";
-        if (section === "reports") {
-          state.moneyView = "reports";
-          await loadMoneyView("reports");
-          setActiveSection("documents");
-          replaceDashboardHash("documents");
-        } else {
-          setActiveSection(section);
-          replaceDashboardHash(section);
-        }
-        await render();
-        return;
-      }
       if (action === "copilot-cancel-schedule") {
         state.copilotScheduleDraft = null;
         copilotPush("assistant", "The visit preview was cancelled. Nothing was added.");
@@ -24079,7 +24167,30 @@ Requirements:
       await render();
     });
 
+    document.addEventListener("input", (event) => {
+      const input = event.target instanceof Element && event.target.matches("[data-dashboard-copilot-form] textarea")
+        ? event.target
+        : null;
+      if (!input) return;
+      const sendButton = input.form?.querySelector("[data-copilot-send]");
+      if (sendButton) sendButton.disabled = state.copilotLoading || !String(input.value || "").trim();
+    });
+
     document.addEventListener("keydown", (event) => {
+      const copilotInput = event.target instanceof Element && event.target.matches("[data-dashboard-copilot-form] textarea")
+        ? event.target
+        : null;
+      if (copilotInput && event.key === "Enter" && !event.shiftKey && !event.isComposing) {
+        event.preventDefault();
+        if (!state.copilotLoading && String(copilotInput.value || "").trim()) copilotInput.form?.requestSubmit();
+        return;
+      }
+      const copilotLauncher = event.target instanceof Element ? event.target.closest(".dashboard-copilot-launcher") : null;
+      if (copilotLauncher && ["Enter", " "].includes(event.key)) {
+        event.preventDefault();
+        copilotLauncher.click();
+        return;
+      }
       if (event.key !== "Escape" || !state.copilotOpen) return;
       state.copilotOpen = false;
       renderDashboardCopilot();

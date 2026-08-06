@@ -23964,7 +23964,7 @@ Requirements:
       ? "Showing the last saved forecast"
       : homeWeatherUpdatedLabel(state.weatherFetchedAt);
     return `<header class="home-weather-header">
-      <div><p class="clean-section-label">Portland, OR</p><h2>7-Day Weather</h2><span>${escapeHtml(statusText || "National Weather Service forecast")}</span></div>
+      <div><p class="clean-section-label">Portland, OR</p><h2>7-Day Weather</h2><span>${escapeHtml(statusText || "National Weather Service forecast")}<small data-weather-range></small></span></div>
       <div class="home-weather-controls" aria-label="Weather forecast controls">
         <button type="button" data-action="weather-scroll" data-direction="previous" aria-label="Previous forecast days" disabled>${homeWeatherControlIcon("previous")}</button>
         <button type="button" data-action="weather-scroll" data-direction="next" aria-label="Next forecast days" disabled>${homeWeatherControlIcon("next")}</button>
@@ -23981,9 +23981,25 @@ Requirements:
     const section = rail.closest("[data-home-weather]");
     const previous = section?.querySelector('[data-action="weather-scroll"][data-direction="previous"]');
     const next = section?.querySelector('[data-action="weather-scroll"][data-direction="next"]');
+    const range = section?.querySelector("[data-weather-range]");
     const maxScroll = Math.max(0, rail.scrollWidth - rail.clientWidth);
     if (previous) previous.disabled = maxScroll <= 2 || rail.scrollLeft <= 16;
     if (next) next.disabled = maxScroll <= 2 || rail.scrollLeft >= maxScroll - 16;
+    if (range) {
+      const cards = [...rail.querySelectorAll(".home-weather-day:not(.home-weather-skeleton)")];
+      const railBox = rail.getBoundingClientRect();
+      const visible = cards.map((card, index) => ({ index, box: card.getBoundingClientRect() }))
+        .filter(({ box }) => box.left >= railBox.left - 2 && box.right <= railBox.right + 2)
+        .map(({ index }) => index);
+      const card = cards[0];
+      const styles = getComputedStyle(rail);
+      const gap = Number.parseFloat(styles.columnGap || styles.gap || "0") || 0;
+      const step = (card?.getBoundingClientRect().width || 1) + gap;
+      const fallbackStart = Math.max(0, Math.min(cards.length - 1, Math.round(rail.scrollLeft / step)));
+      const start = visible[0] ?? fallbackStart;
+      const end = visible.at(-1) ?? start;
+      range.textContent = cards.length ? ` · Showing ${start + 1}–${end + 1} of ${cards.length} days` : "";
+    }
   }
 
   function bindHomeWeatherRail() {

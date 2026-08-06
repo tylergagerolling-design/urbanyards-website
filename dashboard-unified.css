@@ -633,6 +633,12 @@ body:not(.is-login-screen) .dashboard-main .home-weather-header > div:first-chil
   font-size:.69rem;
 }
 
+body:not(.is-login-screen) .dashboard-main .home-weather-header > div:first-child > span small{
+  color:var(--clean-green);
+  font:inherit;
+  font-weight:700;
+}
+
 body:not(.is-login-screen) .dashboard-main .home-weather-controls{
   flex:0 0 auto;
   display:flex;
@@ -671,7 +677,7 @@ body:not(.is-login-screen) .dashboard-main .home-weather-controls svg{
 body:not(.is-login-screen) .dashboard-main .home-weather-rail{
   display:grid;
   grid-auto-flow:column;
-  grid-auto-columns:minmax(132px,1fr);
+  grid-auto-columns:calc((100% - 30px)/4);
   gap:10px;
   width:100%;
   min-width:0;
@@ -877,6 +883,10 @@ body:not(.is-login-screen) .dashboard-main .home-weather-skeleton span{display:n
 
 @keyframes home-weather-pulse{50%{opacity:.5}}
 body:not(.is-login-screen) .dashboard-main .home-weather-rail.is-loading .home-weather-skeleton i{animation:home-weather-pulse 1.2s ease-in-out infinite}
+
+@media(max-width:1000px){
+  body:not(.is-login-screen) .dashboard-main .home-weather-rail{grid-auto-columns:calc((100% - 20px)/3)}
+}
 
 @media(max-width:760px){
   body:not(.is-login-screen) .dashboard-main .home-weather-header{align-items:flex-start;padding:12px}

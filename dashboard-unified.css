@@ -513,3 +513,96 @@ body:not(.is-login-screen) .app-view .dashboard-copilot.is-open{
     bottom:auto!important;
   }
 }
+
+/* Clients and Call Queue should use one white page canvas, like Home and Work.
+   Their legacy wrappers each added a second inset and made the real content
+   look narrow inside a gray outer box. Flatten only those page-level wrappers;
+   the functional cards, toolbars, tables, forms, and drawers remain grouped. */
+html body:not(.is-login-screen) .dashboard-main > :is(#contacts,#call-queue).dashboard-section.is-active{
+  width:100%!important;
+  max-width:1600px!important;
+  min-width:0!important;
+  padding:24px!important;
+  background:#fff!important;
+}
+
+html body:not(.is-login-screen) .dashboard-main #contacts > .uy-page-intro-panel{
+  width:100%!important;
+  max-width:none!important;
+  min-width:0!important;
+  margin:0!important;
+  padding:0!important;
+  border:0!important;
+  border-radius:0!important;
+  background:#fff!important;
+  box-shadow:none!important;
+}
+
+html body:not(.is-login-screen) .dashboard-main #contacts > .uy-page-intro-panel > .panel-heading{
+  position:relative;
+  margin:0 0 18px!important;
+  padding:0 0 18px!important;
+  border:0!important;
+  border-bottom:1px solid rgba(18,63,49,.15)!important;
+  background:#fff!important;
+}
+
+html body:not(.is-login-screen) .dashboard-main #contacts > .uy-page-intro-panel > .panel-heading:after{
+  content:"";
+  position:absolute;
+  bottom:-1px;
+  left:0;
+  width:68px;
+  height:3px;
+  border-radius:3px;
+  background:#e2aa21;
+}
+
+html body:not(.is-login-screen) .dashboard-main #contacts :is(.toolbar,.contact-grid,.client-detail-page){
+  width:100%!important;
+  max-width:none!important;
+  min-width:0!important;
+  box-sizing:border-box!important;
+}
+
+html body:not(.is-login-screen) .dashboard-main #contacts .contact-grid:not(:has(.client-detail-page)){
+  grid-template-columns:repeat(auto-fit,minmax(min(100%,340px),1fr))!important;
+  gap:16px!important;
+}
+
+html body:not(.is-login-screen) .dashboard-main #contacts .client-detail-host .contact-grid:has(.client-detail-page){
+  display:block!important;
+}
+
+html body:not(.is-login-screen) .dashboard-main #call-queue > [data-call-queue-workspace],
+html body:not(.is-login-screen) .dashboard-main #call-queue .call-queue-reference{
+  width:100%!important;
+  max-width:none!important;
+  min-width:0!important;
+  margin:0!important;
+  padding:0!important;
+  box-sizing:border-box!important;
+  background:#fff!important;
+}
+
+html body:not(.is-login-screen) .dashboard-main #call-queue .cq-entries-card{
+  width:100%!important;
+  max-width:none!important;
+  min-width:0!important;
+  margin:0!important;
+  box-sizing:border-box!important;
+}
+
+@media(max-width:760px){
+  html body:not(.is-login-screen) .dashboard-main > :is(#contacts,#call-queue).dashboard-section.is-active{
+    padding:14px 12px 88px!important;
+  }
+
+  html body:not(.is-login-screen) .dashboard-main #contacts .contact-grid:not(:has(.client-detail-page)){
+    grid-template-columns:1fr!important;
+  }
+
+  html body:not(.is-login-screen) .dashboard-main #call-queue .call-queue-reference{
+    padding:0!important;
+  }
+}

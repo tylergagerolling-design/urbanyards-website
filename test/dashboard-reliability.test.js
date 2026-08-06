@@ -1586,3 +1586,13 @@ test("Call Queue can classify callers for Online Quote Requests and Leads", () =
   assert.match(js, /action === "call-queue-promote-lead"[\s\S]*status: "Interested"[\s\S]*classified as a lead from Call Queue/);
   assert.match(js, /Leads from Call Queue[\s\S]*renderLeadQueueItem/);
 });
+
+test("Clients and Call Queue use a flat, fluid page canvas", () => {
+  const css = read("dashboard-unified.css");
+
+  assert.match(css, /> :is\(#contacts,#call-queue\)\.dashboard-section\.is-active\{[\s\S]*padding:24px!important;[\s\S]*background:#fff!important/);
+  assert.match(css, /#contacts > \.uy-page-intro-panel\{[\s\S]*max-width:none!important;[\s\S]*padding:0!important;[\s\S]*border:0!important;[\s\S]*box-shadow:none!important/);
+  assert.match(css, /#contacts \.contact-grid:not\(:has\(\.client-detail-page\)\)\{[\s\S]*repeat\(auto-fit,minmax\(min\(100%,340px\),1fr\)\)/);
+  assert.match(css, /#call-queue \.call-queue-reference\{[\s\S]*max-width:none!important;[\s\S]*padding:0!important;[\s\S]*background:#fff!important/);
+  assert.match(css, /#call-queue \.cq-entries-card\{[\s\S]*width:100%!important;[\s\S]*max-width:none!important/);
+});

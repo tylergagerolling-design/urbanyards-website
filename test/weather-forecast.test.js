@@ -197,7 +197,7 @@ test("Home weather markup exposes accessible controls, disabled-end logic, and c
   const js = read("dashboard.js");
   const css = read("dashboard-unified.css");
   const netlify = read("netlify.toml");
-  assert.match(html, /scripts\/weather-forecast\.js\?v=20260806-weather-icons-1/);
+  assert.match(html, /scripts\/weather-forecast\.js\?v=20260806-weather-alerts-1/);
   assert.match(js, /aria-label="Previous forecast days"/);
   assert.match(js, /aria-label="Next forecast days"/);
   assert.match(js, /aria-label="Refresh weather"/);

@@ -444,6 +444,16 @@
     weatherError: "",
     weatherRequest: null,
     weatherResizeBound: false,
+    weatherAlertsData: [],
+    weatherAlertsStatus: "idle",
+    weatherAlertsFetchedAt: 0,
+    weatherAlertsStale: false,
+    weatherAlertsError: "",
+    weatherAlertsRequest: null,
+    weatherAlertsPollTimer: null,
+    weatherAlertsExpiryTimer: null,
+    weatherAlertsVisibilityBound: false,
+    expandedWeatherAlertIds: new Set(),
     routeDate: todayKey(),
     routeWeekStart: "",
     routeSelectedDate: "",
@@ -24100,6 +24110,229 @@ Requirements:
     return request;
   }
 
+  function homeWeatherAlertsApi() {
+    return window.UrbanYardsWeatherAlerts || null;
+  }
+
+  function homeWeatherAlertSvg(name) {
+    const paths = {
+      warning: '<path d="M10.3 4.4 2.7 17.6A1.6 1.6 0 0 0 4.1 20h15.8a1.6 1.6 0 0 0 1.4-2.4L13.7 4.4a2 2 0 0 0-3.4 0Z"></path><path d="M12 9v4"></path><path d="M12 17h.01"></path>',
+      check: '<path d="M20 11.1V12a8 8 0 1 1-4.8-7.3"></path><path d="m9 11 3 3L22 4"></path>',
+      refresh: '<path d="M20 11a8 8 0 1 0 2 5"></path><path d="M20 4v7h-7"></path>',
+      chevron: '<path d="m9 18 6-6-6-6"></path>'
+    };
+    return `<svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">${paths[name] || paths.warning}</svg>`;
+  }
+
+  function safeHomeWeatherAlertUrl(value) {
+    try {
+      const url = new URL(String(value || ""));
+      return url.protocol === "https:" && /(^|\.)weather\.gov$/i.test(url.hostname) ? url.href : "https://www.weather.gov/";
+    } catch (error) {
+      return "https://www.weather.gov/";
+    }
+  }
+
+  function renderHomeWeatherAlertParagraphs(value) {
+    const escaped = escapeHtml(String(value || "").trim());
+    if (!escaped) return "";
+    return escaped.split(/\n{2,}/).map((paragraph) => `<p>${paragraph.replace(/\n/g, "<br>")}</p>`).join("");
+  }
+
+  function activeHomeWeatherAlerts() {
+    const api = homeWeatherAlertsApi();
+    return state.weatherAlertsData.filter((alert) => api?.isAlertActive?.(alert) !== false);
+  }
+
+  function renderHomeWeatherAlert(alert, index) {
+    const api = homeWeatherAlertsApi();
+    const expanded = state.expandedWeatherAlertIds.has(alert.id);
+    const detailsId = `home-weather-alert-details-${index}`;
+    const severity = api?.normalizeSeverity?.(alert.severity) || "Unknown";
+    const severityClass = severity.toLowerCase();
+    const iconId = api?.resolveAlertIcon?.(alert.event) || "";
+    const icon = iconId
+      ? `<span class="home-weather-alert-icon"><img src="images/weather-icon-pack/png-128/${escapeHtml(iconId)}.png" alt="" aria-hidden="true" data-weather-alert-icon><span hidden>${homeWeatherAlertSvg("warning")}</span></span>`
+      : `<span class="home-weather-alert-icon is-generic">${homeWeatherAlertSvg("warning")}</span>`;
+    const expires = api?.formatAlertExpiration?.(alert.expires) || "Expiration time unavailable";
+    const startsAt = alert.onset || alert.effective;
+    const sourceUrl = safeHomeWeatherAlertUrl(alert.webUrl);
+    return `<article class="home-weather-alert-card is-${escapeHtml(severityClass)}">
+      <div class="home-weather-alert-summary">
+        ${icon}
+        <div class="home-weather-alert-copy">
+          <div class="home-weather-alert-title-row"><h3>${escapeHtml(alert.event || "Weather alert")}</h3><span class="home-weather-alert-badge">${escapeHtml(severity)}</span></div>
+          <p>${escapeHtml(alert.headline || alert.event || "National Weather Service alert")}</p>
+          <div class="home-weather-alert-meta"><span>${escapeHtml(alert.senderName || "National Weather Service")}</span><time datetime="${escapeHtml(alert.expires || "")}">${escapeHtml(expires)}</time></div>
+        </div>
+        <button type="button" class="home-weather-alert-toggle" data-action="toggle-weather-alert" data-id="${escapeHtml(alert.id)}" aria-expanded="${expanded ? "true" : "false"}" aria-controls="${detailsId}"><span>${expanded ? "Hide details" : "View details"}</span>${homeWeatherAlertSvg("chevron")}</button>
+      </div>
+      <div class="home-weather-alert-details" id="${detailsId}" ${expanded ? "" : "hidden"}>
+        <div><h4>Description</h4>${renderHomeWeatherAlertParagraphs(alert.description) || "<p>No additional description was provided.</p>"}</div>
+        ${alert.instruction ? `<div><h4>Recommended actions</h4>${renderHomeWeatherAlertParagraphs(alert.instruction)}</div>` : ""}
+        <dl>
+          <div><dt>Affected area</dt><dd>${escapeHtml(alert.areaDescription || "Portland area")}</dd></div>
+          <div><dt>Effective</dt><dd>${escapeHtml(api?.formatAlertTimestamp?.(startsAt) || "Not provided")}</dd></div>
+          <div><dt>Expires</dt><dd>${escapeHtml(api?.formatAlertTimestamp?.(alert.expires) || "Not provided")}</dd></div>
+          <div><dt>Urgency</dt><dd>${escapeHtml(alert.urgency || "Unknown")}</dd></div>
+          <div><dt>Certainty</dt><dd>${escapeHtml(alert.certainty || "Unknown")}</dd></div>
+        </dl>
+        <a href="${escapeHtml(sourceUrl)}" target="_blank" rel="noopener noreferrer">View on the National Weather Service <span aria-hidden="true">&nearr;</span></a>
+      </div>
+    </article>`;
+  }
+
+  function renderHomeWeatherAlertSkeletons() {
+    return `<div class="home-weather-alert-skeleton" aria-hidden="true"><i></i><span><i></i><i></i></span></div><div class="home-weather-alert-skeleton" aria-hidden="true"><i></i><span><i></i><i></i></span></div>`;
+  }
+
+  function renderHomeWeatherAlertsContent() {
+    const alerts = activeHomeWeatherAlerts();
+    const hasSavedResponse = state.weatherAlertsFetchedAt > 0;
+    const loading = state.weatherAlertsStatus === "loading" && !hasSavedResponse;
+    const refreshing = state.weatherAlertsStatus === "refreshing";
+    const failed = state.weatherAlertsStatus === "error" && !hasSavedResponse;
+    const updatedLabel = homeWeatherUpdatedLabel(state.weatherAlertsFetchedAt).replace(/^Updated/, "Last updated");
+    const statusText = state.weatherAlertsStale
+      ? `${updatedLabel || "Last updated previously"} - live updates temporarily unavailable`
+      : updatedLabel || "Active watches, warnings, and advisories";
+    let body = "";
+    if (loading) {
+      body = `<div class="home-weather-alert-list is-loading">${renderHomeWeatherAlertSkeletons()}</div>`;
+    } else if (failed) {
+      body = `<div class="home-weather-alert-error" role="alert"><span>${homeWeatherAlertSvg("warning")}<span><strong>Weather alerts are temporarily unavailable.</strong><small>Please try again in a moment.</small></span></span><button type="button" data-action="refresh-weather-alerts">Retry</button></div>`;
+    } else if (!alerts.length) {
+      body = `<div class="home-weather-alert-clear"><span>${homeWeatherAlertSvg("check")}</span><span><strong>No active NWS alerts for Portland</strong><small>Conditions are currently clear of active watches, warnings, and advisories.</small></span></div>`;
+    } else {
+      body = `<div class="home-weather-alert-list">${state.weatherAlertsStale ? `<div class="home-weather-alert-stale" role="status">Weather alerts are temporarily unavailable. Showing the most recent successful response from ${escapeHtml(updatedLabel.replace(/^Last updated /, "") || "earlier")}.</div>` : ""}${alerts.map(renderHomeWeatherAlert).join("")}</div>`;
+    }
+    return `<header class="home-weather-alert-header">
+      <div><p class="clean-section-label">National Weather Service</p><h2 id="home-weather-alerts-title">Portland Weather Alerts</h2><span>${escapeHtml(statusText)}</span></div>
+      <button type="button" class="home-weather-alert-refresh${refreshing ? " is-refreshing" : ""}" data-action="refresh-weather-alerts" aria-label="Refresh Portland weather alerts" ${loading || refreshing ? "disabled" : ""}>${homeWeatherAlertSvg("refresh")}</button>
+    </header>
+    ${body}
+    <footer class="home-weather-alert-footer"><a href="https://www.weather.gov/" target="_blank" rel="noopener noreferrer">Alerts by the National Weather Service <span aria-hidden="true">&nearr;</span></a></footer>
+    <p class="sr-only" aria-live="polite">${loading ? "Loading Portland weather alerts." : refreshing ? "Refreshing Portland weather alerts." : failed ? "Weather alerts are temporarily unavailable." : alerts.length ? `${alerts.length} active Portland weather alert${alerts.length === 1 ? "" : "s"}.` : "No active National Weather Service alerts for Portland."}</p>`;
+  }
+
+  function scheduleHomeWeatherAlertExpiry() {
+    if (state.weatherAlertsExpiryTimer) window.clearTimeout(state.weatherAlertsExpiryTimer);
+    state.weatherAlertsExpiryTimer = null;
+    const expirations = activeHomeWeatherAlerts().map((alert) => Date.parse(alert.expires)).filter(Number.isFinite);
+    if (!expirations.length) return;
+    const delay = Math.max(1000, Math.min(Math.min(...expirations) - Date.now() + 1000, 2147483000));
+    state.weatherAlertsExpiryTimer = window.setTimeout(() => {
+      state.weatherAlertsData = activeHomeWeatherAlerts();
+      updateHomeWeatherAlertsSection();
+    }, delay);
+  }
+
+  function bindHomeWeatherAlertIcons() {
+    qsa("[data-weather-alert-icon]").forEach((image) => image.addEventListener("error", () => {
+      image.hidden = true;
+      const fallback = image.nextElementSibling;
+      if (fallback) fallback.hidden = false;
+    }, { once: true }));
+  }
+
+  function updateHomeWeatherAlertsSection() {
+    const section = qs("[data-home-weather-alerts]");
+    if (!section) return;
+    section.innerHTML = renderHomeWeatherAlertsContent();
+    bindHomeWeatherAlertIcons();
+    scheduleHomeWeatherAlertExpiry();
+  }
+
+  function ensureHomeWeatherAlerts(options = {}) {
+    const api = homeWeatherAlertsApi();
+    const forceRefresh = Boolean(options.forceRefresh);
+    if (!api) {
+      state.weatherAlertsStatus = "error";
+      state.weatherAlertsError = "The weather alert service did not load.";
+      updateHomeWeatherAlertsSection();
+      return Promise.resolve(null);
+    }
+    if (state.weatherAlertsRequest) return state.weatherAlertsRequest;
+
+    let cached = null;
+    try {
+      cached = api.readAlertsCache(window.localStorage);
+    } catch (error) {
+      cached = null;
+    }
+    if (!forceRefresh && cached?.hasCache) {
+      state.weatherAlertsData = cached.data;
+      state.weatherAlertsFetchedAt = cached.fetchedAt;
+      state.weatherAlertsStatus = "ready";
+      state.weatherAlertsStale = !cached.isFresh;
+      state.weatherAlertsError = "";
+      updateHomeWeatherAlertsSection();
+      if (cached.isFresh) return Promise.resolve(cached);
+    } else if (!state.weatherAlertsFetchedAt) {
+      state.weatherAlertsStatus = "loading";
+      state.weatherAlertsError = "";
+      updateHomeWeatherAlertsSection();
+    }
+
+    const request = api.loadWeatherAlerts({ forceRefresh })
+      .then((result) => {
+        state.weatherAlertsData = Array.isArray(result?.data) ? result.data : [];
+        state.weatherAlertsFetchedAt = Number(result?.fetchedAt || Date.now());
+        state.weatherAlertsStale = Boolean(result?.stale);
+        state.weatherAlertsError = result?.error ? "Weather alerts are temporarily unavailable." : "";
+        state.weatherAlertsStatus = "ready";
+        updateHomeWeatherAlertsSection();
+        return result;
+      })
+      .catch((error) => {
+        state.weatherAlertsStatus = state.weatherAlertsFetchedAt ? "ready" : "error";
+        state.weatherAlertsStale = state.weatherAlertsFetchedAt > 0;
+        state.weatherAlertsError = "Weather alerts are temporarily unavailable.";
+        if (/^(localhost|127\.0\.0\.1)$/.test(window.location.hostname)) console.warn("Weather alerts request failed.", error);
+        updateHomeWeatherAlertsSection();
+        return null;
+      })
+      .finally(() => {
+        state.weatherAlertsRequest = null;
+      });
+    state.weatherAlertsRequest = request;
+    return request;
+  }
+
+  function stopHomeWeatherAlertsPolling() {
+    if (!state.weatherAlertsPollTimer) return;
+    window.clearInterval(state.weatherAlertsPollTimer);
+    state.weatherAlertsPollTimer = null;
+  }
+
+  function startHomeWeatherAlertsPolling() {
+    if (document.hidden || state.weatherAlertsPollTimer) return;
+    const api = homeWeatherAlertsApi();
+    const intervalMs = api?.ALERTS_CACHE_TTL_MS || 10 * 60 * 1000;
+    state.weatherAlertsPollTimer = window.setInterval(() => {
+      if (!document.hidden && qs("[data-home-weather-alerts]")) void ensureHomeWeatherAlerts({ forceRefresh: true });
+    }, intervalMs);
+  }
+
+  function setupHomeWeatherAlertsPolling() {
+    if (!state.weatherAlertsVisibilityBound) {
+      state.weatherAlertsVisibilityBound = true;
+      document.addEventListener("visibilitychange", () => {
+        if (document.hidden) {
+          stopHomeWeatherAlertsPolling();
+          return;
+        }
+        const api = homeWeatherAlertsApi();
+        const staleAfter = api?.ALERTS_CACHE_TTL_MS || 10 * 60 * 1000;
+        if (qs("[data-home-weather-alerts]") && Date.now() - state.weatherAlertsFetchedAt >= staleAfter) {
+          void ensureHomeWeatherAlerts({ forceRefresh: true });
+        }
+        startHomeWeatherAlertsPolling();
+      });
+    }
+    startHomeWeatherAlertsPolling();
+  }
+
   function renderCleanOperationsHome() {
     const host = qs("[data-home-focus-work]");
     if (!host) return;
@@ -24124,6 +24357,7 @@ Requirements:
         ${renderFocusMetric("briefcase", String(openTickets.length), "Open Tickets", "", "open")}
       </section>
       <section class="home-weather-section" data-home-weather aria-label="Portland weather forecast">${renderHomeWeatherContent()}</section>
+      <section class="home-weather-alerts-section" data-home-weather-alerts aria-labelledby="home-weather-alerts-title">${renderHomeWeatherAlertsContent()}</section>
       <div class="clean-home-grid">
         <section class="focus-card clean-schedule-card">
           <div class="focus-card-header"><div><p class="clean-section-label">Today</p><h2>Today&rsquo;s Schedule</h2></div><a href="#calendar">Open Work</a></div>
@@ -24140,7 +24374,10 @@ Requirements:
       </section>
     </div>`;
     bindHomeWeatherRail();
+    bindHomeWeatherAlertIcons();
+    setupHomeWeatherAlertsPolling();
     void ensureHomeWeather();
+    void ensureHomeWeatherAlerts();
   }
 
   const UNIFIED_TICKET_REFERENCE = Object.freeze({
@@ -26165,6 +26402,22 @@ Requirements:
         state.weatherError = "";
         updateHomeWeatherSection();
         await ensureHomeWeather({ forceRefresh: true });
+        return;
+      }
+
+      if (action === "refresh-weather-alerts") {
+        state.weatherAlertsStatus = state.weatherAlertsFetchedAt ? "refreshing" : "loading";
+        state.weatherAlertsError = "";
+        updateHomeWeatherAlertsSection();
+        await ensureHomeWeatherAlerts({ forceRefresh: true });
+        return;
+      }
+
+      if (action === "toggle-weather-alert") {
+        if (state.expandedWeatherAlertIds.has(id)) state.expandedWeatherAlertIds.delete(id);
+        else state.expandedWeatherAlertIds.add(id);
+        updateHomeWeatherAlertsSection();
+        requestAnimationFrame(() => qs(`[data-action="toggle-weather-alert"][data-id="${cssEscape(id)}"]`)?.focus());
         return;
       }
 

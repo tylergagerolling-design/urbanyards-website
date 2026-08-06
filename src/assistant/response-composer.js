@@ -50,9 +50,8 @@ function composeDeterministicReply(toolResults = [], options = {}) {
   const successful = new Map(toolResults.filter((result) => result.ok).map((result) => [result.name, result.output]));
   const firstName = String(options.userFirstName || "").trim();
   const greeting = firstName ? `${firstName}, ` : "";
-  if (/\b(?:search|look up|find)\b[\s\S]*\b(?:the web|web|internet|official website|current weather|weather forecast)\b/i.test(String(options.message || ""))) {
-    return `${greeting}that is an outside web request. Approved external web search is not configured for The Lawnmower Man yet, so I did not mix public-web information with your private Urban Yards records.`;
-  }
+  const dashboardSearchFailure = toolResults.find((result) => ["search_dashboard", "search_records"].includes(result.name) && !result.ok);
+  if (dashboardSearchFailure) return `${greeting}I couldn’t access the dashboard search right now. No records were invented or treated as missing.`;
   const transitionResult = toolResults.find((result) => result.name === "transition_ticket_stage");
   if (transitionResult?.ok && transitionResult.output?.preview) {
     const preview = transitionResult.output.preview;
@@ -84,7 +83,7 @@ function composeDeterministicReply(toolResults = [], options = {}) {
       ? `I found ${count} completed uninvoiced ticket${count === 1 ? "" : "s"} with ${total} in known value.${missing ? ` ${missing} ticket${missing === 1 ? " is" : "s are"} missing a value, so this total is partial.` : ""} Open “How I got this” to review the source records.`
       : "I found no completed uninvoiced tickets in the records currently available to The Lawnmower Man.";
   }
-  const recordSearch = successful.get("search_records");
+  const recordSearch = successful.get("search_dashboard") || successful.get("search_records");
   const search = recordSearch?.search;
   if (search) {
     const results = search.results || [];

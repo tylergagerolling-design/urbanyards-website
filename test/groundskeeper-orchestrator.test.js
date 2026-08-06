@@ -151,7 +151,7 @@ test("no-match search returns a specific empty result without inventing records"
     actor: owner,
     hasPermission
   });
-  const search = result.toolResults.find((entry) => entry.name === "search_records");
+  const search = result.toolResults.find((entry) => entry.name === "search_dashboard");
   assert.equal(search.ok, true);
   assert.equal(search.output.records.length, 0);
   assert.equal(search.output.summary, "0 matching records");

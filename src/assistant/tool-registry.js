@@ -124,6 +124,97 @@ function getTicketDetails({ recordId, snapshot }) {
   };
 }
 
+const NAVIGATION_ROUTES = new Set([
+  "overview", "tickets", "calendar", "route-planner", "outreach", "call-queue",
+  "documents", "contacts", "equipment", "documentation", "import-export",
+  "groundskeeper-ai", "ai-memory", "settings"
+]);
+
+const DASHBOARD_RECORD_TYPES = new Set([
+  "ticket", "job", "lead", "client", "property", "contact", "quote", "invoice",
+  "payment", "expense", "schedule", "worker", "work_note", "call_queue", "document",
+  "photo", "form", "activity"
+]);
+
+function safeSnapshotRecord(recordType, record) {
+  return {
+    ...toReference(recordType, record),
+    status: record.status || record.stage || undefined,
+    date: record.date || record.updated_at || record.created_at || undefined,
+    amount: Number.isFinite(Number(record.amount)) ? Number(record.amount) : undefined
+  };
+}
+
+async function getDashboardRecord({ recordType, recordId, snapshot, actor, pageContext, searchService }) {
+  const type = normalize(recordType).replace(/\s+/g, "_");
+  const id = String(recordId || "").trim();
+  if (!DASHBOARD_RECORD_TYPES.has(type)) {
+    const error = new Error("A valid dashboard record type is required.");
+    error.code = "RECORD_TYPE_INVALID";
+    throw error;
+  }
+  if (!/^[-a-zA-Z0-9._:]{1,180}$/.test(id)) {
+    const error = new Error("A valid dashboard record ID is required.");
+    error.code = "RECORD_ID_INVALID";
+    throw error;
+  }
+  if (searchService?.search) {
+    const search = await searchService.search({ actor, query: "", entityTypes: [type], filters: { recordId: id }, limit: 2, pageContext });
+    const record = (search.results || []).find((item) => item.entityType === type && String(item.id) === id);
+    if (!record) {
+      if (search.deniedEntityTypes?.includes(type)) {
+        const error = new Error("You do not have permission to view that dashboard record.");
+        error.code = "RECORD_PERMISSION_DENIED";
+        throw error;
+      }
+      return { summary: "The dashboard record was not found.", records: [], citations: [], notFound: true, partial: false, search };
+    }
+    return {
+      summary: `Retrieved ${record.title || `${type} record`}`,
+      records: [record],
+      citations: [recordReference({ recordType: type, recordId: record.id, displayId: record.title, title: record.subtitle || record.title, route: record.route })],
+      notFound: false,
+      partial: Boolean(search.partial),
+      search
+    };
+  }
+  const match = flattenSnapshot(snapshot).find((item) => item.recordType === type && String(item.record?.id) === id);
+  if (!match) return { summary: "The dashboard record was not found.", records: [], citations: [], notFound: true, partial: false };
+  const record = safeSnapshotRecord(type, match.record);
+  return { summary: `Retrieved ${record.title}`, records: [record], citations: [record], notFound: false, partial: false };
+}
+
+async function navigateDashboard({ route, recordType, recordId, snapshot, actor, pageContext, searchService }) {
+  const normalizedRoute = String(route || "").trim().replace(/^#/, "");
+  if (normalizedRoute && !NAVIGATION_ROUTES.has(normalizedRoute)) {
+    const error = new Error("That dashboard destination is not registered.");
+    error.code = "NAVIGATION_ROUTE_INVALID";
+    throw error;
+  }
+  if (recordType || recordId) {
+    const recordResult = await getDashboardRecord({ recordType, recordId, snapshot, actor, pageContext, searchService });
+    if (recordResult.notFound) {
+      const error = new Error("I found the reference, but the dashboard record no longer exists or is not available to you.");
+      error.code = "NAVIGATION_RECORD_NOT_FOUND";
+      throw error;
+    }
+    const record = recordResult.records[0];
+    return {
+      summary: `Validated navigation to ${record.title}`,
+      navigation: { type: "open_record", recordType: record.entityType || recordType, recordId: record.id || recordId, route: String(record.route || routeFor(recordType)).replace(/^#/, "") },
+      records: recordResult.records,
+      citations: recordResult.citations,
+      partial: recordResult.partial
+    };
+  }
+  if (!normalizedRoute) {
+    const error = new Error("A registered dashboard destination is required.");
+    error.code = "NAVIGATION_ROUTE_REQUIRED";
+    throw error;
+  }
+  return { summary: `Validated navigation to ${normalizedRoute}`, navigation: { type: "navigate", route: normalizedRoute }, records: [], citations: [], partial: false };
+}
+
 async function findUnpaidInvoices({ snapshot, limit = 20, actor, pageContext, searchService }) {
   if (searchService?.search) {
     const search = await searchService.search({
@@ -237,7 +328,10 @@ function createToolRegistry({ permissionGuard }) {
     if (!tool?.name || typeof tool.execute !== "function") throw new Error("Invalid assistant tool definition.");
     definitions.set(tool.name, Object.freeze({ timeoutMs: 2500, classification: "read", requiresConfirmation: false, ...tool }));
   };
-  register({ name: "search_records", description: "Search authenticated, permission-scoped dashboard records through the secure server search layer.", requiredPermission: "dashboard:read", inputSchema: { query: "string", entityTypes: "array", filters: "object", limit: "number" }, outputSchema: { records: "array", citations: "array", search: "object" }, execute: searchRecords });
+  register({ name: "search_dashboard", description: "Search authenticated, permission-scoped dashboard records through the secure server search layer.", requiredPermission: "dashboard:read", inputSchema: { query: "string", entityTypes: "array", filters: "object", limit: "number" }, outputSchema: { records: "array", citations: "array", search: "object" }, execute: searchRecords });
+  register({ name: "search_records", description: "Compatibility alias for the authenticated dashboard search.", requiredPermission: "dashboard:read", inputSchema: { query: "string", entityTypes: "array", filters: "object", limit: "number" }, outputSchema: { records: "array", citations: "array", search: "object" }, execute: searchRecords });
+  register({ name: "get_dashboard_record", description: "Retrieve one identified, permission-scoped dashboard record by real type and ID.", requiredPermission: "dashboard:read", inputSchema: { recordType: "string", recordId: "string" }, outputSchema: { records: "array", citations: "array", notFound: "boolean" }, execute: getDashboardRecord });
+  register({ name: "navigate_dashboard", description: "Validate an existing dashboard route or identified record before the client performs navigation.", requiredPermission: "dashboard:read", inputSchema: { route: "string", recordType: "string", recordId: "string" }, outputSchema: { navigation: "object", records: "array", citations: "array" }, execute: navigateDashboard });
   register({ name: "find_blocked_tickets", description: "Find tickets with explicit workflow blockers.", requiredPermission: "tickets:read", inputSchema: {}, outputSchema: { records: "array", citations: "array" }, execute: findBlockedTickets });
   register({ name: "get_attention_items", description: "Return deterministic priority items already calculated by the dashboard.", requiredPermission: "dashboard:read", inputSchema: {}, outputSchema: { records: "array", citations: "array" }, execute: getAttentionItems });
   register({ name: "get_ticket_details", description: "Get one resolved ticket from the permitted context.", requiredPermission: "tickets:read", inputSchema: { recordId: "string" }, outputSchema: { records: "array", citations: "array" }, execute: getTicketDetails });
@@ -300,4 +394,4 @@ function createToolRegistry({ permissionGuard }) {
   };
 }
 
-module.exports = { createToolRegistry, findCompletedUninvoicedWork, findUnpaidInvoices, getAttentionItems, getTicketDetails, previewTicketStageTransition, resolveTicketStage, searchRecords };
+module.exports = { createToolRegistry, findCompletedUninvoicedWork, findUnpaidInvoices, getAttentionItems, getDashboardRecord, getTicketDetails, navigateDashboard, previewTicketStageTransition, resolveTicketStage, searchRecords };

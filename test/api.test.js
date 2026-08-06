@@ -3,7 +3,7 @@ const assert = require("node:assert/strict");
 
 const quoteHandler = require("../api/quote");
 const assistantHandler = require("../api/assistant");
-const groundskeeperHandler = require("../api/groundskeeper-ai");
+const lawnmowerManHandler = require("../api/lawnmower-man-chat");
 const healthHandler = require("../api/health");
 const retentionHandler = require("../api/retention-cleanup");
 const { sendWebhook } = require("../api/lib/integrations");
@@ -86,7 +86,7 @@ test("quote endpoint rejects unsupported methods", async () => {
 
 test("dashboard Gemini consultation route rejects unauthenticated requests", async () => {
   const res = mockResponse();
-  await groundskeeperHandler(request("POST", {
+  await lawnmowerManHandler(request("POST", {
     mode: "dashboard",
     message: "Consult Gemini about this budget.",
     consultation: { manual: true }
@@ -95,9 +95,9 @@ test("dashboard Gemini consultation route rejects unauthenticated requests", asy
   assert.match(res.payload.error, /unauthorized|sign in|authentication/i);
 });
 
-test("Groundskeeper rejects oversized consultation requests before provider calls", async () => {
+test("The Groundskeeper rejects oversized public requests before provider calls", async () => {
   const res = mockResponse();
-  await groundskeeperHandler(request("POST", {
+  await assistantHandler(request("POST", {
     mode: "public",
     message: "x".repeat(1500),
     consultation: { manual: true }
@@ -162,7 +162,7 @@ test("valid quote fails honestly when no delivery integration is configured", as
   });
 });
 
-test("assistant requires a server-side OpenAI key", async () => {
+test("The Groundskeeper uses approved static knowledge when OpenAI is unavailable", async () => {
   const original = {
     OPENAI_API_KEY: process.env.OPENAI_API_KEY,
     SUPABASE_SERVICE_KEY: process.env.SUPABASE_SERVICE_KEY,
@@ -174,8 +174,9 @@ test("assistant requires a server-side OpenAI key", async () => {
   try {
     const res = mockResponse();
     await assistantHandler(request("POST", { message: "Do you mow lawns?" }), res);
-    assert.equal(res.statusCode, 503);
-    assert.match(res.payload.error, /The Lawnmower Man is not available/i);
+    assert.equal(res.statusCode, 200);
+    assert.match(res.payload.reply, /lawn|Urban Yards|quote/i);
+    assert.equal(res.payload.assistantType, "groundskeeper");
     assert.equal("OPENAI_API_KEY" in res.payload, false);
   } finally {
     Object.entries(original).forEach(([key, value]) => {
@@ -244,7 +245,7 @@ test("site knowledge retrieves FAQ answers and asks one lead question", () => {
   assert.doesNotMatch(reply, /What service are you looking for.*best phone number/s);
 });
 
-test("assistant returns a graceful error if the model request fails", async () => {
+test("The Groundskeeper falls back to approved knowledge if the model request fails", async () => {
   const originalKey = process.env.OPENAI_API_KEY;
   const originalFetch = global.fetch;
   process.env.OPENAI_API_KEY = "test-key";
@@ -264,8 +265,9 @@ test("assistant returns a graceful error if the model request fails", async () =
   try {
     const res = mockResponse();
     await assistantHandler(request("POST", { message: "How do I get a quote?" }), res);
-    assert.equal(res.statusCode, 502);
-    assert.match(res.payload.error, /The Lawnmower Man is not available/i);
+    assert.equal(res.statusCode, 200);
+    assert.match(res.payload.reply, /free quote|request a quote/i);
+    assert.equal(res.payload.assistantType, "groundskeeper");
   } finally {
     global.fetch = originalFetch;
     originalKey === undefined ? delete process.env.OPENAI_API_KEY : process.env.OPENAI_API_KEY = originalKey;
@@ -294,13 +296,15 @@ test("assistant sends relevant site knowledge to the model", async () => {
     assert.equal(res.statusCode, 200);
     assert.match(res.payload.reply, /Pressure Washing/i);
     const siteMessage = capturedBody.messages.find((message) => message.content.startsWith("Urban Yards website knowledge source"));
-    const businessMessage = capturedBody.messages.find((message) => message.content.includes("Core Urban Yards facts"));
+    const businessMessage = capturedBody.messages.find((message) => message.content.includes("You are The Groundskeeper"));
     assert.ok(siteMessage);
     assert.ok(businessMessage);
     assert.match(siteMessage.content, /Pressure Washing/i);
     assert.match(siteMessage.content, /request a quote/i);
-    assert.match(businessMessage.content, /Portland, Vancouver & Beaverton/i);
-    assert.match(businessMessage.content, /Square invoices/i);
+    assert.match(businessMessage.content, /public website guide/i);
+    assert.match(businessMessage.content, /cannot search the web/i);
+    assert.match(businessMessage.content, /do not have access to Urban Yards' dashboard/i);
+    assert.equal(capturedBody.store, false);
   } finally {
     global.fetch = originalFetch;
     originalKey === undefined ? delete process.env.OPENAI_API_KEY : process.env.OPENAI_API_KEY = originalKey;

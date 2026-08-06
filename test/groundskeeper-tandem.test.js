@@ -190,7 +190,7 @@ test("persona mode appears only when both assistants add grounded value", async 
   });
   assert.equal(result.collaboration.mode, "persona");
   assert.equal(result.collaboration.personaContributions.length, 2);
-  assert.deepEqual(result.collaboration.personaContributions.map((item) => item.persona), ["groundskeeper", "lawnmower_man"]);
+  assert.deepEqual(result.collaboration.personaContributions.map((item) => item.persona), ["primary", "verification"]);
 });
 
 test("application tool broker validates identity and deduplicates provider requests", async () => {

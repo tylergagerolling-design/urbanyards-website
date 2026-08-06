@@ -9,7 +9,7 @@ const ASSISTANT_INTENTS = Object.freeze([
   "irrigation_troubleshooting", "drainage_troubleshooting", "property_inspection",
   "estimate_request", "material_calculation", "labor_calculation", "field_guidance",
   "safety_question", "licensing_question", "photo_review", "memory_request",
-  "search_records", "retrieve_record_details", "summarize_information", "navigate",
+  "search_dashboard", "get_dashboard_record", "navigate_dashboard", "search_records", "retrieve_record_details", "summarize_information", "navigate",
   "filter_and_navigate", "dashboard_question", "general_question", "clarification_needed",
   "search_internal", "search_external", "search_internal_and_external",
   "retrieve_internal_record", "research_entity", "compare_sources", "summarize_research"

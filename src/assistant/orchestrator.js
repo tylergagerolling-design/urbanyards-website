@@ -38,7 +38,7 @@ function toolsForRouting(routing, resolvedEntity, searchPlan = {}) {
   const calls = [];
   if ((!searchPlan.external || searchPlan.internalRequested) && (searchPlan.searchRequested || routing.intents.includes("record_search"))) {
     calls.push({
-      name: "search_records",
+      name: "search_dashboard",
       input: {
         query: searchPlan.query ?? queryFromMessage(routing.message),
         entityTypes: searchPlan.entityTypes || [],
@@ -51,7 +51,7 @@ function toolsForRouting(routing, resolvedEntity, searchPlan = {}) {
   if (/\b(attention|today|urgent|priority|falls through)\b/i.test(routing.message)) calls.push({ name: "get_attention_items", input: {} });
   if (/\b(unpaid|outstanding|receivable)\b/i.test(routing.message) && /\binvoices?\b/i.test(routing.message)) calls.push({ name: "find_unpaid_invoices", input: {} });
   if (/\b(completed|finished)\b/i.test(routing.message) && /\b(uninvoiced|not (?:yet )?(?:been )?invoiced|without an invoice)\b/i.test(routing.message)) calls.push({ name: "find_completed_uninvoiced_work", input: {} });
-  if (resolvedEntity?.recordType === "ticket") calls.push({ name: "get_ticket_details", input: { recordId: resolvedEntity.recordId } });
+  if (resolvedEntity?.recordType && resolvedEntity?.recordId) calls.push({ name: "get_dashboard_record", input: { recordType: resolvedEntity.recordType, recordId: resolvedEntity.recordId } });
   if (resolvedEntity?.record && /\b(related|relationship|history|everything about|connected)\b/i.test(routing.message)) {
     calls.push({ name: "map_record_relationships", input: { recordType: resolvedEntity.recordType, record: resolvedEntity.record } });
   }
@@ -157,7 +157,7 @@ async function orchestrateDashboardRequest({ message, context = {}, actor, hasPe
       .catch(externalResearchFailure)
     : Promise.resolve({ status: "not_requested", summary: "", results: [], findings: [], entityMatches: [], updateProposals: [] });
   const [toolResults, externalResearch] = await Promise.all([toolResultsTask, externalResearchTask]);
-  const searchOutput = toolResults.find((result) => result.name === "search_records" && result.ok)?.output?.search || null;
+  const searchOutput = toolResults.find((result) => ["search_dashboard", "search_records"].includes(result.name) && result.ok)?.output?.search || null;
   const resolvedEntity = searchOutput
     ? resolvedFromSearch(searchOutput)
     : snapshotResolvedEntity;

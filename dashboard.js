@@ -38,8 +38,8 @@
     follow_up_later: "Follow-up needed"
   };
   const SESSION_KEY = "urbanYardsDashboardSession";
-  const COPILOT_CONVERSATION_KEY_PREFIX = "urbanYardsGroundskeeperConversation:";
-  const COPILOT_SOURCE_MODE_KEY = "urbanYardsGroundskeeperSourceMode";
+  const COPILOT_CONVERSATION_KEY_PREFIX = "urbanYardsLawnmowerManConversation:";
+  const COPILOT_SOURCE_MODE_KEY = "urbanYardsLawnmowerManSourceMode";
   const CALL_METHOD_KEY = "urbanYardsPreferredCallMethod";
   const DASHBOARD_THEME_KEY = "urbanYardsDashboardTheme";
   const DASHBOARD_COMPACT_KEY = "urbanYardsDashboardCompact";
@@ -2522,7 +2522,7 @@
   async function groundskeeperRequest(action, payload = {}, options = {}) {
     const session = getSession();
     if (!session || !session.accessToken) throw new Error("Please sign in again.");
-    const response = await fetch("/.netlify/functions/groundskeeper-ai", {
+    const response = await fetch("/.netlify/functions/lawnmower-man-chat", {
       method: "POST",
       signal: options.signal,
       headers: {
@@ -2531,7 +2531,6 @@
       },
       body: JSON.stringify({
         action,
-        mode: "dashboard",
         payload
       })
     });
@@ -2844,14 +2843,13 @@
   async function groundskeeperChat(message, operation = "", consultation = null) {
     const session = getSession();
     if (!session || !session.accessToken) throw new Error("Please sign in again.");
-    const response = await fetch("/.netlify/functions/groundskeeper-ai", {
+    const response = await fetch("/.netlify/functions/lawnmower-man-chat", {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
         Authorization: `Bearer ${session.accessToken}`
       },
       body: JSON.stringify({
-        mode: "dashboard",
         message,
         page: "Urban Yards Owner Dashboard",
         history: [...state.copilotMessages, ...state.groundskeeperMessages]
@@ -3091,18 +3089,18 @@
     const webHtml = webResults.length ? `<section class="copilot-web-results" aria-label="Public web sources"><strong>Public web sources</strong><ul>${webResults.slice(0, 8).map((source) => `<li><a href="${escapeHtml(source.url || "#")}" target="_blank" rel="noopener noreferrer">${escapeHtml(source.title || "Public web source")}</a></li>`).join("")}</ul></section>` : "";
     if (!meta.used || !Array.isArray(meta.providers) || meta.providers.length < 2) return webHtml;
     if (meta.mode !== "persona" || !Array.isArray(meta.personaContributions) || meta.personaContributions.length < 2) {
-      return `<div class="copilot-collaboration-review" aria-label="AI collaboration review"><strong>The Lawnmower Man</strong><span>Powered by ChatGPT + Gemini</span></div>${webHtml}`;
+      return `<div class="copilot-collaboration-review" aria-label="AI verification review"><strong>The Lawnmower Man</strong><span>Verified response</span></div>${webHtml}`;
     }
     const identity = {
-      groundskeeper: ["Groundkeeper", "ChatGPT"],
-      lawnmower_man: ["Lawnmower Man", "Gemini"]
+      primary: ["Primary analysis", "Operations"],
+      verification: ["Verification review", "Independent check"]
     };
-    return `<section class="copilot-persona-exchange" aria-label="Groundkeeper and Lawnmower Man analysis">
+    return `<section class="copilot-persona-exchange" aria-label="The Lawnmower Man verification analysis">
       ${meta.personaContributions.slice(0, 2).map((contribution) => {
         const labels = identity[contribution.persona] || ["Assistant", contribution.provider || "AI"];
         return `<article><header><strong>${escapeHtml(labels[0])}</strong><span>— ${escapeHtml(labels[1])}</span></header><p>${escapeHtml(contribution.text || "")}</p>${contribution.optionalComment ? `<small>${escapeHtml(contribution.optionalComment)}</small>` : ""}</article>`;
       }).join("")}
-      </section><div class="copilot-collaboration-review" aria-label="AI collaboration review"><strong>The Lawnmower Man</strong><span>Powered by ChatGPT + Gemini</span></div>${webHtml}`;
+      </section><div class="copilot-collaboration-review" aria-label="AI verification review"><strong>The Lawnmower Man</strong><span>Verified response</span></div>${webHtml}`;
   }
 
   async function saveCopilotMemory(memoryType) {
@@ -3247,7 +3245,7 @@
             <img class="copilot-header-mask" src="images/groundskeeper-ai/groundskeeper-ai-keaton-mask.png" alt="" aria-hidden="true">
             <div>
               <h2 id="groundskeeper-copilot-title">The Lawnmower Man</h2>
-              <p>Two minds. One landscaping operation.</p>
+              <p>Private operations intelligence for Urban Yards.</p>
             </div>
           </div>
           <button type="button" data-action="toggle-dashboard-copilot" aria-label="Close The Lawnmower Man">
@@ -3277,7 +3275,7 @@
           `}
         </div>
         <div class="copilot-source-toolbar">
-          <label for="groundskeeper-source-mode"><span>Search sources</span><select id="groundskeeper-source-mode" data-copilot-source-mode aria-label="Choose Groundkeeper research sources">
+          <label for="groundskeeper-source-mode"><span>Search sources</span><select id="groundskeeper-source-mode" data-copilot-source-mode aria-label="Choose The Lawnmower Man research sources">
             <option value="auto"${state.copilotSourceMode === "auto" ? " selected" : ""}>Smart choice</option>
             <option value="internal"${state.copilotSourceMode === "internal" ? " selected" : ""}>Urban Yards only</option>
             <option value="external"${state.copilotSourceMode === "external" ? " selected" : ""}>Public web only</option>
@@ -3543,7 +3541,7 @@
       message,
       history,
       version: state.trainingPreviewMode,
-      page: "The Lawnmower Man training preview"
+      page: "The Groundskeeper training preview"
     });
   }
 
@@ -18438,9 +18436,9 @@ Requirements:
           })}
           ${renderToolsLaunchGroup({
             title: "AI",
-            detail: "Train and review The Lawnmower Man.",
+            detail: "Operate The Lawnmower Man and train The Groundskeeper.",
             items: [
-              { label: "The Lawnmower Man", detail: aiLiveVersion === "Not published" ? "Training not published" : `Published ${aiLiveVersion}`, action: "go-groundskeeper-ai" },
+              { label: "The Groundskeeper Training", detail: aiLiveVersion === "Not published" ? "Training not published" : `Published ${aiLiveVersion}`, action: "go-groundskeeper-ai" },
               { label: "AI Memory", detail: "Approved persistent context", href: "#ai-memory" },
               { label: "AI Website Preview", detail: "Review the visitor experience", action: "focus-helper-preview" }
             ]
@@ -22280,7 +22278,7 @@ Requirements:
 
   const AI_SECTIONS = [
     { id: "operations", icon: "OP", title: "Operations", table: "", type: "", description: "Review daily work, tickets, leads, estimates, schedules, closeout, Money, and client communication with live dashboard context." },
-    { id: "training", icon: "TR", title: "The Lawnmower Man Training", table: "ai_training_rules", type: "trainingRules", description: "Train, test, approve, and publish how The Lawnmower Man responds to website visitors." },
+    { id: "training", icon: "TR", title: "The Groundskeeper Training", table: "ai_training_rules", type: "trainingRules", description: "Train, test, approve, and publish how The Groundskeeper responds to website visitors." },
     { id: "landscaping", icon: "LK", title: "Landscaping Knowledge", table: "", type: "landscapingKnowledge", description: "Versioned general, Pacific Northwest, Urban Yards, and safety knowledge used by The Lawnmower Man." },
     { id: "assistant", icon: "AI", title: "The Lawnmower Man", table: "", type: "", description: "Ask for follow-up drafts, lead summaries, copy ideas, or outreach planning. Dashboard mode can use internal AI knowledge." },
     { id: "settings", icon: "BF", title: "Business Facts", table: "ai_settings", type: "settings", description: "Settings, service area, contact info, tone, quote process, and payment process." },
@@ -22663,7 +22661,7 @@ Requirements:
     const messages = state.trainingMessages;
     if (!messages.length) {
       return `<article class="training-message is-assistant">
-        <p>Tell me how The Lawnmower Man should behave on the website. I will turn your instruction into clean training rules you can save, approve, test, and push live.</p>
+        <p>Tell me how The Groundskeeper should behave on the website. I will turn your instruction into clean training rules you can save, approve, test, and push live.</p>
       </article>`;
     }
     return messages.map((message, messageIndex) => `
@@ -22730,7 +22728,7 @@ Requirements:
 
   function renderTrainingPreviewMessages() {
     if (!state.trainingPreviewMessages.length) {
-      return `<article class="training-preview-message is-assistant">Ask a sample visitor question to see how The Lawnmower Man would respond on the website.</article>`;
+      return `<article class="training-preview-message is-assistant">Ask a sample visitor question to see how The Groundskeeper would respond on the website.</article>`;
     }
     return state.trainingPreviewMessages.map((message) => (
       `<article class="training-preview-message is-${escapeHtml(message.role)}">${escapeHtml(message.content)}</article>`
@@ -22779,7 +22777,7 @@ Requirements:
   function renderPublishModal(ai) {
     if (!state.trainingPublishModalOpen) return "";
     const approved = (ai.trainingRules || []).filter((rule) => String(rule.status || "").toLowerCase() === "approved");
-    return `<div class="ai-training-modal" role="dialog" aria-modal="true" aria-label="Push The Lawnmower Man training live">
+    return `<div class="ai-training-modal" role="dialog" aria-modal="true" aria-label="Push The Groundskeeper training live">
       <div class="ai-training-modal-card">
         <div class="ai-training-modal-head">
           <div>
@@ -22788,7 +22786,7 @@ Requirements:
           </div>
           <button class="inline-action" type="button" data-action="close-training-modal">Close</button>
         </div>
-        <p class="training-publish-copy">This will publish ${escapeHtml(approved.length)} approved training item${approved.length === 1 ? "" : "s"} to The Lawnmower Man on the public website. Draft items will stay private.</p>
+        <p class="training-publish-copy">This will publish ${escapeHtml(approved.length)} approved training item${approved.length === 1 ? "" : "s"} to The Groundskeeper on the public website. Draft items will stay private.</p>
         <div class="training-publish-list">
           ${approved.length ? approved.map((rule) => `<span>${escapeHtml(rule.title || "Training rule")}</span>`).join("") : "<span>No approved items are ready to publish.</span>"}
         </div>
@@ -22838,7 +22836,7 @@ Requirements:
         <section class="panel ai-training-preview-panel" data-helper-preview-panel>
           <div class="ai-training-panel-head">
             <div>
-              <p class="eyebrow">The Lawnmower Man Website Preview</p>
+              <p class="eyebrow">The Groundskeeper Website Preview</p>
               <h3>Test Visitor Questions</h3>
               <p>Preview the public website experience with live rules or with drafts included before publishing.</p>
             </div>
@@ -22867,7 +22865,7 @@ Requirements:
     const approvedRules = (ai.trainingRules || []).filter((rule) => String(rule.status || "").toLowerCase() === "approved").length;
     if (els.groundskeeperAiStatus) {
       els.groundskeeperAiStatus.innerHTML = state.groundskeeperAiReady
-        ? `<span>${aiBadge("Secure Backend", "Secure Backend")} The Lawnmower Man uses live training through <code>/.netlify/functions/groundskeeper-ai</code>.</span><span>${escapeHtml(liveTrainingVersion(ai).label)} / ${escapeHtml(liveRules)} live / ${escapeHtml(approvedRules)} approved</span>`
+        ? `<span>${aiBadge("Secure Backend", "Secure Backend")} The Lawnmower Man operations and The Groundskeeper training are loaded through the authenticated backend.</span><span>${escapeHtml(liveTrainingVersion(ai).label)} / ${escapeHtml(liveRules)} live / ${escapeHtml(approvedRules)} approved</span>`
         : `<span>${aiBadge("Needs Attention", "Needs Attention")} The Lawnmower Man could not load from the secure backend.</span><span>${escapeHtml(state.groundskeeperAiError || "Refresh the dashboard, then check Netlify function logs or Supabase/RLS if it stays down.")}</span>`;
     }
     if (els.aiSearch && els.aiSearch.value !== state.groundskeeperAiSearch) els.aiSearch.value = state.groundskeeperAiSearch;
@@ -28309,7 +28307,7 @@ Requirements:
           state.trainingPublishModalOpen = false;
           state.data.groundskeeperAi = await loadGroundskeeperAi();
           await render();
-          setDashboardState("Approved training rules are now live in The Lawnmower Man on the website.");
+          setDashboardState("Approved training rules are now live in The Groundskeeper on the website.");
         } catch (error) {
           setDashboardState(error.message || "Unable to push AI training live.", "error");
         }
@@ -28417,7 +28415,7 @@ Requirements:
           "Improve website copy": "Improve this Urban Yards website copy while keeping the tone practical, local, owner-operated, and clear.",
           "Create FAQ answer": "Create a public website FAQ answer using Urban Yards service area, quote process, and brand voice.",
           "Review visitor question": "Review this visitor question and suggest whether it should become a FAQ, rule, or knowledge entry.",
-          "Add service rule": "Draft a clear AI rule for how The Lawnmower Man should answer service-related questions."
+          "Add service rule": "Draft a clear AI rule for how The Groundskeeper should answer service-related questions."
         };
         const textarea = qs("[data-groundskeeper-chat-form] textarea[name='message']");
         if (textarea) {
@@ -31611,9 +31609,9 @@ Requirements:
           await render();
           setDashboardState("");
         } catch (error) {
-          state.trainingMessages.push({ role: "assistant", content: error.message || "The Lawnmower Man training is unavailable right now." });
+          state.trainingMessages.push({ role: "assistant", content: error.message || "The Groundskeeper training is unavailable right now." });
           renderGroundskeeperAi(state.data);
-          setDashboardState(error.message || "Unable to train The Lawnmower Man.", "error");
+          setDashboardState(error.message || "Unable to train The Groundskeeper.", "error");
         }
       } else if (event.target.matches("[data-training-preview-form]")) {
         event.preventDefault();
@@ -31665,7 +31663,7 @@ Requirements:
           event.target.reset();
           state.data.groundskeeperAi = await loadGroundskeeperAi();
           await render();
-          setDashboardState("The Lawnmower Man entry saved. Publish when it should affect the public assistant.");
+          setDashboardState("The Groundskeeper entry saved. Publish when it should affect the public assistant.");
         } catch (error) {
           setDashboardState(error.message || "Unable to save AI entry.", "error");
         }

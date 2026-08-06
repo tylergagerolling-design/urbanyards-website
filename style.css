@@ -1583,7 +1583,8 @@ input:focus, select:focus, textarea:focus { outline: 0; }
   letter-spacing: .05em;
   text-transform: uppercase;
 }
-.uy-assistant-lead input {
+.uy-assistant-lead input,
+.uy-assistant-lead textarea {
   min-width: 0;
   padding: 8px 9px;
   border: 1px solid rgba(18, 63, 49, .14);
@@ -1591,6 +1592,20 @@ input:focus, select:focus, textarea:focus { outline: 0; }
   background: #fffdf7;
   color: var(--charcoal);
   font: inherit;
+}
+.uy-assistant-lead textarea { resize: vertical; }
+.uy-assistant-lead-wide { grid-column: 1 / -1; }
+.uy-assistant-lead-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 10px;
+}
+.uy-assistant-lead-summary {
+  margin-top: 10px;
+  color: var(--forest);
+  font-size: .72rem;
+  line-height: 1.45;
 }
 .uy-assistant-form {
   display: grid;

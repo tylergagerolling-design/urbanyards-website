@@ -1,1 +1,1 @@
-module.exports = require("./groundskeeper-ai");
+module.exports = require("./groundskeeper-chat");

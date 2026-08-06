@@ -42,7 +42,7 @@ test("archived workspace polish remains available with current dashboard assets"
   assert.match(css, /\.groundskeeper-operation-card[\s\S]*white-space: normal !important/);
   assert.match(css, /\.dashboard-health-item strong[\s\S]*word-break: break-all/);
   assert.match(html, /dashboard\.css\?v=20260806-controlled-research-1/);
-  assert.match(html, /dashboard\.js\?v=20260806-lawnmower-man-1/);
+  assert.match(html, /dashboard\.js\?v=20260806-assistant-isolation-1/);
 });
 
 test("Tickets Leads and Money use the same flat white page canvas as Home and Work", () => {
@@ -74,7 +74,7 @@ test("collapsed AI launcher sits bottom-right and clears mobile navigation", () 
   assert.match(css, /@media\(max-width:760px\)[\s\S]*?\.dashboard-copilot\{[\s\S]*?bottom:calc\(100px \+ env\(safe-area-inset-bottom\)\)!important/);
 });
 
-test("combined AI product uses the local Keaton Mask launcher and monochrome popup", () => {
+test("separate AI products keep the dashboard Keaton Mask launcher and distinct public identity", () => {
   const html = read("dashboard.html");
   const js = read("dashboard.js");
   const css = read("dashboard.css");
@@ -86,12 +86,12 @@ test("combined AI product uses the local Keaton Mask launcher and monochrome pop
   assert.equal(maskPng.readUInt32BE(16), 512);
   assert.equal(maskPng.readUInt32BE(20), 512);
   assert.match(html, /<h1>The Lawnmower Man<\/h1>/);
-  assert.match(html, /Two minds\. One landscaping operation\./);
-  assert.match(publicAssistant, /<h2 id="uy-assistant-title">The Lawnmower Man<\/h2>/);
-  assert.match(publicAssistant, /Two minds\. One landscaping operation\./);
+  assert.match(html, /Private operations intelligence for Urban Yards\./);
+  assert.match(publicAssistant, /<h2 id="uy-assistant-title">The Groundskeeper<\/h2>/);
+  assert.match(publicAssistant, /Urban Yards[’'] website guide\./);
   assert.match(js, /dashboard-copilot-launcher[\s\S]{0,500}aria-label="Open The Lawnmower Man"/);
   assert.match(js, /dashboard-copilot-launcher[\s\S]{0,500}images\/groundskeeper-ai\/groundskeeper-ai-keaton-mask\.png/);
-  assert.match(js, /Two minds\. One landscaping operation\./);
+  assert.match(js, /Private operations intelligence for Urban Yards\./);
   assert.match(js, /Hi \$\{escapeHtml\(greetingName\)\}!/);
   assert.match(js, /I’m The Lawnmower Man\./);
   assert.match(js, /Here to help with your landscaping jobs, plants, routes, equipment, and more\./);
@@ -101,9 +101,10 @@ test("combined AI product uses the local Keaton Mask launcher and monochrome pop
   assert.match(copilotRenderer, /copilot-header-mask[\s\S]{0,220}groundskeeper-ai-keaton-mask\.png/);
   assert.match(copilotRenderer, /copilot-welcome-mask[\s\S]{0,220}groundskeeper-ai-keaton-mask\.png/);
   assert.match(copilotRenderer, /copilot-message-label/);
-  assert.match(js, /groundskeeper: \["Groundkeeper", "ChatGPT"\]/);
-  assert.match(js, /lawnmower_man: \["Lawnmower Man", "Gemini"\]/);
-  assert.match(js, /Powered by ChatGPT \+ Gemini/);
+  assert.match(js, /primary: \["Primary analysis", "Operations"\]/);
+  assert.match(js, /verification: \["Verification review", "Independent check"\]/);
+  assert.match(js, /Verified response/);
+  assert.doesNotMatch(js, /Powered by ChatGPT \+ Gemini/);
   assert.match(js, /copilotLauncher && \["Enter", " "\]\.includes\(event\.key\)[\s\S]{0,160}copilotLauncher\.click\(\)/);
   assert.match(js, /copilotInput && event\.key === "Enter" && !event\.shiftKey/);
   assert.match(css, /The Lawnmower Man — monochrome Keaton Mask popup/);
@@ -182,7 +183,8 @@ test("authenticated assistant prompt suppresses public quote calls to action", (
   const api = read("api/groundskeeper-ai.js");
   assert.match(api, /You are responding inside the authenticated Urban Yards owner dashboard/);
   assert.match(api, /Do not invite the operator to request a free quote/);
-  assert.match(api, /mode === "dashboard" \? \[\{ role: "system", content: DASHBOARD_CONTEXT \}\] : \[\]/);
+  assert.match(api, /\{ role: "system", content: DASHBOARD_CONTEXT \}/);
+  assert.doesNotMatch(api, /sanitizeMode|mode === "public" \? .*DASHBOARD_CONTEXT/);
 });
 
 function withEnv(patch, callback) {
@@ -1464,7 +1466,7 @@ test("the persistent dashboard copilot replaces duplicate page-level AI tool str
   assert.doesNotMatch(js, /host\.prepend\(panel\)/);
   assert.match(js, /function renderDashboardCopilot/);
   assert.match(js, /groundskeeper-ai-keaton-mask\.png/);
-  assert.match(js, /Two minds\. One landscaping operation\./);
+  assert.match(js, /Private operations intelligence for Urban Yards\./);
   assert.match(js, /Ask me anything\.\.\./);
   const renderer = js.slice(js.indexOf("function renderDashboardCopilot"), js.indexOf("function copilotTicketRows"));
   assert.doesNotMatch(renderer, /raccoon|data-copilot-section|copilot-shortcuts/);

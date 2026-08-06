@@ -251,10 +251,10 @@ test("server route remains authenticated and frontend contains no Gemini secret"
   assert.doesNotMatch(dashboard, /data-action="copilot-consult-gemini"|data-action="copilot-double-check"|data-action="copilot-consultation-settings"/);
 });
 
-test("provider errors preserve the primary Groundskeeper fallback path", () => {
+test("provider errors preserve The Lawnmower Man primary fallback path", () => {
   const api = fs.readFileSync(path.join(__dirname, "..", "api", "groundskeeper-ai.js"), "utf8");
   assert.match(api, /runTandemAssistant/);
-  assert.match(api, /groundskeeperFallback: safeDeterministicReply/);
+  assert.match(api, /primaryFallback: safeDeterministicReply/);
   assert.match(api, /canUseGemini[\s\S]*createGeminiProvider/);
   assert.doesNotMatch(api, /second-opinion service was unavailable/);
 });

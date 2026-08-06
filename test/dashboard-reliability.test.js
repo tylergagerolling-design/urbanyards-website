@@ -42,7 +42,7 @@ test("archived workspace polish remains available with current dashboard assets"
   assert.match(css, /\.groundskeeper-operation-card[\s\S]*white-space: normal !important/);
   assert.match(css, /\.dashboard-health-item strong[\s\S]*word-break: break-all/);
   assert.match(html, /dashboard\.css\?v=20260806-controlled-research-1/);
-  assert.match(html, /dashboard\.js\?v=20260806-home-weather-qa-1/);
+  assert.match(html, /dashboard\.js\?v=20260806-weather-icons-1/);
 });
 
 test("Tickets Leads and Money use the same flat white page canvas as Home and Work", () => {
@@ -50,7 +50,7 @@ test("Tickets Leads and Money use the same flat white page canvas as Home and Wo
   const html = read("dashboard.html");
   assert.match(css, /:is\(#tickets,#outreach,#documents\)\.dashboard-section\.is-active\{\s*padding:0!important;\s*background:#fff!important/);
   assert.match(css, /:is\(#tickets \.tickets-timeline-page,#outreach \.online-quote-workspace,#documents \.money-workspace\)\{\s*background:#fff!important/);
-  assert.match(html, /dashboard-unified\.css\?v=20260806-home-weather-qa-1/);
+  assert.match(html, /dashboard-unified\.css\?v=20260806-weather-icons-1/);
 });
 
 test("every Tools destination uses the Home canvas and shared content width", () => {
@@ -64,7 +64,7 @@ test("Tickets and Work filter text clears the embedded icons", () => {
   const html = read("dashboard.html");
   assert.match(css, /\.ttl-filters label > select\{\s*padding:0 34px 0 43px!important/);
   assert.match(css, /\.wol-filters label > select\{\s*padding:0 34px 0 39px!important/);
-  assert.match(html, /dashboard-unified\.css\?v=20260806-home-weather-qa-1/);
+  assert.match(html, /dashboard-unified\.css\?v=20260806-weather-icons-1/);
 });
 
 test("collapsed AI launcher sits bottom-right and clears mobile navigation", () => {

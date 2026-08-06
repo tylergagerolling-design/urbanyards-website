@@ -55,6 +55,26 @@ test("Portland weather uses the required NWS points endpoint", () => {
   assert.equal(weather.pointsEndpoint(), "https://api.weather.gov/points/45.5152,-122.6784");
 });
 
+test("Urban Yards weather icons resolve common NWS conditions with day and night variants", () => {
+  assert.equal(weather.resolveWeatherIcon("Sunny", { isDaytime: true }), "clear-day");
+  assert.equal(weather.resolveWeatherIcon("Clear", { isDaytime: false }), "clear-night");
+  assert.equal(weather.resolveWeatherIcon("Mostly Sunny", { isDaytime: true }), "mostly-clear-day");
+  assert.equal(weather.resolveWeatherIcon("Partly Cloudy", { isDaytime: false }), "partly-cloudy-night");
+  assert.equal(weather.resolveWeatherIcon("Chance Rain Showers", { isDaytime: true }), "showers-day");
+  assert.equal(weather.resolveWeatherIcon("Patchy Smoke"), "smoke");
+  assert.equal(weather.resolveWeatherIcon("Showers And Thunderstorms"), "thunderstorm-rain");
+  assert.equal(weather.resolveWeatherIcon("Unknown weather state"), "cloudy");
+});
+
+test("the supplied weather icon pack contains every manifest-listed 128px asset", () => {
+  const manifest = JSON.parse(read("images/weather-icon-pack/manifest.json"));
+  assert.equal(manifest.iconCount, 65);
+  assert.equal(manifest.icons.length, 65);
+  manifest.icons.forEach((icon) => {
+    assert.equal(fs.existsSync(path.join(root, "images", "weather-icon-pack", icon.png128)), true, `${icon.id} PNG is missing`);
+  });
+});
+
 test("forecast endpoint is discovered from points metadata and both requests use GeoJSON", async () => {
   const calls = [];
   const result = await weather.fetchWeatherForecast({
@@ -98,6 +118,7 @@ test("today is calculated in the Portland Pacific time zone", () => {
   });
   assert.equal(normalized[0].date, "2026-08-06");
   assert.equal(normalized[0].isToday, true);
+  assert.equal(normalized[0].isDaytime, true);
 });
 
 test("missing temperatures, precipitation, wind, and unsafe icons remain safe null values", () => {
@@ -176,7 +197,7 @@ test("Home weather markup exposes accessible controls, disabled-end logic, and c
   const js = read("dashboard.js");
   const css = read("dashboard-unified.css");
   const netlify = read("netlify.toml");
-  assert.match(html, /scripts\/weather-forecast\.js\?v=20260806-home-weather-1/);
+  assert.match(html, /scripts\/weather-forecast\.js\?v=20260806-weather-icons-1/);
   assert.match(js, /aria-label="Previous forecast days"/);
   assert.match(js, /aria-label="Next forecast days"/);
   assert.match(js, /aria-label="Refresh weather"/);
@@ -184,8 +205,12 @@ test("Home weather markup exposes accessible controls, disabled-end logic, and c
   assert.match(js, />Try again<\/button>/);
   assert.match(js, /Today&rsquo;s Schedule/);
   assert.match(js, /Needs Attention/);
+  assert.match(js, /images\/weather-icon-pack\/png-128\/\$\{iconId\}\.png/);
+  assert.match(js, /data-weather-fallback-src="\$\{fallbackUrl\}"/);
   assert.match(js, /previous\.disabled = maxScroll <= 2 \|\| rail\.scrollLeft <= 16/);
   assert.match(js, /next\.disabled = maxScroll <= 2 \|\| rail\.scrollLeft >= maxScroll - 16/);
+  assert.match(css, /\.home-weather-icon img\{[\s\S]*?object-fit:contain/);
+  assert.match(css, /@media\(max-width:760px\)[\s\S]*?\.home-weather-icon\{width:44px;height:44px\}/);
   assert.match(css, /\.home-weather-rail\{[\s\S]*?max-width:100%;[\s\S]*?overflow-x:auto/);
   assert.match(css, /@media\(max-width:760px\)[\s\S]*?\.home-weather-rail\{grid-auto-columns:minmax\(205px,78vw\)/);
   assert.match(netlify, /img-src[^;]*https:\/\/api\.weather\.gov/);

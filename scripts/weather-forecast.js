@@ -65,6 +65,50 @@
     }
   }
 
+  function resolveWeatherIcon(condition, options = {}) {
+    const label = String(condition || "").trim().toLowerCase().replace(/\s+/g, " ");
+    const isNight = options.isDaytime === false;
+    const dayNight = (dayIcon, nightIcon) => isNight ? nightIcon : dayIcon;
+
+    if (/tornado/.test(label)) return "tornado";
+    if (/hurricane/.test(label)) return "hurricane";
+    if (/tropical (storm|cyclone)/.test(label)) return "tropical-storm";
+    if (/severe.*(thunder|t-storm)|(?:thunder|t-storm).*severe/.test(label)) return "severe-thunderstorm";
+    if (/(thunder|t-storm).*(rain|shower)|(?:rain|shower).*(thunder|t-storm)/.test(label)) return "thunderstorm-rain";
+    if (/thunder|t-storm|lightning/.test(label)) return "thunderstorm";
+    if (/hail/.test(label)) return "hail";
+    if (/blizzard|snowstorm/.test(label)) return "blizzard";
+    if (/freezing (rain|drizzle)|ice rain/.test(label)) return "freezing-rain";
+    if (/ice pellets?/.test(label)) return "ice-pellets";
+    if (/sleet|rain and snow|wintry mix/.test(label)) return "sleet";
+    if (/heavy snow/.test(label)) return "heavy-snow";
+    if (/snow shower/.test(label)) return dayNight("snow-showers-day", "snow-showers-night");
+    if (/light snow/.test(label)) return "light-snow";
+    if (/flurr/.test(label)) return "flurries";
+    if (/snow/.test(label)) return "snow";
+    if (/heavy.*rain|torrential rain/.test(label)) return "heavy-rain";
+    if (/rain shower|showers?/.test(label)) return dayNight("showers-day", "showers-night");
+    if (/light.*drizzle/.test(label)) return "light-drizzle";
+    if (/drizzle/.test(label)) return "drizzle";
+    if (/light.*rain/.test(label)) return "light-rain";
+    if (/rain/.test(label)) return "rain";
+    if (/smoke/.test(label)) return "smoke";
+    if (/haze/.test(label)) return "haze";
+    if (/dense fog|fog/.test(label)) return "fog";
+    if (/mist/.test(label)) return "mist";
+    if (/dust|sand/.test(label)) return "dust";
+    if (/strong wind|high wind|gusty/.test(label)) return "strong-wind";
+    if (/windy|breezy|\bwind\b/.test(label)) return "windy";
+    if (/mostly sunny|fair/.test(label)) return dayNight("mostly-clear-day", "mostly-clear-night");
+    if (/mostly clear/.test(label)) return dayNight("mostly-clear-day", "mostly-clear-night");
+    if (/partly sunny|partly cloudy|few clouds/.test(label)) return dayNight("partly-cloudy-day", "partly-cloudy-night");
+    if (/mostly cloudy|broken clouds/.test(label)) return dayNight("mostly-cloudy-day", "mostly-cloudy-night");
+    if (/overcast/.test(label)) return "overcast";
+    if (/sunny|clear sky|\bclear\b/.test(label)) return dayNight("clear-day", "clear-night");
+    if (/cloud/.test(label)) return "cloudy";
+    return "cloudy";
+  }
+
   function normalizeWeatherForecast(periods, options = {}) {
     if (!Array.isArray(periods)) return [];
     const timeZone = options.timeZone || WEATHER_LOCATION.timeZone;
@@ -101,6 +145,7 @@
           windSpeed: String(primary.windSpeed || ""),
           windDirection: String(primary.windDirection || ""),
           iconUrl: safeIconUrl(primary.icon),
+          isDaytime: primary.isDaytime !== false,
           isToday: date === today
         };
       });
@@ -221,6 +266,7 @@
     locationKey,
     pointsEndpoint,
     dateKeyInTimeZone,
+    resolveWeatherIcon,
     normalizeWeatherForecast,
     fetchWeatherForecast,
     readWeatherCache,

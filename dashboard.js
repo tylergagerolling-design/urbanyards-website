@@ -23933,15 +23933,24 @@ Requirements:
     return Number.isFinite(Number(value)) ? `${Math.round(Number(value))}°${escapeHtml(unit || "F")}` : "—";
   }
 
+  function homeWeatherIconSource(day = {}) {
+    const api = homeWeatherApi();
+    const isDaytime = typeof day.isDaytime === "boolean"
+      ? day.isDaytime
+      : !/\/night\//i.test(String(day.iconUrl || ""));
+    const iconId = api?.resolveWeatherIcon?.(day.shortForecast, { isDaytime }) || "cloudy";
+    return `images/weather-icon-pack/png-128/${iconId}.png`;
+  }
+
   function renderHomeWeatherDay(day = {}) {
     const precipitation = Number.isFinite(Number(day.probabilityOfPrecipitation))
       ? `${Math.round(Number(day.probabilityOfPrecipitation))}%`
       : "—";
     const wind = [day.windDirection, day.windSpeed].filter(Boolean).join(" ") || "—";
-    const iconAlt = `${day.shortForecast || "Weather"} forecast icon`;
-    const icon = day.iconUrl
-      ? `<span class="home-weather-icon"><img src="${escapeHtml(day.iconUrl)}" alt="${escapeHtml(iconAlt)}" loading="lazy" data-weather-icon><span class="home-weather-icon-fallback" hidden>${homeWeatherControlIcon("cloud")}</span></span>`
-      : `<span class="home-weather-icon is-fallback" aria-hidden="true">${homeWeatherControlIcon("cloud")}</span>`;
+    const iconAlt = `${day.shortForecast || "Cloudy"} weather icon`;
+    const iconUrl = homeWeatherIconSource(day);
+    const fallbackUrl = "images/weather-icon-pack/png-128/cloudy.png";
+    const icon = `<span class="home-weather-icon"><img src="${escapeHtml(iconUrl)}" data-weather-fallback-src="${fallbackUrl}" alt="${escapeHtml(iconAlt)}" loading="lazy" data-weather-icon><span class="home-weather-icon-fallback" hidden>${homeWeatherControlIcon("cloud")}</span></span>`;
     return `<article class="home-weather-day${day.isToday ? " is-today" : ""}" scroll-snap-align="start" title="${escapeHtml(day.detailedForecast || day.shortForecast || "Forecast unavailable")}">
       <div class="home-weather-day-heading"><span><strong>${escapeHtml(day.weekday || "Forecast")}</strong><small>${escapeHtml(day.shortDate || "")}</small></span>${day.isToday ? '<b>Today</b>' : ""}</div>
       ${icon}
@@ -23997,6 +24006,12 @@ Requirements:
       scrollHomeWeather(event.key === "ArrowLeft" ? "previous" : "next");
     });
     rail.querySelectorAll("[data-weather-icon]").forEach((image) => image.addEventListener("error", () => {
+      const fallbackSource = image.dataset.weatherFallbackSrc;
+      if (fallbackSource && image.dataset.weatherFallbackApplied !== "true" && image.getAttribute("src") !== fallbackSource) {
+        image.dataset.weatherFallbackApplied = "true";
+        image.src = fallbackSource;
+        return;
+      }
       image.hidden = true;
       const fallback = image.nextElementSibling;
       if (fallback) fallback.hidden = false;

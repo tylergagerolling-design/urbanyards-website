@@ -1,0 +1,559 @@
+{
+  "pack": "Urban Yards Weather Icons",
+  "version": "1.0.0",
+  "iconCount": 65,
+  "icons": [
+    {
+      "id": "clear-day",
+      "svg": "svg/clear-day.svg",
+      "png512": "png-512/clear-day.png",
+      "png128": "png-128/clear-day.png",
+      "aliases": [
+        "sunny",
+        "clear sky",
+        "clear"
+      ]
+    },
+    {
+      "id": "clear-night",
+      "svg": "svg/clear-night.svg",
+      "png512": "png-512/clear-night.png",
+      "png128": "png-128/clear-night.png",
+      "aliases": [
+        "clear night"
+      ]
+    },
+    {
+      "id": "mostly-clear-day",
+      "svg": "svg/mostly-clear-day.svg",
+      "png512": "png-512/mostly-clear-day.png",
+      "png128": "png-128/mostly-clear-day.png",
+      "aliases": [
+        "mostly sunny",
+        "fair day"
+      ]
+    },
+    {
+      "id": "mostly-clear-night",
+      "svg": "svg/mostly-clear-night.svg",
+      "png512": "png-512/mostly-clear-night.png",
+      "png128": "png-128/mostly-clear-night.png",
+      "aliases": [
+        "mostly clear night"
+      ]
+    },
+    {
+      "id": "partly-cloudy-day",
+      "svg": "svg/partly-cloudy-day.svg",
+      "png512": "png-512/partly-cloudy-day.png",
+      "png128": "png-128/partly-cloudy-day.png",
+      "aliases": [
+        "partly sunny",
+        "few clouds day"
+      ]
+    },
+    {
+      "id": "partly-cloudy-night",
+      "svg": "svg/partly-cloudy-night.svg",
+      "png512": "png-512/partly-cloudy-night.png",
+      "png128": "png-128/partly-cloudy-night.png",
+      "aliases": [
+        "few clouds night",
+        "partly cloudy night"
+      ]
+    },
+    {
+      "id": "mostly-cloudy-day",
+      "svg": "svg/mostly-cloudy-day.svg",
+      "png512": "png-512/mostly-cloudy-day.png",
+      "png128": "png-128/mostly-cloudy-day.png",
+      "aliases": [
+        "mostly cloudy day",
+        "broken clouds day"
+      ]
+    },
+    {
+      "id": "mostly-cloudy-night",
+      "svg": "svg/mostly-cloudy-night.svg",
+      "png512": "png-512/mostly-cloudy-night.png",
+      "png128": "png-128/mostly-cloudy-night.png",
+      "aliases": [
+        "mostly cloudy night",
+        "broken clouds night"
+      ]
+    },
+    {
+      "id": "cloudy",
+      "svg": "svg/cloudy.svg",
+      "png512": "png-512/cloudy.png",
+      "png128": "png-128/cloudy.png",
+      "aliases": [
+        "clouds",
+        "scattered clouds"
+      ]
+    },
+    {
+      "id": "overcast",
+      "svg": "svg/overcast.svg",
+      "png512": "png-512/overcast.png",
+      "png128": "png-128/overcast.png",
+      "aliases": [
+        "overcast clouds"
+      ]
+    },
+    {
+      "id": "fog",
+      "svg": "svg/fog.svg",
+      "png512": "png-512/fog.png",
+      "png128": "png-128/fog.png",
+      "aliases": [
+        "foggy"
+      ]
+    },
+    {
+      "id": "mist",
+      "svg": "svg/mist.svg",
+      "png512": "png-512/mist.png",
+      "png128": "png-128/mist.png",
+      "aliases": [
+        "misty"
+      ]
+    },
+    {
+      "id": "haze",
+      "svg": "svg/haze.svg",
+      "png512": "png-512/haze.png",
+      "png128": "png-128/haze.png",
+      "aliases": [
+        "hazy"
+      ]
+    },
+    {
+      "id": "smoke",
+      "svg": "svg/smoke.svg",
+      "png512": "png-512/smoke.png",
+      "png128": "png-128/smoke.png",
+      "aliases": [
+        "smoky"
+      ]
+    },
+    {
+      "id": "dust",
+      "svg": "svg/dust.svg",
+      "png512": "png-512/dust.png",
+      "png128": "png-128/dust.png",
+      "aliases": [
+        "sand",
+        "dust storm"
+      ]
+    },
+    {
+      "id": "windy",
+      "svg": "svg/windy.svg",
+      "png512": "png-512/windy.png",
+      "png128": "png-128/windy.png",
+      "aliases": [
+        "breezy",
+        "wind"
+      ]
+    },
+    {
+      "id": "strong-wind",
+      "svg": "svg/strong-wind.svg",
+      "png512": "png-512/strong-wind.png",
+      "png128": "png-128/strong-wind.png",
+      "aliases": [
+        "gusty",
+        "high wind"
+      ]
+    },
+    {
+      "id": "light-drizzle",
+      "svg": "svg/light-drizzle.svg",
+      "png512": "png-512/light-drizzle.png",
+      "png128": "png-128/light-drizzle.png",
+      "aliases": [
+        "light intensity drizzle"
+      ]
+    },
+    {
+      "id": "drizzle",
+      "svg": "svg/drizzle.svg",
+      "png512": "png-512/drizzle.png",
+      "png128": "png-128/drizzle.png",
+      "aliases": [
+        "drizzle rain"
+      ]
+    },
+    {
+      "id": "light-rain",
+      "svg": "svg/light-rain.svg",
+      "png512": "png-512/light-rain.png",
+      "png128": "png-128/light-rain.png",
+      "aliases": [
+        "light rain"
+      ]
+    },
+    {
+      "id": "rain",
+      "svg": "svg/rain.svg",
+      "png512": "png-512/rain.png",
+      "png128": "png-128/rain.png",
+      "aliases": [
+        "moderate rain"
+      ]
+    },
+    {
+      "id": "heavy-rain",
+      "svg": "svg/heavy-rain.svg",
+      "png512": "png-512/heavy-rain.png",
+      "png128": "png-128/heavy-rain.png",
+      "aliases": [
+        "heavy intensity rain",
+        "torrential rain"
+      ]
+    },
+    {
+      "id": "showers-day",
+      "svg": "svg/showers-day.svg",
+      "png512": "png-512/showers-day.png",
+      "png128": "png-128/showers-day.png",
+      "aliases": [
+        "rain showers day"
+      ]
+    },
+    {
+      "id": "showers-night",
+      "svg": "svg/showers-night.svg",
+      "png512": "png-512/showers-night.png",
+      "png128": "png-128/showers-night.png",
+      "aliases": [
+        "rain showers night"
+      ]
+    },
+    {
+      "id": "thunderstorm",
+      "svg": "svg/thunderstorm.svg",
+      "png512": "png-512/thunderstorm.png",
+      "png128": "png-128/thunderstorm.png",
+      "aliases": [
+        "storm"
+      ]
+    },
+    {
+      "id": "thunderstorm-rain",
+      "svg": "svg/thunderstorm-rain.svg",
+      "png512": "png-512/thunderstorm-rain.png",
+      "png128": "png-128/thunderstorm-rain.png",
+      "aliases": [
+        "thunderstorm with rain"
+      ]
+    },
+    {
+      "id": "severe-thunderstorm",
+      "svg": "svg/severe-thunderstorm.svg",
+      "png512": "png-512/severe-thunderstorm.png",
+      "png128": "png-128/severe-thunderstorm.png",
+      "aliases": [
+        "severe storm"
+      ]
+    },
+    {
+      "id": "hail",
+      "svg": "svg/hail.svg",
+      "png512": "png-512/hail.png",
+      "png128": "png-128/hail.png",
+      "aliases": [
+        "hailstorm"
+      ]
+    },
+    {
+      "id": "freezing-rain",
+      "svg": "svg/freezing-rain.svg",
+      "png512": "png-512/freezing-rain.png",
+      "png128": "png-128/freezing-rain.png",
+      "aliases": [
+        "freezing drizzle",
+        "ice rain"
+      ]
+    },
+    {
+      "id": "sleet",
+      "svg": "svg/sleet.svg",
+      "png512": "png-512/sleet.png",
+      "png128": "png-128/sleet.png",
+      "aliases": [
+        "rain and snow"
+      ]
+    },
+    {
+      "id": "ice-pellets",
+      "svg": "svg/ice-pellets.svg",
+      "png512": "png-512/ice-pellets.png",
+      "png128": "png-128/ice-pellets.png",
+      "aliases": [
+        "ice pellets"
+      ]
+    },
+    {
+      "id": "flurries",
+      "svg": "svg/flurries.svg",
+      "png512": "png-512/flurries.png",
+      "png128": "png-128/flurries.png",
+      "aliases": [
+        "snow flurries"
+      ]
+    },
+    {
+      "id": "light-snow",
+      "svg": "svg/light-snow.svg",
+      "png512": "png-512/light-snow.png",
+      "png128": "png-128/light-snow.png",
+      "aliases": [
+        "light snow"
+      ]
+    },
+    {
+      "id": "snow",
+      "svg": "svg/snow.svg",
+      "png512": "png-512/snow.png",
+      "png128": "png-128/snow.png",
+      "aliases": [
+        "moderate snow"
+      ]
+    },
+    {
+      "id": "heavy-snow",
+      "svg": "svg/heavy-snow.svg",
+      "png512": "png-512/heavy-snow.png",
+      "png128": "png-128/heavy-snow.png",
+      "aliases": [
+        "heavy snow"
+      ]
+    },
+    {
+      "id": "snow-showers-day",
+      "svg": "svg/snow-showers-day.svg",
+      "png512": "png-512/snow-showers-day.png",
+      "png128": "png-128/snow-showers-day.png",
+      "aliases": [
+        "snow showers day"
+      ]
+    },
+    {
+      "id": "snow-showers-night",
+      "svg": "svg/snow-showers-night.svg",
+      "png512": "png-512/snow-showers-night.png",
+      "png128": "png-128/snow-showers-night.png",
+      "aliases": [
+        "snow showers night"
+      ]
+    },
+    {
+      "id": "blizzard",
+      "svg": "svg/blizzard.svg",
+      "png512": "png-512/blizzard.png",
+      "png128": "png-128/blizzard.png",
+      "aliases": [
+        "snowstorm"
+      ]
+    },
+    {
+      "id": "tornado",
+      "svg": "svg/tornado.svg",
+      "png512": "png-512/tornado.png",
+      "png128": "png-128/tornado.png",
+      "aliases": []
+    },
+    {
+      "id": "tropical-storm",
+      "svg": "svg/tropical-storm.svg",
+      "png512": "png-512/tropical-storm.png",
+      "png128": "png-128/tropical-storm.png",
+      "aliases": []
+    },
+    {
+      "id": "hurricane",
+      "svg": "svg/hurricane.svg",
+      "png512": "png-512/hurricane.png",
+      "png128": "png-128/hurricane.png",
+      "aliases": []
+    },
+    {
+      "id": "hot",
+      "svg": "svg/hot.svg",
+      "png512": "png-512/hot.png",
+      "png128": "png-128/hot.png",
+      "aliases": [
+        "high temperature",
+        "heat"
+      ]
+    },
+    {
+      "id": "cold",
+      "svg": "svg/cold.svg",
+      "png512": "png-512/cold.png",
+      "png128": "png-128/cold.png",
+      "aliases": [
+        "low temperature",
+        "freeze"
+      ]
+    },
+    {
+      "id": "frost",
+      "svg": "svg/frost.svg",
+      "png512": "png-512/frost.png",
+      "png128": "png-128/frost.png",
+      "aliases": [
+        "frost advisory"
+      ]
+    },
+    {
+      "id": "rainbow",
+      "svg": "svg/rainbow.svg",
+      "png512": "png-512/rainbow.png",
+      "png128": "png-128/rainbow.png",
+      "aliases": []
+    },
+    {
+      "id": "sunrise",
+      "svg": "svg/sunrise.svg",
+      "png512": "png-512/sunrise.png",
+      "png128": "png-128/sunrise.png",
+      "aliases": []
+    },
+    {
+      "id": "sunset",
+      "svg": "svg/sunset.svg",
+      "png512": "png-512/sunset.png",
+      "png128": "png-128/sunset.png",
+      "aliases": []
+    },
+    {
+      "id": "lightning",
+      "svg": "svg/lightning.svg",
+      "png512": "png-512/lightning.png",
+      "png128": "png-128/lightning.png",
+      "aliases": []
+    },
+    {
+      "id": "precipitation-chance",
+      "svg": "svg/precipitation-chance.svg",
+      "png512": "png-512/precipitation-chance.png",
+      "png128": "png-128/precipitation-chance.png",
+      "aliases": []
+    },
+    {
+      "id": "humidity",
+      "svg": "svg/humidity.svg",
+      "png512": "png-512/humidity.png",
+      "png128": "png-128/humidity.png",
+      "aliases": []
+    },
+    {
+      "id": "temperature",
+      "svg": "svg/temperature.svg",
+      "png512": "png-512/temperature.png",
+      "png128": "png-128/temperature.png",
+      "aliases": []
+    },
+    {
+      "id": "feels-like",
+      "svg": "svg/feels-like.svg",
+      "png512": "png-512/feels-like.png",
+      "png128": "png-128/feels-like.png",
+      "aliases": []
+    },
+    {
+      "id": "dew-point",
+      "svg": "svg/dew-point.svg",
+      "png512": "png-512/dew-point.png",
+      "png128": "png-128/dew-point.png",
+      "aliases": []
+    },
+    {
+      "id": "wind-speed",
+      "svg": "svg/wind-speed.svg",
+      "png512": "png-512/wind-speed.png",
+      "png128": "png-128/wind-speed.png",
+      "aliases": []
+    },
+    {
+      "id": "wind-gusts",
+      "svg": "svg/wind-gusts.svg",
+      "png512": "png-512/wind-gusts.png",
+      "png128": "png-128/wind-gusts.png",
+      "aliases": []
+    },
+    {
+      "id": "wind-direction",
+      "svg": "svg/wind-direction.svg",
+      "png512": "png-512/wind-direction.png",
+      "png128": "png-128/wind-direction.png",
+      "aliases": []
+    },
+    {
+      "id": "pressure",
+      "svg": "svg/pressure.svg",
+      "png512": "png-512/pressure.png",
+      "png128": "png-128/pressure.png",
+      "aliases": []
+    },
+    {
+      "id": "visibility",
+      "svg": "svg/visibility.svg",
+      "png512": "png-512/visibility.png",
+      "png128": "png-128/visibility.png",
+      "aliases": []
+    },
+    {
+      "id": "uv-index",
+      "svg": "svg/uv-index.svg",
+      "png512": "png-512/uv-index.png",
+      "png128": "png-128/uv-index.png",
+      "aliases": []
+    },
+    {
+      "id": "air-quality",
+      "svg": "svg/air-quality.svg",
+      "png512": "png-512/air-quality.png",
+      "png128": "png-128/air-quality.png",
+      "aliases": []
+    },
+    {
+      "id": "cloud-cover",
+      "svg": "svg/cloud-cover.svg",
+      "png512": "png-512/cloud-cover.png",
+      "png128": "png-128/cloud-cover.png",
+      "aliases": []
+    },
+    {
+      "id": "moonrise",
+      "svg": "svg/moonrise.svg",
+      "png512": "png-512/moonrise.png",
+      "png128": "png-128/moonrise.png",
+      "aliases": []
+    },
+    {
+      "id": "moonset",
+      "svg": "svg/moonset.svg",
+      "png512": "png-512/moonset.png",
+      "png128": "png-128/moonset.png",
+      "aliases": []
+    },
+    {
+      "id": "full-moon",
+      "svg": "svg/full-moon.svg",
+      "png512": "png-512/full-moon.png",
+      "png128": "png-128/full-moon.png",
+      "aliases": []
+    },
+    {
+      "id": "crescent-moon",
+      "svg": "svg/crescent-moon.svg",
+      "png512": "png-512/crescent-moon.png",
+      "png128": "png-128/crescent-moon.png",
+      "aliases": []
+    }
+  ]
+}

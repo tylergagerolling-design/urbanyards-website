@@ -396,6 +396,18 @@ html body:not(.is-login-screen) .dashboard-main > :is(#tickets,#outreach,#docume
 html body:not(.is-login-screen) .dashboard-main :is(#tickets .tickets-timeline-page,#outreach .online-quote-workspace,#documents .money-workspace){
   background:#fff!important;
 }
+
+/* Tools destinations already have the same single page inset as Home. Remove
+   only their inherited gray canvas, then let the AI Memory workspace use the
+   full shared content width instead of its former 960px cap. */
+html body:not(.is-login-screen) .dashboard-main > :is(#settings,#equipment,#documentation,#import-export,#groundskeeper-ai,#ai-memory).dashboard-section.is-active{
+  background:#fff!important;
+}
+html body:not(.is-login-screen) .dashboard-main #ai-memory > [data-ai-memory-workspace]{
+  width:100%!important;
+  max-width:none!important;
+  margin:0!important;
+}
 body:not(.is-login-screen) .dashboard-main :is(.ttl-header,.wol-header,.money-page-header,.online-quote-header,.uy-page-header,.cq-page-header,.route-week-header,.clean-page-header){position:relative;margin:0 0 22px!important;padding:0 0 20px!important;border:0!important;border-bottom:1px solid rgba(18,63,49,.15)!important;background:#fff!important}
 body:not(.is-login-screen) .dashboard-main :is(.ttl-header,.wol-header,.money-page-header,.online-quote-header,.uy-page-header,.cq-page-header,.route-week-header,.clean-page-header):after{content:"";position:absolute;bottom:-1px;left:0;width:68px;height:3px;border-radius:3px;background:#e2aa21}
 body:not(.is-login-screen) .dashboard-main :is(.ttl-header,.wol-header,.money-page-header,.online-quote-header,.uy-page-header,.cq-page-header,.route-week-header,.clean-page-header)>div:first-child>p:last-child{max-width:700px;color:#60736b!important;font-size:.92rem!important;line-height:1.55!important}

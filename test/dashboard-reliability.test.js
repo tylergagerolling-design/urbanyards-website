@@ -50,7 +50,13 @@ test("Tickets Leads and Money use the same flat white page canvas as Home and Wo
   const html = read("dashboard.html");
   assert.match(css, /:is\(#tickets,#outreach,#documents\)\.dashboard-section\.is-active\{\s*padding:0!important;\s*background:#fff!important/);
   assert.match(css, /:is\(#tickets \.tickets-timeline-page,#outreach \.online-quote-workspace,#documents \.money-workspace\)\{\s*background:#fff!important/);
-  assert.match(html, /dashboard-unified\.css\?v=20260806-flat-page-canvas-2/);
+  assert.match(html, /dashboard-unified\.css\?v=20260806-tools-page-canvas-1/);
+});
+
+test("every Tools destination uses the Home canvas and shared content width", () => {
+  const css = read("dashboard-unified.css");
+  assert.match(css, /:is\(#settings,#equipment,#documentation,#import-export,#groundskeeper-ai,#ai-memory\)\.dashboard-section\.is-active\{\s*background:#fff!important/);
+  assert.match(css, /#ai-memory > \[data-ai-memory-workspace\]\{\s*width:100%!important;\s*max-width:none!important/);
 });
 
 test("combined AI product uses the local Keaton Mask launcher and monochrome popup", () => {

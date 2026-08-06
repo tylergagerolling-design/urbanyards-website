@@ -45,6 +45,14 @@ test("archived workspace polish remains available with current dashboard assets"
   assert.match(html, /dashboard\.js\?v=20260806-controlled-research-1/);
 });
 
+test("Tickets Leads and Money use the same flat white page canvas as Home and Work", () => {
+  const css = read("dashboard-unified.css");
+  const html = read("dashboard.html");
+  assert.match(css, /:is\(#tickets,#outreach,#documents\)\.dashboard-section\.is-active\{\s*background:#fff!important/);
+  assert.match(css, /:is\(#tickets \.tickets-timeline-page,#outreach \.online-quote-workspace,#documents \.money-workspace\)\{\s*background:#fff!important/);
+  assert.match(html, /dashboard-unified\.css\?v=20260806-flat-page-canvas-1/);
+});
+
 test("combined AI product uses the local Keaton Mask launcher and monochrome popup", () => {
   const html = read("dashboard.html");
   const js = read("dashboard.js");

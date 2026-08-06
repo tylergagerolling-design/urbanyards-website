@@ -384,6 +384,17 @@ body:not(.is-login-screen) .dashboard-main :is(.eyebrow,.clean-workspace-label,.
 
 body:not(.is-login-screen) .dashboard-main>.dashboard-section{max-width:1600px;margin-inline:auto;background:#fff!important}
 body:not(.is-login-screen) .dashboard-main :is(.home-focus-page,.unified-ticket-page,.work-operations-page,.route-planner-page,.uy-standard-page){padding:24px!important;border:0!important;border-radius:0!important;background:#fff!important;box-shadow:none!important}
+
+/* Tickets, Leads, and Money still inherited the older gray operations canvas
+   through a more-specific active-section rule in dashboard.css. Keep their
+   page bodies flat and white like Home and Work without changing the cards,
+   tables, toolbars, or drawers inside them. */
+html body:not(.is-login-screen) .dashboard-main > :is(#tickets,#outreach,#documents).dashboard-section.is-active{
+  background:#fff!important;
+}
+html body:not(.is-login-screen) .dashboard-main :is(#tickets .tickets-timeline-page,#outreach .online-quote-workspace,#documents .money-workspace){
+  background:#fff!important;
+}
 body:not(.is-login-screen) .dashboard-main :is(.ttl-header,.wol-header,.money-page-header,.online-quote-header,.uy-page-header,.cq-page-header,.route-week-header,.clean-page-header){position:relative;margin:0 0 22px!important;padding:0 0 20px!important;border:0!important;border-bottom:1px solid rgba(18,63,49,.15)!important;background:#fff!important}
 body:not(.is-login-screen) .dashboard-main :is(.ttl-header,.wol-header,.money-page-header,.online-quote-header,.uy-page-header,.cq-page-header,.route-week-header,.clean-page-header):after{content:"";position:absolute;bottom:-1px;left:0;width:68px;height:3px;border-radius:3px;background:#e2aa21}
 body:not(.is-login-screen) .dashboard-main :is(.ttl-header,.wol-header,.money-page-header,.online-quote-header,.uy-page-header,.cq-page-header,.route-week-header,.clean-page-header)>div:first-child>p:last-child{max-width:700px;color:#60736b!important;font-size:.92rem!important;line-height:1.55!important}

@@ -175,6 +175,7 @@ test("Home weather markup exposes accessible controls, disabled-end logic, and c
   const html = read("dashboard.html");
   const js = read("dashboard.js");
   const css = read("dashboard-unified.css");
+  const netlify = read("netlify.toml");
   assert.match(html, /scripts\/weather-forecast\.js\?v=20260806-home-weather-1/);
   assert.match(js, /aria-label="Previous forecast days"/);
   assert.match(js, /aria-label="Next forecast days"/);
@@ -187,4 +188,6 @@ test("Home weather markup exposes accessible controls, disabled-end logic, and c
   assert.match(js, /next\.disabled = maxScroll <= 2 \|\| rail\.scrollLeft >= maxScroll - 16/);
   assert.match(css, /\.home-weather-rail\{[\s\S]*?max-width:100%;[\s\S]*?overflow-x:auto/);
   assert.match(css, /@media\(max-width:760px\)[\s\S]*?\.home-weather-rail\{grid-auto-columns:minmax\(205px,78vw\)/);
+  assert.match(netlify, /img-src[^;]*https:\/\/api\.weather\.gov/);
+  assert.match(netlify, /connect-src[^;]*https:\/\/api\.weather\.gov/);
 });

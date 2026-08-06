@@ -427,6 +427,16 @@ body:not(.is-login-screen) .dashboard-main :is(.panel-heading,.focus-card-header
 body:not(.is-login-screen) .dashboard-main :is(.panel-heading,.focus-card-header) p{color:#60736b!important}
 
 body:not(.is-login-screen) .dashboard-main :is(.toolbar,.ttl-filters,.wol-filters,.money-record-toolbar,.equipment-toolbar,.documentation-toolbar,.cq-entry-tools){gap:9px!important;padding:11px!important;border:1px solid rgba(18,63,49,.14)!important;border-radius:12px!important;background:#f7f1e3!important;box-shadow:none!important}
+
+/* The shared select reset reduces padding-inline to 11px. Tickets and Work
+   place an icon inside each filter label, so restore dedicated text clearance
+   on both desktop and mobile without changing the native select behavior. */
+body:not(.is-login-screen) .dashboard-main .ttl-filters label > select{
+  padding:0 34px 0 43px!important;
+}
+body:not(.is-login-screen) .dashboard-main .wol-filters label > select{
+  padding:0 34px 0 39px!important;
+}
 body:not(.is-login-screen) .dashboard-main :is(.documentation-tabs,.import-export-tabs,.equipment-tabs,.money-tabs,.client-detail-tabs,.ut-internal-nav){gap:2px!important;border-bottom:1px solid rgba(18,63,49,.15)!important;background:#fff!important}
 body:not(.is-login-screen) .dashboard-main :is(.documentation-tabs,.import-export-tabs,.equipment-tabs,.money-tabs,.client-detail-tabs,.ut-internal-nav) button{padding-inline:13px!important;border:0!important;border-bottom:3px solid transparent!important;border-radius:0!important;background:transparent!important;color:#60736b!important}
 body:not(.is-login-screen) .dashboard-main :is(.documentation-tabs,.import-export-tabs,.equipment-tabs,.money-tabs,.client-detail-tabs,.ut-internal-nav) button:is(.is-active,[aria-selected=true]){border-bottom-color:#e2aa21!important;color:#0a3027!important}

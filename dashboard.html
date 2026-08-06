@@ -17,6 +17,7 @@
     <script src="dashboard-config.js?v=20260716-loader-1" defer></script>
     <script src="scripts/budget-calculations.js?v=20260716-loader-1" defer></script>
     <script src="scripts/financial-calculations.js?v=20260723-invoice-status-1" defer></script>
+    <script src="scripts/weather-forecast.js?v=20260806-home-weather-1" defer></script>
   <script src="dashboard.js?v=20260806-controlled-research-1" defer></script>
   </head>
   <body>
@@ -131,6 +132,8 @@
               </div>
               <button class="clean-primary-action equipment-mobile-add" type="button" data-action="quick-add-equipment">Add Equipment</button>
             </div>
+
+            <div data-qa-equipment-showcase hidden></div>
 
             <div class="equipment-toolbar">
               <input data-equipment-search type="search" aria-label="Search equipment" placeholder="Search name, brand, model, notes...">

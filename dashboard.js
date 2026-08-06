@@ -437,6 +437,13 @@
     homeFocusDate: "This Week",
     homeFocusLocation: "All Locations",
     homeFocusStatus: "All Status",
+    weatherData: [],
+    weatherStatus: "idle",
+    weatherFetchedAt: 0,
+    weatherStale: false,
+    weatherError: "",
+    weatherRequest: null,
+    weatherResizeBound: false,
     routeDate: todayKey(),
     routeWeekStart: "",
     routeSelectedDate: "",
@@ -2078,7 +2085,85 @@
   }
 
   async function dashboardFinancialRequest(action, body = {}, options = {}) {
-    if (isDemoMode()) return [];
+    if (isDemoMode()) {
+      state.data.financial ||= { overview: null, expenses: [], vendors: [], invoices: [], payments: [], documents: [], deleted: [], reports: {} };
+      const financial = state.data.financial;
+      if (action === "invoice-detail") return demoFinancialInvoiceDetail(body.invoiceId);
+      if (action === "list-invoices") return financial.invoices || [];
+      if (action === "list-expenses") return financial.expenses || [];
+      if (action === "list-payments") return financial.payments || [];
+      if (action === "list-vendors") return financial.vendors || [];
+      if (action === "list-documents") return financial.documents || [];
+      if (action === "list-deleted") return financial.deleted || [];
+      if (action === "overview") return financial.overview || {};
+      if (action === "create-invoice") {
+        const invoice = {
+          id: nextDemoId("invoice"),
+          invoice_number: `DEMO-${Date.now().toString().slice(-6)}`,
+          status: "Draft",
+          issue_date: body.issueDate || todayKey(),
+          due_date: body.dueDate || addDaysKey(todayKey(), 30),
+          subtotal: Number(body.subtotal || 0),
+          tax: 0,
+          discount: 0,
+          deposit: 0,
+          amount_paid: 0,
+          client_id: body.clientId || null,
+          property_id: body.propertyId || null,
+          ticket_id: body.ticketId || null,
+          internal_notes: "Demo-only invoice. Reload to reset.",
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString(),
+          qaLineItems: []
+        };
+        financial.invoices ||= [];
+        financial.invoices.unshift(invoice);
+        return [invoice];
+      }
+      if (action === "submit-expense") {
+        const expense = normalizeExpense({
+          id: nextDemoId("expense"),
+          expense_date: body.expenseDate || todayKey(),
+          total: Number(body.total || 0),
+          description: body.description || "Demo field expense",
+          vendor_name: body.vendorName || null,
+          ticket_id: body.ticketId || null,
+          category: body.category || "Other",
+          status: "Pending Receipt",
+          updated_at: new Date().toISOString()
+        });
+        financial.expenses ||= [];
+        financial.expenses.unshift(expense);
+        return [expense];
+      }
+      const collectionKey = { invoice: "invoices", expense: "expenses", vendor: "vendors", document: "documents" }[body.entityType];
+      if (action === "archive-record" && collectionKey) {
+        const source = financial[collectionKey] || [];
+        const index = source.findIndex((item) => String(item.id) === String(body.id));
+        if (index >= 0) {
+          const [record] = source.splice(index, 1);
+          financial.deleted ||= [];
+          financial.deleted.unshift({ ...record, entityType: body.entityType, archived_at: new Date().toISOString() });
+        }
+        return [];
+      }
+      if (action === "restore-record" && collectionKey) {
+        const index = (financial.deleted || []).findIndex((item) => item.entityType === body.entityType && String(item.id) === String(body.id));
+        if (index >= 0) {
+          const [record] = financial.deleted.splice(index, 1);
+          delete record.entityType;
+          delete record.archived_at;
+          financial[collectionKey] ||= [];
+          financial[collectionKey].unshift(record);
+        }
+        return [];
+      }
+      if (action === "delete-record-permanently") {
+        financial.deleted = (financial.deleted || []).filter((item) => !(item.entityType === body.entityType && String(item.id) === String(body.id)));
+        return [];
+      }
+      return [];
+    }
     const session = getSession();
     if (!session?.accessToken) throw new Error("Please sign in again.");
     const response = await fetch("/.netlify/functions/dashboard-financial", {
@@ -2118,6 +2203,7 @@
   }
 
   async function dashboardFinancialStorageRequest(action, body = {}) {
+    if (isDemoMode()) return { action, expenseId: body.expenseId || "", demo: true };
     const session = getSession();
     if (!session?.accessToken) throw new Error("Please sign in again.");
     const response = await fetch("/.netlify/functions/dashboard-financial-storage", {
@@ -5257,9 +5343,219 @@
     };
   }
 
+  function isQaShowcaseMode() {
+    if (!isDemoMode()) return false;
+    const params = new URLSearchParams(window.location.search);
+    return ["qa", "showcase"].some((key) => ["1", "true", "yes"].includes(String(params.get(key) || "").toLowerCase()));
+  }
+
+  const QA_SHOWCASE_TICKET_STAGES = [
+    "draft", "sales_intake", "scope_in_progress", "quote_pending", "customer_approval_pending",
+    "needs_budget", "budget_in_progress", "needs_owner_approval", "invoice_preparation", "ready_to_schedule",
+    "scheduled", "in_progress", "paused", "scope_change_requested", "field_work_complete", "completion_review",
+    "invoice_review", "invoice_sent", "partially_paid", "paid", "closed", "cancelled"
+  ];
+
+  function demoQaTicketSuite(today, now) {
+    const scheduledStages = new Set(["scheduled", "in_progress", "paused", "field_work_complete", "completion_review", "invoice_review", "invoice_sent", "partially_paid", "paid", "closed"]);
+    return QA_SHOWCASE_TICKET_STAGES.map((stage, index) => normalizeCanonicalTicket({
+      id: `state-ticket-${String(index + 1).padStart(2, "0")}`,
+      ticket_number: `STATE-${String(index + 1).padStart(3, "0")}`,
+      title: `${ticketStageLabel(stage)} example`,
+      customer_name: ["Hannah Edge", "Mason Lee", "River Court HOA"][index % 3],
+      property_name: `${ticketStageLabel(stage)} Property`,
+      property_address: `${120 + index} Demo State Ave, Portland, OR`,
+      contact_email: `state${index + 1}@example.com`,
+      contact_phone: `(971) 555-${String(1100 + index).slice(-4)}`,
+      requested_service: ["Groundskeeping", "Seasonal cleanup", "Equipment support"][index % 3],
+      scope_of_work: `Populated ${ticketStageLabel(stage)} state for manual workflow review. Reload the showcase to reset this record.`,
+      stage,
+      status: ticketRecordStatusForStage(stage),
+      priority: ["High", "Medium", "Low"][index % 3],
+      assigned_user_id: "demo-user",
+      scheduled_date: scheduledStages.has(stage) ? addDaysKey(today, index % 7) : null,
+      due_date: scheduledStages.has(stage) ? addDaysKey(today, (index % 7) + 2) : addDaysKey(today, index % 6),
+      work_window: `${8 + (index % 8)}:00 AM - ${9 + (index % 8)}:30 AM`,
+      next_action: ticketNextAction(stage),
+      created_at: daysFromToday(-(index + 1)),
+      updated_at: now
+    }, index));
+  }
+
+  function demoQaFinancialBundle(today, now, tickets) {
+    const invoiceStates = ["Draft", "Ready", "Sent", "Viewed", "Partially Paid", "Paid", "Overdue", "Voided", "Uncollectible"];
+    const invoices = invoiceStates.map((status, index) => {
+      const subtotal = 650 + (index * 175);
+      const amountPaid = status === "Paid" ? subtotal : status === "Partially Paid" ? Math.round(subtotal * 0.4 * 100) / 100 : 0;
+      const storedStatus = status === "Overdue" ? "Sent" : status;
+      return {
+        id: `state-invoice-${String(index + 1).padStart(2, "0")}`,
+        invoice_number: `INV-STATE-${String(index + 1).padStart(3, "0")}`,
+        client_id: ["demo-contact-1", "demo-contact-2", "demo-contact-3"][index % 3],
+        property_id: `demo-property-${(index % 3) + 1}`,
+        ticket_id: tickets[index % tickets.length]?.id || null,
+        issue_date: addDaysKey(today, -(20 + index)),
+        due_date: status === "Overdue" ? addDaysKey(today, -12) : addDaysKey(today, 8 + index),
+        subtotal,
+        tax: 0,
+        discount: 0,
+        deposit: 0,
+        amount_paid: amountPaid,
+        status: storedStatus,
+        payment_method: status === "Paid" ? "ACH" : status === "Partially Paid" ? "Check" : null,
+        square_payment_reference: `STATE-PO-${index + 1}`,
+        client_notes: `${status} invoice state for manual QA.`,
+        internal_notes: "Demo-only financial record. Reload to reset.",
+        created_at: daysFromToday(-(22 + index)),
+        updated_at: now,
+        qaExpectedStatus: status,
+        qaLineItems: [
+          { id: `state-line-${index + 1}-1`, description: "Recurring groundskeeping", item_type: "Service", quantity: 4, unit: "Visit", unit_price: Math.round((subtotal * 0.7 / 4) * 100) / 100, position: 0 },
+          { id: `state-line-${index + 1}-2`, description: "Seasonal site care", item_type: "Service", quantity: 1, unit: "Each", unit_price: Math.round(subtotal * 0.3 * 100) / 100, position: 1 }
+        ]
+      };
+    });
+    const paymentMethods = ["ACH", "Card", "Check", "Cash", "Bank Transfer", "Square Checking", "Other"];
+    const payments = paymentMethods.map((method, index) => {
+      const invoice = invoices[(index + 3) % invoices.length];
+      return {
+        id: `state-payment-${index + 1}`,
+        invoice_id: invoice.id,
+        payment_date: addDaysKey(today, -index),
+        amount: 75 + (index * 50),
+        payment_method: method,
+        external_reference: `STATE-${method.replace(/\s+/g, "-").toUpperCase()}-${index + 1}`,
+        notes: "Demo payment method coverage.",
+        invoices: invoice
+      };
+    });
+    payments.push({
+      id: "state-payment-voided",
+      invoice_id: invoices[7].id,
+      payment_date: addDaysKey(today, -2),
+      amount: 125,
+      payment_method: "Card",
+      external_reference: "STATE-VOIDED-1",
+      notes: "Voided payment state coverage.",
+      voided_at: now,
+      invoices: invoices[7]
+    });
+    const expenses = EXPENSE_STATUSES.map((status, index) => normalizeExpense({
+      id: `state-expense-${index + 1}`,
+      expense_date: addDaysKey(today, -index),
+      vendor_id: `state-vendor-${(index % 3) + 1}`,
+      vendor_name: ["Northwest Landscape Supply", "Portland Fuel Center", "Tool Repair Depot"][index % 3],
+      category: ["Materials", "Fuel", "Equipment", "Labor", "Insurance", "Other"][index],
+      description: `${status} expense state`,
+      ticket_id: tickets[index % tickets.length]?.id || null,
+      payment_method: EXPENSE_PAYMENT_METHODS[index % EXPENSE_PAYMENT_METHODS.length],
+      subtotal: 80 + (index * 35),
+      tax: 0,
+      total: 80 + (index * 35),
+      reimbursable: ["Reimbursable", "Reimbursed"].includes(status),
+      status,
+      notes: "Demo-only expense state. Reload to reset.",
+      created_by: "Demo User",
+      updated_at: now
+    }));
+    return {
+      overview: { revenue: 14850, expenses: expenses.reduce((sum, item) => sum + Number(item.total || 0), 0), outstanding: 5675, overdue: invoices.find((item) => item.qaExpectedStatus === "Overdue")?.subtotal || 0, missing_receipts: 1 },
+      expenses,
+      vendors: [
+        { id: "state-vendor-1", vendor_name: "Northwest Landscape Supply", default_expense_category: "Materials", status: "Active" },
+        { id: "state-vendor-2", vendor_name: "Portland Fuel Center", default_expense_category: "Fuel", status: "Active" },
+        { id: "state-vendor-3", vendor_name: "Tool Repair Depot", default_expense_category: "Equipment", status: "Active" }
+      ],
+      invoices,
+      payments,
+      documents: [{ id: "state-financial-document-1", title: "Receipt example", document_type: "Receipt", file_name: "state-receipt.pdf", expense_id: expenses[1].id, document_date: today }],
+      deleted: [{ ...expenses[5], entityType: "expense", archived_at: now }],
+      reports: {}
+    };
+  }
+
+  function demoQaEquipmentSuite(today, now) {
+    const items = EQUIPMENT_STATUSES.map((status, index) => normalizeEquipmentItem({
+      id: `state-equipment-${index + 1}`,
+      name: ["Battery mower", "String trimmer", "Backpack blower", "Pressure washer", "Hedge trimmer", "Retired push mower"][index],
+      category: ["Mowers", "Trimmers", "Blowers", "Pressure washing", "Trimmers", "Mowers"][index],
+      brand: "Urban Yards QA",
+      model: `STATE-${index + 1}`,
+      serial_number: `DEMO-${1000 + index}`,
+      quantity: 1,
+      condition: EQUIPMENT_CONDITIONS[index],
+      status,
+      storage_location: index % 2 ? "Trailer" : "Shop",
+      purchase_date: daysFromToday(-(120 + index * 40)),
+      purchase_price: 300 + (index * 125),
+      supplier: "Demo Equipment Supply",
+      notes: `${status} / ${EQUIPMENT_CONDITIONS[index]} state coverage. Reload to reset.`,
+      last_maintenance_date: addDaysKey(today, -(10 + index)),
+      next_maintenance_date: ["Needs Maintenance", "Needs Repair"].includes(status) ? addDaysKey(today, -1) : addDaysKey(today, 12 + index),
+      replacement_priority: index >= 4 ? "High" : index % 2 ? "Normal" : "Low",
+      created_at: now,
+      updated_at: now
+    }));
+    const maintenance = items.slice(0, 4).map((item, index) => normalizeEquipmentMaintenance({
+      id: `state-maintenance-${index + 1}`,
+      equipment_id: item.id,
+      equipment_name: item.name,
+      maintenance_date: addDaysKey(today, -(index + 2)),
+      maintenance_type: ["Blade service", "Line head inspection", "Air filter service", "Pump inspection"][index],
+      notes: "Completed maintenance history example.",
+      cost: 25 + (index * 20),
+      performed_by: "Demo User",
+      next_maintenance_date: addDaysKey(today, 25 + index),
+      created_at: now
+    }));
+    return { items, maintenance };
+  }
+
+  function demoFinancialInvoiceDetail(invoiceId) {
+    const financial = state.data.financial || {};
+    const invoice = (financial.invoices || []).find((item) => String(item.id) === String(invoiceId));
+    if (!invoice) throw new Error("The demo invoice could not be found.");
+    const payments = (financial.payments || []).filter((item) => String(item.invoice_id) === String(invoice.id));
+    return {
+      invoice,
+      lineItems: invoice.qaLineItems || [],
+      payments,
+      attachments: (financial.documents || []).filter((item) => String(item.invoice_id || "") === String(invoice.id)),
+      activity: [
+        { id: `${invoice.id}-activity-1`, action: "invoice_created", actor_label: "Demo User", details: { description: "Invoice created for QA review." }, created_at: invoice.created_at || new Date().toISOString() },
+        { id: `${invoice.id}-activity-2`, action: "status_reviewed", actor_label: "Demo User", details: { description: `${invoice.qaExpectedStatus || invoice.status} state verified.` }, created_at: invoice.updated_at || new Date().toISOString() }
+      ]
+    };
+  }
+
+  function renderQaShowcasePanel(scope) {
+    if (!isQaShowcaseMode()) return "";
+    const intro = `<div class="qa-showcase-heading"><div><span>Local QA Showcase</span><strong>Populated demo states</strong><small>No Supabase writes. Changes last only until reload.</small></div><a href="${escapeHtml(`${window.location.pathname}?demo=1&qa=1${window.location.hash}`)}">Reset demo data</a></div>`;
+    if (scope === "tickets") {
+      const buttons = (state.data.tickets || []).map((ticket) => `<button type="button" data-action="qa-open-ticket-state" data-id="${escapeHtml(ticket.id)}"><span>${escapeHtml(ticket.number)}</span>${escapeHtml(ticket.stageLabel)}</button>`).join("");
+      return `<section class="qa-showcase-panel" aria-label="Ticket state showcase">${intro}<div class="qa-showcase-group"><b>Ticket lifecycle (${(state.data.tickets || []).length})</b><div>${buttons}</div></div></section>`;
+    }
+    if (scope === "money") {
+      const invoices = (state.data.financial?.invoices || []).map((invoice) => `<button type="button" data-action="qa-money-state" data-view="invoicing" data-id="${escapeHtml(invoice.id)}" data-status="${escapeHtml(invoice.qaExpectedStatus || invoice.status)}">${escapeHtml(invoice.qaExpectedStatus || invoice.status)}</button>`).join("");
+      const expenses = (state.data.financial?.expenses || []).map((expense) => `<button type="button" data-action="qa-money-state" data-view="expenses" data-id="${escapeHtml(expense.id)}" data-status="${escapeHtml(expense.status)}">${escapeHtml(expense.status)}</button>`).join("");
+      const paymentStates = ["Completed", "Voided"].map((status) => `<button type="button" data-action="qa-money-state" data-view="payments" data-status="${status}">${status}</button>`).join("");
+      return `<section class="qa-showcase-panel" aria-label="Money state showcase">${intro}<div class="qa-showcase-group"><b>Invoices</b><div>${invoices}</div></div><div class="qa-showcase-group"><b>Expenses</b><div>${expenses}</div></div><div class="qa-showcase-group"><b>Payments</b><div>${paymentStates}</div></div></section>`;
+    }
+    if (scope === "equipment") {
+      const statuses = EQUIPMENT_STATUSES.map((status) => `<button type="button" data-action="qa-equipment-state" data-filter="status" data-value="${escapeHtml(status)}">${escapeHtml(status)}</button>`).join("");
+      const conditions = EQUIPMENT_CONDITIONS.map((condition) => `<button type="button" data-action="qa-equipment-state" data-filter="condition" data-value="${escapeHtml(condition)}">${escapeHtml(condition)}</button>`).join("");
+      return `<section class="qa-showcase-panel" aria-label="Equipment state showcase">${intro}<div class="qa-showcase-group"><b>Equipment status</b><div>${statuses}</div></div><div class="qa-showcase-group"><b>Equipment condition</b><div>${conditions}</div></div></section>`;
+    }
+    return "";
+  }
+
   function demoDashboardData() {
     const today = todayKey();
     const now = new Date().toISOString();
+    const qaShowcase = isQaShowcaseMode();
+    const qaTickets = qaShowcase ? demoQaTicketSuite(today, now) : [];
+    const qaFinancial = qaShowcase ? demoQaFinancialBundle(today, now, qaTickets) : { overview: null, expenses: [], vendors: [], invoices: [], payments: [], documents: [], deleted: [], reports: {} };
+    const qaEquipment = qaShowcase ? demoQaEquipmentSuite(today, now) : { items: [], maintenance: [] };
     return {
       submissions: [
         normalizeSubmission({
@@ -5315,7 +5611,8 @@
         normalizeJob({ id: "demo-job-2", visit_date: daysFromToday(2), visit_window: "1:00 PM - 3:00 PM", site_name: "River Court HOA", city: "Vancouver", service: "Site walk and seasonal cleanup plan", status: "Scheduled" }),
         normalizeJob({ id: "demo-job-3", visit_date: daysFromToday(5), visit_window: "Morning", site_name: "Mason Lee", city: "Beaverton", service: "Backyard cleanup", status: "New" })
       ],
-      tickets: [],
+      tickets: qaTickets,
+      ticketEvents: qaShowcase ? qaTickets.map((ticket, index) => ({ id: `state-ticket-event-${index + 1}`, ticketId: ticket.id, eventType: "state_loaded", notes: `${ticket.stageLabel} state loaded for local QA.`, createdAtRaw: now })) : [],
       notes: [
         normalizeNote({ id: "demo-note-1", title: "Order mulch samples", body: "Bring dark hemlock and fine bark options for River Court.", created_at: now }),
         normalizeNote({ id: "demo-note-2", title: "Check route fuel", body: "Plan Portland to Beaverton to Vancouver route before Friday.", created_at: daysFromToday(-1) })
@@ -5698,8 +5995,8 @@
         normalizeRouteStop({ id: "demo-route-2", route_date: today, client_name: "Mason Lee", address: "Beaverton, OR", service_type: "Cleanup estimate", estimated_minutes: 45, notes: "Take photos and measure bed edges.", status: "In Progress", stop_order: 2, latitude: 45.4871, longitude: -122.8037, created_at: now, updated_at: now }),
         normalizeRouteStop({ id: "demo-route-3", route_date: today, client_name: "River Court HOA", address: "Vancouver, WA", service_type: "Site walk", estimated_minutes: 60, notes: "Review frontage and shared pond edge.", status: "Planned", stop_order: 3, latitude: 45.628, longitude: -122.672, created_at: now, updated_at: now })
       ],
-      equipmentItems: [],
-      equipmentMaintenance: [],
+      equipmentItems: qaEquipment.items,
+      equipmentMaintenance: qaEquipment.maintenance,
       hardwareGuide: [
         normalizeHardwareGuideItem({ id: "demo-guide-1", name: "Commercial battery mower", category: "Mowers", recommended_use: "Quiet mowing for homeowner and small multifamily properties.", brand: "", model: "", estimated_price: 0, priority: "High", supplier: "", product_url: "", good_for: "Mowing, homeowner jobs, apartments", status: "Researching", notes: "Add preferred model and supplier link when ready.", created_at: now, updated_at: now }),
         normalizeHardwareGuideItem({ id: "demo-guide-2", name: "Compact pressure washer", category: "Pressure washing", recommended_use: "Walkways, bins, entries, and common areas.", brand: "", model: "", estimated_price: 0, priority: "Normal", supplier: "", product_url: "", good_for: "Pressure washing, trash area care, apartments", status: "Researching", notes: "Manual price/link only for now.", created_at: now, updated_at: now })
@@ -5732,6 +6029,7 @@
       },
       importExport: demoImportExportSnapshot(),
       budgets: normalizeBudgetBundle(demoBudgetBundle()),
+      financial: qaFinancial,
       leadActivity: [],
       userProfiles: [
         normalizeUserProfile({
@@ -17458,7 +17756,7 @@ Requirements:
     const totalPaid = rows.reduce((sum, row) => sum + Number(row.invoice.amount_paid || 0), 0);
     const outstanding = rows.filter((row) => !["Paid", "Voided", "Uncollectible"].includes(row.status)).reduce((sum, row) => sum + Number(row.summary.balance || 0), 0);
     const overdue = rows.filter((row) => row.status === "Overdue");
-    const statusOptions = ["All", "Draft", "Ready", "Sent", "Viewed", "Partially Paid", "Paid", "Overdue", "Voided"];
+    const statusOptions = ["All", "Draft", "Ready", "Sent", "Viewed", "Partially Paid", "Paid", "Overdue", "Voided", "Uncollectible"];
     const cards = [
       ["Total Billed", totalBilled, "↑ 18% vs last month", "green"],
       ["Total Paid", totalPaid, "↑ 12% vs last month", "green"],
@@ -17509,15 +17807,16 @@ Requirements:
         && (state.moneyPaymentMethod === "All" || method === state.moneyPaymentMethod)
         && (state.moneyPaymentStatus === "All" || status === state.moneyPaymentStatus);
     });
-    const total = rows.reduce((sum,payment)=>sum+Number(payment.amount||0),0);
-    const thisMonth = rows.filter((payment)=>String(payment.payment_date||"").slice(0,7)===todayKey().slice(0,7)).reduce((sum,payment)=>sum+Number(payment.amount||0),0);
+    const completedRows = rows.filter((payment) => !payment.voided_at);
+    const total = completedRows.reduce((sum,payment)=>sum+Number(payment.amount||0),0);
+    const thisMonth = completedRows.filter((payment)=>String(payment.payment_date||"").slice(0,7)===todayKey().slice(0,7)).reduce((sum,payment)=>sum+Number(payment.amount||0),0);
     const previousMonthDate = new Date(); previousMonthDate.setMonth(previousMonthDate.getMonth()-1);
     const previousMonthKey = `${previousMonthDate.getFullYear()}-${String(previousMonthDate.getMonth()+1).padStart(2,"0")}`;
-    const lastMonth = rows.filter((payment)=>String(payment.payment_date||"").slice(0,7)===previousMonthKey).reduce((sum,payment)=>sum+Number(payment.amount||0),0);
+    const lastMonth = completedRows.filter((payment)=>String(payment.payment_date||"").slice(0,7)===previousMonthKey).reduce((sum,payment)=>sum+Number(payment.amount||0),0);
     return `<section class="money-payments-view" aria-label="Payments">
-      <section class="money-kpi-grid" aria-label="Payment summary">${[["Total Received",total],["This Month",thisMonth],["Last Month",lastMonth],["Average Payment",rows.length?total/rows.length:0]].map(([label,value])=>`<article class="money-kpi is-green"><span>$</span><small>${label}</small><strong>${moneyCurrency(value)}</strong><em>Recorded payments</em></article>`).join("")}</section>
+      <section class="money-kpi-grid" aria-label="Payment summary">${[["Total Received",total],["This Month",thisMonth],["Last Month",lastMonth],["Average Payment",completedRows.length?total/completedRows.length:0]].map(([label,value])=>`<article class="money-kpi is-green"><span>$</span><small>${label}</small><strong>${moneyCurrency(value)}</strong><em>Recorded payments</em></article>`).join("")}</section>
       <div class="money-record-toolbar"><label class="money-search-control"><span>⌕</span><input type="search" data-money-payment-search value="${escapeHtml(state.moneyPaymentSearch)}" placeholder="Search payments..." aria-label="Search payments"></label><label><select data-money-payment-method aria-label="Payment method">${["All","ACH","Card","Check","Cash","Bank Transfer","Square Checking","Other"].map((value)=>`<option${state.moneyPaymentMethod===value?" selected":""}>${escapeHtml(value)}</option>`).join("")}</select></label><label><select data-money-payment-status aria-label="Payment status">${["All","Completed","Voided"].map((value)=>`<option${state.moneyPaymentStatus===value?" selected":""}>${escapeHtml(value)}</option>`).join("")}</select></label><button type="button" data-action="open-money-payment-create">Record Payment</button></div>
-      <div class="money-table-wrap"><table class="money-record-table"><thead><tr><th>Date</th><th>Customer</th><th>Invoice</th><th>Ticket</th><th>Method</th><th>Amount</th><th>Status</th><th>Reference</th><th></th></tr></thead><tbody>${rows.length?rows.map((payment)=>{const invoice=payment.invoices||{};return `<tr data-action="open-financial-invoice" data-id="${escapeHtml(payment.invoice_id)}" tabindex="0"><td>${escapeHtml(formatDate(payment.payment_date))}</td><td>${escapeHtml(financialRecordName("client",invoice.client_id)||"Client not linked")}</td><td>${escapeHtml(invoice.invoice_number||payment.invoice_id)}</td><td>${escapeHtml(financialRecordName("ticket",invoice.ticket_id)||"Not linked")}</td><td>${escapeHtml(payment.payment_method||"Other")}</td><td>${moneyCurrency(payment.amount)}</td><td><span class="money-status is-paid">Completed</span></td><td>${escapeHtml(payment.external_reference||"—")}</td><td><button type="button" data-action="open-financial-invoice" data-id="${escapeHtml(payment.invoice_id)}" aria-label="Open linked invoice">⋮</button></td></tr>`;}).join(""):`<tr><td colspan="9">${emptyState("No payments match these filters.")}</td></tr>`}</tbody></table></div>
+      <div class="money-table-wrap"><table class="money-record-table"><thead><tr><th>Date</th><th>Customer</th><th>Invoice</th><th>Ticket</th><th>Method</th><th>Amount</th><th>Status</th><th>Reference</th><th></th></tr></thead><tbody>${rows.length?rows.map((payment)=>{const invoice=payment.invoices||{};const paymentStatus=payment.voided_at?"Voided":"Completed";return `<tr data-action="open-financial-invoice" data-id="${escapeHtml(payment.invoice_id)}" tabindex="0"><td>${escapeHtml(formatDate(payment.payment_date))}</td><td>${escapeHtml(financialRecordName("client",invoice.client_id)||"Client not linked")}</td><td>${escapeHtml(invoice.invoice_number||payment.invoice_id)}</td><td>${escapeHtml(financialRecordName("ticket",invoice.ticket_id)||"Not linked")}</td><td>${escapeHtml(payment.payment_method||"Other")}</td><td>${moneyCurrency(payment.amount)}</td><td><span class="money-status ${paymentStatus==="Voided"?"is-voided":"is-paid"}">${paymentStatus}</span></td><td>${escapeHtml(payment.external_reference||"—")}</td><td><button type="button" data-action="open-financial-invoice" data-id="${escapeHtml(payment.invoice_id)}" aria-label="Open linked invoice">⋮</button></td></tr>`;}).join(""):`<tr><td colspan="9">${emptyState("No payments match these filters.")}</td></tr>`}</tbody></table></div>
       <footer class="money-pagination"><span>Showing ${rows.length} payment${rows.length===1?"":"s"}</span></footer>
     </section>`;
   }
@@ -17655,7 +17954,10 @@ Requirements:
     const daysOverdue = invoice.due_date && summary.balance > 0 ? Math.max(0, Math.floor((new Date(`${todayKey()}T12:00:00`) - new Date(`${invoice.due_date}T12:00:00`)) / 86400000)) : 0;
     const activeTab = state.moneyInvoiceDrawerTab || "details";
     const tabButton = (key, label) => `<button type="button" role="tab" data-action="money-invoice-drawer-tab" data-tab="${key}" aria-selected="${activeTab === key}" class="${activeTab === key ? "is-active" : ""}">${label}</button>`;
-    const paymentRows = (detail.payments || []).map((payment) => `<article class="invoice-payment-row"><div><strong>${moneyCurrency(payment.amount)}</strong><span>${escapeHtml(formatDate(payment.payment_date))}</span></div><dl><div><dt>Method</dt><dd>${escapeHtml(payment.payment_method || "Other")}</dd></div><div><dt>Reference</dt><dd>${escapeHtml(payment.external_reference || "—")}</dd></div><div><dt>Status</dt><dd>Completed</dd></div></dl>${payment.notes ? `<p>${escapeHtml(payment.notes)}</p>` : ""}</article>`).join("");
+    const paymentRows = (detail.payments || []).map((payment) => {
+      const paymentStatus = payment.voided_at ? "Voided" : "Completed";
+      return `<article class="invoice-payment-row"><div><strong>${moneyCurrency(payment.amount)}</strong><span>${escapeHtml(formatDate(payment.payment_date))}</span></div><dl><div><dt>Method</dt><dd>${escapeHtml(payment.payment_method || "Other")}</dd></div><div><dt>Reference</dt><dd>${escapeHtml(payment.external_reference || "—")}</dd></div><div><dt>Status</dt><dd><span class="money-status ${paymentStatus === "Voided" ? "is-voided" : "is-paid"}">${paymentStatus}</span></dd></div></dl>${payment.notes ? `<p>${escapeHtml(payment.notes)}</p>` : ""}</article>`;
+    }).join("");
     const activityRows = (detail.activity || []).map((item) => `<li><span></span><div><strong>${escapeHtml(String(item.action || "Invoice activity").replaceAll("_", " "))}</strong><p>${escapeHtml(item.details?.notes || item.details?.description || "Financial record updated")}</p><small>${escapeHtml(item.actor_label || "Dashboard user")} · ${escapeHtml(item.created_at ? formatDateTime(item.created_at) : "")}</small></div></li>`).join("");
     const documentRows = (detail.attachments || []).map((item) => `<article><span>▧</span><div><strong>${escapeHtml(item.file_name || "Invoice attachment")}</strong><small>${escapeHtml(item.created_at ? formatDate(item.created_at) : "")}</small></div></article>`).join("");
     let body = "";
@@ -17843,6 +18145,7 @@ Requirements:
             ${canManageMoneyWorkflow() ? `<div class="money-new-split"><button type="button" data-action="create-financial-invoice"><span>＋</span> New</button><details><summary aria-label="Open New menu">⌄</summary><div><button type="button" data-action="create-financial-invoice">New Invoice</button><button type="button" data-action="open-money-expense-create">Add Expense</button><button type="button" data-action="open-money-payment-create">Record Payment</button></div></details></div>` : ""}
           </div>
         </header>
+        ${renderQaShowcasePanel("money")}
         <section class="money-unified-shell">
           ${renderMoneyTabs()}
           ${renderMoneyActiveView()}
@@ -21792,6 +22095,11 @@ Requirements:
 
   function renderEquipment(data = state.data) {
     if (!els.equipmentTable) return;
+    const qaShowcase = qs("[data-qa-equipment-showcase]");
+    if (qaShowcase) {
+      qaShowcase.hidden = !isQaShowcaseMode();
+      qaShowcase.innerHTML = isQaShowcaseMode() ? renderQaShowcasePanel("equipment") : "";
+    }
     populateEquipmentControls(data);
     setEquipmentViewVisibility();
     if (els.equipmentSearch && els.equipmentSearch.value !== state.equipmentSearch) els.equipmentSearch.value = state.equipmentSearch;
@@ -23471,7 +23779,7 @@ Requirements:
   }
 
   function approvedOperationalRows() {
-    if (isDemoMode()) return [];
+    if (isDemoMode() && !isQaShowcaseMode()) return [];
     return (state.data.tickets || []).map((ticket) => {
       const job = approvedTicketJob(ticket);
       const profile = approvedTicketProfile(ticket);
@@ -23597,6 +23905,186 @@ Requirements:
     </div>`;
   }
 
+  function homeWeatherApi() {
+    return window.UrbanYardsWeather || null;
+  }
+
+  function homeWeatherControlIcon(name) {
+    const paths = {
+      previous: '<path d="m15 18-6-6 6-6"></path>',
+      next: '<path d="m9 18 6-6-6-6"></path>',
+      refresh: '<path d="M20 11a8 8 0 1 0 2 5"></path><path d="M20 4v7h-7"></path>',
+      cloud: '<path d="M7 18h10a4 4 0 0 0 .5-8 6 6 0 0 0-11.4-1.5A4.8 4.8 0 0 0 7 18Z"></path>'
+    };
+    return `<svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">${paths[name] || paths.cloud}</svg>`;
+  }
+
+  function homeWeatherUpdatedLabel(timestamp) {
+    const value = Number(timestamp || 0);
+    if (!value) return "";
+    try {
+      return `Updated ${new Intl.DateTimeFormat("en-US", { hour: "numeric", minute: "2-digit" }).format(new Date(value))}`;
+    } catch (error) {
+      return "Updated recently";
+    }
+  }
+
+  function homeWeatherTemperature(value, unit) {
+    return Number.isFinite(Number(value)) ? `${Math.round(Number(value))}°${escapeHtml(unit || "F")}` : "—";
+  }
+
+  function renderHomeWeatherDay(day = {}) {
+    const precipitation = Number.isFinite(Number(day.probabilityOfPrecipitation))
+      ? `${Math.round(Number(day.probabilityOfPrecipitation))}%`
+      : "—";
+    const wind = [day.windDirection, day.windSpeed].filter(Boolean).join(" ") || "—";
+    const iconAlt = `${day.shortForecast || "Weather"} forecast icon`;
+    const icon = day.iconUrl
+      ? `<span class="home-weather-icon"><img src="${escapeHtml(day.iconUrl)}" alt="${escapeHtml(iconAlt)}" loading="lazy" data-weather-icon><span class="home-weather-icon-fallback" hidden>${homeWeatherControlIcon("cloud")}</span></span>`
+      : `<span class="home-weather-icon is-fallback" aria-hidden="true">${homeWeatherControlIcon("cloud")}</span>`;
+    return `<article class="home-weather-day${day.isToday ? " is-today" : ""}" scroll-snap-align="start" title="${escapeHtml(day.detailedForecast || day.shortForecast || "Forecast unavailable")}">
+      <div class="home-weather-day-heading"><span><strong>${escapeHtml(day.weekday || "Forecast")}</strong><small>${escapeHtml(day.shortDate || "")}</small></span>${day.isToday ? '<b>Today</b>' : ""}</div>
+      ${icon}
+      <p>${escapeHtml(day.shortForecast || "Forecast unavailable")}</p>
+      <div class="home-weather-temperatures" aria-label="High and low temperatures"><strong>H ${homeWeatherTemperature(day.daytimeTemperature, day.temperatureUnit)}</strong><span>L ${homeWeatherTemperature(day.nighttimeTemperature, day.temperatureUnit)}</span></div>
+      <dl><div><dt>Rain</dt><dd>${escapeHtml(precipitation)}</dd></div><div><dt>Wind</dt><dd>${escapeHtml(wind)}</dd></div></dl>
+    </article>`;
+  }
+
+  function renderHomeWeatherSkeletons() {
+    return Array.from({ length: 7 }, (_, index) => `<div class="home-weather-day home-weather-skeleton" aria-hidden="true"><i></i><i></i><i></i><i></i><span>${index + 1}</span></div>`).join("");
+  }
+
+  function renderHomeWeatherContent() {
+    const hasData = state.weatherData.length > 0;
+    const loading = state.weatherStatus === "loading" && !hasData;
+    const refreshing = state.weatherStatus === "refreshing";
+    const failed = state.weatherStatus === "error" && !hasData;
+    const statusText = state.weatherStale
+      ? "Showing the last saved forecast"
+      : homeWeatherUpdatedLabel(state.weatherFetchedAt);
+    return `<header class="home-weather-header">
+      <div><p class="clean-section-label">Portland, OR</p><h2>7-Day Weather</h2><span>${escapeHtml(statusText || "National Weather Service forecast")}</span></div>
+      <div class="home-weather-controls" aria-label="Weather forecast controls">
+        <button type="button" data-action="weather-scroll" data-direction="previous" aria-label="Previous forecast days" disabled>${homeWeatherControlIcon("previous")}</button>
+        <button type="button" data-action="weather-scroll" data-direction="next" aria-label="Next forecast days" disabled>${homeWeatherControlIcon("next")}</button>
+        <button type="button" data-action="refresh-weather" aria-label="Refresh weather" ${loading || refreshing ? "disabled" : ""}>${homeWeatherControlIcon("refresh")}</button>
+      </div>
+    </header>
+    ${failed ? `<div class="home-weather-error" role="alert"><span><strong>Weather is temporarily unavailable.</strong><small>${escapeHtml(state.weatherError || "Try again in a moment.")}</small></span><button type="button" data-action="refresh-weather">Try again</button></div>` : `<div class="home-weather-rail${loading ? " is-loading" : ""}" data-weather-rail tabindex="0" aria-label="Portland seven-day weather forecast">${loading ? renderHomeWeatherSkeletons() : state.weatherData.map(renderHomeWeatherDay).join("")}</div>`}
+    <p class="sr-only" aria-live="polite">${loading ? "Loading the Portland weather forecast." : refreshing ? "Refreshing the Portland weather forecast." : failed ? "The weather forecast could not be loaded." : hasData ? `Weather forecast loaded for ${state.weatherData.length} days.` : ""}</p>`;
+  }
+
+  function updateHomeWeatherNavigation() {
+    const rail = qs("[data-weather-rail]");
+    if (!rail) return;
+    const section = rail.closest("[data-home-weather]");
+    const previous = section?.querySelector('[data-action="weather-scroll"][data-direction="previous"]');
+    const next = section?.querySelector('[data-action="weather-scroll"][data-direction="next"]');
+    const maxScroll = Math.max(0, rail.scrollWidth - rail.clientWidth);
+    if (previous) previous.disabled = maxScroll <= 2 || rail.scrollLeft <= 16;
+    if (next) next.disabled = maxScroll <= 2 || rail.scrollLeft >= maxScroll - 16;
+  }
+
+  function bindHomeWeatherRail() {
+    const rail = qs("[data-weather-rail]");
+    if (!rail || rail.dataset.weatherBound === "true") return;
+    rail.dataset.weatherBound = "true";
+    rail.addEventListener("scroll", updateHomeWeatherNavigation, { passive: true });
+    rail.addEventListener("keydown", (event) => {
+      if (event.key !== "ArrowLeft" && event.key !== "ArrowRight") return;
+      event.preventDefault();
+      scrollHomeWeather(event.key === "ArrowLeft" ? "previous" : "next");
+    });
+    rail.querySelectorAll("[data-weather-icon]").forEach((image) => image.addEventListener("error", () => {
+      image.hidden = true;
+      const fallback = image.nextElementSibling;
+      if (fallback) fallback.hidden = false;
+    }, { once: true }));
+    if (!state.weatherResizeBound) {
+      state.weatherResizeBound = true;
+      window.addEventListener("resize", () => requestAnimationFrame(updateHomeWeatherNavigation), { passive: true });
+    }
+    requestAnimationFrame(updateHomeWeatherNavigation);
+  }
+
+  function updateHomeWeatherSection() {
+    const section = qs("[data-home-weather]");
+    if (!section) return;
+    section.innerHTML = renderHomeWeatherContent();
+    bindHomeWeatherRail();
+  }
+
+  function scrollHomeWeather(direction) {
+    const rail = qs("[data-weather-rail]");
+    if (!rail) return;
+    const card = rail.querySelector(".home-weather-day");
+    const styles = getComputedStyle(rail);
+    const gap = Number.parseFloat(styles.columnGap || styles.gap || "0") || 0;
+    const distance = Math.max(card?.getBoundingClientRect().width || rail.clientWidth * 0.72, 180) + gap;
+    const reducedMotion = window.matchMedia?.("(prefers-reduced-motion: reduce)").matches || document.documentElement.dataset.reducedMotion === "true";
+    rail.scrollBy({ left: direction === "previous" ? -distance : distance, behavior: reducedMotion ? "auto" : "smooth" });
+    window.setTimeout(updateHomeWeatherNavigation, reducedMotion ? 0 : 320);
+  }
+
+  function ensureHomeWeather(options = {}) {
+    const api = homeWeatherApi();
+    const forceRefresh = Boolean(options.forceRefresh);
+    if (!api) {
+      state.weatherStatus = "error";
+      state.weatherError = "The weather service did not load.";
+      updateHomeWeatherSection();
+      return Promise.resolve(null);
+    }
+    if (state.weatherRequest) return state.weatherRequest;
+    if (!forceRefresh && state.weatherStatus === "error") return Promise.resolve(null);
+    if (!forceRefresh && state.weatherStale && state.weatherError) return Promise.resolve(null);
+
+    let cached = null;
+    try {
+      cached = api.readWeatherCache(window.localStorage);
+    } catch (error) {
+      cached = null;
+    }
+    if (!forceRefresh && cached?.data?.length) {
+      state.weatherData = cached.data;
+      state.weatherFetchedAt = cached.fetchedAt;
+      state.weatherStatus = "ready";
+      state.weatherStale = !cached.isFresh;
+      state.weatherError = "";
+      updateHomeWeatherSection();
+      if (cached.isFresh) return Promise.resolve(cached);
+    } else if (!state.weatherData.length) {
+      state.weatherStatus = "loading";
+      state.weatherError = "";
+      updateHomeWeatherSection();
+    }
+
+    const request = api.loadWeatherForecast({ forceRefresh })
+      .then((result) => {
+        state.weatherData = Array.isArray(result?.data) ? result.data.slice(0, 7) : [];
+        state.weatherFetchedAt = Number(result?.fetchedAt || Date.now());
+        state.weatherStale = Boolean(result?.stale);
+        state.weatherError = result?.error ? "A current forecast could not be reached." : "";
+        state.weatherStatus = state.weatherData.length ? "ready" : "error";
+        updateHomeWeatherSection();
+        return result;
+      })
+      .catch((error) => {
+        state.weatherStatus = state.weatherData.length ? "ready" : "error";
+        state.weatherStale = state.weatherData.length > 0;
+        state.weatherError = "The National Weather Service forecast could not be reached.";
+        if (/^(localhost|127\.0\.0\.1)$/.test(window.location.hostname)) console.warn("Weather forecast request failed.", error);
+        updateHomeWeatherSection();
+        return null;
+      })
+      .finally(() => {
+        state.weatherRequest = null;
+      });
+    state.weatherRequest = request;
+    return request;
+  }
+
   function renderCleanOperationsHome() {
     const host = qs("[data-home-focus-work]");
     if (!host) return;
@@ -23620,6 +24108,7 @@ Requirements:
         ${renderFocusMetric("warning", String(attentionJobs.length), "Needs Attention", "", "attention")}
         ${renderFocusMetric("briefcase", String(openTickets.length), "Open Tickets", "", "open")}
       </section>
+      <section class="home-weather-section" data-home-weather aria-label="Portland weather forecast">${renderHomeWeatherContent()}</section>
       <div class="clean-home-grid">
         <section class="focus-card clean-schedule-card">
           <div class="focus-card-header"><div><p class="clean-section-label">Today</p><h2>Today&rsquo;s Schedule</h2></div><a href="#calendar">Open Work</a></div>
@@ -23635,6 +24124,8 @@ Requirements:
         <div class="clean-recent-list">${recentTickets.length ? recentTickets.map((ticket) => `<button type="button" data-action="unified-ticket-open" data-ticket-source="${escapeHtml(ticket.source || "ticket")}" data-id="${escapeHtml(ticket.id)}"><strong>${escapeHtml(ticket.number || "Ticket")}</strong><span>${escapeHtml(identity(ticket))}</span><em class="focus-status">${escapeHtml(ticket.stageLabel || ticket.status || "Open")}</em></button>`).join("") : `<div class="clean-empty-state"><strong>No tickets yet.</strong><span>Create the first ticket when work comes in.</span></div>`}</div>
       </section>
     </div>`;
+    bindHomeWeatherRail();
+    void ensureHomeWeather();
   }
 
   const UNIFIED_TICKET_REFERENCE = Object.freeze({
@@ -23749,6 +24240,7 @@ Requirements:
         <button type="button" class="ttl-new-ticket" style="background:#343a45!important;color:#fff!important" data-action="open-ticket-create" data-ticket-type="field"><span>+</span> New Ticket</button>
         ${canManageTicketTrash() ? `<button type="button" class="secondary-action" data-action="show-ticket-trash">Trash <span>${escapeHtml(String(trashedTickets.length))}</span></button>` : ""}
       </div></header>
+      ${renderQaShowcasePanel("tickets")}
       <div class="ttl-groups">${groups || '<p class="ttl-no-results">No upcoming tickets match these filters.</p>'}</div>
       <footer class="ttl-footer">${unifiedTicketIcon("calendar")}<span>Showing upcoming tickets for this week and beyond</span><button type="button" data-action="unified-ticket-schedule">View full schedule&nbsp; →</button></footer>
     </div>`;
@@ -23768,7 +24260,7 @@ Requirements:
     const ticket = selectedTimelineTicket ? {
       ...UNIFIED_TICKET_REFERENCE,
       id:selectedTimelineTicket.displayNumber || selectedTimelineTicket.id, recordId:selectedTimelineTicket.id,
-      title:selectedTimelineTicket.name, status:selectedTimelineTicket.status,
+      title:selectedTimelineTicket.name, status:isQaShowcaseMode() && sourceTicket?.stageLabel ? sourceTicket.stageLabel : selectedTimelineTicket.status,
       type:ticketTypeLabel(selectedTimelineTicket), priority:cleanDisplayValue(selectedTimelineTicket.priority, "Normal"), location:cleanDisplayValue(selectedTimelineTicket.city, "Location not set"),
       address:selectedTimelineTicket.address, city:selectedTimelineTicket.city,
       customer:cleanDisplayValue(sourceTicket?.customer || selectedTimelineTicket.customer, "Client not set"),
@@ -25647,6 +26139,55 @@ Requirements:
       const id = target.dataset.id;
       if (action !== "toggle-global-add") setGlobalAddOpen(false);
       if (target.closest("[data-global-search-panel]")) closeGlobalSearchPanel();
+
+      if (action === "weather-scroll") {
+        scrollHomeWeather(target.dataset.direction || "next");
+        return;
+      }
+
+      if (action === "refresh-weather") {
+        state.weatherStatus = state.weatherData.length ? "refreshing" : "loading";
+        state.weatherError = "";
+        updateHomeWeatherSection();
+        await ensureHomeWeather({ forceRefresh: true });
+        return;
+      }
+
+      if (action === "qa-open-ticket-state" && isQaShowcaseMode()) {
+        state.unifiedTicketSelectedId = id;
+        state.unifiedTicketVisible = true;
+        state.unifiedTicketSection = "overview";
+        renderUnifiedTicketOverview();
+        return;
+      }
+
+      if (action === "qa-money-state" && isQaShowcaseMode()) {
+        const view = target.dataset.view || "invoicing";
+        const status = target.dataset.status || "All";
+        state.moneyView = view;
+        state.moneySearch = "";
+        state.moneyPaymentSearch = "";
+        state.moneyInvoiceStatus = view === "invoicing" ? status : "All";
+        state.moneyPaymentStatus = view === "payments" ? status : "All";
+        updateMoneyViewRoute(view);
+        renderMoneyWorkspace();
+        if (view === "invoicing" && id) await openFinancialInvoiceDrawer(id);
+        if (view === "expenses" && id) {
+          const expense = (state.data.financial?.expenses || []).find((item) => String(item.id) === String(id));
+          if (expense) openMoneyExpenseDrawer(expense);
+        }
+        return;
+      }
+
+      if (action === "qa-equipment-state" && isQaShowcaseMode()) {
+        state.equipmentView = "inventory";
+        state.equipmentStatusFilter = target.dataset.filter === "status" ? target.dataset.value : "All";
+        state.equipmentConditionFilter = target.dataset.filter === "condition" ? target.dataset.value : "All";
+        state.equipmentCategoryFilter = "All";
+        state.equipmentPriorityFilter = "All";
+        renderEquipment();
+        return;
+      }
 
       if (action === "open-work-detail") {
         state.selectedWorkJobId = id;
@@ -30082,6 +30623,17 @@ Requirements:
           client_notes: nullableId("client_notes")
         };
         try {
+          if (isDemoMode()) {
+            const invoice = (state.data.financial?.invoices || []).find((item) => String(item.id) === String(id));
+            if (!invoice) throw new Error("The demo invoice could not be found.");
+            Object.assign(invoice, payload, { updated_at: new Date().toISOString() });
+            state.moneyInvoiceDetail = demoFinancialInvoiceDetail(id);
+            renderMoneyWorkspace();
+            els.detailContent.innerHTML = renderUnifiedFinancialInvoiceDrawer(state.moneyInvoiceDetail);
+            renderDetailDrawerBreadcrumbs();
+            setDashboardState("Demo invoice saved. No production data was changed.");
+            return;
+          }
           await supabaseRestRequest(`invoices?id=eq.${encodeURIComponent(id)}`, {
             method: "PATCH",
             headers: { Prefer: "return=representation" },

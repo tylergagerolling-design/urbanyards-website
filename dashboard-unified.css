@@ -593,6 +593,389 @@ html body:not(.is-login-screen) .dashboard-main #call-queue .cq-entries-card{
   box-sizing:border-box!important;
 }
 
+/* Home weather uses the National Weather Service forecast discovered from the
+   Portland grid point. It stays inside the approved Home content column. */
+body:not(.is-login-screen) .dashboard-main .home-weather-section{
+  width:100%;
+  min-width:0;
+  max-width:100%;
+  overflow:hidden;
+  border:1px solid var(--clean-border);
+  border-radius:var(--clean-radius);
+  background:#fff;
+  box-sizing:border-box;
+}
+
+body:not(.is-login-screen) .dashboard-main .home-weather-header{
+  min-height:70px;
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:18px;
+  padding:13px 16px;
+  border-bottom:1px solid var(--clean-border);
+}
+
+body:not(.is-login-screen) .dashboard-main .home-weather-header > div:first-child{
+  min-width:0;
+}
+
+body:not(.is-login-screen) .dashboard-main .home-weather-header h2{
+  margin:0;
+  color:var(--clean-text);
+  font-size:.98rem!important;
+}
+
+body:not(.is-login-screen) .dashboard-main .home-weather-header > div:first-child > span{
+  display:block;
+  margin-top:4px;
+  color:var(--clean-muted);
+  font-size:.69rem;
+}
+
+body:not(.is-login-screen) .dashboard-main .home-weather-controls{
+  flex:0 0 auto;
+  display:flex;
+  align-items:center;
+  gap:7px;
+}
+
+body:not(.is-login-screen) .dashboard-main .home-weather-controls button{
+  width:40px;
+  min-width:40px;
+  height:40px;
+  min-height:40px;
+  display:inline-grid;
+  place-items:center;
+  padding:0!important;
+  border:1px solid var(--clean-border-strong)!important;
+  border-radius:7px!important;
+  background:#fff!important;
+  color:var(--clean-text)!important;
+}
+
+body:not(.is-login-screen) .dashboard-main .home-weather-controls button:last-child{
+  color:var(--clean-green)!important;
+}
+
+body:not(.is-login-screen) .dashboard-main .home-weather-controls button:disabled{
+  cursor:not-allowed;
+  opacity:.38;
+}
+
+body:not(.is-login-screen) .dashboard-main .home-weather-controls svg{
+  width:18px;
+  height:18px;
+}
+
+body:not(.is-login-screen) .dashboard-main .home-weather-rail{
+  display:grid;
+  grid-auto-flow:column;
+  grid-auto-columns:minmax(132px,1fr);
+  gap:10px;
+  width:100%;
+  min-width:0;
+  max-width:100%;
+  overflow-x:auto;
+  overflow-y:hidden;
+  padding:12px;
+  scroll-behavior:smooth;
+  scroll-snap-type:x mandatory;
+  scrollbar-width:thin;
+  scrollbar-color:var(--clean-border-strong) transparent;
+  box-sizing:border-box;
+}
+
+body:not(.is-login-screen) .dashboard-main .home-weather-day{
+  min-width:0;
+  min-height:206px;
+  display:grid;
+  grid-template-rows:auto 52px minmax(32px,auto) auto auto;
+  align-content:start;
+  gap:9px;
+  padding:12px;
+  overflow:hidden;
+  border:1px solid var(--clean-border);
+  border-radius:8px;
+  background:var(--clean-subtle);
+  color:var(--clean-text);
+  scroll-snap-align:start;
+  box-sizing:border-box;
+}
+
+body:not(.is-login-screen) .dashboard-main .home-weather-day.is-today{
+  border-color:rgba(8,127,67,.38);
+  background:#f5fbf7;
+}
+
+body:not(.is-login-screen) .dashboard-main .home-weather-day-heading{
+  min-width:0;
+  display:flex;
+  align-items:flex-start;
+  justify-content:space-between;
+  gap:6px;
+}
+
+body:not(.is-login-screen) .dashboard-main .home-weather-day-heading > span{
+  min-width:0;
+  display:grid;
+  gap:1px;
+}
+
+body:not(.is-login-screen) .dashboard-main .home-weather-day-heading strong{
+  overflow:hidden;
+  font-size:.76rem;
+  text-overflow:ellipsis;
+  white-space:nowrap;
+}
+
+body:not(.is-login-screen) .dashboard-main .home-weather-day-heading small{
+  color:var(--clean-muted);
+  font-size:.65rem;
+}
+
+body:not(.is-login-screen) .dashboard-main .home-weather-day-heading b{
+  flex:0 0 auto;
+  padding:3px 6px;
+  border-radius:999px;
+  background:var(--clean-green-soft);
+  color:var(--clean-green);
+  font-size:.58rem;
+  letter-spacing:.03em;
+  text-transform:uppercase;
+}
+
+body:not(.is-login-screen) .dashboard-main .home-weather-icon{
+  width:52px;
+  height:52px;
+  display:grid;
+  place-items:center;
+  overflow:hidden;
+  border-radius:8px;
+  color:var(--clean-green);
+}
+
+body:not(.is-login-screen) .dashboard-main .home-weather-icon img{
+  width:100%;
+  height:100%;
+  display:block;
+  object-fit:cover;
+  border-radius:8px;
+}
+
+body:not(.is-login-screen) .dashboard-main .home-weather-icon svg{
+  width:34px;
+  height:34px;
+}
+
+body:not(.is-login-screen) .dashboard-main .home-weather-day > p{
+  min-height:32px;
+  margin:0;
+  display:-webkit-box;
+  overflow:hidden;
+  color:var(--clean-text);
+  font-size:.68rem;
+  font-weight:650;
+  line-height:1.35;
+  -webkit-box-orient:vertical;
+  -webkit-line-clamp:2;
+}
+
+body:not(.is-login-screen) .dashboard-main .home-weather-temperatures{
+  display:flex;
+  align-items:baseline;
+  gap:8px;
+  white-space:nowrap;
+}
+
+body:not(.is-login-screen) .dashboard-main .home-weather-temperatures strong{
+  font-size:.79rem;
+}
+
+body:not(.is-login-screen) .dashboard-main .home-weather-temperatures span{
+  color:var(--clean-muted);
+  font-size:.7rem;
+}
+
+body:not(.is-login-screen) .dashboard-main .home-weather-day dl{
+  display:grid;
+  gap:4px;
+  margin:0;
+}
+
+body:not(.is-login-screen) .dashboard-main .home-weather-day dl > div{
+  min-width:0;
+  display:flex;
+  justify-content:space-between;
+  gap:8px;
+  color:var(--clean-muted);
+  font-size:.62rem;
+}
+
+body:not(.is-login-screen) .dashboard-main .home-weather-day :is(dt,dd){
+  min-width:0;
+  margin:0;
+}
+
+body:not(.is-login-screen) .dashboard-main .home-weather-day dd{
+  overflow:hidden;
+  color:var(--clean-text);
+  font-weight:650;
+  text-align:right;
+  text-overflow:ellipsis;
+  white-space:nowrap;
+}
+
+body:not(.is-login-screen) .dashboard-main .home-weather-error{
+  min-height:112px;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  gap:18px;
+  padding:20px;
+  color:var(--clean-muted);
+  text-align:left;
+}
+
+body:not(.is-login-screen) .dashboard-main .home-weather-error span{
+  display:grid;
+  gap:4px;
+}
+
+body:not(.is-login-screen) .dashboard-main .home-weather-error strong{
+  font-size:.82rem;
+}
+
+body:not(.is-login-screen) .dashboard-main .home-weather-error small{
+  color:var(--clean-muted);
+  font-size:.7rem;
+}
+
+body:not(.is-login-screen) .dashboard-main .home-weather-error button{
+  flex:0 0 auto;
+  padding-inline:14px;
+  border-color:var(--clean-green)!important;
+  background:var(--clean-green)!important;
+  color:#fff!important;
+}
+
+body:not(.is-login-screen) .dashboard-main .home-weather-skeleton{
+  position:relative;
+}
+
+body:not(.is-login-screen) .dashboard-main .home-weather-skeleton i{
+  display:block;
+  height:12px;
+  border-radius:5px;
+  background:#e6ece8;
+}
+
+body:not(.is-login-screen) .dashboard-main .home-weather-skeleton i:nth-child(2){width:52px;height:52px}
+body:not(.is-login-screen) .dashboard-main .home-weather-skeleton i:nth-child(3){width:82%}
+body:not(.is-login-screen) .dashboard-main .home-weather-skeleton i:nth-child(4){width:64%}
+body:not(.is-login-screen) .dashboard-main .home-weather-skeleton span{display:none}
+
+@keyframes home-weather-pulse{50%{opacity:.5}}
+body:not(.is-login-screen) .dashboard-main .home-weather-rail.is-loading .home-weather-skeleton i{animation:home-weather-pulse 1.2s ease-in-out infinite}
+
+@media(max-width:760px){
+  body:not(.is-login-screen) .dashboard-main .home-weather-header{align-items:flex-start;padding:12px}
+  body:not(.is-login-screen) .dashboard-main .home-weather-controls{gap:5px}
+  body:not(.is-login-screen) .dashboard-main .home-weather-controls button{width:44px;min-width:44px;height:44px;min-height:44px}
+  body:not(.is-login-screen) .dashboard-main .home-weather-rail{grid-auto-columns:minmax(205px,78vw);gap:9px;padding:10px}
+  body:not(.is-login-screen) .dashboard-main .home-weather-day{min-height:202px}
+  body:not(.is-login-screen) .dashboard-main .home-weather-error{align-items:stretch;flex-direction:column;text-align:center}
+}
+
+/* The opt-in ?demo=1&qa=1 showcase is a local/manual testing aid. It is
+   intentionally compact, clearly labeled, and never shown in normal use. */
+body:not(.is-login-screen) .dashboard-main .qa-showcase-panel{
+  display:grid;
+  gap:12px;
+  width:100%;
+  min-width:0;
+  margin:0 0 16px;
+  padding:14px;
+  border:1px dashed rgba(18,63,49,.28);
+  border-radius:12px;
+  background:#fffdf7;
+  box-sizing:border-box;
+}
+
+body:not(.is-login-screen) .dashboard-main .qa-showcase-heading{
+  display:flex;
+  align-items:flex-start;
+  justify-content:space-between;
+  gap:14px;
+}
+
+body:not(.is-login-screen) .dashboard-main .qa-showcase-heading > div{
+  display:grid;
+  gap:2px;
+}
+
+body:not(.is-login-screen) .dashboard-main .qa-showcase-heading span{
+  color:#78956f;
+  font-size:.67rem;
+  font-weight:700;
+  letter-spacing:.11em;
+  text-transform:uppercase;
+}
+
+body:not(.is-login-screen) .dashboard-main .qa-showcase-heading strong{
+  color:#123f31;
+  font-family:Georgia,serif;
+  font-size:1rem;
+}
+
+body:not(.is-login-screen) .dashboard-main .qa-showcase-heading small{
+  color:#60736b;
+  font-size:.72rem;
+}
+
+body:not(.is-login-screen) .dashboard-main .qa-showcase-heading a{
+  color:#123f31;
+  font-size:.72rem;
+  font-weight:700;
+  white-space:nowrap;
+}
+
+body:not(.is-login-screen) .dashboard-main .qa-showcase-group{
+  display:grid;
+  grid-template-columns:minmax(130px,auto) minmax(0,1fr);
+  align-items:start;
+  gap:10px 14px;
+}
+
+body:not(.is-login-screen) .dashboard-main .qa-showcase-group > b{
+  padding-top:10px;
+  color:#273a34;
+  font-size:.75rem;
+}
+
+body:not(.is-login-screen) .dashboard-main .qa-showcase-group > div{
+  display:flex;
+  flex-wrap:wrap;
+  gap:7px;
+  min-width:0;
+}
+
+body:not(.is-login-screen) .dashboard-main .qa-showcase-group button{
+  min-height:36px!important;
+  padding:7px 10px!important;
+  border:1px solid rgba(18,63,49,.16)!important;
+  border-radius:8px!important;
+  background:#fff!important;
+  color:#123f31!important;
+  font-size:.7rem!important;
+}
+
+body:not(.is-login-screen) .dashboard-main .qa-showcase-group button span{
+  display:block;
+  color:#60736b;
+  font-size:.61rem;
+}
+
 @media(max-width:760px){
   html body:not(.is-login-screen) .dashboard-main > :is(#contacts,#call-queue).dashboard-section.is-active{
     padding:14px 12px 88px!important;
@@ -604,5 +987,18 @@ html body:not(.is-login-screen) .dashboard-main #call-queue .cq-entries-card{
 
   html body:not(.is-login-screen) .dashboard-main #call-queue .call-queue-reference{
     padding:0!important;
+  }
+
+  body:not(.is-login-screen) .dashboard-main .qa-showcase-heading{
+    align-items:stretch;
+    flex-direction:column;
+  }
+
+  body:not(.is-login-screen) .dashboard-main .qa-showcase-group{
+    grid-template-columns:1fr;
+  }
+
+  body:not(.is-login-screen) .dashboard-main .qa-showcase-group > b{
+    padding-top:0;
   }
 }

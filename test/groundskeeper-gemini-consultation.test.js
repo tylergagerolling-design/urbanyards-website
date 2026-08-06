@@ -55,6 +55,39 @@ test("successful Gemini consultation is structured and returns bounded usage met
   assert.equal(JSON.parse(request.options.body).generationConfig.responseMimeType, "application/json");
 });
 
+test("Gemini public web research uses Google Search grounding and returns separate HTTPS sources", async () => {
+  let requestBody;
+  const provider = createGeminiProvider({
+    apiKey: "test-secret",
+    fetchImpl: async (_url, options) => {
+      requestBody = JSON.parse(options.body);
+      return {
+        ok: true,
+        status: 200,
+        async json() {
+          return {
+            candidates: [{
+              content: { parts: [{ text: JSON.stringify(structured) }] },
+              finishReason: "STOP",
+              groundingMetadata: {
+                webSearchQueries: ["Greenbridge official website"],
+                groundingChunks: [
+                  { web: { uri: "https://example.com/greenbridge", title: "Greenbridge" } },
+                  { web: { uri: "javascript:alert(1)", title: "Rejected" } }
+                ]
+              }
+            }]
+          };
+        }
+      };
+    }
+  });
+  const result = await provider.consult({ sanitizedContext: '{"question":"Find Greenbridge online"}', webSearch: true });
+  assert.deepEqual(requestBody.tools, [{ google_search: {} }]);
+  assert.deepEqual(result.webSources, [{ title: "Greenbridge", url: "https://example.com/greenbridge" }]);
+  assert.deepEqual(result.webSearchQueries, ["Greenbridge official website"]);
+});
+
 test("Gemini performs at most one schema fallback retry", async () => {
   let calls = 0;
   const provider = createGeminiProvider({
@@ -147,6 +180,21 @@ test("Gemini receives verified tool results and approved shared memories without
   assert.doesNotMatch(sanitized.serialized, /Unverified record|Do not send|Edge Asset Management|123 Private Street|Private customer note|apiKey|accessToken|"bad"/);
 });
 
+test("Gemini receives minimized secure-search rows without private contact fields", () => {
+  const sanitized = sanitizeConsultationContext({
+    message: "Compare this company with our leads",
+    groundedContext: {
+      toolResults: [{
+        name: "search_records",
+        ok: true,
+        output: { search: { results: [{ id: "lead-1", title: "Greenbridge", status: "New", phone: "971-555-0100", email: "private@example.com", address: "123 Full Address" }] } }
+      }]
+    }
+  });
+  assert.match(sanitized.serialized, /Greenbridge|lead-1/);
+  assert.doesNotMatch(sanitized.serialized, /971-555|private@example|123 Full Address/);
+});
+
 test("grounded dashboard content remains untrusted and credential-shaped text is redacted", () => {
   const googleShapedKey = ["AI", "za", "x".repeat(32)].join("");
   const sanitized = sanitizeConsultationContext({
@@ -205,6 +253,8 @@ test("server route remains authenticated and frontend contains no Gemini secret"
 
 test("provider errors preserve the primary Groundskeeper fallback path", () => {
   const api = fs.readFileSync(path.join(__dirname, "..", "api", "groundskeeper-ai.js"), "utf8");
-  assert.match(api, /reply = `\$\{primaryReply\}[\s\S]*second-opinion service was unavailable/);
-  assert.match(api, /decision\.consult[\s\S]*createGeminiProvider/);
+  assert.match(api, /runTandemAssistant/);
+  assert.match(api, /groundskeeperFallback: safeDeterministicReply/);
+  assert.match(api, /canUseGemini[\s\S]*createGeminiProvider/);
+  assert.doesNotMatch(api, /second-opinion service was unavailable/);
 });

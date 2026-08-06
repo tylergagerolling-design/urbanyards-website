@@ -8,13 +8,17 @@ const ASSISTANT_INTENTS = Object.freeze([
   "landscaping_question", "plant_identification", "diagnostic_request",
   "irrigation_troubleshooting", "drainage_troubleshooting", "property_inspection",
   "estimate_request", "material_calculation", "labor_calculation", "field_guidance",
-  "safety_question", "licensing_question", "photo_review", "memory_request"
+  "safety_question", "licensing_question", "photo_review", "memory_request",
+  "search_records", "retrieve_record_details", "summarize_information", "navigate",
+  "filter_and_navigate", "dashboard_question", "general_question", "clarification_needed",
+  "search_internal", "search_external", "search_internal_and_external",
+  "retrieve_internal_record", "research_entity", "compare_sources", "summarize_research"
 ]);
 
 const RECORD_TYPES = Object.freeze([
   "ticket", "job", "visit", "client", "contact", "property", "lead",
   "quote", "invoice", "expense", "worker", "document", "equipment",
-  "schedule", "report"
+  "schedule", "report", "payment", "call_queue", "work_note", "photo", "form", "activity"
 ]);
 
 function recordReference(input = {}) {

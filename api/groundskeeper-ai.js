@@ -4,8 +4,11 @@ const {
 } = require("./lib/security");
 const {
   getFeatureFlag,
-  hasPermission,
+  getSupabaseAnonKey,
+  getSupabaseUrl,
+  normalizeRole,
   requirePermission,
+  ROLE_PERMISSIONS,
   supabaseAdminRequest,
   verifyOwner,
   writeAuditLog,
@@ -17,14 +20,21 @@ const { MEMORY_TYPES, normalizeMemory, sanitizeScope } = require("../src/assista
 const { consultationDecision, normalizeMode } = require("../src/assistant/consultation/policy");
 const { sanitizeConsultationContext } = require("../src/assistant/consultation/context-sanitizer");
 const { createGeminiProvider } = require("../src/assistant/consultation/gemini-provider");
-const { disagreementDetected, synthesisInstruction } = require("../src/assistant/consultation/synthesizer");
+const { contributionPrompt, parseContribution, runTandemAssistant, shouldUseTandem } = require("../src/assistant/tandem-orchestrator");
 const { landscapingKnowledgeCatalog } = require("../src/assistant/landscaping-knowledge");
+const { authenticatedSupabaseLoader, createDashboardSearchService } = require("../src/assistant/dashboard-search");
+const { createExternalResearchService, createGeminiExternalSearchProvider } = require("../src/assistant/external-research");
+
+function hasStrictSearchPermission(role, permission) {
+  const permissions = ROLE_PERMISSIONS[normalizeRole(role)] || [];
+  return permissions.includes("*") || permissions.includes(permission) || permissions.includes(`${String(permission || "").split(":")[0]}:*`);
+}
 
 const BUSINESS_CONTEXT = `
-You are The Groundskeeper, the shared AI assistant for Urban Yards Groundskeeping.
+You are Groundkeeper — ChatGPT, the practical operations persona inside Groundkeeper & Lawnmower Man AI for Urban Yards Groundskeeping. Lawnmower Man — Gemini is the separate reviewing persona when tandem collaboration is used.
 
 You power both:
-- The public Urban Yards website helper, where you answer visitor questions and guide people toward Request a Free Quote.
+- Groundkeeper & Lawnmower Man AI on the public Urban Yards website, where you answer visitor questions and guide people toward Request a Free Quote.
 - The private Urban Yards dashboard helper, where you may help Tyler draft follow-ups, summarize notes, improve copy, review leads, and plan outreach.
 
 Use the provided Urban Yards knowledge source first. Do not invent services, prices, guarantees, certifications, service areas, availability, portfolio projects, or policies that are not in the knowledge.
@@ -62,9 +72,10 @@ You are responding inside the authenticated Urban Yards owner dashboard.
 - Do not invite the operator to request a free quote, submit the public contact form, or contact Urban Yards.
 - For calculations and operational questions, give the verified result, assumptions, missing information, and the next internal action.
 - Use public lead-capture language only in public mode.
+- Address the authenticated operator by their provided first name when it sounds natural, without repeating their name in every response.
 `;
 
-const UNAVAILABLE_REPLY = "Sorry, the AI helper is not available right now. You can still request a free quote.";
+const UNAVAILABLE_REPLY = "Sorry, Groundkeeper & Lawnmower Man AI is not available right now. You can still request a free quote.";
 const PUBLIC_TABLES = ["ai_settings", "ai_knowledge", "ai_faqs", "ai_rules", "ai_saved_answers"];
 const ADMIN_TABLES = [...PUBLIC_TABLES, "ai_conversation_logs", "ai_feedback", "ai_training_rules", "ai_helper_versions"];
 const TRAINING_CATEGORIES = new Set([
@@ -82,7 +93,7 @@ const TRAINING_CATEGORIES = new Set([
 const TRAINING_STATUSES = new Set(["draft", "approved", "live", "archived"]);
 
 const TRAINING_ROOM_CONTEXT = `
-You are helping Tyler train the Urban Yards public website AI helper.
+You are helping Tyler train Groundkeeper & Lawnmower Man AI for the Urban Yards public website.
 
 Your job is to turn plain-language instructions into clean, usable assistant guidance.
 Respond conversationally first, then propose structured training rules Tyler can save.
@@ -94,14 +105,14 @@ Return JSON only in this shape:
     {
       "title": "Short title",
       "category": "tone | services | service_area | pricing | faq | lead_capture | escalation | do_dont | website_reference | other",
-      "content": "The exact guidance the public helper should follow.",
+      "content": "The exact guidance Groundkeeper & Lawnmower Man AI should follow.",
       "visibility": "public",
       "priority": 50
     }
   ]
 }
 
-Keep training suggestions specific, business-safe, and ready for a public-facing website helper after approval.
+Keep training suggestions specific, business-safe, and ready for Groundkeeper & Lawnmower Man AI on the public website after approval.
 Do not mark anything live. New suggestions are draft until Tyler approves and publishes them.
 `;
 
@@ -215,7 +226,7 @@ async function adminSnapshot() {
 
 function buildDynamicContext(ai, mode) {
   const lines = [
-    `Groundskeeper mode: ${mode}.`,
+    `Groundkeeper & Lawnmower Man AI mode: ${mode}.`,
     "Knowledge publication rules: public mode may use only Published + Public Website records; dashboard mode may use draft, internal-only, and public records."
   ];
   const groups = [
@@ -299,8 +310,52 @@ async function openAiChat(messages, { mode = "dashboard", json = false, maxToken
   if (!response.ok) throw new Error(`OpenAI request failed (${response.status})`);
   const data = await response.json();
   const reply = data?.choices?.[0]?.message?.content?.trim();
-  if (!reply) throw new Error(`The Groundskeeper ${mode} response was empty.`);
+  if (!reply) throw new Error(`Groundkeeper & Lawnmower Man AI returned an empty ${mode} response.`);
   return reply;
+}
+
+function verifiedRecordIds(orchestration = {}) {
+  return [...new Set([
+    ...(orchestration.searchResults || []).map((record) => record?.id),
+    ...(orchestration.citations || []).map((citation) => citation?.recordId)
+  ].filter((value) => value !== undefined && value !== null).map(String))];
+}
+
+function deterministicGroundskeeperContribution(reply, orchestration = {}) {
+  return {
+    findings: reply ? [{ statement: reply, supportingRecordIds: verifiedRecordIds(orchestration), confidence: "high" }] : [],
+    suggestedActions: [],
+    ambiguities: orchestration.clarification ? [orchestration.clarification] : [],
+    warnings: [],
+    optionalComment: ""
+  };
+}
+
+function validatedAssistantActions(orchestration = {}, uiActions = []) {
+  const informational = (orchestration.assistantActions || []).filter((action) => ["SHOW_RESULTS", "REQUEST_CLARIFICATION"].includes(action.type));
+  return [...informational, ...uiActions.map((action) => ({ ...action, type: String(action.type || "").toUpperCase() }))];
+}
+
+function clientCollaborationMetadata(collaboration = {}, providerStatus = []) {
+  return {
+    used: collaboration.used === true,
+    mode: collaboration.mode === "persona" ? "persona" : "unified",
+    providers: collaboration.providers || [],
+    reviewedBy: collaboration.reviewedBy || "",
+    requiresClarification: collaboration.requiresClarification === true,
+    conflictDetected: collaboration.conflictDetected === true,
+    personaContributions: collaboration.personaContributions || [],
+    webResults: collaboration.webResults || [],
+    contributionSummary: (collaboration.contributions || []).map((contribution) => ({
+      provider: contribution.provider,
+      persona: contribution.persona,
+      findingCount: contribution.findings?.length || 0,
+      ambiguityCount: contribution.ambiguities?.length || 0,
+      warningCount: contribution.warnings?.length || 0,
+      rejectedFindingCount: contribution.rejectedFindings?.length || 0
+    })),
+    providerStatus
+  };
 }
 
 function parseTrainingJson(value, fallbackTitle) {
@@ -408,7 +463,7 @@ async function previewHelperAction(payload) {
   const siteContext = buildSiteContext(userMessage, payload.page || "Dashboard preview");
   const reply = await openAiChat([
     { role: "system", content: BUSINESS_CONTEXT },
-    { role: "system", content: "You are previewing exactly how the public website helper should answer a visitor. Do not mention internal dashboard tools, drafts, or training workflow." },
+    { role: "system", content: "You are previewing exactly how Groundkeeper & Lawnmower Man AI should answer a visitor on the public website. Do not mention internal dashboard tools, drafts, or training workflow." },
     { role: "system", content: siteContext },
     { role: "system", content: buildDynamicContext(aiKnowledge, "public-preview") },
     ...cleanMessages(payload.history),
@@ -430,7 +485,7 @@ async function publishTrainingRules() {
   const liveRules = asArray(await tableRows("ai_training_rules", "select=*&status=eq.live&order=priority.asc,updated_at.desc"));
   const systemPromptSnapshot = [
     BUSINESS_CONTEXT,
-    "Live AI Helper Training Rules:",
+    "Live Groundkeeper & Lawnmower Man AI Training Rules:",
     ...liveRules.map((rule) => `- ${rule.title} [${rule.category}]: ${rule.content}`)
   ].join("\n");
 
@@ -690,31 +745,57 @@ async function handler(req, res) {
       return await adminAction(req, res, id, action, payload);
     } catch (error) {
       console.error(JSON.stringify({ event: "groundskeeper_admin_error", requestId: id, message: error.message }));
-      return res.status(error.statusCode || 500).json({ error: error.message || "Unable to manage Groundskeeper AI.", requestId: id });
+      return res.status(error.statusCode || 500).json({ error: error.message || "Unable to manage Groundkeeper & Lawnmower Man AI.", requestId: id });
     }
   }
 
   const limit = rateLimit(`groundskeeper:${mode}:${clientIp(req)}`, mode === "dashboard" ? 40 : 12, 10 * 60 * 1000);
   if (!limit.allowed) {
     res.setHeader("Retry-After", String(limit.retryAfter));
-    return res.status(429).json({ error: "Too many assistant requests. Please try again shortly.", requestId: id });
+    return res.status(429).json({ error: "Too many Groundkeeper & Lawnmower Man AI requests. Please try again shortly.", requestId: id });
   }
   const dailyLimit = rateLimit(`groundskeeper-daily:${mode}:${clientIp(req)}`, Number(process.env.AI_HELPER_DAILY_LIMIT || (mode === "dashboard" ? 240 : 80)), 24 * 60 * 60 * 1000);
   if (!dailyLimit.allowed) {
     res.setHeader("Retry-After", String(dailyLimit.retryAfter));
-    return res.status(429).json({ error: "Too many assistant requests today. Please try again later.", requestId: id });
+    return res.status(429).json({ error: "Too many Groundkeeper & Lawnmower Man AI requests today. Please try again later.", requestId: id });
   }
 
   const userMessage = text(message, 1400);
   if (!userMessage) return res.status(400).json({ error: "Message is required", requestId: id });
   if (String(message || "").length > 1400) return res.status(400).json({ error: "Please keep messages under 1400 characters.", requestId: id });
   let dashboardActor = null;
+  let dashboardSearchService = null;
+  let externalResearchService = null;
   if (mode === "dashboard") {
-    const permission = await requirePermission(req, "admin:manage", { entityType: "ai_session", action: "groundskeeper_orchestration" });
+    const permission = await requirePermission(req, "dashboard:read", { entityType: "ai_session", action: "groundskeeper_orchestration" });
     if (!permission.ok) return res.status(permission.statusCode || 401).json({ error: permission.error || "Unauthorized", requestId: id });
     dashboardActor = permission.actor;
+    const authorization = req.headers?.authorization || req.headers?.Authorization || "";
+    try {
+      dashboardSearchService = createDashboardSearchService({
+        loadRows: authenticatedSupabaseLoader({
+          supabaseUrl: getSupabaseUrl(),
+          anonKey: getSupabaseAnonKey(),
+          authorization
+        }),
+        hasPermission: hasStrictSearchPermission
+      });
+    } catch (error) {
+      console.warn(JSON.stringify({ event: "groundskeeper_search_fallback", requestId: id, message: error.message }));
+    }
+    externalResearchService = createExternalResearchService({
+      provider: createGeminiExternalSearchProvider(),
+      limiter: ({ userId, searchType }) => rateLimit(`groundskeeper-research:${userId}:${searchType}`, Number(process.env.AI_RESEARCH_RATE_LIMIT || 20), 10 * 60 * 1000),
+      audit: (event) => writeAuditLog({
+        actor: dashboardActor,
+        action: event.event || "external_research",
+        entityType: "ai_external_research",
+        entityId: id,
+        metadata: { ...event, requestId: id },
+        module: "groundskeeper"
+      })
+    });
   }
-  if (!shouldUseExternalAi()) return res.status(503).json({ error: UNAVAILABLE_REPLY, requestId: id });
 
   let aiKnowledge = { settings: [], knowledge: [], faqs: [], rules: [], savedAnswers: [] };
   try {
@@ -732,9 +813,19 @@ async function handler(req, res) {
         message: userMessage,
         context,
         actor: dashboardActor,
-        hasPermission,
+        hasPermission: hasStrictSearchPermission,
+        searchService: dashboardSearchService,
+        externalResearchService,
         recentEntities: asArray(context?.recentEntities),
-        memories: availableMemories
+        memories: availableMemories,
+        toolAudit: (event) => writeAuditLog({
+          actor: dashboardActor,
+          action: "ai_tool_broker",
+          entityType: "ai_tool",
+          entityId: event.toolName,
+          metadata: { ...event, requestId: id },
+          module: "groundskeeper"
+        })
       });
       if (["invalid", "permission_denied"].includes(orchestration.transitionAttempt?.outcome)) {
         await writeAuditLog({
@@ -787,11 +878,19 @@ async function handler(req, res) {
 
   try {
     const modelStartedAt = Date.now();
-    const modelReply = await openAiChat(messages, { mode, maxTokens: mode === "dashboard" ? 900 : 360, temperature: mode === "dashboard" ? 0.55 : 0.45 });
-    const primaryReply = composeDeterministicReply(orchestration?.toolResults) || modelReply;
-    let reply = primaryReply;
+    const deterministicReply = composeDeterministicReply(orchestration?.toolResults, {
+      userFirstName: orchestration?.pageContext?.currentUserFirstName,
+      message: userMessage
+    });
+    let reply = "";
     let consultationMeta = null;
-    if (mode === "dashboard") {
+    let collaborationMeta = null;
+    let finalUiActions = orchestration?.uiActions || [];
+    let finalAssistantActions = orchestration?.assistantActions || [];
+    if (mode !== "dashboard") {
+      if (!shouldUseExternalAi()) return res.status(503).json({ error: UNAVAILABLE_REPLY, requestId: id });
+      reply = await openAiChat(messages, { mode, maxTokens: 360, temperature: 0.45 });
+    } else {
       const settings = consultationSettings(aiKnowledge.settings);
       const decision = consultationDecision({
         message: userMessage,
@@ -801,77 +900,106 @@ async function handler(req, res) {
         manual: consultation?.manual === true,
         doubleCheck: consultation?.doubleCheck === true
       });
-      consultationMeta = { used: false, status: "skipped", reason: decision.reason, consultantRole: decision.consultantRole, provider: "gemini", model: settings.model };
-      if (decision.consult) {
+      const tandemCandidate = shouldUseTandem({
+        message: userMessage,
+        routing: orchestration?.routing,
+        searchResults: orchestration?.searchResults,
+        explicit: decision.explicit
+      });
+      const publicWebRequested = orchestration?.searchPlan?.external === true;
+      const researchFallback = orchestration?.research?.status === "failed"
+        ? orchestration.research.error?.message
+        : orchestration?.research?.status === "no_reliable_results"
+          ? "I could not confirm a reliable public source for that request. I did not substitute a directory snippet or invented information."
+          : "";
+      const safeDeterministicReply = publicWebRequested ? researchFallback : deterministicReply;
+      const canUseGemini = settings.enabled && !settings.emergencyStop && settings.mode !== "off" && (decision.consult || tandemCandidate);
+      let geminiTask = null;
+      let sanitized = null;
+      let geminiLimitStatus = "skipped";
+      if (canUseGemini) {
         const userKey = dashboardActor?.userId || dashboardActor?.email || clientIp(req);
         const perUser = rateLimit(`gemini-user-daily:${userKey}`, settings.perUserDailyLimit, 24 * 60 * 60 * 1000);
         const globalGemini = rateLimit("gemini-global-daily", settings.dailyLimit, 24 * 60 * 60 * 1000);
         if (!perUser.allowed || !globalGemini.allowed) {
-          consultationMeta = { ...consultationMeta, status: "rate_limited", reason: "usage_limit" };
+          geminiLimitStatus = "rate_limited";
         } else {
-          const sanitized = sanitizeConsultationContext({
+          geminiLimitStatus = "ready";
+          sanitized = sanitizeConsultationContext({
             message: userMessage,
             context,
-            primaryConclusion: primaryReply,
-            purpose: `${decision.consultantRole}: ${decision.reason}`,
+            primaryConclusion: "",
+            purpose: `Lawnmower Man independent ${decision.consultantRole}: ${decision.reason}`,
             groundedContext: {
               toolResults: orchestration?.toolResults || [],
               memories: orchestration?.relevantMemory || [],
-              citations: orchestration?.citations || []
+              citations: orchestration?.citations || [],
+              research: orchestration?.research || null
             },
             maxChars: settings.maxContextChars
           });
           const provider = createGeminiProvider({ model: settings.model });
-          const startedAt = new Date().toISOString();
-          try {
-            const reviewed = await provider.consult({
-              sanitizedContext: sanitized.serialized,
-              timeoutMs: settings.timeoutMs,
-              maxOutputTokens: settings.maxOutputTokens
-            });
-            const disagreed = disagreementDetected(primaryReply, reviewed.consultation);
-            reply = await openAiChat([
-              { role: "system", content: "You are the Urban Yards Groundskeeper. Synthesize one user-facing answer from a primary draft and one advisory review. Do not expose hidden reasoning." },
-              { role: "user", content: synthesisInstruction({ userQuestion: userMessage, primaryAnswer: primaryReply, consultation: reviewed.consultation }) }
-            ], { mode: "dashboard", maxTokens: 900, temperature: 0.3 });
-            consultationMeta = {
-              used: true,
-              status: "completed",
-              reason: decision.reason,
-              consultantRole: reviewed.consultation.consultantRole || decision.consultantRole,
-              provider: reviewed.provider,
-              model: reviewed.model,
-              durationMs: reviewed.durationMs,
-              usage: reviewed.usage,
-              contextCategories: sanitized.contextCategories,
-              disagreementDetected: disagreed,
-              resultUsed: true,
-              startedAt,
-              completedAt: new Date().toISOString()
-            };
-          } catch (error) {
-            consultationMeta = {
-              used: false,
-              status: "failed",
-              reason: decision.reason,
-              consultantRole: decision.consultantRole,
-              provider: "gemini",
-              model: settings.model,
-              errorCategory: error.category || "unavailable",
-              contextCategories: sanitized.contextCategories,
-              startedAt,
-              completedAt: new Date().toISOString()
-            };
-            reply = `${primaryReply}\n\nGemini’s second-opinion service was unavailable, so the Groundskeeper completed this response without it.`;
-          }
+          geminiTask = () => provider.consult({
+            sanitizedContext: sanitized.serialized,
+            timeoutMs: settings.timeoutMs,
+            maxOutputTokens: settings.maxOutputTokens,
+            webSearch: false
+          });
         }
       }
+
+      const structuredMessages = [
+        ...messages.slice(0, -1),
+        { role: "system", content: contributionPrompt("groundskeeper") },
+        messages[messages.length - 1]
+      ];
+      const groundskeeperTask = tandemCandidate && shouldUseExternalAi()
+        ? async () => parseContribution(await openAiChat(structuredMessages, { mode: "dashboard", json: true, maxTokens: 1100, temperature: 0.2 }))
+        : safeDeterministicReply
+          ? async () => deterministicGroundskeeperContribution(safeDeterministicReply, orchestration)
+          : shouldUseExternalAi()
+            ? async () => parseContribution(await openAiChat(structuredMessages, { mode: "dashboard", json: true, maxTokens: 1000, temperature: 0.25 }))
+            : null;
+
+      const tandem = await runTandemAssistant({
+        message: userMessage,
+        routing: orchestration?.routing,
+        searchResults: orchestration?.searchResults || [],
+        toolResults: orchestration?.toolResults || [],
+        citations: orchestration?.citations || [],
+        externalResults: orchestration?.research?.results || [],
+        applicationActions: orchestration?.uiActions || [],
+        searchRequiresClarification: Boolean(orchestration?.clarification),
+        firstName: orchestration?.pageContext?.currentUserFirstName || "",
+        requestedMode: consultation?.displayMode,
+        explicit: Boolean(geminiTask),
+        groundskeeperTask,
+        lawnmowerTask: geminiTask,
+        groundskeeperFallback: safeDeterministicReply
+      });
+      reply = tandem.reply;
+      finalUiActions = tandem.finalActions;
+      finalAssistantActions = validatedAssistantActions(orchestration, finalUiActions);
+      collaborationMeta = clientCollaborationMetadata(tandem.collaboration, tandem.providerStatus);
+      const geminiStatus = tandem.providerStatus.find((status) => status.provider === "google");
+      consultationMeta = {
+        used: tandem.collaboration.providers.includes("google"),
+        status: geminiStatus?.status === "fulfilled" ? "completed" : geminiStatus?.status === "rejected" ? "failed" : geminiLimitStatus,
+        reason: decision.reason,
+        consultantRole: decision.consultantRole,
+        provider: "gemini",
+        model: settings.model,
+        errorCategory: geminiStatus?.errorCategory || "",
+        contextCategories: sanitized?.contextCategories || [],
+        conflictDetected: tandem.collaboration.conflictDetected,
+        resultUsed: tandem.collaboration.providers.includes("google")
+      };
       await writeAuditLog({
         actor: dashboardActor,
-        action: "ai_consultation",
+        action: "ai_tandem_collaboration",
         entityType: "ai_session",
         entityId: id,
-        metadata: consultationMeta,
+        metadata: { ...consultationMeta, providerStatus: tandem.providerStatus, contributionSummary: collaborationMeta.contributionSummary },
         module: "groundskeeper"
       });
     }
@@ -881,6 +1009,7 @@ async function handler(req, res) {
     }
     await logConversation({ mode, page, question: userMessage, answer: reply, lead, requestId: id });
     await writeAuditLog({
+      actor: dashboardActor,
       action: "ai_helper_used",
       entityType: "ai_session",
       metadata: {
@@ -900,10 +1029,19 @@ async function handler(req, res) {
         intent: orchestration.routing,
         citations: orchestration.citations,
         verification: orchestration.verification,
-        uiActions: orchestration.uiActions,
+        uiActions: finalUiActions,
+        assistantActions: finalAssistantActions,
+        searchResults: orchestration.searchResults,
+        research: orchestration.research,
+        clarification: orchestration.clarification,
+        user: {
+          firstName: orchestration.pageContext?.currentUserFirstName || "",
+          role: orchestration.pageContext?.currentUserRole || ""
+        },
         memoryPreview: orchestration.memoryPreview,
         transitionPreview: orchestration.transitionPreview,
         consultation: consultationMeta,
+        collaboration: collaborationMeta,
         diagnostics: process.env.NODE_ENV === "production" ? undefined : orchestration.diagnostics
       } : {})
     });

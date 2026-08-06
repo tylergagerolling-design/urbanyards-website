@@ -6067,7 +6067,7 @@ body:not(.is-login-screen) #outreach .outreach-archive-panel summary {
   }
 }
 
-/* Groundskeeper AI */
+/* Groundkeeper & Lawnmower Man AI */
 .groundskeeper-ai-hero,
 .groundskeeper-ai-status,
 .groundskeeper-ai-layout,
@@ -23106,7 +23106,7 @@ body:not(.is-login-screen) .money-grid select {
   .dashboard-copilot-panel { height: min(650px, calc(100vh - 76px)); }
   .dashboard-copilot.is-open .dashboard-copilot-launcher { display: none; }
 }
-/* Groundskeeper AI — Pacific Northwest floating assistant */
+/* Groundkeeper & Lawnmower Man AI — Pacific Northwest floating assistant */
 .dashboard-copilot {
   top: 16px;
   right: 22px;
@@ -23448,7 +23448,7 @@ body:not(.is-login-screen) .money-grid select {
   .copilot-shortcuts button { transition: none; }
 }
 
-/* Groundskeeper AI — light contemporary personalized popup */
+/* Groundkeeper & Lawnmower Man AI — light contemporary personalized popup */
 .dashboard-copilot {
   top: 18px;
   right: 22px;
@@ -23941,7 +23941,7 @@ html body:not(.is-login-screen) .app-view .dashboard-copilot-panel .copilot-welc
   }
 }
 
-/* Groundskeeper AI — monochrome Keaton Mask popup */
+/* Groundkeeper & Lawnmower Man AI — monochrome Keaton Mask popup */
 .dashboard-copilot-panel {
   width: min(460px, calc(100vw - 36px));
   height: min(680px, calc(100dvh - 36px));
@@ -24117,6 +24117,204 @@ html body:not(.is-login-screen) .app-view .dashboard-copilot-panel .copilot-welc
   color: inherit;
 }
 
+.dashboard-copilot-panel .copilot-message:has(.copilot-search-results) {
+  width: 100%;
+  max-width: 100%;
+}
+
+.copilot-search-results {
+  display: grid;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.copilot-result-clarification {
+  margin: 0 0 2px !important;
+  color: #3f4b45 !important;
+  font-size: 13px;
+}
+
+.copilot-result-card {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 12px;
+  padding: 11px 11px 11px 12px;
+  border: 1px solid #cbd2ce;
+  border-radius: 12px;
+  background: #fff;
+}
+
+.copilot-result-copy {
+  display: grid;
+  min-width: 0;
+  gap: 3px;
+}
+
+.copilot-result-title,
+.copilot-result-copy > small {
+  overflow-wrap: anywhere;
+}
+
+.copilot-result-title {
+  width: fit-content;
+  max-width: 100%;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: #111;
+  font: inherit;
+  font-size: 14px;
+  font-weight: 800;
+  text-align: left;
+  text-decoration: underline;
+  text-decoration-color: transparent;
+  text-underline-offset: 3px;
+  cursor: pointer;
+}
+
+.copilot-result-title:hover {
+  color: #0f5138;
+  text-decoration-color: currentColor;
+}
+
+.copilot-result-title:focus-visible {
+  outline: 3px solid rgba(210, 162, 32, .48);
+  outline-offset: 3px;
+}
+
+.copilot-result-copy > small {
+  color: #5c6862;
+  font-size: 12px;
+  line-height: 1.35;
+}
+
+.copilot-result-kind {
+  color: #1f6b4f;
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: .055em;
+  text-transform: uppercase;
+}
+
+.copilot-result-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px 8px;
+  color: #536159;
+  font-size: 11px;
+}
+
+.copilot-result-meta > *:not(:last-child)::after {
+  content: "·";
+  margin-left: 8px;
+  color: #9aa39e;
+}
+
+.copilot-collaboration-review {
+  display: inline-grid;
+  gap: 1px;
+  width: fit-content;
+  margin: 10px 0 0 !important;
+  padding: 5px 8px;
+  border: 1px solid #d6ddd9;
+  border-radius: 7px;
+  background: #f5f7f5;
+  color: #526159 !important;
+  font-size: 11px;
+  font-weight: 750;
+  letter-spacing: .02em;
+}
+
+.copilot-collaboration-review strong {
+  color: #153d2e;
+  font-size: 11px;
+}
+
+.copilot-collaboration-review span {
+  font-size: 10px;
+  font-weight: 650;
+}
+
+.copilot-web-results {
+  margin-top: .7rem;
+  padding: .7rem .8rem;
+  border: 1px solid rgba(30, 92, 67, .18);
+  border-radius: 12px;
+  background: rgba(245, 248, 244, .92);
+  color: var(--ink, #102d23);
+}
+
+.copilot-web-results strong {
+  display: block;
+  margin-bottom: .35rem;
+  font-size: .78rem;
+  letter-spacing: .04em;
+  text-transform: uppercase;
+}
+
+.copilot-web-results ul {
+  display: grid;
+  gap: .3rem;
+  margin: 0;
+  padding-left: 1.1rem;
+}
+
+.copilot-web-results a {
+  color: var(--green-700, #176044);
+  font-size: .85rem;
+  overflow-wrap: anywhere;
+}
+
+.copilot-persona-exchange {
+  display: grid;
+  gap: 8px;
+  margin-top: 10px;
+}
+
+.copilot-persona-exchange article {
+  padding: 10px 11px;
+  border: 1px solid #d6ddd9;
+  border-radius: 10px;
+  background: #fff;
+}
+
+.copilot-persona-exchange header {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 5px;
+}
+
+.copilot-persona-exchange header strong { color: #0f5138; font-size: 12px; }
+.copilot-persona-exchange header span { color: #6b756f; font-size: 10px; font-weight: 750; text-transform: uppercase; }
+.copilot-persona-exchange p { margin: 0 !important; color: #26352e !important; font-size: 12px; line-height: 1.45; }
+.copilot-persona-exchange small { display: block; margin-top: 5px; color: #6b756f; font-style: italic; }
+
+.copilot-result-card > button {
+  min-width: 58px;
+  min-height: 36px;
+  padding: 7px 11px;
+  border: 1px solid #0f5138;
+  border-radius: 9px;
+  background: #0f5138;
+  color: #fff;
+  font: inherit;
+  font-size: 12px;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.copilot-result-card > button:hover {
+  background: #0a3f2c;
+}
+
+.copilot-result-card > button:focus-visible {
+  outline: 3px solid rgba(210, 162, 32, .48);
+  outline-offset: 2px;
+}
+
 .dashboard-copilot-panel :is(.copilot-record, .copilot-schedule-preview button, .copilot-memory-preview button, .copilot-transition-preview button) {
   border: 1px solid #aaa !important;
   background: #fff !important;
@@ -24126,12 +24324,12 @@ html body:not(.is-login-screen) .app-view .dashboard-copilot-panel .copilot-welc
 
 .dashboard-copilot-panel > form {
   margin: 0 24px 24px;
-  padding: 6px;
+  padding: 0;
   grid-template-columns: minmax(0, 1fr) 52px;
-  gap: 6px;
-  border: 1px solid #8a8a8a;
-  border-radius: 999px;
-  background: #fff;
+  gap: 10px;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
   box-shadow: none;
 }
 
@@ -24139,11 +24337,17 @@ html body:not(.is-login-screen) .app-view .dashboard-copilot-panel .copilot-welc
   min-height: 52px;
   max-height: 104px;
   padding: 13px 16px;
-  border: 0;
-  border-radius: 24px;
-  background: transparent;
+  border: 1px solid #8a8a8a;
+  border-radius: 16px;
+  background: #fff;
   color: #151515;
   font-size: 17px !important;
+}
+
+.dashboard-copilot-panel textarea:focus {
+  outline: none;
+  border-color: #1f6b4f;
+  box-shadow: none;
 }
 
 .dashboard-copilot-panel textarea::placeholder {
@@ -24187,8 +24391,8 @@ body:not(.is-login-screen) .dashboard-copilot-panel form button[type="submit"]:d
 }
 
 .dashboard-copilot-panel > form:focus-within {
-  border-color: #1f6b4f;
-  box-shadow: 0 0 0 3px rgba(31, 107, 79, .16);
+  border-color: transparent;
+  box-shadow: none;
 }
 
 @media (min-width: 701px) and (max-width: 900px) {
@@ -24264,6 +24468,15 @@ body:not(.is-login-screen) .dashboard-copilot-panel form button[type="submit"]:d
     padding: 14px 14px 10px;
   }
 
+  .copilot-result-card {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .copilot-result-card > button {
+    width: 100%;
+    min-height: 44px;
+  }
+
   .dashboard-copilot-panel > form {
     margin: 0 14px 16px;
     grid-template-columns: minmax(0, 1fr) 50px;
@@ -24336,6 +24549,50 @@ body:not(.is-login-screen) .groundskeeper-operation-grid {
 
 body:not(.is-login-screen) .groundskeeper-ai-main {
   overflow: hidden;
+}
+
+/* Dual-AI product name containment */
+body:not(.is-login-screen) #groundskeeper-ai .groundskeeper-ai-command-header h1 {
+  max-width: 18ch;
+  font-size: clamp(2.05rem, 3.3vw, 3.35rem);
+  line-height: 1;
+  overflow-wrap: normal;
+}
+
+body:not(.is-login-screen) #groundskeeper-ai .groundskeeper-ai-sidebar .ai-nav-item {
+  display: grid !important;
+  grid-template-columns: minmax(26px, auto) minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 8px;
+  width: 100% !important;
+  min-height: 44px;
+  height: auto !important;
+  padding: 10px 12px !important;
+  white-space: normal !important;
+  overflow: visible !important;
+}
+
+body:not(.is-login-screen) #groundskeeper-ai .groundskeeper-ai-sidebar .ai-nav-item > span:nth-child(2) {
+  min-width: 0;
+  line-height: 1.2;
+  overflow-wrap: anywhere;
+}
+
+@media (min-width: 901px) and (max-width: 1366px) {
+  body:not(.is-login-screen) #groundskeeper-ai .groundskeeper-ai-command-header {
+    grid-template-columns: 1fr !important;
+  }
+
+  body:not(.is-login-screen) #groundskeeper-ai .groundskeeper-ai-toolbar {
+    width: 100%;
+  }
+}
+
+@media (max-width: 700px) {
+  body:not(.is-login-screen) #groundskeeper-ai .groundskeeper-ai-command-header h1 {
+    max-width: none;
+    font-size: clamp(1.85rem, 9.2vw, 2.35rem);
+  }
 }
 
 body:not(.is-login-screen) .groundskeeper-operation-card {
@@ -24477,6 +24734,262 @@ body:not(.is-login-screen) .app-view .dashboard-main :is(
   border-color: var(--button-danger-600) !important;
   background: var(--button-danger-600) !important;
   color: var(--button-white) !important;
+}
+
+/* Controlled Groundkeeper public-research additions. These stay inside the
+   existing assistant and do not alter the dashboard shell or navigation. */
+.dashboard-copilot-panel .copilot-source-toolbar {
+  padding: 8px 24px 10px;
+  background: #fff;
+}
+
+.dashboard-copilot-panel .copilot-source-toolbar label {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  color: #59645e;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: .055em;
+  text-transform: uppercase;
+}
+
+.dashboard-copilot-panel .copilot-source-toolbar select {
+  min-width: 148px;
+  min-height: 34px;
+  padding: 5px 30px 5px 10px;
+  border: 1px solid #cbd2ce;
+  border-radius: 8px;
+  background-color: #fff;
+  color: #203128;
+  font: inherit;
+  font-size: 12px;
+  font-weight: 750;
+  letter-spacing: 0;
+  text-transform: none;
+}
+
+.dashboard-copilot-panel .copilot-source-toolbar select:focus-visible {
+  outline: 3px solid rgba(210, 162, 32, .48);
+  outline-offset: 2px;
+  border-color: #1f6b4f;
+}
+
+.copilot-research-results,
+.copilot-research-state,
+.copilot-research-proposals {
+  display: grid;
+  gap: 9px;
+  margin-top: 12px;
+}
+
+.copilot-research-results > header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 10px;
+  padding-bottom: 4px;
+}
+
+.copilot-research-results > header > div {
+  display: grid;
+  gap: 2px;
+}
+
+.copilot-research-results > header strong,
+.copilot-research-proposals > strong,
+.copilot-research-state > strong {
+  color: #153d2e;
+  font-size: 12px;
+}
+
+.copilot-research-results > header span,
+.copilot-research-state p {
+  margin: 0 !important;
+  color: #68736d !important;
+  font-size: 10px;
+  line-height: 1.4;
+}
+
+.copilot-research-card,
+.copilot-research-proposal,
+.copilot-research-state {
+  min-width: 0;
+  padding: 11px 12px;
+  border: 1px solid #d2dad5;
+  border-radius: 11px;
+  background: #fbfcfb;
+}
+
+.copilot-research-state.is-error {
+  border-color: #dec8c4;
+  background: #fff8f6;
+}
+
+.copilot-research-card-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 6px;
+}
+
+.copilot-source-label,
+.copilot-official-badge,
+.copilot-research-proposal > span {
+  display: inline-flex;
+  width: fit-content;
+  padding: 3px 6px;
+  border-radius: 999px;
+  background: #e9f1ec;
+  color: #1f6b4f;
+  font-size: 9px;
+  font-weight: 850;
+  letter-spacing: .045em;
+  text-transform: uppercase;
+}
+
+.copilot-official-badge {
+  background: #eef4df;
+  color: #526b22;
+}
+
+.copilot-research-title {
+  display: block;
+  margin-bottom: 3px;
+  color: #102d23;
+  font-size: 14px;
+  font-weight: 800;
+  line-height: 1.3;
+  overflow-wrap: anywhere;
+}
+
+.copilot-research-card > small {
+  display: block;
+  color: #68736d;
+  font-size: 10px;
+  line-height: 1.35;
+  overflow-wrap: anywhere;
+}
+
+.copilot-research-card > p,
+.copilot-research-proposal > p {
+  margin: 7px 0 !important;
+  color: #304139 !important;
+  font-size: 11px;
+  line-height: 1.45;
+}
+
+.copilot-research-dates {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 8px;
+  margin-top: 6px;
+  color: #6b756f;
+  font-size: 9px;
+}
+
+.copilot-open-source {
+  display: inline-flex;
+  margin-top: 7px;
+  color: #0f5138;
+  font-size: 11px;
+  font-weight: 800;
+}
+
+.copilot-entity-match {
+  display: grid;
+  gap: 3px;
+  margin-top: 8px;
+  padding: 7px 8px;
+  border-left: 3px solid #c69a2c;
+  border-radius: 5px;
+  background: #fffaf0;
+  color: #3f4b45;
+  font-size: 10px;
+  line-height: 1.4;
+}
+
+.copilot-entity-match.is-confirmed,
+.copilot-entity-match.is-likely {
+  border-left-color: #1f6b4f;
+  background: #f2f8f4;
+}
+
+.copilot-entity-match button {
+  width: fit-content !important;
+  height: auto !important;
+  min-width: 0 !important;
+  min-height: 32px !important;
+  margin-top: 4px;
+  padding: 6px 9px !important;
+  border: 1px solid #0f5138 !important;
+  border-radius: 7px !important;
+  background: #fff !important;
+  color: #0f5138 !important;
+  font-size: 10px !important;
+}
+
+.copilot-research-proposal {
+  background: #fffdf7;
+}
+
+.copilot-research-proposal > span {
+  margin-bottom: 5px;
+  background: #fff0c8;
+  color: #79540d;
+}
+
+.copilot-research-proposal > strong {
+  display: block;
+  color: #203128;
+  font-size: 11px;
+}
+
+.copilot-research-proposal dl {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 6px;
+  margin: 7px 0 0;
+}
+
+.copilot-research-proposal dl div {
+  min-width: 0;
+}
+
+.copilot-research-proposal dt {
+  color: #707a74;
+  font-size: 9px;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+.copilot-research-proposal dd {
+  margin: 2px 0 0;
+  color: #1e2e26;
+  font-size: 10px;
+  overflow-wrap: anywhere;
+}
+
+@media (max-width: 700px) {
+  .dashboard-copilot-panel .copilot-source-toolbar {
+    padding: 6px 14px 8px;
+  }
+
+  .dashboard-copilot-panel .copilot-source-toolbar label {
+    align-items: stretch;
+  }
+
+  .dashboard-copilot-panel .copilot-source-toolbar select {
+    min-width: 0;
+    max-width: 178px;
+    min-height: 38px;
+  }
+
+  .copilot-research-proposal dl {
+    grid-template-columns: minmax(0, 1fr);
+  }
 }
 
 body:not(.is-login-screen) .app-view .dashboard-main :is(
@@ -29895,3 +30408,459 @@ html body:not(.is-login-screen) .dashboard-main .money-workspace .money-page-hea
 .client-detail-page{background:#fff;border:1px solid #dfe5e2;border-radius:14px;box-shadow:0 8px 26px rgba(18,45,36,.06);overflow:hidden;color:#13231e}.client-detail-header{display:flex;justify-content:space-between;gap:24px;padding:24px 28px 18px}.client-detail-back{border:0!important;padding:0!important;background:transparent!important;color:#30473e!important;font-weight:600}.client-detail-title{display:flex;align-items:center;gap:12px;margin-top:16px}.client-detail-title h2{margin:0;font-size:30px;letter-spacing:-.03em}.client-detail-header p{margin:6px 0 0;color:#52635d}.client-status-chip{display:inline-flex;padding:5px 11px;border-radius:7px;background:#e4f5ea;color:#08703b;font-weight:700;font-size:13px}.client-favorite{border:0!important;background:transparent!important;font-size:28px!important;padding:0 5px!important;color:#62716c!important}.client-favorite.is-active{color:#d19a13!important}.client-detail-chips{display:flex;gap:10px;margin-top:14px}.client-detail-chips span{background:#f3f5f4;border-radius:7px;padding:7px 12px;color:#40534c;font-size:13px}.client-detail-actions{display:flex;align-items:flex-start;gap:10px}.client-detail-actions>button,.client-detail-actions summary{background:#fff;border:1px solid #d6dfdb;border-radius:8px;padding:11px 16px;font-weight:700;cursor:pointer;list-style:none}.client-detail-actions details{position:relative}.client-detail-actions details>div{position:absolute;right:0;z-index:5;width:170px;padding:6px;background:#fff;border:1px solid #d6dfdb;border-radius:8px;box-shadow:0 8px 22px rgba(10,30,23,.12)}.client-detail-actions details button{width:100%;border:0;background:#fff;padding:9px;text-align:left}.client-detail-overview{display:grid;grid-template-columns:minmax(300px,.85fr) minmax(440px,1.15fr);gap:14px;padding:0 20px 20px}.client-detail-overview>article{border:1px solid #dbe2df;border-radius:10px;padding:20px}.client-detail-overview h3{font-size:14px;margin:0 0 18px}.client-primary{display:flex;align-items:center;gap:14px;margin-bottom:18px}.client-primary>div:last-child,.client-detail-contact-list article>div:nth-child(2){display:flex;flex-direction:column;gap:3px}.client-avatar{display:grid!important;place-items:center;width:54px;height:54px;border-radius:50%;background:#dff2e6;color:#0d402c;font-size:19px;font-weight:800;flex:0 0 auto}.client-detail-overview>article>a,.client-detail-overview>article>p{display:block;margin:12px 0;color:#253a32;text-decoration:none}.client-account-summary>div{display:grid;grid-template-columns:repeat(3,1fr);gap:20px}.client-account-summary section{display:flex;flex-direction:column;gap:8px}.client-account-summary section span,.client-account-summary footer span{color:#52635d}.client-account-summary section strong{font-size:23px}.client-account-summary section small{color:#687771}.client-account-summary footer{display:flex;flex-direction:column;gap:7px;border-top:1px solid #e3e8e6;margin-top:24px;padding-top:18px}.client-detail-tabs{display:flex;gap:20px;padding:0 24px;border-top:1px solid #e1e6e4;border-bottom:1px solid #e1e6e4;overflow-x:auto}.client-detail-tabs button{border:0;background:transparent;padding:16px 10px;color:#40534c;font-weight:700;white-space:nowrap;border-bottom:2px solid transparent}.client-detail-tabs button.is-active{color:#078542;border-bottom-color:#078542}.client-detail-tab-body{padding:20px}.client-detail-table-wrap{border:1px solid #dbe2df;border-radius:10px;overflow:hidden}.client-detail-table{width:100%;border-collapse:collapse}.client-detail-table th,.client-detail-table td{padding:15px;text-align:left;border-bottom:1px solid #e5e9e7}.client-detail-table th{font-size:12px;color:#5a6d65;background:#fbfcfb}.client-detail-table tbody tr[data-action]{cursor:pointer}.client-detail-table tbody tr[data-action]:hover{background:#f5faf7}.client-detail-add{margin:18px;border:1px solid #078542;background:#fff;color:#06783d;border-radius:7px;padding:10px 16px;font-weight:700}.client-detail-contact-list article{display:flex;align-items:center;gap:16px;border:1px solid #dbe2df;border-radius:10px;padding:18px}.client-detail-contact-list article a{color:#31473e;text-decoration:none}.client-detail-contact-list article button{margin-left:auto}.client-detail-notes,.client-detail-files{display:grid;gap:12px}.client-detail-notes article,.client-detail-files>button{border:1px solid #dbe2df;border-radius:9px;padding:16px;background:#fff;text-align:left}.client-detail-files>button{display:flex;justify-content:space-between}.client-detail-files .empty-state,.client-detail-notes .empty-state{grid-column:1/-1}
 @media(max-width:900px){.client-detail-header{padding:20px;flex-direction:column}.client-detail-actions{justify-content:flex-end}.client-detail-overview{grid-template-columns:1fr}.client-account-summary>div{grid-template-columns:1fr 1fr}.client-detail-tab-body{padding:12px}.client-detail-table-wrap{overflow-x:auto}.client-detail-table{min-width:720px}}
 @media(max-width:560px){.client-detail-title h2{font-size:24px}.client-detail-actions{justify-content:flex-start}.client-account-summary>div{grid-template-columns:1fr}.client-detail-overview{padding:0 12px 12px}.client-detail-chips{flex-wrap:wrap}.client-detail-tabs{padding:0 10px}}
+
+/* Production visual-polish pass -----------------------------------------
+   Home remains the loose visual reference. These rules intentionally
+   affect presentation only; navigation, data, and interaction hooks stay
+   unchanged. */
+body:not(.is-login-screen) {
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 20px;
+  --space-6: 24px;
+  --space-8: 32px;
+  --space-10: 40px;
+  --space-12: 48px;
+  --color-action-primary: #1f6b4f;
+  --color-action-primary-hover: #18563f;
+  --color-action-secondary: #ffffff;
+  --color-surface-page: #f4f1e8;
+  --color-surface-card: #ffffff;
+  --color-surface-subtle: #fffdf7;
+  --color-text-primary: #1f2924;
+  --color-text-secondary: #66736d;
+  --color-text-disabled: #8b9690;
+  --color-border-default: rgba(18, 63, 49, .14);
+  --color-border-strong: rgba(18, 63, 49, .28);
+  --color-status-success: #167443;
+  --color-status-warning: #9a5b08;
+  --color-status-danger: #b83232;
+  --color-status-info: #145da6;
+  --uy-polish-radius: 15px;
+  --uy-polish-shadow: 0 12px 26px rgba(25, 59, 42, .07);
+}
+
+/* Consistent keyboard affordances and control rhythm. */
+body:not(.is-login-screen) .dashboard-main :is(button, a, input, select, textarea, summary):focus-visible {
+  outline: 3px solid rgba(201, 162, 39, .72);
+  outline-offset: 2px;
+}
+
+body:not(.is-login-screen) .dashboard-main :is(button, input, select, textarea):disabled {
+  cursor: not-allowed;
+  opacity: .58;
+}
+
+body:not(.is-login-screen) .dashboard-main :is(.clean-primary-action, .secondary-action, .inline-action) {
+  gap: var(--space-2);
+  min-height: 40px;
+  border-radius: 7px;
+  font-weight: 700;
+}
+
+body:not(.is-login-screen) .dashboard-main .clean-primary-action:hover {
+  border-color: var(--color-action-primary-hover);
+  background: var(--color-action-primary-hover);
+}
+
+body:not(.is-login-screen) .dashboard-main .button-icon {
+  display: inline-grid;
+  min-width: 22px;
+  min-height: 22px;
+  place-items: center;
+  margin-right: 6px;
+  padding: 0 4px;
+  border-radius: 5px;
+  background: var(--uy-green-3, #e6efe9);
+  color: var(--uy-green-2, #12372a);
+  font-size: .65rem;
+  font-weight: 850;
+  line-height: 1;
+  vertical-align: middle;
+}
+
+body:not(.is-login-screen) .dashboard-main :is(input, select, textarea) {
+  border-color: var(--color-border-default);
+}
+
+body:not(.is-login-screen) .dashboard-main :is(input, select, textarea):focus {
+  border-color: var(--color-action-primary);
+  box-shadow: 0 0 0 3px rgba(31, 107, 79, .11);
+}
+
+/* Use the Home surface language on the other top-level work areas. */
+body:not(.is-login-screen) .dashboard-main :is(
+  .cq-entries-card,
+  .money-unified-shell,
+  .tools-launch-group,
+  .client-detail-page,
+  .online-quote-card,
+  .import-export-card
+) {
+  border-color: var(--color-border-default);
+  border-radius: var(--uy-polish-radius);
+  box-shadow: var(--uy-polish-shadow);
+}
+
+body:not(.is-login-screen) .dashboard-main :is(
+  .cq-entries-card,
+  .money-unified-shell,
+  .client-detail-page,
+  .online-quote-card,
+  .import-export-card
+) > header {
+  background: var(--color-surface-subtle);
+}
+
+/* The fixed assistant launcher occupies the upper-right corner. Reserve
+   that space in page command headers instead of letting actions sit below it. */
+@media (min-width: 901px) {
+  body:not(.is-login-screen) .dashboard-main :is(
+    .clean-page-header,
+    .ttl-header,
+    .wol-header,
+    .cq-page-header,
+    .money-page-header,
+    .documentation-hero,
+    .import-export-hero,
+    .ticket-lane-heading,
+    .uy-page-intro-panel > .panel-heading
+  ) {
+    box-sizing: border-box;
+    padding-right: 86px;
+  }
+}
+
+/* Clients: remove duplicated text masquerading as icons and let the
+   existing full client-detail experience occupy its intended workspace. */
+body:not(.is-login-screen) .dashboard-main .client-profile-card button[data-action="open-contact"] .button-icon,
+body:not(.is-login-screen) .dashboard-main .client-profile-card button[data-action="copy-phone"] .button-icon {
+  display: none !important;
+}
+
+body:not(.is-login-screen) .dashboard-main .client-profile-card :is(.card-actions, .phone-call-control) {
+  gap: var(--space-2);
+  flex-wrap: wrap;
+}
+
+body:not(.is-login-screen) .dashboard-main .client-profile-card :is(.card-actions, .phone-call-control) button {
+  gap: 6px;
+}
+
+body:not(.is-login-screen) .dashboard-main .client-detail-host .contact-grid:has(.client-detail-page) {
+  display: block !important;
+  width: 100%;
+}
+
+body:not(.is-login-screen) .dashboard-main .client-detail-host .client-detail-page {
+  width: 100%;
+  max-width: none;
+}
+
+body:not(.is-login-screen) .dashboard-main #contacts > .uy-page-intro-panel {
+  width: 100%;
+  margin: 0;
+  box-sizing: border-box;
+}
+
+html body:not(.is-login-screen) .dashboard-main #contacts .client-detail-host > :is(.panel-heading, .toolbar, .client-form) {
+  display: none !important;
+}
+
+/* Call Queue: protect dense desktop status content and make the existing
+   responsive table-card presentation fit the viewport without clipping. */
+body:not(.is-login-screen) .dashboard-main .cq-table-wrap table {
+  min-width: 1000px;
+}
+
+body:not(.is-login-screen) .dashboard-main .call-queue-reference,
+body:not(.is-login-screen) .dashboard-main .cq-entries-card {
+  width: 100%;
+  min-width: 0;
+  max-width: 100%;
+  box-sizing: border-box;
+}
+
+body:not(.is-login-screen) .dashboard-main #call-queue > [data-call-queue-workspace] {
+  width: 100%;
+  min-width: 0;
+  max-width: none;
+  margin: 0;
+}
+
+body:not(.is-login-screen) .dashboard-main .call-queue-reference {
+  overflow-x: hidden;
+}
+
+body:not(.is-login-screen) .dashboard-main .cq-table-wrap {
+  max-width: 100%;
+  overflow-x: auto;
+}
+
+body:not(.is-login-screen) .dashboard-main .cq-table-wrap :is(th, td):nth-child(5) {
+  min-width: 110px;
+}
+
+body:not(.is-login-screen) .dashboard-main .cq-status {
+  max-width: 100%;
+  justify-content: center;
+  line-height: 1.25;
+  text-align: center;
+  white-space: normal;
+}
+
+/* Money inherited the legacy ticket-workspace width. The page itself,
+   tabs, data, and drawer behavior are unchanged; only the canvas is fluid. */
+body:not(.is-login-screen) .dashboard-main #documents .money-workspace.ticket-workspace {
+  width: 100% !important;
+  max-width: none !important;
+  margin: 0 !important;
+  box-sizing: border-box;
+}
+
+body:not(.is-login-screen) .dashboard-main #documents > [data-money-workspace],
+body:not(.is-login-screen) .dashboard-main #settings > [data-tools-workspace] {
+  width: 100%;
+  max-width: none;
+  margin: 0 !important;
+  box-sizing: border-box;
+}
+
+body:not(.is-login-screen) .dashboard-main #documents .money-unified-shell {
+  width: 100%;
+  max-width: none;
+}
+
+/* Tools: reduce tiny four-column density at standard laptop widths. */
+@media (max-width: 1500px) and (min-width: 621px) {
+  body:not(.is-login-screen) .dashboard-main .tools-launch-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: var(--space-4);
+  }
+}
+
+body:not(.is-login-screen) .dashboard-main .tools-launch-group > header {
+  min-height: 88px;
+  padding: 14px 16px;
+}
+
+body:not(.is-login-screen) .dashboard-main .tools-launch-group > header h3 {
+  font-size: .9rem;
+}
+
+body:not(.is-login-screen) .dashboard-main .tools-launch-group > header p {
+  font-size: .72rem;
+  line-height: 1.45;
+}
+
+body:not(.is-login-screen) .dashboard-main .tools-launch-group > div > :is(a, button) {
+  min-height: 62px;
+  padding: 11px 16px;
+}
+
+body:not(.is-login-screen) .dashboard-main .tools-launch-group > div strong {
+  font-size: .8rem;
+}
+
+body:not(.is-login-screen) .dashboard-main .tools-launch-group > div small {
+  font-size: .68rem;
+}
+
+body:not(.is-login-screen) .dashboard-main .tools-launch-grid {
+  width: 100%;
+}
+
+/* Equipment uses all three existing header elements in one balanced row
+   where the viewport permits, rather than rendering the add action as a bar. */
+@media (min-width: 1181px) {
+  body:not(.is-login-screen) .dashboard-main .equipment-hero {
+    grid-template-columns: minmax(245px, 1fr) auto auto !important;
+    grid-template-rows: auto !important;
+    align-items: center !important;
+    gap: var(--space-4) !important;
+    padding-right: 86px !important;
+    box-sizing: border-box;
+  }
+
+  body:not(.is-login-screen) .dashboard-main .equipment-hero .equipment-tabs {
+    min-width: 0;
+  }
+
+  body:not(.is-login-screen) .dashboard-main .equipment-hero .equipment-mobile-add {
+    width: auto;
+    min-width: 132px;
+    margin-right: 78px !important;
+    justify-self: end;
+  }
+}
+
+/* AI Memory is a focused workflow, but it should share the page's left
+   alignment rather than floating in a narrow centered column. */
+body:not(.is-login-screen) .dashboard-main #ai-memory > [data-ai-memory-workspace] {
+  width: min(100%, 960px);
+  margin: 0 !important;
+}
+
+body:not(.is-login-screen) .dashboard-main #ai-memory .ai-memory-workspace {
+  gap: var(--space-6);
+}
+
+body:not(.is-login-screen) .dashboard-main #ai-memory :is(.ai-memory-form, .ai-memory-group, .ai-memory-card) {
+  border-color: var(--color-border-default);
+  border-radius: var(--uy-polish-radius);
+  box-shadow: var(--uy-polish-shadow);
+}
+
+@media (max-width: 720px) {
+  body:not(.is-login-screen) .dashboard-main :is(
+    .clean-page-header,
+    .ttl-header,
+    .wol-header,
+    .cq-page-header,
+    .money-page-header,
+    .documentation-hero,
+    .import-export-hero,
+    .ticket-lane-heading,
+    .uy-page-intro-panel > .panel-heading
+  ) {
+    padding-right: 56px;
+  }
+
+  body:not(.is-login-screen) .dashboard-main .call-queue-reference,
+  body:not(.is-login-screen) .dashboard-main .cq-entries-card,
+  body:not(.is-login-screen) .dashboard-main .cq-entries-card > header,
+  body:not(.is-login-screen) .dashboard-main .cq-entry-tools,
+  body:not(.is-login-screen) .dashboard-main .cq-table-wrap,
+  body:not(.is-login-screen) .dashboard-main .cq-table-wrap table,
+  body:not(.is-login-screen) .dashboard-main .cq-table-wrap tbody,
+  body:not(.is-login-screen) .dashboard-main .cq-table-wrap tr {
+    width: 100%;
+    min-width: 0;
+    box-sizing: border-box;
+  }
+
+  body:not(.is-login-screen) .dashboard-main .call-queue-reference {
+    overflow-x: clip;
+    padding: var(--space-4);
+  }
+
+  body:not(.is-login-screen) .dashboard-main .cq-entry-tools {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    gap: var(--space-2);
+    justify-content: stretch;
+  }
+
+  body:not(.is-login-screen) .dashboard-main .cq-entry-tools :is(input, button, .cq-filter-control) {
+    width: 100%;
+    min-width: 0;
+  }
+
+  body:not(.is-login-screen) .dashboard-main .cq-filter-control select {
+    min-width: 0;
+    flex: 1;
+  }
+
+  body:not(.is-login-screen) .dashboard-main .cq-table-wrap {
+    overflow: visible;
+  }
+
+  body:not(.is-login-screen) .dashboard-main .cq-table-wrap tr {
+    margin: 0;
+    padding: var(--space-4);
+  }
+
+  body:not(.is-login-screen) .dashboard-main .cq-table-wrap td {
+    width: 100%;
+    min-width: 0;
+    align-items: flex-start;
+    justify-content: flex-start;
+    gap: var(--space-4);
+    overflow-wrap: anywhere;
+  }
+
+  body:not(.is-login-screen) .dashboard-main .cq-table-wrap td::before {
+    flex: 0 0 88px;
+    min-width: 88px;
+    text-align: left;
+  }
+
+  html body:not(.is-login-screen) .dashboard-main #call-queue .cq-table-wrap td::before {
+    display: none !important;
+    content: none !important;
+  }
+
+  html body:not(.is-login-screen) .dashboard-main #call-queue .cq-table-wrap td:nth-child(6)::before {
+    display: inline !important;
+    content: "Last contact · " !important;
+    margin-right: 4px;
+    color: var(--color-text-secondary);
+    font-weight: 700;
+  }
+
+  body:not(.is-login-screen) .dashboard-main .cq-table-wrap td > * {
+    min-width: 0;
+    margin-left: auto;
+    text-align: right;
+    overflow-wrap: anywhere;
+  }
+
+  body:not(.is-login-screen) .dashboard-main .cq-table-wrap td:nth-child(8) {
+    align-items: center;
+  }
+
+  body:not(.is-login-screen) .dashboard-main .cq-row-actions {
+    max-width: calc(100% - 104px);
+    justify-content: flex-end;
+    flex-wrap: wrap;
+  }
+
+  body:not(.is-login-screen) .dashboard-main .cq-entries-card > footer {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: var(--space-3);
+  }
+
+  body:not(.is-login-screen) .dashboard-main .money-page-actions {
+    width: 100%;
+    grid-template-columns: minmax(0, 1fr);
+    gap: var(--space-2);
+  }
+
+  body:not(.is-login-screen) .dashboard-main .money-period-button {
+    width: 100%;
+    min-width: 0;
+    justify-content: center;
+    white-space: normal;
+  }
+
+  body:not(.is-login-screen) .dashboard-main .money-new-split {
+    justify-self: start;
+  }
+
+  body:not(.is-login-screen) .dashboard-main #ai-memory > [data-ai-memory-workspace] {
+    width: 100%;
+  }
+
+  body:not(.is-login-screen) .dashboard-main .client-detail-title {
+    flex-wrap: wrap;
+  }
+
+  body:not(.is-login-screen) .dashboard-main .client-status-chip {
+    flex: 0 0 auto;
+    white-space: nowrap;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  body:not(.is-login-screen) .dashboard-main *,
+  body:not(.is-login-screen) .dashboard-main *::before,
+  body:not(.is-login-screen) .dashboard-main *::after {
+    scroll-behavior: auto !important;
+    transition-duration: .01ms !important;
+    animation-duration: .01ms !important;
+    animation-iteration-count: 1 !important;
+  }
+}

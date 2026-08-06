@@ -26,6 +26,31 @@ function detectEntities(message) {
   return Object.entries(map).filter(([, pattern]) => pattern.test(value)).map(([entity]) => entity);
 }
 
+function dashboardActionIntents(message, legacyIntents = []) {
+  const value = String(message || "").trim();
+  const categories = [];
+  const add = (category) => { if (!categories.includes(category)) categories.push(category); };
+  if (/\b(find|search|show|locate|pull up|which|who|how much)\b/i.test(value)) add("search_records");
+  if (/\b(status|details?|what is happening|what happened|attached|connected|assigned)\b/i.test(value)) add("retrieve_record_details");
+  if (/\b(summarize|summary|total|how much|what is happening)\b/i.test(value)) add("summarize_information");
+  if (/\b(open|take me|go to|navigate|pull up)\b/i.test(value)) add("navigate");
+  if (/\b(take me|go to|navigate)\b/i.test(value) && /\b(unpaid|overdue|tomorrow|today|this week|assigned|missing)\b/i.test(value)) add("filter_and_navigate");
+  if (legacyIntents.some((intent) => ["question", "analysis", "comparison", "recommendation", "report", "planning"].includes(intent))) add("dashboard_question");
+  const external = /\b(the web|web|internet|online|official website|current weather|weather forecast|regulations?|ordinances?|manufacturer|product documentation|public (?:phone|address|information)|recent information|still operating)\b/i.test(value);
+  const internal = /\b(our (?:dashboard|database|records?|leads?|clients?|tickets?|properties)|urban yards record|saved (?:lead|client|record)|already exists?)\b/i.test(value);
+  const comparison = /\b(compare|verify|match|see whether|check whether|against our records?|with our records?)\b/i.test(value);
+  if (external) add("search_external");
+  if (external && (internal || comparison)) add("search_internal_and_external");
+  else if (internal) add("search_internal");
+  if (external && /\b(company|business|vendor|client|property management|apartment|address|official website)\b/i.test(value)) add("research_entity");
+  if (external && comparison) add("compare_sources");
+  if (/\b(summarize|summary|research report|findings)\b/i.test(value) && external) add("summarize_research");
+  if (external) add("general_question");
+  if (!value) add("clarification_needed");
+  if (!categories.length) add("dashboard_question");
+  return categories;
+}
+
 function routeIntent(message) {
   const value = String(message || "").trim();
   const intents = [];
@@ -63,9 +88,10 @@ function routeIntent(message) {
   return {
     primaryIntent: intents[0],
     intents: [...new Set(intents)],
+    actionIntents: dashboardActionIntents(value, intents),
     entities: detectEntities(value),
     requiresWritePreview: explicitWrite && intents.some((intent) => ["create_action", "update_action", "schedule_action", "financial_action", "automation_request"].includes(intent))
   };
 }
 
-module.exports = { detectEntities, routeIntent };
+module.exports = { dashboardActionIntents, detectEntities, routeIntent };

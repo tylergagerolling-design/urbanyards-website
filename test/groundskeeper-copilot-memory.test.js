@@ -60,12 +60,33 @@ test("navigation route selection is allowlisted", () => {
   assert.equal(navigationRoute("Take me to invoices"), "documents");
   assert.equal(navigationRoute("Open AI memory"), "ai-memory");
   assert.equal(navigationRoute("Go to today's schedule"), "calendar");
+  assert.equal(navigationRoute("Show this job in the Work tab"), "calendar");
 });
 
 test("invoice navigation selects the invoicing workspace", () => {
   const actions = planUIActions({ message: "Take me to invoices", routing: {}, resolvedEntity: null, citations: [] });
   assert.ok(actions.some((action) => action.type === "navigate" && action.route === "documents"));
   assert.ok(actions.some((action) => action.type === "apply_filters" && action.filters.moneyView === "invoicing"));
+});
+
+test("informational invoice results stay in chat while explicit navigation applies Money filters", () => {
+  const shown = planUIActions({
+    message: "Show me unpaid invoices",
+    routing: {},
+    resolvedEntity: null,
+    citations: [],
+    searchPlan: { navigationRequested: false }
+  });
+  assert.equal(shown.some((action) => action.type === "navigate"), false);
+  const opened = planUIActions({
+    message: "Take me to unpaid invoices",
+    routing: {},
+    resolvedEntity: null,
+    citations: [],
+    searchPlan: { navigationRequested: true }
+  });
+  assert.ok(opened.some((action) => action.type === "navigate" && action.route === "documents"));
+  assert.ok(opened.some((action) => action.type === "apply_filters" && action.filters.financialStatus === "unpaid"));
 });
 
 test("record commands produce validated side-panel actions", () => {
@@ -97,6 +118,8 @@ test("filter commands produce bounded filter and highlight actions", () => {
 test("action validator rejects arbitrary routes, scripts, and oversized highlights", () => {
   assert.equal(validateUIAction({ type: "navigate", route: "javascript:alert(1)" }), false);
   assert.equal(validateUIAction({ type: "execute_script", script: "alert(1)" }), false);
+  assert.equal(validateUIAction({ type: "apply_filters", page: "tickets", filters: { arbitraryCommand: "delete all" } }), false);
+  assert.equal(validateUIAction({ type: "open_record", recordType: "ticket", recordId: "../../secrets", presentation: "side_panel" }), false);
   assert.equal(validateUIAction({ type: "highlight_records", recordIds: Array.from({ length: 51 }, (_, index) => String(index)) }), false);
 });
 

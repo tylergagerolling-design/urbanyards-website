@@ -43,7 +43,24 @@ function toReference(recordType, record) {
   });
 }
 
-function searchRecords({ query, snapshot, limit = 10 }) {
+async function searchRecords({ query, snapshot, limit = 10, entityTypes = [], filters = {}, actor, pageContext, searchService }) {
+  if (searchService?.search) {
+    const search = await searchService.search({ actor, query, entityTypes, filters, limit, pageContext });
+    const citations = search.results.map((result) => recordReference({
+      recordType: result.entityType,
+      recordId: result.id,
+      displayId: result.title,
+      title: result.subtitle || result.title,
+      route: result.route
+    }));
+    return {
+      summary: `${search.totalResults} matching records`,
+      records: search.results,
+      citations,
+      search,
+      partial: search.partial
+    };
+  }
   const words = normalize(query).split(" ").filter((word) => word.length > 2);
   const results = flattenSnapshot(snapshot).map(({ recordType, record }) => {
     const haystack = normalize(Object.values(record).flat(2).filter((value) => typeof value !== "object").join(" "));
@@ -107,7 +124,32 @@ function getTicketDetails({ recordId, snapshot }) {
   };
 }
 
-function findUnpaidInvoices({ snapshot, limit = 20 }) {
+async function findUnpaidInvoices({ snapshot, limit = 20, actor, pageContext, searchService }) {
+  if (searchService?.search) {
+    const search = await searchService.search({
+      actor,
+      query: "",
+      entityTypes: ["invoice"],
+      filters: { financialStatus: "unpaid" },
+      limit,
+      pageContext
+    });
+    const totalOutstanding = Number(search.summary?.totalAmount || 0);
+    return {
+      summary: `${search.totalResults} unpaid invoices totaling ${totalOutstanding.toFixed(2)}`,
+      calculation: { count: search.totalResults, totalOutstanding, currency: "USD", source: "permission-scoped invoice balance" },
+      records: search.results,
+      citations: search.results.map((invoice) => recordReference({
+        recordType: "invoice",
+        recordId: invoice.id,
+        displayId: invoice.title,
+        title: invoice.subtitle || invoice.title,
+        route: invoice.route
+      })),
+      search,
+      partial: search.partial
+    };
+  }
   const invoices = (snapshot.invoices || []).filter((invoice) => {
     const status = normalize(invoice.status);
     return !["paid", "void", "cancelled", "canceled"].includes(status) && Number(invoice.balance ?? invoice.total ?? 0) > 0;
@@ -153,7 +195,7 @@ function previewTicketStageTransition({ ticketId, newStage, snapshot, actor }) {
     throw error;
   }
   if (ticket.source !== "ticket" || !/^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(String(ticket.id || ""))) {
-    const error = new Error("Only canonical job tickets can be moved by Groundskeeper AI.");
+    const error = new Error("Only canonical job tickets can be moved by Groundkeeper & Lawnmower Man AI.");
     error.code = "TICKET_NOT_CANONICAL";
     throw error;
   }
@@ -195,7 +237,7 @@ function createToolRegistry({ permissionGuard }) {
     if (!tool?.name || typeof tool.execute !== "function") throw new Error("Invalid assistant tool definition.");
     definitions.set(tool.name, Object.freeze({ timeoutMs: 2500, classification: "read", requiresConfirmation: false, ...tool }));
   };
-  register({ name: "search_records", description: "Search the permitted dashboard snapshot.", requiredPermission: "dashboard:read", inputSchema: { query: "string" }, outputSchema: { records: "array", citations: "array" }, execute: searchRecords });
+  register({ name: "search_records", description: "Search authenticated, permission-scoped dashboard records through the secure server search layer.", requiredPermission: "dashboard:read", inputSchema: { query: "string", entityTypes: "array", filters: "object", limit: "number" }, outputSchema: { records: "array", citations: "array", search: "object" }, execute: searchRecords });
   register({ name: "find_blocked_tickets", description: "Find tickets with explicit workflow blockers.", requiredPermission: "tickets:read", inputSchema: {}, outputSchema: { records: "array", citations: "array" }, execute: findBlockedTickets });
   register({ name: "get_attention_items", description: "Return deterministic priority items already calculated by the dashboard.", requiredPermission: "dashboard:read", inputSchema: {}, outputSchema: { records: "array", citations: "array" }, execute: getAttentionItems });
   register({ name: "get_ticket_details", description: "Get one resolved ticket from the permitted context.", requiredPermission: "tickets:read", inputSchema: { recordId: "string" }, outputSchema: { records: "array", citations: "array" }, execute: getTicketDetails });
@@ -227,7 +269,7 @@ function createToolRegistry({ permissionGuard }) {
     async execute(name, input, runtime) {
       const tool = definitions.get(name);
       if (!tool) {
-        const error = new Error(`Groundskeeper does not have a registered tool named ${name}.`);
+        const error = new Error(`Groundkeeper & Lawnmower Man AI does not have a registered tool named ${name}.`);
         error.code = "TOOL_NOT_FOUND";
         throw error;
       }
@@ -240,10 +282,10 @@ function createToolRegistry({ permissionGuard }) {
             error.code = "CONFIRMATION_REQUIRED";
             throw error;
           }
-          const output = await timeout(tool.preview({ ...input, snapshot: runtime.snapshot, pageContext: runtime.pageContext, actor: runtime.actor }), tool.timeoutMs, name);
+          const output = await timeout(tool.preview({ ...input, snapshot: runtime.snapshot, pageContext: runtime.pageContext, actor: runtime.actor, searchService: runtime.searchService }), tool.timeoutMs, name);
           return { name, ok: true, output, previewOnly: true, requiresConfirmation: true, latencyMs: Date.now() - startedAt };
         }
-        const output = await timeout(tool.execute({ ...input, snapshot: runtime.snapshot, pageContext: runtime.pageContext, actor: runtime.actor }), tool.timeoutMs, name);
+        const output = await timeout(tool.execute({ ...input, snapshot: runtime.snapshot, pageContext: runtime.pageContext, actor: runtime.actor, searchService: runtime.searchService }), tool.timeoutMs, name);
         return { name, ok: true, output, latencyMs: Date.now() - startedAt };
       } catch (error) {
         return {

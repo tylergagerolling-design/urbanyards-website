@@ -133,7 +133,7 @@ function documentInsights({ snapshot, record }) {
     records: documents.slice(0, 20).map((item) => ({ id: item.id, title: recordLabel(item), status: item.status, type: item.type || item.category, date: item.date || item.createdAt })),
     citations: documents.slice(0, 20).map((item) => ({ recordType: "document", recordId: item.id, title: recordLabel(item), route: "#documentation" })),
     missingInformation: incomplete.map((item) => `${recordLabel(item)}: final status or attached file`),
-    extractionCapability: "Groundskeeper can reason over stored document metadata and extracted text supplied by the dashboard; it does not invent unread file contents.",
+    extractionCapability: "Groundkeeper & Lawnmower Man AI can reason over stored document metadata and extracted text supplied by the dashboard; it does not invent unread file contents.",
     partial: incomplete.length > 0
   };
 }

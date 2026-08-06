@@ -5,8 +5,10 @@ const ALLOWED_ROUTES = new Set([
   "documents", "contacts", "equipment", "documentation", "import-export",
   "groundskeeper-ai", "ai-memory", "settings"
 ]);
-const ALLOWED_RECORD_TYPES = new Set(["ticket", "job", "client", "contact", "property", "lead", "invoice", "expense", "document"]);
+const ALLOWED_RECORD_TYPES = new Set(["ticket", "job", "client", "contact", "property", "lead", "quote", "invoice", "payment", "expense", "schedule", "worker", "work_note", "call_queue", "document", "photo", "form", "activity"]);
 const ALLOWED_ACTION_TYPES = new Set(["navigate", "open_record", "apply_filters", "highlight_records", "scroll_to", "switch_tab"]);
+const ALLOWED_RECORD_SECTIONS = new Set(["overview", "details", "quote", "costs", "payments", "invoice", "scheduling", "documents", "notes", "history"]);
+const ALLOWED_FILTER_KEYS = new Set(["moneyView", "financialStatus", "dateRange", "status", "missingRequirement", "assignment", "client"]);
 
 function navigationRoute(message) {
   const value = String(message || "").toLowerCase();
@@ -17,7 +19,8 @@ function navigationRoute(message) {
     [/\b(lead|prospect|outreach)s?\b/, "outreach"],
     [/\b(schedule|calendar|next week|today'?s schedule)\b/, "calendar"],
     [/\b(route planner|route)\b/, "route-planner"],
-    [/\b(kanban|ticket|job)s?\b/, "tickets"],
+    [/\b(work tab|work page|jobs?|visits?)\b/, "calendar"],
+    [/\b(kanban|tickets?)\b/, "tickets"],
     [/\b(client|contact)s?\b/, "contacts"],
     [/\b(equipment|tools?)\b/, "equipment"],
     [/\b(documentation|forms?)\b/, "documentation"],
@@ -27,23 +30,26 @@ function navigationRoute(message) {
   return routes.find(([pattern]) => pattern.test(value))?.[1] || "";
 }
 
-function planUIActions({ message, routing, resolvedEntity, citations = [] }) {
+function planUIActions({ message, routing, resolvedEntity, citations = [], searchPlan = {} }) {
   const value = String(message || "");
   const command = /\b(open|show|pull up|take me|go to|filter|highlight|switch|view)\b/i.test(value);
   if (!command) return [];
   const actions = [];
   const route = navigationRoute(value);
-  if (route) actions.push({ type: "navigate", route });
-  if (resolvedEntity && /\b(open|pull up|show)\b/i.test(value)) {
+  const explicitNavigation = searchPlan.navigationRequested ?? /\b(open|pull up|take me|go to|navigate|show this|view this)\b/i.test(value);
+  if (route && explicitNavigation) actions.push({ type: "navigate", route });
+  if (resolvedEntity && explicitNavigation) {
     actions.push({
       type: "open_record",
       recordType: resolvedEntity.recordType,
       recordId: resolvedEntity.recordId,
-      presentation: "side_panel"
+      presentation: "side_panel",
+      ...(searchPlan.section ? { section: searchPlan.section } : {})
     });
   }
   const filters = {};
   if (route === "documents" && /\binvoices?\b/i.test(value)) filters.moneyView = "invoicing";
+  if (route === "documents" && /\bunpaid|outstanding|receivable\b/i.test(value)) filters.financialStatus = "unpaid";
   if (route === "documents" && /\breports?\b/i.test(value)) filters.moneyView = "reports";
   if (route === "calendar" && /\bnext week\b/i.test(value)) filters.dateRange = "next_week";
   if (route === "calendar" && /\btoday\b/i.test(value)) filters.dateRange = "today";
@@ -66,11 +72,16 @@ function validateUIAction(action) {
   if (action.type === "navigate") return ALLOWED_ROUTES.has(action.route);
   if (action.type === "open_record") {
     return ALLOWED_RECORD_TYPES.has(action.recordType)
-      && Boolean(String(action.recordId || "").trim())
-      && ["page", "side_panel", "modal"].includes(action.presentation);
+      && /^[-a-zA-Z0-9._:]{1,180}$/.test(String(action.recordId || ""))
+      && ["page", "side_panel", "modal"].includes(action.presentation)
+      && (!action.section || ALLOWED_RECORD_SECTIONS.has(action.section));
   }
-  if (action.type === "apply_filters") return ALLOWED_ROUTES.has(action.page) && action.filters && typeof action.filters === "object" && !Array.isArray(action.filters);
-  if (action.type === "highlight_records") return Array.isArray(action.recordIds) && action.recordIds.length <= 50;
+  if (action.type === "apply_filters") {
+    const entries = action.filters && typeof action.filters === "object" && !Array.isArray(action.filters) ? Object.entries(action.filters) : [];
+    return ALLOWED_ROUTES.has(action.page) && entries.length > 0 && entries.length <= 8
+      && entries.every(([key, value]) => ALLOWED_FILTER_KEYS.has(key) && ["string", "number", "boolean"].includes(typeof value) && String(value).length <= 160);
+  }
+  if (action.type === "highlight_records") return Array.isArray(action.recordIds) && action.recordIds.length <= 50 && action.recordIds.every((id) => /^[-a-zA-Z0-9._:]{1,180}$/.test(String(id)));
   if (action.type === "scroll_to") return Boolean(String(action.targetId || "").match(/^[a-zA-Z0-9_-]{1,100}$/));
   if (action.type === "switch_tab") return Boolean(String(action.tabId || "").match(/^[a-zA-Z0-9_-]{1,100}$/));
   return false;

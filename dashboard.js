@@ -38,6 +38,8 @@
     follow_up_later: "Follow-up needed"
   };
   const SESSION_KEY = "urbanYardsDashboardSession";
+  const COPILOT_CONVERSATION_KEY_PREFIX = "urbanYardsGroundskeeperConversation:";
+  const COPILOT_SOURCE_MODE_KEY = "urbanYardsGroundskeeperSourceMode";
   const CALL_METHOD_KEY = "urbanYardsPreferredCallMethod";
   const DASHBOARD_THEME_KEY = "urbanYardsDashboardTheme";
   const DASHBOARD_COMPACT_KEY = "urbanYardsDashboardCompact";
@@ -471,6 +473,8 @@
     groundskeeperMessages: [],
     copilotOpen: false,
     copilotLoading: false,
+    copilotResearchLoading: false,
+    copilotSourceMode: ["auto", "internal", "external", "both", "official_only"].includes(readStoredPreference(COPILOT_SOURCE_MODE_KEY, "auto")) ? readStoredPreference(COPILOT_SOURCE_MODE_KEY, "auto") : "auto",
     copilotMessages: [],
     copilotLastResults: [],
     copilotScheduleDraft: null,
@@ -624,7 +628,7 @@
     equipment: "Equipment",
     documentation: "Documentation",
     "import-export": "Import & Export",
-    "groundskeeper-ai": "Groundskeeper AI",
+    "groundskeeper-ai": "Groundkeeper & Lawnmower Man AI",
     "ai-memory": "AI Memory",
     settings: "Tools"
   });
@@ -639,7 +643,7 @@
     "equipment",
     "equipment maintenance",
     "hardware guide",
-    "Groundskeeper AI",
+    "Groundkeeper & Lawnmower Man AI",
     "Documentation",
     "Import & Export",
     "import/export",
@@ -1742,7 +1746,7 @@
       });
     });
     if (!state.groundskeeperAiReady && state.groundskeeperAiError) {
-      warnings.push({ name: "Groundskeeper AI", message: state.groundskeeperAiError, detail: state.groundskeeperAiError, scope: "support" });
+      warnings.push({ name: "Groundkeeper & Lawnmower Man AI", message: state.groundskeeperAiError, detail: state.groundskeeperAiError, scope: "support" });
     }
     if (!state.documentationReady && state.documentationError) {
       warnings.push({ name: "Documentation", message: state.documentationError, detail: state.documentationError, scope: "support" });
@@ -2436,7 +2440,7 @@
       })
     });
     const result = await response.json().catch(() => ({}));
-    if (!response.ok) throw new Error(result.error || "Groundskeeper AI request failed.");
+    if (!response.ok) throw new Error(result.error || "Groundkeeper & Lawnmower Man AI request failed.");
     return result;
   }
 
@@ -2754,29 +2758,47 @@
         mode: "dashboard",
         message,
         page: "Urban Yards Owner Dashboard",
-        history: state.groundskeeperMessages.slice(-10),
+        history: [...state.copilotMessages, ...state.groundskeeperMessages]
+          .filter((entry) => ["user", "assistant"].includes(entry.role) && entry.content)
+          .slice(-10)
+          .map((entry) => ({ role: entry.role, content: String(entry.content).slice(0, 2000) })),
         consultation: consultation || state.copilotConsultationRequest || undefined,
         context: {
           operation,
+          externalResearchSettings: {
+            externalSearchEnabled: state.copilotSourceMode !== "internal",
+            allowInternalExternalComparison: ["auto", "both"].includes(state.copilotSourceMode),
+            allowSuggestedRecordUpdates: true,
+            requireConfirmationBeforeSaving: true,
+            showSourcesByDefault: true,
+            sourceScope: state.copilotSourceMode,
+            officialSourcesOnly: state.copilotSourceMode === "official_only"
+          },
           ...groundskeeperOperationsContext()
         }
       })
     });
     const result = await response.json().catch(() => ({}));
-    if (!response.ok) throw new Error(result.error || "The Groundskeeper is unavailable.");
+    if (!response.ok) throw new Error(result.error || "Groundkeeper & Lawnmower Man AI is unavailable.");
     state.groundskeeperLastMeta = result;
     return result.reply;
   }
 
   const COPILOT_UI_ROUTES = new Set(["overview", "tickets", "calendar", "route-planner", "outreach", "call-queue", "documents", "contacts", "equipment", "documentation", "import-export", "groundskeeper-ai", "ai-memory", "settings"]);
-  const COPILOT_UI_RECORD_TYPES = new Set(["ticket", "job", "client", "contact", "property", "lead", "invoice", "expense", "document"]);
+  const COPILOT_UI_RECORD_TYPES = new Set(["ticket", "job", "client", "contact", "property", "lead", "quote", "invoice", "payment", "expense", "schedule", "worker", "work_note", "call_queue", "document", "photo", "form", "activity"]);
+  const COPILOT_UI_RECORD_SECTIONS = new Set(["overview", "details", "quote", "costs", "payments", "invoice", "scheduling", "documents", "notes", "history"]);
+  const COPILOT_UI_FILTER_KEYS = new Set(["moneyView", "financialStatus", "dateRange", "status", "missingRequirement", "assignment", "client"]);
 
   function validDashboardUIAction(action) {
     if (!action || typeof action !== "object") return false;
     if (action.type === "navigate") return COPILOT_UI_ROUTES.has(action.route);
-    if (action.type === "open_record") return COPILOT_UI_RECORD_TYPES.has(action.recordType) && Boolean(action.recordId) && ["page", "side_panel", "modal"].includes(action.presentation);
-    if (action.type === "apply_filters") return COPILOT_UI_ROUTES.has(action.page) && action.filters && typeof action.filters === "object" && !Array.isArray(action.filters);
-    if (action.type === "highlight_records") return Array.isArray(action.recordIds) && action.recordIds.length <= 50;
+    if (action.type === "open_record") return COPILOT_UI_RECORD_TYPES.has(action.recordType) && /^[-a-zA-Z0-9._:]{1,180}$/.test(String(action.recordId || "")) && ["page", "side_panel", "modal"].includes(action.presentation) && (!action.section || COPILOT_UI_RECORD_SECTIONS.has(action.section));
+    if (action.type === "apply_filters") {
+      const entries = action.filters && typeof action.filters === "object" && !Array.isArray(action.filters) ? Object.entries(action.filters) : [];
+      return COPILOT_UI_ROUTES.has(action.page) && entries.length > 0 && entries.length <= 8
+        && entries.every(([key, value]) => COPILOT_UI_FILTER_KEYS.has(key) && ["string", "number", "boolean"].includes(typeof value) && String(value).length <= 160);
+    }
+    if (action.type === "highlight_records") return Array.isArray(action.recordIds) && action.recordIds.length <= 50 && action.recordIds.every((id) => /^[-a-zA-Z0-9._:]{1,180}$/.test(String(id)));
     if (action.type === "scroll_to") return /^[a-zA-Z0-9_-]{1,100}$/.test(action.targetId || "");
     if (action.type === "switch_tab") return /^[a-zA-Z0-9_-]{1,100}$/.test(action.tabId || "");
     return false;
@@ -2784,8 +2806,8 @@
 
   async function openRecordFromCopilot(action) {
     const id = String(action.recordId || "");
-    const destinationByType = { ticket: "tickets", job: "calendar", client: "contacts", contact: "contacts", property: "outreach", lead: "outreach", invoice: "documents", expense: "documents", document: "documents" };
-    const destination = destinationByType[action.recordType];
+    const destinationByType = { ticket: "tickets", job: "calendar", client: "contacts", contact: "contacts", property: "outreach", lead: "outreach", quote: "documents", invoice: "documents", payment: "documents", expense: "documents", schedule: "route-planner", worker: "calendar", work_note: "tickets", call_queue: "call-queue", document: "documentation", photo: "tickets", form: "documentation", activity: "tickets" };
+    const destination = destinationByType[action.recordType] || "overview";
     if (action.recordType === "invoice") {
       state.moneyView = "invoicing";
       await loadMoneyView("invoicing");
@@ -2793,12 +2815,35 @@
     setActiveSection(destination);
     replaceDashboardHash(destination);
     await render();
-    if (action.recordType === "ticket") openTicketDrawer("ticket", id);
+    if (action.recordType === "ticket") openTicketDrawer("ticket", id, { section: action.section || "overview" });
     else if (action.recordType === "job") openJobDrawer(id);
     else if (action.recordType === "client" || action.recordType === "contact") openContactDrawer(id);
     else if (action.recordType === "property") openOutreachPropertyDrawer(id);
     else if (action.recordType === "lead") openOutreachDrawer(id);
+    else if (action.recordType === "quote") {
+      const linkedTicket = findTicketForDrawer("quote", id);
+      if (linkedTicket?.source === "ticket") openTicketDrawer("ticket", linkedTicket.id, { section: "quote" });
+      else openSubmissionDrawer(id);
+    }
     else if (action.recordType === "invoice") await openFinancialInvoiceDrawer(id);
+    else if (action.recordType === "expense") {
+      state.moneyView = "expenses";
+      updateMoneyViewRoute("expenses");
+      const expense = (state.data.financial?.expenses || []).find((item) => String(item.id) === id);
+      if (expense) openMoneyExpenseDrawer(expense);
+      else await render();
+    }
+    else if (action.recordType === "payment") {
+      state.moneyView = "payments";
+      updateMoneyViewRoute("payments");
+      await render();
+    }
+    else if (action.recordType === "call_queue") {
+      state.callQueueSelectedId = id;
+      state.callQueueDrawerTab = action.section === "history" ? "activity" : "details";
+      state.callQueueConfirmAction = "";
+      renderCallQueueWorkspace();
+    }
     else if (action.recordType === "document") openDocumentDrawer(id);
   }
 
@@ -2828,6 +2873,7 @@
           state.moneyView = action.filters.moneyView;
           await loadMoneyView(state.moneyView);
         }
+        if (action.filters.financialStatus === "unpaid") state.moneyInvoiceStatus = "All";
         await render();
         status.push(`Applied ${Object.keys(action.filters).join(" and ")} filters.`);
       } else if (action.type === "highlight_records") {
@@ -2846,7 +2892,7 @@
   }
 
   function isCopilotUICommand(message) {
-    return /\b(open|show|pull up|take me|go to|filter|highlight|switch|view)\b/i.test(message);
+    return /\b(open|pull up|take me|go to|navigate|filter|highlight|switch|view this)\b/i.test(message);
   }
 
   function copilotMemoryPreviewHtml(preview) {
@@ -2878,21 +2924,89 @@
   }
 
   function copilotOutcomeHtml() {
-    return copilotConsultationHtml(state.groundskeeperLastMeta?.consultation);
+    const research = state.groundskeeperLastMeta?.research;
+    const researchHtml = copilotResearchHtml(research);
+    return `${researchHtml}${copilotCollaborationHtml(state.groundskeeperLastMeta?.collaboration, Boolean(research?.results?.length))}`;
   }
 
-  function copilotConsultationHtml(meta) {
-    if (!meta || meta.status === "skipped") return "";
-    const label = meta.status === "completed" ? "Gemini consultation used" : meta.status === "rate_limited" ? "Gemini consultation limit reached" : "Gemini consultation unavailable";
-    return `<details class="copilot-consultation-detail"><summary>${escapeHtml(label)}</summary><dl>
-      <div><dt>Purpose</dt><dd>${escapeHtml(String(meta.reason || "").replace(/_/g, " "))}</dd></div>
-      <div><dt>Provider</dt><dd>Gemini</dd></div>
-      <div><dt>Model</dt><dd>${escapeHtml(meta.model || "Configured Gemini model")}</dd></div>
-      <div><dt>Status</dt><dd>${escapeHtml(meta.status || "unknown")}</dd></div>
-      ${meta.errorCategory ? `<div><dt>Admin detail</dt><dd>${escapeHtml(String(meta.errorCategory).replace(/_/g, " "))}</dd></div>` : ""}
-      ${meta.durationMs ? `<div><dt>Duration</dt><dd>${escapeHtml(String(meta.durationMs))} ms</dd></div>` : ""}
-      <div><dt>Disagreement</dt><dd>${meta.disagreementDetected ? "Detected and surfaced" : "None detected"}</dd></div>
-    </dl></details>`;
+  function normalizeCopilotResearchSource(source = {}) {
+    let url;
+    try {
+      url = new URL(String(source.url || ""));
+      if (url.protocol !== "https:") return null;
+    } catch (_) { return null; }
+    return {
+      id: String(source.id || "").slice(0, 100),
+      sourceType: source.sourceType === "external_web" ? "external_web" : "",
+      title: String(source.title || url.hostname).slice(0, 220),
+      url: url.href.slice(0, 2000),
+      domain: String(source.domain || url.hostname).replace(/^www\./, "").slice(0, 253),
+      summary: String(source.summary || "").slice(0, 700),
+      publishedAt: String(source.publishedAt || "").slice(0, 40),
+      updatedAt: String(source.updatedAt || "").slice(0, 40),
+      accessedAt: String(source.accessedAt || "").slice(0, 40),
+      resultType: String(source.resultType || "general").slice(0, 60),
+      confidence: ["high", "medium", "low"].includes(source.confidence) ? source.confidence : "medium",
+      isOfficialSource: source.isOfficialSource === true
+    };
+  }
+
+  function copilotResearchHtml(research) {
+    if (!research || research.status === "not_requested") return "";
+    if (research.status === "failed") {
+      return `<section class="copilot-research-state is-error" role="status"><strong>Public research unavailable</strong><p>${escapeHtml(research.error?.message || "External research could not complete. Your internal Urban Yards search is still working.")}</p></section>`;
+    }
+    const sources = (research.results || []).map(normalizeCopilotResearchSource).filter(Boolean).slice(0, 8);
+    if (!sources.length) {
+      return `<section class="copilot-research-state"><strong>No reliable public result</strong><p>I did not find a source strong enough to present as verified public information.</p></section>`;
+    }
+    const matchesBySource = new Map();
+    (research.entityMatches || []).forEach((match) => (match.externalResultIds || []).forEach((sourceId) => {
+      const current = matchesBySource.get(String(sourceId));
+      const rank = { confirmed: 5, likely: 4, possible: 3, insufficient_information: 2, not_a_match: 1 };
+      if (!current || (rank[match.matchStatus] || 0) > (rank[current.matchStatus] || 0)) matchesBySource.set(String(sourceId), match);
+    }));
+    const cards = sources.map((source) => {
+      const match = matchesBySource.get(source.id);
+      const canOpenMatch = match && ["confirmed", "likely"].includes(match.matchStatus) && COPILOT_UI_RECORD_TYPES.has(match.internalRecordType) && match.internalRecordId;
+      const dateParts = [source.publishedAt && `Published ${source.publishedAt}`, source.updatedAt && `Updated ${source.updatedAt}`, source.accessedAt && `Accessed ${source.accessedAt.slice(0, 10)}`].filter(Boolean);
+      return `<article class="copilot-research-card">
+        <div class="copilot-research-card-head"><span class="copilot-source-label">Public web result</span>${source.isOfficialSource ? `<span class="copilot-official-badge">Official source</span>` : ""}</div>
+        <a class="copilot-research-title" href="${escapeHtml(source.url)}" target="_blank" rel="noopener noreferrer">${escapeHtml(source.title)}</a>
+        <small>${escapeHtml(source.domain)} · ${escapeHtml(source.resultType.replace(/_/g, " "))} · ${escapeHtml(source.confidence)} confidence</small>
+        ${source.summary ? `<p>${escapeHtml(source.summary)}</p>` : ""}
+        ${dateParts.length ? `<div class="copilot-research-dates">${dateParts.map((part) => `<time>${escapeHtml(part)}</time>`).join("")}</div>` : ""}
+        ${match ? `<div class="copilot-entity-match is-${escapeHtml(match.matchStatus)}"><strong>${escapeHtml(match.matchStatus.replace(/_/g, " "))} Urban Yards match</strong><span>${escapeHtml(match.explanation || "")}</span>${canOpenMatch ? `<button type="button" data-action="copilot-open-result" data-record-type="${escapeHtml(match.internalRecordType)}" data-record-id="${escapeHtml(match.internalRecordId)}">Open internal record</button>` : ""}</div>` : ""}
+        <a class="copilot-open-source" href="${escapeHtml(source.url)}" target="_blank" rel="noopener noreferrer">Open source</a>
+      </article>`;
+    }).join("");
+    const proposals = (research.updateProposals || []).slice(0, 5).map((proposal) => `<article class="copilot-research-proposal">
+      <span>Suggested update · approval required</span>
+      <strong>${escapeHtml(proposal.targetTitle || "Urban Yards record")} · ${escapeHtml(proposal.field || "field")}</strong>
+      <dl><div><dt>Saved</dt><dd>${escapeHtml(proposal.existingValue || "Not saved")}</dd></div><div><dt>Public source</dt><dd>${escapeHtml(proposal.proposedValue || "")}</dd></div></dl>
+      <p>Nothing will change unless you explicitly approve a separate save action.</p>
+    </article>`).join("");
+    return `<section class="copilot-research-results" aria-label="Public web research"><header><div><strong>Public web research</strong><span>Separate from Urban Yards records</span></div><span>${sources.length} source${sources.length === 1 ? "" : "s"}</span></header>${cards}${proposals ? `<div class="copilot-research-proposals"><strong>Review before saving</strong>${proposals}</div>` : ""}</section>`;
+  }
+
+  function copilotCollaborationHtml(meta, suppressWebResults = false) {
+    if (!meta) return "";
+    const webResults = suppressWebResults ? [] : Array.isArray(meta.webResults) ? meta.webResults : [];
+    const webHtml = webResults.length ? `<section class="copilot-web-results" aria-label="Public web sources"><strong>Public web sources</strong><ul>${webResults.slice(0, 8).map((source) => `<li><a href="${escapeHtml(source.url || "#")}" target="_blank" rel="noopener noreferrer">${escapeHtml(source.title || "Public web source")}</a></li>`).join("")}</ul></section>` : "";
+    if (!meta.used || !Array.isArray(meta.providers) || meta.providers.length < 2) return webHtml;
+    if (meta.mode !== "persona" || !Array.isArray(meta.personaContributions) || meta.personaContributions.length < 2) {
+      return `<div class="copilot-collaboration-review" aria-label="AI collaboration review"><strong>Groundkeeper &amp; Lawnmower Man AI</strong><span>Powered by ChatGPT + Gemini</span></div>${webHtml}`;
+    }
+    const identity = {
+      groundskeeper: ["Groundkeeper", "ChatGPT"],
+      lawnmower_man: ["Lawnmower Man", "Gemini"]
+    };
+    return `<section class="copilot-persona-exchange" aria-label="Groundkeeper and Lawnmower Man analysis">
+      ${meta.personaContributions.slice(0, 2).map((contribution) => {
+        const labels = identity[contribution.persona] || ["Assistant", contribution.provider || "AI"];
+        return `<article><header><strong>${escapeHtml(labels[0])}</strong><span>— ${escapeHtml(labels[1])}</span></header><p>${escapeHtml(contribution.text || "")}</p>${contribution.optionalComment ? `<small>${escapeHtml(contribution.optionalComment)}</small>` : ""}</article>`;
+      }).join("")}
+      </section><div class="copilot-collaboration-review" aria-label="AI collaboration review"><strong>Groundkeeper &amp; Lawnmower Man AI</strong><span>Powered by ChatGPT + Gemini</span></div>${webHtml}`;
   }
 
   async function saveCopilotMemory(memoryType) {
@@ -2933,7 +3047,7 @@
     };
     return citations.map((citation) => ({
       title: citation.displayId || citation.title || "Source record",
-      detail: citation.title && citation.title !== citation.displayId ? citation.title : "Groundskeeper source",
+      detail: citation.title && citation.title !== citation.displayId ? citation.title : "Groundkeeper & Lawnmower Man AI source",
       group: "Source",
       action: actionByType[citation.recordType] || "",
       id: citation.recordId,
@@ -2941,9 +3055,79 @@
     })).filter((row) => row.action && row.id);
   }
 
-  function copilotPush(role, content, extraHtml = "") {
-    state.copilotMessages.push({ role, content, extraHtml });
+  function normalizeCopilotSearchResult(result = {}) {
+    const entityType = String(result.entityType || "").toLowerCase();
+    if (!COPILOT_UI_RECORD_TYPES.has(entityType) || !result.id) return null;
+    return {
+      id: String(result.id).slice(0, 180),
+      entityType,
+      sourceKind: result.sourceKind === "internal" ? "internal" : "",
+      title: String(result.title || "Matching record").slice(0, 180),
+      subtitle: String(result.subtitle || "").slice(0, 260),
+      status: String(result.status || "").slice(0, 80),
+      date: String(result.date || "").slice(0, 30),
+      amount: result.amount !== null && result.amount !== undefined && result.amount !== "" && Number.isFinite(Number(result.amount)) ? Number(result.amount) : null,
+      section: COPILOT_UI_RECORD_SECTIONS.has(result.section) ? result.section : ""
+    };
+  }
+
+  function copilotSearchResultsHtml(results = [], clarification = "") {
+    const normalized = results.map(normalizeCopilotSearchResult).filter(Boolean).slice(0, 10);
+    if (!normalized.length) return "";
+    const labels = { ticket: "Ticket", job: "Work", client: "Client", contact: "Contact", property: "Property", lead: "Lead", quote: "Quote request", invoice: "Invoice", payment: "Payment", expense: "Expense", schedule: "Schedule", worker: "Crew", work_note: "Work note", call_queue: "Call Queue", document: "Document", photo: "Photo", form: "Form", activity: "Activity" };
+    return `<section class="copilot-search-results" aria-label="Urban Yards search results">
+      ${clarification ? `<p class="copilot-result-clarification">${escapeHtml(clarification)}</p>` : ""}
+      ${normalized.map((result) => {
+        const openLabel = `Open ${labels[result.entityType] || "Record"}`;
+        const actionAttributes = `data-action="copilot-open-result" data-record-type="${escapeHtml(result.entityType)}" data-record-id="${escapeHtml(result.id)}"${result.section ? ` data-record-section="${escapeHtml(result.section)}"` : ""}`;
+        return `<article class="copilot-result-card">
+        <div class="copilot-result-copy">
+          <span class="copilot-result-kind">${escapeHtml(labels[result.entityType] || "Record")}${result.sourceKind === "internal" ? " · Urban Yards" : ""}</span>
+          <button class="copilot-result-title" type="button" ${actionAttributes}>${escapeHtml(result.title)}</button>
+          ${result.subtitle ? `<small>${escapeHtml(result.subtitle)}</small>` : ""}
+          <div class="copilot-result-meta">${result.status ? `<span>${escapeHtml(result.status)}</span>` : ""}${result.date ? `<time datetime="${escapeHtml(result.date)}">${escapeHtml(result.date)}</time>` : ""}${result.amount !== null ? `<b>${escapeHtml(moneyCurrency(result.amount))}</b>` : ""}</div>
+        </div>
+        <button type="button" ${actionAttributes}>${escapeHtml(openLabel)}</button>
+      </article>`;
+      }).join("")}
+    </section>`;
+  }
+
+  function copilotConversationStorageKey(session = getSession()) {
+    const identity = firstProfileText(session?.userId, session?.email).toLowerCase();
+    return identity ? `${COPILOT_CONVERSATION_KEY_PREFIX}${identity}` : "";
+  }
+
+  function persistCopilotConversation(session = getSession()) {
+    const key = copilotConversationStorageKey(session);
+    if (!key) return;
+    const messages = state.copilotMessages.slice(-24).map((message) => ({
+      role: message.role === "user" ? "user" : "assistant",
+      content: String(message.content || "").slice(0, 4000),
+      results: (message.results || []).map(normalizeCopilotSearchResult).filter(Boolean).slice(0, 10)
+    })).filter((message) => message.content);
+    try { sessionStorage.setItem(key, JSON.stringify(messages)); } catch (_) { /* Storage may be unavailable in private mode. */ }
+  }
+
+  function restoreCopilotConversation(session = getSession()) {
+    const key = copilotConversationStorageKey(session);
+    if (!key) return;
+    try {
+      const saved = JSON.parse(sessionStorage.getItem(key) || "[]");
+      if (!Array.isArray(saved)) return;
+      state.copilotMessages = saved.slice(-24).map((message) => ({
+        role: message?.role === "user" ? "user" : "assistant",
+        content: String(message?.content || "").slice(0, 4000),
+        extraHtml: "",
+        results: Array.isArray(message?.results) ? message.results.map(normalizeCopilotSearchResult).filter(Boolean).slice(0, 10) : []
+      })).filter((message) => message.content);
+    } catch (_) { sessionStorage.removeItem(key); }
+  }
+
+  function copilotPush(role, content, extraHtml = "", metadata = {}) {
+    state.copilotMessages.push({ role, content, extraHtml, results: (metadata.results || []).map(normalizeCopilotSearchResult).filter(Boolean).slice(0, 10) });
     state.copilotMessages = state.copilotMessages.slice(-24);
+    persistCopilotConversation();
   }
 
   function renderDashboardCopilot() {
@@ -2957,20 +3141,20 @@
     const greetingName = groundskeeperGreetingFirstName();
     shell.className = `dashboard-copilot${state.copilotOpen ? " is-open" : ""}`;
     shell.innerHTML = `
-      <button class="dashboard-copilot-launcher" type="button" data-action="toggle-dashboard-copilot" aria-expanded="${state.copilotOpen ? "true" : "false"}" aria-label="Open Groundskeeper AI" title="Open Groundskeeper AI">
+      <button class="dashboard-copilot-launcher" type="button" data-action="toggle-dashboard-copilot" aria-expanded="${state.copilotOpen ? "true" : "false"}" aria-label="Open Groundkeeper &amp; Lawnmower Man AI" title="Open Groundkeeper &amp; Lawnmower Man AI">
         <img src="images/groundskeeper-ai/groundskeeper-ai-keaton-mask.png" alt="" aria-hidden="true">
-        <span class="sr-only">Open Groundskeeper AI</span>
+        <span class="sr-only">Open Groundkeeper &amp; Lawnmower Man AI</span>
       </button>
       <section class="dashboard-copilot-panel${hasConversation ? " has-conversation" : " is-welcome"}" aria-labelledby="groundskeeper-copilot-title" ${state.copilotOpen ? "" : "hidden"}>
         <header class="copilot-header">
           <div class="copilot-header-identity">
             <img class="copilot-header-mask" src="images/groundskeeper-ai/groundskeeper-ai-keaton-mask.png" alt="" aria-hidden="true">
             <div>
-              <h2 id="groundskeeper-copilot-title">Groundskeeper AI</h2>
-              <p>Your Landscaping Assistant</p>
+              <h2 id="groundskeeper-copilot-title">Groundkeeper &amp; Lawnmower Man AI</h2>
+              <p>Two minds. One landscaping operation.</p>
             </div>
           </div>
-          <button type="button" data-action="toggle-dashboard-copilot" aria-label="Close Groundskeeper AI">
+          <button type="button" data-action="toggle-dashboard-copilot" aria-label="Close Groundkeeper &amp; Lawnmower Man AI">
             <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 5l14 14M19 5 5 19"/></svg>
           </button>
         </header>
@@ -2979,26 +3163,35 @@
             <div class="dashboard-copilot-messages" data-copilot-messages aria-live="polite">
               ${state.copilotMessages.map((message) => `
                 <article class="copilot-message is-${escapeHtml(message.role)}">
-                  <span class="copilot-message-label">${message.role === "user" ? "You" : "Groundskeeper AI"}</span>
+                  <span class="copilot-message-label">${message.role === "user" ? "You" : "Groundkeeper &amp; Lawnmower Man AI"}</span>
                   <p>${escapeHtml(message.content).replace(/\n/g, "<br>")}</p>
-                  ${message.extraHtml || ""}
+                  ${message.extraHtml || copilotSearchResultsHtml(message.results || [])}
                 </article>
               `).join("")}
-              ${state.copilotLoading ? `<article class="copilot-message is-assistant is-loading" role="status"><span class="copilot-message-label">Groundskeeper AI</span><p>${state.copilotConsultationRequest ? "Consulting Gemini for a second opinion…" : "Checking your dashboard…"}</p></article>` : ""}
+              ${state.copilotLoading ? `<article class="copilot-message is-assistant is-loading" role="status"><span class="copilot-message-label">Groundkeeper &amp; Lawnmower Man AI</span><p>${state.copilotResearchLoading ? "Searching public sources and checking Urban Yards…" : state.copilotConsultationRequest ? "ChatGPT + Gemini are reviewing your request…" : "Checking your dashboard…"}</p></article>` : ""}
             </div>
           ` : `
-            <section class="copilot-welcome" aria-label="Groundskeeper AI welcome">
+            <section class="copilot-welcome" aria-label="Groundkeeper &amp; Lawnmower Man AI welcome">
               <img class="copilot-welcome-mask" src="images/groundskeeper-ai/groundskeeper-ai-keaton-mask.png" alt="" aria-hidden="true">
               <h3>Hi ${escapeHtml(greetingName)}!</h3>
-              <p class="copilot-welcome-intro">I’m Groundskeeper AI.</p>
+              <p class="copilot-welcome-intro">I’m Groundkeeper &amp; Lawnmower Man AI.</p>
               <p class="copilot-welcome-description">Here to help with your landscaping jobs, plants, routes, equipment, and more.</p>
               <p class="copilot-welcome-question">What can I help you with today?</p>
             </section>
           `}
         </div>
+        <div class="copilot-source-toolbar">
+          <label for="groundskeeper-source-mode"><span>Search sources</span><select id="groundskeeper-source-mode" data-copilot-source-mode aria-label="Choose Groundkeeper research sources">
+            <option value="auto"${state.copilotSourceMode === "auto" ? " selected" : ""}>Smart choice</option>
+            <option value="internal"${state.copilotSourceMode === "internal" ? " selected" : ""}>Urban Yards only</option>
+            <option value="external"${state.copilotSourceMode === "external" ? " selected" : ""}>Public web only</option>
+            <option value="both"${state.copilotSourceMode === "both" ? " selected" : ""}>Compare both</option>
+            <option value="official_only"${state.copilotSourceMode === "official_only" ? " selected" : ""}>Official sources only</option>
+          </select></label>
+        </div>
         <form data-dashboard-copilot-form class="${state.copilotLoading ? "is-loading" : ""}">
-          <label class="sr-only" for="groundskeeper-copilot-message">Message Groundskeeper AI</label>
-          <textarea id="groundskeeper-copilot-message" name="message" rows="1" maxlength="700" placeholder="Ask me anything..." aria-label="Message Groundskeeper AI"${state.copilotLoading ? " disabled" : ""} required></textarea>
+          <label class="sr-only" for="groundskeeper-copilot-message">Message Groundkeeper &amp; Lawnmower Man AI</label>
+          <textarea id="groundskeeper-copilot-message" name="message" rows="1" maxlength="700" placeholder="Ask me anything..." aria-label="Message Groundkeeper &amp; Lawnmower Man AI"${state.copilotLoading ? " disabled" : ""} required></textarea>
           <button type="submit" data-copilot-send aria-label="${state.copilotLoading ? "Sending message" : "Send message"}" disabled>
             <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 19V5M6.5 10.5 12 5l5.5 5.5"/></svg>
           </button>
@@ -3076,6 +3269,44 @@
     return { query, rows: rows.slice(0, 10) };
   }
 
+  function copilotLocalSearchResults(rows = []) {
+    const recordTypeByAction = {
+      "open-contact": "contact",
+      "open-outreach-company": "client",
+      "open-outreach-property": "property",
+      "open-outreach-prospect": "lead",
+      "open-ticket": "ticket",
+      "open-financial-invoice": "invoice",
+      "open-money-expense": "expense",
+      "open-money-document": "document",
+      "open-document": "document",
+      "edit-job": "job"
+    };
+    const sectionByType = {
+      contact: "contacts",
+      client: "contacts",
+      property: "outreach",
+      lead: "outreach",
+      ticket: "tickets",
+      invoice: "documents",
+      expense: "documents",
+      document: "documentation",
+      job: "calendar"
+    };
+    return rows.map((row) => {
+      const entityType = recordTypeByAction[row.action];
+      if (!entityType) return null;
+      return normalizeCopilotSearchResult({
+        id: row.id,
+        entityType,
+        sourceKind: "internal",
+        title: row.title,
+        subtitle: row.detail,
+        section: sectionByType[entityType]
+      });
+    }).filter(Boolean);
+  }
+
   function copilotAttentionSummary() {
     const items = todayActionItems(state.data).slice(0, 8);
     if (!items.length) return { content: "Nothing urgent is currently queued. I found no overdue calls, due visits, completion reviews, or payment actions.", html: "" };
@@ -3117,6 +3348,7 @@
     const lower = normalizeLookup(message);
     copilotPush("user", message);
     state.copilotLoading = true;
+    state.copilotResearchLoading = ["external", "both", "official_only"].includes(state.copilotSourceMode) || /\b(?:web|internet|online|official website|weather|forecast|regulation|ordinance|manufacturer|public information|recent information|still operating)\b/i.test(message);
     state.copilotConsultationRequest = consultationRequest;
     renderDashboardCopilot();
     try {
@@ -3129,15 +3361,25 @@
           content: answer,
           html: `${sources.length ? `<details class="copilot-sources"><summary>How I got this · ${sources.length} source${sources.length === 1 ? "" : "s"}</summary>${copilotRecordButtons(sources)}</details>` : ""}${copilotOutcomeHtml()}`
         };
-      } else if (isCopilotUICommand(message)) {
-        const answer = await groundskeeperChat(message, `command:${normalizeDashboardSection(state.activeSection)}`, consultationRequest);
+      } else if (!isDemoMode()) {
+        const answer = await groundskeeperChat(message, `${isCopilotUICommand(message) ? "command" : "copilot"}:${normalizeDashboardSection(state.activeSection)}`, consultationRequest);
         const actions = state.groundskeeperLastMeta?.uiActions || [];
-        const statuses = await executeDashboardUIActions(actions);
+        const statuses = isCopilotUICommand(message) ? await executeDashboardUIActions(actions) : [];
+        const results = (state.groundskeeperLastMeta?.searchResults || []).map(normalizeCopilotSearchResult).filter(Boolean);
+        state.copilotLastResults = results.map((result) => ({
+          id: result.id,
+          title: result.title,
+          detail: result.subtitle,
+          group: result.entityType,
+          recordType: result.entityType
+        }));
         const sources = copilotCitationRows(state.groundskeeperLastMeta?.citations || []);
-        const movement = actions.length ? `<div class="copilot-action-plan"><strong>I’m going to:</strong><ol>${actions.map((action) => `<li>${escapeHtml(action.type.replace(/_/g, " "))}</li>`).join("")}</ol></div>` : "";
+        const movement = statuses.length ? `<div class="copilot-action-plan"><strong>Completed:</strong><ol>${statuses.map((status) => `<li>${escapeHtml(status)}</li>`).join("")}</ol></div>` : "";
+        const resultCards = copilotSearchResultsHtml(results, state.groundskeeperLastMeta?.clarification || "");
         reply = {
-          content: statuses.length ? statuses.join(" ") : answer,
-          html: `${movement}${copilotMemoryPreviewHtml(state.groundskeeperLastMeta?.memoryPreview)}${copilotTransitionPreviewHtml(state.groundskeeperLastMeta?.transitionPreview)}${sources.length ? `<details class="copilot-sources"><summary>How I got this · ${sources.length} source${sources.length === 1 ? "" : "s"}</summary>${copilotRecordButtons(sources)}</details>` : ""}${copilotOutcomeHtml()}`
+          content: statuses.length ? `${answer}\n${statuses.join(" ")}` : answer,
+          html: `${movement}${resultCards}${copilotMemoryPreviewHtml(state.groundskeeperLastMeta?.memoryPreview)}${copilotTransitionPreviewHtml(state.groundskeeperLastMeta?.transitionPreview)}${sources.length ? `<details class="copilot-sources"><summary>How I got this · ${sources.length} source${sources.length === 1 ? "" : "s"}</summary>${copilotRecordButtons(sources)}</details>` : ""}${copilotOutcomeHtml()}`,
+          results
         };
       } else if (/\b(schedule|add visit|create visit)\b/.test(lower)) {
         reply = copilotSchedulePreview(message);
@@ -3154,8 +3396,19 @@
         reply = copilotAttentionSummary();
       } else if (/\b(find|search|show|open|pull up|look for)\b/.test(lower)) {
         const { query, rows } = copilotSearchRows(message);
-        state.copilotLastResults = rows;
-        reply = { content: rows.length ? `I found ${rows.length} matching records for “${query}”.` : `I couldn't find a dashboard record matching “${query}”. Try a client, property, ticket number, phone, email, or vendor.`, html: copilotRecordButtons(rows) };
+        const results = copilotLocalSearchResults(rows);
+        state.copilotLastResults = results.map((result) => ({
+          id: result.id,
+          title: result.title,
+          detail: result.subtitle,
+          group: result.entityType,
+          recordType: result.entityType
+        }));
+        reply = {
+          content: results.length ? `I found ${results.length} matching records for “${query}”.` : `I couldn't find a dashboard record matching “${query}”. Try a client, property, ticket number, phone, email, or vendor.`,
+          html: copilotSearchResultsHtml(results),
+          results
+        };
       } else {
         const answer = await groundskeeperChat(message, `copilot:${normalizeDashboardSection(state.activeSection)}`, consultationRequest);
         const sources = copilotCitationRows(state.groundskeeperLastMeta?.citations || []);
@@ -3164,11 +3417,12 @@
           html: `${copilotMemoryPreviewHtml(state.groundskeeperLastMeta?.memoryPreview)}${copilotTransitionPreviewHtml(state.groundskeeperLastMeta?.transitionPreview)}${sources.length ? `<details class="copilot-sources"><summary>How I got this · ${sources.length} source${sources.length === 1 ? "" : "s"}</summary>${copilotRecordButtons(sources)}</details>` : ""}${copilotOutcomeHtml()}`
         };
       }
-      copilotPush("assistant", reply.content, reply.html);
+      copilotPush("assistant", reply.content, reply.html, { results: reply.results || [] });
     } catch (error) {
       copilotPush("assistant", error.message || "I couldn't finish that dashboard check.");
     } finally {
       state.copilotLoading = false;
+      state.copilotResearchLoading = false;
       state.copilotConsultationRequest = null;
       renderDashboardCopilot();
     }
@@ -3193,7 +3447,7 @@
       message,
       history,
       version: state.trainingPreviewMode,
-      page: "Dashboard AI Helper Training preview"
+      page: "Groundkeeper & Lawnmower Man AI training preview"
     });
   }
 
@@ -5637,7 +5891,7 @@
       { key: "equipmentItems", name: "equipment", loader: loadEquipmentItems, fallback: [] },
       { key: "equipmentMaintenance", name: "equipment maintenance", loader: loadEquipmentMaintenance, fallback: [] },
       { key: "hardwareGuide", name: "hardware guide", loader: loadHardwareGuide, fallback: [] },
-      { key: "groundskeeperAi", name: "Groundskeeper AI", loader: loadGroundskeeperAi, fallback: emptyGroundskeeperAiBundle },
+      { key: "groundskeeperAi", name: "Groundkeeper & Lawnmower Man AI", loader: loadGroundskeeperAi, fallback: emptyGroundskeeperAiBundle },
       { key: "documentation", name: "documentation", loader: loadDocumentation, fallback: () => normalizeDocumentationBundle() },
       {
         key: "importExport",
@@ -5874,7 +6128,7 @@
       };
     } catch (error) {
       state.groundskeeperAiReady = false;
-      state.groundskeeperAiError = error.message || "Groundskeeper AI could not load.";
+      state.groundskeeperAiError = error.message || "Groundkeeper & Lawnmower Man AI could not load.";
       return {
         settings: [],
         knowledge: [],
@@ -9549,7 +9803,8 @@
     try {
       return JSON.parse(sessionStorage.getItem(SESSION_KEY) || "null");
     } catch (error) {
-      clearSession();
+      sessionStorage.removeItem(SESSION_KEY);
+      resetCopilotUserState();
       return null;
     }
   }
@@ -9576,11 +9831,20 @@
     const previousSession = getSession();
     const previousIdentity = firstProfileText(previousSession?.userId, previousSession?.email).toLowerCase();
     const nextIdentity = firstProfileText(session.userId, session.email).toLowerCase();
-    if (previousIdentity && nextIdentity && previousIdentity !== nextIdentity) resetCopilotUserState();
+    if (previousIdentity && nextIdentity && previousIdentity !== nextIdentity) {
+      sessionStorage.removeItem(`${COPILOT_CONVERSATION_KEY_PREFIX}${previousIdentity}`);
+      resetCopilotUserState();
+    }
     sessionStorage.setItem(SESSION_KEY, JSON.stringify(session));
+    if (!state.copilotMessages.length) restoreCopilotConversation(session);
   }
 
   function clearSession() {
+    try {
+      const existing = JSON.parse(sessionStorage.getItem(SESSION_KEY) || "null");
+      const identity = firstProfileText(existing?.userId, existing?.email).toLowerCase();
+      if (identity) sessionStorage.removeItem(`${COPILOT_CONVERSATION_KEY_PREFIX}${identity}`);
+    } catch (_) { /* Ignore malformed session data while signing out. */ }
     sessionStorage.removeItem(SESSION_KEY);
     resetCopilotUserState();
   }
@@ -17181,8 +17445,10 @@ Requirements:
       };
     });
     const search = state.moneySearch.trim().toLowerCase();
+    const unpaidOnly = state.copilotFilters.financialStatus === "unpaid";
     const filtered = rows.filter((row) => (!search || [row.invoice.invoice_number, row.customer, row.property, row.ticket, row.invoice.square_payment_reference].some((value) => String(value || "").toLowerCase().includes(search)))
       && (state.moneyInvoiceStatus === "All" || row.status === state.moneyInvoiceStatus)
+      && (!unpaidOnly || (!['Paid', 'Voided', 'Uncollectible'].includes(row.status) && Number(row.summary.balance || 0) > 0))
       && (state.moneyInvoiceType === "All" || (state.moneyInvoiceType === "Ticket linked" ? Boolean(row.invoice.ticket_id) : !row.invoice.ticket_id)));
     const pageCount = Math.max(1, Math.ceil(filtered.length / state.moneyInvoicePageSize));
     state.moneyInvoicePage = Math.min(state.moneyInvoicePage, pageCount);
@@ -17766,7 +18032,7 @@ Requirements:
         ${renderToolsSystemCard({
           label: "Records + AI",
           value: documentationCount,
-          detail: "Documentation, templates, submissions, and Groundskeeper AI training stay in one admin lane.",
+          detail: "Documentation, templates, submissions, and Groundkeeper & Lawnmower Man AI training stay in one admin lane.",
           rows: [
             { label: "Forms and files", value: documentationCount },
             { label: "AI live version", value: aiLiveVersion || "Not published" }
@@ -17859,11 +18125,11 @@ Requirements:
           })}
           ${renderToolsLaunchGroup({
             title: "AI",
-            detail: "Train and review the Groundskeeper assistant.",
+            detail: "Train and review Groundkeeper & Lawnmower Man AI.",
             items: [
-              { label: "Groundskeeper AI", detail: aiLiveVersion === "Not published" ? "Training not published" : `Published ${aiLiveVersion}`, action: "go-groundskeeper-ai" },
+              { label: "Groundkeeper & Lawnmower Man AI", detail: aiLiveVersion === "Not published" ? "Training not published" : `Published ${aiLiveVersion}`, action: "go-groundskeeper-ai" },
               { label: "AI Memory", detail: "Approved persistent context", href: "#ai-memory" },
-              { label: "Website Helper Preview", detail: "Review the visitor experience", action: "focus-helper-preview" }
+              { label: "AI Website Preview", detail: "Review the visitor experience", action: "focus-helper-preview" }
             ]
           })}
           ${renderToolsLaunchGroup({
@@ -21638,7 +21904,7 @@ Requirements:
   function renderAiLogs(logs) {
     if (!els.aiLogsList) return;
     if (!logs.length) {
-      els.aiLogsList.innerHTML = emptyState(state.groundskeeperAiReady ? "No AI questions logged yet." : (state.groundskeeperAiError || "Groundskeeper AI logs could not load."));
+      els.aiLogsList.innerHTML = emptyState(state.groundskeeperAiReady ? "No Groundkeeper & Lawnmower Man AI questions logged yet." : (state.groundskeeperAiError || "Groundkeeper & Lawnmower Man AI logs could not load."));
       return;
     }
     const visibleLogs = logs.slice(0, 6);
@@ -21666,14 +21932,14 @@ Requirements:
     { key: "dashboard-search", group: "Find", title: "Natural-language dashboard search", detail: "Ask a plain-language question about dashboard records.", prompt: "Use only the supplied dashboard context to answer the user's dashboard search question. State when the available snapshot is insufficient and never invent a matching record.", needsQuestion: true, placeholder: "Example: Which Kennedy tickets still need completion photos?" },
     { key: "lead-priority", group: "Leads", title: "Lead prioritization", detail: "Rank prospects by urgency, fit, location, and value signals.", prompt: "Rank the active leads that deserve attention first. Use follow-up date, priority, service fit, property context, and contact history signals. Explain the ranking without inventing revenue." },
     { key: "call-brief", group: "Leads", title: "Call preparation brief", detail: "Prepare talking points and questions for a prospect.", prompt: "Prepare concise call briefs for the highest-priority leads. Include known context, the goal of the call, useful questions, likely objections, and the recommended outcome. Do not claim facts not present." },
-    { key: "call-outcome", group: "Leads", title: "Call outcome assistant", detail: "Turn rough notes into status, follow-up, and next action.", prompt: "Convert the user's rough call notes into a structured outcome with summary, recommended lead status, follow-up timing, next action, and a polished internal note. Return a draft only.", needsQuestion: true, placeholder: "Paste rough call notes here…" },
+    { key: "call-outcome", group: "Leads", title: "Call outcome review", detail: "Turn rough notes into status, follow-up, and next action.", prompt: "Convert the user's rough call notes into a structured outcome with summary, recommended lead status, follow-up timing, next action, and a polished internal note. Return a draft only.", needsQuestion: true, placeholder: "Paste rough call notes here…" },
     { key: "scope-builder", group: "Planning", title: "Scope-of-work generator", detail: "Draft a structured scope from ticket or walkthrough notes.", prompt: "Draft a practical scope of work from the supplied ticket context and the user's notes. Include included work, exclusions, assumptions, access, proof, and questions still needing answers. This is a draft for review.", needsQuestion: true, placeholder: "Optional: identify the ticket and add walkthrough details…" },
     { key: "estimate-prep", group: "Planning", title: "Estimate preparation", detail: "Suggest labor, materials, equipment, and missing questions.", prompt: "Prepare an estimate worksheet for the relevant ticket. Suggest labor categories, materials, equipment, risk allowances, and unanswered questions. Do not provide final pricing or promises." },
     { key: "profitability", group: "Money", title: "Profitability insights", detail: "Explain margin strengths, risks, and cost drivers.", prompt: "Review the supplied financial and ticket signals for profitability. Explain likely cost drivers, weak or strong margin signals, missing actuals, and the records that need review. Do not invent amounts." },
     { key: "schedule", group: "Planning", title: "Schedule optimizer", detail: "Recommend visit order and scheduling improvements.", prompt: "Recommend a practical schedule and work order using dates, urgency, location text, and ticket readiness. Flag conflicts and missing information. Do not change the calendar." },
     { key: "weather", group: "Planning", title: "Weather-aware planning", detail: "Identify weather-sensitive work and a forecast checklist.", prompt: "Identify upcoming work that is weather-sensitive and create a planning checklist. If live forecast data is not present in the context, say so explicitly and recommend what must be checked before rescheduling. Never invent weather." },
     { key: "property-history", group: "Properties", title: "Property history summary", detail: "Summarize visits, issues, preferences, and costs.", prompt: "Create concise property history summaries using only the supplied contacts, properties, jobs, tickets, expenses, and documents. Highlight recurring needs, open issues, and missing history." },
-    { key: "closeout", group: "Tickets", title: "Closeout assistant", detail: "Review proof, N/A decisions, costs, documents, and blockers.", prompt: "Prepare a ticket closeout review. Show completed evidence, missing proof, N/A decisions, actual costs, invoice and payment state, linked documents, and remaining blockers. Recommend; do not close anything." },
+    { key: "closeout", group: "Tickets", title: "Closeout review", detail: "Review proof, N/A decisions, costs, documents, and blockers.", prompt: "Prepare a ticket closeout review. Show completed evidence, missing proof, N/A decisions, actual costs, invoice and payment state, linked documents, and remaining blockers. Recommend; do not close anything." },
     { key: "invoice-ready", group: "Money", title: "Invoice readiness checker", detail: "Find missing billing details and approvals.", prompt: "Determine which tickets appear ready to invoice and which are not. For each one, list missing client details, scope, line items, proof, actuals, approvals, or documents. Do not create or send invoices." },
     { key: "expense-category", group: "Money", title: "Expense categorization", detail: "Suggest vendor, category, ticket, and receipt details.", prompt: "Categorize the user's expense or receipt notes. Suggest vendor, expense category, likely property or ticket link, reimbursable status, and missing receipt information. Return a draft only.", needsQuestion: true, placeholder: "Paste receipt text or describe the purchase…" },
     { key: "anomalies", group: "Insights", title: "Anomaly and duplicate detection", detail: "Find unusual costs, duplicates, conflicts, and stuck records.", prompt: "Inspect the dashboard snapshot for likely duplicates, inconsistent totals, unusual costs, scheduling conflicts, missing links, and tickets stuck too long. Separate confirmed problems from possible issues." },
@@ -21695,13 +21961,13 @@ Requirements:
   };
 
   const AI_SECTIONS = [
-    { id: "operations", icon: "OP", title: "Operations Copilot", table: "", type: "", description: "Review daily work, tickets, leads, estimates, schedules, closeout, Money, and client communication with live dashboard context." },
-    { id: "training", icon: "TR", title: "AI Helper Training", table: "ai_training_rules", type: "trainingRules", description: "Train, test, approve, and publish how the public website helper responds to visitors." },
-    { id: "landscaping", icon: "LK", title: "Landscaping Knowledge", table: "", type: "landscapingKnowledge", description: "Versioned general, Pacific Northwest, Urban Yards, and safety knowledge used by the dashboard assistant." },
-    { id: "assistant", icon: "AI", title: "Dashboard Assistant", table: "", type: "", description: "Ask for follow-up drafts, lead summaries, copy ideas, or outreach planning. Dashboard mode can use internal AI knowledge." },
+    { id: "operations", icon: "OP", title: "Operations", table: "", type: "", description: "Review daily work, tickets, leads, estimates, schedules, closeout, Money, and client communication with live dashboard context." },
+    { id: "training", icon: "TR", title: "Groundkeeper & Lawnmower Man AI Training", table: "ai_training_rules", type: "trainingRules", description: "Train, test, approve, and publish how Groundkeeper & Lawnmower Man AI responds to website visitors." },
+    { id: "landscaping", icon: "LK", title: "Landscaping Knowledge", table: "", type: "landscapingKnowledge", description: "Versioned general, Pacific Northwest, Urban Yards, and safety knowledge used by Groundkeeper & Lawnmower Man AI." },
+    { id: "assistant", icon: "AI", title: "Groundkeeper & Lawnmower Man AI", table: "", type: "", description: "Ask for follow-up drafts, lead summaries, copy ideas, or outreach planning. Dashboard mode can use internal AI knowledge." },
     { id: "settings", icon: "BF", title: "Business Facts", table: "ai_settings", type: "settings", description: "Settings, service area, contact info, tone, quote process, and payment process." },
     { id: "knowledge", icon: "SK", title: "Services & Knowledge", table: "ai_knowledge", type: "knowledge", description: "Published and draft knowledge entries for services, site content, and business context." },
-    { id: "faqs", icon: "FAQ", title: "Website FAQ", table: "ai_faqs", type: "faqs", description: "Visitor-facing questions and approved answers for the public helper." },
+    { id: "faqs", icon: "FAQ", title: "Website FAQ", table: "ai_faqs", type: "faqs", description: "Visitor-facing questions and approved answers for Groundkeeper & Lawnmower Man AI." },
     { id: "rules", icon: "R", title: "AI Rules", table: "ai_rules", type: "rules", description: "Behavior rules, boundaries, tone, fallback guidance, and safety instructions." },
     { id: "savedAnswers", icon: "SA", title: "Saved Answers", table: "ai_saved_answers", type: "savedAnswers", description: "Reusable answers that can become official knowledge after review." },
     { id: "logs", icon: "IN", title: "Visitor Question Logs", table: "", type: "logs", description: "Review recent questions and turn good answers into official AI knowledge." }
@@ -21872,8 +22138,8 @@ Requirements:
       <section class="panel groundskeeper-ai-chat-panel ai-command-panel">
         <div class="panel-heading">
           <div>
-            <h3>Dashboard Assistant</h3>
-            <p>Internal copilot for follow-ups, lead summaries, website copy, and AI knowledge cleanup.</p>
+            <h3>Groundkeeper &amp; Lawnmower Man AI</h3>
+            <p>Internal workspace for follow-ups, lead summaries, website copy, and AI knowledge cleanup.</p>
           </div>
         </div>
         <div class="ai-quick-actions">
@@ -21881,7 +22147,7 @@ Requirements:
         </div>
         <div class="groundskeeper-ai-chat" data-groundskeeper-chat></div>
         <form class="groundskeeper-ai-chat-form ai-command-chat-form" data-groundskeeper-chat-form>
-          <textarea name="message" rows="5" placeholder="Ask The Groundskeeper to draft a follow-up, summarize a lead, improve website copy, or turn a visitor question into reusable knowledge..."></textarea>
+          <textarea name="message" rows="5" placeholder="Ask Groundkeeper &amp; Lawnmower Man AI to draft a follow-up, summarize a lead, improve website copy, or turn a visitor question into reusable knowledge..."></textarea>
           <button type="submit"><span class="button-icon" aria-hidden="true">AI</span><span>Ask</span></button>
         </form>
       </section>`;
@@ -21896,7 +22162,7 @@ Requirements:
     els.aiMain.innerHTML = `
       <section class="groundskeeper-operations">
         <div class="ai-workspace-heading">
-          <div><p class="eyebrow">Owner Operations</p><h3>Groundskeeper Operations Copilot</h3><p>Choose a focused review. Groundskeeper uses a bounded dashboard snapshot and prepares recommendations or drafts for you to approve.</p></div>
+          <div><p class="eyebrow">Owner Operations</p><h3>Groundkeeper &amp; Lawnmower Man AI Operations</h3><p>Choose a focused review. Groundkeeper &amp; Lawnmower Man AI uses a bounded dashboard snapshot and prepares recommendations or drafts for you to approve.</p></div>
           <span class="ai-review-badge">Review before applying</span>
         </div>
         <div class="groundskeeper-operation-groups">
@@ -21906,7 +22172,7 @@ Requirements:
         </div>
         <section class="groundskeeper-operation-runner">
           <div><p class="eyebrow">${escapeHtml(selected.group)}</p><h3>${escapeHtml(selected.title)}</h3><p>${escapeHtml(selected.detail)}</p></div>
-          ${selected.needsQuestion ? `<label>Details or question<textarea rows="4" maxlength="800" data-ai-operation-question placeholder="${escapeHtml(selected.placeholder || "Add the details Groundskeeper should review…")}"></textarea></label>` : ""}
+          ${selected.needsQuestion ? `<label>Details or question<textarea rows="4" maxlength="800" data-ai-operation-question placeholder="${escapeHtml(selected.placeholder || "Add the details Groundkeeper & Lawnmower Man AI should review…")}"></textarea></label>` : ""}
           <button type="button" data-action="run-ai-operation" data-operation="${escapeHtml(selected.key)}"${state.groundskeeperOperationLoading ? " disabled" : ""}>${state.groundskeeperOperationLoading ? "Reviewing…" : "Run Review"}</button>
         </section>
         <section class="groundskeeper-operation-result" aria-live="polite">
@@ -21934,7 +22200,7 @@ Requirements:
     state.groundskeeperOperationKey = operation.key;
     openDetailDrawer();
     els.detailContent.innerHTML = `<div class="drawer-content contextual-ai-drawer">
-      <p class="eyebrow">Groundskeeper AI · ${escapeHtml(detailDrawerSectionLabel())}</p>
+      <p class="eyebrow">Groundkeeper &amp; Lawnmower Man AI · ${escapeHtml(detailDrawerSectionLabel())}</p>
       <div class="ticket-drawer-heading"><div><h3>${escapeHtml(operation.title)}</h3><p>${escapeHtml(operation.detail)}</p></div><span class="ai-review-badge">Review before applying</span></div>
       <div class="contextual-ai-page-tools">${groundskeeperToolsForPage().map((tool) => `<button type="button" data-action="switch-contextual-ai" data-operation="${escapeHtml(tool.key)}" class="${tool.key === operation.key ? "is-active" : ""}">${escapeHtml(tool.title)}</button>`).join("")}</div>
       ${operation.needsQuestion ? `<label>Details or question<textarea rows="5" maxlength="800" data-contextual-ai-question placeholder="${escapeHtml(operation.placeholder || "Add details…")}"></textarea></label>` : ""}
@@ -22002,7 +22268,7 @@ Requirements:
                 <button class="inline-action" type="button" data-action="dismiss-ai-log" data-id="${escapeHtml(log.id)}">Dismiss</button>
               </div>
             </article>
-          `).join("") : emptyState(state.groundskeeperAiSearch ? "No logs match that search." : "No AI questions logged yet.")}
+          `).join("") : emptyState(state.groundskeeperAiSearch ? "No logs match that search." : "No Groundkeeper & Lawnmower Man AI questions logged yet.")}
         </div>
       </section>`;
   }
@@ -22079,7 +22345,7 @@ Requirements:
     const messages = state.trainingMessages;
     if (!messages.length) {
       return `<article class="training-message is-assistant">
-        <p>Tell me how the website helper should behave. I will turn your instruction into clean training rules you can save, approve, test, and push live.</p>
+        <p>Tell me how Groundkeeper &amp; Lawnmower Man AI should behave on the website. I will turn your instruction into clean training rules you can save, approve, test, and push live.</p>
       </article>`;
     }
     return messages.map((message, messageIndex) => `
@@ -22146,7 +22412,7 @@ Requirements:
 
   function renderTrainingPreviewMessages() {
     if (!state.trainingPreviewMessages.length) {
-      return `<article class="training-preview-message is-assistant">Ask a sample visitor question to see how the public website helper would respond.</article>`;
+      return `<article class="training-preview-message is-assistant">Ask a sample visitor question to see how Groundkeeper &amp; Lawnmower Man AI would respond on the website.</article>`;
     }
     return state.trainingPreviewMessages.map((message) => (
       `<article class="training-preview-message is-${escapeHtml(message.role)}">${escapeHtml(message.content)}</article>`
@@ -22195,7 +22461,7 @@ Requirements:
   function renderPublishModal(ai) {
     if (!state.trainingPublishModalOpen) return "";
     const approved = (ai.trainingRules || []).filter((rule) => String(rule.status || "").toLowerCase() === "approved");
-    return `<div class="ai-training-modal" role="dialog" aria-modal="true" aria-label="Push AI helper training live">
+    return `<div class="ai-training-modal" role="dialog" aria-modal="true" aria-label="Push Groundkeeper &amp; Lawnmower Man AI training live">
       <div class="ai-training-modal-card">
         <div class="ai-training-modal-head">
           <div>
@@ -22204,7 +22470,7 @@ Requirements:
           </div>
           <button class="inline-action" type="button" data-action="close-training-modal">Close</button>
         </div>
-        <p class="training-publish-copy">This will publish ${escapeHtml(approved.length)} approved training item${approved.length === 1 ? "" : "s"} to the public website helper. Draft items will stay private.</p>
+        <p class="training-publish-copy">This will publish ${escapeHtml(approved.length)} approved training item${approved.length === 1 ? "" : "s"} to Groundkeeper &amp; Lawnmower Man AI on the public website. Draft items will stay private.</p>
         <div class="training-publish-list">
           ${approved.length ? approved.map((rule) => `<span>${escapeHtml(rule.title || "Training rule")}</span>`).join("") : "<span>No approved items are ready to publish.</span>"}
         </div>
@@ -22254,9 +22520,9 @@ Requirements:
         <section class="panel ai-training-preview-panel" data-helper-preview-panel>
           <div class="ai-training-panel-head">
             <div>
-              <p class="eyebrow">Website Helper Preview</p>
+              <p class="eyebrow">Groundkeeper &amp; Lawnmower Man AI Website Preview</p>
               <h3>Test Visitor Questions</h3>
-              <p>Preview the public helper with live rules or with drafts included before publishing.</p>
+              <p>Preview the public website experience with live rules or with drafts included before publishing.</p>
             </div>
             <div class="training-preview-toggle" role="group" aria-label="Preview version">
               <button type="button" class="${state.trainingPreviewMode === "live" ? "is-active" : ""}" data-action="set-preview-mode" data-mode="live">Test Live Version</button>
@@ -22283,8 +22549,8 @@ Requirements:
     const approvedRules = (ai.trainingRules || []).filter((rule) => String(rule.status || "").toLowerCase() === "approved").length;
     if (els.groundskeeperAiStatus) {
       els.groundskeeperAiStatus.innerHTML = state.groundskeeperAiReady
-        ? `<span>${aiBadge("Secure Backend", "Secure Backend")} Website helper uses live training through <code>/.netlify/functions/groundskeeper-ai</code>.</span><span>${escapeHtml(liveTrainingVersion(ai).label)} / ${escapeHtml(liveRules)} live / ${escapeHtml(approvedRules)} approved</span>`
-        : `<span>${aiBadge("Needs Attention", "Needs Attention")} Groundskeeper AI could not load from the secure backend.</span><span>${escapeHtml(state.groundskeeperAiError || "Refresh the dashboard, then check Netlify function logs or Supabase/RLS if it stays down.")}</span>`;
+        ? `<span>${aiBadge("Secure Backend", "Secure Backend")} Groundkeeper &amp; Lawnmower Man AI uses live training through <code>/.netlify/functions/groundskeeper-ai</code>.</span><span>${escapeHtml(liveTrainingVersion(ai).label)} / ${escapeHtml(liveRules)} live / ${escapeHtml(approvedRules)} approved</span>`
+        : `<span>${aiBadge("Needs Attention", "Needs Attention")} Groundkeeper &amp; Lawnmower Man AI could not load from the secure backend.</span><span>${escapeHtml(state.groundskeeperAiError || "Refresh the dashboard, then check Netlify function logs or Supabase/RLS if it stays down.")}</span>`;
     }
     if (els.aiSearch && els.aiSearch.value !== state.groundskeeperAiSearch) els.aiSearch.value = state.groundskeeperAiSearch;
     renderAiWorkspace(ai);
@@ -23045,7 +23311,7 @@ Requirements:
       ["conversation", "Conversation memory"]
     ];
     target.innerHTML = `<section class="ai-memory-workspace">
-      <div class="ticket-lane-heading"><div><p class="eyebrow">Groundskeeper AI</p><h1>AI Memory</h1><p>Review exactly what Groundskeeper can remember. Permanent memories are saved only after approval.</p></div><button type="button" data-action="refresh-ai-memory">Refresh</button></div>
+      <div class="ticket-lane-heading"><div><p class="eyebrow">Groundkeeper &amp; Lawnmower Man AI</p><h1>AI Memory</h1><p>Review exactly what Groundkeeper &amp; Lawnmower Man AI can remember. Permanent memories are saved only after approval.</p></div><button type="button" data-action="refresh-ai-memory">Refresh</button></div>
       <form class="ai-memory-form" data-ai-memory-form>
         <label>Memory type<select name="memory_type"><option value="business_rule">Business rule</option><option value="record">Record memory</option><option value="user_preference">User preference</option><option value="outcome">Outcome</option><option value="conversation">Conversation</option></select></label>
         <label class="span-full">Statement<textarea name="statement" rows="3" maxlength="2000" required placeholder="Write one clear fact, rule, preference, or outcome."></textarea></label>
@@ -23054,7 +23320,7 @@ Requirements:
         <label>Confidence<select name="confidence"><option>high</option><option selected>medium</option><option>low</option></select></label>
         <button type="submit">Save approved memory</button>
       </form>
-      ${state.assistantMemoriesError ? `<div class="dashboard-state is-error"><strong>Memory storage needs setup.</strong><span>${escapeHtml(state.assistantMemoriesError)}</span><small>Run the 20260724 Groundskeeper memory migration in Supabase, then refresh.</small></div>` : ""}
+      ${state.assistantMemoriesError ? `<div class="dashboard-state is-error"><strong>Memory storage needs setup.</strong><span>${escapeHtml(state.assistantMemoriesError)}</span><small>Run the 20260724 AI memory migration in Supabase, then refresh.</small></div>` : ""}
       ${state.assistantMemoriesLoading ? `<div class="loading-state">Loading AI memory…</div>` : !state.assistantMemories.length ? `<div class="ai-memory-empty-groups"><section><h3>Approved persistent memories</h3>${emptyState("No approved persistent memories yet.")}</section><section><h3>Transient conversation memories</h3>${emptyState("No transient conversation memories yet.")}</section></div>` : groups.map(([type, label]) => {
         const items = state.assistantMemories.filter((memory) => memory.memory_type === type);
         return `<section class="ai-memory-group"><div class="ticket-lane-heading"><div><h3>${escapeHtml(label)}</h3><p>${items.length} saved</p></div></div><div class="ai-memory-list">${items.length ? items.map((memory) => `
@@ -23759,11 +24025,11 @@ Requirements:
     if (active === "equipment") safeRender("equipment workspace", () => renderEquipment(data));
     if (active === "documentation") safeRender("documentation workspace", () => renderDocumentation(data));
     if (active === "contacts") safeRender("contacts workspace", () => renderContacts(data));
-    if (active === "groundskeeper-ai") safeRender("Groundskeeper AI workspace", () => renderGroundskeeperAi(data));
+    if (active === "groundskeeper-ai") safeRender("Groundkeeper & Lawnmower Man AI workspace", () => renderGroundskeeperAi(data));
     if (active === "import-export") safeRender("import and export workspace", () => renderImportExport(data));
     safeRender("active route heading", () => normalizeActiveRouteHeading(active));
-    safeRender("contextual Groundskeeper tools", () => renderContextualGroundskeeperTools(active));
-    safeRender("dashboard Groundskeeper", () => renderDashboardCopilot());
+    safeRender("contextual Groundkeeper & Lawnmower Man AI tools", () => renderContextualGroundskeeperTools(active));
+    safeRender("dashboard Groundkeeper & Lawnmower Man AI", () => renderDashboardCopilot());
     safeRender("avatar fallbacks", () => bindAvatarFallbacks());
     if (els.todayChip) els.todayChip.textContent = new Date().toLocaleDateString("en-US", { weekday: "long", month: "short", day: "numeric" });
     setActiveSection(state.activeSection, { hydrate: false });
@@ -24009,6 +24275,17 @@ Requirements:
     document.addEventListener("click", async (event) => {
       const copilotTarget = event.target instanceof Element ? event.target.closest("[data-action]") : null;
       const action = copilotTarget?.dataset.action || "";
+      if (action === "copilot-open-result") {
+        const recordAction = {
+          type: "open_record",
+          recordType: String(copilotTarget.dataset.recordType || "").toLowerCase(),
+          recordId: String(copilotTarget.dataset.recordId || ""),
+          presentation: "side_panel",
+          section: String(copilotTarget.dataset.recordSection || "")
+        };
+        if (validDashboardUIAction(recordAction)) await executeDashboardUIActions([recordAction]);
+        return;
+      }
       if (action === "toggle-dashboard-copilot") {
         state.copilotOpen = !state.copilotOpen;
         renderDashboardCopilot();
@@ -24174,6 +24451,15 @@ Requirements:
       if (!input) return;
       const sendButton = input.form?.querySelector("[data-copilot-send]");
       if (sendButton) sendButton.disabled = state.copilotLoading || !String(input.value || "").trim();
+    });
+
+    document.addEventListener("change", (event) => {
+      const sourceMode = event.target instanceof Element && event.target.matches("[data-copilot-source-mode]")
+        ? String(event.target.value || "auto")
+        : "";
+      if (!sourceMode || !["auto", "internal", "external", "both", "official_only"].includes(sourceMode)) return;
+      state.copilotSourceMode = sourceMode;
+      try { localStorage.setItem(COPILOT_SOURCE_MODE_KEY, sourceMode); } catch (_) { /* Keep the in-memory selection if storage is unavailable. */ }
     });
 
     document.addEventListener("keydown", (event) => {
@@ -27214,7 +27500,7 @@ Requirements:
           state.trainingPublishModalOpen = false;
           state.data.groundskeeperAi = await loadGroundskeeperAi();
           await render();
-          setDashboardState("Approved AI training rules are now live on the website helper.");
+          setDashboardState("Approved training rules are now live in Groundkeeper & Lawnmower Man AI on the website.");
         } catch (error) {
           setDashboardState(error.message || "Unable to push AI training live.", "error");
         }
@@ -27262,7 +27548,7 @@ Requirements:
         if (!operation) return;
         const question = qs("[data-contextual-ai-question]")?.value?.trim() || "";
         if (operation.needsQuestion && !question) {
-          setDashboardState("Add the details or question Groundskeeper should review.", "error");
+          setDashboardState("Add the details or question Groundkeeper & Lawnmower Man AI should review.", "error");
           qs("[data-contextual-ai-question]")?.focus();
           return;
         }
@@ -27273,7 +27559,7 @@ Requirements:
           state.groundskeeperOperationResult = await runGroundskeeperOperation(operation, question);
           setDashboardState(`${operation.title} review is ready.`);
         } catch (error) {
-          state.groundskeeperOperationResult = error.message || "Groundskeeper could not complete this review.";
+          state.groundskeeperOperationResult = error.message || "Groundkeeper & Lawnmower Man AI could not complete this review.";
           setDashboardState(state.groundskeeperOperationResult, "error");
         } finally {
           state.groundskeeperOperationLoading = false;
@@ -27294,7 +27580,7 @@ Requirements:
         if (!operation) return;
         const question = qs("[data-ai-operation-question]")?.value?.trim() || "";
         if (operation.needsQuestion && !question) {
-          setDashboardState("Add the details or question Groundskeeper should review.", "error");
+          setDashboardState("Add the details or question Groundkeeper & Lawnmower Man AI should review.", "error");
           qs("[data-ai-operation-question]")?.focus();
           return;
         }
@@ -27306,7 +27592,7 @@ Requirements:
           state.groundskeeperOperationResult = await runGroundskeeperOperation(operation, question);
           setDashboardState(`${operation.title} review is ready.`);
         } catch (error) {
-          state.groundskeeperOperationResult = error.message || "Groundskeeper could not complete this review.";
+          state.groundskeeperOperationResult = error.message || "Groundkeeper & Lawnmower Man AI could not complete this review.";
           setDashboardState(state.groundskeeperOperationResult, "error");
         } finally {
           state.groundskeeperOperationLoading = false;
@@ -27322,7 +27608,7 @@ Requirements:
           "Improve website copy": "Improve this Urban Yards website copy while keeping the tone practical, local, owner-operated, and clear.",
           "Create FAQ answer": "Create a public website FAQ answer using Urban Yards service area, quote process, and brand voice.",
           "Review visitor question": "Review this visitor question and suggest whether it should become a FAQ, rule, or knowledge entry.",
-          "Add service rule": "Draft a clear AI rule for how The Groundskeeper should answer service-related questions."
+          "Add service rule": "Draft a clear AI rule for how Groundkeeper & Lawnmower Man AI should answer service-related questions."
         };
         const textarea = qs("[data-groundskeeper-chat-form] textarea[name='message']");
         if (textarea) {
@@ -29053,20 +29339,20 @@ Requirements:
         await refreshDashboard();
       } else if (action === "refresh-groundskeeper-ai") {
         try {
-          setDashboardState("Refreshing Groundskeeper AI...");
+          setDashboardState("Refreshing Groundkeeper & Lawnmower Man AI...");
           state.data.groundskeeperAi = await loadGroundskeeperAi();
           await render();
-          setDashboardState("Groundskeeper AI refreshed.");
+          setDashboardState("Groundkeeper & Lawnmower Man AI refreshed.");
         } catch (error) {
-          setDashboardState(error.message || "Unable to refresh Groundskeeper AI.", "error");
+          setDashboardState(error.message || "Unable to refresh Groundkeeper & Lawnmower Man AI.", "error");
         }
       } else if (action === "publish-groundskeeper-ai") {
         try {
-          setDashboardState("Publishing Groundskeeper AI updates...");
+          setDashboardState("Publishing Groundkeeper & Lawnmower Man AI updates...");
           await groundskeeperRequest("publish");
           state.data.groundskeeperAi = await loadGroundskeeperAi();
           await render();
-          setDashboardState("Groundskeeper AI updates published.");
+          setDashboardState("Groundkeeper & Lawnmower Man AI updates published.");
         } catch (error) {
           setDashboardState(error.message || "Unable to publish AI updates.", "error");
         }
@@ -30505,9 +30791,9 @@ Requirements:
           await render();
           setDashboardState("");
         } catch (error) {
-          state.trainingMessages.push({ role: "assistant", content: error.message || "The training assistant is unavailable right now." });
+          state.trainingMessages.push({ role: "assistant", content: error.message || "Groundkeeper & Lawnmower Man AI training is unavailable right now." });
           renderGroundskeeperAi(state.data);
-          setDashboardState(error.message || "Unable to train the AI helper.", "error");
+          setDashboardState(error.message || "Unable to train Groundkeeper & Lawnmower Man AI.", "error");
         }
       } else if (event.target.matches("[data-training-preview-form]")) {
         event.preventDefault();
@@ -30551,7 +30837,7 @@ Requirements:
       } else if (event.target.matches("[data-groundskeeper-entry-form]")) {
         event.preventDefault();
         try {
-          setDashboardState("Saving Groundskeeper AI entry...");
+          setDashboardState("Saving Groundkeeper & Lawnmower Man AI entry...");
           const requestedStatus = event.submitter?.dataset.aiSaveStatus;
           if (requestedStatus && event.target.elements.status) event.target.elements.status.value = requestedStatus;
           const payload = aiEntryPayloadFromForm(event.target);
@@ -30559,7 +30845,7 @@ Requirements:
           event.target.reset();
           state.data.groundskeeperAi = await loadGroundskeeperAi();
           await render();
-          setDashboardState("Groundskeeper AI entry saved. Publish when it should affect the public helper.");
+          setDashboardState("Groundkeeper & Lawnmower Man AI entry saved. Publish when it should affect the public assistant.");
         } catch (error) {
           setDashboardState(error.message || "Unable to save AI entry.", "error");
         }
@@ -30584,9 +30870,9 @@ Requirements:
           await render();
           setDashboardState("");
         } catch (error) {
-          state.groundskeeperMessages.push({ role: "assistant", content: error.message || "The Groundskeeper is unavailable." });
+          state.groundskeeperMessages.push({ role: "assistant", content: error.message || "Groundkeeper & Lawnmower Man AI is unavailable." });
           renderGroundskeeperChat();
-          setDashboardState(error.message || "Unable to ask The Groundskeeper.", "error");
+          setDashboardState(error.message || "Unable to ask Groundkeeper & Lawnmower Man AI.", "error");
         }
       } else if (event.target.matches("[data-job-create-form]")) {
         event.preventDefault();

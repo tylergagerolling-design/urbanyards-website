@@ -175,7 +175,7 @@ test("assistant requires a server-side OpenAI key", async () => {
     const res = mockResponse();
     await assistantHandler(request("POST", { message: "Do you mow lawns?" }), res);
     assert.equal(res.statusCode, 503);
-    assert.match(res.payload.error, /AI helper is not available/i);
+    assert.match(res.payload.error, /Groundkeeper & Lawnmower Man AI is not available/i);
     assert.equal("OPENAI_API_KEY" in res.payload, false);
   } finally {
     Object.entries(original).forEach(([key, value]) => {
@@ -265,7 +265,7 @@ test("assistant returns a graceful error if the model request fails", async () =
     const res = mockResponse();
     await assistantHandler(request("POST", { message: "How do I get a quote?" }), res);
     assert.equal(res.statusCode, 502);
-    assert.match(res.payload.error, /AI helper is not available/i);
+    assert.match(res.payload.error, /Groundkeeper & Lawnmower Man AI is not available/i);
   } finally {
     global.fetch = originalFetch;
     originalKey === undefined ? delete process.env.OPENAI_API_KEY : process.env.OPENAI_API_KEY = originalKey;

@@ -3,7 +3,7 @@
   const maxStoredMessages = 18;
   const maxMessageLength = 1400;
   const requestCooldownMs = 2500;
-  const unavailableReply = "Sorry, the AI helper is not available right now. You can still request a free quote.";
+  const unavailableReply = "Sorry, Groundkeeper & Lawnmower Man AI is not available right now. You can still request a free quote.";
   const leadSignals = ["quote", "estimate", "price", "cost", "hire", "schedule", "book", "service", "cleanup", "mowing", "mulch", "trim", "porter", "address", "property"];
   const quickActions = ["Request a Free Quote", "Homeowner Services", "Property Management Services", "Service Areas", "Contact Urban Yards"];
   const cityPatterns = [
@@ -25,7 +25,7 @@
   ];
   const defaultMessages = [{
     role: "assistant",
-    content: "Hi, I am The Groundskeeper. I can help with service questions, seasonal property care, and preparing details for Urban Yards to review."
+    content: "Hi, I am Groundkeeper & Lawnmower Man AI. I can help with service questions, seasonal property care, and preparing details for Urban Yards to review."
   }];
 
   const state = { open: false, busy: false, messages: loadMessages(), lastRequestAt: 0 };
@@ -51,9 +51,9 @@
   function createAssistant() {
     const root = document.createElement("section");
     root.className = "uy-assistant";
-    root.setAttribute("aria-label", "The Groundskeeper website assistant");
+    root.setAttribute("aria-label", "Groundkeeper & Lawnmower Man AI website assistant");
     root.innerHTML = `
-      <button class="uy-assistant-toggle" type="button" aria-label="Open The Groundskeeper assistant" aria-expanded="false" aria-controls="uy-assistant-panel">
+      <button class="uy-assistant-toggle" type="button" aria-label="Open Groundkeeper &amp; Lawnmower Man AI" aria-expanded="false" aria-controls="uy-assistant-panel">
         <svg class="uy-assistant-toggle-icon" viewBox="0 0 64 64" aria-hidden="true" focusable="false">
           <path class="uy-helper-hex-fill" d="M32 5.8 54.5 18.9v26.2L32 58.2 9.5 45.1V18.9L32 5.8Z"/>
           <path class="uy-helper-hex-outline" d="M32 5.8 54.5 18.9v26.2L32 58.2 9.5 45.1V18.9L32 5.8Z"/>
@@ -65,14 +65,15 @@
           <circle class="uy-helper-dot" cx="47.2" cy="42.5" r="1.45"/>
           <circle class="uy-helper-dot" cx="51.7" cy="42.5" r="1.45"/>
         </svg>
-        <span class="sr-only">Open The Groundskeeper assistant</span>
+        <span class="sr-only">Open Groundkeeper &amp; Lawnmower Man AI</span>
       </button>
       <div class="uy-assistant-panel" id="uy-assistant-panel" role="dialog" aria-modal="false" aria-labelledby="uy-assistant-title" hidden>
         <header class="uy-assistant-header">
           <div>
-            <h2 id="uy-assistant-title">The Groundskeeper</h2>
+            <h2 id="uy-assistant-title">Groundkeeper &amp; Lawnmower Man AI</h2>
+            <p>Two minds. One landscaping operation.</p>
           </div>
-          <button class="uy-assistant-close" type="button" aria-label="Close assistant">Close</button>
+          <button class="uy-assistant-close" type="button" aria-label="Close Groundkeeper &amp; Lawnmower Man AI">Close</button>
         </header>
         <div class="uy-assistant-messages" role="log" aria-live="polite" aria-relevant="additions"></div>
         <div class="uy-assistant-actions" aria-label="Suggested questions"></div>
@@ -88,7 +89,7 @@
           </div>
         </form>
         <form class="uy-assistant-form">
-          <label class="sr-only" for="uy-assistant-input">Ask The Groundskeeper a question</label>
+          <label class="sr-only" for="uy-assistant-input">Ask Groundkeeper &amp; Lawnmower Man AI a question</label>
           <textarea id="uy-assistant-input" rows="2" placeholder="Ask about services, timing, or quote details..."></textarea>
           <button class="button button-small" type="submit">Send</button>
         </form>
@@ -156,6 +157,8 @@
     if (!active || typing) return;
     typing = document.createElement("div");
     typing.className = "uy-assistant-typing";
+    typing.setAttribute("role", "status");
+    typing.setAttribute("aria-label", "Groundkeeper & Lawnmower Man AI is responding");
     typing.innerHTML = "<span></span><span></span><span></span>";
     messagesList.appendChild(typing);
     messagesList.scrollTop = messagesList.scrollHeight;

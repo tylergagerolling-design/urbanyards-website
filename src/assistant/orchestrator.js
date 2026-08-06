@@ -12,6 +12,15 @@ const { planUIActions } = require("./ui-action-planner");
 const { landscapingIntent } = require("./landscaping-knowledge");
 const { DIAGNOSTIC_TERMS, currentSeason } = require("./landscaping-diagnostics");
 const { buildExecutionPlan } = require("./reasoning-planner");
+const { planDashboardSearch } = require("./dashboard-search");
+const { createAssistantToolBroker } = require("./tool-broker");
+const {
+  ExternalResearchError,
+  buildSuggestedRecordUpdates,
+  externalResearchFailure,
+  matchInternalExternalEntities,
+  planExternalResearch
+} = require("./external-research");
 
 function queryFromMessage(message) {
   return String(message || "")
@@ -25,9 +34,19 @@ function requestedTicketStage(message) {
   return match?.[1]?.trim() || "";
 }
 
-function toolsForRouting(routing, resolvedEntity) {
+function toolsForRouting(routing, resolvedEntity, searchPlan = {}) {
   const calls = [];
-  if (routing.intents.includes("record_search")) calls.push({ name: "search_records", input: { query: queryFromMessage(routing.message) } });
+  if ((!searchPlan.external || searchPlan.internalRequested) && (searchPlan.searchRequested || routing.intents.includes("record_search"))) {
+    calls.push({
+      name: "search_records",
+      input: {
+        query: searchPlan.query ?? queryFromMessage(routing.message),
+        entityTypes: searchPlan.entityTypes || [],
+        filters: searchPlan.filters || {},
+        limit: 10
+      }
+    });
+  }
   if (routing.intents.includes("analysis") && /\b(blocked|missing|complete|ready)\b/i.test(routing.message)) calls.push({ name: "find_blocked_tickets", input: {} });
   if (/\b(attention|today|urgent|priority|falls through)\b/i.test(routing.message)) calls.push({ name: "get_attention_items", input: {} });
   if (/\b(unpaid|outstanding|receivable)\b/i.test(routing.message) && /\binvoices?\b/i.test(routing.message)) calls.push({ name: "find_unpaid_invoices", input: {} });
@@ -66,7 +85,21 @@ function toolsForRouting(routing, resolvedEntity) {
   return calls.filter((call, index, items) => items.findIndex((candidate) => candidate.name === call.name && JSON.stringify(candidate.input) === JSON.stringify(call.input)) === index);
 }
 
-async function orchestrateDashboardRequest({ message, context = {}, actor, hasPermission, recentEntities = [], memories = [] }) {
+function resolvedFromSearch(search) {
+  if (!search?.uniqueMatch || !search.results?.length) return null;
+  const result = search.results[0];
+  return {
+    recordType: result.entityType,
+    recordId: result.id,
+    displayName: result.title,
+    confidence: Math.min(1, Math.max(.6, Number(result.relevanceScore || 0) / 200)),
+    matchedBy: "secure_dashboard_search",
+    record: result,
+    alternatives: []
+  };
+}
+
+async function orchestrateDashboardRequest({ message, context = {}, actor, hasPermission, searchService = null, externalResearchService = null, recentEntities = [], memories = [], toolAudit = async () => {} }) {
   const startedAt = Date.now();
   const routed = routeIntent(message);
   const routing = { ...routed, message: String(message || "") };
@@ -82,13 +115,52 @@ async function orchestrateDashboardRequest({ message, context = {}, actor, hasPe
     expenses: context.expenses || [],
     documents: context.documents || []
   };
-  const resolvedEntity = resolveRecord({ message, snapshot, pageContext, recentEntities });
+  const snapshotResolvedEntity = resolveRecord({ message, snapshot, pageContext, recentEntities });
+  const baseSearchPlan = planDashboardSearch(message, pageContext);
+  const researchPlan = planExternalResearch(message, {
+    settings: context.externalResearchSettings || {},
+    internalPlan: baseSearchPlan,
+    currentDate: pageContext.currentDate
+  });
+  const searchPlan = {
+    ...baseSearchPlan,
+    external: researchPlan.requiresExternalSearch,
+    internalRequested: researchPlan.requiresInternalSearch && researchPlan.requiresExternalSearch,
+    searchRequested: researchPlan.requiresInternalSearch && (baseSearchPlan.searchRequested || researchPlan.requiresEntityMatching)
+  };
+  routing.researchIntents = researchPlan.intents;
   const permissionGuard = createPermissionGuard({ hasPermission });
   const registry = createToolRegistry({ permissionGuard });
-  const calls = toolsForRouting(routing, resolvedEntity);
-  const executionPlan = buildExecutionPlan({ message, routing, resolvedEntity, calls });
+  const broker = createAssistantToolBroker({ registry, audit: toolAudit });
+  const calls = toolsForRouting(routing, snapshotResolvedEntity, searchPlan);
+  const executionPlan = buildExecutionPlan({ message, routing, resolvedEntity: snapshotResolvedEntity, calls });
   const toolStartedAt = Date.now();
-  const toolResults = await Promise.all(calls.map((call) => registry.execute(call.name, call.input, { actor, snapshot, pageContext })));
+  const toolResultsTask = Promise.all(calls.map((call) => broker.execute({
+    requestedBy: "openai",
+    toolName: call.name,
+    arguments: call.input,
+    authenticatedUserId: actor?.userId
+  }, { actor, snapshot, pageContext, searchService })));
+  const externalResearchTask = researchPlan.requiresExternalSearch
+    ? (externalResearchService?.search({
+      authenticatedUserId: actor?.userId,
+      query: researchPlan.externalQuery,
+      searchType: researchPlan.searchType,
+      location: context.externalResearchRequest?.location,
+      dateRange: context.externalResearchRequest?.dateRange,
+      preferredDomains: context.externalResearchRequest?.preferredDomains,
+      excludedDomains: context.externalResearchRequest?.excludedDomains,
+      officialSourcesOnly: researchPlan.settings.officialSourcesOnly,
+      queryRedactions: researchPlan.queryRedactions,
+      allowDirectIdentifier: true
+    }) || Promise.reject(new ExternalResearchError("provider_not_configured", "External research is temporarily unavailable. Your internal Urban Yards search is still working.", 503, true)))
+      .catch(externalResearchFailure)
+    : Promise.resolve({ status: "not_requested", summary: "", results: [], findings: [], entityMatches: [], updateProposals: [] });
+  const [toolResults, externalResearch] = await Promise.all([toolResultsTask, externalResearchTask]);
+  const searchOutput = toolResults.find((result) => result.name === "search_records" && result.ok)?.output?.search || null;
+  const resolvedEntity = searchOutput
+    ? resolvedFromSearch(searchOutput)
+    : snapshotResolvedEntity;
   const citations = [];
   const seen = new Set();
   toolResults.filter((result) => result.ok).flatMap((result) => result.output?.citations || []).forEach((citation) => {
@@ -116,7 +188,44 @@ async function orchestrateDashboardRequest({ message, context = {}, actor, hasPe
     is_active: memory.isActive !== false
   })).filter((memory) => memory.statement);
   const relevantMemory = relevantMemories([...memories, ...conversationMemories], { actor, pageContext, resolvedEntity }).map(toModelMemory);
-  const uiActions = planUIActions({ message, routing, resolvedEntity, citations });
+  let uiActions = planUIActions({ message, routing, resolvedEntity, citations, searchPlan });
+  const searchResults = searchOutput?.results || [];
+  const entityMatches = researchPlan.requiresEntityMatching
+    ? matchInternalExternalEntities({ internalResults: searchResults, externalResults: externalResearch.results || [] })
+    : [];
+  const updateProposals = buildSuggestedRecordUpdates({
+    internalResults: searchResults,
+    externalResults: externalResearch.results || [],
+    entityMatches,
+    settings: researchPlan.settings
+  });
+  const research = {
+    ...externalResearch,
+    intent: researchPlan.primaryIntent,
+    intents: researchPlan.intents,
+    sourceTypes: researchPlan.requiresInternalSearch && researchPlan.requiresExternalSearch ? ["internal", "external_web"] : researchPlan.requiresExternalSearch ? ["external_web"] : ["internal"],
+    entityMatches,
+    updateProposals,
+    settings: researchPlan.settings
+  };
+  const reliableMatchIds = new Set(entityMatches.filter((match) => ["confirmed", "likely"].includes(match.matchStatus)).map((match) => String(match.internalRecordId)));
+  if (researchPlan.requiresEntityMatching && researchPlan.intents.includes("navigate")) {
+    uiActions = uiActions.filter((action) => action.type !== "open_record" || reliableMatchIds.has(String(action.recordId)));
+  }
+  let clarification = searchOutput?.requiresClarification
+    ? `I found ${searchResults.length} possible matches. Which one would you like?`
+    : "";
+  if (!clarification && researchPlan.requiresEntityMatching && researchPlan.intents.includes("navigate") && searchResults.length && !reliableMatchIds.size) {
+    clarification = "I found an internal record, but the public identifiers are not strong enough to confirm it is the same organization. Choose the record or provide another identifier before I open it.";
+  }
+  const assistantActions = [];
+  if (searchResults.length) assistantActions.push({ type: "SHOW_RESULTS", results: searchResults });
+  if (research.results?.length || research.status === "failed") assistantActions.push({ type: "SHOW_RESEARCH", research });
+  if (clarification) assistantActions.push({ type: "REQUEST_CLARIFICATION", message: clarification });
+  uiActions.forEach((action) => assistantActions.push({
+    ...action,
+    type: String(action.type || "").toUpperCase()
+  }));
   const transitionResult = toolResults.find((result) => result.name === "transition_ticket_stage") || null;
   const transitionPreview = transitionResult?.ok ? transitionResult.output?.preview || null : null;
   const transitionAttempt = transitionResult ? {
@@ -145,14 +254,20 @@ async function orchestrateDashboardRequest({ message, context = {}, actor, hasPe
     citations,
     verification,
     diagnostics,
-    registeredTools: registry.definitions(),
+    registeredTools: broker.definitions(),
     memoryPreview,
     transitionPreview,
     transitionAttempt,
     relevantMemory,
     uiActions,
-    modelContext: composeModelContext({ routing, executionPlan, pageContext, resolvedEntity, toolResults, verification, memories: relevantMemory, uiActions, memoryPreview })
+    assistantActions,
+    searchPlan,
+    researchPlan,
+    research,
+    searchResults,
+    clarification,
+    modelContext: composeModelContext({ routing, executionPlan, pageContext, resolvedEntity, toolResults, verification, memories: relevantMemory, uiActions, memoryPreview, researchPlan, research })
   };
 }
 
-module.exports = { orchestrateDashboardRequest, requestedTicketStage, toolsForRouting };
+module.exports = { orchestrateDashboardRequest, requestedTicketStage, resolvedFromSearch, toolsForRouting };

@@ -30514,25 +30514,6 @@ body:not(.is-login-screen) .dashboard-main :is(
   background: var(--color-surface-subtle);
 }
 
-/* The fixed assistant launcher occupies the upper-right corner. Reserve
-   that space in page command headers instead of letting actions sit below it. */
-@media (min-width: 901px) {
-  body:not(.is-login-screen) .dashboard-main :is(
-    .clean-page-header,
-    .ttl-header,
-    .wol-header,
-    .cq-page-header,
-    .money-page-header,
-    .documentation-hero,
-    .import-export-hero,
-    .ticket-lane-heading,
-    .uy-page-intro-panel > .panel-heading
-  ) {
-    box-sizing: border-box;
-    padding-right: 86px;
-  }
-}
-
 /* Clients: remove duplicated text masquerading as icons and let the
    existing full client-detail experience occupy its intended workspace. */
 body:not(.is-login-screen) .dashboard-main .client-profile-card button[data-action="open-contact"] .button-icon,

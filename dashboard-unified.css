@@ -478,3 +478,38 @@ body:not(.is-login-screen) .dashboard-main :is(.drawer-header,.drawer-footer){bo
   body:not(.is-login-screen) .dashboard-main :is(.ttl-header,.wol-header,.money-page-header,.online-quote-header,.uy-page-header,.cq-page-header,.route-week-header,.clean-page-header){margin-bottom:16px!important;padding-bottom:16px!important}
   body:not(.is-login-screen) .dashboard-main :is(button,input:not([type=checkbox]):not([type=radio]),select){min-height:44px!important}
 }
+
+/* Keep the collapsed assistant launcher within easy reach at the bottom-right.
+   Opening it restores the existing top-right panel position. On mobile the
+   launcher clears the fixed navigation dock and the device safe area. */
+body:not(.is-login-screen) .app-view .dashboard-copilot{
+  top:auto!important;
+  right:22px!important;
+  bottom:22px!important;
+}
+body:not(.is-login-screen) .app-view .dashboard-copilot.is-open{
+  top:18px!important;
+  bottom:auto!important;
+}
+@media(min-width:701px) and (max-width:900px){
+  body:not(.is-login-screen) .app-view .dashboard-copilot{
+    right:18px!important;
+    bottom:18px!important;
+  }
+  body:not(.is-login-screen) .app-view .dashboard-copilot.is-open{
+    top:100px!important;
+    bottom:auto!important;
+  }
+}
+@media(max-width:760px){
+  body:not(.is-login-screen) .app-view .dashboard-copilot{
+    right:14px!important;
+    bottom:calc(100px + env(safe-area-inset-bottom))!important;
+  }
+}
+@media(max-width:700px){
+  body:not(.is-login-screen) .app-view .dashboard-copilot.is-open{
+    top:14px!important;
+    bottom:auto!important;
+  }
+}

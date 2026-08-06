@@ -50,7 +50,7 @@ test("Tickets Leads and Money use the same flat white page canvas as Home and Wo
   const html = read("dashboard.html");
   assert.match(css, /:is\(#tickets,#outreach,#documents\)\.dashboard-section\.is-active\{\s*padding:0!important;\s*background:#fff!important/);
   assert.match(css, /:is\(#tickets \.tickets-timeline-page,#outreach \.online-quote-workspace,#documents \.money-workspace\)\{\s*background:#fff!important/);
-  assert.match(html, /dashboard-unified\.css\?v=20260806-filter-icon-clearance-1/);
+  assert.match(html, /dashboard-unified\.css\?v=20260806-copilot-bottom-right-1/);
 });
 
 test("every Tools destination uses the Home canvas and shared content width", () => {
@@ -64,7 +64,14 @@ test("Tickets and Work filter text clears the embedded icons", () => {
   const html = read("dashboard.html");
   assert.match(css, /\.ttl-filters label > select\{\s*padding:0 34px 0 43px!important/);
   assert.match(css, /\.wol-filters label > select\{\s*padding:0 34px 0 39px!important/);
-  assert.match(html, /dashboard-unified\.css\?v=20260806-filter-icon-clearance-1/);
+  assert.match(html, /dashboard-unified\.css\?v=20260806-copilot-bottom-right-1/);
+});
+
+test("collapsed AI launcher sits bottom-right and clears mobile navigation", () => {
+  const css = read("dashboard-unified.css");
+  assert.match(css, /\.dashboard-copilot\{\s*top:auto!important;\s*right:22px!important;\s*bottom:22px!important/);
+  assert.match(css, /\.dashboard-copilot\.is-open\{\s*top:18px!important;\s*bottom:auto!important/);
+  assert.match(css, /@media\(max-width:760px\)[\s\S]*?\.dashboard-copilot\{[\s\S]*?bottom:calc\(100px \+ env\(safe-area-inset-bottom\)\)!important/);
 });
 
 test("combined AI product uses the local Keaton Mask launcher and monochrome popup", () => {

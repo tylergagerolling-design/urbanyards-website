@@ -308,6 +308,8 @@ test("netlify deploy runs dashboard checks and has dashboard cache guards", () =
   assert.match(toml, /for = "\/dashboard-config\.js"[\s\S]*Cache-Control = "no-store, max-age=0"/);
   assert.match(toml, /for = "\/dashboard\.js"[\s\S]*Cache-Control = "no-cache, max-age=0, must-revalidate"/);
   assert.match(toml, /for = "\/dashboard\.css"[\s\S]*Cache-Control = "no-cache, max-age=0, must-revalidate"/);
+  assert.match(toml, /img-src[^;]*https:\/\/streetviewpixels-pa\.googleapis\.com/);
+  assert.match(toml, /connect-src[^;]*https:\/\/streetviewpixels-pa\.googleapis\.com/);
 });
 
 test("dashboard design system locks the six-page rebuild contract", () => {

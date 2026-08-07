@@ -710,6 +710,7 @@
   const routeCoordinatePromises = new Map();
   const unifiedTicketLocationCache = new Map();
   const unifiedTicketStreetViews = new Map();
+  const unifiedTicketStreetViewLoads = new Map();
   const PORTLAND_CENTER = { lat: 45.5152, lng: -122.6784 };
 
   function qs(selector) {
@@ -10976,19 +10977,150 @@
     return unifiedTicketLocationCache.get(cacheKey);
   }
 
+  function unifiedTicketStreetViewHeading(from, to) {
+    const coordinate = (value, key) => Number(typeof value?.[key] === "function" ? value[key]() : value?.[key]);
+    const fromLat = coordinate(from, "lat");
+    const fromLng = coordinate(from, "lng");
+    const toLat = coordinate(to, "lat");
+    const toLng = coordinate(to, "lng");
+    if (![fromLat, fromLng, toLat, toLng].every(Number.isFinite)) return 0;
+    const degreesToRadians = Math.PI / 180;
+    const latitudeA = fromLat * degreesToRadians;
+    const latitudeB = toLat * degreesToRadians;
+    const longitudeDelta = (toLng - fromLng) * degreesToRadians;
+    const y = Math.sin(longitudeDelta) * Math.cos(latitudeB);
+    const x = Math.cos(latitudeA) * Math.sin(latitudeB)
+      - Math.sin(latitudeA) * Math.cos(latitudeB) * Math.cos(longitudeDelta);
+    return (Math.atan2(y, x) / degreesToRadians + 360) % 360;
+  }
+
+  function disposeUnifiedTicketStreetView(ticketId) {
+    const view = unifiedTicketStreetViews.get(String(ticketId || ""));
+    if (!view) return;
+    if (view.resizeFrame) cancelAnimationFrame(view.resizeFrame);
+    view.resizeObserver?.disconnect?.();
+    view.controlObserver?.disconnect?.();
+    view.panorama?.setVisible?.(false);
+    unifiedTicketStreetViews.delete(String(ticketId || ""));
+  }
+
+  function suppressUnifiedTicketStreetViewControls(canvas) {
+    const hideOptionalControls = () => {
+      canvas.querySelectorAll("button").forEach((button) => {
+        if (button.style.getPropertyValue("display") === "none"
+          && button.style.getPropertyPriority("display") === "important") return;
+        button.style.setProperty("display", "none", "important");
+        button.setAttribute("aria-hidden", "true");
+        button.tabIndex = -1;
+      });
+    };
+    hideOptionalControls();
+    if (!window.MutationObserver) return null;
+    const observer = new MutationObserver(hideOptionalControls);
+    observer.observe(canvas, { childList: true, subtree: true, attributes: true, attributeFilter: ["style"] });
+    return observer;
+  }
+
+  function scheduleUnifiedTicketStreetViewResize(ticketId) {
+    const view = unifiedTicketStreetViews.get(String(ticketId || ""));
+    if (!view?.panorama || !view.canvas?.isConnected || view.resizeFrame) return;
+    view.resizeFrame = requestAnimationFrame(() => {
+      view.resizeFrame = 0;
+      if (!view.canvas.isConnected) {
+        disposeUnifiedTicketStreetView(ticketId);
+        return;
+      }
+      view.maps?.event?.trigger?.(view.panorama, "resize");
+    });
+  }
+
+  function updateUnifiedTicketStreetViewFullscreen(ticketId) {
+    const view = unifiedTicketStreetViews.get(String(ticketId || ""));
+    if (!view?.shell) return;
+    const isFullscreen = document.fullscreenElement === view.shell
+      || view.shell.classList.contains("is-fullscreen-fallback");
+    view.shell.classList.toggle("is-fullscreen", isFullscreen);
+    const button = view.shell.querySelector("[data-action='unified-ticket-street-view-fullscreen']");
+    if (button) {
+      button.setAttribute("aria-pressed", String(isFullscreen));
+      button.setAttribute("aria-label", isFullscreen ? "Exit Street View fullscreen" : "View Street View fullscreen");
+      button.title = isFullscreen ? "Exit fullscreen" : "View fullscreen";
+    }
+    scheduleUnifiedTicketStreetViewResize(ticketId);
+  }
+
+  async function toggleUnifiedTicketStreetViewFullscreen(ticketId) {
+    const view = unifiedTicketStreetViews.get(String(ticketId || ""));
+    if (!view?.shell) return;
+    const isNativeFullscreen = document.fullscreenElement === view.shell;
+    const isFallbackFullscreen = view.shell.classList.contains("is-fullscreen-fallback");
+    if (isNativeFullscreen) {
+      await document.exitFullscreen?.();
+      return;
+    }
+    if (isFallbackFullscreen) {
+      view.shell.classList.remove("is-fullscreen-fallback");
+      document.body.classList.remove("ut-street-view-fullscreen-open");
+      updateUnifiedTicketStreetViewFullscreen(ticketId);
+      return;
+    }
+    if (view.shell.requestFullscreen) {
+      try {
+        await view.shell.requestFullscreen();
+        return;
+      } catch (_error) {
+        // Browser policy can reject the Fullscreen API; the fixed-position
+        // fallback below preserves the same control and Escape behavior.
+      }
+    }
+    view.shell.classList.add("is-fullscreen-fallback");
+    document.body.classList.add("ut-street-view-fullscreen-open");
+    updateUnifiedTicketStreetViewFullscreen(ticketId);
+  }
+
+  document.addEventListener("fullscreenchange", () => {
+    unifiedTicketStreetViews.forEach((_view, ticketId) => updateUnifiedTicketStreetViewFullscreen(ticketId));
+  });
+
+  document.addEventListener("keydown", (event) => {
+    if (event.key !== "Escape") return;
+    unifiedTicketStreetViews.forEach((view, ticketId) => {
+      if (document.fullscreenElement === view.shell) {
+        void document.exitFullscreen?.();
+        return;
+      }
+      if (!view.shell?.classList.contains("is-fullscreen-fallback")) return;
+      view.shell.classList.remove("is-fullscreen-fallback");
+      document.body.classList.remove("ut-street-view-fullscreen-open");
+      updateUnifiedTicketStreetViewFullscreen(ticketId);
+    });
+  });
+
   async function loadUnifiedTicketStreetView(ticket = {}) {
     const ticketId = String(ticket.recordId || state.unifiedTicketSelectedId || "");
     const canvas = qs(`[data-unified-ticket-street-view="${cssEscape(ticketId)}"]`);
     const status = qs(`[data-unified-ticket-street-view-status="${cssEscape(ticketId)}"]`);
+    const shell = qs(`[data-unified-ticket-street-view-shell="${cssEscape(ticketId)}"]`);
     const address = unifiedTicketDisplayAddress(ticket);
-    if (!canvas || !address) {
-      if (status) status.textContent = "Add and verify the property address to load Street View.";
+    const loadToken = Symbol(ticketId);
+    unifiedTicketStreetViewLoads.set(ticketId, loadToken);
+    disposeUnifiedTicketStreetView(ticketId);
+    if (!canvas || !shell || !address) {
+      if (status) status.textContent = "Street View unavailable for this property";
+      shell?.classList.add("is-unavailable");
       return null;
     }
-    if (status) status.textContent = "Loading Street View...";
+    shell.classList.remove("is-unavailable");
+    if (status) {
+      status.textContent = "Loading Street View...";
+      status.classList.remove("is-loaded");
+    }
     try {
       const [maps, location] = await Promise.all([loadGoogleMapsScript(), resolveUnifiedTicketLocation(address)]);
-      if (!canvas.isConnected || !maps?.StreetViewService || !maps?.StreetViewPanorama) return null;
+      if (unifiedTicketStreetViewLoads.get(ticketId) !== loadToken
+        || !canvas.isConnected
+        || !maps?.StreetViewService
+        || !maps?.StreetViewPanorama) return null;
       const result = await new Promise((resolve, reject) => {
         const service = new maps.StreetViewService();
         service.getPanorama({
@@ -10996,20 +11128,24 @@
           radius: 180,
           source: maps.StreetViewSource?.OUTDOOR
         }, (data, panoramaStatus) => {
+          canvas.dataset.streetViewStatus = String(panoramaStatus || "UNKNOWN");
           if (panoramaStatus === maps.StreetViewStatus.OK && data?.location?.latLng) resolve(data);
-          else reject(new Error("Street View is not available near this property."));
+          else reject(new Error("Street View unavailable for this property"));
         });
       });
-      if (!canvas.isConnected) return null;
-      unifiedTicketStreetViews.get(ticketId)?.setVisible?.(false);
+      if (unifiedTicketStreetViewLoads.get(ticketId) !== loadToken || !canvas.isConnected) return null;
+      const heading = unifiedTicketStreetViewHeading(result.location.latLng, location);
       const panorama = new maps.StreetViewPanorama(canvas, {
         position: result.location.latLng,
-        pov: { heading: 0, pitch: 0 },
+        pov: { heading, pitch: 0 },
         zoom: 0,
         addressControl: false,
         clickToGo: true,
         disableDefaultUI: true,
+        enableCloseButton: false,
         fullscreenControl: false,
+        imageDateControl: false,
+        keyboardShortcuts: false,
         linksControl: false,
         motionTracking: false,
         motionTrackingControl: false,
@@ -11018,18 +11154,37 @@
         showRoadLabels: false,
         zoomControl: false
       });
-      unifiedTicketStreetViews.set(ticketId, panorama);
+      const view = {
+        panorama,
+        maps,
+        canvas,
+        shell,
+        resizeObserver: null,
+        controlObserver: suppressUnifiedTicketStreetViewControls(canvas),
+        resizeFrame: 0
+      };
+      if (window.ResizeObserver) {
+        view.resizeObserver = new ResizeObserver(() => scheduleUnifiedTicketStreetViewResize(ticketId));
+        view.resizeObserver.observe(shell);
+      }
+      unifiedTicketStreetViews.set(ticketId, view);
       if (status) {
-        status.textContent = `Street View near ${location.displayName || address}`;
+        status.textContent = "";
         status.classList.add("is-loaded");
       }
+      scheduleUnifiedTicketStreetViewResize(ticketId);
       return panorama;
     } catch (error) {
       if (status) {
-        status.textContent = error.message || "Street View is unavailable for this address.";
+        status.textContent = "Street View unavailable for this property";
         status.classList.remove("is-loaded");
       }
+      shell?.classList.add("is-unavailable");
       return null;
+    } finally {
+      if (unifiedTicketStreetViewLoads.get(ticketId) === loadToken) {
+        unifiedTicketStreetViewLoads.delete(ticketId);
+      }
     }
   }
 
@@ -24663,7 +24818,9 @@ Requirements:
       crew: '<circle cx="9" cy="8" r="3"></circle><path d="M3 20v-2a5 5 0 0 1 10 0v2M16 11a3 3 0 0 1 5 2v2"></path>',
       edit: '<path d="M4 20h4L19 9l-4-4L4 16zM13 7l4 4"></path>',
       upload: '<path d="M12 16V4M7 9l5-5 5 5M4 20h16"></path>',
-      plus: '<path d="M12 5v14M5 12h14"></path>'
+      plus: '<path d="M12 5v14M5 12h14"></path>',
+      expand: '<path d="M8 3H3v5M16 3h5v5M8 21H3v-5M16 21h5v-5"></path>',
+      collapse: '<path d="M3 8h5V3M21 8h-5V3M3 16h5v5M21 16h-5v5"></path>'
       ,warning: '<path d="M10.3 4.2 2.5 18a2 2 0 0 0 1.7 3h15.6a2 2 0 0 0 1.7-3L13.7 4.2a2 2 0 0 0-3.4 0Z"></path><path d="M12 9v4M12 17h.01"></path>'
     };
     return `<svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">${paths[name] || paths.info}</svg>`;
@@ -24881,7 +25038,6 @@ Requirements:
     const summaryRows = [["Type",ticket.type],["Priority",ticket.priority],["Due Date",ticket.dueDate],["Status",ticket.status],["Lead",ticket.lead],["Crew",ticket.crew],["Est. Time",ticket.duration || "Not set"],["Created",ticket.created],["Customer",ticket.customer],["Phone",ticket.phone],["Email",ticket.email]].map(([a,b])=>`<div><span>${escapeHtml(a)}</span><strong>${escapeHtml(cleanDisplayValue(b, "Not set"))}</strong></div>`).join("");
     const quickActions = `<button type="button" data-action="unified-ticket-edit"><span>${unifiedTicketIcon("edit")}</span><strong>Edit Ticket</strong><b>›</b></button>` + [["Add Task","plus","tasks"],["Upload Photo","upload","photos"],["Add Note","note","notes"],["Create Document","document","documents"]].map(([label,icon,section])=>`<button type="button" data-action="unified-ticket-quick" data-section="${section}"><span>${unifiedTicketIcon(icon)}</span><strong>${label}</strong><b>›</b></button>`).join("");
     const sectionActivity = selectedEvents.length ? selectedEvents.slice(0, 20).map((event) => `<article><strong>${escapeHtml(String(event.eventType || "Ticket updated").replaceAll("_", " "))}</strong><p>${escapeHtml(event.notes || "Ticket activity recorded.")}</p><small>${escapeHtml(event.createdAtRaw ? formatDateTime(event.createdAtRaw) : "")}</small></article>`).join("") : `<article><strong>No activity recorded</strong><p>Ticket history will appear here as work is completed.</p></article>`;
-    const propertyAddress = unifiedTicketDisplayAddress(ticket);
     const ticketRecordId = ticket.recordId || state.unifiedTicketSelectedId;
     const linkedJobId = selectedTimelineTicket?.sourceJob?.id || sourceTicket?.jobId || "";
     const linkedAssets = unifiedTicketLinkedAssets(ticketRecordId, selectedTimelineTicket?.sourceJob);
@@ -24906,7 +25062,7 @@ Requirements:
         ${active !== "overview" ? `<section class="ut-active-section-summary"><h3>${escapeHtml(activeLabel)}</h3><p>${escapeHtml(active === "details" ? "Customer, property, scope, and ticket details." : active === "work" ? "Scope, checklist, and field notes for this ticket." : active === "schedule" ? "Upcoming visit and scheduling details." : active === "tasks" ? "Checklist items connected to this ticket." : active === "photos" ? "Arrival, progress, and completion photos." : active === "documents" ? "Documents connected to this ticket." : active === "notes" ? "Operational notes connected to this ticket." : "Recorded ticket activity and lifecycle history.")}</p>${active === "history" ? `<div class="ut-section-activity">${sectionActivity}</div>` : ""}</section>` : ""}
         <div class="ut-main-top">
           <div class="ut-property-stack">
-            ${unifiedTicketCard("Property", `${unifiedTicketCardEditAction("Edit Property & Contact", "property_name")}<div class="ut-property"><div class="ut-property-image ut-street-view"><div class="ut-street-view-canvas" data-unified-ticket-street-view="${escapeHtml(ticketRecordId)}"></div><span class="ut-street-view-status" data-unified-ticket-street-view-status="${escapeHtml(ticketRecordId)}">Loading Street View...</span><button type="button" data-action="unified-ticket-open-location" data-address="${escapeHtml(propertyAddress)}" aria-label="Open verified property location in Google Maps">${unifiedTicketIcon("pin")}</button></div><div class="ut-property-copy"><strong>${escapeHtml(cleanDisplayValue(ticket.title, "Property not set"))}</strong><span>${escapeHtml(cleanDisplayValue(ticket.address, "Address not set"))}</span><span>${escapeHtml(cleanDisplayValue(ticket.city, "Location not set"))}</span><hr><b>Property Contact</b><span>${escapeHtml(cleanDisplayValue(ticket.contact, "Contact not set"))}</span><div class="ut-contact"><span>${unifiedTicketIcon("phone")}${escapeHtml(cleanDisplayValue(ticket.phone, "Not provided"))}</span><span>${unifiedTicketIcon("mail")}${escapeHtml(cleanDisplayValue(ticket.email, "Not provided"))}</span></div></div></div>`, "ut-property-card")}
+            ${unifiedTicketCard("Property", `${unifiedTicketCardEditAction("Edit Property & Contact", "property_name")}<div class="ut-property"><div class="ut-property-image ut-street-view" data-unified-ticket-street-view-shell="${escapeHtml(ticketRecordId)}"><div class="ut-street-view-canvas" data-unified-ticket-street-view="${escapeHtml(ticketRecordId)}"></div><span class="ut-street-view-status" data-unified-ticket-street-view-status="${escapeHtml(ticketRecordId)}">Loading Street View...</span><button type="button" class="ut-street-view-fullscreen" data-action="unified-ticket-street-view-fullscreen" data-id="${escapeHtml(ticketRecordId)}" aria-label="View Street View fullscreen" aria-pressed="false" title="View fullscreen"><span class="ut-street-view-expand-icon">${unifiedTicketIcon("expand")}</span><span class="ut-street-view-collapse-icon">${unifiedTicketIcon("collapse")}</span></button></div><div class="ut-property-copy"><strong>${escapeHtml(cleanDisplayValue(ticket.title, "Property not set"))}</strong><span>${escapeHtml(cleanDisplayValue(ticket.address, "Address not set"))}</span><span>${escapeHtml(cleanDisplayValue(ticket.city, "Location not set"))}</span><hr><b>Property Contact</b><span>${escapeHtml(cleanDisplayValue(ticket.contact, "Contact not set"))}</span><div class="ut-contact"><span>${unifiedTicketIcon("phone")}${escapeHtml(cleanDisplayValue(ticket.phone, "Not provided"))}</span><span>${unifiedTicketIcon("mail")}${escapeHtml(cleanDisplayValue(ticket.email, "Not provided"))}</span></div></div></div>`, "ut-property-card")}
             ${unifiedTicketCard("Job Summary", `${unifiedTicketCardEditAction("Edit Scope", "scope_of_work")}<p>${escapeHtml(ticket.scope || "No scope of work has been recorded.")}</p>`, "ut-job-summary")}
           </div>
           ${unifiedTicketCard("Summary", `${unifiedTicketCardEditAction("Edit Summary", "title")}<div class="ut-summary-rows">${summaryRows}</div>`, "ut-summary-card")}
@@ -27212,14 +27368,8 @@ Requirements:
         return;
       }
 
-      if (action === "unified-ticket-open-location") {
-        const address = String(target.dataset.address || "").trim();
-        if (!address) {
-          setDashboardState("Add and verify the property address before opening Google Maps.", "error");
-          return;
-        }
-        const mapWindow = window.open(`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(address)}`, "_blank", "noopener,noreferrer");
-        if (mapWindow) mapWindow.opener = null;
+      if (action === "unified-ticket-street-view-fullscreen") {
+        void toggleUnifiedTicketStreetViewFullscreen(id);
         return;
       }
 

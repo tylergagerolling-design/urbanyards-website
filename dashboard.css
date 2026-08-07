@@ -23817,34 +23817,123 @@ body:not(.is-login-screen) .wod-focus-panel .wod-notes form button {
 .ut-street-view {
   overflow: hidden;
   background: #e8ece9;
+  isolation: isolate;
 }
 
 .ut-street-view-canvas {
   position: absolute;
   inset: 0;
+  width: 100%;
+  height: 100%;
+}
+
+.ut-street-view-canvas > .gm-style,
+.ut-street-view-canvas .widget-scene {
+  width: 100% !important;
+  height: 100% !important;
+}
+
+.ut-street-view-canvas .widget-scene {
+  position: absolute !important;
+  inset: 0 !important;
+  overflow: hidden !important;
+}
+
+/* Keep Google's required logo, attribution, Terms and reporting links visible;
+   remove only optional Street View chrome disabled by the panorama options. */
+.ut-street-view-canvas :is(
+  button[aria-label="Toggle fullscreen view"],
+  button[aria-label="Keyboard shortcuts"],
+  button[aria-label="Map Data"],
+  button[aria-label="Zoom in"],
+  button[aria-label="Zoom out"],
+  .gm-iv-address,
+  .gm-iv-close
+) {
+  display: none !important;
 }
 
 .ut-street-view-status {
   position: absolute;
-  left: 8px;
-  right: 61px;
-  bottom: 9px;
-  z-index: 2;
-  padding: 5px 7px;
-  border-radius: 4px;
-  background: rgba(20, 35, 27, .78);
-  color: #fff;
-  font-size: .5rem;
-  line-height: 1.35;
+  inset: 0;
+  z-index: 4;
+  display: grid;
+  place-items: center;
+  padding: 44px 20px 20px;
+  background: #e8ece9;
+  color: #4d5861;
+  font-size: .7rem;
+  line-height: 1.45;
+  text-align: center;
 }
 
 .ut-street-view-status.is-loaded {
-  background: rgba(20, 35, 27, .68);
+  display: none;
 }
 
-.ut-street-view > button {
-  z-index: 3;
+.ut-street-view > .ut-street-view-fullscreen {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  bottom: auto;
+  z-index: 6;
+  width: 42px;
+  height: 42px;
+  display: grid;
+  place-items: center;
+  padding: 0;
+  border: 1px solid rgba(214, 219, 225, .94);
+  border-radius: 7px;
+  background: rgba(255, 255, 255, .94);
   box-shadow: 0 5px 15px rgba(15, 30, 22, .16);
+  color: #26303d;
+  cursor: pointer;
+  backdrop-filter: blur(4px);
+}
+
+.ut-street-view > .ut-street-view-fullscreen:hover {
+  background: #fff;
+  box-shadow: 0 7px 18px rgba(15, 30, 22, .22);
+}
+
+.ut-street-view > .ut-street-view-fullscreen:focus-visible {
+  outline: 3px solid rgba(38, 111, 79, .35);
+  outline-offset: 2px;
+}
+
+.ut-street-view-fullscreen > span {
+  display: grid;
+  place-items: center;
+}
+
+.ut-street-view-fullscreen .ut-street-view-collapse-icon,
+.ut-street-view.is-fullscreen .ut-street-view-expand-icon {
+  display: none;
+}
+
+.ut-street-view.is-fullscreen .ut-street-view-collapse-icon {
+  display: grid;
+}
+
+.ut-street-view:fullscreen,
+.ut-street-view:-webkit-full-screen,
+.ut-street-view.is-fullscreen-fallback {
+  width: 100vw !important;
+  height: 100vh !important;
+  max-width: none !important;
+  max-height: none !important;
+  border-radius: 0;
+  background: #111;
+}
+
+.ut-street-view.is-fullscreen-fallback {
+  position: fixed !important;
+  inset: 0 !important;
+  z-index: 1000 !important;
+}
+
+body.ut-street-view-fullscreen-open {
+  overflow: hidden;
 }
 
 .unified-ticket-shell.is-editing {
@@ -24445,6 +24534,13 @@ html body:not(.is-login-screen) .app-view .dashboard-copilot-panel .copilot-welc
     width: min(430px, calc(100vw - 36px));
     height: min(690px, calc(100dvh - 36px));
   }
+}
+
+/* Street View control lock: the canvas owns only Google imagery and required
+   attribution links. The single Urban Yards fullscreen control is its sibling. */
+html body:not(.is-login-screen) .dashboard-main .unified-ticket-page
+  .ut-street-view-canvas button {
+  display: none !important;
 }
 
 /* Work checklist task controls */
@@ -30958,8 +31054,8 @@ body:not(.is-login-screen) .dashboard-main .unified-ticket-page { min-height: ca
 .ut-card-edit:focus-visible { outline: 3px solid rgba(45,118,89,.24); outline-offset: 2px; }
 .ut-main-top { display: grid; grid-template-columns: minmax(0,1.72fr) minmax(220px,.98fr); gap: 14px; }
 .ut-property-stack { display: grid; gap: 14px; }
-.ut-property { display: grid; grid-template-columns: 48% 1fr; gap: 18px; padding: 6px 18px 20px; }
-.ut-property-image { position: relative; min-height: 158px; border-radius: 5px; background: linear-gradient(135deg,#f0f1f3,#e3e5e9); }
+.ut-property { display: grid; grid-template-columns: 1fr; gap: 15px; padding: 6px 18px 20px; }
+.ut-property-image { position: relative; width: 100%; height: clamp(220px,22vw,280px); min-height: 220px; border-radius: 5px; background: linear-gradient(135deg,#f0f1f3,#e3e5e9); }
 .ut-property-image button { position: absolute; right: 11px; bottom: 10px; width: 42px; height: 42px; display: grid; place-items: center; border: 1px solid #d6dbe1; border-radius: 5px; background: #fff; color: #26303d; }
 .ut-property-image svg { width: 18px; height: 18px; }
 .ut-property-copy { min-width: 0; display: flex; flex-direction: column; gap: 7px; padding-top: 2px; font-size: .71rem; }

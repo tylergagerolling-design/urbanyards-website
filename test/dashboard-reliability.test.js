@@ -1595,6 +1595,15 @@ test("Unified Ticket edits the canonical record, syncs its work order, and verif
   assert.match(js, /new maps\.StreetViewService/);
   assert.match(js, /new maps\.StreetViewPanorama/);
   assert.match(js, /data-unified-ticket-street-view=/);
+  assert.match(js, /addressControl: false[\s\S]*enableCloseButton: false[\s\S]*fullscreenControl: false[\s\S]*keyboardShortcuts: false[\s\S]*linksControl: false[\s\S]*motionTrackingControl: false[\s\S]*panControl: false[\s\S]*showRoadLabels: false[\s\S]*zoomControl: false/);
+  assert.match(js, /function unifiedTicketStreetViewHeading/);
+  assert.match(js, /new ResizeObserver/);
+  assert.match(js, /function suppressUnifiedTicketStreetViewControls[\s\S]*new MutationObserver/);
+  assert.match(js, /function toggleUnifiedTicketStreetViewFullscreen/);
+  assert.match(js, /requestFullscreen/);
+  assert.match(js, /Street View unavailable for this property/);
+  assert.match(js, /data-action="unified-ticket-street-view-fullscreen"/);
+  assert.doesNotMatch(js, /data-action="unified-ticket-open-location"/);
   assert.match(js, /function unifiedTicketCardEditAction/);
   assert.match(js, /Edit Property & Contact/);
   assert.match(js, /Edit Scope/);
@@ -1603,6 +1612,9 @@ test("Unified Ticket edits the canonical record, syncs its work order, and verif
   assert.match(js, /const focusName = target\.dataset\.focus \|\| "title"/);
   assert.match(css, /\.ut-ticket-editor/);
   assert.match(css, /\.ut-street-view-canvas/);
+  assert.match(css, /\.ut-street-view > \.ut-street-view-fullscreen/);
+  assert.match(css, /\.ut-street-view:fullscreen/);
+  assert.match(css, /\.ut-street-view-canvas \.widget-scene/);
   assert.match(css, /\.ut-card-edit/);
 });
 

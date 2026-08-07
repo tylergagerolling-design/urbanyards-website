@@ -69,8 +69,8 @@ test("archived workspace polish remains available with current dashboard assets"
   assert.match(css, /\.call-queue-row > span:first-child :is\(strong, small\)[\s\S]*overflow-wrap: anywhere/);
   assert.match(css, /\.groundskeeper-operation-card[\s\S]*white-space: normal !important/);
   assert.match(css, /\.dashboard-health-item strong[\s\S]*word-break: break-all/);
-  assert.match(html, /dashboard\.css\?v=20260807-route-map-data-1/);
-  assert.match(html, /dashboard\.js\?v=20260807-route-map-controls-1/);
+  assert.match(html, /dashboard\.css\?v=20260807-unified-work-focus-1/);
+  assert.match(html, /dashboard\.js\?v=20260807-unified-work-focus-1/);
 });
 
 test("Tickets Leads and Money use the same flat white page canvas as Home and Work", () => {
@@ -1539,11 +1539,32 @@ test("Work Detail persists assignments, tasks, notes, photos, documents, and his
   assert.match(js, /renderWorkOperationsWorkspace\(\);[\s\S]*Note saved\./);
   assert.match(js, /uploadJobSitePhotos/);
   assert.match(js, /ticket_document_uploaded/);
+  assert.match(js, /requiredDocumentsPresent: checked/);
+  assert.match(js, /ticket_documents_requirement_updated/);
   assert.match(js, /insertJobTicketEvent/);
   assert.doesNotMatch(js, /const fallbackChecklist =/);
   assert.doesNotMatch(js, /\[\["Site Notes","Added by John D\."/);
   assert.match(auth, /job_ticket_crew_assignments: \{ GET: "operations:read", POST: "operations:write", PATCH: "operations:write"/);
   assert.match(auth, /job_ticket_equipment_assignments: \{ GET: "operations:read", POST: "operations:write", PATCH: "operations:write"/);
+});
+
+test("Work focus stays on the shared ticket record and returns from Unified Ticket", () => {
+  const js = read("dashboard.js");
+  const css = read("dashboard.css");
+
+  assert.match(js, /function renderWorkFocusPanel/);
+  assert.match(js, /data-work-focus/);
+  assert.match(js, /data-work-focus-section="tasks"/);
+  assert.match(js, /data-work-focus-section="team"/);
+  assert.match(js, /data-work-focus-section="equipment"/);
+  assert.match(js, /Arrival &amp; Completion Photos/);
+  assert.match(js, /data-work-required-documents/);
+  assert.match(js, /data-work-focus-section="notes"/);
+  assert.match(js, /data-action="unified-ticket-open"[^>]*data-return-section="calendar"/);
+  assert.match(js, /state\.unifiedTicketReturnSection[\s\S]*setActiveSection\("tickets"\)/);
+  assert.match(js, /returnSection === "calendar"[\s\S]*setActiveSection\("calendar"\)/);
+  assert.match(js, /ticketBackLabel = ticketReturnSection === "calendar" \? "Back to Work"/);
+  assert.match(css, /\.wod-content\.wod-focus-content/);
 });
 
 test("functional QA safeguards route transitions, demo edits, and visible feedback", () => {

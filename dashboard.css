@@ -23452,6 +23452,367 @@ body:not(.is-login-screen) .money-grid select {
   .copilot-shortcuts { padding-inline: 24px; }
 }
 
+/* Unified Work focus: one field-facing view on the canonical ticket record. */
+body:not(.is-login-screen) .wod-focus-panel > header {
+  align-items: flex-start;
+  gap: 16px;
+  padding: 14px 18px;
+}
+
+body:not(.is-login-screen) .wod-focus-panel .wod-title {
+  min-width: 0;
+  display: grid;
+  grid-template-columns: minmax(0, auto) auto;
+  align-items: center;
+  gap: 5px 10px;
+}
+
+body:not(.is-login-screen) .wod-focus-panel .wod-ticket-link-label {
+  grid-column: 1 / -1;
+  color: #65736c;
+  font-size: .58rem;
+  font-weight: 750;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+}
+
+body:not(.is-login-screen) .wod-focus-panel .wod-title h2 {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+body:not(.is-login-screen) .wod-focus-panel .wod-header-actions {
+  flex: 0 0 auto;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+body:not(.is-login-screen) .wod-focus-panel .wod-open-ticket {
+  min-height: 36px;
+  padding: 0 13px;
+  border: 1px solid #1f6b4f !important;
+  border-radius: 6px;
+  background: #1f6b4f !important;
+  box-shadow: none !important;
+  color: #fff !important;
+  font-size: .62rem;
+  font-weight: 750;
+  white-space: nowrap;
+}
+
+body:not(.is-login-screen) .wod-content.wod-focus-content {
+  grid-template-columns: minmax(250px, 1.1fr) minmax(190px, .75fr) minmax(260px, 1fr);
+  grid-template-areas:
+    "summary summary summary"
+    "check middle photos"
+    "docs docs notes";
+  align-items: start;
+  gap: 12px;
+  padding: 14px;
+}
+
+body:not(.is-login-screen) .wod-focus-summary {
+  grid-area: summary;
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  overflow: hidden;
+  border: 1px solid #dfe5e1;
+  border-radius: 8px;
+  background: #fffdf7;
+}
+
+body:not(.is-login-screen) .wod-focus-summary > div {
+  min-width: 0;
+  min-height: 58px;
+  display: grid;
+  align-content: center;
+  gap: 4px;
+  padding: 11px 14px;
+}
+
+body:not(.is-login-screen) .wod-focus-summary > div + div {
+  border-left: 1px solid #e3e8e5;
+}
+
+body:not(.is-login-screen) .wod-focus-summary span,
+body:not(.is-login-screen) .wod-focus-summary small {
+  color: #65736c;
+  font-size: .54rem;
+}
+
+body:not(.is-login-screen) .wod-focus-summary strong {
+  overflow: hidden;
+  color: #17231d;
+  font-size: .64rem;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+body:not(.is-login-screen) .wod-focus-panel .wod-section-heading {
+  min-height: 50px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 11px 13px 8px;
+}
+
+body:not(.is-login-screen) .wod-focus-panel .wod-section-heading > div {
+  min-width: 0;
+}
+
+body:not(.is-login-screen) .wod-focus-panel .wod-section-heading span {
+  display: block;
+  margin-bottom: 3px;
+  color: #6a766f;
+  font-size: .48rem;
+  font-weight: 750;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+}
+
+body:not(.is-login-screen) .wod-focus-panel .wod-section-heading h3 {
+  margin: 0;
+  padding: 0;
+  color: #17231d !important;
+  font-size: .72rem;
+}
+
+body:not(.is-login-screen) .wod-focus-panel .wod-section-heading > b {
+  flex: 0 0 auto;
+  padding: 4px 7px;
+  border-radius: 999px;
+  background: #edf2ef;
+  color: #43544b;
+  font-size: .52rem;
+}
+
+body:not(.is-login-screen) .wod-focus-panel .wod-section-heading > b.is-complete {
+  background: #e3f3e9;
+  color: #166c3e;
+}
+
+body:not(.is-login-screen) .wod-focus-panel .wod-section-heading > b.is-attention {
+  background: #fff1df;
+  color: #985b0d;
+}
+
+body:not(.is-login-screen) .wod-focus-panel .wod-middle-top {
+  align-self: stretch;
+}
+
+body:not(.is-login-screen) .wod-focus-panel .wod-middle-top .wod-card {
+  min-height: 0;
+}
+
+body:not(.is-login-screen) .wod-focus-panel .wod-middle-top li > button {
+  width: 24px;
+  height: 24px;
+  margin-left: auto;
+  padding: 0;
+  border: 0 !important;
+  background: transparent !important;
+  color: #68756e !important;
+}
+
+body:not(.is-login-screen) .wod-focus-panel .wod-proof-block {
+  display: grid;
+  gap: 8px;
+  margin: 0 13px 10px;
+  padding: 10px;
+  border: 1px solid #dfe5e1;
+  border-radius: 6px;
+  background: #fbfcfb;
+}
+
+body:not(.is-login-screen) .wod-focus-panel .wod-proof-block > div {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  color: #25352d;
+  font-size: .58rem;
+}
+
+body:not(.is-login-screen) .wod-focus-panel .wod-proof-block > div span {
+  color: #6a766f;
+  font-size: .52rem;
+}
+
+body:not(.is-login-screen) .wod-focus-panel .wod-proof-block.is-attention {
+  border-color: #ead7bb;
+  background: #fffaf2;
+}
+
+body:not(.is-login-screen) .wod-focus-panel .wod-proof-block.is-complete {
+  border-color: #cce3d4;
+  background: #f5fbf7;
+}
+
+body:not(.is-login-screen) .wod-focus-panel .wod-proof-block .wod-photo-upload {
+  height: 44px !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  gap: 7px !important;
+  margin: 0 !important;
+  background: #fff !important;
+}
+
+body:not(.is-login-screen) .wod-focus-panel .wod-proof-block .wod-photo-upload svg {
+  width: 15px;
+  height: 15px;
+}
+
+body:not(.is-login-screen) .wod-focus-panel .wod-document-confirmation {
+  display: grid;
+  grid-template-columns: 18px 1fr;
+  align-items: start;
+  gap: 9px;
+  margin: 0 13px 10px;
+  padding: 10px;
+  border: 1px solid #dfe5e1;
+  border-radius: 6px;
+  background: #fbfcfb;
+}
+
+body:not(.is-login-screen) .wod-focus-panel .wod-document-confirmation input {
+  width: 16px;
+  height: 16px;
+  margin: 1px 0 0;
+  accent-color: #1f6b4f;
+}
+
+body:not(.is-login-screen) .wod-focus-panel .wod-document-confirmation span {
+  display: grid;
+  gap: 4px;
+}
+
+body:not(.is-login-screen) .wod-focus-panel .wod-document-confirmation strong {
+  color: #24352c;
+  font-size: .59rem;
+}
+
+body:not(.is-login-screen) .wod-focus-panel .wod-document-confirmation small {
+  color: #66736d;
+  font-size: .51rem;
+  line-height: 1.45;
+}
+
+body:not(.is-login-screen) .wod-focus-panel .wod-note-list {
+  max-height: 150px;
+  display: grid;
+  gap: 7px;
+  overflow: auto;
+  padding: 0 13px 9px;
+}
+
+body:not(.is-login-screen) .wod-focus-panel .wod-note-list article {
+  padding: 8px;
+  border: 1px solid #e4e8e5;
+  border-radius: 5px;
+  background: #fbfcfb;
+}
+
+body:not(.is-login-screen) .wod-focus-panel .wod-note-list article :is(strong, p, small) {
+  display: block;
+  margin: 0;
+  font-size: .52rem;
+}
+
+body:not(.is-login-screen) .wod-focus-panel .wod-note-list article p {
+  margin-top: 4px;
+  color: #56645c;
+  line-height: 1.4;
+}
+
+body:not(.is-login-screen) .wod-focus-panel .wod-notes form button {
+  margin-right: 72px;
+}
+
+@media (max-width: 1000px) {
+  body:not(.is-login-screen) .wod-content.wod-focus-content {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    grid-template-areas:
+      "summary summary"
+      "check middle"
+      "photos photos"
+      "docs notes";
+  }
+
+  body:not(.is-login-screen) .wod-focus-summary {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  body:not(.is-login-screen) .wod-focus-summary > div:nth-child(3) {
+    border-left: 0;
+    border-top: 1px solid #e3e8e5;
+  }
+
+  body:not(.is-login-screen) .wod-focus-summary > div:nth-child(4) {
+    border-top: 1px solid #e3e8e5;
+  }
+}
+
+@media (max-width: 720px) {
+  body:not(.is-login-screen) .wod-focus-panel > header {
+    padding-right: 12px;
+  }
+
+  body:not(.is-login-screen) .wod-focus-panel .wod-header-actions {
+    align-items: center;
+  }
+
+  body:not(.is-login-screen) .wod-focus-panel .wod-open-ticket {
+    min-height: 40px;
+    padding-inline: 10px;
+  }
+
+  body:not(.is-login-screen) .wod-content.wod-focus-content {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-areas:
+      "summary"
+      "check"
+      "middle"
+      "photos"
+      "docs"
+      "notes";
+    padding: 10px;
+  }
+
+  body:not(.is-login-screen) .wod-focus-panel .wod-notes form button {
+    margin-right: 68px;
+  }
+}
+
+@media (max-width: 460px) {
+  body:not(.is-login-screen) .wod-focus-panel > header {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+  }
+
+  body:not(.is-login-screen) .wod-focus-panel .wod-title {
+    grid-template-columns: 1fr;
+  }
+
+  body:not(.is-login-screen) .wod-focus-panel .wod-title .wol-status {
+    justify-self: start;
+  }
+
+  body:not(.is-login-screen) .wod-focus-panel .wod-open-ticket {
+    position: absolute;
+    top: 67px;
+    left: 10px;
+    right: 10px;
+    width: calc(100% - 20px);
+  }
+
+  body:not(.is-login-screen) .wod-content.wod-focus-content {
+    padding-top: 58px;
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   .dashboard-copilot-launcher,
   .copilot-shortcuts button { transition: none; }

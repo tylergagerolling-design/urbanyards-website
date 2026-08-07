@@ -24604,6 +24604,8 @@ Requirements:
       checklistItems:selectedChecklist.items || [], events:selectedEvents
     } : UNIFIED_TICKET_REFERENCE;
     const active = state.unifiedTicketSection || "overview";
+    const ticketReturnSection = state.unifiedTicketReturnSection === "calendar" ? "calendar" : "tickets";
+    const ticketBackLabel = ticketReturnSection === "calendar" ? "Back to Work" : "Back to Tickets";
     const activeLabel = UNIFIED_TICKET_NAV.find(([key]) => key === active)?.[1] || "Overview";
     const nav = UNIFIED_TICKET_NAV.map(([key, label, icon]) => `<button type="button" class="ut-nav-item ${active === key ? "is-active" : ""}" data-action="unified-ticket-section" data-section="${key}" aria-pressed="${active === key}"><span>${unifiedTicketIcon(icon)}</span>${label}</button>`).join("");
     ticket.type = ticketTypeLabel(ticket);
@@ -24613,7 +24615,7 @@ Requirements:
     host.innerHTML = `<div class="unified-ticket-shell is-section-${escapeHtml(active)}">
       <nav class="ut-internal-nav" aria-label="Ticket sections">${nav}</nav>
       <main class="ut-main">
-        <button type="button" class="ut-back" data-action="unified-ticket-back">←&nbsp; Back to Tickets</button>
+        <button type="button" class="ut-back" data-action="unified-ticket-back" data-return-section="${ticketReturnSection}">←&nbsp; ${ticketBackLabel}</button>
         <header class="ut-header"><div class="ut-title-line"><h1>#${escapeHtml(cleanDisplayValue(ticket.id, "Ticket"))}&nbsp;&nbsp; ${escapeHtml(cleanDisplayValue(ticket.title, "Property not set"))}</h1><span>${escapeHtml(cleanDisplayValue(ticket.status, "Unscheduled"))}</span><button type="button" data-action="unified-ticket-menu" aria-label="Ticket actions">⋮</button></div>
           <div class="ut-metadata">${[["Type",ticket.type,"document"],["Priority",ticket.priority,"upload"],["Due Date",ticket.dueDate,"calendar"],["Lead",ticket.lead,"crew"],["Location",ticket.location,"pin"]].map(([label,value,icon])=>`<div><span>${unifiedTicketIcon(icon)}${label}</span><strong>${escapeHtml(cleanDisplayValue(value, "Not set"))}</strong></div>`).join("")}</div>
           <div class="ut-overflow-menu" data-unified-ticket-menu hidden><button type="button" data-action="unified-ticket-quick" data-section="work">Edit Job</button><button type="button" data-action="unified-ticket-section" data-section="history">View History</button>${canManageTicketTrash() && ticket.recordId ? `<button type="button" class="danger" data-action="trash-ticket" data-id="${escapeHtml(ticket.recordId)}">Move to Trash</button>` : ""}</div>
@@ -24742,7 +24744,7 @@ Requirements:
       notes: "Operational notes connected to this job.",
       history: "Recorded job activity is available in the unified ticket history."
     };
-    const tabButtons = ["Overview","Work","Schedule","Tasks","Photos","Documents","Notes","History"].map(label=>`<button type="button" style="background:transparent!important;box-shadow:none!important;border:0!important;border-bottom:2px solid ${activeTab===label.toLowerCase()?"#276fca":"transparent"}!important" class="${activeTab===label.toLowerCase()?"is-active":""}" data-action="work-detail-tab" data-section="${label.toLowerCase()}">${label}</button>`).join("");
+    const tabButtons = ["Overview","Work","Schedule","Tasks","Photos","Documents","Notes","History"].map(label=>`<button type="button" style="background:transparent!important;box-shadow:none!important;border:0!important;border-bottom:2px solid ${activeTab===label.toLowerCase()?"#276fca":"transparent"}!important" class="${activeTab===label.toLowerCase()?"is-active":""}" data-work-detail-tab data-section="${label.toLowerCase()}">${label}</button>`).join("");
     return `<div class="wod-overlay" data-work-detail-overlay><button type="button" style="background:transparent!important;box-shadow:none!important;border:0!important" class="wod-scrim" data-action="close-work-detail" aria-label="Close work details"></button><aside class="wod-panel" aria-label="Work details for ${job.job}">
       <header><div><h2 style="color:#10141a!important">#${job.displayNumber || job.id}&nbsp;&nbsp; ${job.job}</h2><span class="wol-status is-${job.status.toLowerCase().replaceAll(" ","-")}">${job.status}</span></div><button type="button" style="background:transparent!important;box-shadow:none!important;border:0!important" class="wod-close" data-action="close-work-detail" aria-label="Close work detail">×</button></header>
       <nav aria-label="Work detail sections">${tabButtons}</nav>
@@ -24753,10 +24755,51 @@ Requirements:
           <section class="wod-card"><h3>Crew</h3><ul>${crewAssignments.length ? crewAssignments.map((item)=>`<li>${unifiedTicketIcon("crew")}<span>${escapeHtml(item.employee_name || assignmentProfileForId(item.user_id)?.displayName || "Crew member")}${item.is_lead ? " (Lead)" : ""}</span><button type="button" data-action="work-remove-assignment" data-kind="crew" data-id="${item.id}" aria-label="Remove crew member">×</button></li>`).join("") : `<li>${unifiedTicketIcon("crew")}${escapeHtml(job.crewName || "Unassigned")}</li>`}</ul><button type="button" data-action="work-add-assignment" data-kind="crew" data-ticket-id="${job.id}">+&nbsp; Add Crew</button></section>
           <section class="wod-card"><h3>Equipment</h3><ul>${equipmentAssignments.length ? equipmentAssignments.map((item)=>`<li>${unifiedTicketIcon("work")}<span>${escapeHtml(item.equipment_name || "Equipment")}</span><button type="button" data-action="work-remove-assignment" data-kind="equipment" data-id="${item.id}" aria-label="Remove equipment">×</button></li>`).join("") : `<li>${unifiedTicketIcon("work")}No equipment assigned</li>`}</ul><button type="button" data-action="work-add-assignment" data-kind="equipment" data-ticket-id="${job.id}">+&nbsp; Add Equipment</button></section>
         </div>
-        <section class="wod-card wod-details"><h3>Work Details</h3><dl><dt>Type</dt><dd>Maintenance</dd><dt>Priority</dt><dd><span class="wol-priority is-${job.priority.toLowerCase()}"><i></i>${job.priority}</span></dd><dt>Est. Time</dt><dd>${job.estimate}</dd><dt>Start Time</dt><dd>${job.time}</dd><dt>Location</dt><dd>${job.address}<br>${job.city}</dd></dl><button type="button" data-action="work-detail-tab" data-section="overview">Edit Details</button></section>
+        <section class="wod-card wod-details"><h3>Work Details</h3><dl><dt>Type</dt><dd>Maintenance</dd><dt>Priority</dt><dd><span class="wol-priority is-${job.priority.toLowerCase()}"><i></i>${job.priority}</span></dd><dt>Est. Time</dt><dd>${job.estimate}</dd><dt>Start Time</dt><dd>${job.time}</dd><dt>Location</dt><dd>${job.address}<br>${job.city}</dd></dl><button type="button" data-work-detail-tab data-section="overview">Edit Details</button></section>
         <section class="wod-card wod-photos"><h3>Photos</h3><label>Arrival Photos (${arrivalPhotos.length})</label><label class="wod-photo-upload">${unifiedTicketIcon("photo")}<span>Upload Arrival Photo</span><input type="file" accept="image/*" multiple data-work-photo-upload data-category="arrival" hidden></label><div class="wod-photo-heading"><label>Completion Photos (${completionPhotos.length})</label><span>${unifiedTicketIcon("upload")} ⋮</span></div><label class="wod-photo-upload">${unifiedTicketIcon("photo")}<span>Upload Completion Photo</span><input type="file" accept="image/*" multiple data-work-photo-upload data-category="completion" hidden></label><label class="wod-more-photos">+&nbsp; Upload Additional Photos<input type="file" accept="image/*" multiple data-work-photo-upload data-category="additional" hidden></label><p data-work-upload-status></p></section>
         <section class="wod-card wod-docs"><h3>Documentation</h3><div>${ticketAttachments.length ? ticketAttachments.map((item)=>`<span>${unifiedTicketIcon("document")}<b>${escapeHtml(item.fileName || item.category || "Document")}<small>${escapeHtml(item.completedBy || "Dashboard user")}</small></b><time>${escapeHtml(item.createdAt || "")}</time></span>`).join("") : "<small>No documents attached.</small>"}</div><label class="wod-add-document">+&nbsp; Add Document<input type="file" data-work-document-upload hidden></label></section>
         <section class="wod-card wod-notes"><h3>Notes</h3><div class="wod-note-list">${ticketNotes.length ? ticketNotes.map((item)=>`<article><strong>${escapeHtml(item.title)}</strong><p>${escapeHtml(item.body)}</p><small>${escapeHtml(item.date || "")}</small></article>`).join("") : "<small>No notes added.</small>"}</div><form data-work-note-form data-ticket-id="${job.id}"><textarea placeholder="Type a note..."></textarea><button type="submit">Add Note</button></form><p data-work-note-status></p></section>
+      </div><p class="wod-action-status" data-work-action-status aria-live="polite"></p>
+    </aside></div>`;
+  }
+
+  function renderWorkFocusPanel(job) {
+    if (!job) return "";
+    const done = workRowProgress(job);
+    const ticketId = job.ticketId || job.id;
+    const checklist = job.checklistItems?.length
+      ? job.checklistItems.map((item) => [item.label || "Task", item.completed_at ? formatDateTime(item.completed_at) : "", item.id, Boolean(item.checked)])
+      : [];
+    const crewAssignments = job.crewAssignments || [];
+    const equipmentAssignments = (state.data.ticketRelations?.equipment || []).filter((item) => String(item.ticket_id || item.ticketId) === String(ticketId));
+    const ticketAttachments = (state.data.documentation?.attachments || []).filter((item) => String(item.metadata?.ticketId || item.targetId || "") === String(ticketId));
+    const sitePhotos = (state.data.connectedOps?.sitePhotos || []).filter((item) => [
+      item.ticket_id, item.ticketId, item.job_id, item.jobId, item.scheduled_job_id, item.scheduledJobId
+    ].some((value) => value && [String(ticketId), String(job.sourceJob?.id || "")].includes(String(value))));
+    const photoType = (item) => String(item.photo_type || item.photoType || item.metadata?.photoStage || "").toLowerCase();
+    const arrivalPhotos = [...sitePhotos, ...ticketAttachments].filter((item) => photoType(item) === "arrival");
+    const completionPhotos = [...sitePhotos, ...ticketAttachments].filter((item) => photoType(item) === "completion");
+    const documents = ticketAttachments.filter((item) => !photoType(item));
+    const arrivalCount = Math.max(arrivalPhotos.length, job.ticket?.beforePhotosUploaded ? 1 : 0);
+    const completionCount = Math.max(completionPhotos.length, job.ticket?.afterPhotosUploaded ? 1 : 0);
+    const documentsComplete = state.workDocumentCompletion?.[ticketId] ?? Boolean(job.ticket?.requiredDocumentsPresent);
+    const ticketNotes = (state.data.notes || [])
+      .filter((item) => String(item.ticketId || "") === String(ticketId))
+      .sort((a, b) => String(b.createdAtRaw || "").localeCompare(String(a.createdAtRaw || "")));
+    const fallbackTeam = job.crewName || (job.crew || []).join(", ") || "Unassigned";
+
+    return `<div class="wod-overlay" data-work-detail-overlay><button type="button" class="wod-scrim" data-action="close-work-detail" aria-label="Close work details"></button><aside class="wod-panel wod-focus-panel" aria-label="Field work for ${escapeHtml(job.job)}">
+      <header><div class="wod-title"><span class="wod-ticket-link-label">Unified ticket #${escapeHtml(job.displayNumber || job.id)}</span><h2>${escapeHtml(job.job)}</h2><span class="wol-status is-${job.status.toLowerCase().replaceAll(" ","-")}">${escapeHtml(job.status)}</span></div><div class="wod-header-actions"><button type="button" class="wod-open-ticket" data-action="unified-ticket-open" data-id="${escapeHtml(ticketId)}" data-return-section="calendar">Open Unified Ticket</button><button type="button" class="wod-close" data-action="close-work-detail" aria-label="Close work detail">&times;</button></div></header>
+      <div class="wod-content wod-focus-content" data-work-focus>
+        <section class="wod-focus-summary" aria-label="Field work context"><div><span>Visit</span><strong>${escapeHtml(job.visit)} &middot; ${escapeHtml(job.time)}</strong></div><div><span>Location</span><strong>${escapeHtml(job.address)}</strong><small>${escapeHtml(job.city)}</small></div><div><span>Progress</span><strong>${done} of ${job.total} tasks</strong></div><div><span>Priority</span><strong>${escapeHtml(job.priority)}</strong></div></section>
+        <section class="wod-card wod-checklist" data-work-focus-section="tasks"><div class="wod-section-heading"><div><span>Field execution</span><h3>Tasks</h3></div><b>${done}/${job.total}</b></div><p><span>${done} of ${job.total} completed</span></p><i class="wod-progress"><b style="width:${job.total ? Math.round((done/job.total)*100) : 0}%"></b></i><div>${checklist.map(([label,time,itemId,checked])=>`<label><input type="checkbox" data-work-checklist-item data-id="${escapeHtml(ticketId)}" data-item-id="${escapeHtml(itemId)}" ${checked?"checked":""}><span>${escapeHtml(label)}</span><time>${escapeHtml(time)}</time></label>`).join("") || '<small>No connected task details are loaded.</small>'}</div><button type="button" data-action="work-add-task">+ Add Task</button></section>
+        <div class="wod-middle-top">
+          <section class="wod-card" data-work-focus-section="team"><div class="wod-section-heading"><div><span>Assignment</span><h3>Team</h3></div><b>${crewAssignments.length || (job.crew?.length || 0)}</b></div><ul>${crewAssignments.length ? crewAssignments.map((item)=>`<li>${unifiedTicketIcon("crew")}<span>${escapeHtml(item.employee_name || assignmentProfileForId(item.user_id)?.displayName || "Team member")}${item.is_lead ? " (Lead)" : ""}</span><button type="button" data-action="work-remove-assignment" data-kind="crew" data-id="${escapeHtml(item.id)}" aria-label="Remove team member">&times;</button></li>`).join("") : `<li>${unifiedTicketIcon("crew")}<span>${escapeHtml(fallbackTeam)}</span></li>`}</ul><button type="button" data-action="work-add-assignment" data-kind="crew" data-ticket-id="${escapeHtml(ticketId)}">+&nbsp; Add Team Member</button></section>
+          <section class="wod-card" data-work-focus-section="equipment"><div class="wod-section-heading"><div><span>Assignment</span><h3>Equipment</h3></div><b>${equipmentAssignments.length}</b></div><ul>${equipmentAssignments.length ? equipmentAssignments.map((item)=>`<li>${unifiedTicketIcon("work")}<span>${escapeHtml(item.equipment_name || "Equipment")}</span><button type="button" data-action="work-remove-assignment" data-kind="equipment" data-id="${escapeHtml(item.id)}" aria-label="Remove equipment">&times;</button></li>`).join("") : `<li>${unifiedTicketIcon("work")}<span>No equipment assigned</span></li>`}</ul><button type="button" data-action="work-add-assignment" data-kind="equipment" data-ticket-id="${escapeHtml(ticketId)}">+&nbsp; Add Equipment</button></section>
+        </div>
+        <section class="wod-card wod-photos" data-work-focus-section="photos"><div class="wod-section-heading"><div><span>Field proof</span><h3>Arrival &amp; Completion Photos</h3></div><b>${arrivalCount + completionCount}</b></div><div class="wod-proof-block ${arrivalCount ? "is-complete" : "is-attention"}"><div><strong>Arrival photos</strong><span>${arrivalCount ? `${arrivalCount} uploaded` : "Required"}</span></div><label class="wod-photo-upload">${unifiedTicketIcon("photo")}<span>Upload Arrival Photos</span><input type="file" accept="image/*" multiple data-work-photo-upload data-category="arrival" hidden></label></div><div class="wod-proof-block ${completionCount ? "is-complete" : "is-attention"}"><div><strong>Completion photos</strong><span>${completionCount ? `${completionCount} uploaded` : "Required"}</span></div><label class="wod-photo-upload">${unifiedTicketIcon("photo")}<span>Upload Completion Photos</span><input type="file" accept="image/*" multiple data-work-photo-upload data-category="completion" hidden></label></div><p data-work-upload-status></p></section>
+        <section class="wod-card wod-docs" data-work-focus-section="documents"><div class="wod-section-heading"><div><span>Closeout requirement</span><h3>Required Documents</h3></div><b class="${documentsComplete ? "is-complete" : "is-attention"}">${documentsComplete ? "Complete" : "Needs review"}</b></div><label class="wod-document-confirmation"><input type="checkbox" data-work-required-documents data-id="${escapeHtml(ticketId)}"${documentsComplete ? " checked" : ""}><span><strong>Required documents are complete</strong><small>Confirm assigned forms, approvals, and supporting records.</small></span></label><div>${documents.length ? documents.map((item)=>`<span>${unifiedTicketIcon("document")}<b>${escapeHtml(item.fileName || item.category || "Document")}<small>${escapeHtml(item.completedBy || "Dashboard user")}</small></b><time>${escapeHtml(item.createdAt || "")}</time></span>`).join("") : "<small>No required documents attached.</small>"}</div><label class="wod-add-document">+&nbsp; Upload Required Document<input type="file" data-work-document-upload hidden></label></section>
+        <section class="wod-card wod-notes" data-work-focus-section="notes"><div class="wod-section-heading"><div><span>Shared ticket record</span><h3>Notes</h3></div><b>${ticketNotes.length}</b></div><div class="wod-note-list">${ticketNotes.length ? ticketNotes.map((item)=>`<article><strong>${escapeHtml(item.title)}</strong><p>${escapeHtml(item.body)}</p><small>${escapeHtml(item.date || "")}</small></article>`).join("") : "<small>No notes added.</small>"}</div><form data-work-note-form data-ticket-id="${escapeHtml(ticketId)}"><textarea placeholder="Add a field note..." aria-label="Field note"></textarea><button type="submit">Add Note</button></form><p data-work-note-status></p></section>
       </div><p class="wod-action-status" data-work-action-status aria-live="polite"></p>
     </aside></div>`;
   }
@@ -24789,7 +24832,7 @@ Requirements:
         <article><strong>${allJobs.length}<small>Total Jobs</small></strong></article>
       </section>
       <section class="wol-table-card"><div class="wol-table-wrap"><table><thead><tr><th>Next Visit</th><th>Job / Customer</th><th>Location</th><th>Crew</th><th>Status</th><th>Progress</th><th>Est. Time</th><th>Priority</th><th>Attention</th><th></th></tr></thead><tbody>${jobs.map(renderWorkOperationsRow).join("")}</tbody></table></div><footer><span>Showing ${jobs.length} of ${allJobs.length} matching jobs</span></footer></section>
-      ${renderWorkDetailPanel(selected)}
+      ${renderWorkFocusPanel(selected)}
     </div>`;
   }
 
@@ -25791,6 +25834,30 @@ Requirements:
         return;
       }
 
+      if (target.matches("[data-work-required-documents]")) {
+        const ticketId = target.dataset.id || state.selectedWorkJobId;
+        const checked = target.checked;
+        try {
+          target.disabled = true;
+          if (!isDemoMode()) {
+            await updateJobTicket(ticketId, { requiredDocumentsPresent: checked });
+            await insertJobTicketEvent(ticketId, {
+              eventType: "ticket_documents_requirement_updated",
+              notes: checked ? "Required documents confirmed complete." : "Required documents reopened for review.",
+              newValue: { requiredDocumentsPresent: checked }
+            });
+          }
+          state.workDocumentCompletion = { ...(state.workDocumentCompletion || {}), [ticketId]: checked };
+          renderWorkOperationsWorkspace();
+          setDashboardState(checked ? "Required documents marked complete." : "Required documents need review.");
+        } catch (error) {
+          target.checked = !checked;
+          target.disabled = false;
+          setDashboardState(error.message || "Unable to update required documents.", "error");
+        }
+        return;
+      }
+
       if (target.matches("[data-work-photo-upload]")) {
         const status = qs("[data-work-upload-status]");
         const count = target.files?.length || 0;
@@ -26533,7 +26600,6 @@ Requirements:
 
       if (action === "open-work-detail") {
         state.selectedWorkJobId = id;
-        state.workDetailTab = "work";
         renderWorkOperationsWorkspace();
         qs(".wod-close")?.focus();
         return;
@@ -26543,12 +26609,6 @@ Requirements:
         state.selectedWorkJobId = "";
         renderWorkOperationsWorkspace();
         qs(`[data-action="open-work-detail"][data-id="${cssEscape(id || "10024")}"]`)?.focus();
-        return;
-      }
-
-      if (action === "work-detail-tab") {
-        state.workDetailTab = target.dataset.section || "work";
-        renderWorkOperationsWorkspace();
         return;
       }
 
@@ -26646,9 +26706,12 @@ Requirements:
       }
 
       if (action === "unified-ticket-open") {
+        state.unifiedTicketReturnSection = target.dataset.returnSection || (state.activeSection === "calendar" ? "calendar" : "tickets");
         state.unifiedTicketVisible = true;
         state.unifiedTicketSection = "overview";
         state.unifiedTicketSelectedId = id || "10024";
+        setActiveSection("tickets");
+        replaceDashboardHash("tickets");
         renderUnifiedTicketOverview();
         qs(".ut-back")?.focus();
         return;
@@ -26662,8 +26725,16 @@ Requirements:
       }
 
       if (action === "unified-ticket-back") {
+        const returnSection = target.dataset.returnSection || state.unifiedTicketReturnSection || "tickets";
         state.unifiedTicketVisible = false;
-        renderUnifiedTicketOverview();
+        state.unifiedTicketReturnSection = "tickets";
+        if (returnSection === "calendar") {
+          setActiveSection("calendar");
+          replaceDashboardHash("calendar");
+          renderWorkOperationsWorkspace();
+        } else {
+          renderUnifiedTicketOverview();
+        }
         return;
       }
 

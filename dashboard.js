@@ -707,6 +707,7 @@
   const googleMapViews = new Map();
   const routePreviewState = new Map();
   const routeGeocodingIds = new Set();
+  const routeCoordinatePromises = new Map();
   const PORTLAND_CENTER = { lat: 45.5152, lng: -122.6784 };
 
   function qs(selector) {
@@ -4356,6 +4357,8 @@
       notes: row.notes || "",
       status: ROUTE_STATUSES.includes(row.status) ? row.status : "Planned",
       stopOrder: Number(row.stop_order || 0),
+      sourceTicketId: row.ticket_id || row.ticketId || "",
+      sourceJobId: row.job_id || row.jobId || "",
       latitude: Number.isFinite(latitude) ? latitude : null,
       longitude: Number.isFinite(longitude) ? longitude : null,
       createdAt: formatDate(row.created_at),
@@ -6227,7 +6230,7 @@
       contacts: ["contacts", "jobs", "documents", "routeStops", "reminders"],
       documents: ["documents", "tickets", "submissions"],
       settings: [],
-      "route-planner": ["routeStops", "jobs"],
+      "route-planner": ["routeStops", "jobs", "tickets"],
       equipment: ["equipmentItems", "equipmentMaintenance", "hardwareGuide"],
       documentation: ["documentation"],
       "groundskeeper-ai": ["groundskeeperAi"],
@@ -10836,16 +10839,14 @@
       center: PORTLAND_CENTER,
       zoom: options.zoom || 11,
       controlSize: compact ? 24 : 32,
-      disableDefaultUI: compact,
+      disableDefaultUI: true,
       mapTypeControl: false,
       streetViewControl: false,
-      fullscreenControl: !compact,
-      fullscreenControlOptions: {
-        position: window.google.maps.ControlPosition.RIGHT_BOTTOM
-      },
+      fullscreenControl: false,
       rotateControl: false,
       scaleControl: false,
       zoomControl: false,
+      keyboardShortcuts: false,
       clickableIcons: false,
       gestureHandling: compact ? "cooperative" : "greedy"
     };
@@ -10924,6 +10925,32 @@
     addressAutocompleteInputs.add(input);
   }
 
+  function isDashboardAddressInput(input) {
+    if (!(input instanceof HTMLInputElement) || input.disabled || input.readOnly) return false;
+    if (input.matches("[data-address-autocomplete]")) return true;
+    if (input.getAttribute("autocomplete") === "street-address") return true;
+    return /^(?:address|city|property_address|service_address)$/i.test(String(input.name || ""));
+  }
+
+  async function resolveRouteStopCoordinates(stop) {
+    if (!stop?.address || hasRouteCoordinates(stop)) return stop;
+    const lookupAddress = normalizedRouteLookupAddress(stop.address);
+    const cacheKey = lookupAddress.toLowerCase();
+    if (!cacheKey) return stop;
+    if (!routeCoordinatePromises.has(cacheKey)) {
+      routeCoordinatePromises.set(cacheKey, geocodeRouteAddress(lookupAddress).catch(() => null));
+    }
+    const coordinates = await routeCoordinatePromises.get(cacheKey);
+    if (!coordinates) return stop;
+    const latitude = Number(coordinates.lat);
+    const longitude = Number(coordinates.lng);
+    if (Number.isFinite(latitude) && Number.isFinite(longitude)) {
+      stop.latitude = latitude;
+      stop.longitude = longitude;
+    }
+    return stop;
+  }
+
   async function renderGoogleRouteMapView({
     key,
     mapElement,
@@ -10955,6 +10982,7 @@
 
       clearGoogleMapView(view);
 
+      await Promise.all(stops.map(resolveRouteStopCoordinates));
       const pinnedStops = stops.filter(hasRouteCoordinates);
       const missingPins = stops.filter((stop) => stop.address && !hasRouteCoordinates(stop));
       if (!stops.length) {
@@ -12803,8 +12831,11 @@
         <small>${escapeHtml(field.detail || "Managed by the linked ticket record.")}</small>
       </div>`;
     }
+    const addressAttributes = /^(?:address|city|property_address|service_address)$/i.test(String(field.name || ""))
+      ? ` autocomplete="street-address" data-address-autocomplete`
+      : "";
     return `<label>${escapeHtml(field.label)}
-      <input name="${escapeHtml(field.name)}" type="${escapeHtml(field.type || "text")}" value="${escapeHtml(value)}"${field.step ? ` step="${escapeHtml(field.step)}"` : ""} placeholder="${escapeHtml(field.placeholder || "")}">
+      <input name="${escapeHtml(field.name)}" type="${escapeHtml(field.type || "text")}" value="${escapeHtml(value)}"${field.step ? ` step="${escapeHtml(field.step)}"` : ""} placeholder="${escapeHtml(field.placeholder || "")}"${addressAttributes}>
     </label>`;
   }
 
@@ -18530,13 +18561,48 @@ Requirements:
     return `${hour > 12 ? hour - 12 : hour}:${String(base % 60).padStart(2, "0")} ${hour >= 12 ? "PM" : "AM"}`;
   }
 
+  function routePlannerStopKey(stop = {}) {
+    const address = normalizedRouteLookupAddress(stop.address).toLowerCase();
+    return address || String(stop.clientName || stop.id || "").trim().toLowerCase();
+  }
+
+  function routeStopCanDelete(stop) {
+    return Boolean(stop?.id && findRouteStop(stop.id) && !stop.sourceTicketId && !stop.sourceJobId);
+  }
+
   function routePlannerStopsForDay(day) {
     const routeStops = visibleOperationalRecords(state.data.routeStops || [])
       .filter((stop) => stop.routeDate === day && stop.status !== "Cancelled")
       .sort((a, b) => a.stopOrder - b.stopOrder || String(a.createdAt).localeCompare(String(b.createdAt)));
-    const existingNames = new Set(routeStops.map((stop) => String(stop.clientName).toLowerCase()));
+    const seenStops = new Set(routeStops.map(routePlannerStopKey));
+    const ticketStops = dashboardTickets()
+      .filter((ticket) => ticket.source === "ticket"
+        && dateKey(ticket.scheduledDate) === day
+        && !["cancelled", "closed"].includes(ticketStage(ticket)))
+      .map((ticket, index) => ({
+        id: `ticket-${ticket.id}`,
+        routeDate: day,
+        clientName: ticket.customer || ticket.property || ticket.title || "Ticket stop",
+        address: ticket.propertyAddress || "",
+        serviceType: ticket.requestedService || ticket.title || "Scheduled work",
+        estimatedMinutes: 60,
+        status: ticket.status || ticket.stageLabel || "Scheduled",
+        stopOrder: routeStops.length + index + 1,
+        window: ticket.workWindow || "",
+        sourceTicketId: ticket.id,
+        sourceJobId: ticket.jobId || "",
+        latitude: null,
+        longitude: null
+      }))
+      .filter((stop) => {
+        const key = routePlannerStopKey(stop);
+        if (!key || seenStops.has(key)) return false;
+        seenStops.add(key);
+        return true;
+      });
+    const ticketJobIds = new Set(ticketStops.map((stop) => String(stop.sourceJobId || "")).filter(Boolean));
     const scheduled = visibleOperationalRecords(state.data.jobs || [])
-      .filter((job) => job.dateRaw === day && !["Cancelled", "Canceled"].includes(job.status) && !existingNames.has(String(job.site).toLowerCase()))
+      .filter((job) => job.dateRaw === day && !["Cancelled", "Canceled"].includes(job.status) && !ticketJobIds.has(String(job.id)))
       .map((job, index) => ({
         id: `scheduled-${job.id}`,
         routeDate: day,
@@ -18545,13 +18611,19 @@ Requirements:
         serviceType: job.service,
         estimatedMinutes: 60,
         status: job.status,
-        stopOrder: routeStops.length + index + 1,
+        stopOrder: routeStops.length + ticketStops.length + index + 1,
         window: job.window,
         sourceJobId: job.id,
         latitude: null,
         longitude: null
-      }));
-    return [...routeStops, ...scheduled];
+      }))
+      .filter((stop) => {
+        const key = routePlannerStopKey(stop);
+        if (!key || seenStops.has(key)) return false;
+        seenStops.add(key);
+        return true;
+      });
+    return [...routeStops, ...ticketStops, ...scheduled];
   }
 
   function routePlannerDuration(stops) {
@@ -18644,6 +18716,19 @@ Requirements:
     return visibleOperationalRecords(state.data.routeStops || []).filter((stop) => stop.routeDate === day).sort((a, b) => a.stopOrder - b.stopOrder);
   }
 
+  function renderRoutePlannerStop(stop, index) {
+    const ticketStop = Boolean(stop.sourceTicketId);
+    const deleteButton = routeStopCanDelete(stop)
+      ? `<button type="button" class="route-stop-delete" data-action="delete-route-stop" data-id="${escapeHtml(stop.id)}" aria-label="Delete ${escapeHtml(stop.clientName)} route stop" title="Delete manual stop">&times;</button>`
+      : "";
+    return `<li class="${ticketStop ? "is-ticket-stop" : ""}">
+      <span>${index + 1}</span>
+      <span class="route-day-stop-copy"><strong title="${escapeHtml(stop.clientName)}">${escapeHtml(stop.clientName)}</strong><small>${escapeHtml(stop.address || "Address not set")}${ticketStop ? " / Ticket" : ""}</small></span>
+      <time>${escapeHtml(routePlannerTimeLabel(stop, index))}</time>
+      ${deleteButton}
+    </li>`;
+  }
+
   function renderRoutePlanner() {
     if (!els.routeWeekPlanner) return;
     if (!state.routeWeekStart) state.routeWeekStart = routePlannerMonday();
@@ -18671,12 +18756,10 @@ Requirements:
             const date = new Date(`${day}T12:00:00`);
             const dateLabel = date.toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric" });
             const mapKey = `route-week-${day}`;
-            const visibleStops = stops.slice(0, 6);
-            const hiddenStops = Math.max(0, stops.length - visibleStops.length);
             if (stops.length) setRoutePreviewState(mapKey, { section: "route-planner", stops, emptyText: "No mapped stops yet." });
             return `<article class="route-day-card${selected ? " is-selected" : ""}" data-action="route-select-day" data-date="${escapeHtml(day)}" role="listitem" tabindex="0" aria-current="${selected ? "date" : "false"}">
               <header><h2>${escapeHtml(dateLabel)}</h2><p><span>${stops.length} stop${stops.length === 1 ? "" : "s"}</span><span>${routePlannerDistance(stops)} mi</span></p></header>
-              ${stops.length ? `${routePreviewMapShell(mapKey)}<ol class="route-day-stops">${visibleStops.map((stop, index) => `<li><span>${index + 1}</span><strong title="${escapeHtml(stop.clientName)}">${escapeHtml(stop.clientName)}</strong><time>${escapeHtml(routePlannerTimeLabel(stop, index))}</time></li>`).join("")}${hiddenStops ? `<li class="route-more-stops"><span>＋</span><strong>${hiddenStops} more stop${hiddenStops === 1 ? "" : "s"}</strong></li>` : ""}</ol>` : `<div class="route-empty-day"><span aria-hidden="true">▣</span><strong>No stops scheduled</strong><p>Enjoy your day!</p></div>`}
+              ${stops.length ? `${routePreviewMapShell(mapKey)}<ol class="route-day-stops">${stops.map(renderRoutePlannerStop).join("")}</ol>` : `<div class="route-empty-day"><span aria-hidden="true">▣</span><strong>No stops scheduled</strong><p>Enjoy your day!</p></div>`}
               <button type="button" class="route-add-stop" data-action="route-add-stop" data-date="${escapeHtml(day)}"><span>＋</span> Add Stop</button>
               <footer><span aria-hidden="true">◷</span><strong>Est.</strong> ${escapeHtml(routePlannerDuration(stops))}</footer>
             </article>`;
@@ -25273,7 +25356,7 @@ Requirements:
     });
 
     document.addEventListener("focusin", (event) => {
-      if (event.target.matches("[data-address-autocomplete]")) {
+      if (isDashboardAddressInput(event.target)) {
         initAddressAutocomplete(event.target);
       }
     });
@@ -29984,7 +30067,12 @@ Requirements:
       } else if (action === "edit-route-stop") {
         editRouteStop(id);
       } else if (action === "delete-route-stop") {
-        const ok = window.confirm("Delete this route stop?");
+        const routeStop = findRouteStop(id);
+        if (!routeStop || !routeStopCanDelete(routeStop)) {
+          setDashboardState("Ticket and scheduled-work stops must be changed from their linked record.", "error");
+          return;
+        }
+        const ok = window.confirm(`Delete ${routeStop.clientName || "this manual stop"} from the route?`);
         if (!ok) return;
         try {
           setDashboardState("Deleting route stop...");

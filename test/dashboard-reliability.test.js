@@ -27,11 +27,32 @@ test("Route Planner renders the approved weekly card workspace from shared sched
   assert.match(js, /function routePlannerStopsForDay/);
   assert.match(js, /state\.data\.routeStops/);
   assert.match(js, /state\.data\.jobs/);
+  assert.match(js, /"route-planner": \["routeStops", "jobs", "tickets"\]/);
+  assert.match(js, /dashboardTickets\(\)[\s\S]*sourceTicketId: ticket\.id/);
+  assert.match(js, /address: ticket\.propertyAddress \|\| ""/);
+  assert.match(js, /await Promise\.all\(stops\.map\(resolveRouteStopCoordinates\)\)/);
   assert.match(js, /Optimize All Routes/);
   assert.match(js, /route-add-stop/);
+  assert.match(js, /function routeStopCanDelete[\s\S]*!stop\.sourceTicketId[\s\S]*!stop\.sourceJobId/);
+  assert.match(js, /class="route-stop-delete" data-action="delete-route-stop"/);
+  assert.match(js, /stops\.map\(renderRoutePlannerStop\)/);
+  assert.match(js, /Ticket and scheduled-work stops must be changed from their linked record\./);
+  assert.match(js, /disableDefaultUI: true/);
+  assert.match(js, /fullscreenControl: false/);
+  assert.match(js, /keyboardShortcuts: false/);
   assert.match(js, /No stops scheduled[\s\S]*data-action="route-add-stop"/);
   assert.match(js, /"route-planner"[\s\S]*\.includes\(key\)\) return/);
   assert.match(css, /grid-template-columns:repeat\(7,minmax\(188px,1fr\)\)/);
+  assert.match(css, /\.route-stop-delete\{width:26px/);
+  assert.match(css, /\.route-day-stops\{[^}]*max-height:288px[^}]*overflow-y:auto/);
+});
+
+test("every dashboard address field receives Google Places suggestions", () => {
+  const js = read("dashboard.js");
+  assert.match(js, /function isDashboardAddressInput/);
+  assert.match(js, /\^\(\?:address\|city\|property_address\|service_address\)\$/);
+  assert.match(js, /isDashboardAddressInput\(event\.target\)[\s\S]*initAddressAutocomplete\(event\.target\)/);
+  assert.match(js, /name="\$\{escapeHtml\(field\.name\)\}"[\s\S]*\$\{addressAttributes\}/);
 });
 
 test("archived workspace polish remains available with current dashboard assets", () => {
@@ -41,8 +62,8 @@ test("archived workspace polish remains available with current dashboard assets"
   assert.match(css, /\.call-queue-row > span:first-child :is\(strong, small\)[\s\S]*overflow-wrap: anywhere/);
   assert.match(css, /\.groundskeeper-operation-card[\s\S]*white-space: normal !important/);
   assert.match(css, /\.dashboard-health-item strong[\s\S]*word-break: break-all/);
-  assert.match(html, /dashboard\.css\?v=20260806-controlled-research-1/);
-  assert.match(html, /dashboard\.js\?v=20260806-weather-compact-1/);
+  assert.match(html, /dashboard\.css\?v=20260806-route-address-1/);
+  assert.match(html, /dashboard\.js\?v=20260806-route-address-1/);
 });
 
 test("Tickets Leads and Money use the same flat white page canvas as Home and Work", () => {

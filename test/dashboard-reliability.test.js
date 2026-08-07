@@ -69,8 +69,8 @@ test("archived workspace polish remains available with current dashboard assets"
   assert.match(css, /\.call-queue-row > span:first-child :is\(strong, small\)[\s\S]*overflow-wrap: anywhere/);
   assert.match(css, /\.groundskeeper-operation-card[\s\S]*white-space: normal !important/);
   assert.match(css, /\.dashboard-health-item strong[\s\S]*word-break: break-all/);
-  assert.match(html, /dashboard\.css\?v=20260807-owner-task-delete-1/);
-  assert.match(html, /dashboard\.js\?v=20260807-owner-task-delete-1/);
+  assert.match(html, /dashboard\.css\?v=20260807-street-view-1/);
+  assert.match(html, /dashboard\.js\?v=20260807-street-view-1/);
 });
 
 test("Tickets Leads and Money use the same flat white page canvas as Home and Work", () => {
@@ -306,6 +306,8 @@ test("netlify deploy runs dashboard checks and has dashboard cache guards", () =
   assert.doesNotMatch(toml, /from = "\/budgets/);
   assert.doesNotMatch(toml, /from = "\/operations/);
   assert.match(toml, /for = "\/dashboard-config\.js"[\s\S]*Cache-Control = "no-store, max-age=0"/);
+  assert.match(toml, /for = "\/dashboard\.js"[\s\S]*Cache-Control = "no-cache, max-age=0, must-revalidate"/);
+  assert.match(toml, /for = "\/dashboard\.css"[\s\S]*Cache-Control = "no-cache, max-age=0, must-revalidate"/);
 });
 
 test("dashboard design system locks the six-page rebuild contract", () => {

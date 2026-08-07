@@ -109,6 +109,16 @@
     Cache-Control = "public, max-age=604800"
 
 [[headers]]
+  for = "/dashboard.js"
+  [headers.values]
+    Cache-Control = "no-cache, max-age=0, must-revalidate"
+
+[[headers]]
+  for = "/dashboard.css"
+  [headers.values]
+    Cache-Control = "no-cache, max-age=0, must-revalidate"
+
+[[headers]]
   for = "/dashboard.html"
   [headers.values]
     Cache-Control = "no-cache"

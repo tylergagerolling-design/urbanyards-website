@@ -51,7 +51,7 @@ test("Route Planner renders the approved weekly card workspace from shared sched
   assert.match(css, /grid-template-columns:repeat\(7,minmax\(188px,1fr\)\)/);
   assert.match(css, /\.route-stop-delete\{width:26px/);
   assert.match(css, /\.route-day-stops\{[^}]*max-height:288px[^}]*overflow-y:auto/);
-  assert.match(css, /#route-planner \.gm-style button\[aria-label="Undo last edit"\],[\s\S]*button\[aria-label\^="Map Scale:"\][\s\S]*display: none !important/);
+  assert.match(css, /#route-planner \.gm-style button\[aria-label="Undo last edit"\],[\s\S]*button\[aria-label\^="Map Scale:"\],[\s\S]*button\[aria-label="Map Data"\][\s\S]*display: none !important/);
 });
 
 test("every dashboard address field receives Google Places suggestions", () => {
@@ -69,7 +69,7 @@ test("archived workspace polish remains available with current dashboard assets"
   assert.match(css, /\.call-queue-row > span:first-child :is\(strong, small\)[\s\S]*overflow-wrap: anywhere/);
   assert.match(css, /\.groundskeeper-operation-card[\s\S]*white-space: normal !important/);
   assert.match(css, /\.dashboard-health-item strong[\s\S]*word-break: break-all/);
-  assert.match(html, /dashboard\.css\?v=20260807-route-map-controls-1/);
+  assert.match(html, /dashboard\.css\?v=20260807-route-map-data-1/);
   assert.match(html, /dashboard\.js\?v=20260807-route-map-controls-1/);
 });
 

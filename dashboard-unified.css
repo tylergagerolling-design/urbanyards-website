@@ -397,6 +397,34 @@ html body:not(.is-login-screen) .dashboard-main :is(#tickets .tickets-timeline-p
   background:#fff!important;
 }
 
+/* Leads had its own 24px inset inside the shared page canvas, leaving the
+   metrics and record cards narrower than the space already provided by the
+   dashboard shell. Keep the shell gutter and let the workspace fill it. */
+html body:not(.is-login-screen) .dashboard-main #outreach > [data-leads-workspace],
+html body:not(.is-login-screen) .dashboard-main #outreach .online-quote-workspace {
+  width:100%!important;
+  min-width:0!important;
+  max-width:none!important;
+  margin:0!important;
+  box-sizing:border-box!important;
+}
+
+html body:not(.is-login-screen) .dashboard-main #outreach .online-quote-workspace {
+  padding:0!important;
+}
+
+html body:not(.is-login-screen) .dashboard-main #outreach :is(
+  .online-quote-header,
+  .online-quote-metrics,
+  .online-quote-card,
+  .online-quote-table-wrap
+) {
+  width:100%;
+  min-width:0;
+  max-width:none;
+  box-sizing:border-box;
+}
+
 /* Tools destinations already have the same single page inset as Home. Remove
    only their inherited gray canvas, then let the AI Memory workspace use the
    full shared content width instead of its former 960px cap. */

@@ -179,13 +179,13 @@ test("public and dashboard clients use separate endpoints and conversation stora
   assert.doesNotMatch(dashboardClient, /fetch\("\/\.netlify\/functions\/groundskeeper-chat/);
 });
 
-test("public lead capture requires review and confirmation before opening the existing quote form", () => {
+test("public assistant keeps quote capture out of the chat window", () => {
   const source = fs.readFileSync(path.join(root, "assistant.js"), "utf8");
-  assert.match(source, /Review Quote Details/);
-  assert.match(source, /Nothing has been submitted/);
-  assert.match(source, /Confirm and Open Quote Form/);
-  assert.match(source, /document\.querySelector\("#quote-form"\)/);
-  assert.doesNotMatch(source, /quoteForm\.submit\(|requestSubmit\(/);
+  assert.match(source, /Request a Free Quote/);
+  assert.match(source, /class="uy-assistant-form"/);
+  assert.doesNotMatch(source, /uy-assistant-lead/);
+  assert.doesNotMatch(source, /Review Quote Details|Confirm and Open Quote Form/);
+  assert.doesNotMatch(source, /document\.querySelector\("#quote-form"\)|quoteDraftKey|getLeadDetails/);
 });
 
 test("browser assets do not contain committed provider or service-role secrets", () => {

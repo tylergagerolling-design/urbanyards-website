@@ -24447,6 +24447,44 @@ html body:not(.is-login-screen) .app-view .dashboard-copilot-panel .copilot-welc
   }
 }
 
+/* Work checklist task controls */
+.wod-checklist .wod-task-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 6px;
+}
+
+.wod-checklist .wod-task-row > label {
+  min-width: 0;
+}
+
+.wod-checklist .wod-task-delete {
+  width: 28px;
+  height: 28px;
+  display: grid;
+  place-items: center;
+  padding: 0;
+  border: 1px solid transparent !important;
+  border-radius: 5px;
+  background: transparent !important;
+  box-shadow: none !important;
+  color: #a32727 !important;
+  font-size: 1rem;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.wod-checklist .wod-task-delete:hover {
+  border-color: #efcaca !important;
+  background: #fff1f1 !important;
+}
+
+.wod-checklist .wod-task-delete:focus-visible {
+  outline: 2px solid #a32727;
+  outline-offset: 2px;
+}
+
 @media (max-width: 700px) {
   .dashboard-copilot {
     inset: 14px 14px auto auto;

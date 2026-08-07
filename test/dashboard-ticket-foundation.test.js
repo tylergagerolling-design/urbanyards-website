@@ -62,6 +62,15 @@ test("job ticket deletion remains an administrator-only operation", () => {
   assert.equal(ticketFunctionInternals.canDeleteTicket({ role: "field_worker" }), false);
 });
 
+test("work checklist task deletion is owner and admin only", () => {
+  assert.equal(dashboardAuth.permissionForTable("job_checklist_items", "DELETE"), "admin:manage");
+  assert.equal(dashboardAuth.hasPermission("owner", "admin:manage"), true);
+  assert.equal(dashboardAuth.hasPermission("admin", "admin:manage"), true);
+  assert.equal(dashboardAuth.hasPermission("manager", "admin:manage"), false);
+  assert.equal(dashboardAuth.hasPermission("field_worker", "admin:manage"), false);
+  assert.equal(dashboardAuth.hasPermission("viewer", "admin:manage"), false);
+});
+
 test("rapid Work Board assignment respects employee role areas", () => {
   assert.equal(ticketFunctionInternals.canRoleTakeComponent("sales_outreach", "scopeComplete"), true);
   assert.equal(ticketFunctionInternals.canRoleTakeComponent("sales_outreach", "costReviewComplete"), false);

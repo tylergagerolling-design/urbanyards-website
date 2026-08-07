@@ -69,8 +69,8 @@ test("archived workspace polish remains available with current dashboard assets"
   assert.match(css, /\.call-queue-row > span:first-child :is\(strong, small\)[\s\S]*overflow-wrap: anywhere/);
   assert.match(css, /\.groundskeeper-operation-card[\s\S]*white-space: normal !important/);
   assert.match(css, /\.dashboard-health-item strong[\s\S]*word-break: break-all/);
-  assert.match(html, /dashboard\.css\?v=20260807-unified-ticket-shared-work-3/);
-  assert.match(html, /dashboard\.js\?v=20260807-unified-ticket-shared-work-3/);
+  assert.match(html, /dashboard\.css\?v=20260807-owner-task-delete-1/);
+  assert.match(html, /dashboard\.js\?v=20260807-owner-task-delete-1/);
 });
 
 test("Tickets Leads and Money use the same flat white page canvas as Home and Work", () => {
@@ -1614,6 +1614,12 @@ test("Unified Ticket and Work share tasks, photos, documents, and closeout state
   assert.match(js, /function approvedTicketChecklist[\s\S]*metadata\?\.ticketId/);
   assert.match(js, /function updateSharedTicketChecklistItem/);
   assert.match(js, /function addSharedTicketChecklistItem/);
+  assert.match(js, /function canDeleteWorkTasks\(\)[\s\S]*\["owner", "admin"\]/);
+  assert.match(js, /function deleteSharedTicketChecklistItem/);
+  assert.match(js, /method: "DELETE"/);
+  assert.match(js, /data-action="work-delete-task"/);
+  assert.match(js, /Only an owner or administrator can delete work tasks/);
+  assert.match(js, /Task deleted from Work and the Unified Ticket/);
   assert.match(js, /data-unified-ticket-checklist-item/);
   assert.match(js, /data-unified-ticket-photo-upload/);
   assert.match(js, /data-unified-ticket-document-upload/);
@@ -1629,6 +1635,7 @@ test("Unified Ticket and Work share tasks, photos, documents, and closeout state
   assert.doesNotMatch(addTaskHandler, /ticket_id/);
   assert.match(css, /\.ut-linked-files/);
   assert.match(css, /\.ut-document-requirement/);
+  assert.match(css, /\.wod-task-delete/);
   assert.match(storage, /"job-site-photos"/);
   assert.match(storage, /bucket === "job-site-photos" \? "operations:read" : "documentation:read"/);
 });

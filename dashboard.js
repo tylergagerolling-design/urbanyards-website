@@ -12033,6 +12033,10 @@
     return ["owner", "admin"].includes(currentSessionRole());
   }
 
+  function canDeleteWorkTasks() {
+    return ["owner", "admin"].includes(currentSessionRole());
+  }
+
   function ticketInStage(ticket = {}, stages = []) {
     return stages.includes(ticketStage(ticket));
   }
@@ -24019,6 +24023,25 @@ Requirements:
     return item;
   }
 
+  async function deleteSharedTicketChecklistItem(ticketId, itemId) {
+    if (!canDeleteWorkTasks()) throw new Error("Only an owner or administrator can delete work tasks.");
+    const item = (state.data.connectedOps?.checklistItems || []).find((entry) => String(entry.id) === String(itemId));
+    if (!item) throw new Error("The connected checklist item was not found.");
+    if (!isDemoMode()) {
+      await supabaseRestRequest(`job_checklist_items?id=eq.${encodeURIComponent(itemId)}`, {
+        method: "DELETE",
+        headers: { Prefer: "return=minimal" }
+      });
+    }
+    state.data.connectedOps.checklistItems = (state.data.connectedOps.checklistItems || []).filter((entry) => String(entry.id) !== String(itemId));
+    await insertJobTicketEvent(ticketId, {
+      eventType: "ticket_task_deleted",
+      notes: `Deleted checklist task ${item.label || itemId}.`,
+      oldValue: { checklistItemId: itemId, label: item.label || "", checked: Boolean(item.checked) }
+    });
+    return item;
+  }
+
   function approvedTicketAttention(ticket = {}, job = null, checklist = {}) {
     const ops = state.data.connectedOps || normalizeConnectedOpsBundle();
     const hasCrewAssignment = (state.data.ticketRelations?.crew || []).some((item) => String(item.ticket_id || item.ticketId || "") === String(ticket.id || ""));
@@ -25037,7 +25060,7 @@ Requirements:
       <nav aria-label="Work detail sections">${tabButtons}</nav>
       <div class="wod-content is-tab-${escapeHtml(activeTab)}">
         ${activeTab !== "work" ? `<section class="wod-tab-summary"><h3>${escapeHtml(activeTab[0].toUpperCase() + activeTab.slice(1))}</h3><p>${escapeHtml(workTabDescriptions[activeTab] || "Connected work details.")}</p></section>` : ""}
-        <section class="wod-card wod-checklist"><h3>Work Checklist</h3><p><span>${done} of ${job.total} completed</span></p><i class="wod-progress"><b style="width:${job.total ? Math.round((done/job.total)*100) : 0}%"></b></i><div>${checklist.map(([label,time,itemId,checked])=>`<label><input type="checkbox" data-work-checklist-item data-id="${job.id}" data-item-id="${itemId}" ${checked?"checked":""}><span>${escapeHtml(label)}</span><time>${escapeHtml(time)}</time></label>`).join("") || '<small>No checklist tasks yet.</small>'}</div><button type="button" data-action="work-add-task">+ Add Task</button></section>
+        <section class="wod-card wod-checklist"><h3>Work Checklist</h3><p><span>${done} of ${job.total} completed</span></p><i class="wod-progress"><b style="width:${job.total ? Math.round((done/job.total)*100) : 0}%"></b></i><div>${checklist.map(([label,time,itemId,checked])=>`<div class="wod-task-row"><label><input type="checkbox" data-work-checklist-item data-id="${job.id}" data-item-id="${itemId}" ${checked?"checked":""}><span>${escapeHtml(label)}</span><time>${escapeHtml(time)}</time></label>${canDeleteWorkTasks() ? `<button type="button" class="wod-task-delete" data-action="work-delete-task" data-id="${escapeHtml(itemId)}" data-ticket-id="${escapeHtml(job.id)}" aria-label="Delete task ${escapeHtml(label)}">&times;</button>` : ""}</div>`).join("") || '<small>No checklist tasks yet.</small>'}</div><button type="button" data-action="work-add-task">+ Add Task</button></section>
         <div class="wod-middle-top">
           <section class="wod-card"><h3>Crew</h3><ul>${crewAssignments.length ? crewAssignments.map((item)=>`<li>${unifiedTicketIcon("crew")}<span>${escapeHtml(item.employee_name || assignmentProfileForId(item.user_id)?.displayName || "Crew member")}${item.is_lead ? " (Lead)" : ""}</span><button type="button" data-action="work-remove-assignment" data-kind="crew" data-id="${item.id}" aria-label="Remove crew member">×</button></li>`).join("") : `<li>${unifiedTicketIcon("crew")}${escapeHtml(job.crewName || "Unassigned")}</li>`}</ul><button type="button" data-action="work-add-assignment" data-kind="crew" data-ticket-id="${job.id}">+&nbsp; Add Crew</button></section>
           <section class="wod-card"><h3>Equipment</h3><ul>${equipmentAssignments.length ? equipmentAssignments.map((item)=>`<li>${unifiedTicketIcon("work")}<span>${escapeHtml(item.equipment_name || "Equipment")}</span><button type="button" data-action="work-remove-assignment" data-kind="equipment" data-id="${item.id}" aria-label="Remove equipment">×</button></li>`).join("") : `<li>${unifiedTicketIcon("work")}No equipment assigned</li>`}</ul><button type="button" data-action="work-add-assignment" data-kind="equipment" data-ticket-id="${job.id}">+&nbsp; Add Equipment</button></section>
@@ -25079,7 +25102,7 @@ Requirements:
       <header><div class="wod-title"><span class="wod-ticket-link-label">Unified ticket #${escapeHtml(job.displayNumber || job.id)}</span><h2>${escapeHtml(job.job)}</h2><span class="wol-status is-${job.status.toLowerCase().replaceAll(" ","-")}">${escapeHtml(job.status)}</span></div><div class="wod-header-actions"><button type="button" class="wod-open-ticket" data-action="unified-ticket-open" data-id="${escapeHtml(ticketId)}" data-return-section="calendar">Open Unified Ticket</button><button type="button" class="wod-close" data-action="close-work-detail" aria-label="Close work detail">&times;</button></div></header>
       <div class="wod-content wod-focus-content" data-work-focus>
         <section class="wod-focus-summary" aria-label="Field work context"><div><span>Visit</span><strong>${escapeHtml(job.visit)} &middot; ${escapeHtml(job.time)}</strong></div><div><span>Location</span><strong>${escapeHtml(job.address)}</strong><small>${escapeHtml(job.city)}</small></div><div><span>Progress</span><strong>${done} of ${job.total} tasks</strong></div><div><span>Priority</span><strong>${escapeHtml(job.priority)}</strong></div></section>
-        <section class="wod-card wod-checklist" data-work-focus-section="tasks"><div class="wod-section-heading"><div><span>Field execution</span><h3>Tasks</h3></div><b>${done}/${job.total}</b></div><p><span>${done} of ${job.total} completed</span></p><i class="wod-progress"><b style="width:${job.total ? Math.round((done/job.total)*100) : 0}%"></b></i><div>${checklist.map(([label,time,itemId,checked])=>`<label><input type="checkbox" data-work-checklist-item data-id="${escapeHtml(ticketId)}" data-item-id="${escapeHtml(itemId)}" ${checked?"checked":""}><span>${escapeHtml(label)}</span><time>${escapeHtml(time)}</time></label>`).join("") || '<small>No connected task details are loaded.</small>'}</div><button type="button" data-action="work-add-task">+ Add Task</button></section>
+        <section class="wod-card wod-checklist" data-work-focus-section="tasks"><div class="wod-section-heading"><div><span>Field execution</span><h3>Tasks</h3></div><b>${done}/${job.total}</b></div><p><span>${done} of ${job.total} completed</span></p><i class="wod-progress"><b style="width:${job.total ? Math.round((done/job.total)*100) : 0}%"></b></i><div>${checklist.map(([label,time,itemId,checked])=>`<div class="wod-task-row"><label><input type="checkbox" data-work-checklist-item data-id="${escapeHtml(ticketId)}" data-item-id="${escapeHtml(itemId)}" ${checked?"checked":""}><span>${escapeHtml(label)}</span><time>${escapeHtml(time)}</time></label>${canDeleteWorkTasks() ? `<button type="button" class="wod-task-delete" data-action="work-delete-task" data-id="${escapeHtml(itemId)}" data-ticket-id="${escapeHtml(ticketId)}" aria-label="Delete task ${escapeHtml(label)}">&times;</button>` : ""}</div>`).join("") || '<small>No connected task details are loaded.</small>'}</div><button type="button" data-action="work-add-task">+ Add Task</button></section>
         <div class="wod-middle-top">
           <section class="wod-card" data-work-focus-section="team"><div class="wod-section-heading"><div><span>Assignment</span><h3>Team</h3></div><b>${crewAssignments.length || (job.crew?.length || 0)}</b></div><ul>${crewAssignments.length ? crewAssignments.map((item)=>`<li>${unifiedTicketIcon("crew")}<span>${escapeHtml(item.employee_name || assignmentProfileForId(item.user_id)?.displayName || "Team member")}${item.is_lead ? " (Lead)" : ""}</span><button type="button" data-action="work-remove-assignment" data-kind="crew" data-id="${escapeHtml(item.id)}" aria-label="Remove team member">&times;</button></li>`).join("") : `<li>${unifiedTicketIcon("crew")}<span>${escapeHtml(fallbackTeam)}</span></li>`}</ul><button type="button" data-action="work-add-assignment" data-kind="crew" data-ticket-id="${escapeHtml(ticketId)}">+&nbsp; Add Team Member</button></section>
           <section class="wod-card" data-work-focus-section="equipment"><div class="wod-section-heading"><div><span>Assignment</span><h3>Equipment</h3></div><b>${equipmentAssignments.length}</b></div><ul>${equipmentAssignments.length ? equipmentAssignments.map((item)=>`<li>${unifiedTicketIcon("work")}<span>${escapeHtml(item.equipment_name || "Equipment")}</span><button type="button" data-action="work-remove-assignment" data-kind="equipment" data-id="${escapeHtml(item.id)}" aria-label="Remove equipment">&times;</button></li>`).join("") : `<li>${unifiedTicketIcon("work")}<span>No equipment assigned</span></li>`}</ul><button type="button" data-action="work-add-assignment" data-kind="equipment" data-ticket-id="${escapeHtml(ticketId)}">+&nbsp; Add Equipment</button></section>
@@ -27050,6 +27073,32 @@ Requirements:
           renderWorkOperationsWorkspace();
         } catch (error) {
           setDashboardState(error.message || "Unable to add the task.", "error");
+        }
+        return;
+      }
+
+      if (action === "work-delete-task") {
+        const taskId = id || target.dataset.id;
+        const ticketId = target.dataset.ticketId || state.selectedWorkJobId;
+        if (!canDeleteWorkTasks()) {
+          setDashboardState("Only an owner or administrator can delete work tasks.", "error");
+          return;
+        }
+        const item = (state.data.connectedOps?.checklistItems || []).find((entry) => String(entry.id) === String(taskId));
+        if (!item) {
+          setDashboardState("The connected checklist item was not found.", "error");
+          return;
+        }
+        if (!window.confirm(`Delete “${item.label || "this task"}”? This cannot be undone.`)) return;
+        try {
+          target.disabled = true;
+          await deleteSharedTicketChecklistItem(ticketId, taskId);
+          renderWorkOperationsWorkspace();
+          if (String(state.unifiedTicketSelectedId || "") === String(ticketId)) renderUnifiedTicketOverview();
+          setDashboardState("Task deleted from Work and the Unified Ticket.");
+        } catch (error) {
+          target.disabled = false;
+          setDashboardState(error.message || "Unable to delete the task.", "error");
         }
         return;
       }

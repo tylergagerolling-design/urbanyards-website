@@ -1,35 +1,16 @@
 (() => {
   const storageKey = "urbanYardsGroundskeeperConversation.v1";
-  const quoteDraftKey = "urbanYardsGroundskeeperQuoteDraft.v1";
   const maxStoredMessages = 18;
   const maxMessageLength = 1400;
   const requestCooldownMs = 2500;
   const unavailableReply = "I can’t answer that from Urban Yards’ public materials right now. You can contact Urban Yards directly or request a free quote.";
-  const leadSignals = ["quote", "estimate", "price", "cost", "hire", "schedule", "book", "service", "cleanup", "mowing", "mulch", "trim", "porter", "address", "property"];
   const quickActions = ["Request a Free Quote", "Homeowner Services", "Property Management Services", "Service Areas", "Contact Urban Yards"];
-  const cityPatterns = [
-    { value: "Beaverton", pattern: /\bbeaverton\b/i },
-    { value: "Portland", pattern: /\bportland\b/i },
-    { value: "Vancouver", pattern: /\bvancouver\b/i },
-    { value: "North Portland", pattern: /\bnorth portland\b/i }
-  ];
-  const intentRules = [
-    { id: "quote", leadIntent: true, keywords: ["quote", "estimate", "price", "cost", "hire", "schedule", "book", "how much"] },
-    { id: "property_management", leadIntent: true, keywords: ["apartment", "apartments", "multifamily", "hoa", "condo", "condominium", "property manager", "building", "complex"] },
-    { id: "cleanup", leadIntent: true, keywords: ["rough", "messy", "cleanup", "clean up", "overgrown", "out of hand", "weeds are crazy", "getting crazy", "needs help"] },
-    { id: "lawn_care", leadIntent: true, keywords: ["lawn", "mow", "mowing", "grass", "edging", "edge", "weed", "weeds", "yard care"] },
-    { id: "trimming", leadIntent: true, keywords: ["trim", "trimming", "shrubs", "bushes", "prune", "pruning", "hedges"] },
-    { id: "property_improvement", leadIntent: true, keywords: ["landscaping", "landscape", "improve", "refresh", "mulch", "planting", "plants", "beds", "curb appeal"] },
-    { id: "service_area", keywords: ["area", "serve", "service area", "where", "location", "beaverton", "portland", "vancouver", "north portland"] },
-    { id: "contact", keywords: ["contact", "phone", "email", "call", "reach", "number"] },
-    { id: "casual", keywords: ["hello", "hi", "hey", "thanks", "thank you"] }
-  ];
   const defaultMessages = [{
     role: "assistant",
     content: "I’m The Groundskeeper, Urban Yards’ website guide. I can help you learn about our services, service areas, and how to request a quote."
   }];
 
-  const state = { open: false, busy: false, messages: loadMessages(), lastRequestAt: 0, pendingQuoteLead: null };
+  const state = { open: false, busy: false, messages: loadMessages(), lastRequestAt: 0 };
 
   function loadMessages() {
     try {
@@ -78,23 +59,6 @@
         </header>
         <div class="uy-assistant-messages" role="log" aria-live="polite" aria-relevant="additions"></div>
         <div class="uy-assistant-actions" aria-label="Suggested questions"></div>
-        <form class="uy-assistant-lead" hidden>
-          <p class="eyebrow">Optional Lead Details</p>
-          <div class="uy-assistant-lead-grid">
-            <label>Name<input name="name" autocomplete="name" placeholder="Name"></label>
-            <label>Email<input name="email" type="email" autocomplete="email" placeholder="Email"></label>
-            <label>Phone<input name="phone" autocomplete="tel" placeholder="Phone"></label>
-            <label>Property Type<input name="propertyType" placeholder="House, apartment, commercial..."></label>
-            <label>Property Location<input name="propertyLocation" autocomplete="street-address" placeholder="Address or general area"></label>
-            <label>Service<input name="service" placeholder="Cleanup, mowing, mulch..."></label>
-            <label class="uy-assistant-lead-wide">Additional Details<textarea name="details" rows="3" placeholder="Property condition, timing, or anything Urban Yards should know"></textarea></label>
-          </div>
-          <div class="uy-assistant-lead-actions">
-            <button class="uy-assistant-lead-review button button-small" type="button">Review Quote Details</button>
-            <button class="uy-assistant-lead-confirm button button-small" type="button" hidden>Confirm and Open Quote Form</button>
-          </div>
-          <div class="uy-assistant-lead-summary" role="status" hidden></div>
-        </form>
         <form class="uy-assistant-form">
           <label class="sr-only" for="uy-assistant-input">Ask The Groundskeeper a question</label>
           <textarea id="uy-assistant-input" rows="2" placeholder="Ask about services, timing, or quote details..."></textarea>
@@ -115,10 +79,6 @@
   const actionsList = assistant.querySelector(".uy-assistant-actions");
   const form = assistant.querySelector(".uy-assistant-form");
   const input = assistant.querySelector("#uy-assistant-input");
-  const leadForm = assistant.querySelector(".uy-assistant-lead");
-  const reviewLeadButton = assistant.querySelector(".uy-assistant-lead-review");
-  const confirmLeadButton = assistant.querySelector(".uy-assistant-lead-confirm");
-  const leadSummary = assistant.querySelector(".uy-assistant-lead-summary");
 
   function setOpen(open, options = {}) {
     const { focus = true } = options;
@@ -174,155 +134,10 @@
     messagesList.scrollTop = messagesList.scrollHeight;
   }
 
-  function shouldShowLeadCapture(message) {
-    const normalized = message.toLowerCase();
-    const intent = detectIntent(message);
-    return Boolean(intent.leadIntent) || leadSignals.some((signal) => normalized.includes(signal));
-  }
-
-  function detectIntent(message) {
-    const normalized = message.toLowerCase();
-    const scored = intentRules.map((intent) => ({
-      ...intent,
-      score: intent.keywords.reduce((total, keyword) => {
-        const escaped = keyword.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-        return total + (new RegExp(`\\b${escaped}\\b`, "i").test(normalized) ? 1 : 0);
-      }, 0)
-    })).sort((a, b) => b.score - a.score);
-    return scored[0]?.score ? scored[0] : { id: "unknown", leadIntent: false };
-  }
-
-  function setInputValue(name, value) {
-    const field = leadForm.elements[name];
-    if (field && !field.value) field.value = value;
-  }
-
-  function rememberLeadDetails(message) {
-    const city = cityPatterns.find((item) => item.pattern.test(message));
-    if (city) setInputValue("propertyLocation", city.value);
-    if (/\b(apartment|apartments|multifamily|building|complex)\b/i.test(message)) setInputValue("propertyType", "Apartment community");
-    else if (/\bhoa\b/i.test(message)) setInputValue("propertyType", "HOA");
-    else if (/\b(condo|condominium)\b/i.test(message)) setInputValue("propertyType", "Condominium");
-    else if (/\b(home|house|yard)\b/i.test(message)) setInputValue("propertyType", "Home");
-
-    if (/\b(mow|mowing|lawn|grass|edge|edging)\b/i.test(message)) setInputValue("service", "Lawn care");
-    else if (/\b(cleanup|clean up|overgrown|rough|messy|weeds?)\b/i.test(message)) setInputValue("service", "Cleanup");
-    else if (/\b(trim|trimming|shrubs?|bushes|prun(e|ing)|hedges?)\b/i.test(message)) setInputValue("service", "Shrub trimming");
-    else if (/\bpressure wash|pressure washing\b/i.test(message)) setInputValue("service", "Pressure washing");
-    else if (/\b(landscaping|landscape|mulch|planting|beds|refresh)\b/i.test(message)) setInputValue("service", "Landscape improvement");
-
-    const nameMatch = message.match(/\b(?:my name is|i am|i'm)\s+([a-z][a-z\s'-]{1,40})/i);
-    if (nameMatch) setInputValue("name", nameMatch[1].trim().replace(/\s+/g, " "));
-  }
-
-  function getLeadDetails() {
-    const data = new FormData(leadForm);
-    return {
-      name: String(data.get("name") || "").trim(),
-      email: String(data.get("email") || "").trim(),
-      phone: String(data.get("phone") || "").trim(),
-      propertyType: String(data.get("propertyType") || "").trim(),
-      propertyLocation: String(data.get("propertyLocation") || "").trim(),
-      service: String(data.get("service") || "").trim(),
-      details: String(data.get("details") || "").trim()
-    };
-  }
-
-  function quoteServiceValue(value) {
-    const normalized = String(value || "").toLowerCase();
-    if (/mow|lawn|grass|edge/.test(normalized)) return "Lawn Mowing";
-    if (/cleanup|clean up|overgrown|weed/.test(normalized)) return "Seasonal Cleanup";
-    if (/mulch|bed|plant|refresh/.test(normalized)) return "Mulch & Entry Bed Refresh";
-    if (/pressure/.test(normalized)) return "Pressure Washing";
-    if (/apartment.*turnover|turnover/.test(normalized)) return "Apartment Turnover Support";
-    if (/apartment/.test(normalized)) return "Apartment Groundskeeping";
-    if (/hoa/.test(normalized)) return "HOA Landscape Maintenance";
-    if (/property management/.test(normalized)) return "Property Management Landscaping";
-    if (/landscape/.test(normalized)) return "Landscape Maintenance";
-    return value || "Other";
-  }
-
-  function setQuoteField(formElement, name, value) {
-    const field = formElement?.elements?.[name];
-    if (!field || !value) return;
-    if (field.tagName === "SELECT") {
-      const candidate = [...field.options].find((option) => option.value.toLowerCase() === String(value).toLowerCase());
-      field.value = candidate ? candidate.value : "Other";
-    } else {
-      field.value = value;
-    }
-    field.dispatchEvent(new Event("input", { bubbles: true }));
-    field.dispatchEvent(new Event("change", { bubbles: true }));
-  }
-
-  function applyQuoteDraft(lead, { focus = false } = {}) {
-    const quoteForm = document.querySelector("#quote-form");
-    if (!quoteForm) return false;
-    setQuoteField(quoteForm, "name", lead.name);
-    setQuoteField(quoteForm, "email", lead.email);
-    setQuoteField(quoteForm, "phone", lead.phone);
-    setQuoteField(quoteForm, "location", lead.propertyLocation);
-    setQuoteField(quoteForm, "service", quoteServiceValue(lead.service));
-    setQuoteField(quoteForm, "message", lead.details);
-    if (focus) {
-      document.querySelector("#quote")?.scrollIntoView({ behavior: "smooth", block: "start" });
-      quoteForm.elements.name?.focus({ preventScroll: true });
-    }
-    return true;
-  }
-
-  function restoreQuoteDraft() {
-    try {
-      const saved = JSON.parse(sessionStorage.getItem(quoteDraftKey) || "null");
-      if (!saved || !applyQuoteDraft(saved)) return;
-      sessionStorage.removeItem(quoteDraftKey);
-    } catch (_) {
-      sessionStorage.removeItem(quoteDraftKey);
-    }
-  }
-
-  function reviewQuoteDetails() {
-    const lead = getLeadDetails();
-    const missing = [!lead.name && "name", !lead.email && "email", !lead.service && "service"].filter(Boolean);
-    if (missing.length) {
-      leadSummary.hidden = false;
-      leadSummary.textContent = `Add ${missing.join(", ")} before reviewing the quote details.`;
-      confirmLeadButton.hidden = true;
-      state.pendingQuoteLead = null;
-      return;
-    }
-    state.pendingQuoteLead = lead;
-    const lines = [lead.name, lead.email, lead.phone, lead.propertyLocation, quoteServiceValue(lead.service), lead.details].filter(Boolean);
-    leadSummary.hidden = false;
-    leadSummary.textContent = `Please confirm: ${lines.join(" · ")}. Nothing has been submitted.`;
-    confirmLeadButton.hidden = false;
-  }
-
-  function confirmQuoteDetails() {
-    if (!state.pendingQuoteLead) return;
-    const lead = { ...state.pendingQuoteLead };
-    state.pendingQuoteLead = null;
-    confirmLeadButton.hidden = true;
-    leadSummary.hidden = false;
-    leadSummary.textContent = "Confirmed. Review the website quote form and submit it when you are ready.";
-    if (applyQuoteDraft(lead, { focus: true })) return;
-    try { sessionStorage.setItem(quoteDraftKey, JSON.stringify(lead)); } catch (_) { /* The visitor can still use the quote form manually. */ }
-    window.location.href = "index.html#quote";
-  }
-
-  function nextLeadPrompt(lead) {
-    if (!lead.propertyType) return "What type of property is it: a home, apartment community, HOA, condominium, or another property type?";
-    if (!lead.propertyLocation) return "What city or general area is the property in?";
-    if (!lead.service) return "What service are you looking for: mowing, cleanup, landscape maintenance, pressure washing, apartment turnover support, property management care, or something else listed on the site?";
-    if (!lead.phone && !lead.email) return "What is the best phone number or email for Urban Yards to follow up?";
-    return "";
-  }
-
   async function requestAssistantReply(message) {
     const payload = {
       message: message.slice(0, maxMessageLength),
       page: document.title,
-      lead: getLeadDetails(),
       history: state.messages.slice(-10)
     };
     try {
@@ -357,9 +172,7 @@
     state.busy = true;
     state.lastRequestAt = now;
     input.value = "";
-    rememberLeadDetails(message);
     state.messages.push({ role: "user", content: message });
-    leadForm.hidden = !shouldShowLeadCapture(message);
     saveMessages();
     renderMessages();
     setTyping(true);
@@ -382,9 +195,6 @@
     event.preventDefault();
     submitMessage();
   });
-  leadForm.addEventListener("submit", (event) => event.preventDefault());
-  reviewLeadButton.addEventListener("click", reviewQuoteDetails);
-  confirmLeadButton.addEventListener("click", confirmQuoteDetails);
   input.addEventListener("keydown", (event) => {
     if (event.key === "Enter" && !event.shiftKey) {
       event.preventDefault();
@@ -397,5 +207,4 @@
 
   renderQuickActions();
   renderMessages();
-  restoreQuoteDraft();
 })();

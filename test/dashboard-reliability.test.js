@@ -78,7 +78,7 @@ test("Tickets Leads and Money use the same flat white page canvas as Home and Wo
   const html = read("dashboard.html");
   assert.match(css, /:is\(#tickets,#outreach,#documents\)\.dashboard-section\.is-active\{\s*padding:0!important;\s*background:#fff!important/);
   assert.match(css, /:is\(#tickets \.tickets-timeline-page,#outreach \.online-quote-workspace,#documents \.money-workspace\)\{\s*background:#fff!important/);
-  assert.match(html, /dashboard-unified\.css\?v=20260806-route-canvas-1/);
+  assert.match(html, /dashboard-unified\.css\?v=20260807-popup-shadows-2/);
   assert.match(css, /#outreach > \[data-leads-workspace\][\s\S]*width:100%!important;[\s\S]*max-width:none!important/);
   assert.match(css, /#outreach \.online-quote-workspace \{\s*padding:0!important;/);
 });
@@ -94,7 +94,18 @@ test("Tickets and Work filter text clears the embedded icons", () => {
   const html = read("dashboard.html");
   assert.match(css, /\.ttl-filters label > select\{\s*padding:0 34px 0 43px!important/);
   assert.match(css, /\.wol-filters label > select\{\s*padding:0 34px 0 39px!important/);
-  assert.match(html, /dashboard-unified\.css\?v=20260806-route-canvas-1/);
+  assert.match(html, /dashboard-unified\.css\?v=20260807-popup-shadows-2/);
+});
+
+test("Unified Ticket, Work detail, and Call Notes use one elevated popup shadow without a dim overlay", () => {
+  const css = read("dashboard-unified.css");
+  assert.match(css, /--clean-popup-shadow:/);
+  assert.match(css, /--clean-drawer-shadow:/);
+  assert.match(css, /\.unified-ticket-shell\{box-shadow:var\(--clean-popup-shadow\)\}/);
+  assert.match(css, /\.wod-panel\{[^}]*box-shadow:var\(--clean-drawer-shadow\)!important/);
+  assert.match(css, /#call-queue \.cq-lead-drawer\{[^}]*box-shadow:var\(--clean-drawer-shadow\)/);
+  assert.match(css, /#call-queue \.cq-call-outcome-slot \.call-helper-panel,#call-queue \.cq-call-outcome-slot \.call-outcome-panel\{[^}]*box-shadow:0 10px 26px/);
+  assert.match(css, /\.wod-scrim\{background:transparent!important;opacity:0!important\}/);
 });
 
 test("Route Planner uses the flat full-width dashboard canvas", () => {

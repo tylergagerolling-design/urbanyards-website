@@ -4766,11 +4766,13 @@
   }
 
   function normalizeJobChecklist(row = {}) {
+    const metadata = row.metadata || {};
     return {
       id: row.id || "",
       templateId: row.template_id || "",
       jobId: row.job_id || "",
       scheduledJobId: row.scheduled_job_id || "",
+      ticketId: row.ticket_id || row.ticketId || metadata.ticketId || "",
       title: row.title || "Job checklist",
       status: row.status || "Not Started",
       dueDateRaw: dateKey(row.due_date),
@@ -4778,6 +4780,7 @@
       completedAtRaw: row.completed_at || "",
       completedAt: formatDate(row.completed_at),
       notes: row.notes || "",
+      metadata,
       updatedAtRaw: row.updated_at || "",
       updatedAt: formatDate(row.updated_at)
     };
@@ -8706,6 +8709,7 @@
 
   async function insertDocumentationAttachment(payload) {
     if (!state.documentationReady) throw new Error("Documentation is not available right now. Refresh the dashboard, then check Supabase/RLS if it stays down.");
+    state.data.documentation ||= normalizeDocumentationBundle();
     if (isDemoMode()) {
       const attachment = normalizeDocumentationAttachment({
         id: nextDemoId("documentation-attachment"),
@@ -8729,7 +8733,9 @@
       headers: { Prefer: "return=representation" },
       body: JSON.stringify(payload)
     });
-    return rows?.[0] ? normalizeDocumentationAttachment(rows[0]) : null;
+    const attachment = rows?.[0] ? normalizeDocumentationAttachment(rows[0]) : null;
+    if (attachment) state.data.documentation.attachments.unshift(attachment);
+    return attachment;
   }
 
   async function assignDocumentationTemplateToJob(jobId, templateId) {
@@ -23951,12 +23957,66 @@ Requirements:
   function approvedTicketChecklist(ticket = {}, job = null) {
     const ops = state.data.connectedOps || normalizeConnectedOpsBundle();
     const checklist = (ops.checklists || []).find((item) =>
+      String(item.ticketId || item.metadata?.ticketId || "") === String(ticket.id || "") ||
       String(item.jobId || "") === String(ticket.id || "") ||
       String(item.jobId || "") === String(job?.id || "") ||
       String(item.scheduledJobId || "") === String(job?.id || "")
     );
     const items = checklist ? (ops.checklistItems || []).filter((item) => String(item.checklist_id || item.checklistId || "") === String(checklist.id)) : [];
     return { checklist, items, done: items.filter((item) => Boolean(item.checked)).length, total: items.length };
+  }
+
+  async function updateSharedTicketChecklistItem(ticketId, itemId, checked) {
+    const item = (state.data.connectedOps?.checklistItems || []).find((entry) => String(entry.id) === String(itemId));
+    if (!item) throw new Error("The connected checklist item was not found.");
+    const completedAt = checked ? new Date().toISOString() : null;
+    if (!isDemoMode()) {
+      await supabaseRestRequest(`job_checklist_items?id=eq.${encodeURIComponent(itemId)}`, {
+        method: "PATCH",
+        headers: { Prefer: "return=representation" },
+        body: JSON.stringify({ checked, completed_at: completedAt })
+      });
+    }
+    Object.assign(item, { checked, completed_at: completedAt });
+    await insertJobTicketEvent(ticketId, {
+      eventType: checked ? "ticket_task_completed" : "ticket_task_reopened",
+      notes: `${checked ? "Completed" : "Reopened"} checklist task ${item.label || itemId}.`,
+      newValue: { checklistItemId: itemId, checked }
+    });
+    return item;
+  }
+
+  async function addSharedTicketChecklistItem(ticketId, label, { ticket = {}, job = null, title = "Ticket" } = {}) {
+    const taskLabel = String(label || "").trim();
+    if (!ticketId || !taskLabel) throw new Error("A ticket and task name are required.");
+    state.data.connectedOps ||= normalizeConnectedOpsBundle();
+    let checklist = approvedTicketChecklist({ ...ticket, id: ticket.id || ticketId }, job).checklist;
+    if (!checklist) {
+      const checklistPayload = {
+        job_id: job?.id || ticketId,
+        scheduled_job_id: job?.id || null,
+        title: `${title || "Ticket"} checklist`,
+        status: "Not Started",
+        metadata: { ticketId }
+      };
+      if (isDemoMode()) {
+        checklist = normalizeJobChecklist({ id: nextDemoId("job-checklist"), ...checklistPayload });
+      } else {
+        const rows = await supabaseRestRequest("job_checklists", { method: "POST", headers: { Prefer: "return=representation" }, body: JSON.stringify(checklistPayload) });
+        checklist = normalizeJobChecklist(rows?.[0] || {});
+      }
+      if (!checklist.id) throw new Error("The shared checklist could not be created.");
+      state.data.connectedOps.checklists.push(checklist);
+    }
+    const sortOrder = (state.data.connectedOps.checklistItems || []).filter((item) => String(item.checklist_id || item.checklistId) === String(checklist.id)).length;
+    const itemPayload = { checklist_id: checklist.id, label: taskLabel, sort_order: sortOrder, checked: false };
+    const item = isDemoMode()
+      ? { id: nextDemoId("job-checklist-item"), ...itemPayload }
+      : (await supabaseRestRequest("job_checklist_items", { method: "POST", headers: { Prefer: "return=representation" }, body: JSON.stringify(itemPayload) }))?.[0];
+    if (!item?.id) throw new Error("The shared checklist task could not be created.");
+    state.data.connectedOps.checklistItems.push(item);
+    await insertJobTicketEvent(ticketId, { eventType: "ticket_task_added", notes: `Task added: ${taskLabel}`, newValue: { checklistItemId: item.id } });
+    return item;
   }
 
   function approvedTicketAttention(ticket = {}, job = null, checklist = {}) {
@@ -24594,6 +24654,54 @@ Requirements:
     return `<button type="button" class="ut-card-edit" data-action="unified-ticket-edit" data-focus="${escapeHtml(focus)}">${escapeHtml(label)}</button>`;
   }
 
+  function unifiedTicketPhotoStage(item = {}) {
+    return String(item.photo_type || item.photoType || item.metadata?.photoStage || (item.attachmentType === "supporting_photo" ? "progress" : "")).toLowerCase();
+  }
+
+  function unifiedTicketLinkedAssets(ticketId, sourceJob = null) {
+    const recordIds = new Set([ticketId, sourceJob?.id].filter(Boolean).map(String));
+    const relatedAttachment = (item = {}) => [
+      item.metadata?.ticketId,
+      item.metadata?.targetId,
+      item.metadata?.scheduledJobId,
+      item.targetId,
+      item.assignmentId
+    ].some((value) => value && recordIds.has(String(value)));
+    const attachments = (state.data.documentation?.attachments || []).filter(relatedAttachment);
+    const storedPhotos = (state.data.connectedOps?.sitePhotos || []).filter((item) => [
+      item.ticket_id,
+      item.ticketId,
+      item.job_id,
+      item.jobId,
+      item.scheduled_job_id,
+      item.scheduledJobId
+    ].some((value) => value && recordIds.has(String(value))));
+    const photoAttachments = attachments.filter((item) => unifiedTicketPhotoStage(item) || item.attachmentType === "supporting_photo");
+    const documents = attachments.filter((item) => !photoAttachments.includes(item));
+    return {
+      photos: [
+        ...storedPhotos.map((item) => ({ ...item, linkedKind: "site-photo" })),
+        ...photoAttachments.map((item) => ({ ...item, linkedKind: "attachment" }))
+      ],
+      documents: documents.map((item) => ({ ...item, linkedKind: "attachment" }))
+    };
+  }
+
+  function unifiedTicketLinkedFileLabel(item = {}, fallback = "Attached file") {
+    return item.fileName || item.file_name || item.caption || item.metadata?.caption || fallback;
+  }
+
+  function unifiedTicketLinkedFileDate(item = {}) {
+    return item.createdAt || formatDate(item.createdAtRaw || item.created_at || item.taken_at) || "";
+  }
+
+  function renderUnifiedTicketLinkedFile(item, fallback, icon = "document") {
+    const label = unifiedTicketLinkedFileLabel(item, fallback);
+    const stage = unifiedTicketPhotoStage(item);
+    const meta = [stage ? `${stage[0].toUpperCase()}${stage.slice(1)} photo` : item.category || item.attachmentType || "Document", unifiedTicketLinkedFileDate(item)].filter(Boolean).join(" · ");
+    return `<button type="button" class="ut-linked-file" data-action="unified-ticket-open-file" data-kind="${escapeHtml(item.linkedKind || "attachment")}" data-id="${escapeHtml(item.id || "")}"><span>${unifiedTicketIcon(icon)}</span><span><strong>${escapeHtml(label)}</strong><small>${escapeHtml(meta)}</small></span><b aria-hidden="true">›</b></button>`;
+  }
+
   const TICKET_TIMELINE_FIXTURE = Object.freeze([
     { group:"Today", date:"Jul 23", time:"8:00 AM", id:"10024", name:"Johnson Residence", type:"Maintenance", address:"123 Main St", city:"Portland, OR", status:"In Progress", crew:"John D.", extra:"+1", priority:"Medium", range:"week" },
     { group:"Today", date:"Jul 23", time:"1:00 PM", id:"10022", name:"Pinecrest Office Park", type:"Maintenance", address:"789 Pine Rd", city:"Beaverton, OR", status:"In Progress", crew:"Sarah P.", extra:"+2", priority:"Medium", range:"week" },
@@ -24723,7 +24831,8 @@ Requirements:
     const selectedTimelineTicket = ticketTimelineRows().find((item) => item.id === state.unifiedTicketSelectedId);
     const sourceTicket = selectedTimelineTicket?.ticket || (state.data.tickets || []).find((item) => item.id === state.unifiedTicketSelectedId);
     const selectedEvents = (state.data.ticketEvents || []).filter((item) => item.ticketId === sourceTicket?.id);
-    const selectedChecklist = sourceTicket ? approvedTicketChecklist(sourceTicket, selectedTimelineTicket?.sourceJob) : { items: [] };
+    const checklistTicket = sourceTicket || { id: selectedTimelineTicket?.id || state.unifiedTicketSelectedId };
+    const selectedChecklist = selectedTimelineTicket ? approvedTicketChecklist(checklistTicket, selectedTimelineTicket.sourceJob) : { items: [], done: 0, total: 0 };
     const ticket = selectedTimelineTicket ? {
       ...UNIFIED_TICKET_REFERENCE,
       id:selectedTimelineTicket.displayNumber || selectedTimelineTicket.id, recordId:selectedTimelineTicket.id,
@@ -24751,6 +24860,16 @@ Requirements:
     const sectionActivity = selectedEvents.length ? selectedEvents.slice(0, 20).map((event) => `<article><strong>${escapeHtml(String(event.eventType || "Ticket updated").replaceAll("_", " "))}</strong><p>${escapeHtml(event.notes || "Ticket activity recorded.")}</p><small>${escapeHtml(event.createdAtRaw ? formatDateTime(event.createdAtRaw) : "")}</small></article>`).join("") : `<article><strong>No activity recorded</strong><p>Ticket history will appear here as work is completed.</p></article>`;
     const propertyAddress = unifiedTicketDisplayAddress(ticket);
     const ticketRecordId = ticket.recordId || state.unifiedTicketSelectedId;
+    const linkedJobId = selectedTimelineTicket?.sourceJob?.id || sourceTicket?.jobId || "";
+    const linkedAssets = unifiedTicketLinkedAssets(ticketRecordId, selectedTimelineTicket?.sourceJob);
+    const visibleTasks = active === "tasks" ? (ticket.checklistItems || []) : (ticket.checklistItems || []).slice(0, 3);
+    const visiblePhotos = active === "photos" ? linkedAssets.photos : linkedAssets.photos.slice(0, 4);
+    const visibleDocuments = active === "documents" ? linkedAssets.documents : linkedAssets.documents.slice(0, 3);
+    const documentsComplete = state.workDocumentCompletion?.[ticketRecordId] ?? Boolean(sourceTicket?.requiredDocumentsPresent);
+    const taskCard = `<div class="ut-task-lines">${visibleTasks.length ? visibleTasks.map((item) => `<label title="${escapeHtml(item.label || "Task")}"><input type="checkbox" data-unified-ticket-checklist-item data-id="${escapeHtml(ticketRecordId)}" data-item-id="${escapeHtml(item.id || "")}" ${item.checked ? "checked" : ""}><span>${escapeHtml(item.label || "Task")}</span></label>`).join("") : '<small>No checklist tasks yet.</small>'}</div><div class="ut-linked-actions"><button class="ut-small-btn" type="button" data-action="unified-ticket-add-task" data-id="${escapeHtml(ticketRecordId)}">+ Add Task</button>${active !== "tasks" && (ticket.checklistItems || []).length > visibleTasks.length ? `<button class="ut-small-btn" type="button" data-action="unified-ticket-section" data-section="tasks">View all tasks</button>` : ""}</div><p class="ut-linked-status" data-unified-ticket-task-status aria-live="polite"></p>`;
+    const photoUploadControls = linkedJobId ? `<div class="ut-upload-actions"><label>Upload Arrival Photos<input type="file" accept="image/*" multiple data-unified-ticket-photo-upload data-category="arrival" data-ticket-id="${escapeHtml(ticketRecordId)}" data-job-id="${escapeHtml(linkedJobId)}" hidden></label><label>Upload Completion Photos<input type="file" accept="image/*" multiple data-unified-ticket-photo-upload data-category="completion" data-ticket-id="${escapeHtml(ticketRecordId)}" data-job-id="${escapeHtml(linkedJobId)}" hidden></label></div>` : `<small class="ut-linked-empty">Schedule a visit before uploading job photos.</small>`;
+    const photoCard = `<div class="ut-linked-files">${visiblePhotos.length ? visiblePhotos.map((item) => renderUnifiedTicketLinkedFile(item, "Job site photo", "photo")).join("") : '<small class="ut-linked-empty">No job photos attached.</small>'}</div>${photoUploadControls}${active !== "photos" && linkedAssets.photos.length > visiblePhotos.length ? `<button class="ut-small-btn" type="button" data-action="unified-ticket-section" data-section="photos">View all photos</button>` : ""}<p class="ut-linked-status" data-unified-ticket-photo-status aria-live="polite"></p>`;
+    const documentCard = `<label class="ut-document-requirement"><input type="checkbox" data-unified-ticket-required-documents data-id="${escapeHtml(ticketRecordId)}"${documentsComplete ? " checked" : ""}><span><strong>Required documents are complete</strong><small>${documentsComplete ? "Confirmed for closeout" : "Needs review before closeout"}</small></span></label><div class="ut-linked-files">${visibleDocuments.length ? visibleDocuments.map((item) => renderUnifiedTicketLinkedFile(item, "Ticket document")).join("") : '<small class="ut-linked-empty">No ticket documents attached.</small>'}</div><label class="ut-document-upload">+ Upload Document<input type="file" data-unified-ticket-document-upload data-ticket-id="${escapeHtml(ticketRecordId)}" hidden></label>${active !== "documents" && linkedAssets.documents.length > visibleDocuments.length ? `<button class="ut-small-btn" type="button" data-action="unified-ticket-section" data-section="documents">View all documents</button>` : ""}<p class="ut-linked-status" data-unified-ticket-document-status aria-live="polite"></p>`;
     host.innerHTML = `<div class="unified-ticket-shell is-section-${escapeHtml(active)} ${state.unifiedTicketEditing ? "is-editing" : ""}">
       <nav class="ut-internal-nav" aria-label="Ticket sections">${nav}</nav>
       <main class="ut-main">
@@ -24771,9 +24890,9 @@ Requirements:
         </div>
         ${unifiedTicketCard("", `<div class="ut-next-visit"><span>${unifiedTicketIcon("calendar")}</span><div><b>Next Visit</b><strong>${escapeHtml(ticket.nextVisit || "Not scheduled")}</strong><small>Estimated: ${escapeHtml(ticket.duration || "Not set")}</small></div><button type="button" data-action="unified-ticket-schedule">View / Edit Schedule</button></div>`, "ut-next-card")}
         <div class="ut-lower-grid">
-          ${unifiedTicketCard(`Tasks (${ticket.checklistItems?.length || 0})`, `<div class="ut-task-lines">${(ticket.checklistItems || []).slice(0,3).map((item)=>`<label title="${escapeHtml(item.label || "Task")}"><input type="checkbox" ${item.checked ? "checked" : ""} disabled><i></i></label>`).join("") || '<small>No checklist tasks yet.</small>'}</div><button class="ut-small-btn" type="button" data-action="unified-ticket-section" data-section="tasks">View all tasks</button>`, "ut-tasks-card")}
-          ${unifiedTicketCard("Photos (4)", `<div class="ut-thumbnails">${[1,2,3,4].map(()=>'<i></i>').join("")}</div><button class="ut-small-btn" type="button" data-action="unified-ticket-section" data-section="photos">View all photos</button>`, "ut-photos-card")}
-          ${unifiedTicketCard("Documents (2)", `<div class="ut-documents">${[1,2].map(()=>`<button type="button"><span>${unifiedTicketIcon("document")}</span><i></i><b>›</b></button>`).join("")}</div><button class="ut-small-btn" type="button" data-action="unified-ticket-section" data-section="documents">View all documents</button>`, "ut-documents-card")}
+          ${unifiedTicketCard(`Tasks (${ticket.checklistItems?.length || 0})`, taskCard, "ut-tasks-card")}
+          ${unifiedTicketCard(`Photos (${linkedAssets.photos.length})`, photoCard, "ut-photos-card")}
+          ${unifiedTicketCard(`Documents (${linkedAssets.documents.length})`, documentCard, "ut-documents-card")}
         </div>
         ${unifiedTicketCard("Notes", `<form class="ut-note-form" data-unified-ticket-note-form data-ticket-id="${ticket.recordId || state.unifiedTicketSelectedId}"><textarea placeholder="Type a note here..." aria-label="Ticket note"></textarea><button type="submit">Add Note</button></form><p class="ut-note-status" data-unified-ticket-note-status aria-live="polite"></p>`, "ut-notes-card")}
       </main>
@@ -25978,21 +26097,7 @@ Requirements:
         const itemId = target.dataset.itemId || "";
         try {
           target.disabled = true;
-          if (!isDemoMode() && itemId) {
-            const completedAt = target.checked ? new Date().toISOString() : null;
-            await supabaseRestRequest(`job_checklist_items?id=eq.${encodeURIComponent(itemId)}`, {
-              method: "PATCH",
-              headers: { Prefer: "return=representation" },
-              body: JSON.stringify({ checked: target.checked, completed_at: completedAt })
-            });
-            const opsItem = (state.data.connectedOps?.checklistItems || []).find((item) => String(item.id) === String(itemId));
-            if (opsItem) Object.assign(opsItem, { checked: target.checked, completed_at: completedAt });
-            await insertJobTicketEvent(target.dataset.id, {
-              eventType: target.checked ? "ticket_task_completed" : "ticket_task_reopened",
-              notes: `${target.checked ? "Completed" : "Reopened"} checklist task ${opsItem?.label || itemId}.`,
-              newValue: { checklistItemId: itemId, checked: target.checked }
-            });
-          }
+          await updateSharedTicketChecklistItem(target.dataset.id, itemId, target.checked);
           renderWorkOperationsWorkspace();
         } catch (error) {
           target.checked = !target.checked;
@@ -26026,6 +26131,95 @@ Requirements:
         return;
       }
 
+      if (target.matches("[data-unified-ticket-checklist-item]")) {
+        const ticketId = target.dataset.id || state.unifiedTicketSelectedId;
+        const itemId = target.dataset.itemId || "";
+        const checked = target.checked;
+        try {
+          target.disabled = true;
+          await updateSharedTicketChecklistItem(ticketId, itemId, checked);
+          renderUnifiedTicketOverview();
+          setDashboardState(checked ? "Task completed in Unified Ticket and Work." : "Task reopened in Unified Ticket and Work.");
+        } catch (error) {
+          target.checked = !checked;
+          target.disabled = false;
+          setDashboardState(error.message || "Unable to update the shared task.", "error");
+        }
+        return;
+      }
+
+      if (target.matches("[data-unified-ticket-required-documents]")) {
+        const ticketId = target.dataset.id || state.unifiedTicketSelectedId;
+        const checked = target.checked;
+        try {
+          target.disabled = true;
+          if (!isDemoMode()) await updateJobTicket(ticketId, { requiredDocumentsPresent: checked });
+          const demoTicket = (state.data.tickets || []).find((item) => String(item.id) === String(ticketId));
+          if (demoTicket) demoTicket.requiredDocumentsPresent = checked;
+          state.workDocumentCompletion = { ...(state.workDocumentCompletion || {}), [ticketId]: checked };
+          await insertJobTicketEvent(ticketId, {
+            eventType: "ticket_documents_requirement_updated",
+            notes: checked ? "Required documents confirmed complete." : "Required documents reopened for review.",
+            newValue: { requiredDocumentsPresent: checked }
+          });
+          renderUnifiedTicketOverview();
+          setDashboardState(checked ? "Required documents marked complete in Ticket and Work." : "Required documents reopened in Ticket and Work.");
+        } catch (error) {
+          target.checked = !checked;
+          target.disabled = false;
+          setDashboardState(error.message || "Unable to update the shared document requirement.", "error");
+        }
+        return;
+      }
+
+      if (target.matches("[data-unified-ticket-photo-upload]")) {
+        const status = qs("[data-unified-ticket-photo-status]");
+        const files = Array.from(target.files || []);
+        const ticketId = target.dataset.ticketId || state.unifiedTicketSelectedId;
+        const jobId = target.dataset.jobId || "";
+        const category = target.dataset.category || "progress";
+        if (!files.length) return;
+        if (!jobId) { if (status) status.textContent = "Schedule a visit before uploading job photos."; return; }
+        try {
+          target.disabled = true;
+          if (status) status.textContent = `Uploading ${files.length} ${category} photo${files.length === 1 ? "" : "s"}...`;
+          const uploads = await uploadJobSitePhotos(jobId, files, category);
+          await insertJobTicketEvent(ticketId, { eventType: "ticket_photo_uploaded", notes: `${uploads.length} ${category} photo${uploads.length === 1 ? "" : "s"} uploaded from Unified Ticket.`, newValue: { category, count: uploads.length } });
+          if (category === "arrival") await updateJobTicket(ticketId, { beforePhotosUploaded: true });
+          if (category === "completion") await updateJobTicket(ticketId, { afterPhotosUploaded: true });
+          target.value = "";
+          renderUnifiedTicketOverview();
+          setDashboardState(`${uploads.length} ${category} photo${uploads.length === 1 ? "" : "s"} added to Ticket and Work.`);
+        } catch (error) {
+          target.disabled = false;
+          if (status) status.textContent = error.message || "Unable to upload the shared photos.";
+          setDashboardState(error.message || "Unable to upload the shared photos.", "error");
+        }
+        return;
+      }
+
+      if (target.matches("[data-unified-ticket-document-upload]")) {
+        const status = qs("[data-unified-ticket-document-status]");
+        const file = target.files?.[0];
+        const ticketId = target.dataset.ticketId || state.unifiedTicketSelectedId;
+        if (!file) return;
+        try {
+          target.disabled = true;
+          if (status) status.textContent = `Uploading ${file.name}...`;
+          const upload = await uploadDocumentationFile(file, { kind: "submission", assignmentId: ticketId });
+          const attachment = await insertDocumentationAttachment({ attachment_type: "ticket_document", file_bucket: upload.bucket, file_path: upload.path, file_name: upload.fileName || file.name, mime_type: upload.mimeType || file.type || "", file_size_bytes: upload.size || file.size || null, metadata: { ticketId, targetType: "ticket", targetId: ticketId, category: "Work Document" } });
+          await insertJobTicketEvent(ticketId, { eventType: "ticket_document_uploaded", notes: `${file.name} uploaded from Unified Ticket.`, newValue: { attachmentId: attachment?.id || null } });
+          target.value = "";
+          renderUnifiedTicketOverview();
+          setDashboardState(`${file.name} added to Ticket and Work.`);
+        } catch (error) {
+          target.disabled = false;
+          if (status) status.textContent = error.message || "Unable to upload the shared document.";
+          setDashboardState(error.message || "Unable to upload the shared document.", "error");
+        }
+        return;
+      }
+
       if (target.matches("[data-work-photo-upload]")) {
         const status = qs("[data-work-upload-status]");
         const count = target.files?.length || 0;
@@ -26040,12 +26234,13 @@ Requirements:
           await insertJobTicketEvent(selected.id, { eventType: "ticket_photo_uploaded", notes: `${uploads.length} ${category} photo${uploads.length===1?"":"s"} uploaded.`, newValue: { category, count: uploads.length } });
           if (category === "arrival") await updateJobTicket(selected.id, { beforePhotosUploaded: true });
           if (category === "completion") await updateJobTicket(selected.id, { afterPhotosUploaded: true });
-          if (status) status.textContent = `${uploads.length} photo${uploads.length===1?"":"s"} uploaded.`;
           target.value = "";
-          target.disabled = false;
+          renderWorkOperationsWorkspace();
+          setDashboardState(`${uploads.length} ${category} photo${uploads.length===1?"":"s"} added to Work and Unified Ticket.`);
         } catch (error) {
           target.disabled = false;
           if (status) status.textContent = error.message || "Unable to upload photos.";
+          setDashboardState(error.message || "Unable to upload photos.", "error");
         }
         return;
       }
@@ -26060,12 +26255,13 @@ Requirements:
           const upload = await uploadDocumentationFile(file, { kind: "submission", assignmentId: state.selectedWorkJobId });
           const attachment = await insertDocumentationAttachment({ attachment_type: "ticket_document", file_bucket: upload.bucket, file_path: upload.path, file_name: upload.fileName || file.name, mime_type: upload.mimeType || file.type || "", file_size_bytes: upload.size || file.size || null, metadata: { ticketId: state.selectedWorkJobId, targetType: "ticket", targetId: state.selectedWorkJobId, category: "Work Document" } });
           await insertJobTicketEvent(state.selectedWorkJobId, { eventType: "ticket_document_uploaded", notes: `${file.name} uploaded.`, newValue: { attachmentId: attachment?.id || null } });
-          if (status) status.textContent = `${file.name} uploaded.`;
           target.value = "";
-          target.disabled = false;
+          renderWorkOperationsWorkspace();
+          setDashboardState(`${file.name} added to Work and Unified Ticket.`);
         } catch (error) {
           target.disabled = false;
           if (status) status.textContent = error.message || "Unable to upload the document.";
+          setDashboardState(error.message || "Unable to upload the document.", "error");
         }
         return;
       }
@@ -26850,16 +27046,7 @@ Requirements:
         if (!ticketId || !String(label || "").trim()) return;
         try {
           const selectedJob = workOperationsRows().find((job) => job.id === ticketId);
-          let checklist = approvedTicketChecklist(selectedJob?.ticket || {}, selectedJob?.sourceJob).checklist;
-          if (!checklist) {
-            const rows = await supabaseRestRequest("job_checklists", { method: "POST", headers: { Prefer: "return=representation" }, body: JSON.stringify({ ticket_id: ticketId, job_id: selectedJob?.sourceJob?.id || null, title: `${selectedJob?.job || "Ticket"} checklist`, status: "Not Started" }) });
-            checklist = normalizeJobChecklist(rows?.[0] || {});
-            state.data.connectedOps.checklists.push(checklist);
-          }
-          const sortOrder = (state.data.connectedOps.checklistItems || []).filter((item) => String(item.checklist_id) === String(checklist.id)).length;
-          const rows = await supabaseRestRequest("job_checklist_items", { method: "POST", headers: { Prefer: "return=representation" }, body: JSON.stringify({ checklist_id: checklist.id, label: String(label).trim(), sort_order: sortOrder, checked: false }) });
-          if (rows?.[0]) state.data.connectedOps.checklistItems.push(rows[0]);
-          await insertJobTicketEvent(ticketId, { eventType: "ticket_task_added", notes: `Task added: ${String(label).trim()}`, newValue: { checklistItemId: rows?.[0]?.id || null } });
+          await addSharedTicketChecklistItem(ticketId, label, { ticket: selectedJob?.ticket || {}, job: selectedJob?.sourceJob, title: selectedJob?.job || "Ticket" });
           renderWorkOperationsWorkspace();
         } catch (error) {
           setDashboardState(error.message || "Unable to add the task.", "error");
@@ -26870,6 +27057,52 @@ Requirements:
       if (action === "work-assignment-placeholder") {
         const status = qs("[data-work-action-status]");
         if (status) status.textContent = `${target.dataset.kind === "equipment" ? "Equipment" : target.dataset.kind === "crew" ? "Crew" : "Task"} assignment remains non-destructive until the selected ticket is connected to the canonical service.`;
+        return;
+      }
+
+      if (action === "unified-ticket-add-task") {
+        const ticketId = id || state.unifiedTicketSelectedId;
+        const label = window.prompt("Task name");
+        if (!ticketId || !String(label || "").trim()) return;
+        try {
+          const selectedTimelineTicket = ticketTimelineRows().find((item) => String(item.id) === String(ticketId));
+          const sourceTicket = selectedTimelineTicket?.ticket || (state.data.tickets || []).find((item) => String(item.id) === String(ticketId));
+          await addSharedTicketChecklistItem(ticketId, label, { ticket: sourceTicket || { id: ticketId }, job: selectedTimelineTicket?.sourceJob, title: selectedTimelineTicket?.name || sourceTicket?.title || "Ticket" });
+          renderUnifiedTicketOverview();
+          setDashboardState("Task added to Unified Ticket and Work.");
+        } catch (error) {
+          setDashboardState(error.message || "Unable to add the shared task.", "error");
+        }
+        return;
+      }
+
+      if (action === "unified-ticket-open-file") {
+        const kind = target.dataset.kind || "attachment";
+        const record = kind === "site-photo"
+          ? (state.data.connectedOps?.sitePhotos || []).find((item) => String(item.id) === String(id))
+          : (state.data.documentation?.attachments || []).find((item) => String(item.id) === String(id));
+        if (!record) {
+          setDashboardState("The linked file was not found.", "error");
+          return;
+        }
+        try {
+          const directUrl = record.public_url || record.publicUrl || record.signed_url || record.signedUrl || "";
+          if (directUrl) {
+            const parsedUrl = new URL(directUrl, window.location.origin);
+            if (!/^https?:$/.test(parsedUrl.protocol)) throw new Error("The linked file URL is not safe to open.");
+            const fileWindow = window.open(parsedUrl.href, "_blank", "noopener,noreferrer");
+            if (fileWindow) fileWindow.opener = null;
+          } else {
+            await openDocumentationSignedFile({
+              bucket: record.fileBucket || record.file_bucket || record.storage_bucket || "documentation-submissions",
+              path: record.filePath || record.file_path || record.storage_path,
+              label: unifiedTicketLinkedFileLabel(record, kind === "site-photo" ? "job photo" : "ticket document")
+            });
+          }
+          setDashboardState("Secure linked file opened.");
+        } catch (error) {
+          setDashboardState(error.message || "Unable to open the linked file.", "error");
+        }
         return;
       }
 

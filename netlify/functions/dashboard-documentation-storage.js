@@ -13,7 +13,7 @@ const {
 } = require("./lib/dashboard-auth");
 
 const MAX_FILE_BYTES = 15 * 1024 * 1024;
-const ALLOWED_BUCKETS = new Set(["documentation-templates", "documentation-submissions"]);
+const ALLOWED_BUCKETS = new Set(["documentation-templates", "documentation-submissions", "job-site-photos"]);
 const ALLOWED_EXTENSIONS = new Set(["pdf", "docx", "jpg", "jpeg", "png", "webp", "xlsx", "csv"]);
 const ALLOWED_MIME_TYPES = new Set([
   "application/pdf",
@@ -172,7 +172,8 @@ exports.handler = async (event) => {
     if (action === "signed-url") {
       const bucket = validateBucket(body.bucket);
       const path = validatePath(body.path);
-      const auth = await requirePermission(event, "documentation:read", { entityType: "documentation_file", bucket, path });
+      const permission = bucket === "job-site-photos" ? "operations:read" : "documentation:read";
+      const auth = await requirePermission(event, permission, { entityType: "documentation_file", bucket, path });
       actor = auth.actor;
       if (!auth.ok) return json(auth.statusCode, { error: auth.error, requestId });
 

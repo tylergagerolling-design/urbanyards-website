@@ -30952,7 +30952,30 @@ body:not(.is-login-screen) .dashboard-main .unified-ticket-page { min-height: ca
 .ut-lower-grid .ut-card { min-height: 180px; display: flex; flex-direction: column; }
 .ut-lower-grid .ut-small-btn { align-self: flex-start; margin: auto 18px 17px; }
 .ut-task-lines { display: grid; gap: 11px; padding: 5px 18px 17px; }
-.ut-task-lines label { display: flex; align-items: center; gap: 10px; }.ut-task-lines input { width:16px;height:16px;margin:0; }.ut-task-lines i { width:65%;height:7px;border-radius:99px;background:#d9dce1; }
+.ut-task-lines label { display: flex; align-items: center; gap: 10px; color:#242b35; font-size:.68rem; line-height:1.35; cursor:pointer; }.ut-task-lines input { width:16px;height:16px;margin:0;accent-color:#176b47; }.ut-task-lines input:checked+span { color:#727b87;text-decoration:line-through; }.ut-task-lines i { width:65%;height:7px;border-radius:99px;background:#d9dce1; }
+.ut-linked-actions { display:flex;flex-wrap:wrap;gap:8px;margin:auto 18px 17px; }
+.ut-linked-actions .ut-small-btn,.ut-photos-card>.ut-small-btn,.ut-documents-card>.ut-small-btn { margin:0; }
+.ut-linked-files { display:grid;gap:7px;padding:2px 18px 12px; }
+.ut-linked-file { width:100%;min-height:44px;display:grid;grid-template-columns:22px minmax(0,1fr) 12px;align-items:center;gap:9px;padding:7px 9px;border:1px solid #e0e4e8!important;border-radius:6px;background:#fff!important;box-shadow:none!important;color:#303844!important;text-align:left;cursor:pointer; }
+.ut-linked-file:hover { border-color:#bdc8c1!important;background:#fbfcfb!important; }
+.ut-linked-file>span:first-child { width:22px;height:22px;display:grid;place-items:center;color:#205b42; }
+.ut-linked-file svg { width:15px;height:15px; }
+.ut-linked-file>span:nth-child(2) { min-width:0;display:grid;gap:3px; }
+.ut-linked-file strong,.ut-linked-file small { overflow:hidden;text-overflow:ellipsis;white-space:nowrap; }
+.ut-linked-file strong { color:#222933;font-size:.65rem;font-weight:650; }
+.ut-linked-file small { color:#657080;font-size:.56rem; }
+.ut-linked-file>b { color:#657080;font-size:1rem;font-weight:400; }
+.ut-upload-actions { display:grid;grid-template-columns:1fr 1fr;gap:7px;margin:auto 18px 10px; }
+.ut-upload-actions label,.ut-document-upload { min-height:34px;display:flex;align-items:center;justify-content:center;padding:7px 9px;border:1px solid #d6dbe1;border-radius:6px;background:#fff;color:#1e503c;font-size:.6rem;font-weight:650;text-align:center;cursor:pointer; }
+.ut-document-upload { align-self:flex-start;margin:auto 18px 10px; }
+.ut-document-requirement { display:grid;grid-template-columns:17px minmax(0,1fr);align-items:start;gap:9px;margin:1px 18px 12px;padding:10px;border:1px solid #e0e4e8;border-radius:6px;background:#fafbfa;cursor:pointer; }
+.ut-document-requirement input { width:16px;height:16px;margin:1px 0 0;accent-color:#176b47; }
+.ut-document-requirement span { display:grid;gap:3px; }
+.ut-document-requirement strong { color:#29313a;font-size:.63rem; }
+.ut-document-requirement small,.ut-linked-empty { color:#66717f;font-size:.57rem;line-height:1.4; }
+.ut-linked-empty { display:block;padding:3px 18px 12px; }
+.ut-linked-files .ut-linked-empty { padding:3px 0; }
+.ut-linked-status { min-height:0;margin:0 18px 11px;color:#526070;font-size:.57rem; }
 .ut-thumbnails { display: grid; grid-template-columns: repeat(4,1fr); gap: 8px; padding: 6px 18px 20px; }.ut-thumbnails i { aspect-ratio:1;border-radius:5px;background:linear-gradient(135deg,#f0f1f3,#e1e3e7); }
 .ut-documents { display:grid;gap:7px;padding:2px 18px 13px; }.ut-documents>button { min-height:40px;display:grid;grid-template-columns:18px 1fr 10px;align-items:center;gap:10px;padding:0 10px;border:1px solid #e0e4e8;border-radius:5px;background:#fff;color:#4d5664; }.ut-documents i { width:70%;height:7px;border-radius:99px;background:#d7dadf; }
 .ut-notes-card { margin-top: 14px; }.ut-note-form { display:grid;grid-template-columns:1fr auto;gap:8px;padding:2px 18px 17px; }.ut-note-form textarea { min-height:44px;resize:vertical;padding:12px;border:1px solid #dfe3e7;border-radius:5px;font:inherit;font-size:.7rem; }.ut-note-form button { align-self:end;min-height:34px;padding:0 14px;border:0;border-radius:5px;background:#e8eaed;color:#252b34;font-size:.68rem; }.ut-note-status { min-height:0;margin:-8px 18px 12px;color:#606875;font-size:.65rem; }
@@ -30965,6 +30988,7 @@ body:not(.is-login-screen) .dashboard-main .unified-ticket-page { min-height: ca
 
 @media (max-width:1180px){.unified-ticket-shell{grid-template-columns:140px minmax(0,1fr)}.ut-sidebar{grid-column:2;padding-top:0;display:grid;grid-template-columns:repeat(2,minmax(0,1fr))}.ut-main{border-right:0}.ut-progress-card,.ut-schedule-card,.ut-activity-card,.ut-quick-card{min-height:180px}}
 @media (max-width:760px){body:not(.is-login-screen) .dashboard-main .unified-ticket-page{padding-bottom:78px}.unified-ticket-shell{display:block;border:0;border-radius:0}.ut-internal-nav{position:sticky;top:0;z-index:5;display:flex;overflow-x:auto;padding:8px;border-right:0;border-bottom:1px solid #e2e5e9}.ut-nav-item{width:auto;min-width:max-content;min-height:42px;margin:0 3px 0 0;padding:0 12px}.ut-main{padding:12px 14px 20px}.ut-title-line{flex-wrap:wrap;gap:10px}.ut-title-line h2{width:100%;font-size:1.18rem}.ut-metadata{grid-template-columns:repeat(2,minmax(0,1fr));gap:13px;margin-top:18px}.ut-main-top{grid-template-columns:1fr}.ut-summary-card{grid-row:auto}.ut-property{grid-template-columns:1fr}.ut-property-image{min-height:190px}.ut-next-visit{grid-template-columns:22px 1fr}.ut-next-visit button{grid-column:2;justify-self:start}.ut-lower-grid{grid-template-columns:1fr}.ut-sidebar{display:grid;grid-template-columns:1fr;padding:0 14px 20px}.ut-progress{padding-inline:5px}.ut-progress small{font-size:.55rem}.ut-note-form{grid-template-columns:1fr}.ut-note-form button{justify-self:end}.ut-overflow-menu{top:80px;left:auto;right:8px}.ut-card>h3{padding-right:18px;padding-bottom:45px}.ut-card-edit{top:42px;left:18px;right:auto}}
+@media (max-width:520px){.ut-upload-actions{grid-template-columns:1fr}.ut-linked-file{min-height:48px}.ut-linked-file strong{font-size:.68rem}.ut-linked-file small{font-size:.59rem}}
 
 html body:not(.is-login-screen) .dashboard-main .unified-ticket-page .ut-title-line h2,
 html body:not(.is-login-screen) .dashboard-main .unified-ticket-page .ut-card > h3 { color:#111419 !important; }

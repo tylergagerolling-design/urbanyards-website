@@ -69,8 +69,8 @@ test("archived workspace polish remains available with current dashboard assets"
   assert.match(css, /\.call-queue-row > span:first-child :is\(strong, small\)[\s\S]*overflow-wrap: anywhere/);
   assert.match(css, /\.groundskeeper-operation-card[\s\S]*white-space: normal !important/);
   assert.match(css, /\.dashboard-health-item strong[\s\S]*word-break: break-all/);
-  assert.match(html, /dashboard\.css\?v=20260807-unified-ticket-edit-cards-2/);
-  assert.match(html, /dashboard\.js\?v=20260807-unified-ticket-edit-cards-2/);
+  assert.match(html, /dashboard\.css\?v=20260807-unified-ticket-shared-work-3/);
+  assert.match(html, /dashboard\.js\?v=20260807-unified-ticket-shared-work-3/);
 });
 
 test("Tickets Leads and Money use the same flat white page canvas as Home and Work", () => {
@@ -1593,6 +1593,33 @@ test("Unified Ticket edits the canonical record, syncs its work order, and verif
   assert.match(css, /\.ut-ticket-editor/);
   assert.match(css, /\.ut-street-view-canvas/);
   assert.match(css, /\.ut-card-edit/);
+});
+
+test("Unified Ticket and Work share tasks, photos, documents, and closeout state", () => {
+  const js = read("dashboard.js");
+  const css = read("dashboard.css");
+  const storage = read("netlify/functions/dashboard-documentation-storage.js");
+
+  assert.match(js, /function approvedTicketChecklist[\s\S]*metadata\?\.ticketId/);
+  assert.match(js, /function updateSharedTicketChecklistItem/);
+  assert.match(js, /function addSharedTicketChecklistItem/);
+  assert.match(js, /data-unified-ticket-checklist-item/);
+  assert.match(js, /data-unified-ticket-photo-upload/);
+  assert.match(js, /data-unified-ticket-document-upload/);
+  assert.match(js, /data-unified-ticket-required-documents/);
+  assert.match(js, /function unifiedTicketLinkedAssets/);
+  assert.match(js, /Photos \(\$\{linkedAssets\.photos\.length\}\)/);
+  assert.match(js, /Documents \(\$\{linkedAssets\.documents\.length\}\)/);
+  assert.doesNotMatch(js, /Photos \(4\)/);
+  assert.doesNotMatch(js, /Documents \(2\)/);
+  assert.match(js, /added to Work and Unified Ticket/);
+  assert.match(js, /added to Ticket and Work/);
+  const addTaskHandler = js.slice(js.indexOf('action === "work-add-task"'), js.indexOf('action === "work-assignment-placeholder"'));
+  assert.doesNotMatch(addTaskHandler, /ticket_id/);
+  assert.match(css, /\.ut-linked-files/);
+  assert.match(css, /\.ut-document-requirement/);
+  assert.match(storage, /"job-site-photos"/);
+  assert.match(storage, /bucket === "job-site-photos" \? "operations:read" : "documentation:read"/);
 });
 
 test("functional QA safeguards route transitions, demo edits, and visible feedback", () => {

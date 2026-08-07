@@ -425,6 +425,39 @@ html body:not(.is-login-screen) .dashboard-main #outreach :is(
   box-sizing:border-box;
 }
 
+/* Route Planner used a second padded gray page canvas inside the dashboard
+   shell. Flatten that redundant layer and let the weekly planner consume the
+   same full content width as Home and Work without changing planner cards,
+   maps, stops, or route behavior. */
+html body:not(.is-login-screen) .dashboard-main > #route-planner.dashboard-section.is-active {
+  width:100%!important;
+  min-width:0!important;
+  max-width:none!important;
+  margin:0!important;
+  padding:0!important;
+  overflow-x:clip!important;
+  background:#fff!important;
+  box-sizing:border-box!important;
+}
+
+html body:not(.is-login-screen) .dashboard-main #route-planner > [data-route-week-planner],
+html body:not(.is-login-screen) .dashboard-main #route-planner .route-week-shell {
+  width:100%!important;
+  min-width:0!important;
+  max-width:none!important;
+  margin:0!important;
+  padding:0!important;
+  background:#fff!important;
+  box-sizing:border-box!important;
+}
+
+html body:not(.is-login-screen) .dashboard-main #route-planner .route-week-cards {
+  width:100%!important;
+  min-width:0!important;
+  max-width:none!important;
+  box-sizing:border-box!important;
+}
+
 /* Tools destinations already have the same single page inset as Home. Remove
    only their inherited gray canvas, then let the AI Memory workspace use the
    full shared content width instead of its former 960px cap. */

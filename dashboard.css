@@ -23813,6 +23813,290 @@ body:not(.is-login-screen) .wod-focus-panel .wod-notes form button {
   }
 }
 
+/* Unified Ticket editing, verified address, and property Street View. */
+.ut-street-view {
+  overflow: hidden;
+  background: #e8ece9;
+}
+
+.ut-street-view-canvas {
+  position: absolute;
+  inset: 0;
+}
+
+.ut-street-view-status {
+  position: absolute;
+  left: 8px;
+  right: 61px;
+  bottom: 9px;
+  z-index: 2;
+  padding: 5px 7px;
+  border-radius: 4px;
+  background: rgba(20, 35, 27, .78);
+  color: #fff;
+  font-size: .5rem;
+  line-height: 1.35;
+}
+
+.ut-street-view-status.is-loaded {
+  background: rgba(20, 35, 27, .68);
+}
+
+.ut-street-view > button {
+  z-index: 3;
+  box-shadow: 0 5px 15px rgba(15, 30, 22, .16);
+}
+
+.unified-ticket-shell.is-editing {
+  grid-template-columns: minmax(150px, 14%) minmax(0, 1fr);
+}
+
+.unified-ticket-shell.is-editing .ut-sidebar {
+  display: none;
+}
+
+.unified-ticket-shell.is-editing .ut-main {
+  border-right: 0;
+}
+
+.unified-ticket-shell.is-editing .ut-main > :is(
+  .ut-active-section-summary,
+  .ut-main-top,
+  .ut-next-card,
+  .ut-lower-grid,
+  .ut-notes-card
+) {
+  display: none !important;
+}
+
+.ut-ticket-editor {
+  overflow: hidden;
+  margin-top: 14px;
+  border: 1px solid #dfe5e1;
+  border-radius: 9px;
+  background: #fff;
+}
+
+.ut-ticket-editor > header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 18px;
+  padding: 17px 18px;
+  border-bottom: 1px solid #e2e7e4;
+  background: #fffdf7;
+}
+
+.ut-ticket-editor > header span {
+  color: #1f6b4f;
+  font-size: .52rem;
+  font-weight: 800;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+}
+
+.ut-ticket-editor > header h2 {
+  margin: 4px 0;
+  color: #142019 !important;
+  font-size: 1rem;
+}
+
+.ut-ticket-editor > header p {
+  max-width: 620px;
+  margin: 0;
+  color: #617068;
+  font-size: .62rem;
+  line-height: 1.45;
+}
+
+.ut-ticket-editor > header button {
+  min-height: 36px;
+  padding: 0 12px;
+  border: 1px solid #d7dfdb;
+  border-radius: 6px;
+  background: #fff;
+  color: #25372e;
+  font-size: .62rem;
+  font-weight: 700;
+}
+
+.ut-ticket-editor form {
+  display: grid;
+  gap: 14px;
+  padding: 16px;
+}
+
+.ut-ticket-editor fieldset {
+  min-width: 0;
+  margin: 0;
+  padding: 14px;
+  border: 1px solid #e1e6e3;
+  border-radius: 7px;
+}
+
+.ut-ticket-editor legend {
+  padding: 0 7px;
+  color: #1c392c;
+  font-size: .66rem;
+  font-weight: 800;
+}
+
+.ut-edit-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.ut-edit-grid label {
+  min-width: 0;
+  display: grid;
+  align-content: start;
+  gap: 6px;
+  color: #33483e;
+  font-size: .58rem;
+  font-weight: 750;
+}
+
+.ut-edit-grid :is(input, select, textarea) {
+  width: 100%;
+  min-width: 0;
+  min-height: 40px;
+  padding: 8px 10px;
+  border: 1px solid #d6dfda;
+  border-radius: 6px;
+  background: #fff;
+  color: #16241d;
+  font: inherit;
+  font-size: .64rem;
+  font-weight: 500;
+}
+
+.ut-edit-grid input[readonly] {
+  background: #f3f5f4;
+  color: #65736c;
+}
+
+.ut-edit-grid textarea {
+  min-height: 90px;
+  resize: vertical;
+  line-height: 1.45;
+}
+
+.ut-edit-grid label small {
+  color: #6a766f;
+  font-size: .5rem;
+  font-weight: 500;
+  line-height: 1.4;
+}
+
+.ut-edit-address,
+.ut-address-verification {
+  grid-column: 1 / -1;
+}
+
+.ut-address-verification {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.ut-address-verification button {
+  min-height: 38px;
+  padding: 0 13px;
+  border: 1px solid #1f6b4f;
+  border-radius: 6px;
+  background: #fff;
+  color: #1f6b4f;
+  font-size: .6rem;
+  font-weight: 800;
+}
+
+.ut-address-verification span {
+  color: #7d5c22;
+  font-size: .55rem;
+}
+
+.ut-address-verification span.is-verified {
+  color: #167443;
+  font-weight: 750;
+}
+
+.ut-edit-grid-textareas {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.ut-ticket-editor form > footer {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 9px;
+}
+
+.ut-ticket-editor form > footer > span {
+  margin-right: auto;
+  color: #56665d;
+  font-size: .57rem;
+}
+
+.ut-ticket-editor form > footer button {
+  min-height: 40px;
+  padding: 0 14px;
+  border: 1px solid #d5ddd9;
+  border-radius: 6px;
+  background: #fff;
+  color: #22372d;
+  font-size: .62rem;
+  font-weight: 750;
+}
+
+.ut-ticket-editor form > footer button[type="submit"] {
+  border-color: #1f6b4f;
+  background: #1f6b4f;
+  color: #fff;
+}
+
+@media (max-width: 760px) {
+  .unified-ticket-shell.is-editing {
+    display: block;
+  }
+
+  .ut-ticket-editor > header {
+    display: grid;
+  }
+
+  .ut-ticket-editor form {
+    padding: 11px;
+  }
+
+  .ut-edit-grid,
+  .ut-edit-grid-textareas {
+    grid-template-columns: 1fr;
+  }
+
+  .ut-edit-address,
+  .ut-address-verification {
+    grid-column: auto;
+  }
+
+  .ut-address-verification {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .ut-ticket-editor form > footer {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .ut-ticket-editor form > footer > span {
+    margin: 0;
+  }
+
+  .ut-ticket-editor form > footer button {
+    width: 100%;
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   .dashboard-copilot-launcher,
   .copilot-shortcuts button { transition: none; }

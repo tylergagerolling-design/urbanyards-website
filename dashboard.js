@@ -708,6 +708,8 @@
   const routePreviewState = new Map();
   const routeGeocodingIds = new Set();
   const routeCoordinatePromises = new Map();
+  const unifiedTicketLocationCache = new Map();
+  const unifiedTicketStreetViews = new Map();
   const PORTLAND_CENTER = { lat: 45.5152, lng: -122.6784 };
 
   function qs(selector) {
@@ -10947,6 +10949,84 @@
     addressAutocompleteInputs.add(input);
   }
 
+  function unifiedTicketDisplayAddress(ticket = {}) {
+    const address = String(ticket.address || ticket.propertyAddress || "").trim();
+    const city = String(ticket.city || ticket.location || "").trim();
+    if (!address) return city;
+    if (!city || address.toLowerCase().includes(city.toLowerCase())) return address;
+    return `${address}, ${city}`;
+  }
+
+  async function resolveUnifiedTicketLocation(address) {
+    const normalizedAddress = normalizedRouteLookupAddress(address);
+    if (!normalizedAddress) throw new Error("Add a property address before loading Street View.");
+    const cacheKey = normalizedAddress.toLowerCase();
+    if (!unifiedTicketLocationCache.has(cacheKey)) {
+      unifiedTicketLocationCache.set(cacheKey, geocodeRouteAddress(normalizedAddress).catch((error) => {
+        unifiedTicketLocationCache.delete(cacheKey);
+        throw error;
+      }));
+    }
+    return unifiedTicketLocationCache.get(cacheKey);
+  }
+
+  async function loadUnifiedTicketStreetView(ticket = {}) {
+    const ticketId = String(ticket.recordId || state.unifiedTicketSelectedId || "");
+    const canvas = qs(`[data-unified-ticket-street-view="${cssEscape(ticketId)}"]`);
+    const status = qs(`[data-unified-ticket-street-view-status="${cssEscape(ticketId)}"]`);
+    const address = unifiedTicketDisplayAddress(ticket);
+    if (!canvas || !address) {
+      if (status) status.textContent = "Add and verify the property address to load Street View.";
+      return null;
+    }
+    if (status) status.textContent = "Loading Street View...";
+    try {
+      const [maps, location] = await Promise.all([loadGoogleMapsScript(), resolveUnifiedTicketLocation(address)]);
+      if (!canvas.isConnected || !maps?.StreetViewService || !maps?.StreetViewPanorama) return null;
+      const result = await new Promise((resolve, reject) => {
+        const service = new maps.StreetViewService();
+        service.getPanorama({
+          location: { lat: Number(location.lat), lng: Number(location.lng) },
+          radius: 180,
+          source: maps.StreetViewSource?.OUTDOOR
+        }, (data, panoramaStatus) => {
+          if (panoramaStatus === maps.StreetViewStatus.OK && data?.location?.latLng) resolve(data);
+          else reject(new Error("Street View is not available near this property."));
+        });
+      });
+      if (!canvas.isConnected) return null;
+      unifiedTicketStreetViews.get(ticketId)?.setVisible?.(false);
+      const panorama = new maps.StreetViewPanorama(canvas, {
+        position: result.location.latLng,
+        pov: { heading: 0, pitch: 0 },
+        zoom: 0,
+        addressControl: false,
+        clickToGo: true,
+        disableDefaultUI: true,
+        fullscreenControl: false,
+        linksControl: false,
+        motionTracking: false,
+        motionTrackingControl: false,
+        panControl: false,
+        scrollwheel: false,
+        showRoadLabels: false,
+        zoomControl: false
+      });
+      unifiedTicketStreetViews.set(ticketId, panorama);
+      if (status) {
+        status.textContent = `Street View near ${location.displayName || address}`;
+        status.classList.add("is-loaded");
+      }
+      return panorama;
+    } catch (error) {
+      if (status) {
+        status.textContent = error.message || "Street View is unavailable for this address.";
+        status.classList.remove("is-loaded");
+      }
+      return null;
+    }
+  }
+
   function isDashboardAddressInput(input) {
     if (!(input instanceof HTMLInputElement) || input.disabled || input.readOnly) return false;
     if (input.matches("[data-address-autocomplete]")) return true;
@@ -12160,6 +12240,7 @@
       customerId: row.customer_id || row.customerId || "",
       propertyId: row.property_id || row.propertyId || "",
       propertyAddress: row.property_address || row.propertyAddress || row.address || "",
+      city: row.city || "",
       quoteId: row.quote_id || row.quoteId || "",
       jobId: row.job_id || row.jobId || "",
       invoiceId: row.invoice_id || row.invoiceId || "",
@@ -24577,6 +24658,57 @@ Requirements:
     </div>`;
   }
 
+  function renderUnifiedTicketEditForm(sourceTicket = {}, ticket = {}) {
+    const ticketId = sourceTicket.id || ticket.recordId || state.unifiedTicketSelectedId || "";
+    const linkedJob = approvedTicketJob(sourceTicket);
+    const profiles = (state.data.userProfiles || [])
+      .map((profile) => ({ id: profile.userId || profile.id || "", label: profile.displayName || profile.name || profile.email || "Team member" }))
+      .filter((profile) => profile.id);
+    const propertyName = sourceTicket.property || ticket.title || "";
+    const ticketTitle = sourceTicket.title || sourceTicket.requestedService || ticket.type || "";
+    const scheduledDate = sourceTicket.scheduledDate || linkedJob?.dateRaw || "";
+    const workWindow = sourceTicket.workWindow || linkedJob?.window || (ticket.duration === "Not set" ? "" : ticket.duration) || "";
+    const address = sourceTicket.propertyAddress || ticket.address || "";
+    const city = sourceTicket.city || linkedJob?.city || (ticket.city === "Location not set" ? "" : ticket.city) || "";
+    const service = sourceTicket.requestedService || linkedJob?.service || (ticket.type === "Type not set" ? "" : ticket.type) || "";
+    const customerName = sourceTicket.customer || ticket.customer || "";
+    const contactName = sourceTicket.primaryContact || customerName;
+    return `<section class="ut-ticket-editor" aria-labelledby="ut-ticket-editor-title">
+      <header><div><span>Canonical ticket + linked work order</span><h2 id="ut-ticket-editor-title">Edit Ticket Details</h2><p>Changes save to this ticket and update its connected scheduled work order where applicable.</p></div><button type="button" data-action="unified-ticket-edit-cancel">Cancel</button></header>
+      <form data-unified-ticket-edit-form data-ticket-id="${escapeHtml(ticketId)}" data-job-id="${escapeHtml(linkedJob?.id || sourceTicket.jobId || "")}">
+        <fieldset><legend>Ticket and service</legend><div class="ut-edit-grid">
+          <label>Ticket title<input name="title" value="${escapeHtml(ticketTitle)}" required></label>
+          <label>Requested service<input name="requested_service" value="${escapeHtml(service)}"></label>
+          <label>Priority<select name="priority">${["Low","Normal","Medium","High","Urgent"].map((value)=>`<option${String(sourceTicket.priority || ticket.priority || "Normal").toLowerCase() === value.toLowerCase() ? " selected" : ""}>${value}</option>`).join("")}</select></label>
+          <label>Status<input value="${escapeHtml(sourceTicket.stageLabel || ticket.status || "Unscheduled")}" readonly><small>Use the ticket workflow controls to change lifecycle status.</small></label>
+          <label>Due date<input type="date" name="due_date" value="${escapeHtml(sourceTicket.dueDate || "")}"></label>
+          <label>Scheduled date<input type="date" name="scheduled_date" value="${escapeHtml(scheduledDate)}"></label>
+          <label>Work window / estimated time<input name="work_window" value="${escapeHtml(workWindow)}" placeholder="8:00 AM - 10:00 AM"></label>
+          <label>Assigned lead<select name="assigned_user_id"><option value="">Unassigned</option>${profiles.map((profile)=>`<option value="${escapeHtml(profile.id)}"${String(sourceTicket.assignedUserId || "") === String(profile.id) ? " selected" : ""}>${escapeHtml(profile.label)}</option>`).join("")}</select></label>
+        </div></fieldset>
+        <fieldset><legend>Property and verified location</legend><div class="ut-edit-grid">
+          <label>Property name<input name="property_name" value="${escapeHtml(propertyName)}" required></label>
+          <label>Location label<input name="city" value="${escapeHtml(city)}" placeholder="Portland, OR"></label>
+          <label class="ut-edit-address">Property address<input name="property_address" value="${escapeHtml(address)}" autocomplete="street-address" data-address-autocomplete required><small>Start typing for Google address suggestions, then verify before saving.</small></label>
+          <div class="ut-address-verification"><button type="button" data-action="unified-ticket-verify-address">Verify Address</button><span data-unified-ticket-address-status>Address verification required.</span><input type="hidden" name="verified_address"><input type="hidden" name="verified_lat"><input type="hidden" name="verified_lng"></div>
+        </div></fieldset>
+        <fieldset><legend>Customer and contact</legend><div class="ut-edit-grid">
+          <label>Customer / company<input name="customer_name" value="${escapeHtml(customerName)}"></label>
+          <label>Primary contact<input name="contact_name" value="${escapeHtml(contactName)}"></label>
+          <label>Contact phone<input name="contact_phone" type="tel" value="${escapeHtml(sourceTicket.contactPhone || (ticket.phone === "Not provided" ? "" : ticket.phone) || "")}"></label>
+          <label>Contact email<input name="contact_email" type="email" value="${escapeHtml(sourceTicket.contactEmail || (ticket.email === "Not provided" ? "" : ticket.email) || "")}"></label>
+        </div></fieldset>
+        <fieldset><legend>Scope and instructions</legend><div class="ut-edit-grid ut-edit-grid-textareas">
+          <label>Scope of work<textarea name="scope_of_work">${escapeHtml(sourceTicket.scopeOfWork || (ticket.scope === "No scope of work has been recorded." ? "" : ticket.scope) || "")}</textarea></label>
+          <label>Access instructions<textarea name="access_instructions">${escapeHtml(sourceTicket.accessInstructions || "")}</textarea></label>
+          <label>Customer notes<textarea name="customer_notes">${escapeHtml(sourceTicket.customerNotes || "")}</textarea></label>
+          <label>Internal notes<textarea name="internal_notes">${escapeHtml(sourceTicket.internalNotes || "")}</textarea></label>
+        </div></fieldset>
+        <footer><span data-unified-ticket-edit-status aria-live="polite"></span><button type="button" data-action="unified-ticket-edit-cancel">Cancel</button><button type="submit">Save Ticket &amp; Work Order</button></footer>
+      </form>
+    </section>`;
+  }
+
   function renderUnifiedTicketOverview() {
     const host = qs("[data-unified-ticket-workspace]");
     if (!host) return;
@@ -24610,21 +24742,24 @@ Requirements:
     const nav = UNIFIED_TICKET_NAV.map(([key, label, icon]) => `<button type="button" class="ut-nav-item ${active === key ? "is-active" : ""}" data-action="unified-ticket-section" data-section="${key}" aria-pressed="${active === key}"><span>${unifiedTicketIcon(icon)}</span>${label}</button>`).join("");
     ticket.type = ticketTypeLabel(ticket);
     const summaryRows = [["Type",ticket.type],["Priority",ticket.priority],["Due Date",ticket.dueDate],["Status",ticket.status],["Lead",ticket.lead],["Crew",ticket.crew],["Est. Time",ticket.duration || "Not set"],["Created",ticket.created],["Customer",ticket.customer],["Phone",ticket.phone],["Email",ticket.email]].map(([a,b])=>`<div><span>${escapeHtml(a)}</span><strong>${escapeHtml(cleanDisplayValue(b, "Not set"))}</strong></div>`).join("");
-    const quickActions = [["Edit Job","edit","work"],["Add Task","plus","tasks"],["Upload Photo","upload","photos"],["Add Note","note","notes"],["Create Document","document","documents"]].map(([label,icon,section])=>`<button type="button" data-action="unified-ticket-quick" data-section="${section}"><span>${unifiedTicketIcon(icon)}</span><strong>${label}</strong><b>›</b></button>`).join("");
+    const quickActions = `<button type="button" data-action="unified-ticket-edit"><span>${unifiedTicketIcon("edit")}</span><strong>Edit Ticket</strong><b>›</b></button>` + [["Add Task","plus","tasks"],["Upload Photo","upload","photos"],["Add Note","note","notes"],["Create Document","document","documents"]].map(([label,icon,section])=>`<button type="button" data-action="unified-ticket-quick" data-section="${section}"><span>${unifiedTicketIcon(icon)}</span><strong>${label}</strong><b>›</b></button>`).join("");
     const sectionActivity = selectedEvents.length ? selectedEvents.slice(0, 20).map((event) => `<article><strong>${escapeHtml(String(event.eventType || "Ticket updated").replaceAll("_", " "))}</strong><p>${escapeHtml(event.notes || "Ticket activity recorded.")}</p><small>${escapeHtml(event.createdAtRaw ? formatDateTime(event.createdAtRaw) : "")}</small></article>`).join("") : `<article><strong>No activity recorded</strong><p>Ticket history will appear here as work is completed.</p></article>`;
-    host.innerHTML = `<div class="unified-ticket-shell is-section-${escapeHtml(active)}">
+    const propertyAddress = unifiedTicketDisplayAddress(ticket);
+    const ticketRecordId = ticket.recordId || state.unifiedTicketSelectedId;
+    host.innerHTML = `<div class="unified-ticket-shell is-section-${escapeHtml(active)} ${state.unifiedTicketEditing ? "is-editing" : ""}">
       <nav class="ut-internal-nav" aria-label="Ticket sections">${nav}</nav>
       <main class="ut-main">
         <button type="button" class="ut-back" data-action="unified-ticket-back" data-return-section="${ticketReturnSection}">←&nbsp; ${ticketBackLabel}</button>
         <header class="ut-header"><div class="ut-title-line"><h1>#${escapeHtml(cleanDisplayValue(ticket.id, "Ticket"))}&nbsp;&nbsp; ${escapeHtml(cleanDisplayValue(ticket.title, "Property not set"))}</h1><span>${escapeHtml(cleanDisplayValue(ticket.status, "Unscheduled"))}</span><button type="button" data-action="unified-ticket-menu" aria-label="Ticket actions">⋮</button></div>
           <div class="ut-metadata">${[["Type",ticket.type,"document"],["Priority",ticket.priority,"upload"],["Due Date",ticket.dueDate,"calendar"],["Lead",ticket.lead,"crew"],["Location",ticket.location,"pin"]].map(([label,value,icon])=>`<div><span>${unifiedTicketIcon(icon)}${label}</span><strong>${escapeHtml(cleanDisplayValue(value, "Not set"))}</strong></div>`).join("")}</div>
-          <div class="ut-overflow-menu" data-unified-ticket-menu hidden><button type="button" data-action="unified-ticket-quick" data-section="work">Edit Job</button><button type="button" data-action="unified-ticket-section" data-section="history">View History</button>${canManageTicketTrash() && ticket.recordId ? `<button type="button" class="danger" data-action="trash-ticket" data-id="${escapeHtml(ticket.recordId)}">Move to Trash</button>` : ""}</div>
+          <div class="ut-overflow-menu" data-unified-ticket-menu hidden><button type="button" data-action="unified-ticket-edit">Edit Ticket</button><button type="button" data-action="unified-ticket-section" data-section="history">View History</button>${canManageTicketTrash() && ticket.recordId ? `<button type="button" class="danger" data-action="trash-ticket" data-id="${escapeHtml(ticket.recordId)}">Move to Trash</button>` : ""}</div>
         </header>
         <label class="ut-mobile-section-selector">Section<select data-unified-ticket-section-select aria-label="Ticket section">${UNIFIED_TICKET_NAV.map(([key,label])=>`<option value="${escapeHtml(key)}"${active === key ? " selected" : ""}>${escapeHtml(label)}</option>`).join("")}</select></label>
+        ${state.unifiedTicketEditing ? renderUnifiedTicketEditForm(sourceTicket || {}, ticket) : ""}
         ${active !== "overview" ? `<section class="ut-active-section-summary"><h3>${escapeHtml(activeLabel)}</h3><p>${escapeHtml(active === "details" ? "Customer, property, scope, and ticket details." : active === "work" ? "Scope, checklist, and field notes for this ticket." : active === "schedule" ? "Upcoming visit and scheduling details." : active === "tasks" ? "Checklist items connected to this ticket." : active === "photos" ? "Arrival, progress, and completion photos." : active === "documents" ? "Documents connected to this ticket." : active === "notes" ? "Operational notes connected to this ticket." : "Recorded ticket activity and lifecycle history.")}</p>${active === "history" ? `<div class="ut-section-activity">${sectionActivity}</div>` : ""}</section>` : ""}
         <div class="ut-main-top">
           <div class="ut-property-stack">
-            ${unifiedTicketCard("Property", `<div class="ut-property"><div class="ut-property-image"><button type="button" aria-label="View property location">${unifiedTicketIcon("pin")}</button></div><div class="ut-property-copy"><strong>${escapeHtml(cleanDisplayValue(ticket.title, "Property not set"))}</strong><span>${escapeHtml(cleanDisplayValue(ticket.address, "Address not set"))}</span><span>${escapeHtml(cleanDisplayValue(ticket.city, "Location not set"))}</span><hr><b>Property Contact</b><span>${escapeHtml(cleanDisplayValue(ticket.customer, "Client not set"))}</span><div class="ut-contact"><span>${unifiedTicketIcon("phone")}${escapeHtml(cleanDisplayValue(ticket.phone, "Not provided"))}</span><span>${unifiedTicketIcon("mail")}${escapeHtml(cleanDisplayValue(ticket.email, "Not provided"))}</span></div></div></div>`, "ut-property-card")}
+            ${unifiedTicketCard("Property", `<div class="ut-property"><div class="ut-property-image ut-street-view"><div class="ut-street-view-canvas" data-unified-ticket-street-view="${escapeHtml(ticketRecordId)}"></div><span class="ut-street-view-status" data-unified-ticket-street-view-status="${escapeHtml(ticketRecordId)}">Loading Street View...</span><button type="button" data-action="unified-ticket-open-location" data-address="${escapeHtml(propertyAddress)}" aria-label="Open verified property location in Google Maps">${unifiedTicketIcon("pin")}</button></div><div class="ut-property-copy"><strong>${escapeHtml(cleanDisplayValue(ticket.title, "Property not set"))}</strong><span>${escapeHtml(cleanDisplayValue(ticket.address, "Address not set"))}</span><span>${escapeHtml(cleanDisplayValue(ticket.city, "Location not set"))}</span><hr><b>Property Contact</b><span>${escapeHtml(cleanDisplayValue(ticket.customer, "Client not set"))}</span><div class="ut-contact"><span>${unifiedTicketIcon("phone")}${escapeHtml(cleanDisplayValue(ticket.phone, "Not provided"))}</span><span>${unifiedTicketIcon("mail")}${escapeHtml(cleanDisplayValue(ticket.email, "Not provided"))}</span></div></div></div>`, "ut-property-card")}
             ${unifiedTicketCard("Job Summary", `<p>${escapeHtml(ticket.scope || "No scope of work has been recorded.")}</p>`, "ut-job-summary")}
           </div>
           ${unifiedTicketCard("Summary", `<div class="ut-summary-rows">${summaryRows}</div>`, "ut-summary-card")}
@@ -24639,11 +24774,12 @@ Requirements:
       </main>
       <aside class="ut-sidebar">
         ${unifiedTicketCard("Progress", `<div class="ut-progress">${[["Created","check"],["Scheduled","calendar"],["On Site","pin"],["In Progress","clock"],["Complete","check"]].map(([label,icon],i)=>`<div class="${i===0?"is-done":i===1?"is-active":""}"><span>${unifiedTicketIcon(icon)}</span><small>${label}</small></div>`).join("")}</div>`, "ut-progress-card")}
-        ${unifiedTicketCard("Schedule", `<div class="ut-schedule-rows"><div><span>${unifiedTicketIcon("calendar")}Scheduled</span><strong>Jul 25, 2026 at 8:00 AM</strong></div><div><span>${unifiedTicketIcon("clock")}Estimated Duration</span><strong>2 hours</strong></div><div><span>${unifiedTicketIcon("crew")}Crew</span><strong>${ticket.crew}</strong></div></div><button class="ut-small-btn" type="button" data-action="unified-ticket-schedule">View Full Schedule</button>`, "ut-schedule-card")}
+        ${unifiedTicketCard("Schedule", `<div class="ut-schedule-rows"><div><span>${unifiedTicketIcon("calendar")}Scheduled</span><strong>${escapeHtml(ticket.nextVisit || "Not scheduled")}</strong></div><div><span>${unifiedTicketIcon("clock")}Estimated Duration</span><strong>${escapeHtml(ticket.duration || "Not set")}</strong></div><div><span>${unifiedTicketIcon("crew")}Crew</span><strong>${escapeHtml(ticket.crew)}</strong></div></div><button class="ut-small-btn" type="button" data-action="unified-ticket-schedule">View Full Schedule</button>`, "ut-schedule-card")}
         ${unifiedTicketCard("Recent Activity", `<div class="ut-activity">${[["Job scheduled","by Tyler G.","Jul 21, 8:15 AM"],["Estimate approved by customer","by Sarah Johnson","Jul 20, 4:32 PM"],["Quote sent to customer","by Tyler G.","Jul 20, 2:10 PM"]].map(([title,by,date])=>`<div><i></i><span><strong>${title}</strong><small>${by}</small></span><time>${date}</time></div>`).join("")}</div><button class="ut-small-btn" type="button" data-action="unified-ticket-section" data-section="history">View all history</button>`, "ut-activity-card")}
         ${unifiedTicketCard("Quick Actions", `<div class="ut-quick-actions">${quickActions}</div>`, "ut-quick-card")}
       </aside>
     </div>`;
+    if (!state.unifiedTicketEditing) void loadUnifiedTicketStreetView({ ...ticket, recordId: ticketRecordId });
   }
 
   const WORK_OPERATIONS_FIXTURE = Object.freeze([
@@ -24658,7 +24794,34 @@ Requirements:
 
   function workOperationsRows() {
     const live = approvedOperationalRows();
-    return live.length || !isDemoMode() ? live : WORK_OPERATIONS_FIXTURE.map((job) => ({ ...job, displayNumber: job.id, ticketId: job.id }));
+    return live.length || !isDemoMode() ? live : WORK_OPERATIONS_FIXTURE.map((job) => {
+      const ticket = (state.data.tickets || []).find((item) => String(item.id) === String(job.id));
+      if (!ticket) return { ...job, displayNumber: job.id, ticketId: job.id };
+      const dateRaw = ticket.scheduledDate || job.dateRaw || "";
+      const date = dateRaw ? new Date(`${dateRaw}T12:00:00`) : null;
+      const tomorrow = addDaysKey(todayKey(), 1);
+      return {
+        ...job,
+        displayNumber: job.id,
+        ticketId: job.id,
+        dateRaw,
+        date: dateRaw ? formatDate(dateRaw) : job.date,
+        visit: dateRaw === todayKey() ? "Today" : dateRaw === tomorrow ? "Tomorrow" : date ? date.toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric" }) : job.visit,
+        group: dateRaw === todayKey() ? "Today" : dateRaw === tomorrow ? "Tomorrow" : date ? (dateRaw <= addDaysKey(todayKey(), 6) ? date.toLocaleDateString("en-US", { weekday: "short" }) : "Later") : job.group,
+        time: ticket.workWindow || job.time,
+        job: ticket.property || ticket.title || job.job,
+        name: ticket.property || ticket.title || job.job,
+        customer: ticket.customer || job.customer,
+        type: ticket.requestedService || ticket.title || job.type,
+        address: ticket.propertyAddress || job.address,
+        city: ticket.city || job.city,
+        priority: ticket.priority || job.priority,
+        estimate: ticket.workWindow || job.estimate,
+        status: approvedTicketStatus(ticket),
+        ticket,
+        sourceJob: approvedTicketJob(ticket)
+      };
+    });
   }
 
   function ticketTimelineRows() {
@@ -26705,9 +26868,77 @@ Requirements:
         return;
       }
 
+      if (action === "unified-ticket-edit") {
+        state.unifiedTicketEditing = true;
+        state.unifiedTicketSection = "details";
+        renderUnifiedTicketOverview();
+        qs("[data-unified-ticket-edit-form] input[name='title']")?.focus();
+        return;
+      }
+
+      if (action === "unified-ticket-edit-cancel") {
+        state.unifiedTicketEditing = false;
+        renderUnifiedTicketOverview();
+        qs("[data-action='unified-ticket-edit']")?.focus();
+        return;
+      }
+
+      if (action === "unified-ticket-verify-address") {
+        const form = target.closest("[data-unified-ticket-edit-form]");
+        const input = form?.querySelector("input[name='property_address']");
+        const status = form?.querySelector("[data-unified-ticket-address-status]");
+        const address = String(input?.value || "").trim();
+        if (!form || !address) {
+          if (status) status.textContent = "Enter a property address before verifying it.";
+          input?.focus();
+          return;
+        }
+        try {
+          target.disabled = true;
+          if (status) status.textContent = "Verifying address...";
+          const verified = isDemoMode()
+            ? { address: normalizedRouteLookupAddress(address), displayName: normalizedRouteLookupAddress(address), provider: "demo" }
+            : await geocodeRouteAddress(address);
+          const verifiedAddress = verified.displayName || verified.address || address;
+          input.value = verifiedAddress;
+          form.dataset.verifiedAddress = verifiedAddress;
+          form.querySelector("input[name='verified_address']").value = verifiedAddress;
+          form.querySelector("input[name='verified_lat']").value = Number.isFinite(Number(verified.lat)) ? String(verified.lat) : "";
+          form.querySelector("input[name='verified_lng']").value = Number.isFinite(Number(verified.lng)) ? String(verified.lng) : "";
+          if (Number.isFinite(Number(verified.lat)) && Number.isFinite(Number(verified.lng))) {
+            unifiedTicketLocationCache.set(normalizedRouteLookupAddress(verifiedAddress).toLowerCase(), Promise.resolve(verified));
+          }
+          if (status) {
+            status.textContent = isDemoMode() ? "Demo address accepted. Production saves use live verification." : `Verified by ${verified.provider === "google" ? "Google Maps" : "the map service"}.`;
+            status.classList.add("is-verified");
+          }
+        } catch (error) {
+          form.dataset.verifiedAddress = "";
+          if (status) {
+            status.textContent = error.message || "The address could not be verified.";
+            status.classList.remove("is-verified");
+          }
+        } finally {
+          target.disabled = false;
+        }
+        return;
+      }
+
+      if (action === "unified-ticket-open-location") {
+        const address = String(target.dataset.address || "").trim();
+        if (!address) {
+          setDashboardState("Add and verify the property address before opening Google Maps.", "error");
+          return;
+        }
+        const mapWindow = window.open(`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(address)}`, "_blank", "noopener,noreferrer");
+        if (mapWindow) mapWindow.opener = null;
+        return;
+      }
+
       if (action === "unified-ticket-open") {
         state.unifiedTicketReturnSection = target.dataset.returnSection || (state.activeSection === "calendar" ? "calendar" : "tickets");
         state.unifiedTicketVisible = true;
+        state.unifiedTicketEditing = false;
         state.unifiedTicketSection = "overview";
         state.unifiedTicketSelectedId = id || "10024";
         setActiveSection("tickets");
@@ -26727,6 +26958,7 @@ Requirements:
       if (action === "unified-ticket-back") {
         const returnSection = target.dataset.returnSection || state.unifiedTicketReturnSection || "tickets";
         state.unifiedTicketVisible = false;
+        state.unifiedTicketEditing = false;
         state.unifiedTicketReturnSection = "tickets";
         if (returnSection === "calendar") {
           setActiveSection("calendar");
@@ -26751,6 +26983,7 @@ Requirements:
 
       if (action === "unified-ticket-section" || action === "unified-ticket-quick") {
         const sectionKey = target.dataset.section || "overview";
+        state.unifiedTicketEditing = false;
         state.unifiedTicketSection = sectionKey;
         renderUnifiedTicketOverview();
         const selector = { tasks: ".ut-tasks-card", photos: ".ut-photos-card", documents: ".ut-documents-card", notes: ".ut-notes-card", history: ".ut-activity-card", schedule: ".ut-schedule-card", work: ".ut-job-summary", details: ".ut-property-card" }[sectionKey];
@@ -30741,6 +30974,113 @@ Requirements:
     });
 
   els.appView.addEventListener("submit", async (event) => {
+      if (event.target?.matches?.("[data-unified-ticket-edit-form]")) {
+        event.preventDefault();
+        const form = event.target;
+        const data = new FormData(form);
+        const ticketId = form.dataset.ticketId || state.unifiedTicketSelectedId || "";
+        const status = form.querySelector("[data-unified-ticket-edit-status]");
+        const submit = form.querySelector("button[type='submit']");
+        let address = String(data.get("property_address") || "").trim();
+        if (!ticketId || !address) {
+          if (status) status.textContent = "A ticket and property address are required.";
+          return;
+        }
+        try {
+          if (submit) submit.disabled = true;
+          if (status) status.textContent = "Verifying the address and saving...";
+          let verified = null;
+          if (form.dataset.verifiedAddress === address) {
+            const verifiedLat = String(data.get("verified_lat") || "");
+            const verifiedLng = String(data.get("verified_lng") || "");
+            verified = {
+              displayName: String(data.get("verified_address") || address),
+              lat: verifiedLat ? Number(verifiedLat) : null,
+              lng: verifiedLng ? Number(verifiedLng) : null
+            };
+          } else if (!isDemoMode()) {
+            verified = await geocodeRouteAddress(address);
+            address = verified.displayName || verified.address || address;
+          } else {
+            address = normalizedRouteLookupAddress(address);
+          }
+          const ticketPayload = {
+            title: String(data.get("title") || "").trim(),
+            requestedService: String(data.get("requested_service") || "").trim(),
+            priority: String(data.get("priority") || "Normal"),
+            dueDate: String(data.get("due_date") || ""),
+            scheduledDate: String(data.get("scheduled_date") || ""),
+            workWindow: String(data.get("work_window") || "").trim(),
+            assignedUserId: String(data.get("assigned_user_id") || ""),
+            propertyName: String(data.get("property_name") || "").trim(),
+            propertyAddress: address,
+            city: String(data.get("city") || "").trim(),
+            customerName: String(data.get("customer_name") || "").trim(),
+            contactName: String(data.get("contact_name") || "").trim(),
+            contactPhone: String(data.get("contact_phone") || "").trim(),
+            contactEmail: String(data.get("contact_email") || "").trim(),
+            scopeOfWork: String(data.get("scope_of_work") || "").trim(),
+            accessInstructions: String(data.get("access_instructions") || "").trim(),
+            customerNotes: String(data.get("customer_notes") || "").trim(),
+            internalNotes: String(data.get("internal_notes") || "").trim()
+          };
+          let existingTicket = (state.data.tickets || []).find((ticket) => String(ticket.id) === String(ticketId));
+          if (!existingTicket && isDemoMode()) {
+            const fixture = WORK_OPERATIONS_FIXTURE.find((job) => String(job.id) === String(ticketId)) || {};
+            existingTicket = normalizeCanonicalTicket({
+              id: ticketId,
+              ticket_number: ticketId,
+              title: fixture.job || ticketPayload.title,
+              property_name: fixture.job || ticketPayload.propertyName,
+              property_address: fixture.address || ticketPayload.propertyAddress,
+              city: fixture.city || ticketPayload.city,
+              customer_name: fixture.customer || ticketPayload.customerName,
+              requested_service: ticketPayload.requestedService,
+              priority: fixture.priority || ticketPayload.priority,
+              status: fixture.status || "Scheduled",
+              work_window: fixture.estimate || ticketPayload.workWindow,
+              created_at: new Date().toISOString(),
+              updated_at: new Date().toISOString()
+            });
+            state.data.tickets.unshift(existingTicket);
+          }
+          const savedTicket = await updateJobTicket(ticketId, ticketPayload);
+          const linkedJobId = form.dataset.jobId || savedTicket?.jobId || existingTicket?.jobId || "";
+          if (linkedJobId) {
+            const existingJob = (state.data.jobs || []).find((job) => String(job.id) === String(linkedJobId));
+            const savedJob = await updateScheduledJob(linkedJobId, {
+              visit_date: ticketPayload.scheduledDate || existingJob?.dateRaw || null,
+              visit_window: ticketPayload.workWindow || existingJob?.window || null,
+              site_name: ticketPayload.propertyName || existingJob?.site || null,
+              city: ticketPayload.city || existingJob?.city || null,
+              service: ticketPayload.requestedService || existingJob?.service || null,
+              status: existingJob?.status || "Scheduled"
+            });
+            if (savedJob) {
+              const jobIndex = state.data.jobs.findIndex((job) => String(job.id) === String(linkedJobId));
+              if (jobIndex >= 0) state.data.jobs[jobIndex] = savedJob;
+              else state.data.jobs.push(savedJob);
+            }
+          }
+          if (verified && verified.lat !== null && verified.lng !== null && Number.isFinite(Number(verified.lat)) && Number.isFinite(Number(verified.lng))) {
+            unifiedTicketLocationCache.set(normalizedRouteLookupAddress(address).toLowerCase(), Promise.resolve({ ...verified, displayName: address }));
+          }
+          await insertJobTicketEvent(ticketId, {
+            eventType: "ticket_details_updated",
+            notes: linkedJobId ? "Ticket details and linked work order updated." : "Ticket details updated.",
+            oldValue: existingTicket || null,
+            newValue: ticketPayload
+          });
+          state.unifiedTicketEditing = false;
+          renderUnifiedTicketOverview();
+          setDashboardState(linkedJobId ? "Ticket and linked work order updated." : "Ticket updated. No separate scheduled work order is linked yet.");
+        } catch (error) {
+          if (submit) submit.disabled = false;
+          if (status) status.textContent = error.message || "The ticket could not be updated.";
+          setDashboardState(error.message || "The ticket could not be updated.", "error");
+        }
+        return;
+      }
       if (event.target?.matches?.("[data-work-note-form]")) {
         event.preventDefault();
         const note = event.target.querySelector("textarea")?.value.trim();

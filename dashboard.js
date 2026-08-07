@@ -23982,32 +23982,15 @@ Requirements:
       : homeWeatherUpdatedLabel(state.weatherFetchedAt);
     return `<header class="home-weather-header">
       <div><p class="clean-section-label">Portland, OR</p><h2>7-Day Weather</h2><span>${escapeHtml(statusText || "National Weather Service forecast")}</span></div>
-      <div class="home-weather-controls" aria-label="Weather forecast controls">
-        <button type="button" data-action="weather-scroll" data-direction="previous" aria-label="Previous forecast days" disabled>${homeWeatherControlIcon("previous")}</button>
-        <button type="button" data-action="weather-scroll" data-direction="next" aria-label="Next forecast days" disabled>${homeWeatherControlIcon("next")}</button>
-        <button type="button" data-action="refresh-weather" aria-label="Refresh weather" ${loading || refreshing ? "disabled" : ""}>${homeWeatherControlIcon("refresh")}</button>
-      </div>
     </header>
     ${failed ? `<div class="home-weather-error" role="alert"><span><strong>Weather is temporarily unavailable.</strong><small>${escapeHtml(state.weatherError || "Try again in a moment.")}</small></span><button type="button" data-action="refresh-weather">Try again</button></div>` : `<div class="home-weather-rail${loading ? " is-loading" : ""}" data-weather-rail tabindex="0" aria-label="Portland seven-day weather forecast">${loading ? renderHomeWeatherSkeletons() : state.weatherData.map(renderHomeWeatherDay).join("")}</div>`}
     <p class="sr-only" aria-live="polite">${loading ? "Loading the Portland weather forecast." : refreshing ? "Refreshing the Portland weather forecast." : failed ? "The weather forecast could not be loaded." : hasData ? `Weather forecast loaded for ${state.weatherData.length} days.` : ""}</p>`;
-  }
-
-  function updateHomeWeatherNavigation() {
-    const rail = qs("[data-weather-rail]");
-    if (!rail) return;
-    const section = rail.closest("[data-home-weather]");
-    const previous = section?.querySelector('[data-action="weather-scroll"][data-direction="previous"]');
-    const next = section?.querySelector('[data-action="weather-scroll"][data-direction="next"]');
-    const maxScroll = Math.max(0, rail.scrollWidth - rail.clientWidth);
-    if (previous) previous.disabled = maxScroll <= 2 || rail.scrollLeft <= 16;
-    if (next) next.disabled = maxScroll <= 2 || rail.scrollLeft >= maxScroll - 16;
   }
 
   function bindHomeWeatherRail() {
     const rail = qs("[data-weather-rail]");
     if (!rail || rail.dataset.weatherBound === "true") return;
     rail.dataset.weatherBound = "true";
-    rail.addEventListener("scroll", updateHomeWeatherNavigation, { passive: true });
     rail.addEventListener("keydown", (event) => {
       if (event.key !== "ArrowLeft" && event.key !== "ArrowRight") return;
       event.preventDefault();
@@ -24024,11 +24007,6 @@ Requirements:
       const fallback = image.nextElementSibling;
       if (fallback) fallback.hidden = false;
     }, { once: true }));
-    if (!state.weatherResizeBound) {
-      state.weatherResizeBound = true;
-      window.addEventListener("resize", () => requestAnimationFrame(updateHomeWeatherNavigation), { passive: true });
-    }
-    requestAnimationFrame(updateHomeWeatherNavigation);
   }
 
   function updateHomeWeatherSection() {
@@ -24047,7 +24025,6 @@ Requirements:
     const distance = Math.max(card?.getBoundingClientRect().width || rail.clientWidth * 0.72, 180) + gap;
     const reducedMotion = window.matchMedia?.("(prefers-reduced-motion: reduce)").matches || document.documentElement.dataset.reducedMotion === "true";
     rail.scrollBy({ left: direction === "previous" ? -distance : distance, behavior: reducedMotion ? "auto" : "smooth" });
-    window.setTimeout(updateHomeWeatherNavigation, reducedMotion ? 0 : 320);
   }
 
   function ensureHomeWeather(options = {}) {
@@ -24206,7 +24183,6 @@ Requirements:
     }
     return `<header class="home-weather-alert-header">
       <div><p class="clean-section-label">National Weather Service</p><h2 id="home-weather-alerts-title">Portland Weather Alerts</h2><span>${escapeHtml(statusText)}</span></div>
-      <button type="button" class="home-weather-alert-refresh${refreshing ? " is-refreshing" : ""}" data-action="refresh-weather-alerts" aria-label="Refresh Portland weather alerts" ${loading || refreshing ? "disabled" : ""}>${homeWeatherAlertSvg("refresh")}</button>
     </header>
     ${body}
     <footer class="home-weather-alert-footer"><a href="https://www.weather.gov/" target="_blank" rel="noopener noreferrer">Alerts by the National Weather Service <span aria-hidden="true">&nearr;</span></a></footer>
@@ -26389,11 +26365,6 @@ Requirements:
       const id = target.dataset.id;
       if (action !== "toggle-global-add") setGlobalAddOpen(false);
       if (target.closest("[data-global-search-panel]")) closeGlobalSearchPanel();
-
-      if (action === "weather-scroll") {
-        scrollHomeWeather(target.dataset.direction || "next");
-        return;
-      }
 
       if (action === "refresh-weather") {
         state.weatherStatus = state.weatherData.length ? "refreshing" : "loading";

@@ -204,6 +204,7 @@ test("Home alert markup provides responsive, keyboard-native, and accessible sta
   assert.match(js, /data-action="toggle-weather-alert"[\s\S]*aria-expanded=/);
   assert.match(js, /View on the National Weather Service/);
   assert.match(js, /Alerts by the National Weather Service/);
+  assert.doesNotMatch(js, /aria-label="Refresh Portland weather alerts"/);
   assert.match(js, /document\.addEventListener\("visibilitychange"/);
   assert.match(js, /setInterval\([\s\S]*ensureHomeWeatherAlerts/);
   assert.match(css, /\.home-weather-alert-card\.is-extreme/);

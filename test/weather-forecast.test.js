@@ -192,28 +192,28 @@ test("API failure rejects without cache and returns stale data with expired cach
   assert.equal(result.data[0].date, "2026-08-05");
 });
 
-test("Home weather markup exposes accessible controls, disabled-end logic, and contained responsive scrolling", () => {
+test("Home weather uses a compact button-free forecast with contained responsive scrolling", () => {
   const html = read("dashboard.html");
   const js = read("dashboard.js");
   const css = read("dashboard-unified.css");
   const netlify = read("netlify.toml");
   assert.match(html, /scripts\/weather-forecast\.js\?v=20260806-weather-alerts-1/);
-  assert.match(js, /aria-label="Previous forecast days"/);
-  assert.match(js, /aria-label="Next forecast days"/);
-  assert.match(js, /aria-label="Refresh weather"/);
+  assert.doesNotMatch(js, /aria-label="Previous forecast days"/);
+  assert.doesNotMatch(js, /aria-label="Next forecast days"/);
+  assert.doesNotMatch(js, /aria-label="Refresh weather"/);
   assert.match(js, /Weather is temporarily unavailable\./);
   assert.match(js, />Try again<\/button>/);
   assert.match(js, /Today&rsquo;s Schedule/);
   assert.match(js, /Needs Attention/);
   assert.match(js, /images\/weather-icon-pack\/png-128\/\$\{iconId\}\.png/);
   assert.match(js, /data-weather-fallback-src="\$\{fallbackUrl\}"/);
-  assert.match(js, /previous\.disabled = maxScroll <= 2 \|\| rail\.scrollLeft <= 16/);
-  assert.match(js, /next\.disabled = maxScroll <= 2 \|\| rail\.scrollLeft >= maxScroll - 16/);
+  assert.doesNotMatch(js, /data-action="weather-scroll"/);
   assert.match(css, /\.home-weather-icon img\{[\s\S]*?object-fit:contain/);
   assert.match(css, /\.home-weather-icon\{[\s\S]*?justify-self:center/);
-  assert.match(css, /@media\(max-width:760px\)[\s\S]*?\.home-weather-icon\{width:44px;height:44px\}/);
+  assert.match(css, /\.home-weather-day\{[\s\S]*?min-height:182px;[\s\S]*?gap:6px;[\s\S]*?padding:10px/);
+  assert.match(css, /@media\(max-width:760px\)[\s\S]*?\.home-weather-icon\{width:40px;height:40px\}/);
   assert.match(css, /\.home-weather-rail\{[\s\S]*?max-width:100%;[\s\S]*?overflow-x:auto/);
-  assert.match(css, /@media\(max-width:760px\)[\s\S]*?\.home-weather-rail\{grid-auto-columns:minmax\(205px,78vw\)/);
+  assert.match(css, /@media\(max-width:760px\)[\s\S]*?\.home-weather-rail\{grid-auto-columns:minmax\(184px,72vw\)/);
   assert.match(netlify, /img-src[^;]*https:\/\/api\.weather\.gov/);
   assert.match(netlify, /connect-src[^;]*https:\/\/api\.weather\.gov/);
 });

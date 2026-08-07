@@ -10858,6 +10858,7 @@
       zoom: options.zoom || 11,
       controlSize: compact ? 24 : 32,
       disableDefaultUI: true,
+      cameraControl: false,
       mapTypeControl: false,
       streetViewControl: false,
       fullscreenControl: false,
@@ -10899,6 +10900,9 @@
     await loadGoogleMapsScript();
     const existing = googleMapViews.get(key);
     if (existing?.map && existing.mapElement === mapElement) {
+      // Reapply the current control policy whenever a persisted map view is
+      // reused so newly introduced Google controls do not reappear.
+      existing.map.setOptions(googleMapOptions(options));
       resizeGoogleMapView(existing);
       return existing;
     }

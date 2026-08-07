@@ -41,13 +41,17 @@ test("Route Planner renders the approved weekly card workspace from shared sched
   assert.match(js, /stops\.map\(renderRoutePlannerStop\)/);
   assert.match(js, /Ticket and scheduled-work stops must be changed from their linked record\./);
   assert.match(js, /disableDefaultUI: true/);
+  assert.match(js, /cameraControl: false/);
   assert.match(js, /fullscreenControl: false/);
+  assert.match(js, /scaleControl: false/);
   assert.match(js, /keyboardShortcuts: false/);
+  assert.match(js, /existing\.map\.setOptions\(googleMapOptions\(options\)\)/);
   assert.match(js, /No stops scheduled[\s\S]*data-action="route-add-stop"/);
   assert.match(js, /"route-planner"[\s\S]*\.includes\(key\)\) return/);
   assert.match(css, /grid-template-columns:repeat\(7,minmax\(188px,1fr\)\)/);
   assert.match(css, /\.route-stop-delete\{width:26px/);
   assert.match(css, /\.route-day-stops\{[^}]*max-height:288px[^}]*overflow-y:auto/);
+  assert.match(css, /#route-planner \.gm-style button\[aria-label="Undo last edit"\],[\s\S]*button\[aria-label\^="Map Scale:"\][\s\S]*display: none !important/);
 });
 
 test("every dashboard address field receives Google Places suggestions", () => {
@@ -65,8 +69,8 @@ test("archived workspace polish remains available with current dashboard assets"
   assert.match(css, /\.call-queue-row > span:first-child :is\(strong, small\)[\s\S]*overflow-wrap: anywhere/);
   assert.match(css, /\.groundskeeper-operation-card[\s\S]*white-space: normal !important/);
   assert.match(css, /\.dashboard-health-item strong[\s\S]*word-break: break-all/);
-  assert.match(html, /dashboard\.css\?v=20260806-route-address-2/);
-  assert.match(html, /dashboard\.js\?v=20260806-route-address-2/);
+  assert.match(html, /dashboard\.css\?v=20260807-route-map-controls-1/);
+  assert.match(html, /dashboard\.js\?v=20260807-route-map-controls-1/);
 });
 
 test("Tickets Leads and Money use the same flat white page canvas as Home and Work", () => {

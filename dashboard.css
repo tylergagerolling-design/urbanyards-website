@@ -3451,6 +3451,14 @@ button:active,
   display: inline-block;
 }
 
+/* Google Maps' current camera UI can expose an "Undo last edit" control and
+   a scale button even when the legacy default UI is disabled. Route Planner
+   intentionally shows only the route, markers, and map surface. */
+#route-planner .gm-style button[aria-label="Undo last edit"],
+#route-planner .gm-style button[aria-label^="Map Scale:"] {
+  display: none !important;
+}
+
 .dashboard-map-preview-shell {
   position: relative;
   width: 100%;

@@ -10808,15 +10808,33 @@
   }
 
   async function loadGoogleMapsScript() {
-    if (window.google?.maps) return Promise.resolve(window.google.maps);
+    const googleMapsReady = () => Boolean(window.google?.maps?.Map && window.google?.maps?.places?.Autocomplete);
+    if (googleMapsReady()) return Promise.resolve(window.google.maps);
     if (googleMapsLoadPromise) return googleMapsLoadPromise;
     const key = await getGoogleMapsBrowserKey();
     if (!key) return Promise.reject(new Error("Google Maps browser key is not configured."));
 
     googleMapsLoadPromise = new Promise((resolve, reject) => {
+      let readyTimer = 0;
+      const waitForGoogleMaps = () => {
+        const startedAt = Date.now();
+        const checkReady = () => {
+          if (googleMapsReady()) {
+            window.clearTimeout(readyTimer);
+            resolve(window.google.maps);
+            return;
+          }
+          if (Date.now() - startedAt >= 10000) {
+            reject(new Error("Google Maps libraries did not finish loading."));
+            return;
+          }
+          readyTimer = window.setTimeout(checkReady, 50);
+        };
+        checkReady();
+      };
       const existing = document.querySelector("script[data-google-maps-route]");
       if (existing) {
-        existing.addEventListener("load", () => resolve(window.google.maps), { once: true });
+        waitForGoogleMaps();
         existing.addEventListener("error", () => reject(new Error("Google Maps failed to load.")), { once: true });
         return;
       }
@@ -10825,7 +10843,7 @@
       script.async = true;
       script.defer = true;
       script.dataset.googleMapsRoute = "true";
-      script.addEventListener("load", () => resolve(window.google.maps), { once: true });
+      script.addEventListener("load", waitForGoogleMaps, { once: true });
       script.addEventListener("error", () => reject(new Error("Google Maps failed to load.")), { once: true });
       document.head.appendChild(script);
     });

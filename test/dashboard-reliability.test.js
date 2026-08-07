@@ -16,7 +16,10 @@ function read(relativePath) {
 }
 
 test("Google Maps loads asynchronously to avoid blocking dashboard startup", () => {
-  assert.match(read("dashboard.js"), /maps\/api\/js\?key=.*&loading=async/);
+  const js = read("dashboard.js");
+  assert.match(js, /maps\/api\/js\?key=.*&loading=async/);
+  assert.match(js, /googleMapsReady[\s\S]*maps\?\.Map[\s\S]*places\?\.Autocomplete/);
+  assert.match(js, /waitForGoogleMaps[\s\S]*setTimeout\(checkReady, 50\)/);
 });
 
 test("Route Planner renders the approved weekly card workspace from shared schedule data", () => {
@@ -62,8 +65,8 @@ test("archived workspace polish remains available with current dashboard assets"
   assert.match(css, /\.call-queue-row > span:first-child :is\(strong, small\)[\s\S]*overflow-wrap: anywhere/);
   assert.match(css, /\.groundskeeper-operation-card[\s\S]*white-space: normal !important/);
   assert.match(css, /\.dashboard-health-item strong[\s\S]*word-break: break-all/);
-  assert.match(html, /dashboard\.css\?v=20260806-route-address-1/);
-  assert.match(html, /dashboard\.js\?v=20260806-route-address-1/);
+  assert.match(html, /dashboard\.css\?v=20260806-route-address-2/);
+  assert.match(html, /dashboard\.js\?v=20260806-route-address-2/);
 });
 
 test("Tickets Leads and Money use the same flat white page canvas as Home and Work", () => {

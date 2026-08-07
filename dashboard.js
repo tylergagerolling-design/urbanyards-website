@@ -24590,6 +24590,10 @@ Requirements:
     return `<section class="ut-card ${className}"><h3>${escapeHtml(title)}</h3>${body}</section>`;
   }
 
+  function unifiedTicketCardEditAction(label, focus) {
+    return `<button type="button" class="ut-card-edit" data-action="unified-ticket-edit" data-focus="${escapeHtml(focus)}">${escapeHtml(label)}</button>`;
+  }
+
   const TICKET_TIMELINE_FIXTURE = Object.freeze([
     { group:"Today", date:"Jul 23", time:"8:00 AM", id:"10024", name:"Johnson Residence", type:"Maintenance", address:"123 Main St", city:"Portland, OR", status:"In Progress", crew:"John D.", extra:"+1", priority:"Medium", range:"week" },
     { group:"Today", date:"Jul 23", time:"1:00 PM", id:"10022", name:"Pinecrest Office Park", type:"Maintenance", address:"789 Pine Rd", city:"Beaverton, OR", status:"In Progress", crew:"Sarah P.", extra:"+2", priority:"Medium", range:"week" },
@@ -24665,7 +24669,7 @@ Requirements:
       .map((profile) => ({ id: profile.userId || profile.id || "", label: profile.displayName || profile.name || profile.email || "Team member" }))
       .filter((profile) => profile.id);
     const propertyName = sourceTicket.property || ticket.title || "";
-    const ticketTitle = sourceTicket.title || sourceTicket.requestedService || ticket.type || "";
+    const ticketTitle = sourceTicket.title || ticket.title || "";
     const scheduledDate = sourceTicket.scheduledDate || linkedJob?.dateRaw || "";
     const workWindow = sourceTicket.workWindow || linkedJob?.window || (ticket.duration === "Not set" ? "" : ticket.duration) || "";
     const address = sourceTicket.propertyAddress || ticket.address || "";
@@ -24727,6 +24731,7 @@ Requirements:
       type:ticketTypeLabel(selectedTimelineTicket), priority:cleanDisplayValue(selectedTimelineTicket.priority, "Normal"), location:cleanDisplayValue(selectedTimelineTicket.city, "Location not set"),
       address:selectedTimelineTicket.address, city:selectedTimelineTicket.city,
       customer:cleanDisplayValue(sourceTicket?.customer || selectedTimelineTicket.customer, "Client not set"),
+      contact:cleanDisplayValue(sourceTicket?.primaryContact || selectedTimelineTicket.customer || sourceTicket?.customer, "Contact not set"),
       phone:sourceTicket?.contactPhone || "Not provided", email:sourceTicket?.contactEmail || "Not provided",
       lead:selectedTimelineTicket.crewName || "Unassigned", crew:selectedTimelineTicket.crewName || "Unassigned",
       dueDate:formatDate(sourceTicket?.dueDate || selectedTimelineTicket.dateRaw) || "Not set",
@@ -24759,10 +24764,10 @@ Requirements:
         ${active !== "overview" ? `<section class="ut-active-section-summary"><h3>${escapeHtml(activeLabel)}</h3><p>${escapeHtml(active === "details" ? "Customer, property, scope, and ticket details." : active === "work" ? "Scope, checklist, and field notes for this ticket." : active === "schedule" ? "Upcoming visit and scheduling details." : active === "tasks" ? "Checklist items connected to this ticket." : active === "photos" ? "Arrival, progress, and completion photos." : active === "documents" ? "Documents connected to this ticket." : active === "notes" ? "Operational notes connected to this ticket." : "Recorded ticket activity and lifecycle history.")}</p>${active === "history" ? `<div class="ut-section-activity">${sectionActivity}</div>` : ""}</section>` : ""}
         <div class="ut-main-top">
           <div class="ut-property-stack">
-            ${unifiedTicketCard("Property", `<div class="ut-property"><div class="ut-property-image ut-street-view"><div class="ut-street-view-canvas" data-unified-ticket-street-view="${escapeHtml(ticketRecordId)}"></div><span class="ut-street-view-status" data-unified-ticket-street-view-status="${escapeHtml(ticketRecordId)}">Loading Street View...</span><button type="button" data-action="unified-ticket-open-location" data-address="${escapeHtml(propertyAddress)}" aria-label="Open verified property location in Google Maps">${unifiedTicketIcon("pin")}</button></div><div class="ut-property-copy"><strong>${escapeHtml(cleanDisplayValue(ticket.title, "Property not set"))}</strong><span>${escapeHtml(cleanDisplayValue(ticket.address, "Address not set"))}</span><span>${escapeHtml(cleanDisplayValue(ticket.city, "Location not set"))}</span><hr><b>Property Contact</b><span>${escapeHtml(cleanDisplayValue(ticket.customer, "Client not set"))}</span><div class="ut-contact"><span>${unifiedTicketIcon("phone")}${escapeHtml(cleanDisplayValue(ticket.phone, "Not provided"))}</span><span>${unifiedTicketIcon("mail")}${escapeHtml(cleanDisplayValue(ticket.email, "Not provided"))}</span></div></div></div>`, "ut-property-card")}
-            ${unifiedTicketCard("Job Summary", `<p>${escapeHtml(ticket.scope || "No scope of work has been recorded.")}</p>`, "ut-job-summary")}
+            ${unifiedTicketCard("Property", `${unifiedTicketCardEditAction("Edit Property & Contact", "property_name")}<div class="ut-property"><div class="ut-property-image ut-street-view"><div class="ut-street-view-canvas" data-unified-ticket-street-view="${escapeHtml(ticketRecordId)}"></div><span class="ut-street-view-status" data-unified-ticket-street-view-status="${escapeHtml(ticketRecordId)}">Loading Street View...</span><button type="button" data-action="unified-ticket-open-location" data-address="${escapeHtml(propertyAddress)}" aria-label="Open verified property location in Google Maps">${unifiedTicketIcon("pin")}</button></div><div class="ut-property-copy"><strong>${escapeHtml(cleanDisplayValue(ticket.title, "Property not set"))}</strong><span>${escapeHtml(cleanDisplayValue(ticket.address, "Address not set"))}</span><span>${escapeHtml(cleanDisplayValue(ticket.city, "Location not set"))}</span><hr><b>Property Contact</b><span>${escapeHtml(cleanDisplayValue(ticket.contact, "Contact not set"))}</span><div class="ut-contact"><span>${unifiedTicketIcon("phone")}${escapeHtml(cleanDisplayValue(ticket.phone, "Not provided"))}</span><span>${unifiedTicketIcon("mail")}${escapeHtml(cleanDisplayValue(ticket.email, "Not provided"))}</span></div></div></div>`, "ut-property-card")}
+            ${unifiedTicketCard("Job Summary", `${unifiedTicketCardEditAction("Edit Scope", "scope_of_work")}<p>${escapeHtml(ticket.scope || "No scope of work has been recorded.")}</p>`, "ut-job-summary")}
           </div>
-          ${unifiedTicketCard("Summary", `<div class="ut-summary-rows">${summaryRows}</div>`, "ut-summary-card")}
+          ${unifiedTicketCard("Summary", `${unifiedTicketCardEditAction("Edit Summary", "title")}<div class="ut-summary-rows">${summaryRows}</div>`, "ut-summary-card")}
         </div>
         ${unifiedTicketCard("", `<div class="ut-next-visit"><span>${unifiedTicketIcon("calendar")}</span><div><b>Next Visit</b><strong>${escapeHtml(ticket.nextVisit || "Not scheduled")}</strong><small>Estimated: ${escapeHtml(ticket.duration || "Not set")}</small></div><button type="button" data-action="unified-ticket-schedule">View / Edit Schedule</button></div>`, "ut-next-card")}
         <div class="ut-lower-grid">
@@ -26872,7 +26877,8 @@ Requirements:
         state.unifiedTicketEditing = true;
         state.unifiedTicketSection = "details";
         renderUnifiedTicketOverview();
-        qs("[data-unified-ticket-edit-form] input[name='title']")?.focus();
+        const focusName = target.dataset.focus || "title";
+        qs(`[data-unified-ticket-edit-form] [name="${cssEscape(focusName)}"]`)?.focus();
         return;
       }
 

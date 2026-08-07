@@ -69,8 +69,8 @@ test("archived workspace polish remains available with current dashboard assets"
   assert.match(css, /\.call-queue-row > span:first-child :is\(strong, small\)[\s\S]*overflow-wrap: anywhere/);
   assert.match(css, /\.groundskeeper-operation-card[\s\S]*white-space: normal !important/);
   assert.match(css, /\.dashboard-health-item strong[\s\S]*word-break: break-all/);
-  assert.match(html, /dashboard\.css\?v=20260807-unified-ticket-location-1/);
-  assert.match(html, /dashboard\.js\?v=20260807-unified-ticket-location-1/);
+  assert.match(html, /dashboard\.css\?v=20260807-unified-ticket-edit-cards-2/);
+  assert.match(html, /dashboard\.js\?v=20260807-unified-ticket-edit-cards-2/);
 });
 
 test("Tickets Leads and Money use the same flat white page canvas as Home and Work", () => {
@@ -1584,8 +1584,15 @@ test("Unified Ticket edits the canonical record, syncs its work order, and verif
   assert.match(js, /new maps\.StreetViewService/);
   assert.match(js, /new maps\.StreetViewPanorama/);
   assert.match(js, /data-unified-ticket-street-view=/);
+  assert.match(js, /function unifiedTicketCardEditAction/);
+  assert.match(js, /Edit Property & Contact/);
+  assert.match(js, /Edit Scope/);
+  assert.match(js, /Edit Summary/);
+  assert.match(js, /const ticketTitle = sourceTicket\.title \|\| ticket\.title \|\| ""/);
+  assert.match(js, /const focusName = target\.dataset\.focus \|\| "title"/);
   assert.match(css, /\.ut-ticket-editor/);
   assert.match(css, /\.ut-street-view-canvas/);
+  assert.match(css, /\.ut-card-edit/);
 });
 
 test("functional QA safeguards route transitions, demo edits, and visible feedback", () => {

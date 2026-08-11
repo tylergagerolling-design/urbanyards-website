@@ -24819,6 +24819,7 @@ Requirements:
       edit: '<path d="M4 20h4L19 9l-4-4L4 16zM13 7l4 4"></path>',
       upload: '<path d="M12 16V4M7 9l5-5 5 5M4 20h16"></path>',
       plus: '<path d="M12 5v14M5 12h14"></path>',
+      trash: '<path d="M4 7h16M9 7V4h6v3M7 7l1 14h8l1-14M10 11v6M14 11v6"></path>',
       expand: '<path d="M8 3H3v5M16 3h5v5M8 21H3v-5M16 21h5v-5"></path>',
       collapse: '<path d="M3 8h5V3M21 8h-5V3M3 16h5v5M21 16h-5v5"></path>'
       ,warning: '<path d="M10.3 4.2 2.5 18a2 2 0 0 0 1.7 3h15.6a2 2 0 0 0 1.7-3L13.7 4.2a2 2 0 0 0-3.4 0Z"></path><path d="M12 9v4M12 17h.01"></path>'
@@ -25036,9 +25037,11 @@ Requirements:
     const nav = UNIFIED_TICKET_NAV.map(([key, label, icon]) => `<button type="button" class="ut-nav-item ${active === key ? "is-active" : ""}" data-action="unified-ticket-section" data-section="${key}" aria-pressed="${active === key}"><span>${unifiedTicketIcon(icon)}</span>${label}</button>`).join("");
     ticket.type = ticketTypeLabel(ticket);
     const summaryRows = [["Type",ticket.type],["Priority",ticket.priority],["Due Date",ticket.dueDate],["Status",ticket.status],["Lead",ticket.lead],["Crew",ticket.crew],["Est. Time",ticket.duration || "Not set"],["Created",ticket.created],["Customer",ticket.customer],["Phone",ticket.phone],["Email",ticket.email]].map(([a,b])=>`<div><span>${escapeHtml(a)}</span><strong>${escapeHtml(cleanDisplayValue(b, "Not set"))}</strong></div>`).join("");
-    const quickActions = `<button type="button" data-action="unified-ticket-edit"><span>${unifiedTicketIcon("edit")}</span><strong>Edit Ticket</strong><b>›</b></button>` + [["Add Task","plus","tasks"],["Upload Photo","upload","photos"],["Add Note","note","notes"],["Create Document","document","documents"]].map(([label,icon,section])=>`<button type="button" data-action="unified-ticket-quick" data-section="${section}"><span>${unifiedTicketIcon(icon)}</span><strong>${label}</strong><b>›</b></button>`).join("");
-    const sectionActivity = selectedEvents.length ? selectedEvents.slice(0, 20).map((event) => `<article><strong>${escapeHtml(String(event.eventType || "Ticket updated").replaceAll("_", " "))}</strong><p>${escapeHtml(event.notes || "Ticket activity recorded.")}</p><small>${escapeHtml(event.createdAtRaw ? formatDateTime(event.createdAtRaw) : "")}</small></article>`).join("") : `<article><strong>No activity recorded</strong><p>Ticket history will appear here as work is completed.</p></article>`;
     const ticketRecordId = ticket.recordId || state.unifiedTicketSelectedId;
+    const quickActions = `<button type="button" data-action="unified-ticket-edit"><span>${unifiedTicketIcon("edit")}</span><strong>Edit Ticket</strong><b>›</b></button>`
+      + [["Add Task","plus","tasks"],["Upload Photo","upload","photos"],["Add Note","note","notes"],["Create Document","document","documents"]].map(([label,icon,section])=>`<button type="button" data-action="unified-ticket-quick" data-section="${section}"><span>${unifiedTicketIcon(icon)}</span><strong>${label}</strong><b>›</b></button>`).join("")
+      + (canManageTicketTrash() && ticketRecordId ? `<button type="button" class="ut-quick-danger danger" data-action="trash-ticket" data-id="${escapeHtml(ticketRecordId)}" aria-label="Move ticket to Trash"><span>${unifiedTicketIcon("trash")}</span><strong>Move to Trash</strong><b>›</b></button>` : "");
+    const sectionActivity = selectedEvents.length ? selectedEvents.slice(0, 20).map((event) => `<article><strong>${escapeHtml(String(event.eventType || "Ticket updated").replaceAll("_", " "))}</strong><p>${escapeHtml(event.notes || "Ticket activity recorded.")}</p><small>${escapeHtml(event.createdAtRaw ? formatDateTime(event.createdAtRaw) : "")}</small></article>`).join("") : `<article><strong>No activity recorded</strong><p>Ticket history will appear here as work is completed.</p></article>`;
     const linkedJobId = selectedTimelineTicket?.sourceJob?.id || sourceTicket?.jobId || "";
     const linkedAssets = unifiedTicketLinkedAssets(ticketRecordId, selectedTimelineTicket?.sourceJob);
     const visibleTasks = active === "tasks" ? (ticket.checklistItems || []) : (ticket.checklistItems || []).slice(0, 3);

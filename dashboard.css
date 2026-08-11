@@ -31138,6 +31138,21 @@ html body:not(.is-login-screen) .dashboard-main .unified-ticket-page .ut-title-l
 .unified-ticket-page.unified-ticket-page.unified-ticket-page.unified-ticket-page.unified-ticket-page.unified-ticket-page.unified-ticket-page.unified-ticket-page.unified-ticket-page.unified-ticket-page.unified-ticket-page.unified-ticket-page :is(button.ut-back,button.ut-nav-item,.ut-title-line>button[type="button"]) { border:0 !important;background:transparent !important;box-shadow:none !important;color:#20252d !important; }
 .unified-ticket-page.unified-ticket-page.unified-ticket-page.unified-ticket-page.unified-ticket-page.unified-ticket-page.unified-ticket-page.unified-ticket-page.unified-ticket-page.unified-ticket-page.unified-ticket-page.unified-ticket-page button.ut-nav-item.is-active { background:#e9eaed !important; }
 .unified-ticket-page.unified-ticket-page.unified-ticket-page.unified-ticket-page.unified-ticket-page.unified-ticket-page.unified-ticket-page.unified-ticket-page.unified-ticket-page.unified-ticket-page.unified-ticket-page.unified-ticket-page :is(.ut-small-btn,.ut-next-visit button,.ut-quick-actions>button,.ut-documents>button) { border:1px solid #d6dbe1 !important;background:#fff !important;box-shadow:none !important;color:#161b22 !important; }
+.unified-ticket-page.unified-ticket-page.unified-ticket-page.unified-ticket-page.unified-ticket-page.unified-ticket-page.unified-ticket-page.unified-ticket-page.unified-ticket-page.unified-ticket-page.unified-ticket-page.unified-ticket-page.unified-ticket-page .ut-quick-actions > button.ut-quick-danger {
+  margin-top: 7px;
+  border-color: #d8a49a !important;
+  background: #fff5f3 !important;
+  color: var(--uy-danger) !important;
+}
+.unified-ticket-page.unified-ticket-page.unified-ticket-page.unified-ticket-page.unified-ticket-page.unified-ticket-page.unified-ticket-page.unified-ticket-page.unified-ticket-page.unified-ticket-page.unified-ticket-page.unified-ticket-page.unified-ticket-page .ut-quick-actions > button.ut-quick-danger:hover {
+  border-color: #bd7568 !important;
+  background: #fce9e5 !important;
+}
+.unified-ticket-page.unified-ticket-page.unified-ticket-page.unified-ticket-page.unified-ticket-page.unified-ticket-page.unified-ticket-page.unified-ticket-page.unified-ticket-page.unified-ticket-page.unified-ticket-page.unified-ticket-page.unified-ticket-page .ut-quick-actions > button.ut-quick-danger:focus-visible {
+  outline: 3px solid color-mix(in srgb, var(--uy-danger) 24%, transparent);
+  outline-offset: 2px;
+}
+.unified-ticket-page.unified-ticket-page.unified-ticket-page.unified-ticket-page.unified-ticket-page.unified-ticket-page.unified-ticket-page.unified-ticket-page.unified-ticket-page.unified-ticket-page.unified-ticket-page.unified-ticket-page.unified-ticket-page .ut-quick-actions > button.ut-quick-danger strong { color: inherit; }
 
 /* Tickets: next-visit timeline ------------------------------------------- */
 .tickets-timeline-page { min-height:calc(100vh - 48px); padding:28px 30px 48px; background:#f7f8fa; color:#151922; font-family:Inter,ui-sans-serif,system-ui,-apple-system,"Segoe UI",sans-serif; }

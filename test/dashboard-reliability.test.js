@@ -69,8 +69,8 @@ test("archived workspace polish remains available with current dashboard assets"
   assert.match(css, /\.call-queue-row > span:first-child :is\(strong, small\)[\s\S]*overflow-wrap: anywhere/);
   assert.match(css, /\.groundskeeper-operation-card[\s\S]*white-space: normal !important/);
   assert.match(css, /\.dashboard-health-item strong[\s\S]*word-break: break-all/);
-  assert.match(html, /dashboard\.css\?v=20260807-street-view-1/);
-  assert.match(html, /dashboard\.js\?v=20260807-street-view-1/);
+  assert.match(html, /dashboard\.css\?v=20260811-ticket-trash-1/);
+  assert.match(html, /dashboard\.js\?v=20260811-ticket-trash-1/);
 });
 
 test("Tickets Leads and Money use the same flat white page canvas as Home and Work", () => {
@@ -1683,17 +1683,23 @@ test("new ticket creation returns to the active workspace instead of opening the
 });
 
 test("ticket trash is recoverable and permanent clearing is owner guarded", () => {
+  const html = read("dashboard.html");
   const js = read("dashboard.js");
   const css = read("dashboard.css");
   const backend = read("netlify/functions/dashboard-tickets.js");
 
   assert.match(js, /function ticketIsTrashed[\s\S]*statusText\(ticket\.status\) === "archived"/);
+  assert.match(html, /dashboard\.css\?v=20260811-ticket-trash-1/);
+  assert.match(html, /dashboard\.js\?v=20260811-ticket-trash-1/);
   assert.match(js, /data-action="show-ticket-trash"/);
   assert.match(js, /data-action="trash-ticket"/);
+  assert.match(js, /class="ut-quick-danger danger" data-action="trash-ticket"[\s\S]*<strong>Move to Trash<\/strong>/);
+  assert.match(js, /const quickActions =[\s\S]*Create Document[\s\S]*ut-quick-danger danger/);
   assert.match(js, /data-action="restore-ticket"/);
   assert.match(js, /data-action="empty-ticket-trash"/);
   assert.match(js, /Type EMPTY TICKET TRASH to continue/);
   assert.match(css, /\.ticket-trash/);
+  assert.match(css, /\.ut-quick-actions > button\.ut-quick-danger[\s\S]*var\(--uy-danger\)/);
   assert.match(backend, /"trash", "restore", "empty-trash"/);
   assert.match(backend, /Only an owner or admin can manage ticket trash/);
   assert.match(backend, /confirmation \|\| ""\) !== "EMPTY TICKET TRASH"/);

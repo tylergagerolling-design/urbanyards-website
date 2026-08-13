@@ -115,8 +115,14 @@ function Save-UyPetWindowState {
 function Get-UyAccessToken {
     param([Parameter(Mandatory = $true)]$Config)
     $name = [string]$Config.accessTokenEnvironmentVariable
-    if ([string]::IsNullOrWhiteSpace($name)) { return "" }
-    return [string][Environment]::GetEnvironmentVariable($name, [EnvironmentVariableTarget]::Process)
+    if (-not [string]::IsNullOrWhiteSpace($name)) {
+        $environmentToken = [string][Environment]::GetEnvironmentVariable($name, [EnvironmentVariableTarget]::Process)
+        if (-not [string]::IsNullOrWhiteSpace($environmentToken)) { return $environmentToken }
+    }
+    if (Get-Command Get-UyUsableAccessToken -ErrorAction SilentlyContinue) {
+        return [string](Get-UyUsableAccessToken -Config $Config)
+    }
+    return ""
 }
 
 function Test-UyConnectivityConfigured {

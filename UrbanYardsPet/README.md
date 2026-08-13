@@ -93,7 +93,9 @@ $env:URBAN_YARDS_ACCESS_TOKEN = "<short-lived signed-in user access token>"
 
 For a persistent setup, use a secure per-user credential handoff or a session-token broker in a future build. Do not paste a service-role credential into Windows environment variables. Tokens expire by design; when one expires the pet enters reconnecting/offline mode rather than crashing.
 
-If no token is present, double-click chat explains the configuration requirement and the **Open full dashboard AI** button opens the authenticated web experience.
+Open **Settings**, then use **Connect to Urban Yards** with the same email and password used by the owner dashboard. The password is sent directly to the existing Supabase Auth endpoint and is never stored. Access and refresh tokens are encrypted with Windows Data Protection for the current Windows user. **Disconnect** removes the saved session.
+
+The `URBAN_YARDS_ACCESS_TOKEN` environment variable remains available as a developer override. If neither an encrypted session nor that override is present, double-click chat explains the configuration requirement and the **Open full dashboard AI** button opens the authenticated web experience.
 
 ## Connecting to Urban Yards
 

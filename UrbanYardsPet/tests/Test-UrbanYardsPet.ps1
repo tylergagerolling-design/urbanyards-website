@@ -16,6 +16,7 @@ function Assert-UyTest {
 $required = @(
     "Start-UrbanYardsPet.ps1", "UrbanYardsPet.ps1", "Launch Urban Yards Pet.cmd", "README.md", "config.example.json",
     "src\PetWindow.ps1", "src\PetController.ps1", "src\AnimationController.ps1", "src\EventController.ps1",
+    "src\AuthClient.ps1",
     "src\LawnmowerManClient.ps1", "src\UrbanYardsClient.ps1", "src\NotificationController.ps1", "src\Config.ps1",
     "ui\PetWindow.xaml", "ui\PetMenu.xaml", "ui\ChatPopup.xaml", "ui\SettingsWindow.xaml",
     "config\sprite-manifest.json", "assets\icons\urban-yards-pet.ico"
@@ -89,6 +90,9 @@ Assert-UyTest ($allText -notmatch '(?i)SUPABASE_SERVICE_ROLE_KEY\s*[=:]\s*[^\s<]
 Assert-UyTest ($allText -match 'lawnmower-man-chat') "reuses existing Lawnmower Man endpoint"
 Assert-UyTest ($allText -match 'dashboard-tickets') "reuses existing ticket endpoint"
 Assert-UyTest ($allText -match 'dashboard-records') "reuses existing records endpoint"
+Assert-UyTest ($allText -match 'DataProtectionScope]::CurrentUser') "encrypts saved desktop session for current Windows user"
+Assert-UyTest ($allText -match 'Connect to Urban Yards') "settings expose an explicit connection workflow"
+Assert-UyTest ($allText -match 'BringForwardEvent') "second launch brings the existing pet forward"
 
 Write-Host ""
 Write-Host "$($passes.Count) passed, $($failures.Count) failed."

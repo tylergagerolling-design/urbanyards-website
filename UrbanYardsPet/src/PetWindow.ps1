@@ -113,6 +113,11 @@ function Show-UySettingsWindow {
     $poll = & $get "PollingInterval"
     $dashboard = & $get "DashboardUrl"
     $notice = & $get "ConnectionNoticeText"
+    $connectionStatus = & $get "ConnectionStatusText"
+    $connectionEmail = & $get "ConnectionEmail"
+    $connectionPassword = & $get "ConnectionPassword"
+    $connectButton = & $get "ConnectUrbanYards"
+    $disconnectButton = & $get "DisconnectUrbanYards"
     $debug = & $get "DebugState"
     $launch.IsChecked = [bool]$Config.launchWithWindows
     $top.IsChecked = [bool]$Config.alwaysOnTop
@@ -123,7 +128,36 @@ function Show-UySettingsWindow {
     $speed.Value = [double]$Config.animationSpeed
     $poll.Text = [string]$Config.pollIntervalSeconds
     $dashboard.Text = [string]$Config.dashboardUrl
-    $notice.Text = if (Test-UyConnectivityConfigured -Config $Config) { "Authenticated connectivity is configured through $($Config.accessTokenEnvironmentVariable). Secrets are never stored in this file." } else { "Local/demo mode is active. To enable Urban Yards data and compact chat, set the short-lived user access token environment variable $($Config.accessTokenEnvironmentVariable), then restart. The full dashboard AI remains available without copying credentials into this app." }
+    $connectedEmail = Get-UyPetConnectedEmail
+    $connectionEmail.Text = $connectedEmail
+    $connectionStatus.Text = if ($connectedEmail) { "Connected as $connectedEmail." } else { "Not connected. Sign in with the same account you use for the Urban Yards dashboard." }
+    $disconnectButton.IsEnabled = [bool]$connectedEmail
+    $notice.Text = if (Test-UyConnectivityConfigured -Config $Config) { "Urban Yards data and compact chat are connected. The session is protected for this Windows account." } else { "Local mode is active. The pet still animates and opens dashboard pages. Use Connect to Urban Yards below to enable live notifications and compact chat." }
+    $connectButton.Add_Click(({
+        $connectButton.IsEnabled = $false
+        $connectionStatus.Text = "Connecting to Urban Yards..."
+        try {
+            $session = Connect-UyPetToUrbanYards -Config $Config -Email $connectionEmail.Text -Password $connectionPassword.Password
+            $connectionPassword.Clear()
+            $connectionStatus.Text = "Connected as $($session.email)."
+            $notice.Text = "Urban Yards data and compact chat are connected. The session is protected for this Windows account."
+            $disconnectButton.IsEnabled = $true
+            $Polling.Poll()
+            $Notification.ShowSpeech("Urban Yards connected.", "OPEN HOME", "overview", 6)
+        }
+        catch {
+            $connectionStatus.Text = $_.Exception.Message
+        }
+        finally { $connectButton.IsEnabled = $true }
+    }).GetNewClosure())
+    $disconnectButton.Add_Click(({
+        Remove-UyPetAuthSession
+        $connectionPassword.Clear()
+        $connectionStatus.Text = "Not connected. Sign in with the same account you use for the Urban Yards dashboard."
+        $notice.Text = "Local mode is active. Use Connect to Urban Yards to enable live notifications and compact chat."
+        $disconnectButton.IsEnabled = $false
+        $Notification.ShowSpeech("Urban Yards disconnected. Local mode is still available.", "", "", 6)
+    }).GetNewClosure())
     foreach ($state in $AllowedStates) { [void]$debug.Items.Add($state) }
     $debug.SelectedItem = "idle"
     (& $get "ResetPosition").Add_Click(({ Reset-UyPetPosition; Set-UyDefaultWindowPosition -Window $Window; $Notification.ShowSpeech("Position reset.", "", "", 4) }).GetNewClosure())
@@ -158,7 +192,8 @@ function New-UyPetWindow {
     param(
         [Parameter(Mandatory = $true)][string]$ProjectRoot,
         [Parameter(Mandatory = $true)]$Config,
-        [switch]$SmokeTest
+        [switch]$SmokeTest,
+        [Threading.EventWaitHandle]$BringForwardEvent
     )
     $window = Import-UyXaml -Path (Join-Path $ProjectRoot "ui\PetWindow.xaml")
     $petImage = $window.FindName("PetImage")
@@ -184,7 +219,9 @@ function New-UyPetWindow {
     $polling = $null
     $notification = $null
     $eventController = $null
-    $runtimeContext = [hashtable]::Synchronized(@{ EventController = $null; Polling = $null })
+    $runtimeContext = [hashtable]::Synchronized(@{ EventController = $null; Polling = $null; Notification = $null })
+    $bringForwardTimer = [System.Windows.Threading.DispatcherTimer]::new()
+    $bringForwardTimer.Interval = [TimeSpan]::FromMilliseconds(350)
 
     $openRoute = { param([string]$route) Open-UyDashboardRoute -Config $Config -Route $route }.GetNewClosure()
     $ask = {
@@ -194,9 +231,20 @@ function New-UyPetWindow {
     $togglePause = { param([bool]$paused) $petController.Pause($paused); if ($runtimeContext.Polling) { $runtimeContext.Polling.SetPaused($paused) } }.GetNewClosure()
     $restore = { if ($runtimeContext.Polling) { $runtimeContext.Polling.SetPaused($false) } }.GetNewClosure()
     $exit = { $script:UyPetExitRequested = $true; $window.Close() }.GetNewClosure()
+    $bringForwardTimer.Add_Tick(({
+        if ($BringForwardEvent -and $BringForwardEvent.WaitOne(0)) {
+            if (-not $window.IsVisible) { $window.Show() }
+            Set-UyWindowWithinScreens -Window $window
+            $window.Activate()
+            $window.Topmost = [bool]$Config.alwaysOnTop
+            if ($runtimeContext.Polling) { $runtimeContext.Polling.SetPaused($false) }
+        }
+    }).GetNewClosure())
+    $bringForwardTimer.Start()
 
     $trayIconPath = Join-Path $ProjectRoot "assets\icons\urban-yards-pet.ico"
     $notification = New-UyNotificationController -Window $window -SpeechPopup $speechPopup -SpeechText $speechText -SpeechAction $speechAction -Config $Config -TrayIconPath $trayIconPath -OpenRoute $openRoute -Restore $restore -Ask $ask -TogglePause $togglePause -Exit $exit
+    $runtimeContext.Notification = $notification
     $eventController = New-UyEventController -AllowedStates $allowedStates -CooldownMinutes ([int]$Config.notificationCooldownMinutes) -OnEvent {
         param($event)
         $duration = if ($event.type -in @("overdue", "weather", "busyDay")) { 12 } else { 8 }
@@ -225,7 +273,8 @@ function New-UyPetWindow {
     if ($savedState -and $savedState.PSObject.Properties["left"] -and $savedState.PSObject.Properties["top"]) {
         $window.Left = [double]$savedState.left
         $window.Top = [double]$savedState.top
-        Set-UyWindowWithinScreens -Window $window
+        # A saved position can be invalid after DPI, resolution, or monitor changes.
+        # Defer the authoritative clamp until WPF has created the HWND and knows DPI.
     }
     else { Set-UyDefaultWindowPosition -Window $window }
 
@@ -267,6 +316,10 @@ function New-UyPetWindow {
         $button.Add_Click(({ param($sender,$eventArgs); $menuPopup.IsOpen = $false; & $openRoute ([string]$sender.Tag) }).GetNewClosure())
     }
     $menu.FindName("AskButton").Add_Click(({ $menuPopup.IsOpen = $false; & $ask }).GetNewClosure())
+    $menu.FindName("ConnectButton").Add_Click(({
+        $menuPopup.IsOpen = $false
+        Show-UySettingsWindow -ProjectRoot $ProjectRoot -Config $Config -Window $window -Animation $animation -PetController $petController -Notification $runtimeContext.Notification -Polling $runtimeContext.Polling -AllowedStates $allowedStates
+    }).GetNewClosure())
     $menu.FindName("MinimizeButton").Add_Click(({ $menuPopup.IsOpen = $false; $polling.SetPaused($true); $notification.MinimizeToTray() }).GetNewClosure())
 
     $context = [System.Windows.Controls.ContextMenu]::new()
@@ -284,7 +337,7 @@ function New-UyPetWindow {
     $topItem = Add-ContextItem "Keep On Top" { $Config.alwaysOnTop = -not [bool]$Config.alwaysOnTop; $window.Topmost = [bool]$Config.alwaysOnTop; $topItem.IsChecked = [bool]$Config.alwaysOnTop; Save-UyPetConfig -Config $Config } $true ([bool]$Config.alwaysOnTop)
     $pauseItem = Add-ContextItem "Pause Animations" { $paused = -not $animation.IsPaused; & $togglePause $paused; $pauseItem.IsChecked = $paused } $true $false
     [void](Add-ContextItem "Minimize to Tray" { $polling.SetPaused($true); $notification.MinimizeToTray() })
-    [void](Add-ContextItem "Settings" { Show-UySettingsWindow -ProjectRoot $ProjectRoot -Config $Config -Window $window -Animation $animation -PetController $petController -Notification $notification -Polling $polling -AllowedStates $allowedStates })
+    [void](Add-ContextItem "Connect Urban Yards / Settings" { Show-UySettingsWindow -ProjectRoot $ProjectRoot -Config $Config -Window $window -Animation $animation -PetController $petController -Notification $runtimeContext.Notification -Polling $runtimeContext.Polling -AllowedStates $allowedStates })
     [void](Add-ContextItem "Exit" { & $exit })
     $petImage.ContextMenu = $context
 
@@ -305,14 +358,18 @@ function New-UyPetWindow {
         }
     }).GetNewClosure())
     $window.Add_Closed(({
-        $polling.Stop(); $petController.BehaviorTimer.Stop(); $petController.MoveTimer.Stop(); $petController.ReturnTimer.Stop(); $animation.Timer.Stop(); $notification.Dispose()
+        $polling.Stop(); $bringForwardTimer.Stop(); $petController.BehaviorTimer.Stop(); $petController.MoveTimer.Stop(); $petController.ReturnTimer.Stop(); $animation.Timer.Stop(); $notification.Dispose()
         Save-UyPetWindowState -Left $window.Left -Top $window.Top
         Write-UyPetLog "The Lawnmower Man exited."
     }).GetNewClosure())
     $window.Add_Loaded(({
         Write-UyPetLog "Pet window loaded."
+        Set-UyWindowWithinScreens -Window $window
+        Save-UyPetWindowState -Left $window.Left -Top $window.Top
         $window.Tag = [pscustomobject]@{ loaded = $true; loadedAt = [DateTime]::UtcNow.ToString("o") }
-        if (-not (Test-UyConnectivityConfigured -Config $Config)) { $notification.ShowSpeech("Local mode is ready. Open Settings to connect Urban Yards.", "SETTINGS", "settings", 9) }
+        if (-not (Test-UyConnectivityConfigured -Config $Config)) {
+            $notification.ShowSpeech("Local mode is ready. Click me, then choose Connect Urban Yards.", "", "", 9)
+        }
         if ($SmokeTest) {
             $notification.ShowSpeech("Smoke test: pet window, animation, and notification are working.", "", "", 3)
             # Exercise the same LocationChanged and movement-completion callbacks

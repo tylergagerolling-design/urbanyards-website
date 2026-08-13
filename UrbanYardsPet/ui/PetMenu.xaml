@@ -32,6 +32,7 @@
         </StackPanel>
         <Button x:Name="AttentionButton" Content="What needs my attention?" Tag="attention"/>
         <Button x:Name="AskButton" Content="Ask Lawnmower Man" Tag="ask"/>
+        <Button x:Name="ConnectButton" Content="Connect Urban Yards" Tag="connect"/>
         <Button x:Name="ScheduleButton" Content="Today's Schedule" Tag="work"/>
         <Button x:Name="RoutesButton" Content="Check Routes" Tag="routes"/>
         <Button x:Name="LeadsButton" Content="New Leads" Tag="leads"/>

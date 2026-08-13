@@ -13,6 +13,21 @@
         </StackPanel>
         <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto">
             <StackPanel Margin="0,4,10,4">
+                <Border Padding="14" CornerRadius="10" BorderBrush="#CAD8CE" BorderThickness="1" Background="#F5FAF4" Margin="0,0,0,12">
+                    <StackPanel>
+                        <TextBlock Text="Connect to Urban Yards" FontWeight="SemiBold" FontSize="16" Foreground="#103B2A"/>
+                        <TextBlock x:Name="ConnectionStatusText" TextWrapping="Wrap" Foreground="#617069" Margin="0,3,0,10"/>
+                        <TextBlock Text="Dashboard email" FontWeight="SemiBold" Margin="0,0,0,4"/>
+                        <TextBox x:Name="ConnectionEmail" Padding="8"/>
+                        <TextBlock Text="Dashboard password" FontWeight="SemiBold" Margin="0,10,0,4"/>
+                        <PasswordBox x:Name="ConnectionPassword" Padding="8"/>
+                        <TextBlock Text="Your password is sent directly to your existing Supabase project and is never saved. The resulting session is encrypted for this Windows account." TextWrapping="Wrap" Foreground="#617069" FontSize="11" Margin="0,8,0,10"/>
+                        <WrapPanel>
+                            <Button x:Name="ConnectUrbanYards" Content="Connect" Padding="14,8" Background="#1C6A48" Foreground="White" BorderBrush="#1C6A48" Margin="0,0,8,0"/>
+                            <Button x:Name="DisconnectUrbanYards" Content="Disconnect" Padding="14,8"/>
+                        </WrapPanel>
+                    </StackPanel>
+                </Border>
                 <CheckBox x:Name="LaunchWithWindows" Content="Launch with Windows" Margin="0,7"/>
                 <CheckBox x:Name="AlwaysOnTop" Content="Always on top" Margin="0,7"/>
                 <CheckBox x:Name="AnimationsEnabled" Content="Enable animations" Margin="0,7"/>

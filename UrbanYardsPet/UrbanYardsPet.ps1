@@ -7,12 +7,26 @@ param(
 $ErrorActionPreference = "Stop"
 Set-StrictMode -Version Latest
 $projectRoot = $PSScriptRoot
+$singleInstanceName = "Local\UrbanYardsPet.TheLawnmowerMan"
+$bringForwardEventName = "Local\UrbanYardsPet.TheLawnmowerMan.BringForward"
+$createdNew = $false
+$singleInstanceMutex = [Threading.Mutex]::new($true, $singleInstanceName, [ref]$createdNew)
+if (-not $createdNew) {
+    try {
+        $existingEvent = [Threading.EventWaitHandle]::OpenExisting($bringForwardEventName)
+        [void]$existingEvent.Set()
+        $existingEvent.Dispose()
+    } catch {}
+    exit 0
+}
+$bringForwardEvent = [Threading.EventWaitHandle]::new($false, [Threading.EventResetMode]::AutoReset, $bringForwardEventName)
 
 Add-Type -AssemblyName PresentationFramework, PresentationCore, WindowsBase, System.Xaml
 Add-Type -AssemblyName System.Windows.Forms, System.Drawing
 
 $sourceFiles = @(
     "src\Config.ps1",
+    "src\AuthClient.ps1",
     "src\AnimationController.ps1",
     "src\EventController.ps1",
     "src\LawnmowerManClient.ps1",
@@ -46,7 +60,7 @@ try {
         $eventArgs.Handled = $false
     })
     Write-UyPetLog "Creating the WPF pet window."
-    $runtime = New-UyPetWindow -ProjectRoot $projectRoot -Config $config -SmokeTest:$SmokeTest
+    $runtime = New-UyPetWindow -ProjectRoot $projectRoot -Config $config -SmokeTest:$SmokeTest -BringForwardEvent $bringForwardEvent
     Write-UyPetLog "The WPF pet window was created."
     if ($TestState -and $runtime.Animation.IsAllowedState($TestState)) {
         $runtime.Window.Add_Loaded({ $runtime.PetController.SetState($TestState, "normal", 8) })
@@ -67,4 +81,11 @@ catch {
         [System.Windows.MessageBoxImage]::Error
     ) | Out-Null
     throw
+}
+finally {
+    if ($bringForwardEvent) { $bringForwardEvent.Dispose() }
+    if ($singleInstanceMutex) {
+        try { $singleInstanceMutex.ReleaseMutex() } catch {}
+        $singleInstanceMutex.Dispose()
+    }
 }

@@ -1,21 +1,38 @@
 Set-StrictMode -Version Latest
 
 function Get-UyWorkingArea {
-    param([double]$Left, [double]$Top, [double]$Width = 160, [double]$Height = 160)
-    $point = [System.Drawing.Point]::new([int]($Left + $Width / 2), [int]($Top + $Height / 2))
-    return [System.Windows.Forms.Screen]::FromPoint($point).WorkingArea
+    param([Parameter(Mandatory = $true)][System.Windows.Window]$Window)
+    $dpi = [System.Windows.Media.VisualTreeHelper]::GetDpi($Window)
+    $scaleX = if ($dpi.DpiScaleX -gt 0) { $dpi.DpiScaleX } else { 1.0 }
+    $scaleY = if ($dpi.DpiScaleY -gt 0) { $dpi.DpiScaleY } else { 1.0 }
+    if ([double]::IsNaN($Window.Left) -or [double]::IsNaN($Window.Top)) {
+        $area = [System.Windows.Forms.Screen]::PrimaryScreen.WorkingArea
+    }
+    else {
+        $point = [System.Drawing.Point]::new(
+            [int](($Window.Left + $Window.Width / 2) * $scaleX),
+            [int](($Window.Top + $Window.Height / 2) * $scaleY)
+        )
+        $area = [System.Windows.Forms.Screen]::FromPoint($point).WorkingArea
+    }
+    return [pscustomobject]@{
+        Left = $area.Left / $scaleX
+        Top = $area.Top / $scaleY
+        Right = $area.Right / $scaleX
+        Bottom = $area.Bottom / $scaleY
+    }
 }
 
 function Set-UyWindowWithinScreens {
     param([Parameter(Mandatory = $true)][System.Windows.Window]$Window)
-    $area = Get-UyWorkingArea -Left $Window.Left -Top $Window.Top -Width $Window.Width -Height $Window.Height
+    $area = Get-UyWorkingArea -Window $Window
     $Window.Left = [Math]::Min($area.Right - $Window.Width, [Math]::Max($area.Left, $Window.Left))
     $Window.Top = [Math]::Min($area.Bottom - $Window.Height, [Math]::Max($area.Top, $Window.Top))
 }
 
 function Set-UyDefaultWindowPosition {
     param([Parameter(Mandatory = $true)][System.Windows.Window]$Window)
-    $area = [System.Windows.Forms.Screen]::PrimaryScreen.WorkingArea
+    $area = Get-UyWorkingArea -Window $Window
     $Window.Left = $area.Right - $Window.Width - 24
     $Window.Top = $area.Bottom - $Window.Height - 24
 }
@@ -66,7 +83,7 @@ function New-UyPetController {
     }
     $controller | Add-Member -MemberType ScriptMethod -Name BeginWander -Value {
         if (-not [bool]$this.Config.wanderingEnabled -or $this.IsMoving -or $this.IsDragging -or $this.TemporaryState -or -not $this.Window.IsVisible) { return }
-        $area = Get-UyWorkingArea -Left $this.Window.Left -Top $this.Window.Top -Width $this.Window.Width -Height $this.Window.Height
+        $area = Get-UyWorkingArea -Window $this.Window
         $distance = $this.Random.Next(45, 135) * $(if ($this.Random.Next(0, 2) -eq 0) { -1 } else { 1 })
         $target = [Math]::Min($area.Right - $this.Window.Width, [Math]::Max($area.Left, $this.Window.Left + $distance))
         if ([Math]::Abs($target - $this.Window.Left) -lt 15) { return }

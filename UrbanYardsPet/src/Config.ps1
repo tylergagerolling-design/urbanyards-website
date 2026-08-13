@@ -109,8 +109,17 @@ function Get-UyPetWindowState {
 
 function Save-UyPetWindowState {
     param([Parameter(Mandatory = $true)][double]$Left, [Parameter(Mandatory = $true)][double]$Top)
-    [pscustomobject]@{ left = [Math]::Round($Left, 2); top = [Math]::Round($Top, 2); savedAt = [DateTime]::UtcNow.ToString("o") } |
-        ConvertTo-Json | Set-Content -LiteralPath (Join-Path (Get-UyPetDataDirectory) "window-state.json") -Encoding UTF8
+    if ([double]::IsNaN($Left) -or [double]::IsInfinity($Left) -or [double]::IsNaN($Top) -or [double]::IsInfinity($Top)) {
+        Write-UyPetLog "Skipped an invalid pet window position." "WARN"
+        return
+    }
+    try {
+        [pscustomobject]@{ left = [Math]::Round($Left, 2); top = [Math]::Round($Top, 2); savedAt = [DateTime]::UtcNow.ToString("o") } |
+            ConvertTo-Json | Set-Content -LiteralPath (Join-Path (Get-UyPetDataDirectory) "window-state.json") -Encoding UTF8
+    }
+    catch {
+        Write-UyPetLog "Pet window position could not be saved: $($_.Exception.Message)" "WARN"
+    }
 }
 
 function Get-UyAccessToken {

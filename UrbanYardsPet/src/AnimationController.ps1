@@ -93,25 +93,31 @@ function New-UyAnimationController {
     $timer.Add_Tick({
         param($sender, $eventArgs)
         $instance = $sender.Tag
-        if ($instance.IsPaused) { return }
-        $animation = $instance.Manifest.animations.($instance.State)
-        $frames = @($animation.frames)
-        if ($frames.Count -eq 0) { return }
-        $instance.FrameIndex++
-        if ($instance.FrameIndex -ge $frames.Count) {
-            if ([bool]$animation.loop) {
-                $instance.FrameIndex = 0
+        try {
+            if ($instance.IsPaused) { return }
+            $animation = $instance.Manifest.animations.($instance.State)
+            $frames = @($animation.frames)
+            if ($frames.Count -eq 0) { return }
+            $instance.FrameIndex++
+            if ($instance.FrameIndex -ge $frames.Count) {
+                if ([bool]$animation.loop) {
+                    $instance.FrameIndex = 0
+                }
+                elseif ($animation.PSObject.Properties["returnTo"] -and $animation.returnTo) {
+                    [void]$instance.SetState([string]$animation.returnTo, "normal", $true)
+                    return
+                }
+                else {
+                    $instance.FrameIndex = $frames.Count - 1
+                    $instance.Timer.Stop()
+                }
             }
-            elseif ($animation.PSObject.Properties["returnTo"] -and $animation.returnTo) {
-                [void]$instance.SetState([string]$animation.returnTo, "normal", $true)
-                return
-            }
-            else {
-                $instance.FrameIndex = $frames.Count - 1
-                $instance.Timer.Stop()
-            }
+            $instance.RenderFrame()
         }
-        $instance.RenderFrame()
+        catch {
+            $sender.Stop()
+            Write-UyPetLog "Animation timer stopped safely after an error: $($_.Exception.Message)" "ERROR"
+        }
     })
 
     [void]$controller.SetState("idle", "normal", $true)

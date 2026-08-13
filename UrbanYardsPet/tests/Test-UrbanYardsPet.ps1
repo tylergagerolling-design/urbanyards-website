@@ -118,6 +118,10 @@ Assert-UyTest ($allText -match 'SEND TO SHELF' -and $allText -match 'BRING FORWA
 Assert-UyTest ($allText -match 'displayMode') "desktop display mode is persisted"
 Assert-UyTest ($allText -match 'SetCurrentProcessExplicitAppUserModelID') "PowerShell host receives a branded app identity"
 Assert-UyTest ($allText -match 'TrayOnly' -and $allText -match 'wscript.exe') "shortcut starts PowerShell silently in tray-only mode"
+Assert-UyTest ($allText -match 'SetUnhandledExceptionMode' -and $allText -match 'CatchException') "tray UI errors are contained without a JIT crash"
+Assert-UyTest ($allText -match 'DispatcherUnhandledException' -and $allText -match 'Handled = \$true') "WPF feature errors cannot terminate the pet"
+Assert-UyTest ($allText -match 'ActionFailures' -and $allText -match 'ReportFailure') "tray command failures remain observable in smoke tests"
+Assert-UyTest ($allText -match 'Items\[0\]\.PerformClick' -and $allText -match 'Items\[7\]\.PerformClick') "smoke test exercises alerts and pause tray commands"
 
 Write-Host ""
 Write-Host "$($passes.Count) passed, $($failures.Count) failed."

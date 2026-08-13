@@ -26,6 +26,8 @@ function Get-UyWorkingArea {
 function Set-UyWindowWithinScreens {
     param([Parameter(Mandatory = $true)][System.Windows.Window]$Window)
     $area = Get-UyWorkingArea -Window $Window
+    if ([double]::IsNaN($Window.Left) -or [double]::IsInfinity($Window.Left)) { $Window.Left = $area.Right - $Window.Width - 24 }
+    if ([double]::IsNaN($Window.Top) -or [double]::IsInfinity($Window.Top)) { $Window.Top = $area.Bottom - $Window.Height - 24 }
     $Window.Left = [Math]::Min($area.Right - $Window.Width, [Math]::Max($area.Left, $Window.Left))
     $Window.Top = [Math]::Min($area.Bottom - $Window.Height, [Math]::Max($area.Top, $Window.Top))
 }
@@ -95,11 +97,18 @@ function New-UyPetController {
         $this.MoveTimer.Start()
     }
     $controller | Add-Member -MemberType ScriptMethod -Name StopWander -Value {
-        $this.MoveTimer.Stop()
-        $this.IsMoving = $false
-        Set-UyWindowWithinScreens -Window $this.Window
-        Save-UyPetWindowState -Left $this.Window.Left -Top $this.Window.Top
-        if (-not $this.TemporaryState -and -not $this.IsDragging) { [void]$this.Animation.SetState("idle", "normal", $true) }
+        try {
+            $this.MoveTimer.Stop()
+            $this.IsMoving = $false
+            Set-UyWindowWithinScreens -Window $this.Window
+            Save-UyPetWindowState -Left $this.Window.Left -Top $this.Window.Top
+            if (-not $this.TemporaryState -and -not $this.IsDragging) { [void]$this.Animation.SetState("idle", "normal", $true) }
+        }
+        catch {
+            $this.MoveTimer.Stop()
+            $this.IsMoving = $false
+            Write-UyPetLog "Wandering stopped safely after a movement error: $($_.Exception.Message)" "ERROR"
+        }
     }
     $controller | Add-Member -MemberType ScriptMethod -Name Pause -Value {
         param([bool]$Paused)
@@ -121,20 +130,26 @@ function New-UyPetController {
 
     $behaviorTimer.Interval = [TimeSpan]::FromSeconds(14)
     $behaviorTimer.Tag = $controller
-    $behaviorTimer.Add_Tick({ param($sender, $eventArgs); $sender.Tag.TickBehavior() })
+    $behaviorTimer.Add_Tick({ param($sender, $eventArgs); try { $sender.Tag.TickBehavior() } catch { Write-UyPetLog "Behavior timer recovered from an error: $($_.Exception.Message)" "ERROR" } })
     $moveTimer.Interval = [TimeSpan]::FromMilliseconds(30)
     $moveTimer.Tag = $controller
     $moveTimer.Add_Tick({
         param($sender, $eventArgs)
         $instance = $sender.Tag
-        if (-not $instance.IsMoving) { $sender.Stop(); return }
-        $next = $instance.Window.Left + $instance.MoveStep
-        $done = ($instance.MoveStep -gt 0 -and $next -ge $instance.TargetLeft) -or ($instance.MoveStep -lt 0 -and $next -le $instance.TargetLeft)
-        $instance.Window.Left = if ($done) { $instance.TargetLeft } else { $next }
-        if ($done) { $instance.StopWander() }
+        try {
+            if (-not $instance.IsMoving) { $sender.Stop(); return }
+            $next = $instance.Window.Left + $instance.MoveStep
+            $done = ($instance.MoveStep -gt 0 -and $next -ge $instance.TargetLeft) -or ($instance.MoveStep -lt 0 -and $next -le $instance.TargetLeft)
+            $instance.Window.Left = if ($done) { $instance.TargetLeft } else { $next }
+            if ($done) { $instance.StopWander() }
+        }
+        catch {
+            $sender.Stop(); $instance.IsMoving = $false
+            Write-UyPetLog "Movement timer recovered from an error: $($_.Exception.Message)" "ERROR"
+        }
     })
     $returnTimer.Tag = $controller
-    $returnTimer.Add_Tick({ param($sender, $eventArgs); $sender.Tag.ReturnToIdle() })
+    $returnTimer.Add_Tick({ param($sender, $eventArgs); try { $sender.Tag.ReturnToIdle() } catch { $sender.Stop(); Write-UyPetLog "Idle timer recovered from an error: $($_.Exception.Message)" "ERROR" } })
 
     $behaviorTimer.Start()
     return $controller

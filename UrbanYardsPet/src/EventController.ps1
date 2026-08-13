@@ -57,8 +57,14 @@ function New-UyEventController {
         }
         $this.LastEvents[$fingerprint] = $now
         Write-UyPetLog "Pet event received: $($Event.type) / $($Event.severity)."
-        & $this.OnEvent $Event
-        return $true
+        try {
+            & $this.OnEvent $Event
+            return $true
+        }
+        catch {
+            Write-UyPetLog "Pet event '$($Event.type)' could not be displayed: $($_.Exception.Message)" "ERROR"
+            return $false
+        }
     }
     return $controller
 }

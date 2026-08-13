@@ -64,46 +64,55 @@ function Show-UyChatWindow {
     $messages = $window.FindName("MessagesPanel")
     $scroll = $window.FindName("ChatScroll")
     $history = [System.Collections.Generic.List[object]]::new()
-    $header.Add_MouseLeftButtonDown(({ param($sender,$eventArgs); if ($eventArgs.ChangedButton -eq [System.Windows.Input.MouseButton]::Left) { $window.DragMove() } }).GetNewClosure())
-    $close.Add_Click(({ $window.Close() }).GetNewClosure())
-    $openFull.Add_Click(({ Open-UyDashboardRoute -Config $Config -Route "ai" }).GetNewClosure())
-    $sendAction = {
-        $text = $input.Text.Trim()
-        if (-not $text -or -not $send.IsEnabled) { return }
-        [void](Add-UyChatMessage -Panel $messages -Text $text -Role "user")
-        $history.Add([pscustomobject]@{ role = "user"; content = $text })
-        $input.Clear()
-        $send.IsEnabled = $false
-        $input.IsEnabled = $false
-        [void]$PetController.SetState("thinking", "normal", 0)
-        $status = Add-UyChatMessage -Panel $messages -Text "Checking Urban Yards…" -Role "assistant"
-        $scroll.ScrollToEnd()
+    $chatState = [pscustomobject]@{
+        Window = $window; Config = $Config; PetController = $PetController; AllowedStates = $AllowedStates
+        EventController = $EventController; Input = $input; SendButton = $send; Messages = $messages
+        Scroll = $scroll; History = $history; IsSending = $false
+    }
+    $chatState | Add-Member -MemberType ScriptMethod -Name SendMessage -Value {
+        $text = $this.Input.Text.Trim()
+        if (-not $text -or $this.IsSending) { return }
+        [void](Add-UyChatMessage -Panel $this.Messages -Text $text -Role "user")
+        $this.History.Add([pscustomobject]@{ role = "user"; content = $text })
+        $this.Input.Clear()
+        $this.IsSending = $true
+        $this.SendButton.IsEnabled = $false
+        $this.Input.IsEnabled = $false
+        [void]$this.PetController.SetState("thinking", "normal", 0)
+        $status = Add-UyChatMessage -Panel $this.Messages -Text "Checking Urban Yards…" -Role "assistant"
+        $this.Scroll.ScrollToEnd()
         try {
-            $response = Invoke-UyLawnmowerMan -Config $Config -Message $text -History @($history) -AllowedStates $AllowedStates
-            [void]$messages.Children.Remove($status)
-            [void](Add-UyChatMessage -Panel $messages -Text $response.reply -Role "assistant")
-            $history.Add([pscustomobject]@{ role = "assistant"; content = $response.reply })
+            $response = Invoke-UyLawnmowerMan -Config $this.Config -Message $text -History @($this.History) -AllowedStates $this.AllowedStates
+            [void]$this.Messages.Children.Remove($status)
+            [void](Add-UyChatMessage -Panel $this.Messages -Text $response.reply -Role "assistant")
+            $this.History.Add([pscustomobject]@{ role = "assistant"; content = $response.reply })
             if ($response.pet) {
-                [void](Send-PetEvent -Controller $EventController -Type $response.pet.state -Severity $response.pet.severity -Message $response.pet.speech -ActionLabel $(if ($response.action) { $response.action.label } else { "OPEN URBAN YARDS" }) -Route $(if ($response.action) { $response.action.route } else { "overview" }) -Force)
+                [void](Send-PetEvent -Controller $this.EventController -Type $response.pet.state -Severity $response.pet.severity -Message $response.pet.speech -ActionLabel $(if ($response.action) { $response.action.label } else { "OPEN URBAN YARDS" }) -Route $(if ($response.action) { $response.action.route } else { "overview" }) -Force)
             }
-            else { $PetController.SetState("foundSomething", "normal", 5) }
+            else { $this.PetController.SetState("foundSomething", "normal", 5) }
         }
         catch {
-            [void]$messages.Children.Remove($status)
-            [void](Add-UyChatMessage -Panel $messages -Text $_.Exception.Message -Role "error")
+            [void]$this.Messages.Children.Remove($status)
+            [void](Add-UyChatMessage -Panel $this.Messages -Text $_.Exception.Message -Role "error")
             Write-UyPetLog "AI request failed: $($_.Exception.Message)" "WARN"
-            $PetController.ReturnToIdle()
+            $this.PetController.ReturnToIdle()
         }
         finally {
-            $send.IsEnabled = $true
-            $input.IsEnabled = $true
-            $input.Focus()
-            $scroll.ScrollToEnd()
+            $this.IsSending = $false
+            $this.SendButton.IsEnabled = $true
+            $this.Input.IsEnabled = $true
+            $this.Input.Focus()
+            $this.Scroll.ScrollToEnd()
         }
-    }.GetNewClosure()
-    $send.Add_Click($sendAction)
-    $input.Add_KeyDown(({ param($sender,$eventArgs); if ($eventArgs.Key -eq [System.Windows.Input.Key]::Enter -and [System.Windows.Input.Keyboard]::Modifiers -ne [System.Windows.Input.ModifierKeys]::Shift) { $eventArgs.Handled = $true; & $sendAction } }).GetNewClosure())
-    $window.Add_Closed(({ $PetController.ReturnToIdle() }).GetNewClosure())
+    }
+    foreach ($control in @($header, $close, $openFull, $send, $input)) { $control.Tag = $chatState }
+    $window.Tag = $chatState
+    $header.Add_MouseLeftButtonDown({ param($sender,$eventArgs); if ($eventArgs.ChangedButton -eq [System.Windows.Input.MouseButton]::Left) { try { $sender.Tag.Window.DragMove() } catch {} } })
+    $close.Add_Click({ param($sender,$eventArgs); $sender.Tag.Window.Close() })
+    $openFull.Add_Click({ param($sender,$eventArgs); Open-UyDashboardRoute -Config $sender.Tag.Config -Route "ai" })
+    $send.Add_Click({ param($sender,$eventArgs); $sender.Tag.SendMessage() })
+    $input.Add_KeyDown({ param($sender,$eventArgs); if ($eventArgs.Key -eq [System.Windows.Input.Key]::Enter -and [System.Windows.Input.Keyboard]::Modifiers -ne [System.Windows.Input.ModifierKeys]::Shift) { $eventArgs.Handled = $true; $sender.Tag.SendMessage() } })
+    $window.Add_Closed({ param($sender,$eventArgs); $sender.Tag.PetController.ReturnToIdle() })
     [void]$window.Show()
     $window.Activate()
     $input.Focus()
@@ -250,58 +259,71 @@ function New-UyPetWindow {
     $polling = $null
     $notification = $null
     $eventController = $null
-    $runtimeContext = [hashtable]::Synchronized(@{ EventController = $null; Polling = $null; Notification = $null })
+    $runtimeContext = [hashtable]::Synchronized(@{
+        ProjectRoot = $ProjectRoot; Config = $Config; Window = $window; DesktopLayer = $desktopLayer
+        PetController = $petController; Animation = $animation; AllowedStates = $allowedStates
+        Menu = $menu; MenuPopup = $menuPopup; PetGlow = $petGlow; BringForwardEvent = $BringForwardEvent
+        EventController = $null; Polling = $null; Notification = $null; MouseState = $null
+    })
+    # The pet is single-instance. Delayed WPF and tray callbacks resolve this
+    # persistent state instead of depending on function-local PowerShell closures.
+    $script:UyPetRuntimeState = $runtimeContext
     $bringForwardTimer = [System.Windows.Threading.DispatcherTimer]::new()
     $bringForwardTimer.Interval = [TimeSpan]::FromMilliseconds(350)
 
-    $openRoute = { param([string]$route) Open-UyDashboardRoute -Config $Config -Route $route }.GetNewClosure()
+    $openRoute = { param([string]$route) Open-UyDashboardRoute -Config $script:UyPetRuntimeState.Config -Route $route }
     $ask = {
         if ($null -ne $script:UyChatWindow -and $script:UyChatWindow.IsVisible) { $script:UyChatWindow.Activate(); return }
-        $script:UyChatWindow = Show-UyChatWindow -ProjectRoot $ProjectRoot -Config $Config -PetController $petController -AllowedStates $allowedStates -EventController $runtimeContext.EventController
-    }.GetNewClosure()
-    $togglePause = { param([bool]$paused) $petController.Pause($paused); if ($runtimeContext.Polling) { $runtimeContext.Polling.SetPaused($paused) } }.GetNewClosure()
-    $restore = { if ($runtimeContext.Polling) { $runtimeContext.Polling.SetPaused($false) } }.GetNewClosure()
-    $exit = { $script:UyPetExitRequested = $true; $window.Close() }.GetNewClosure()
-    $bringForwardTimer.Add_Tick(({
-        if ($BringForwardEvent -and $BringForwardEvent.WaitOne(0)) {
-            $desktopLayer.BringForward($true)
-            if ($runtimeContext.Polling) { $runtimeContext.Polling.SetPaused($false) }
+        $state = $script:UyPetRuntimeState
+        $script:UyChatWindow = Show-UyChatWindow -ProjectRoot $state.ProjectRoot -Config $state.Config -PetController $state.PetController -AllowedStates $state.AllowedStates -EventController $state.EventController
+    }
+    $togglePause = { param([bool]$paused); $state = $script:UyPetRuntimeState; $state.PetController.Pause($paused); if ($state.Polling) { $state.Polling.SetPaused($paused) } }
+    $restore = { $state = $script:UyPetRuntimeState; if ($state.Polling) { $state.Polling.SetPaused($false) } }
+    $exit = { $script:UyPetExitRequested = $true; $script:UyPetRuntimeState.Window.Close() }
+    $bringForwardTimer.Add_Tick({
+        $state = $script:UyPetRuntimeState
+        if ($state.BringForwardEvent -and $state.BringForwardEvent.WaitOne(0)) {
+            $state.DesktopLayer.BringForward($true)
+            if ($state.Polling) { $state.Polling.SetPaused($false) }
         }
-    }).GetNewClosure())
+    })
     $bringForwardTimer.Start()
 
     $trayIconPath = Join-Path $ProjectRoot "assets\icons\lawnmower-man-app.ico"
-    $bringForward = { $desktopLayer.BringForward($true) }.GetNewClosure()
-    $returnToShelf = { $desktopLayer.ReturnToShelf($true) }.GetNewClosure()
+    $bringForward = { $script:UyPetRuntimeState.DesktopLayer.BringForward($true) }
+    $returnToShelf = { $script:UyPetRuntimeState.DesktopLayer.ReturnToShelf($true) }
     $showAlerts = {
-        $desktopLayer.BringForward($false)
-        if ($runtimeContext.Notification) {
-            $runtimeContext.Notification.ShowSpeech("I’m watching Urban Yards. No unread alerts right now.", "OPEN URBAN YARDS", "overview", 8)
+        $state = $script:UyPetRuntimeState
+        $state.DesktopLayer.BringForward($false)
+        if ($state.Notification) {
+            $state.Notification.ShowSpeech("I’m watching Urban Yards. No unread alerts right now.", "OPEN URBAN YARDS", "overview", 8)
         }
-    }.GetNewClosure()
+    }
     $notification = New-UyNotificationController -Window $window -SpeechPopup $speechPopup -SpeechText $speechText -SpeechAction $speechAction -Config $Config -TrayIconPath $trayIconPath -OpenRoute $openRoute -Restore $restore -Ask $ask -ShowAlerts $showAlerts -BringForward $bringForward -ReturnToShelf $returnToShelf -TogglePause $togglePause -Exit $exit
     $runtimeContext.Notification = $notification
     $eventController = New-UyEventController -AllowedStates $allowedStates -CooldownMinutes ([int]$Config.notificationCooldownMinutes) -OnEvent {
         param($event)
+        $state = $script:UyPetRuntimeState
         $duration = if ($event.type -in @("overdue", "weather", "busyDay")) { 12 } else { 8 }
-        $petController.SetState([string]$event.type, [string]$event.severity, $duration)
-        if ($event.message) { $notification.ShowSpeech([string]$event.message, [string]$event.action.label, [string]$event.action.route, $duration) }
+        $state.PetController.SetState([string]$event.type, [string]$event.severity, $duration)
+        if ($event.message) { $state.Notification.ShowSpeech([string]$event.message, [string]$event.action.label, [string]$event.action.route, $duration) }
         if ($event.type -eq "payment") {
             $celebrateTimer = [System.Windows.Threading.DispatcherTimer]::new()
             $celebrateTimer.Interval = [TimeSpan]::FromSeconds(5)
-            $celebrateTimer.Add_Tick({ param($s,$e); $s.Stop(); $petController.SetState("celebrate", "normal", 7) })
+            $celebrateTimer.Add_Tick({ param($sender,$eventArgs); $sender.Stop(); $script:UyPetRuntimeState.PetController.SetState("celebrate", "normal", 7) })
             $celebrateTimer.Start()
         }
-    }.GetNewClosure()
+    }
     $runtimeContext.EventController = $eventController
 
     $polling = New-UyPollingController -Config $Config -OnSnapshot {
         param($snapshot)
-        $connectionText = $menu.FindName("ConnectionStatus")
+        $state = $script:UyPetRuntimeState
+        $connectionText = $state.Menu.FindName("ConnectionStatus")
         $connectionText.Text = if (-not $snapshot.configured) { "LOCAL MODE" } elseif ($snapshot.online) { "ONLINE" } else { "RECONNECTING" }
-        foreach ($event in @($snapshot.events)) { [void]$eventController.Publish($event, $false) }
-        if (-not $snapshot.online -and $snapshot.configured -and $polling.Failures -eq 1) { $notification.ShowSpeech("Urban Yards is offline. I’ll keep trying.", "", "", 7) }
-    }.GetNewClosure()
+        foreach ($event in @($snapshot.events)) { [void]$state.EventController.Publish($event, $false) }
+        if (-not $snapshot.online -and $snapshot.configured -and $state.Polling.Failures -eq 1) { $state.Notification.ShowSpeech("Urban Yards is offline. I’ll keep trying.", "", "", 7) }
+    }
     $runtimeContext.Polling = $polling
     $polling.Start()
 
@@ -315,70 +337,98 @@ function New-UyPetWindow {
     else { Set-UyDefaultWindowPosition -Window $window }
 
     $mouseState = [hashtable]::Synchronized(@{ LeftDownAt = [DateTime]::MinValue; DragStarted = $false; DoubleClick = $false })
-    $petImage.Add_MouseEnter(({ if (-not $petController.IsDragging) { [void]$animation.SetState("hover", "normal", $false); $petGlow.Opacity = 0.9 } }).GetNewClosure())
-    $petImage.Add_MouseLeave(({ if (-not $petController.IsDragging -and -not $petController.TemporaryState) { [void]$animation.SetState("idle", "normal", $true); $petGlow.Opacity = 0 } }).GetNewClosure())
-    $petImage.Add_MouseLeftButtonDown(({
+    $runtimeContext.MouseState = $mouseState
+    $petImage.Add_MouseEnter({
+        $state = $script:UyPetRuntimeState
+        if (-not $state.PetController.IsDragging) { [void]$state.Animation.SetState("hover", "normal", $false); $state.PetGlow.Opacity = 0.9 }
+    })
+    $petImage.Add_MouseLeave({
+        $state = $script:UyPetRuntimeState
+        if (-not $state.PetController.IsDragging -and -not $state.PetController.TemporaryState) { [void]$state.Animation.SetState("idle", "normal", $true); $state.PetGlow.Opacity = 0 }
+    })
+    $petImage.Add_MouseLeftButtonDown({
         param($sender,$eventArgs)
-        $mouseState.LeftDownAt = [DateTime]::UtcNow
-        $mouseState.DragStarted = $false
-        $mouseState.DoubleClick = $eventArgs.ClickCount -ge 2
-        if ($mouseState.DoubleClick) {
-            $menuPopup.IsOpen = $false
-            & $ask
+        $state = $script:UyPetRuntimeState
+        $state.MouseState.LeftDownAt = [DateTime]::UtcNow
+        $state.MouseState.DragStarted = $false
+        $state.MouseState.DoubleClick = $eventArgs.ClickCount -ge 2
+        if ($state.MouseState.DoubleClick) {
+            $state.MenuPopup.IsOpen = $false
+            $state.Notification.InvokeAction("AskAction")
             $eventArgs.Handled = $true
             return
         }
-        $petController.Touch()
-        $petController.IsDragging = $true
-        [void]$animation.SetState("dragged", "normal", $true)
-        try { $window.DragMove(); $mouseState.DragStarted = ([DateTime]::UtcNow - $mouseState.LeftDownAt).TotalMilliseconds -gt 180 } catch {}
-        $petController.IsDragging = $false
-        Set-UyWindowWithinScreens -Window $window
-        Save-UyPetWindowState -Left $window.Left -Top $window.Top
-        if ($mouseState.DragStarted) { [void]$animation.SetState("idle", "normal", $true) }
-    }).GetNewClosure())
-    $petImage.Add_MouseLeftButtonUp(({
+        $state.PetController.Touch()
+        $state.PetController.IsDragging = $true
+        [void]$state.Animation.SetState("dragged", "normal", $true)
+        try { $state.Window.DragMove(); $state.MouseState.DragStarted = ([DateTime]::UtcNow - $state.MouseState.LeftDownAt).TotalMilliseconds -gt 180 } catch {}
+        $state.PetController.IsDragging = $false
+        Set-UyWindowWithinScreens -Window $state.Window
+        Save-UyPetWindowState -Left $state.Window.Left -Top $state.Window.Top
+        if ($state.MouseState.DragStarted) { [void]$state.Animation.SetState("idle", "normal", $true) }
+    })
+    $petImage.Add_MouseLeftButtonUp({
         param($sender,$eventArgs)
-        if (-not $mouseState.DoubleClick -and -not $mouseState.DragStarted -and ([DateTime]::UtcNow - $mouseState.LeftDownAt).TotalMilliseconds -lt 550) {
-            $petController.SetState("clicked", "normal", 2)
-            $menuPopup.IsOpen = -not $menuPopup.IsOpen
+        $state = $script:UyPetRuntimeState
+        if (-not $state.MouseState.DoubleClick -and -not $state.MouseState.DragStarted -and ([DateTime]::UtcNow - $state.MouseState.LeftDownAt).TotalMilliseconds -lt 550) {
+            $state.PetController.SetState("clicked", "normal", 2)
+            $state.MenuPopup.IsOpen = -not $state.MenuPopup.IsOpen
         }
-    }).GetNewClosure())
+    })
 
     $menuButtonRoutes = @{ AttentionButton = "tickets"; ScheduleButton = "work"; RoutesButton = "routes"; LeadsButton = "leads"; DashboardButton = "overview" }
     foreach ($pair in $menuButtonRoutes.GetEnumerator()) {
         $button = $menu.FindName($pair.Key)
         $button.Tag = $pair.Value
-        $button.Add_Click(({ param($sender,$eventArgs); $menuPopup.IsOpen = $false; & $openRoute ([string]$sender.Tag) }).GetNewClosure())
+        $button.Add_Click({ param($sender,$eventArgs); $script:UyPetRuntimeState.MenuPopup.IsOpen = $false; $script:UyPetRuntimeState.Notification.InvokeAction("OpenRouteAction", [string]$sender.Tag, $true) })
     }
-    $menu.FindName("AskButton").Add_Click(({ $menuPopup.IsOpen = $false; & $ask }).GetNewClosure())
-    $menu.FindName("ConnectButton").Add_Click(({
-        $menuPopup.IsOpen = $false
-        Show-UySettingsWindow -ProjectRoot $ProjectRoot -Config $Config -Window $window -Animation $animation -PetController $petController -DesktopLayer $desktopLayer -Notification $runtimeContext.Notification -Polling $runtimeContext.Polling -AllowedStates $allowedStates
-    }).GetNewClosure())
-    $menu.FindName("BringForwardButton").Add_Click(({ $menuPopup.IsOpen = $false; & $bringForward }).GetNewClosure())
-    $menu.FindName("ReturnToShelfButton").Add_Click(({ $menuPopup.IsOpen = $false; & $returnToShelf }).GetNewClosure())
-    $menu.FindName("MinimizeButton").Add_Click(({ $menuPopup.IsOpen = $false; $polling.SetPaused($true); $notification.MinimizeToTray() }).GetNewClosure())
+    $menu.FindName("AskButton").Add_Click({ $state = $script:UyPetRuntimeState; $state.MenuPopup.IsOpen = $false; $state.Notification.InvokeAction("AskAction") })
+    $menu.FindName("ConnectButton").Add_Click({
+        $state = $script:UyPetRuntimeState
+        $state.MenuPopup.IsOpen = $false
+        Show-UySettingsWindow -ProjectRoot $state.ProjectRoot -Config $state.Config -Window $state.Window -Animation $state.Animation -PetController $state.PetController -DesktopLayer $state.DesktopLayer -Notification $state.Notification -Polling $state.Polling -AllowedStates $state.AllowedStates
+    })
+    $menu.FindName("BringForwardButton").Add_Click({ $state = $script:UyPetRuntimeState; $state.MenuPopup.IsOpen = $false; $state.Notification.InvokeAction("BringForwardAction") })
+    $menu.FindName("ReturnToShelfButton").Add_Click({ $state = $script:UyPetRuntimeState; $state.MenuPopup.IsOpen = $false; $state.Notification.InvokeAction("ReturnToShelfAction") })
+    $menu.FindName("MinimizeButton").Add_Click({ $state = $script:UyPetRuntimeState; $state.MenuPopup.IsOpen = $false; $state.Polling.SetPaused($true); $state.Notification.MinimizeToTray() })
 
     $context = [System.Windows.Controls.ContextMenu]::new()
-    function Add-ContextItem([string]$Label, [scriptblock]$Action, [bool]$Checkable = $false, [bool]$Checked = $false) {
-        $item = [System.Windows.Controls.MenuItem]::new(); $item.Header = $Label; $item.IsCheckable = $Checkable; $item.IsChecked = $Checked; $item.Add_Click($Action.GetNewClosure()); [void]$context.Items.Add($item); return $item
+    function Add-ContextItem([string]$Label, [string]$ActionName, [string]$Argument = "", [bool]$Checkable = $false, [bool]$Checked = $false) {
+        $item = [System.Windows.Controls.MenuItem]::new()
+        $item.Header = $Label; $item.IsCheckable = $Checkable; $item.IsChecked = $Checked
+        $item.Tag = [pscustomobject]@{ ActionName = $ActionName; Argument = $Argument }
+        $item.Add_Click({
+            param($sender,$eventArgs)
+            $state = $script:UyPetRuntimeState
+            switch ([string]$sender.Tag.ActionName) {
+                "ask" { $state.Notification.InvokeAction("AskAction") }
+                "open" { $state.Notification.InvokeAction("OpenRouteAction", [string]$sender.Tag.Argument, $true) }
+                "bring" { $state.Notification.InvokeAction("BringForwardAction") }
+                "shelf" { $state.Notification.InvokeAction("ReturnToShelfAction") }
+                "top" { $state.Config.alwaysOnTop = -not [bool]$state.Config.alwaysOnTop; $state.Window.Topmost = [bool]$state.Config.alwaysOnTop; $sender.IsChecked = [bool]$state.Config.alwaysOnTop; Save-UyPetConfig -Config $state.Config }
+                "pause" { $paused = -not $state.Animation.IsPaused; $state.Notification.InvokeAction("TogglePauseAction", $paused, $true); $sender.IsChecked = $paused }
+                "hide" { $state.Polling.SetPaused($true); $state.Notification.MinimizeToTray() }
+                "settings" { Show-UySettingsWindow -ProjectRoot $state.ProjectRoot -Config $state.Config -Window $state.Window -Animation $state.Animation -PetController $state.PetController -DesktopLayer $state.DesktopLayer -Notification $state.Notification -Polling $state.Polling -AllowedStates $state.AllowedStates }
+                "exit" { $state.Notification.InvokeAction("ExitAction") }
+            }
+        })
+        [void]$context.Items.Add($item); return $item
     }
-    [void](Add-ContextItem "Ask Lawnmower Man" { & $ask })
-    [void](Add-ContextItem "Open Urban Yards" { & $openRoute "overview" })
-    [void](Add-ContextItem "Bring Forward" { & $bringForward })
-    [void](Add-ContextItem "Return to Desktop Shelf" { & $returnToShelf })
-    [void](Add-ContextItem "Today's Work" { & $openRoute "work" })
-    [void](Add-ContextItem "Leads" { & $openRoute "leads" })
-    [void](Add-ContextItem "Tickets" { & $openRoute "tickets" })
-    [void](Add-ContextItem "Routes" { & $openRoute "routes" })
-    [void](Add-ContextItem "Money" { & $openRoute "money" })
+    [void](Add-ContextItem "Ask Lawnmower Man" "ask")
+    [void](Add-ContextItem "Open Urban Yards" "open" "overview")
+    [void](Add-ContextItem "Bring Forward" "bring")
+    [void](Add-ContextItem "Return to Desktop Shelf" "shelf")
+    [void](Add-ContextItem "Today's Work" "open" "work")
+    [void](Add-ContextItem "Leads" "open" "leads")
+    [void](Add-ContextItem "Tickets" "open" "tickets")
+    [void](Add-ContextItem "Routes" "open" "routes")
+    [void](Add-ContextItem "Money" "open" "money")
     [void]$context.Items.Add([System.Windows.Controls.Separator]::new())
-    $topItem = Add-ContextItem "Keep On Top" { $Config.alwaysOnTop = -not [bool]$Config.alwaysOnTop; $window.Topmost = [bool]$Config.alwaysOnTop; $topItem.IsChecked = [bool]$Config.alwaysOnTop; Save-UyPetConfig -Config $Config } $true ([bool]$Config.alwaysOnTop)
-    $pauseItem = Add-ContextItem "Pause Animations" { $paused = -not $animation.IsPaused; & $togglePause $paused; $pauseItem.IsChecked = $paused } $true $false
-    [void](Add-ContextItem "Minimize to Tray" { $polling.SetPaused($true); $notification.MinimizeToTray() })
-    [void](Add-ContextItem "Connect Urban Yards / Settings" { Show-UySettingsWindow -ProjectRoot $ProjectRoot -Config $Config -Window $window -Animation $animation -PetController $petController -DesktopLayer $desktopLayer -Notification $runtimeContext.Notification -Polling $runtimeContext.Polling -AllowedStates $allowedStates })
-    [void](Add-ContextItem "Exit" { & $exit })
+    $topItem = Add-ContextItem "Keep On Top" "top" "" $true ([bool]$Config.alwaysOnTop)
+    $pauseItem = Add-ContextItem "Pause Animations" "pause" "" $true $false
+    [void](Add-ContextItem "Minimize to Tray" "hide")
+    [void](Add-ContextItem "Connect Urban Yards / Settings" "settings")
+    [void](Add-ContextItem "Exit" "exit")
     $petImage.ContextMenu = $context
 
     $window.Add_SourceInitialized(({
@@ -388,7 +438,7 @@ function New-UyPetWindow {
             if ($source) { $source.CompositionTarget.BackgroundColor = [System.Windows.Media.Colors]::Transparent }
         } catch {}
     }).GetNewClosure())
-    $window.Add_LocationChanged(({ if ($desktopLayer.Mode -ne "shelf" -and -not $petController.IsMoving -and -not $petController.IsDragging) { Set-UyWindowWithinScreens -Window $window } }).GetNewClosure())
+    $window.Add_LocationChanged({ $state = $script:UyPetRuntimeState; if ($state.DesktopLayer.Mode -ne "shelf" -and -not $state.PetController.IsMoving -and -not $state.PetController.IsDragging) { Set-UyWindowWithinScreens -Window $state.Window } })
     $window.Add_Closing(({
         param($sender,$eventArgs)
         if (-not $script:UyPetExitRequested -and -not $SmokeTest) {
@@ -413,24 +463,34 @@ function New-UyPetWindow {
         }
         if ($SmokeTest) {
             $notification.ShowSpeech("Smoke test: pet window, animation, and notification are working.", "", "", 3)
-            # Exercise both native display modes as part of every desktop smoke test.
-            # Use the real delayed WinForms tray callbacks after their factory
-            # function has returned; this catches runspace/closure regressions.
-            $notification.TrayMenu.Items[2].PerformClick()
-            $modeTimer = [System.Windows.Threading.DispatcherTimer]::new()
-            $modeTimer.Interval = [TimeSpan]::FromSeconds(1)
-            $modeTimer.Add_Tick({ param($sender,$eventArgs); $sender.Stop(); $notification.TrayMenu.Items[1].PerformClick() })
-            $modeTimer.Start()
+            # Exercise the actual delayed tray handlers. This covers the commands
+            # users rely on without opening an external browser or account window.
+            $featureState = [pscustomobject]@{ Step = 0; Notification = $notification; Window = $window }
+            $featureTimer = [System.Windows.Threading.DispatcherTimer]::new()
+            $featureTimer.Tag = $featureState
+            $featureTimer.Interval = [TimeSpan]::FromMilliseconds(550)
+            $featureTimer.Add_Tick({
+                param($sender,$eventArgs)
+                $state = $sender.Tag
+                switch ($state.Step) {
+                    0 { $state.Notification.TrayMenu.Items[0].PerformClick() } # SHOW ALERTS
+                    1 { $state.Notification.TrayMenu.Items[2].PerformClick() } # SEND TO SHELF
+                    2 { $state.Notification.TrayMenu.Items[1].PerformClick() } # BRING FORWARD
+                    3 { $state.Notification.TrayMenu.Items[7].PerformClick() } # PAUSE
+                    4 { $state.Notification.TrayMenu.Items[7].PerformClick() } # RESUME
+                    5 { $state.Notification.TrayMenu.Items[3].PerformClick() } # HIDE
+                    6 { $state.Notification.TrayMenu.Items[1].PerformClick() } # RECOVER
+                    default { $sender.Stop(); $script:UyPetExitRequested = $true; $state.Window.Close(); return }
+                }
+                $state.Step++
+            })
+            $featureTimer.Start()
             # Exercise the same LocationChanged and movement-completion callbacks
             # used by dragging and wandering, not only the initial window render.
             $petController.TargetLeft = $window.Left - 4
             $petController.MoveStep = -2
             $petController.IsMoving = $true
             $petController.MoveTimer.Start()
-            $smokeTimer = [System.Windows.Threading.DispatcherTimer]::new()
-            $smokeTimer.Interval = [TimeSpan]::FromSeconds(3)
-            $smokeTimer.Add_Tick({ param($sender,$eventArgs); $sender.Stop(); $script:UyPetExitRequested = $true; $window.Close() })
-            $smokeTimer.Start()
         }
         elseif (Test-UyConnectivityConfigured -Config $Config) { $polling.Poll() }
     }).GetNewClosure())
@@ -443,7 +503,7 @@ function New-UyPetWindow {
 
     if ($SmokeTest) {
         $safetyTimer = [System.Windows.Threading.DispatcherTimer]::new()
-        $safetyTimer.Interval = [TimeSpan]::FromSeconds(5)
+        $safetyTimer.Interval = [TimeSpan]::FromSeconds(8)
         $safetyTimer.Add_Tick({ param($sender,$eventArgs); $sender.Stop(); $script:UyPetExitRequested = $true; if ($window.IsVisible) { $window.Close() } })
         $window.Add_Activated(({ if (-not $safetyTimer.IsEnabled) { $safetyTimer.Start() } }).GetNewClosure())
     }

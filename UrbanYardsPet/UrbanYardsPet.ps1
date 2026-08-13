@@ -27,6 +27,17 @@ $bringForwardEvent = [Threading.EventWaitHandle]::new($false, [Threading.EventRe
 Add-Type -AssemblyName PresentationFramework, PresentationCore, WindowsBase, System.Xaml
 Add-Type -AssemblyName System.Windows.Forms, System.Drawing
 
+# Both WPF and Windows Forms dispatch delayed UI callbacks. A feature-level
+# exception must be logged and contained; it must never tear down the tray host
+# or show the Windows Forms JIT crash dialog.
+$script:UyUnhandledUiErrorCount = 0
+[System.Windows.Forms.Application]::SetUnhandledExceptionMode([System.Windows.Forms.UnhandledExceptionMode]::CatchException)
+[System.Windows.Forms.Application]::add_ThreadException({
+    param($sender, $eventArgs)
+    $script:UyUnhandledUiErrorCount++
+    try { Write-UyPetLog "Unhandled tray UI error was contained: $($eventArgs.Exception.Message)" "ERROR" } catch {}
+})
+
 $sourceFiles = @(
     "src\Config.ps1",
     "src\AuthClient.ps1",
@@ -61,8 +72,9 @@ try {
     $app.ShutdownMode = [System.Windows.ShutdownMode]::OnMainWindowClose
     $app.Add_DispatcherUnhandledException({
         param($sender, $eventArgs)
-        Write-UyPetLog "Unhandled WPF dispatcher error: $($eventArgs.Exception.Message)" "ERROR"
-        $eventArgs.Handled = $false
+        $script:UyUnhandledUiErrorCount++
+        Write-UyPetLog "Unhandled WPF feature error was contained: $($eventArgs.Exception.Message)" "ERROR"
+        $eventArgs.Handled = $true
     })
     Write-UyPetLog "Creating the WPF pet window."
     $runtime = New-UyPetWindow -ProjectRoot $projectRoot -Config $config -SmokeTest:$SmokeTest -TrayOnly:$TrayOnly -BringForwardEvent $bringForwardEvent
@@ -80,17 +92,25 @@ try {
         Write-UyPetLog "The WPF pet window was shown."
     }
     $exitCode = $app.Run()
+    if ($SmokeTest -and $script:UyUnhandledUiErrorCount -gt 0) {
+        throw "The UI stability smoke test caught $script:UyUnhandledUiErrorCount unhandled feature error(s)."
+    }
+    if ($SmokeTest -and $runtime.Notification.ActionFailures -gt 0) {
+        throw "The tray stability smoke test caught $($runtime.Notification.ActionFailures) failed command(s): $($runtime.Notification.LastActionError)"
+    }
     Write-UyPetLog "Application loop exited with code $exitCode."
     exit $exitCode
 }
 catch {
     try { Write-UyPetLog "Startup failed: $($_.Exception.Message)" "ERROR" } catch {}
-    [System.Windows.MessageBox]::Show(
-        "The Lawnmower Man could not start.`n`n$($_.Exception.Message)",
-        "Urban Yards Pet",
-        [System.Windows.MessageBoxButton]::OK,
-        [System.Windows.MessageBoxImage]::Error
-    ) | Out-Null
+    if (-not $SmokeTest) {
+        [System.Windows.MessageBox]::Show(
+            "The Lawnmower Man could not start.`n`n$($_.Exception.Message)",
+            "Urban Yards Pet",
+            [System.Windows.MessageBoxButton]::OK,
+            [System.Windows.MessageBoxImage]::Error
+        ) | Out-Null
+    }
     throw
 }
 finally {

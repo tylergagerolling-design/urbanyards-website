@@ -133,7 +133,11 @@ function New-UyPollingController {
         try {
             $snapshot = Get-UyOperationalSnapshot -Config $this.Config
             if ($snapshot.online) { $this.Failures = 0 } elseif ($snapshot.configured) { $this.Failures++ }
-            & $this.OnSnapshot $snapshot
+            try { & $this.OnSnapshot $snapshot }
+            catch {
+                $this.Failures++
+                Write-UyPetLog "Operational snapshot could not be displayed: $($_.Exception.Message)" "ERROR"
+            }
         }
         finally {
             $this.IsBusy = $false

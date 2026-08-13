@@ -76,7 +76,7 @@ endlocal
     Move-Item -LiteralPath $staging -Destination $installRoot
 
     $launcherPath = Join-Path $installRoot "Launch Urban Yards Pet.cmd"
-    $iconPath = Join-Path $installRoot "assets\icons\urban-yards-pet.ico"
+    $iconPath = Join-Path $installRoot "assets\icons\lawnmower-man-app.ico"
     $desktop = [Environment]::GetFolderPath([Environment+SpecialFolder]::DesktopDirectory)
     $programs = [Environment]::GetFolderPath([Environment+SpecialFolder]::Programs)
     $startMenuDirectory = Join-Path $programs "Urban Yards"

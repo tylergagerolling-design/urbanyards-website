@@ -19,9 +19,28 @@ $required = @(
     "src\AuthClient.ps1",
     "src\LawnmowerManClient.ps1", "src\UrbanYardsClient.ps1", "src\NotificationController.ps1", "src\Config.ps1",
     "ui\PetWindow.xaml", "ui\PetMenu.xaml", "ui\ChatPopup.xaml", "ui\SettingsWindow.xaml",
-    "config\sprite-manifest.json", "assets\icons\urban-yards-pet.ico"
+    "config\sprite-manifest.json", "assets\icons\lawnmower-man-app-icon.png", "assets\icons\lawnmower-man-app.ico"
 )
 foreach ($file in $required) { Assert-UyTest (Test-Path -LiteralPath (Join-Path $root $file)) "required file: $file" }
+
+$appIconPath = Join-Path $root "assets\icons\lawnmower-man-app.ico"
+if (Test-Path -LiteralPath $appIconPath -PathType Leaf) {
+    $iconBytes = [System.IO.File]::ReadAllBytes($appIconPath)
+    $iconCount = if ($iconBytes.Length -ge 6) { [BitConverter]::ToUInt16($iconBytes, 4) } else { 0 }
+    $iconSizes = @()
+    for ($index = 0; $index -lt $iconCount; $index++) {
+        $entryOffset = 6 + (16 * $index)
+        if (($entryOffset + 16) -gt $iconBytes.Length) { break }
+        $width = [int]$iconBytes[$entryOffset]
+        $iconSizes += $(if ($width -eq 0) { 256 } else { $width })
+    }
+    Assert-UyTest ($iconCount -ge 8) "app icon contains multiple resolution layers"
+    Assert-UyTest ($iconSizes -contains 16 -and $iconSizes -contains 32 -and $iconSizes -contains 48 -and $iconSizes -contains 256) "app icon covers Windows shortcut sizes"
+}
+else {
+    Assert-UyTest $false "app icon contains multiple resolution layers"
+    Assert-UyTest $false "app icon covers Windows shortcut sizes"
+}
 
 $parseFiles = Get-ChildItem -LiteralPath $root -Recurse -Filter *.ps1 -File
 foreach ($file in $parseFiles) {

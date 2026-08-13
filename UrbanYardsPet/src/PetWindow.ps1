@@ -6,6 +6,25 @@ function Import-UyXaml {
     return [System.Windows.Markup.XamlReader]::Load([System.Xml.XmlNodeReader]::new($xaml))
 }
 
+function Set-UyWindowIcon {
+    param(
+        [Parameter(Mandatory = $true)][System.Windows.Window]$Window,
+        [Parameter(Mandatory = $true)][string]$ProjectRoot
+    )
+    $iconPath = Join-Path $ProjectRoot "assets\icons\lawnmower-man-app.ico"
+    if (-not (Test-Path -LiteralPath $iconPath -PathType Leaf)) { return }
+    $stream = [System.IO.File]::OpenRead($iconPath)
+    try {
+        $decoder = [System.Windows.Media.Imaging.IconBitmapDecoder]::new(
+            $stream,
+            [System.Windows.Media.Imaging.BitmapCreateOptions]::PreservePixelFormat,
+            [System.Windows.Media.Imaging.BitmapCacheOption]::OnLoad
+        )
+        $Window.Icon = $decoder.Frames | Sort-Object PixelWidth -Descending | Select-Object -First 1
+    }
+    finally { $stream.Dispose() }
+}
+
 function Add-UyChatMessage {
     param(
         [Parameter(Mandatory = $true)][System.Windows.Controls.StackPanel]$Panel,
@@ -36,6 +55,7 @@ function Show-UyChatWindow {
         [Parameter(Mandatory = $true)]$EventController
     )
     $window = Import-UyXaml -Path (Join-Path $ProjectRoot "ui\ChatPopup.xaml")
+    Set-UyWindowIcon -Window $window -ProjectRoot $ProjectRoot
     $header = $window.FindName("ChatHeader")
     $close = $window.FindName("ChatClose")
     $input = $window.FindName("ChatInput")
@@ -102,6 +122,7 @@ function Show-UySettingsWindow {
         [Parameter(Mandatory = $true)][string[]]$AllowedStates
     )
     $settings = Import-UyXaml -Path (Join-Path $ProjectRoot "ui\SettingsWindow.xaml")
+    Set-UyWindowIcon -Window $settings -ProjectRoot $ProjectRoot
     $get = { param($name) $settings.FindName($name) }
     $launch = & $get "LaunchWithWindows"
     $top = & $get "AlwaysOnTop"
@@ -196,6 +217,7 @@ function New-UyPetWindow {
         [Threading.EventWaitHandle]$BringForwardEvent
     )
     $window = Import-UyXaml -Path (Join-Path $ProjectRoot "ui\PetWindow.xaml")
+    Set-UyWindowIcon -Window $window -ProjectRoot $ProjectRoot
     $petImage = $window.FindName("PetImage")
     $petGlow = $window.FindName("PetGlow")
     $petShadow = $window.FindName("PetShadow")
@@ -242,7 +264,7 @@ function New-UyPetWindow {
     }).GetNewClosure())
     $bringForwardTimer.Start()
 
-    $trayIconPath = Join-Path $ProjectRoot "assets\icons\urban-yards-pet.ico"
+    $trayIconPath = Join-Path $ProjectRoot "assets\icons\lawnmower-man-app.ico"
     $notification = New-UyNotificationController -Window $window -SpeechPopup $speechPopup -SpeechText $speechText -SpeechAction $speechAction -Config $Config -TrayIconPath $trayIconPath -OpenRoute $openRoute -Restore $restore -Ask $ask -TogglePause $togglePause -Exit $exit
     $runtimeContext.Notification = $notification
     $eventController = New-UyEventController -AllowedStates $allowedStates -CooldownMinutes ([int]$Config.notificationCooldownMinutes) -OnEvent {

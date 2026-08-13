@@ -35,6 +35,12 @@ pwsh -NoProfile -File .\tools\Extract-Sprites.ps1 `
 
 The extraction is deterministic. It copies the original alpha-enabled sprite pixels, removes all sheet labels/numbers by selecting only character cells, and normalizes every frame onto a transparent 128×128 canvas anchored at `(64,112)`.
 
+The Desktop shortcut, Start Menu shortcut, system tray, and native app windows use the dedicated transparent Lawnmower Man logo at `assets/icons/lawnmower-man-app.ico`. It includes Windows-ready sizes from 16×16 through 256×256. To rebuild it after intentionally replacing `assets/icons/lawnmower-man-app-icon.png`, run:
+
+```powershell
+pwsh -NoProfile -File .\tools\Build-AppIcon.ps1
+```
+
 ## Launching
 
 Double-click:

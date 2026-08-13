@@ -1,0 +1,5 @@
+config/config.json
+logs/
+*.log
+*.user.json
+smoke-test-*.png

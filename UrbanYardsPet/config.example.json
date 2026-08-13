@@ -1,0 +1,17 @@
+{
+  "dashboardUrl": "https://urbanyards.us/dashboard",
+  "apiBaseUrl": "https://urbanyards.us",
+  "accessTokenEnvironmentVariable": "URBAN_YARDS_ACCESS_TOKEN",
+  "pollIntervalSeconds": 45,
+  "alwaysOnTop": true,
+  "animationsEnabled": true,
+  "animationSpeed": 1.0,
+  "wanderingEnabled": true,
+  "speechEnabled": true,
+  "soundsEnabled": false,
+  "launchWithWindows": false,
+  "debugMode": false,
+  "idleBeforeSleepMinutes": 20,
+  "notificationCooldownMinutes": 15,
+  "scheduleHeavyThreshold": 6
+}

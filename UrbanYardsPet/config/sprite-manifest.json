@@ -1,0 +1,279 @@
+﻿{
+    "schemaVersion":  1,
+    "character":  "The Lawnmower Man",
+    "source":  "assets/source/urban-yards-lawnmower-man-sprite-sheet.png",
+    "canvas":  {
+                   "width":  128,
+                   "height":  128,
+                   "anchorX":  64,
+                   "anchorY":  112
+               },
+    "allowedStates":  [
+                          "idle",
+                          "walk",
+                          "lookAround",
+                          "sleep",
+                          "hover",
+                          "clicked",
+                          "dragged",
+                          "thinking",
+                          "working",
+                          "writing",
+                          "foundSomething",
+                          "newLead",
+                          "overdue",
+                          "route",
+                          "busyDay",
+                          "weather",
+                          "payment",
+                          "celebrate",
+                          "plant",
+                          "water"
+                      ],
+    "severities":  [
+                       "normal",
+                       "attention",
+                       "urgent"
+                   ],
+    "animations":  {
+                       "idle":  {
+                                    "fps":  4,
+                                    "loop":  true,
+                                    "frames":  [
+                                                   "idle_01.png",
+                                                   "idle_02.png",
+                                                   "idle_03.png",
+                                                   "idle_04.png",
+                                                   "idle_05.png",
+                                                   "idle_06.png"
+                                               ]
+                                },
+                       "walk":  {
+                                    "fps":  7,
+                                    "loop":  true,
+                                    "frames":  [
+                                                   "walk_01.png",
+                                                   "walk_02.png",
+                                                   "walk_03.png",
+                                                   "walk_04.png",
+                                                   "walk_05.png",
+                                                   "walk_06.png",
+                                                   "walk_07.png",
+                                                   "walk_08.png"
+                                               ]
+                                },
+                       "lookAround":  {
+                                          "fps":  4,
+                                          "loop":  false,
+                                          "frames":  [
+                                                         "lookAround_01.png",
+                                                         "lookAround_02.png",
+                                                         "lookAround_03.png",
+                                                         "lookAround_04.png",
+                                                         "lookAround_05.png",
+                                                         "lookAround_06.png"
+                                                     ],
+                                          "returnTo":  "idle"
+                                      },
+                       "sleep":  {
+                                     "fps":  3,
+                                     "loop":  true,
+                                     "frames":  [
+                                                    "sleep_01.png",
+                                                    "sleep_02.png",
+                                                    "sleep_03.png",
+                                                    "sleep_04.png",
+                                                    "sleep_05.png",
+                                                    "sleep_06.png",
+                                                    "sleep_07.png"
+                                                ]
+                                 },
+                       "hover":  {
+                                     "fps":  5,
+                                     "loop":  true,
+                                     "frames":  [
+                                                    "hover_01.png",
+                                                    "hover_02.png"
+                                                ]
+                                 },
+                       "clicked":  {
+                                       "fps":  8,
+                                       "loop":  false,
+                                       "frames":  [
+                                                      "clicked_01.png",
+                                                      "clicked_02.png",
+                                                      "clicked_03.png"
+                                                  ],
+                                       "returnTo":  "idle"
+                                   },
+                       "dragged":  {
+                                       "fps":  5,
+                                       "loop":  true,
+                                       "frames":  [
+                                                      "dragged_01.png",
+                                                      "dragged_02.png"
+                                                  ]
+                                   },
+                       "thinking":  {
+                                        "fps":  5,
+                                        "loop":  true,
+                                        "frames":  [
+                                                       "thinking_01.png",
+                                                       "thinking_02.png",
+                                                       "thinking_03.png",
+                                                       "thinking_04.png",
+                                                       "thinking_05.png"
+                                                   ]
+                                    },
+                       "working":  {
+                                       "fps":  6,
+                                       "loop":  true,
+                                       "frames":  [
+                                                      "working_01.png",
+                                                      "working_02.png",
+                                                      "working_03.png",
+                                                      "working_04.png",
+                                                      "working_05.png",
+                                                      "working_06.png"
+                                                  ]
+                                   },
+                       "writing":  {
+                                       "fps":  6,
+                                       "loop":  true,
+                                       "frames":  [
+                                                      "writing_01.png",
+                                                      "writing_02.png",
+                                                      "writing_03.png",
+                                                      "writing_04.png",
+                                                      "writing_05.png",
+                                                      "writing_06.png"
+                                                  ]
+                                   },
+                       "foundSomething":  {
+                                              "fps":  6,
+                                              "loop":  false,
+                                              "frames":  [
+                                                             "foundSomething_01.png",
+                                                             "foundSomething_02.png",
+                                                             "foundSomething_03.png",
+                                                             "foundSomething_04.png"
+                                                         ],
+                                              "returnTo":  "idle"
+                                          },
+                       "newLead":  {
+                                       "fps":  6,
+                                       "loop":  false,
+                                       "frames":  [
+                                                      "newLead_01.png",
+                                                      "newLead_02.png",
+                                                      "newLead_03.png",
+                                                      "newLead_04.png",
+                                                      "newLead_05.png",
+                                                      "newLead_06.png"
+                                                  ],
+                                       "returnTo":  "idle"
+                                   },
+                       "overdue":  {
+                                       "fps":  5,
+                                       "loop":  true,
+                                       "frames":  [
+                                                      "overdue_01.png",
+                                                      "overdue_02.png",
+                                                      "overdue_03.png",
+                                                      "overdue_04.png",
+                                                      "overdue_05.png",
+                                                      "overdue_06.png"
+                                                  ]
+                                   },
+                       "route":  {
+                                     "fps":  5,
+                                     "loop":  false,
+                                     "frames":  [
+                                                    "route_01.png",
+                                                    "route_02.png",
+                                                    "route_03.png",
+                                                    "route_04.png",
+                                                    "route_05.png",
+                                                    "route_06.png"
+                                                ],
+                                     "returnTo":  "idle"
+                                 },
+                       "busyDay":  {
+                                       "fps":  7,
+                                       "loop":  true,
+                                       "frames":  [
+                                                      "busyDay_01.png",
+                                                      "busyDay_02.png",
+                                                      "busyDay_03.png",
+                                                      "busyDay_04.png",
+                                                      "busyDay_05.png",
+                                                      "busyDay_06.png"
+                                                  ]
+                                   },
+                       "weather":  {
+                                       "fps":  5,
+                                       "loop":  true,
+                                       "frames":  [
+                                                      "weather_01.png",
+                                                      "weather_02.png",
+                                                      "weather_03.png",
+                                                      "weather_04.png",
+                                                      "weather_05.png",
+                                                      "weather_06.png"
+                                                  ]
+                                   },
+                       "payment":  {
+                                       "fps":  6,
+                                       "loop":  false,
+                                       "frames":  [
+                                                      "payment_01.png",
+                                                      "payment_02.png",
+                                                      "payment_03.png",
+                                                      "payment_04.png",
+                                                      "payment_05.png",
+                                                      "payment_06.png"
+                                                  ],
+                                       "returnTo":  "celebrate"
+                                   },
+                       "celebrate":  {
+                                         "fps":  8,
+                                         "loop":  false,
+                                         "frames":  [
+                                                        "celebrate_01.png",
+                                                        "celebrate_02.png",
+                                                        "celebrate_03.png",
+                                                        "celebrate_04.png",
+                                                        "celebrate_05.png",
+                                                        "celebrate_06.png",
+                                                        "celebrate_07.png"
+                                                    ],
+                                         "returnTo":  "idle"
+                                     },
+                       "plant":  {
+                                     "fps":  6,
+                                     "loop":  false,
+                                     "frames":  [
+                                                    "plant_01.png",
+                                                    "plant_02.png",
+                                                    "plant_03.png",
+                                                    "plant_04.png",
+                                                    "plant_05.png"
+                                                ],
+                                     "returnTo":  "idle"
+                                 },
+                       "water":  {
+                                     "fps":  6,
+                                     "loop":  false,
+                                     "frames":  [
+                                                    "water_01.png",
+                                                    "water_02.png",
+                                                    "water_03.png",
+                                                    "water_04.png",
+                                                    "water_05.png",
+                                                    "water_06.png",
+                                                    "water_07.png"
+                                                ],
+                                     "returnTo":  "idle"
+                                 }
+                   }
+}

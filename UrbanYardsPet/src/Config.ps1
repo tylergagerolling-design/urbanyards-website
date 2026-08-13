@@ -49,6 +49,7 @@ function Get-UyDefaultConfig {
         speechEnabled = $true
         soundsEnabled = $false
         launchWithWindows = $false
+        displayMode = "floating"
         debugMode = $false
         idleBeforeSleepMinutes = 20
         notificationCooldownMinutes = 15
@@ -172,17 +173,34 @@ function Open-UyDashboardRoute {
 function Set-UyStartupRegistration {
     param(
         [Parameter(Mandatory = $true)][bool]$Enabled,
-        [Parameter(Mandatory = $true)][string]$LauncherPath
+        [Parameter(Mandatory = $true)][string]$LauncherPath,
+        [string]$IconPath = ""
     )
     $startup = [Environment]::GetFolderPath([Environment+SpecialFolder]::Startup)
-    $startupLauncher = Join-Path $startup "Urban Yards Pet.cmd"
+    $startupLauncher = Join-Path $startup "The Lawnmower Man.lnk"
+    $legacyLauncher = Join-Path $startup "Urban Yards Pet.cmd"
     if ($Enabled) {
-        $content = "@echo off`r`nstart `"`" `"$LauncherPath`"`r`n"
-        [System.IO.File]::WriteAllText($startupLauncher, $content, [Text.UTF8Encoding]::new($false))
+        $projectRoot = [System.IO.Path]::GetDirectoryName($LauncherPath)
+        $scriptPath = Join-Path $projectRoot "Start-UrbanYardsPet.ps1"
+        $bundledPowerShell = Join-Path $projectRoot "runtime\pwsh.exe"
+        $systemPowerShell = Get-Command pwsh.exe -ErrorAction SilentlyContinue
+        if (Test-Path -LiteralPath $bundledPowerShell -PathType Leaf) { $target = $bundledPowerShell }
+        elseif ($systemPowerShell) { $target = $systemPowerShell.Source }
+        else { $target = (Get-Command powershell.exe -ErrorAction Stop).Source }
+        $shell = New-Object -ComObject WScript.Shell
+        $shortcut = $shell.CreateShortcut($startupLauncher)
+        $shortcut.TargetPath = $target
+        $shortcut.Arguments = "-NoProfile -STA -WindowStyle Hidden -ExecutionPolicy Bypass -File `"$scriptPath`""
+        $shortcut.WorkingDirectory = $projectRoot
+        $shortcut.IconLocation = if ($IconPath) { "$IconPath,0" } else { "$LauncherPath,0" }
+        $shortcut.Description = "Launch The Lawnmower Man desktop pet"
+        $shortcut.Save()
+        if (Test-Path -LiteralPath $legacyLauncher) { Remove-Item -LiteralPath $legacyLauncher -Force }
         Write-UyPetLog "Per-user Windows startup enabled."
     }
-    elseif (Test-Path -LiteralPath $startupLauncher) {
-        Remove-Item -LiteralPath $startupLauncher -Force
+    else {
+        if (Test-Path -LiteralPath $startupLauncher) { Remove-Item -LiteralPath $startupLauncher -Force }
+        if (Test-Path -LiteralPath $legacyLauncher) { Remove-Item -LiteralPath $legacyLauncher -Force }
         Write-UyPetLog "Per-user Windows startup disabled."
     }
 }

@@ -32,12 +32,14 @@ $sourceFiles = @(
     "src\LawnmowerManClient.ps1",
     "src\UrbanYardsClient.ps1",
     "src\NotificationController.ps1",
+    "src\DesktopLayer.ps1",
     "src\PetController.ps1",
     "src\PetWindow.ps1"
 )
 foreach ($sourceFile in $sourceFiles) {
     . (Join-Path $projectRoot $sourceFile)
 }
+Set-UyProcessAppIdentity
 
 # WPF raises several callbacks from closure-backed event scopes. PowerShell 7 does
 # not automatically expose functions declared in this script scope to those

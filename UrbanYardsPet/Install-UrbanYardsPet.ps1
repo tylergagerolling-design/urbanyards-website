@@ -27,10 +27,11 @@ function Copy-UyDirectory {
 }
 
 function New-UyShortcut {
-    param([string]$Path, [string]$Target, [string]$WorkingDirectory, [string]$IconPath)
+    param([string]$Path, [string]$Target, [string]$Arguments, [string]$WorkingDirectory, [string]$IconPath)
     $shell = New-Object -ComObject WScript.Shell
     $shortcut = $shell.CreateShortcut($Path)
     $shortcut.TargetPath = $Target
+    $shortcut.Arguments = $Arguments
     $shortcut.WorkingDirectory = $WorkingDirectory
     $shortcut.IconLocation = "$IconPath,0"
     $shortcut.Description = "Launch The Lawnmower Man desktop pet"
@@ -76,17 +77,24 @@ endlocal
     Move-Item -LiteralPath $staging -Destination $installRoot
 
     $launcherPath = Join-Path $installRoot "Launch Urban Yards Pet.cmd"
+    $scriptPath = Join-Path $installRoot "Start-UrbanYardsPet.ps1"
     $iconPath = Join-Path $installRoot "assets\icons\lawnmower-man-app.ico"
+    $bundledPowerShell = Join-Path $installRoot "runtime\pwsh.exe"
+    $systemPowerShell = Get-Command pwsh.exe -ErrorAction SilentlyContinue
+    if (Test-Path -LiteralPath $bundledPowerShell -PathType Leaf) { $shortcutTarget = $bundledPowerShell }
+    elseif ($systemPowerShell) { $shortcutTarget = $systemPowerShell.Source }
+    else { $shortcutTarget = (Get-Command powershell.exe -ErrorAction Stop).Source }
+    $shortcutArguments = "-NoProfile -STA -WindowStyle Hidden -ExecutionPolicy Bypass -File `"$scriptPath`""
     $desktop = [Environment]::GetFolderPath([Environment+SpecialFolder]::DesktopDirectory)
     $programs = [Environment]::GetFolderPath([Environment+SpecialFolder]::Programs)
     $startMenuDirectory = Join-Path $programs "Urban Yards"
     [System.IO.Directory]::CreateDirectory($startMenuDirectory) | Out-Null
-    New-UyShortcut -Path (Join-Path $desktop "The Lawnmower Man.lnk") -Target $launcherPath -WorkingDirectory $installRoot -IconPath $iconPath
-    New-UyShortcut -Path (Join-Path $startMenuDirectory "The Lawnmower Man.lnk") -Target $launcherPath -WorkingDirectory $installRoot -IconPath $iconPath
+    New-UyShortcut -Path (Join-Path $desktop "The Lawnmower Man.lnk") -Target $shortcutTarget -Arguments $shortcutArguments -WorkingDirectory $installRoot -IconPath $iconPath
+    New-UyShortcut -Path (Join-Path $startMenuDirectory "The Lawnmower Man.lnk") -Target $shortcutTarget -Arguments $shortcutArguments -WorkingDirectory $installRoot -IconPath $iconPath
 
     if ($EnableStartup) {
         $startup = [Environment]::GetFolderPath([Environment+SpecialFolder]::Startup)
-        New-UyShortcut -Path (Join-Path $startup "The Lawnmower Man.lnk") -Target $launcherPath -WorkingDirectory $installRoot -IconPath $iconPath
+        New-UyShortcut -Path (Join-Path $startup "The Lawnmower Man.lnk") -Target $shortcutTarget -Arguments $shortcutArguments -WorkingDirectory $installRoot -IconPath $iconPath
     }
     [System.IO.Directory]::CreateDirectory($dataRoot) | Out-Null
     [pscustomobject]@{

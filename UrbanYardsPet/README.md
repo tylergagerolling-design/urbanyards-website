@@ -65,6 +65,8 @@ The launcher selects PowerShell 7 when available and starts it in STA mode, whic
 - **Right click:** full context menu with Urban Yards routes, pause, settings, tray, and exit.
 - **Close:** minimizes to the system tray. Use `Exit` from the context/tray menu to terminate.
 - **Tray double-click:** restores the pet.
+- **Bring Forward:** detaches the pet from the Windows desktop layer and displays it above regular windows. Available from the pet menu, right-click menu, and tray.
+- **Return to Desktop Shelf:** attaches the pet to the Windows desktop layer so normal application windows appear above it. The selected display mode is saved between launches.
 
 ## Configuration
 
@@ -85,6 +87,8 @@ Important fields:
 - `alwaysOnTop`, `wanderingEnabled`, `speechEnabled`, `soundsEnabled`.
 
 Sounds default to off. Launch-with-Windows is opt-in.
+
+The installed app continues to run under its bundled PowerShell 7 runtime. Windows receives the stable `UrbanYards.TheLawnmowerMan` app identity, while shortcuts, tray controls, and native windows use the Lawnmower Man logo instead of the generic PowerShell icon.
 
 ## Adding API configuration
 

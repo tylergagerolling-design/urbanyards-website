@@ -38,6 +38,8 @@
         <Button x:Name="LeadsButton" Content="New Leads" Tag="leads"/>
         <Button x:Name="DashboardButton" Content="Open Urban Yards" Tag="overview"/>
         <Separator Margin="0,8"/>
+        <Button x:Name="BringForwardButton" Content="Bring forward" Tag="floating"/>
+        <Button x:Name="ReturnToShelfButton" Content="Return to desktop shelf" Tag="shelf"/>
         <Button x:Name="MinimizeButton" Content="Minimize to tray" Tag="minimize"/>
     </StackPanel>
 </Border>

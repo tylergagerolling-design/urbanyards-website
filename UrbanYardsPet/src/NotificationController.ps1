@@ -11,6 +11,8 @@ function New-UyNotificationController {
         [Parameter(Mandatory = $true)][scriptblock]$OpenRoute,
         [Parameter(Mandatory = $true)][scriptblock]$Restore,
         [Parameter(Mandatory = $true)][scriptblock]$Ask,
+        [Parameter(Mandatory = $true)][scriptblock]$BringForward,
+        [Parameter(Mandatory = $true)][scriptblock]$ReturnToShelf,
         [Parameter(Mandatory = $true)][scriptblock]$TogglePause,
         [Parameter(Mandatory = $true)][scriptblock]$Exit
     )
@@ -72,16 +74,25 @@ function New-UyNotificationController {
         $tray = [System.Windows.Forms.NotifyIcon]::new()
         $tray.Icon = [System.Drawing.Icon]::new($TrayIconPath)
         $tray.Text = "The Lawnmower Man"
-        $tray.Visible = $false
+        # Keep the tray control available in both floating and shelf modes so the
+        # pet can always be recovered even while normal windows cover the desktop.
+        $tray.Visible = $true
         $menu = [System.Windows.Forms.ContextMenuStrip]::new()
-        $showItem = $menu.Items.Add("Show Lawnmower Man")
+        $alertsItem = $menu.Items.Add("SHOW ALERTS")
+        $bringForwardItem = $menu.Items.Add("BRING FORWARD")
+        $returnToShelfItem = $menu.Items.Add("RETURN TO SHELF")
+        $hideItem = $menu.Items.Add("Hide Lawnmower Man")
+        [void]$menu.Items.Add([System.Windows.Forms.ToolStripSeparator]::new())
         $askItem = $menu.Items.Add("Ask Lawnmower Man")
         $openItem = $menu.Items.Add("Open Urban Yards")
         $pauseItem = $menu.Items.Add("Pause")
         [void]$menu.Items.Add([System.Windows.Forms.ToolStripSeparator]::new())
         $exitItem = $menu.Items.Add("Exit")
         $tray.ContextMenuStrip = $menu
-        $showItem.Add_Click(({ $controller.RestoreFromTray() }).GetNewClosure())
+        $alertsItem.Add_Click(({ $controller.RestoreFromTray() }).GetNewClosure())
+        $bringForwardItem.Add_Click(({ $controller.RestoreFromTray(); & $BringForward }).GetNewClosure())
+        $returnToShelfItem.Add_Click(({ $controller.RestoreFromTray(); & $ReturnToShelf }).GetNewClosure())
+        $hideItem.Add_Click(({ $controller.MinimizeToTray() }).GetNewClosure())
         $askItem.Add_Click(({ & $Ask }).GetNewClosure())
         $openItem.Add_Click(({ & $OpenRoute "overview" }).GetNewClosure())
         $pauseItem.Add_Click(({
@@ -90,7 +101,7 @@ function New-UyNotificationController {
             & $TogglePause $controller.IsPaused
         }).GetNewClosure())
         $exitItem.Add_Click(({ & $Exit }).GetNewClosure())
-        $tray.Add_DoubleClick(({ $controller.RestoreFromTray() }).GetNewClosure())
+        $tray.Add_DoubleClick(({ $controller.RestoreFromTray(); & $BringForward }).GetNewClosure())
         $controller.Tray = $tray
         $controller.TrayMenu = $menu
     }

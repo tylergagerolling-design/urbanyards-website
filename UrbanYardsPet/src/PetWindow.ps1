@@ -117,6 +117,7 @@ function Show-UySettingsWindow {
         [Parameter(Mandatory = $true)]$Window,
         [Parameter(Mandatory = $true)]$Animation,
         [Parameter(Mandatory = $true)]$PetController,
+        [Parameter(Mandatory = $true)]$DesktopLayer,
         [Parameter(Mandatory = $true)]$Notification,
         [Parameter(Mandatory = $true)]$Polling,
         [Parameter(Mandatory = $true)][string[]]$AllowedStates
@@ -126,6 +127,7 @@ function Show-UySettingsWindow {
     $get = { param($name) $settings.FindName($name) }
     $launch = & $get "LaunchWithWindows"
     $top = & $get "AlwaysOnTop"
+    $displayMode = & $get "DisplayMode"
     $animations = & $get "AnimationsEnabled"
     $wander = & $get "WanderingEnabled"
     $speech = & $get "SpeechEnabled"
@@ -142,6 +144,10 @@ function Show-UySettingsWindow {
     $debug = & $get "DebugState"
     $launch.IsChecked = [bool]$Config.launchWithWindows
     $top.IsChecked = [bool]$Config.alwaysOnTop
+    foreach ($item in $displayMode.Items) {
+        if ([string]$item.Tag -eq [string]$Config.displayMode) { $displayMode.SelectedItem = $item; break }
+    }
+    if ($displayMode.SelectedIndex -lt 0) { $displayMode.SelectedIndex = 0 }
     $animations.IsChecked = [bool]$Config.animationsEnabled
     $wander.IsChecked = [bool]$Config.wanderingEnabled
     $speech.IsChecked = [bool]$Config.speechEnabled
@@ -190,6 +196,7 @@ function Show-UySettingsWindow {
         if (-not [int]::TryParse($poll.Text, [ref]$interval)) { $interval = 45 }
         $Config.launchWithWindows = [bool]$launch.IsChecked
         $Config.alwaysOnTop = [bool]$top.IsChecked
+        $Config.displayMode = [string]$displayMode.SelectedItem.Tag
         $Config.animationsEnabled = [bool]$animations.IsChecked
         $Config.wanderingEnabled = [bool]$wander.IsChecked
         $Config.speechEnabled = [bool]$speech.IsChecked
@@ -198,8 +205,8 @@ function Show-UySettingsWindow {
         $Config.pollIntervalSeconds = [Math]::Min(300, [Math]::Max(30, $interval))
         if (-not [string]::IsNullOrWhiteSpace($dashboard.Text)) { $Config.dashboardUrl = $dashboard.Text.Trim() }
         Save-UyPetConfig -Config $Config
-        Set-UyStartupRegistration -Enabled ([bool]$Config.launchWithWindows) -LauncherPath (Join-Path $ProjectRoot "Launch Urban Yards Pet.cmd")
-        $Window.Topmost = [bool]$Config.alwaysOnTop
+        Set-UyStartupRegistration -Enabled ([bool]$Config.launchWithWindows) -LauncherPath (Join-Path $ProjectRoot "Launch Urban Yards Pet.cmd") -IconPath (Join-Path $ProjectRoot "assets\icons\lawnmower-man-app.ico")
+        if ($Config.displayMode -eq "shelf") { $DesktopLayer.ReturnToShelf($false) } else { $DesktopLayer.BringForward($false) }
         $Animation.SetSpeed([double]$Config.animationSpeed)
         $Animation.SetPaused(-not [bool]$Config.animationsEnabled)
         $Polling.ApplyInterval()
@@ -228,6 +235,7 @@ function New-UyPetWindow {
     $menu = Import-UyXaml -Path (Join-Path $ProjectRoot "ui\PetMenu.xaml")
     $menuPopup.Child = $menu
     $window.Topmost = [bool]$Config.alwaysOnTop
+    $desktopLayer = New-UyDesktopLayerController -Window $window -Config $Config
 
     $manifestPath = Join-Path $ProjectRoot "config\sprite-manifest.json"
     $spriteDirectory = Join-Path $ProjectRoot "assets\sprites"
@@ -255,17 +263,16 @@ function New-UyPetWindow {
     $exit = { $script:UyPetExitRequested = $true; $window.Close() }.GetNewClosure()
     $bringForwardTimer.Add_Tick(({
         if ($BringForwardEvent -and $BringForwardEvent.WaitOne(0)) {
-            if (-not $window.IsVisible) { $window.Show() }
-            Set-UyWindowWithinScreens -Window $window
-            $window.Activate()
-            $window.Topmost = [bool]$Config.alwaysOnTop
+            $desktopLayer.BringForward($true)
             if ($runtimeContext.Polling) { $runtimeContext.Polling.SetPaused($false) }
         }
     }).GetNewClosure())
     $bringForwardTimer.Start()
 
     $trayIconPath = Join-Path $ProjectRoot "assets\icons\lawnmower-man-app.ico"
-    $notification = New-UyNotificationController -Window $window -SpeechPopup $speechPopup -SpeechText $speechText -SpeechAction $speechAction -Config $Config -TrayIconPath $trayIconPath -OpenRoute $openRoute -Restore $restore -Ask $ask -TogglePause $togglePause -Exit $exit
+    $bringForward = { $desktopLayer.BringForward($true) }.GetNewClosure()
+    $returnToShelf = { $desktopLayer.ReturnToShelf($true) }.GetNewClosure()
+    $notification = New-UyNotificationController -Window $window -SpeechPopup $speechPopup -SpeechText $speechText -SpeechAction $speechAction -Config $Config -TrayIconPath $trayIconPath -OpenRoute $openRoute -Restore $restore -Ask $ask -BringForward $bringForward -ReturnToShelf $returnToShelf -TogglePause $togglePause -Exit $exit
     $runtimeContext.Notification = $notification
     $eventController = New-UyEventController -AllowedStates $allowedStates -CooldownMinutes ([int]$Config.notificationCooldownMinutes) -OnEvent {
         param($event)
@@ -340,8 +347,10 @@ function New-UyPetWindow {
     $menu.FindName("AskButton").Add_Click(({ $menuPopup.IsOpen = $false; & $ask }).GetNewClosure())
     $menu.FindName("ConnectButton").Add_Click(({
         $menuPopup.IsOpen = $false
-        Show-UySettingsWindow -ProjectRoot $ProjectRoot -Config $Config -Window $window -Animation $animation -PetController $petController -Notification $runtimeContext.Notification -Polling $runtimeContext.Polling -AllowedStates $allowedStates
+        Show-UySettingsWindow -ProjectRoot $ProjectRoot -Config $Config -Window $window -Animation $animation -PetController $petController -DesktopLayer $desktopLayer -Notification $runtimeContext.Notification -Polling $runtimeContext.Polling -AllowedStates $allowedStates
     }).GetNewClosure())
+    $menu.FindName("BringForwardButton").Add_Click(({ $menuPopup.IsOpen = $false; & $bringForward }).GetNewClosure())
+    $menu.FindName("ReturnToShelfButton").Add_Click(({ $menuPopup.IsOpen = $false; & $returnToShelf }).GetNewClosure())
     $menu.FindName("MinimizeButton").Add_Click(({ $menuPopup.IsOpen = $false; $polling.SetPaused($true); $notification.MinimizeToTray() }).GetNewClosure())
 
     $context = [System.Windows.Controls.ContextMenu]::new()
@@ -350,6 +359,8 @@ function New-UyPetWindow {
     }
     [void](Add-ContextItem "Ask Lawnmower Man" { & $ask })
     [void](Add-ContextItem "Open Urban Yards" { & $openRoute "overview" })
+    [void](Add-ContextItem "Bring Forward" { & $bringForward })
+    [void](Add-ContextItem "Return to Desktop Shelf" { & $returnToShelf })
     [void](Add-ContextItem "Today's Work" { & $openRoute "work" })
     [void](Add-ContextItem "Leads" { & $openRoute "leads" })
     [void](Add-ContextItem "Tickets" { & $openRoute "tickets" })
@@ -359,7 +370,7 @@ function New-UyPetWindow {
     $topItem = Add-ContextItem "Keep On Top" { $Config.alwaysOnTop = -not [bool]$Config.alwaysOnTop; $window.Topmost = [bool]$Config.alwaysOnTop; $topItem.IsChecked = [bool]$Config.alwaysOnTop; Save-UyPetConfig -Config $Config } $true ([bool]$Config.alwaysOnTop)
     $pauseItem = Add-ContextItem "Pause Animations" { $paused = -not $animation.IsPaused; & $togglePause $paused; $pauseItem.IsChecked = $paused } $true $false
     [void](Add-ContextItem "Minimize to Tray" { $polling.SetPaused($true); $notification.MinimizeToTray() })
-    [void](Add-ContextItem "Connect Urban Yards / Settings" { Show-UySettingsWindow -ProjectRoot $ProjectRoot -Config $Config -Window $window -Animation $animation -PetController $petController -Notification $runtimeContext.Notification -Polling $runtimeContext.Polling -AllowedStates $allowedStates })
+    [void](Add-ContextItem "Connect Urban Yards / Settings" { Show-UySettingsWindow -ProjectRoot $ProjectRoot -Config $Config -Window $window -Animation $animation -PetController $petController -DesktopLayer $desktopLayer -Notification $runtimeContext.Notification -Polling $runtimeContext.Polling -AllowedStates $allowedStates })
     [void](Add-ContextItem "Exit" { & $exit })
     $petImage.ContextMenu = $context
 
@@ -370,7 +381,7 @@ function New-UyPetWindow {
             if ($source) { $source.CompositionTarget.BackgroundColor = [System.Windows.Media.Colors]::Transparent }
         } catch {}
     }).GetNewClosure())
-    $window.Add_LocationChanged(({ if (-not $petController.IsMoving -and -not $petController.IsDragging) { Set-UyWindowWithinScreens -Window $window } }).GetNewClosure())
+    $window.Add_LocationChanged(({ if ($desktopLayer.Mode -ne "shelf" -and -not $petController.IsMoving -and -not $petController.IsDragging) { Set-UyWindowWithinScreens -Window $window } }).GetNewClosure())
     $window.Add_Closing(({
         param($sender,$eventArgs)
         if (-not $script:UyPetExitRequested -and -not $SmokeTest) {
@@ -380,7 +391,7 @@ function New-UyPetWindow {
         }
     }).GetNewClosure())
     $window.Add_Closed(({
-        $polling.Stop(); $bringForwardTimer.Stop(); $petController.BehaviorTimer.Stop(); $petController.MoveTimer.Stop(); $petController.ReturnTimer.Stop(); $animation.Timer.Stop(); $notification.Dispose()
+        $polling.Stop(); $bringForwardTimer.Stop(); $petController.BehaviorTimer.Stop(); $petController.MoveTimer.Stop(); $petController.ReturnTimer.Stop(); $animation.Timer.Stop(); $notification.Dispose(); $desktopLayer.DetachForExit()
         Save-UyPetWindowState -Left $window.Left -Top $window.Top
         Write-UyPetLog "The Lawnmower Man exited."
     }).GetNewClosure())
@@ -388,12 +399,19 @@ function New-UyPetWindow {
         Write-UyPetLog "Pet window loaded."
         Set-UyWindowWithinScreens -Window $window
         Save-UyPetWindowState -Left $window.Left -Top $window.Top
+        $desktopLayer.ApplySavedMode()
         $window.Tag = [pscustomobject]@{ loaded = $true; loadedAt = [DateTime]::UtcNow.ToString("o") }
         if (-not (Test-UyConnectivityConfigured -Config $Config)) {
             $notification.ShowSpeech("Local mode is ready. Click me, then choose Connect Urban Yards.", "", "", 9)
         }
         if ($SmokeTest) {
             $notification.ShowSpeech("Smoke test: pet window, animation, and notification are working.", "", "", 3)
+            # Exercise both native display modes as part of every desktop smoke test.
+            $desktopLayer.ReturnToShelf($false)
+            $modeTimer = [System.Windows.Threading.DispatcherTimer]::new()
+            $modeTimer.Interval = [TimeSpan]::FromSeconds(1)
+            $modeTimer.Add_Tick({ param($sender,$eventArgs); $sender.Stop(); $desktopLayer.BringForward($false) })
+            $modeTimer.Start()
             # Exercise the same LocationChanged and movement-completion callbacks
             # used by dragging and wandering, not only the initial window render.
             $petController.TargetLeft = $window.Left - 4
@@ -415,5 +433,5 @@ function New-UyPetWindow {
         $window.Add_Activated(({ if (-not $safetyTimer.IsEnabled) { $safetyTimer.Start() } }).GetNewClosure())
     }
 
-    return [pscustomobject]@{ Window = $window; Animation = $animation; PetController = $petController; EventController = $eventController; Notification = $notification; Polling = $polling }
+    return [pscustomobject]@{ Window = $window; Animation = $animation; PetController = $petController; DesktopLayer = $desktopLayer; EventController = $eventController; Notification = $notification; Polling = $polling }
 }

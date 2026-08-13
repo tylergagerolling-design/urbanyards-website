@@ -30,6 +30,11 @@
                 </Border>
                 <CheckBox x:Name="LaunchWithWindows" Content="Launch with Windows" Margin="0,7"/>
                 <CheckBox x:Name="AlwaysOnTop" Content="Always on top" Margin="0,7"/>
+                <TextBlock Text="Desktop display mode" FontWeight="SemiBold" Margin="0,14,0,5"/>
+                <ComboBox x:Name="DisplayMode" Height="32">
+                    <ComboBoxItem Content="Floating above application windows" Tag="floating"/>
+                    <ComboBoxItem Content="Desktop shelf behind application windows" Tag="shelf"/>
+                </ComboBox>
                 <CheckBox x:Name="AnimationsEnabled" Content="Enable animations" Margin="0,7"/>
                 <CheckBox x:Name="WanderingEnabled" Content="Enable wandering" Margin="0,7"/>
                 <CheckBox x:Name="SpeechEnabled" Content="Enable speech bubbles" Margin="0,7"/>

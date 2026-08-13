@@ -16,6 +16,7 @@ function Assert-UyTest {
 $required = @(
     "Start-UrbanYardsPet.ps1", "UrbanYardsPet.ps1", "Launch Urban Yards Pet.cmd", "README.md", "config.example.json",
     "src\PetWindow.ps1", "src\PetController.ps1", "src\AnimationController.ps1", "src\EventController.ps1",
+    "src\DesktopLayer.ps1",
     "src\AuthClient.ps1",
     "src\LawnmowerManClient.ps1", "src\UrbanYardsClient.ps1", "src\NotificationController.ps1", "src\Config.ps1",
     "ui\PetWindow.xaml", "ui\PetMenu.xaml", "ui\ChatPopup.xaml", "ui\SettingsWindow.xaml",
@@ -112,6 +113,10 @@ Assert-UyTest ($allText -match 'dashboard-records') "reuses existing records end
 Assert-UyTest ($allText -match 'DataProtectionScope]::CurrentUser') "encrypts saved desktop session for current Windows user"
 Assert-UyTest ($allText -match 'Connect to Urban Yards') "settings expose an explicit connection workflow"
 Assert-UyTest ($allText -match 'BringForwardEvent') "second launch brings the existing pet forward"
+Assert-UyTest ($allText -match 'SetParent' -and $allText -match 'SHELLDLL_DefView') "desktop shelf uses the native Windows desktop layer"
+Assert-UyTest ($allText -match 'RETURN TO SHELF' -and $allText -match 'BRING FORWARD') "tray exposes shelf and foreground controls"
+Assert-UyTest ($allText -match 'displayMode') "desktop display mode is persisted"
+Assert-UyTest ($allText -match 'SetCurrentProcessExplicitAppUserModelID') "PowerShell host receives a branded app identity"
 
 Write-Host ""
 Write-Host "$($passes.Count) passed, $($failures.Count) failed."

@@ -88,7 +88,7 @@ Important fields:
 
 Sounds default to off. Launch-with-Windows is opt-in.
 
-The installed app continues to run under its bundled PowerShell 7 runtime. Windows receives the stable `UrbanYards.TheLawnmowerMan` app identity, while shortcuts, tray controls, and native windows use the Lawnmower Man logo instead of the generic PowerShell icon.
+The installed app continues to run under its bundled PowerShell 7 runtime. Its shortcut uses a silent Windows Script Host launcher, so no console or pet window appears at startup: only the branded tray icon is created. From that icon use **SHOW ALERTS**, **BRING FORWARD**, or **SEND TO SHELF**. Windows receives the stable `UrbanYards.TheLawnmowerMan` app identity, while shortcuts, tray controls, and native windows use the Lawnmower Man logo instead of the generic PowerShell icon.
 
 ## Adding API configuration
 

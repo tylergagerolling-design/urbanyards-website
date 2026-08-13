@@ -221,6 +221,7 @@ function New-UyPetWindow {
         [Parameter(Mandatory = $true)][string]$ProjectRoot,
         [Parameter(Mandatory = $true)]$Config,
         [switch]$SmokeTest,
+        [switch]$TrayOnly,
         [Threading.EventWaitHandle]$BringForwardEvent
     )
     $window = Import-UyXaml -Path (Join-Path $ProjectRoot "ui\PetWindow.xaml")
@@ -272,7 +273,13 @@ function New-UyPetWindow {
     $trayIconPath = Join-Path $ProjectRoot "assets\icons\lawnmower-man-app.ico"
     $bringForward = { $desktopLayer.BringForward($true) }.GetNewClosure()
     $returnToShelf = { $desktopLayer.ReturnToShelf($true) }.GetNewClosure()
-    $notification = New-UyNotificationController -Window $window -SpeechPopup $speechPopup -SpeechText $speechText -SpeechAction $speechAction -Config $Config -TrayIconPath $trayIconPath -OpenRoute $openRoute -Restore $restore -Ask $ask -BringForward $bringForward -ReturnToShelf $returnToShelf -TogglePause $togglePause -Exit $exit
+    $showAlerts = {
+        $desktopLayer.BringForward($false)
+        if ($runtimeContext.Notification) {
+            $runtimeContext.Notification.ShowSpeech("I’m watching Urban Yards. No unread alerts right now.", "OPEN URBAN YARDS", "overview", 8)
+        }
+    }.GetNewClosure()
+    $notification = New-UyNotificationController -Window $window -SpeechPopup $speechPopup -SpeechText $speechText -SpeechAction $speechAction -Config $Config -TrayIconPath $trayIconPath -OpenRoute $openRoute -Restore $restore -Ask $ask -ShowAlerts $showAlerts -BringForward $bringForward -ReturnToShelf $returnToShelf -TogglePause $togglePause -Exit $exit
     $runtimeContext.Notification = $notification
     $eventController = New-UyEventController -AllowedStates $allowedStates -CooldownMinutes ([int]$Config.notificationCooldownMinutes) -OnEvent {
         param($event)
@@ -399,9 +406,9 @@ function New-UyPetWindow {
         Write-UyPetLog "Pet window loaded."
         Set-UyWindowWithinScreens -Window $window
         Save-UyPetWindowState -Left $window.Left -Top $window.Top
-        $desktopLayer.ApplySavedMode()
+        if (-not $TrayOnly) { $desktopLayer.ApplySavedMode() }
         $window.Tag = [pscustomobject]@{ loaded = $true; loadedAt = [DateTime]::UtcNow.ToString("o") }
-        if (-not (Test-UyConnectivityConfigured -Config $Config)) {
+        if (-not $TrayOnly -and -not (Test-UyConnectivityConfigured -Config $Config)) {
             $notification.ShowSpeech("Local mode is ready. Click me, then choose Connect Urban Yards.", "", "", 9)
         }
         if ($SmokeTest) {
@@ -425,6 +432,12 @@ function New-UyPetWindow {
         }
         elseif (Test-UyConnectivityConfigured -Config $Config) { $polling.Poll() }
     }).GetNewClosure())
+
+    if ($TrayOnly) {
+        # WPF must create the native HWND so tray callbacks can show or attach it,
+        # but the launcher leaves the visual pet hidden until a tray command asks for it.
+        $window.Visibility = [System.Windows.Visibility]::Hidden
+    }
 
     if ($SmokeTest) {
         $safetyTimer = [System.Windows.Threading.DispatcherTimer]::new()

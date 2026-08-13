@@ -1,6 +1,7 @@
 [CmdletBinding()]
 param(
     [switch]$SmokeTest,
+    [switch]$TrayOnly,
     [string]$TestState = ""
 )
 
@@ -12,11 +13,13 @@ $bringForwardEventName = "Local\UrbanYardsPet.TheLawnmowerMan.BringForward"
 $createdNew = $false
 $singleInstanceMutex = [Threading.Mutex]::new($true, $singleInstanceName, [ref]$createdNew)
 if (-not $createdNew) {
-    try {
-        $existingEvent = [Threading.EventWaitHandle]::OpenExisting($bringForwardEventName)
-        [void]$existingEvent.Set()
-        $existingEvent.Dispose()
-    } catch {}
+    if (-not $TrayOnly) {
+        try {
+            $existingEvent = [Threading.EventWaitHandle]::OpenExisting($bringForwardEventName)
+            [void]$existingEvent.Set()
+            $existingEvent.Dispose()
+        } catch {}
+    }
     exit 0
 }
 $bringForwardEvent = [Threading.EventWaitHandle]::new($false, [Threading.EventResetMode]::AutoReset, $bringForwardEventName)
@@ -62,14 +65,20 @@ try {
         $eventArgs.Handled = $false
     })
     Write-UyPetLog "Creating the WPF pet window."
-    $runtime = New-UyPetWindow -ProjectRoot $projectRoot -Config $config -SmokeTest:$SmokeTest -BringForwardEvent $bringForwardEvent
+    $runtime = New-UyPetWindow -ProjectRoot $projectRoot -Config $config -SmokeTest:$SmokeTest -TrayOnly:$TrayOnly -BringForwardEvent $bringForwardEvent
     Write-UyPetLog "The WPF pet window was created."
+    if ($TrayOnly) { Write-UyPetLog "Tray-only visible top-level windows: $(Get-UyVisibleProcessWindowCount)." }
     if ($TestState -and $runtime.Animation.IsAllowedState($TestState)) {
         $runtime.Window.Add_Loaded({ $runtime.PetController.SetState($TestState, "normal", 8) })
     }
     $app.MainWindow = $runtime.Window
-    $runtime.Window.Show()
-    Write-UyPetLog "The WPF pet window was shown."
+    if ($TrayOnly) {
+        Write-UyPetLog "The Lawnmower Man started in tray-only mode."
+    }
+    else {
+        $runtime.Window.Show()
+        Write-UyPetLog "The WPF pet window was shown."
+    }
     $exitCode = $app.Run()
     Write-UyPetLog "Application loop exited with code $exitCode."
     exit $exitCode

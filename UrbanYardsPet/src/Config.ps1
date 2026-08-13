@@ -181,18 +181,14 @@ function Set-UyStartupRegistration {
     $legacyLauncher = Join-Path $startup "Urban Yards Pet.cmd"
     if ($Enabled) {
         $projectRoot = [System.IO.Path]::GetDirectoryName($LauncherPath)
-        $scriptPath = Join-Path $projectRoot "Start-UrbanYardsPet.ps1"
-        $bundledPowerShell = Join-Path $projectRoot "runtime\pwsh.exe"
-        $systemPowerShell = Get-Command pwsh.exe -ErrorAction SilentlyContinue
-        if (Test-Path -LiteralPath $bundledPowerShell -PathType Leaf) { $target = $bundledPowerShell }
-        elseif ($systemPowerShell) { $target = $systemPowerShell.Source }
-        else { $target = (Get-Command powershell.exe -ErrorAction Stop).Source }
+        $silentLauncherPath = Join-Path $projectRoot "Launch-UrbanYardsPet.vbs"
+        $target = Join-Path $env:WINDIR "System32\wscript.exe"
         $shell = New-Object -ComObject WScript.Shell
         $shortcut = $shell.CreateShortcut($startupLauncher)
         $shortcut.TargetPath = $target
-        $shortcut.Arguments = "-NoProfile -STA -WindowStyle Hidden -ExecutionPolicy Bypass -File `"$scriptPath`""
+        $shortcut.Arguments = "`"$silentLauncherPath`""
         $shortcut.WorkingDirectory = $projectRoot
-        $shortcut.IconLocation = if ($IconPath) { "$IconPath,0" } else { "$LauncherPath,0" }
+        $shortcut.IconLocation = if ($IconPath) { "$IconPath,0" } else { "$target,0" }
         $shortcut.Description = "Launch The Lawnmower Man desktop pet"
         $shortcut.Save()
         if (Test-Path -LiteralPath $legacyLauncher) { Remove-Item -LiteralPath $legacyLauncher -Force }

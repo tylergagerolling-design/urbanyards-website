@@ -1,6 +1,7 @@
 [CmdletBinding()]
 param(
     [switch]$SmokeTest,
+    [switch]$TrayOnly,
     [string]$TestState = ""
 )
 
@@ -12,6 +13,7 @@ function Start-UyPetProcess {
     param([Parameter(Mandatory = $true)][string]$Executable)
     $arguments = @("-NoProfile", "-STA", "-ExecutionPolicy", "Bypass", "-File", ('"{0}"' -f $main))
     if ($SmokeTest) { $arguments += "-SmokeTest" }
+    if ($TrayOnly) { $arguments += "-TrayOnly" }
     if ($TestState) { $arguments += @("-TestState", ('"{0}"' -f $TestState)) }
     $process = Start-Process -FilePath $Executable -ArgumentList $arguments -WorkingDirectory $PSScriptRoot -PassThru
     Write-Host "The Lawnmower Man started (PID $($process.Id)) with $Executable."
@@ -19,7 +21,7 @@ function Start-UyPetProcess {
 }
 
 if ($PSVersionTable.PSEdition -eq "Core" -and $PSVersionTable.PSVersion.Major -ge 7 -and [Threading.Thread]::CurrentThread.ApartmentState -eq "STA") {
-    & $main -SmokeTest:$SmokeTest -TestState $TestState
+    & $main -SmokeTest:$SmokeTest -TrayOnly:$TrayOnly -TestState $TestState
     exit $LASTEXITCODE
 }
 

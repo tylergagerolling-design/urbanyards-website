@@ -11,6 +11,7 @@ function New-UyNotificationController {
         [Parameter(Mandatory = $true)][scriptblock]$OpenRoute,
         [Parameter(Mandatory = $true)][scriptblock]$Restore,
         [Parameter(Mandatory = $true)][scriptblock]$Ask,
+        [Parameter(Mandatory = $true)][scriptblock]$ShowAlerts,
         [Parameter(Mandatory = $true)][scriptblock]$BringForward,
         [Parameter(Mandatory = $true)][scriptblock]$ReturnToShelf,
         [Parameter(Mandatory = $true)][scriptblock]$TogglePause,
@@ -80,7 +81,7 @@ function New-UyNotificationController {
         $menu = [System.Windows.Forms.ContextMenuStrip]::new()
         $alertsItem = $menu.Items.Add("SHOW ALERTS")
         $bringForwardItem = $menu.Items.Add("BRING FORWARD")
-        $returnToShelfItem = $menu.Items.Add("RETURN TO SHELF")
+        $returnToShelfItem = $menu.Items.Add("SEND TO SHELF")
         $hideItem = $menu.Items.Add("Hide Lawnmower Man")
         [void]$menu.Items.Add([System.Windows.Forms.ToolStripSeparator]::new())
         $askItem = $menu.Items.Add("Ask Lawnmower Man")
@@ -89,7 +90,7 @@ function New-UyNotificationController {
         [void]$menu.Items.Add([System.Windows.Forms.ToolStripSeparator]::new())
         $exitItem = $menu.Items.Add("Exit")
         $tray.ContextMenuStrip = $menu
-        $alertsItem.Add_Click(({ $controller.RestoreFromTray() }).GetNewClosure())
+        $alertsItem.Add_Click(({ & $ShowAlerts }).GetNewClosure())
         $bringForwardItem.Add_Click(({ $controller.RestoreFromTray(); & $BringForward }).GetNewClosure())
         $returnToShelfItem.Add_Click(({ $controller.RestoreFromTray(); & $ReturnToShelf }).GetNewClosure())
         $hideItem.Add_Click(({ $controller.MinimizeToTray() }).GetNewClosure())
@@ -101,7 +102,7 @@ function New-UyNotificationController {
             & $TogglePause $controller.IsPaused
         }).GetNewClosure())
         $exitItem.Add_Click(({ & $Exit }).GetNewClosure())
-        $tray.Add_DoubleClick(({ $controller.RestoreFromTray(); & $BringForward }).GetNewClosure())
+        $tray.Add_DoubleClick(({ & $ShowAlerts }).GetNewClosure())
         $controller.Tray = $tray
         $controller.TrayMenu = $menu
     }

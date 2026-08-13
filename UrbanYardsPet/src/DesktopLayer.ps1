@@ -19,6 +19,12 @@ public static class UrbanYardsDesktopLayer {
     [DllImport("user32.dll", SetLastError=true)]
     public static extern bool EnumWindows(EnumWindowsProc callback, IntPtr lParam);
 
+    [DllImport("user32.dll")]
+    public static extern uint GetWindowThreadProcessId(IntPtr hwnd, out uint processId);
+
+    [DllImport("user32.dll")]
+    public static extern bool IsWindowVisible(IntPtr hwnd);
+
     [DllImport("user32.dll", CharSet=CharSet.Unicode)]
     public static extern IntPtr FindWindow(string className, string windowName);
 
@@ -53,6 +59,22 @@ function Set-UyProcessAppIdentity {
 function Get-UyPetNativeHandle {
     param([Parameter(Mandatory = $true)][System.Windows.Window]$Window)
     return [System.Windows.Interop.WindowInteropHelper]::new($Window).Handle
+}
+
+function Get-UyVisibleProcessWindowCount {
+    $currentProcessId = [uint32][System.Diagnostics.Process]::GetCurrentProcess().Id
+    $script:UyVisibleProcessWindowCount = 0
+    $callback = [UrbanYardsDesktopLayer+EnumWindowsProc]{
+        param([IntPtr]$candidate, [IntPtr]$parameter)
+        $windowProcessId = [uint32]0
+        [void][UrbanYardsDesktopLayer]::GetWindowThreadProcessId($candidate, [ref]$windowProcessId)
+        if ($windowProcessId -eq $currentProcessId -and [UrbanYardsDesktopLayer]::IsWindowVisible($candidate)) {
+            $script:UyVisibleProcessWindowCount++
+        }
+        return $true
+    }
+    [void][UrbanYardsDesktopLayer]::EnumWindows($callback, [IntPtr]::Zero)
+    return $script:UyVisibleProcessWindowCount
 }
 
 function Get-UyDesktopShelfHost {

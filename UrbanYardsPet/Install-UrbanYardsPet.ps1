@@ -77,14 +77,10 @@ endlocal
     Move-Item -LiteralPath $staging -Destination $installRoot
 
     $launcherPath = Join-Path $installRoot "Launch Urban Yards Pet.cmd"
-    $scriptPath = Join-Path $installRoot "Start-UrbanYardsPet.ps1"
+    $silentLauncherPath = Join-Path $installRoot "Launch-UrbanYardsPet.vbs"
     $iconPath = Join-Path $installRoot "assets\icons\lawnmower-man-app.ico"
-    $bundledPowerShell = Join-Path $installRoot "runtime\pwsh.exe"
-    $systemPowerShell = Get-Command pwsh.exe -ErrorAction SilentlyContinue
-    if (Test-Path -LiteralPath $bundledPowerShell -PathType Leaf) { $shortcutTarget = $bundledPowerShell }
-    elseif ($systemPowerShell) { $shortcutTarget = $systemPowerShell.Source }
-    else { $shortcutTarget = (Get-Command powershell.exe -ErrorAction Stop).Source }
-    $shortcutArguments = "-NoProfile -STA -WindowStyle Hidden -ExecutionPolicy Bypass -File `"$scriptPath`""
+    $shortcutTarget = Join-Path $env:WINDIR "System32\wscript.exe"
+    $shortcutArguments = "`"$silentLauncherPath`""
     $desktop = [Environment]::GetFolderPath([Environment+SpecialFolder]::DesktopDirectory)
     $programs = [Environment]::GetFolderPath([Environment+SpecialFolder]::Programs)
     $startMenuDirectory = Join-Path $programs "Urban Yards"
@@ -109,7 +105,7 @@ endlocal
     Write-Host "Desktop shortcut: The Lawnmower Man" -ForegroundColor Green
     Write-Host "Start Menu shortcut: Urban Yards > The Lawnmower Man" -ForegroundColor Green
     if (Test-Path -LiteralPath $backup) { Write-Host "Previous installation retained at $backup" }
-    if ($Launch) { Start-Process -FilePath $launcherPath -WorkingDirectory $installRoot | Out-Null }
+    if ($Launch) { Start-Process -FilePath $shortcutTarget -ArgumentList $shortcutArguments -WorkingDirectory $installRoot -WindowStyle Hidden | Out-Null }
 }
 catch {
     if (Test-Path -LiteralPath $staging) { Remove-Item -LiteralPath $staging -Recurse -Force }

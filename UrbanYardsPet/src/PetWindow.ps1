@@ -414,10 +414,12 @@ function New-UyPetWindow {
         if ($SmokeTest) {
             $notification.ShowSpeech("Smoke test: pet window, animation, and notification are working.", "", "", 3)
             # Exercise both native display modes as part of every desktop smoke test.
-            $desktopLayer.ReturnToShelf($false)
+            # Use the real delayed WinForms tray callbacks after their factory
+            # function has returned; this catches runspace/closure regressions.
+            $notification.TrayMenu.Items[2].PerformClick()
             $modeTimer = [System.Windows.Threading.DispatcherTimer]::new()
             $modeTimer.Interval = [TimeSpan]::FromSeconds(1)
-            $modeTimer.Add_Tick({ param($sender,$eventArgs); $sender.Stop(); $desktopLayer.BringForward($false) })
+            $modeTimer.Add_Tick({ param($sender,$eventArgs); $sender.Stop(); $notification.TrayMenu.Items[1].PerformClick() })
             $modeTimer.Start()
             # Exercise the same LocationChanged and movement-completion callbacks
             # used by dragging and wandering, not only the initial window render.

@@ -29,10 +29,30 @@ function New-UyNotificationController {
         Tray = $null
         TrayMenu = $null
         IsPaused = $false
+        OpenRouteAction = $OpenRoute
+        RestoreAction = $Restore
+        AskAction = $Ask
+        ShowAlertsAction = $ShowAlerts
+        BringForwardAction = $BringForward
+        ReturnToShelfAction = $ReturnToShelf
+        TogglePauseAction = $TogglePause
+        ExitAction = $Exit
     }
     $controller | Add-Member -MemberType ScriptMethod -Name HideSpeech -Value {
         $this.HideTimer.Stop()
         $this.SpeechPopup.IsOpen = $false
+    }
+    $controller | Add-Member -MemberType ScriptMethod -Name InvokeAction -Value {
+        param([string]$ActionName, $Argument = $null, [bool]$HasArgument = $false)
+        try {
+            $property = $this.PSObject.Properties[$ActionName]
+            if ($null -eq $property -or $null -eq $property.Value) { throw "Tray action '$ActionName' is unavailable." }
+            $action = $property.Value
+            if ($HasArgument) { & $action $Argument } else { & $action }
+        }
+        catch {
+            Write-UyPetLog "Tray command '$ActionName' failed: $($_.Exception.Message)" "ERROR"
+        }
     }
     $controller | Add-Member -MemberType ScriptMethod -Name ShowSpeech -Value {
         param([string]$Message, [string]$ActionLabel = "", [string]$Route = "overview", [int]$Seconds = 8)
@@ -58,7 +78,7 @@ function New-UyNotificationController {
         $this.Window.Show()
         $this.Window.Activate()
         $this.Window.Topmost = [bool]$this.Config.alwaysOnTop
-        & $Restore
+        $this.InvokeAction("RestoreAction")
     }
     $controller | Add-Member -MemberType ScriptMethod -Name Dispose -Value {
         $this.HideTimer.Stop()
@@ -69,7 +89,12 @@ function New-UyNotificationController {
     $hideTimer.Tag = $controller
     $hideTimer.Add_Tick({ param($sender, $eventArgs); $sender.Tag.HideSpeech() })
     $speechAction.Tag = $controller
-    $speechAction.Add_Click(({ param($sender, $eventArgs); $instance = $sender.Tag; $instance.HideSpeech(); & $OpenRoute $instance.CurrentRoute }).GetNewClosure())
+    $speechAction.Add_Click(({
+        param($sender, $eventArgs)
+        $instance = $sender.Tag
+        $instance.HideSpeech()
+        $instance.InvokeAction("OpenRouteAction", $instance.CurrentRoute, $true)
+    }).GetNewClosure())
 
     if (Test-Path -LiteralPath $TrayIconPath) {
         $tray = [System.Windows.Forms.NotifyIcon]::new()
@@ -90,19 +115,19 @@ function New-UyNotificationController {
         [void]$menu.Items.Add([System.Windows.Forms.ToolStripSeparator]::new())
         $exitItem = $menu.Items.Add("Exit")
         $tray.ContextMenuStrip = $menu
-        $alertsItem.Add_Click(({ & $ShowAlerts }).GetNewClosure())
-        $bringForwardItem.Add_Click(({ $controller.RestoreFromTray(); & $BringForward }).GetNewClosure())
-        $returnToShelfItem.Add_Click(({ $controller.RestoreFromTray(); & $ReturnToShelf }).GetNewClosure())
+        $alertsItem.Add_Click(({ $controller.InvokeAction("ShowAlertsAction") }).GetNewClosure())
+        $bringForwardItem.Add_Click(({ $controller.InvokeAction("BringForwardAction") }).GetNewClosure())
+        $returnToShelfItem.Add_Click(({ $controller.InvokeAction("ReturnToShelfAction") }).GetNewClosure())
         $hideItem.Add_Click(({ $controller.MinimizeToTray() }).GetNewClosure())
-        $askItem.Add_Click(({ & $Ask }).GetNewClosure())
-        $openItem.Add_Click(({ & $OpenRoute "overview" }).GetNewClosure())
+        $askItem.Add_Click(({ $controller.InvokeAction("AskAction") }).GetNewClosure())
+        $openItem.Add_Click(({ $controller.InvokeAction("OpenRouteAction", "overview", $true) }).GetNewClosure())
         $pauseItem.Add_Click(({
             $controller.IsPaused = -not $controller.IsPaused
             $pauseItem.Text = if ($controller.IsPaused) { "Resume" } else { "Pause" }
-            & $TogglePause $controller.IsPaused
+            $controller.InvokeAction("TogglePauseAction", $controller.IsPaused, $true)
         }).GetNewClosure())
-        $exitItem.Add_Click(({ & $Exit }).GetNewClosure())
-        $tray.Add_DoubleClick(({ & $ShowAlerts }).GetNewClosure())
+        $exitItem.Add_Click(({ $controller.InvokeAction("ExitAction") }).GetNewClosure())
+        $tray.Add_DoubleClick(({ $controller.InvokeAction("ShowAlertsAction") }).GetNewClosure())
         $controller.Tray = $tray
         $controller.TrayMenu = $menu
     }

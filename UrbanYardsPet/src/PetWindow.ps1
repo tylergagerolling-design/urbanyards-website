@@ -315,6 +315,12 @@ function New-UyPetWindow {
         if (-not (Test-UyConnectivityConfigured -Config $Config)) { $notification.ShowSpeech("Local mode is ready. Open Settings to connect Urban Yards.", "SETTINGS", "settings", 9) }
         if ($SmokeTest) {
             $notification.ShowSpeech("Smoke test: pet window, animation, and notification are working.", "", "", 3)
+            # Exercise the same LocationChanged and movement-completion callbacks
+            # used by dragging and wandering, not only the initial window render.
+            $petController.TargetLeft = $window.Left - 4
+            $petController.MoveStep = -2
+            $petController.IsMoving = $true
+            $petController.MoveTimer.Start()
             $smokeTimer = [System.Windows.Threading.DispatcherTimer]::new()
             $smokeTimer.Interval = [TimeSpan]::FromSeconds(3)
             $smokeTimer.Add_Tick({ param($sender,$eventArgs); $sender.Stop(); $script:UyPetExitRequested = $true; $window.Close() })

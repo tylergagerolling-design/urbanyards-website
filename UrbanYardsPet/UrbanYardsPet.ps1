@@ -25,6 +25,16 @@ foreach ($sourceFile in $sourceFiles) {
     . (Join-Path $projectRoot $sourceFile)
 }
 
+# WPF raises several callbacks from closure-backed event scopes. PowerShell 7 does
+# not automatically expose functions declared in this script scope to those
+# closures, so publish the pet's own helpers into this isolated process runspace.
+# Without this, moving the window can fail when LocationChanged tries to resolve
+# Set-UyWindowWithinScreens. The desktop-pet process owns this runspace, so these
+# names do not leak into the user's PowerShell session.
+Get-Command -CommandType Function -Name "*-Uy*" | ForEach-Object {
+    Set-Item -LiteralPath ("Function:\global:{0}" -f $_.Name) -Value $_.ScriptBlock
+}
+
 try {
     Write-UyPetLog "The Lawnmower Man is starting. PowerShell $($PSVersionTable.PSVersion)."
     $config = Get-UyPetConfig -ProjectRoot $projectRoot

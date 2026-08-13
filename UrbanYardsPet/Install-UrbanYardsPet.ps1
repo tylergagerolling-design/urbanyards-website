@@ -47,6 +47,11 @@ try {
         [System.IO.Directory]::CreateDirectory($runtimeDirectory) | Out-Null
         Expand-Archive -LiteralPath $RuntimeArchive -DestinationPath $runtimeDirectory -Force
     }
+    elseif (Test-Path -LiteralPath (Join-Path $installRoot "runtime\pwsh.exe") -PathType Leaf) {
+        # Keep the private PowerShell runtime during an in-place application
+        # update so a reinstall does not silently fall back to PowerShell 5.1.
+        Copy-UyDirectory -Source (Join-Path $installRoot "runtime") -Destination $runtimeDirectory
+    }
 
     $launcher = @'
 @echo off

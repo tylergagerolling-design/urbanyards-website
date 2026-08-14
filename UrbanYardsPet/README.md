@@ -28,7 +28,7 @@ If a portable PowerShell 7 zip is supplied with `-RuntimeArchive`, it is install
 
 The approved source-of-truth pack is preserved at `assets/source/sprout-6-animation-pack/`. It contains the supplied README, source manifest, validation results, QA contact sheet, and six-animation previews. The active runtime uses the 48 individual alpha-enabled production frames copied into `assets/sprites/`.
 
-The Desktop shortcut, Start Menu shortcut, system tray, and native app windows use the dedicated transparent Lawnmower Man logo at `assets/icons/lawnmower-man-app.ico`. It includes Windows-ready sizes from 16×16 through 256×256. To rebuild it after intentionally replacing `assets/icons/lawnmower-man-app-icon.png`, run:
+The Desktop shortcut, Start Menu shortcut, system tray, and native app windows use the approved Sprout master artwork stored at `assets/icons/lawnmower-man-app-icon.png`. The generated `assets/icons/lawnmower-man-app.ico` includes Windows-ready sizes from 16×16 through 256×256. To rebuild the Windows icon after intentionally replacing the master PNG, run:
 
 ```powershell
 pwsh -NoProfile -File .\tools\Build-AppIcon.ps1

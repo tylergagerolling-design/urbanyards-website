@@ -24,20 +24,5 @@
                ToolTip="The Lawnmower Man"/>
         <Popup x:Name="MenuPopup" AllowsTransparency="True" Placement="Top" StaysOpen="False"
                PlacementTarget="{Binding ElementName=PetImage}" PopupAnimation="Fade"/>
-        <Popup x:Name="SpeechPopup" AllowsTransparency="True" Placement="Left" StaysOpen="True"
-               PlacementTarget="{Binding ElementName=PetImage}" PopupAnimation="Fade">
-            <Border x:Name="SpeechBorder" MaxWidth="270" MinWidth="190" Margin="8" Padding="14,12"
-                    CornerRadius="16" Background="#FFFBF3" BorderBrush="#CFD9CD" BorderThickness="1">
-                <Border.Effect>
-                    <DropShadowEffect BlurRadius="14" ShadowDepth="3" Opacity="0.26" Color="#173B28"/>
-                </Border.Effect>
-                <StackPanel>
-                    <TextBlock x:Name="SpeechText" FontFamily="Segoe UI" FontSize="14" Foreground="#12291F"
-                               TextWrapping="Wrap" Margin="0,0,0,8"/>
-                    <Button x:Name="SpeechAction" HorizontalAlignment="Left" Padding="10,5" FontWeight="SemiBold"
-                            Background="#E8F2E5" BorderBrush="#9DB899" Foreground="#174B34" Cursor="Hand"/>
-                </StackPanel>
-            </Border>
-        </Popup>
     </Grid>
 </Window>

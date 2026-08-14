@@ -1,6 +1,6 @@
 <Border xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-        Width="270" Margin="8" Padding="16" CornerRadius="18"
+        Width="250" Margin="8" Padding="16" CornerRadius="18"
         Background="#FFFBF3" BorderBrush="#CAD7C8" BorderThickness="1">
     <Border.Effect>
         <DropShadowEffect BlurRadius="18" ShadowDepth="4" Opacity="0.28" Color="#173B28"/>
@@ -25,21 +25,11 @@
         </Style>
     </Border.Resources>
     <StackPanel>
-        <TextBlock Text="THE LAWNMOWER MAN" FontFamily="Segoe UI Semibold" FontSize="17" Foreground="#0C3928"/>
-        <StackPanel Orientation="Horizontal" Margin="0,4,0,12">
-            <Ellipse Width="8" Height="8" Fill="#35A854" Margin="0,0,7,0"/>
-            <TextBlock x:Name="ConnectionStatus" Text="LOCAL MODE" FontFamily="Segoe UI Semibold" FontSize="11" Foreground="#52645B"/>
-        </StackPanel>
-        <Button x:Name="AttentionButton" Content="What needs my attention?" Tag="attention"/>
-        <Button x:Name="AskButton" Content="Ask Lawnmower Man" Tag="ask"/>
-        <Button x:Name="ConnectButton" Content="Connect Urban Yards" Tag="connect"/>
-        <Button x:Name="ScheduleButton" Content="Today's Schedule" Tag="work"/>
-        <Button x:Name="RoutesButton" Content="Check Routes" Tag="routes"/>
-        <Button x:Name="LeadsButton" Content="New Leads" Tag="leads"/>
-        <Button x:Name="DashboardButton" Content="Open Urban Yards" Tag="overview"/>
-        <Separator Margin="0,8"/>
-        <Button x:Name="BringForwardButton" Content="Bring forward" Tag="floating"/>
-        <Button x:Name="ReturnToShelfButton" Content="Return to desktop shelf" Tag="shelf"/>
-        <Button x:Name="MinimizeButton" Content="Minimize to tray" Tag="minimize"/>
+        <TextBlock Text="SPROUT" FontFamily="Segoe UI Semibold" FontSize="17" Foreground="#0C3928"/>
+        <TextBlock Text="Your desktop companion" FontSize="11" Foreground="#52645B" Margin="0,3,0,12"/>
+        <Button x:Name="BringForwardButton" Content="Bring forward"/>
+        <Button x:Name="ReturnToShelfButton" Content="Send to desktop shelf"/>
+        <Button x:Name="SettingsButton" Content="Settings"/>
+        <Button x:Name="MinimizeButton" Content="Hide to tray"/>
     </StackPanel>
 </Border>

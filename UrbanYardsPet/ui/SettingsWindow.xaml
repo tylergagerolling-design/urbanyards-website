@@ -1,33 +1,15 @@
 <Window xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-        Title="The Lawnmower Man Settings" Width="520" Height="720" MinHeight="600"
+        Title="The Lawnmower Man Settings" Width="480" Height="560" MinHeight="500"
         Background="#FFFDF8" WindowStartupLocation="CenterScreen">
     <Grid Margin="22">
         <Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="*"/><RowDefinition Height="Auto"/></Grid.RowDefinitions>
         <StackPanel>
             <TextBlock Text="The Lawnmower Man" FontFamily="Segoe UI Semibold" FontSize="25" Foreground="#103B2A"/>
-            <TextBlock Text="Desktop pet settings" FontSize="13" Foreground="#617069" Margin="0,2,0,16"/>
-            <Border x:Name="ConnectionNotice" Padding="12" CornerRadius="10" Background="#FFF1CE" Margin="0,0,0,12">
-                <TextBlock x:Name="ConnectionNoticeText" TextWrapping="Wrap" Foreground="#584717"/>
-            </Border>
+            <TextBlock Text="A quiet little desktop companion" FontSize="13" Foreground="#617069" Margin="0,2,0,16"/>
         </StackPanel>
         <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto">
             <StackPanel Margin="0,4,10,4">
-                <Border Padding="14" CornerRadius="10" BorderBrush="#CAD8CE" BorderThickness="1" Background="#F5FAF4" Margin="0,0,0,12">
-                    <StackPanel>
-                        <TextBlock Text="Connect to Urban Yards" FontWeight="SemiBold" FontSize="16" Foreground="#103B2A"/>
-                        <TextBlock x:Name="ConnectionStatusText" TextWrapping="Wrap" Foreground="#617069" Margin="0,3,0,10"/>
-                        <TextBlock Text="Dashboard email" FontWeight="SemiBold" Margin="0,0,0,4"/>
-                        <TextBox x:Name="ConnectionEmail" Padding="8"/>
-                        <TextBlock Text="Dashboard password" FontWeight="SemiBold" Margin="0,10,0,4"/>
-                        <PasswordBox x:Name="ConnectionPassword" Padding="8"/>
-                        <TextBlock Text="Your password is sent directly to your existing Supabase project and is never saved. The resulting session is encrypted for this Windows account." TextWrapping="Wrap" Foreground="#617069" FontSize="11" Margin="0,8,0,10"/>
-                        <WrapPanel>
-                            <Button x:Name="ConnectUrbanYards" Content="Connect" Padding="14,8" Background="#1C6A48" Foreground="White" BorderBrush="#1C6A48" Margin="0,0,8,0"/>
-                            <Button x:Name="DisconnectUrbanYards" Content="Disconnect" Padding="14,8"/>
-                        </WrapPanel>
-                    </StackPanel>
-                </Border>
                 <CheckBox x:Name="LaunchWithWindows" Content="Launch with Windows" Margin="0,7"/>
                 <CheckBox x:Name="AlwaysOnTop" Content="Always on top" Margin="0,7"/>
                 <TextBlock Text="Desktop display mode" FontWeight="SemiBold" Margin="0,14,0,5"/>
@@ -35,23 +17,16 @@
                     <ComboBoxItem Content="Floating above application windows" Tag="floating"/>
                     <ComboBoxItem Content="Desktop shelf behind application windows" Tag="shelf"/>
                 </ComboBox>
-                <CheckBox x:Name="AnimationsEnabled" Content="Enable animations" Margin="0,7"/>
-                <CheckBox x:Name="SpeechEnabled" Content="Enable speech bubbles" Margin="0,7"/>
-                <CheckBox x:Name="SoundsEnabled" Content="Enable sounds (off by default)" Margin="0,7"/>
+                <CheckBox x:Name="AnimationsEnabled" Content="Enable animations" Margin="0,12,0,7"/>
                 <TextBlock Text="Animation speed" FontWeight="SemiBold" Margin="0,14,0,5"/>
                 <Slider x:Name="AnimationSpeed" Minimum="0.35" Maximum="2.5" TickFrequency="0.05" IsSnapToTickEnabled="True"/>
-                <TextBlock Text="Polling interval (seconds, 30–300)" FontWeight="SemiBold" Margin="0,14,0,5"/>
-                <TextBox x:Name="PollingInterval" Padding="8"/>
-                <TextBlock Text="Dashboard URL" FontWeight="SemiBold" Margin="0,14,0,5"/>
-                <TextBox x:Name="DashboardUrl" Padding="8"/>
-                <WrapPanel Margin="0,14,0,4">
+                <WrapPanel Margin="0,18,0,4">
                     <Button x:Name="ResetPosition" Content="Reset pet position" Padding="12,7" Margin="0,0,8,8"/>
-                    <Button x:Name="TestNotification" Content="Test notification" Padding="12,7" Margin="0,0,8,8"/>
                 </WrapPanel>
-                <Expander Header="Developer animation QA" Margin="0,12,0,0" IsExpanded="False">
+                <Expander Header="Animation preview" Margin="0,12,0,0" IsExpanded="False">
                     <StackPanel Margin="0,10,0,0">
                         <ComboBox x:Name="DebugState" Height="32"/>
-                        <Button x:Name="TestAnimation" Content="Run selected state" Padding="12,7" Margin="0,8,0,0" HorizontalAlignment="Left"/>
+                        <Button x:Name="TestAnimation" Content="Run selected animation" Padding="12,7" Margin="0,8,0,0" HorizontalAlignment="Left"/>
                     </StackPanel>
                 </Expander>
             </StackPanel>

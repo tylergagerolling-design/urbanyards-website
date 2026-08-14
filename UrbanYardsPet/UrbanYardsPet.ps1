@@ -40,11 +40,7 @@ $script:UyUnhandledUiErrorCount = 0
 
 $sourceFiles = @(
     "src\Config.ps1",
-    "src\AuthClient.ps1",
     "src\AnimationController.ps1",
-    "src\EventController.ps1",
-    "src\LawnmowerManClient.ps1",
-    "src\UrbanYardsClient.ps1",
     "src\NotificationController.ps1",
     "src\DesktopLayer.ps1",
     "src\PetController.ps1",

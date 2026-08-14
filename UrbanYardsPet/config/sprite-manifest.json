@@ -27,13 +27,6 @@
     "attention",
     "urgent"
   ],
-  "eventStateMap": {
-    "weather": "attention",
-    "overdue": "attention",
-    "newLead": "attention",
-    "busyDay": "attention",
-    "payment": "celebrate"
-  },
   "animations": {
     "idle_blink": {
       "fps": 6.6666667,

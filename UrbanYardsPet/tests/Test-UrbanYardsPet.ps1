@@ -15,11 +15,9 @@ function Assert-UyTest {
 
 $required = @(
     "Start-UrbanYardsPet.ps1", "UrbanYardsPet.ps1", "Launch Urban Yards Pet.cmd", "Launch-UrbanYardsPet.vbs", "README.md", "config.example.json",
-    "src\PetWindow.ps1", "src\PetController.ps1", "src\AnimationController.ps1", "src\EventController.ps1",
-    "src\DesktopLayer.ps1",
-    "src\AuthClient.ps1",
-    "src\LawnmowerManClient.ps1", "src\UrbanYardsClient.ps1", "src\NotificationController.ps1", "src\Config.ps1",
-    "ui\PetWindow.xaml", "ui\PetMenu.xaml", "ui\ChatPopup.xaml", "ui\SettingsWindow.xaml",
+    "src\PetWindow.ps1", "src\PetController.ps1", "src\AnimationController.ps1", "src\DesktopLayer.ps1",
+    "src\NotificationController.ps1", "src\Config.ps1",
+    "ui\PetWindow.xaml", "ui\PetMenu.xaml", "ui\SettingsWindow.xaml",
     "config\sprite-manifest.json", "assets\icons\lawnmower-man-app-icon.png", "assets\icons\lawnmower-man-app.ico"
 )
 foreach ($file in $required) { Assert-UyTest (Test-Path -LiteralPath (Join-Path $root $file)) "required file: $file" }
@@ -82,7 +80,6 @@ foreach ($state in $expectedStates) {
     }
 }
 Assert-UyTest (@($manifest.animations.PSObject.Properties.Name).Count -eq 6) "no retired animations remain in runtime manifest"
-Assert-UyTest ($manifest.eventStateMap.weather -eq "attention" -and $manifest.eventStateMap.overdue -eq "attention" -and $manifest.eventStateMap.newLead -eq "attention" -and $manifest.eventStateMap.busyDay -eq "attention" -and $manifest.eventStateMap.payment -eq "celebrate") "business events map into the approved animation vocabulary"
 
 $spriteFiles = Get-ChildItem -LiteralPath (Join-Path $root "assets\sprites") -Filter *.png -File
 $transparentCorners = $true
@@ -112,16 +109,20 @@ $configText = Get-Content -LiteralPath (Join-Path $root "config.example.json") -
 Assert-UyTest ($configText -notmatch '(?i)service[_-]?role|sk_live|eyJ[a-zA-Z0-9_-]{20,}') "example config contains no privileged secrets"
 $allText = (Get-ChildItem -LiteralPath $root -Recurse -File | Where-Object { $_.Extension -in @('.ps1','.json','.xaml','.md','.cmd') } | ForEach-Object { Get-Content -LiteralPath $_.FullName -Raw }) -join "`n"
 Assert-UyTest ($allText -notmatch '(?i)SUPABASE_SERVICE_ROLE_KEY\s*[=:]\s*[^\s<]+') "no service role credential in project"
-Assert-UyTest ($allText -match 'lawnmower-man-chat') "reuses existing Lawnmower Man endpoint"
-Assert-UyTest ($allText -match 'dashboard-tickets') "reuses existing ticket endpoint"
-Assert-UyTest ($allText -match 'dashboard-records') "reuses existing records endpoint"
-Assert-UyTest ($allText -match 'DataProtectionScope]::CurrentUser') "encrypts saved desktop session for current Windows user"
-Assert-UyTest ($allText -match 'Connect to Urban Yards') "settings expose an explicit connection workflow"
+$retiredFeatures = @("src\AuthClient.ps1", "src\EventController.ps1", "src\LawnmowerManClient.ps1", "src\UrbanYardsClient.ps1", "ui\ChatPopup.xaml")
+foreach ($file in $retiredFeatures) { Assert-UyTest (-not (Test-Path -LiteralPath (Join-Path $root $file))) "retired feature removed: $file" }
+$runtimeText = (Get-ChildItem -LiteralPath $root -Recurse -File | Where-Object {
+    $_.Extension -in @('.ps1','.json','.xaml','.cmd','.vbs') -and
+    $_.FullName -notmatch '[\\/]tests[\\/]' -and
+    $_.FullName -notmatch '[\\/]assets[\\/]source[\\/]'
+} | ForEach-Object { Get-Content -LiteralPath $_.FullName -Raw }) -join "`n"
+Assert-UyTest ($runtimeText -notmatch '(?i)Invoke-RestMethod|Invoke-WebRequest|lawnmower-man-chat|dashboard-records|dashboard-tickets|accessToken|ChatPopup|Show-UyChatWindow|Supabase') "desktop mascot runtime contains no AI, authentication, data polling, or network client"
+Assert-UyTest ($runtimeText -notmatch '(?i)ConnectUrbanYards|ConnectionEmail|ConnectionPassword|PollingInterval|DashboardUrl|SpeechPopup') "desktop mascot UI contains no connection, polling, dashboard, or assistant controls"
 Assert-UyTest ($allText -match 'BringForwardEvent') "second launch brings the existing pet forward"
 Assert-UyTest ($allText -match 'BitmapScalingMode="HighQuality"' -and $allText -match 'HighQualityBicubic') "WPF and shelf modes use high-quality painted-art scaling"
 Assert-UyTest ($allText -match 'New-UyDesktopShelfMirror' -and $allText -match 'System\.Drawing\.Region' -and $allText -match 'SetWindowPos\(\$form\.Handle, \$shelfHost') "desktop shelf uses a renderable region-shaped window at the native desktop layer"
 Assert-UyTest ($allText -notmatch 'SetParent\(\$handle|SetParent\(\$form\.Handle') "transparent pet windows are never reparented as Explorer children"
-Assert-UyTest ($allText -match 'SEND TO SHELF' -and $allText -match 'BRING FORWARD' -and $allText -match 'SHOW ALERTS') "tray exposes alert, shelf, and foreground controls"
+Assert-UyTest ($allText -match 'SEND TO SHELF' -and $allText -match 'BRING FORWARD' -and $allText -match 'Hide Sprout') "tray exposes only local shelf, foreground, and visibility controls"
 Assert-UyTest ($allText -match 'displayMode') "desktop display mode is persisted"
 $movementRuntimeText = @(
     (Get-Content -LiteralPath (Join-Path $root "src\PetController.ps1") -Raw),
@@ -137,9 +138,9 @@ Assert-UyTest ($allText -match 'TrayOnly' -and $allText -match 'wscript.exe') "s
 Assert-UyTest ($allText -match 'SetUnhandledExceptionMode' -and $allText -match 'CatchException') "tray UI errors are contained without a JIT crash"
 Assert-UyTest ($allText -match 'DispatcherUnhandledException' -and $allText -match 'Handled = \$true') "WPF feature errors cannot terminate the pet"
 Assert-UyTest ($allText -match 'ActionFailures' -and $allText -match 'ReportFailure') "tray command failures remain observable in smoke tests"
-Assert-UyTest ($allText -match 'Items\[0\]\.PerformClick' -and $allText -match 'Items\[7\]\.PerformClick') "smoke test exercises alerts and pause tray commands"
-Assert-UyTest ($allText -match 'Items\[9\]\.PerformClick') "smoke test exercises the real tray exit command"
-Assert-UyTest ($allText -match 'trayStartupTimer' -and $allText -match 'Items\[1\]\.PerformClick') "smoke test covers first bring-forward from tray-only startup"
+Assert-UyTest ($allText -match 'Items\[0\]\.PerformClick' -and $allText -match 'Items\[5\]\.PerformClick') "smoke test exercises bring-forward and pause tray commands"
+Assert-UyTest ($allText -match 'Items\[7\]\.PerformClick') "smoke test exercises the real tray exit command"
+Assert-UyTest ($allText -match 'trayStartupTimer' -and $allText -match 'Items\[0\]\.PerformClick') "smoke test covers first bring-forward from tray-only startup"
 Assert-UyTest ($allText -match 'ShowWindowAsync' -and $allText -match 'SetForegroundWindow') "bring forward restores and foregrounds the native pet window"
 
 Write-Host ""

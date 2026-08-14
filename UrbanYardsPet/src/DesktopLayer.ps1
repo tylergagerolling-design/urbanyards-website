@@ -281,14 +281,9 @@ function New-UyDesktopLayerController {
         $this.ShelfMirror.Timer = $timer
         $timer.Start()
         $menuPopup = $this.Window.FindName("MenuPopup")
-        $speechPopup = $this.Window.FindName("SpeechPopup")
         if ($null -ne $menuPopup) {
             $menuPopup.PopupAnimation = [System.Windows.Controls.Primitives.PopupAnimation]::None
             $menuPopup.IsOpen = $false
-        }
-        if ($null -ne $speechPopup) {
-            $speechPopup.PopupAnimation = [System.Windows.Controls.Primitives.PopupAnimation]::None
-            $speechPopup.IsOpen = $false
         }
         $this.Window.Hide()
         $this.Mode = "shelf"
@@ -305,9 +300,7 @@ function New-UyDesktopLayerController {
         $this.Window.Visibility = [System.Windows.Visibility]::Visible
         if (-not $this.Window.IsVisible) { $this.Window.Show() }
         $menuPopup = $this.Window.FindName("MenuPopup")
-        $speechPopup = $this.Window.FindName("SpeechPopup")
         if ($null -ne $menuPopup) { $menuPopup.PopupAnimation = [System.Windows.Controls.Primitives.PopupAnimation]::Fade }
-        if ($null -ne $speechPopup) { $speechPopup.PopupAnimation = [System.Windows.Controls.Primitives.PopupAnimation]::Fade }
         if ($this.Window.WindowState -eq [System.Windows.WindowState]::Minimized) { $this.Window.WindowState = [System.Windows.WindowState]::Normal }
         $this.Mode = "floating"
         $this.ShelfHost = [IntPtr]::Zero

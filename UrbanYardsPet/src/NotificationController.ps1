@@ -10,6 +10,7 @@ function New-UyNotificationController {
         [Parameter(Mandatory = $true)][scriptblock]$BringForward,
         [Parameter(Mandatory = $true)][scriptblock]$ReturnToShelf,
         [Parameter(Mandatory = $true)][scriptblock]$TogglePause,
+        [Parameter(Mandatory = $true)][scriptblock]$OpenLeads,
         [Parameter(Mandatory = $true)][scriptblock]$Exit
     )
     $controller = [pscustomobject]@{
@@ -20,11 +21,14 @@ function New-UyNotificationController {
         IsPaused = $false
         ActionFailures = 0
         LastActionError = ""
+        QuoteStatusItem = $null
+        LastQuoteAlertCount = 0
         RestoreAction = $Restore
         SettingsAction = $Settings
         BringForwardAction = $BringForward
         ReturnToShelfAction = $ReturnToShelf
         TogglePauseAction = $TogglePause
+        OpenLeadsAction = $OpenLeads
         ExitAction = $Exit
     }
     $controller | Add-Member -MemberType ScriptMethod -Name ReportFailure -Value {
@@ -57,6 +61,26 @@ function New-UyNotificationController {
         }
         catch { $this.ReportFailure("RestoreFromTray", $_) }
     }
+    $controller | Add-Member -MemberType ScriptMethod -Name SetQuoteStatus -Value {
+        param([string]$Status)
+        if ($null -ne $this.QuoteStatusItem) { $this.QuoteStatusItem.Text = "Quote alerts: $Status" }
+    }
+    $controller | Add-Member -MemberType ScriptMethod -Name ShowQuoteNotification -Value {
+        param([int]$Count)
+        try {
+            if ($Count -lt 1 -or $null -eq $this.Tray) { return }
+            $this.LastQuoteAlertCount = $Count
+            $this.Tray.BalloonTipIcon = [System.Windows.Forms.ToolTipIcon]::Info
+            $this.Tray.BalloonTipTitle = if ($Count -eq 1) { "New online quote request" } else { "$Count new online quote requests" }
+            $this.Tray.BalloonTipText = if ($Count -eq 1) {
+                "Open Online Quote Requests & Leads to review it."
+            } else {
+                "Open Online Quote Requests & Leads to review them."
+            }
+            $this.Tray.ShowBalloonTip(12000)
+        }
+        catch { $this.ReportFailure("ShowQuoteNotification", $_) }
+    }
     $controller | Add-Member -MemberType ScriptMethod -Name Dispose -Value {
         if ($null -ne $this.Tray) { $this.Tray.Visible = $false; $this.Tray.Dispose(); $this.Tray = $null }
         if ($null -ne $this.TrayMenu) { $this.TrayMenu.Dispose(); $this.TrayMenu = $null }
@@ -68,6 +92,10 @@ function New-UyNotificationController {
         $tray.Text = "The Lawnmower Man"
         $tray.Visible = $true
         $menu = [System.Windows.Forms.ContextMenuStrip]::new()
+        $openQuotesItem = $menu.Items.Add("OPEN QUOTE REQUESTS")
+        $quoteStatusItem = $menu.Items.Add("Quote alerts: Not connected")
+        $quoteStatusItem.Enabled = $false
+        [void]$menu.Items.Add([System.Windows.Forms.ToolStripSeparator]::new())
         $bringForwardItem = $menu.Items.Add("BRING FORWARD")
         $returnToShelfItem = $menu.Items.Add("SEND TO SHELF")
         $hideItem = $menu.Items.Add("Hide Sprout")
@@ -77,8 +105,9 @@ function New-UyNotificationController {
         [void]$menu.Items.Add([System.Windows.Forms.ToolStripSeparator]::new())
         $exitItem = $menu.Items.Add("Exit")
         $tray.ContextMenuStrip = $menu
-        foreach ($item in @($bringForwardItem, $returnToShelfItem, $hideItem, $settingsItem, $pauseItem, $exitItem)) { $item.Tag = $controller }
+        foreach ($item in @($openQuotesItem, $bringForwardItem, $returnToShelfItem, $hideItem, $settingsItem, $pauseItem, $exitItem)) { $item.Tag = $controller }
         $tray.Tag = $controller
+        $openQuotesItem.Add_Click({ param($sender,$eventArgs); $sender.Tag.InvokeAction("OpenLeadsAction") })
         $bringForwardItem.Add_Click({ param($sender,$eventArgs); $sender.Tag.InvokeAction("BringForwardAction") })
         $returnToShelfItem.Add_Click({ param($sender,$eventArgs); $sender.Tag.InvokeAction("ReturnToShelfAction") })
         $hideItem.Add_Click({ param($sender,$eventArgs); $sender.Tag.MinimizeToTray() })
@@ -92,8 +121,10 @@ function New-UyNotificationController {
         })
         $exitItem.Add_Click({ param($sender,$eventArgs); $sender.Tag.InvokeAction("ExitAction") })
         $tray.Add_DoubleClick({ param($sender,$eventArgs); $sender.Tag.InvokeAction("BringForwardAction") })
+        $tray.Add_BalloonTipClicked({ param($sender,$eventArgs); $sender.Tag.InvokeAction("OpenLeadsAction") })
         $controller.Tray = $tray
         $controller.TrayMenu = $menu
+        $controller.QuoteStatusItem = $quoteStatusItem
     }
     return $controller
 }

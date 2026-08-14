@@ -1,6 +1,6 @@
 # The Lawnmower Man — Urban Yards Windows Desktop Pet
 
-The Lawnmower Man is a lightweight, offline PowerShell/WPF desktop mascot featuring Sprout, the approved Urban Yards character. It does not connect to the Urban Yards dashboard, Supabase, or any AI provider. It stores no credentials and makes no network requests.
+The Lawnmower Man is a lightweight PowerShell/WPF desktop mascot featuring Sprout, the approved Urban Yards character. Its only online feature is an optional notification feed for new requests submitted through the Urban Yards website. It has no AI or chat features.
 
 ## What it does
 
@@ -9,6 +9,8 @@ The Lawnmower Man is a lightweight, offline PowerShell/WPF desktop mascot featur
 - Supports manual dragging and remembers its screen position.
 - Switches between floating mode and the Windows desktop shelf.
 - Runs quietly from the Windows notification area with bring-forward, shelf, hide, settings, pause, and exit controls.
+- Shows a Windows alert and plays the `attention` animation when a new online quote request arrives.
+- Opens **Online Quote Requests & Leads** when an alert or the notification-area shortcut is clicked.
 - Can optionally launch with Windows for the current user.
 
 ## Requirements
@@ -17,7 +19,7 @@ The Lawnmower Man is a lightweight, offline PowerShell/WPF desktop mascot featur
 - PowerShell 7 or newer is recommended. Windows PowerShell 5.1 remains a compatibility fallback.
 - WPF and the .NET desktop assemblies included with Windows.
 
-No internet connection, dashboard login, API token, database connection, or package installation is required.
+The mascot works offline. Quote alerts require an internet connection and an Urban Yards dashboard account with `leads:read` permission.
 
 ## Installation
 
@@ -41,6 +43,7 @@ The Desktop shortcut, Start Menu shortcut, notification-area icon, and native wi
 - **Notification-area double click:** bring Sprout forward.
 - **Bring Forward:** show Sprout above ordinary application windows.
 - **Send to Desktop Shelf:** place Sprout behind ordinary application windows.
+- **Open Quote Requests:** open the existing Leads page in the default browser.
 
 Sprout never moves around the desktop on its own.
 
@@ -57,8 +60,11 @@ Available settings are:
 - animation speed;
 - reset saved position;
 - preview any of the six approved animations.
+- connect or disconnect an Urban Yards dashboard account;
+- enable or pause new-quote notifications;
+- check for quote requests immediately or display a local test alert.
 
-Legacy connection, AI, polling, speech, and dashboard settings from older versions are ignored and removed the next time settings are saved.
+The dashboard password is used only for sign-in and is never stored. Supabase access and refresh tokens are encrypted for the current Windows user with Windows DPAPI. The first successful check records a baseline without replaying old requests; subsequent unseen request IDs trigger alerts. No service-role credential is included in the pet.
 
 ## Sprite source of truth
 
@@ -68,7 +74,7 @@ The animation controller uses high-quality scaling for both floating and shelf r
 
 ## Testing
 
-Run the structural, sprite, parser, XAML, and offline-safety checks:
+Run the structural, sprite, parser, XAML, and notification-safety checks:
 
 ```powershell
 powershell.exe -NoProfile -STA -ExecutionPolicy Bypass -File .\tests\Test-UrbanYardsPet.ps1

@@ -16,7 +16,7 @@ function Assert-UyTest {
 $required = @(
     "Start-UrbanYardsPet.ps1", "UrbanYardsPet.ps1", "Launch Urban Yards Pet.cmd", "Launch-UrbanYardsPet.vbs", "README.md", "config.example.json",
     "src\PetWindow.ps1", "src\PetController.ps1", "src\AnimationController.ps1", "src\DesktopLayer.ps1",
-    "src\NotificationController.ps1", "src\Config.ps1",
+    "src\NotificationController.ps1", "src\Config.ps1", "src\AuthClient.ps1", "src\QuoteNotificationClient.ps1",
     "ui\PetWindow.xaml", "ui\PetMenu.xaml", "ui\SettingsWindow.xaml",
     "config\sprite-manifest.json", "assets\icons\lawnmower-man-app-icon.png", "assets\icons\lawnmower-man-app.ico"
 )
@@ -109,20 +109,31 @@ $configText = Get-Content -LiteralPath (Join-Path $root "config.example.json") -
 Assert-UyTest ($configText -notmatch '(?i)service[_-]?role|sk_live|eyJ[a-zA-Z0-9_-]{20,}') "example config contains no privileged secrets"
 $allText = (Get-ChildItem -LiteralPath $root -Recurse -File | Where-Object { $_.Extension -in @('.ps1','.json','.xaml','.md','.cmd') } | ForEach-Object { Get-Content -LiteralPath $_.FullName -Raw }) -join "`n"
 Assert-UyTest ($allText -notmatch '(?i)SUPABASE_SERVICE_ROLE_KEY\s*[=:]\s*[^\s<]+') "no service role credential in project"
-$retiredFeatures = @("src\AuthClient.ps1", "src\EventController.ps1", "src\LawnmowerManClient.ps1", "src\UrbanYardsClient.ps1", "ui\ChatPopup.xaml")
+$retiredFeatures = @("src\EventController.ps1", "src\LawnmowerManClient.ps1", "src\UrbanYardsClient.ps1", "ui\ChatPopup.xaml")
 foreach ($file in $retiredFeatures) { Assert-UyTest (-not (Test-Path -LiteralPath (Join-Path $root $file))) "retired feature removed: $file" }
 $runtimeText = (Get-ChildItem -LiteralPath $root -Recurse -File | Where-Object {
     $_.Extension -in @('.ps1','.json','.xaml','.cmd','.vbs') -and
     $_.FullName -notmatch '[\\/]tests[\\/]' -and
     $_.FullName -notmatch '[\\/]assets[\\/]source[\\/]'
 } | ForEach-Object { Get-Content -LiteralPath $_.FullName -Raw }) -join "`n"
-Assert-UyTest ($runtimeText -notmatch '(?i)Invoke-RestMethod|Invoke-WebRequest|lawnmower-man-chat|dashboard-records|dashboard-tickets|accessToken|ChatPopup|Show-UyChatWindow|Supabase') "desktop mascot runtime contains no AI, authentication, data polling, or network client"
-Assert-UyTest ($runtimeText -notmatch '(?i)ConnectUrbanYards|ConnectionEmail|ConnectionPassword|PollingInterval|DashboardUrl|SpeechPopup') "desktop mascot UI contains no connection, polling, dashboard, or assistant controls"
+Assert-UyTest ($runtimeText -match 'dashboard-records' -and $runtimeText -match 'quote_submissions') "notification client uses the existing dashboard quote-request route"
+Assert-UyTest ($runtimeText -notmatch '(?i)lawnmower-man-chat|groundskeeper-ai|dashboard-tickets|dashboard-financial|follow_up_reminders|scheduled_jobs|ChatPopup|Show-UyChatWindow|SpeechPopup') "desktop pet contains no AI, chat, or unrelated record polling"
+Assert-UyTest ($runtimeText -match 'DataProtectionScope\]::CurrentUser' -and $runtimeText -match 'session\.bin') "dashboard session is encrypted for the current Windows user"
+Assert-UyTest ($runtimeText -match 'leads:read|quote_submissions' -and $runtimeText -notmatch '(?i)service[_-]?role') "quote alerts do not include a Supabase service credential"
+Assert-UyTest ($runtimeText -match 'baseline established without replaying old requests' -and $runtimeText -match 'seenIds') "first quote check baselines old records and later checks deduplicate IDs"
+Assert-UyTest ($runtimeText -match '\$TrayOnly -and -not \$SmokeTest.*\$quotePolling\.Start\(\)') "quote monitoring starts while the pet remains hidden in the notification area"
+Assert-UyTest ($runtimeText -match '#outreach' -and $runtimeText -match 'BalloonTipClicked') "quote alert opens Online Quote Requests and Leads"
+Assert-UyTest ($runtimeText -match 'ConnectionPassword\.Clear\(\)' -and $configText -notmatch '(?i)password') "dashboard password is never written to pet configuration"
+Assert-UyTest ($runtimeText -notmatch 'return\s+if\s*\(') "runtime avoids return-if syntax that fails inside PowerShell callbacks"
+. (Join-Path $root "src\QuoteNotificationClient.ps1")
+$dedupeRows = @([pscustomobject]@{ id = "quote-a" }, [pscustomobject]@{ id = "quote-b" }, [pscustomobject]@{ id = "QUOTE-C" })
+$unseenRows = @(Get-UyUnseenQuoteRequests -Rows $dedupeRows -SeenIds @("QUOTE-A", "quote-c"))
+Assert-UyTest ($unseenRows.Count -eq 1 -and $unseenRows[0].id -eq "quote-b") "quote deduplication reports only unseen request IDs"
 Assert-UyTest ($allText -match 'BringForwardEvent') "second launch brings the existing pet forward"
 Assert-UyTest ($allText -match 'BitmapScalingMode="HighQuality"' -and $allText -match 'HighQualityBicubic') "WPF and shelf modes use high-quality painted-art scaling"
 Assert-UyTest ($allText -match 'New-UyDesktopShelfMirror' -and $allText -match 'System\.Drawing\.Region' -and $allText -match 'SetWindowPos\(\$form\.Handle, \$shelfHost') "desktop shelf uses a renderable region-shaped window at the native desktop layer"
 Assert-UyTest ($allText -notmatch 'SetParent\(\$handle|SetParent\(\$form\.Handle') "transparent pet windows are never reparented as Explorer children"
-Assert-UyTest ($allText -match 'SEND TO SHELF' -and $allText -match 'BRING FORWARD' -and $allText -match 'Hide Sprout') "tray exposes only local shelf, foreground, and visibility controls"
+Assert-UyTest ($allText -match 'SEND TO SHELF' -and $allText -match 'BRING FORWARD' -and $allText -match 'Hide Sprout' -and $allText -match 'OPEN QUOTE REQUESTS') "tray exposes quote, shelf, foreground, and visibility controls"
 Assert-UyTest ($allText -match 'displayMode') "desktop display mode is persisted"
 $movementRuntimeText = @(
     (Get-Content -LiteralPath (Join-Path $root "src\PetController.ps1") -Raw),
@@ -138,9 +149,10 @@ Assert-UyTest ($allText -match 'TrayOnly' -and $allText -match 'wscript.exe') "s
 Assert-UyTest ($allText -match 'SetUnhandledExceptionMode' -and $allText -match 'CatchException') "tray UI errors are contained without a JIT crash"
 Assert-UyTest ($allText -match 'DispatcherUnhandledException' -and $allText -match 'Handled = \$true') "WPF feature errors cannot terminate the pet"
 Assert-UyTest ($allText -match 'ActionFailures' -and $allText -match 'ReportFailure') "tray command failures remain observable in smoke tests"
-Assert-UyTest ($allText -match 'Items\[0\]\.PerformClick' -and $allText -match 'Items\[5\]\.PerformClick') "smoke test exercises bring-forward and pause tray commands"
-Assert-UyTest ($allText -match 'Items\[7\]\.PerformClick') "smoke test exercises the real tray exit command"
-Assert-UyTest ($allText -match 'trayStartupTimer' -and $allText -match 'Items\[0\]\.PerformClick') "smoke test covers first bring-forward from tray-only startup"
+Assert-UyTest ($allText -match 'Where-Object Text -eq "BRING FORWARD"' -and $allText -match 'Where-Object Text -eq "Pause Animations"') "smoke test exercises bring-forward and pause tray commands"
+Assert-UyTest ($allText -match 'ShowQuoteNotification\(1\)') "smoke test exercises the Windows quote notification"
+Assert-UyTest ($allText -match 'Where-Object Text -eq "Exit"') "smoke test exercises the real tray exit command"
+Assert-UyTest ($allText -match 'trayStartupTimer' -and $allText -match 'Where-Object Text -eq "BRING FORWARD"') "smoke test covers first bring-forward from tray-only startup"
 Assert-UyTest ($allText -match 'ShowWindowAsync' -and $allText -match 'SetForegroundWindow') "bring forward restores and foregrounds the native pet window"
 
 Write-Host ""

@@ -42,6 +42,9 @@ function Get-UyDefaultConfig {
         launchWithWindows = $false
         displayMode = "floating"
         idleBeforeSleepMinutes = 20
+        dashboardUrl = "https://urbanyards.us/dashboard#outreach"
+        quoteNotificationsEnabled = $true
+        quotePollIntervalSeconds = 60
     }
 }
 
@@ -71,6 +74,8 @@ function Get-UyPetConfig {
     }
     $config.animationSpeed = [Math]::Min(2.5, [Math]::Max(0.35, [double]$config.animationSpeed))
     $config.idleBeforeSleepMinutes = [Math]::Min(240, [Math]::Max(1, [int]$config.idleBeforeSleepMinutes))
+    $config.quotePollIntervalSeconds = [Math]::Min(300, [Math]::Max(60, [int]$config.quotePollIntervalSeconds))
+    if (-not ([string]$config.dashboardUrl).StartsWith("https://")) { $config.dashboardUrl = "https://urbanyards.us/dashboard#outreach" }
     return $config
 }
 

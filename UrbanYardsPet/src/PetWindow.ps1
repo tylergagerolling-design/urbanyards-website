@@ -33,6 +33,8 @@ function Show-UySettingsWindow {
         [Parameter(Mandatory = $true)]$Animation,
         [Parameter(Mandatory = $true)]$PetController,
         [Parameter(Mandatory = $true)]$DesktopLayer,
+        [Parameter(Mandatory = $true)]$Notification,
+        [Parameter(Mandatory = $true)]$QuotePolling,
         [Parameter(Mandatory = $true)][string[]]$AllowedStates
     )
     $settings = Import-UyXaml -Path (Join-Path $ProjectRoot "ui\SettingsWindow.xaml")
@@ -44,6 +46,10 @@ function Show-UySettingsWindow {
     $animations = & $get "AnimationsEnabled"
     $speed = & $get "AnimationSpeed"
     $debug = & $get "DebugState"
+    $connectionEmail = & $get "ConnectionEmail"
+    $connectionPassword = & $get "ConnectionPassword"
+    $connectionStatus = & $get "ConnectionStatus"
+    $quoteNotificationsEnabled = & $get "QuoteNotificationsEnabled"
 
     $launch.IsChecked = [bool]$Config.launchWithWindows
     $top.IsChecked = [bool]$Config.alwaysOnTop
@@ -53,6 +59,9 @@ function Show-UySettingsWindow {
     if ($displayMode.SelectedIndex -lt 0) { $displayMode.SelectedIndex = 0 }
     $animations.IsChecked = [bool]$Config.animationsEnabled
     $speed.Value = [double]$Config.animationSpeed
+    $connectionEmail.Text = Get-UyPetConnectedEmail
+    $connectionStatus.Text = if ($connectionEmail.Text) { $QuotePolling.Status } else { "Not connected" }
+    $quoteNotificationsEnabled.IsChecked = [bool]$Config.quoteNotificationsEnabled
     foreach ($state in $AllowedStates) { [void]$debug.Items.Add($state) }
     $debug.SelectedItem = "idle_blink"
 
@@ -65,6 +74,36 @@ function Show-UySettingsWindow {
     (& $get "TestAnimation").Add_Click(({
         if ($debug.SelectedItem) { $PetController.SetState([string]$debug.SelectedItem, "normal", 7) }
     }).GetNewClosure())
+    (& $get "ConnectUrbanYards").Add_Click(({
+        $connectionStatus.Text = "Connecting..."
+        try {
+            $session = Connect-UyPetToUrbanYards -Config $Config -Email $connectionEmail.Text -Password $connectionPassword.Password
+            $connectionPassword.Clear()
+            $connectionEmail.Text = [string]$session.email
+            $Config.quoteNotificationsEnabled = $true
+            $quoteNotificationsEnabled.IsChecked = $true
+            Save-UyPetConfig -Config $Config
+            $QuotePolling.Start()
+            $connectionStatus.Text = $QuotePolling.Status
+        }
+        catch { $connectionPassword.Clear(); $connectionStatus.Text = $_.Exception.Message }
+    }).GetNewClosure())
+    (& $get "DisconnectUrbanYards").Add_Click(({
+        Remove-UyPetAuthSession
+        $QuotePolling.SetStatus("Not connected")
+        $connectionEmail.Text = ""
+        $connectionPassword.Clear()
+        $connectionStatus.Text = "Not connected"
+    }).GetNewClosure())
+    (& $get "CheckQuotesNow").Add_Click(({
+        $Config.quoteNotificationsEnabled = [bool]$quoteNotificationsEnabled.IsChecked
+        $QuotePolling.PollNow()
+        $connectionStatus.Text = $QuotePolling.Status
+    }).GetNewClosure())
+    (& $get "TestQuoteNotification").Add_Click(({
+        $PetController.SetState("attention", "normal", 5)
+        $Notification.ShowQuoteNotification(1)
+    }).GetNewClosure())
     (& $get "CancelSettings").Add_Click(({ $settings.Close() }).GetNewClosure())
     (& $get "SaveSettings").Add_Click(({
         $Config.launchWithWindows = [bool]$launch.IsChecked
@@ -72,12 +111,14 @@ function Show-UySettingsWindow {
         $Config.displayMode = [string]$displayMode.SelectedItem.Tag
         $Config.animationsEnabled = [bool]$animations.IsChecked
         $Config.animationSpeed = [double]$speed.Value
+        $Config.quoteNotificationsEnabled = [bool]$quoteNotificationsEnabled.IsChecked
         Save-UyPetConfig -Config $Config
         Set-UyStartupRegistration -Enabled ([bool]$Config.launchWithWindows) -LauncherPath (Join-Path $ProjectRoot "Launch Urban Yards Pet.cmd") -IconPath (Join-Path $ProjectRoot "assets\icons\lawnmower-man-app.ico")
         $Window.Topmost = [bool]$Config.alwaysOnTop
         if ($Config.displayMode -eq "shelf") { $DesktopLayer.ReturnToShelf($false) } else { $DesktopLayer.BringForward($false) }
         $Animation.SetSpeed([double]$Config.animationSpeed)
         $Animation.SetPaused(-not [bool]$Config.animationsEnabled)
+        if ([bool]$Config.quoteNotificationsEnabled) { $QuotePolling.Start() } else { $QuotePolling.SetStatus("Notifications paused") }
         $settings.Close()
     }).GetNewClosure())
     [void]$settings.ShowDialog()
@@ -120,6 +161,7 @@ function New-UyPetWindow {
         MenuPopup = $menuPopup
         PetGlow = $petGlow
         Notification = $null
+        QuotePolling = $null
         MouseState = $null
         BringForwardEvent = $BringForwardEvent
     }
@@ -147,11 +189,31 @@ function New-UyPetWindow {
     $settingsAction = {
         $state = $script:UyPetRuntimeState
         $state.DesktopLayer.BringForward($false)
-        Show-UySettingsWindow -ProjectRoot $state.ProjectRoot -Config $state.Config -Window $state.Window -Animation $state.Animation -PetController $state.PetController -DesktopLayer $state.DesktopLayer -AllowedStates $state.AllowedStates
+        Show-UySettingsWindow -ProjectRoot $state.ProjectRoot -Config $state.Config -Window $state.Window -Animation $state.Animation -PetController $state.PetController -DesktopLayer $state.DesktopLayer -Notification $state.Notification -QuotePolling $state.QuotePolling -AllowedStates $state.AllowedStates
+    }
+    $openLeads = {
+        try {
+            $url = [string]$script:UyPetRuntimeState.Config.dashboardUrl
+            if ($url -notmatch '#outreach$') { $url = $url.Split('#')[0] + '#outreach' }
+            $startInfo = [Diagnostics.ProcessStartInfo]::new($url)
+            $startInfo.UseShellExecute = $true
+            [void][Diagnostics.Process]::Start($startInfo)
+        }
+        catch { Write-UyPetLog "The Leads page could not be opened: $($_.Exception.Message)" "ERROR" }
     }
     $trayIconPath = Join-Path $ProjectRoot "assets\icons\lawnmower-man-app.ico"
-    $notification = New-UyNotificationController -Window $window -Config $Config -TrayIconPath $trayIconPath -Restore $restore -Settings $settingsAction -BringForward $bringForward -ReturnToShelf $returnToShelf -TogglePause $togglePause -Exit $exit
+    $notification = New-UyNotificationController -Window $window -Config $Config -TrayIconPath $trayIconPath -Restore $restore -Settings $settingsAction -BringForward $bringForward -ReturnToShelf $returnToShelf -TogglePause $togglePause -OpenLeads $openLeads -Exit $exit
     $runtimeContext.Notification = $notification
+    $quotePolling = New-UyQuotePollingController -Config $Config -OnNewQuotes {
+        param($quotes)
+        $state = $script:UyPetRuntimeState
+        $state.PetController.SetState("attention", "normal", 8)
+        $state.Notification.ShowQuoteNotification(@($quotes).Count)
+    } -OnStatusChanged {
+        param($status)
+        $script:UyPetRuntimeState.Notification.SetQuoteStatus([string]$status)
+    }
+    $runtimeContext.QuotePolling = $quotePolling
 
     $savedState = Get-UyPetWindowState
     if ($savedState -and $savedState.PSObject.Properties["left"] -and $savedState.PSObject.Properties["top"]) {
@@ -268,6 +330,7 @@ function New-UyPetWindow {
         $petController.BehaviorTimer.Stop()
         $petController.ReturnTimer.Stop()
         $animation.Timer.Stop()
+        $quotePolling.Stop()
         $notification.Dispose()
         $desktopLayer.DetachForExit()
         Save-UyPetWindowState -Left $window.Left -Top $window.Top
@@ -278,6 +341,7 @@ function New-UyPetWindow {
         Set-UyWindowWithinScreens -Window $window
         Save-UyPetWindowState -Left $window.Left -Top $window.Top
         if (-not $TrayOnly) { $desktopLayer.ApplySavedMode() }
+        if (-not $SmokeTest) { $quotePolling.Start() }
         $window.Tag = [pscustomobject]@{ loaded = $true; loadedAt = [DateTime]::UtcNow.ToString("o") }
         if ($SmokeTest) {
             $featureState = [pscustomobject]@{ Step = 0; Notification = $notification }
@@ -288,14 +352,15 @@ function New-UyPetWindow {
                 param($sender,$eventArgs)
                 $state = $sender.Tag
                 switch ($state.Step) {
-                    0 { $state.Notification.TrayMenu.Items[0].PerformClick() } # BRING FORWARD
-                    1 { $state.Notification.TrayMenu.Items[1].PerformClick() } # SEND TO SHELF
-                    2 { $state.Notification.TrayMenu.Items[0].PerformClick() } # BRING FORWARD
-                    3 { $state.Notification.TrayMenu.Items[5].PerformClick() } # PAUSE
-                    4 { $state.Notification.TrayMenu.Items[5].PerformClick() } # RESUME
-                    5 { $state.Notification.TrayMenu.Items[2].PerformClick() } # HIDE
-                    6 { $state.Notification.TrayMenu.Items[0].PerformClick() } # RECOVER
-                    7 { $state.Notification.TrayMenu.Items[7].PerformClick(); $sender.Stop(); return } # EXIT
+                    0 { ($state.Notification.TrayMenu.Items | Where-Object Text -eq "BRING FORWARD").PerformClick() }
+                    1 { ($state.Notification.TrayMenu.Items | Where-Object Text -eq "SEND TO SHELF").PerformClick() }
+                    2 { ($state.Notification.TrayMenu.Items | Where-Object Text -eq "BRING FORWARD").PerformClick() }
+                    3 { $state.Notification.ShowQuoteNotification(1) }
+                    4 { ($state.Notification.TrayMenu.Items | Where-Object Text -eq "Pause Animations").PerformClick() }
+                    5 { ($state.Notification.TrayMenu.Items | Where-Object Text -eq "Resume Animations").PerformClick() }
+                    6 { ($state.Notification.TrayMenu.Items | Where-Object Text -eq "Hide Sprout").PerformClick() }
+                    7 { ($state.Notification.TrayMenu.Items | Where-Object Text -eq "BRING FORWARD").PerformClick() }
+                    8 { ($state.Notification.TrayMenu.Items | Where-Object Text -eq "Exit").PerformClick(); $sender.Stop(); return }
                     default { $sender.Stop(); $global:UyPetExitRequested = $true; [System.Windows.Application]::Current.Shutdown(0); return }
                 }
                 $state.Step++
@@ -307,6 +372,7 @@ function New-UyPetWindow {
     }).GetNewClosure())
 
     if ($TrayOnly) { $window.Visibility = [System.Windows.Visibility]::Hidden }
+    if ($TrayOnly -and -not $SmokeTest) { $quotePolling.Start() }
     if ($SmokeTest) {
         $safetyTimer = [System.Windows.Threading.DispatcherTimer]::new()
         $safetyTimer.Interval = [TimeSpan]::FromSeconds(8)
@@ -316,10 +382,10 @@ function New-UyPetWindow {
             $trayStartupTimer = [System.Windows.Threading.DispatcherTimer]::new()
             $trayStartupTimer.Interval = [TimeSpan]::FromMilliseconds(400)
             $trayStartupTimer.Tag = $notification
-            $trayStartupTimer.Add_Tick({ param($sender,$eventArgs); $sender.Stop(); $sender.Tag.TrayMenu.Items[0].PerformClick() })
+            $trayStartupTimer.Add_Tick({ param($sender,$eventArgs); $sender.Stop(); ($sender.Tag.TrayMenu.Items | Where-Object Text -eq "BRING FORWARD").PerformClick() })
             $trayStartupTimer.Start()
         }
     }
 
-    return [pscustomobject]@{ Window = $window; Animation = $animation; PetController = $petController; DesktopLayer = $desktopLayer; Notification = $notification }
+    return [pscustomobject]@{ Window = $window; Animation = $animation; PetController = $petController; DesktopLayer = $desktopLayer; Notification = $notification; QuotePolling = $quotePolling }
 }

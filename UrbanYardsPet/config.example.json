@@ -4,5 +4,8 @@
   "animationSpeed": 1.0,
   "launchWithWindows": false,
   "displayMode": "floating",
-  "idleBeforeSleepMinutes": 20
+  "idleBeforeSleepMinutes": 20,
+  "dashboardUrl": "https://urbanyards.us/dashboard#outreach",
+  "quoteNotificationsEnabled": true,
+  "quotePollIntervalSeconds": 60
 }

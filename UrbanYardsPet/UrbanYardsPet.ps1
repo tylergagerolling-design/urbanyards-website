@@ -40,6 +40,8 @@ $script:UyUnhandledUiErrorCount = 0
 
 $sourceFiles = @(
     "src\Config.ps1",
+    "src\AuthClient.ps1",
+    "src\QuoteNotificationClient.ps1",
     "src\AnimationController.ps1",
     "src\NotificationController.ps1",
     "src\DesktopLayer.ps1",

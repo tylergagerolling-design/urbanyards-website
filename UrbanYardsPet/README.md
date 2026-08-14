@@ -77,7 +77,7 @@ Important fields:
 - `apiBaseUrl`: backend origin, currently `https://urbanyards.us`.
 - `pollIntervalSeconds`: live operational polling interval, constrained to 30–300 seconds.
 - `accessTokenEnvironmentVariable`: name of the environment variable that supplies a short-lived signed-in user token.
-- `alwaysOnTop`, `wanderingEnabled`, `speechEnabled`, `soundsEnabled`.
+- `alwaysOnTop`, `speechEnabled`, `soundsEnabled`.
 
 Sounds default to off. Launch-with-Windows is opt-in.
 

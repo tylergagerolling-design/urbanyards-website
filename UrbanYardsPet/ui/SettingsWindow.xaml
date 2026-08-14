@@ -36,7 +36,6 @@
                     <ComboBoxItem Content="Desktop shelf behind application windows" Tag="shelf"/>
                 </ComboBox>
                 <CheckBox x:Name="AnimationsEnabled" Content="Enable animations" Margin="0,7"/>
-                <CheckBox x:Name="WanderingEnabled" Content="Enable wandering" Margin="0,7"/>
                 <CheckBox x:Name="SpeechEnabled" Content="Enable speech bubbles" Margin="0,7"/>
                 <CheckBox x:Name="SoundsEnabled" Content="Enable sounds (off by default)" Margin="0,7"/>
                 <TextBlock Text="Animation speed" FontWeight="SemiBold" Margin="0,14,0,5"/>

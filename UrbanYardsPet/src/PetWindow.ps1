@@ -138,7 +138,6 @@ function Show-UySettingsWindow {
     $top = & $get "AlwaysOnTop"
     $displayMode = & $get "DisplayMode"
     $animations = & $get "AnimationsEnabled"
-    $wander = & $get "WanderingEnabled"
     $speech = & $get "SpeechEnabled"
     $sounds = & $get "SoundsEnabled"
     $speed = & $get "AnimationSpeed"
@@ -158,7 +157,6 @@ function Show-UySettingsWindow {
     }
     if ($displayMode.SelectedIndex -lt 0) { $displayMode.SelectedIndex = 0 }
     $animations.IsChecked = [bool]$Config.animationsEnabled
-    $wander.IsChecked = [bool]$Config.wanderingEnabled
     $speech.IsChecked = [bool]$Config.speechEnabled
     $sounds.IsChecked = [bool]$Config.soundsEnabled
     $speed.Value = [double]$Config.animationSpeed
@@ -207,7 +205,6 @@ function Show-UySettingsWindow {
         $Config.alwaysOnTop = [bool]$top.IsChecked
         $Config.displayMode = [string]$displayMode.SelectedItem.Tag
         $Config.animationsEnabled = [bool]$animations.IsChecked
-        $Config.wanderingEnabled = [bool]$wander.IsChecked
         $Config.speechEnabled = [bool]$speech.IsChecked
         $Config.soundsEnabled = [bool]$sounds.IsChecked
         $Config.animationSpeed = [double]$speed.Value
@@ -442,7 +439,7 @@ function New-UyPetWindow {
             if ($source) { $source.CompositionTarget.BackgroundColor = [System.Windows.Media.Colors]::Transparent }
         } catch {}
     }).GetNewClosure())
-    $window.Add_LocationChanged({ $state = $script:UyPetRuntimeState; if ($state.DesktopLayer.Mode -ne "shelf" -and -not $state.PetController.IsMoving -and -not $state.PetController.IsDragging) { Set-UyWindowWithinScreens -Window $state.Window } })
+    $window.Add_LocationChanged({ $state = $script:UyPetRuntimeState; if ($state.DesktopLayer.Mode -ne "shelf" -and -not $state.PetController.IsDragging) { Set-UyWindowWithinScreens -Window $state.Window } })
     $window.Add_Closing(({
         param($sender,$eventArgs)
         if (-not $global:UyPetExitRequested -and -not $SmokeTest) {
@@ -452,7 +449,7 @@ function New-UyPetWindow {
         }
     }).GetNewClosure())
     $window.Add_Closed(({
-        $polling.Stop(); $bringForwardTimer.Stop(); $petController.BehaviorTimer.Stop(); $petController.MoveTimer.Stop(); $petController.ReturnTimer.Stop(); $animation.Timer.Stop(); $notification.Dispose(); $desktopLayer.DetachForExit()
+        $polling.Stop(); $bringForwardTimer.Stop(); $petController.BehaviorTimer.Stop(); $petController.ReturnTimer.Stop(); $animation.Timer.Stop(); $notification.Dispose(); $desktopLayer.DetachForExit()
         Save-UyPetWindowState -Left $window.Left -Top $window.Top
         Write-UyPetLog "The Lawnmower Man exited."
     }).GetNewClosure())
@@ -490,12 +487,10 @@ function New-UyPetWindow {
                 $state.Step++
             })
             $featureTimer.Start()
-            # Exercise the same LocationChanged and movement-completion callbacks
-            # used by dragging and wandering, not only the initial window render.
-            $petController.TargetLeft = $window.Left - 4
-            $petController.MoveStep = -2
-            $petController.IsMoving = $true
-            $petController.MoveTimer.Start()
+            # Exercise the same screen-boundary correction used after manual
+            # dragging without introducing autonomous desktop movement.
+            $window.Left = $window.Left - 4
+            Set-UyWindowWithinScreens -Window $window
         }
         elseif (Test-UyConnectivityConfigured -Config $Config) { $polling.Poll() }
     }).GetNewClosure())

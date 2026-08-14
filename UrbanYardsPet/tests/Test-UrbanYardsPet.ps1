@@ -123,6 +123,15 @@ Assert-UyTest ($allText -match 'New-UyDesktopShelfMirror' -and $allText -match '
 Assert-UyTest ($allText -notmatch 'SetParent\(\$handle|SetParent\(\$form\.Handle') "transparent pet windows are never reparented as Explorer children"
 Assert-UyTest ($allText -match 'SEND TO SHELF' -and $allText -match 'BRING FORWARD' -and $allText -match 'SHOW ALERTS') "tray exposes alert, shelf, and foreground controls"
 Assert-UyTest ($allText -match 'displayMode') "desktop display mode is persisted"
+$movementRuntimeText = @(
+    (Get-Content -LiteralPath (Join-Path $root "src\PetController.ps1") -Raw),
+    (Get-Content -LiteralPath (Join-Path $root "src\PetWindow.ps1") -Raw),
+    (Get-Content -LiteralPath (Join-Path $root "src\Config.ps1") -Raw),
+    (Get-Content -LiteralPath (Join-Path $root "ui\SettingsWindow.xaml") -Raw),
+    (Get-Content -LiteralPath (Join-Path $root "config.example.json") -Raw)
+) -join "`n"
+Assert-UyTest ($movementRuntimeText -notmatch '(?i)wanderingEnabled|BeginWander|StopWander|MoveTimer') "sprite has no autonomous desktop movement feature"
+Assert-UyTest ($allText -match 'DragMove\(\)' -and $allText -match 'Save-UyPetWindowState') "manual dragging and position persistence remain available"
 Assert-UyTest ($allText -match 'SetCurrentProcessExplicitAppUserModelID') "PowerShell host receives a branded app identity"
 Assert-UyTest ($allText -match 'TrayOnly' -and $allText -match 'wscript.exe') "shortcut starts PowerShell silently in tray-only mode"
 Assert-UyTest ($allText -match 'SetUnhandledExceptionMode' -and $allText -match 'CatchException') "tray UI errors are contained without a JIT crash"

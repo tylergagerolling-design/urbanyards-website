@@ -45,7 +45,6 @@ function Get-UyDefaultConfig {
         alwaysOnTop = $true
         animationsEnabled = $true
         animationSpeed = 1.0
-        wanderingEnabled = $true
         speechEnabled = $true
         soundsEnabled = $false
         launchWithWindows = $false

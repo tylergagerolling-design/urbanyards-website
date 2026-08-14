@@ -182,7 +182,10 @@ function New-UyPetWindow {
     })
     $bringForwardTimer.Start()
 
-    $bringForward = { $script:UyPetRuntimeState.DesktopLayer.BringForward($true) }
+    $bringForward = {
+        $script:UyPetRuntimeState.PetController.Touch()
+        $script:UyPetRuntimeState.DesktopLayer.BringForward($true)
+    }
     $returnToShelf = { $script:UyPetRuntimeState.DesktopLayer.ReturnToShelf($true) }
     $restore = { $script:UyPetRuntimeState.DesktopLayer.BringForward($false) }
     $togglePause = { param([bool]$paused); $script:UyPetRuntimeState.PetController.Pause($paused) }
@@ -230,7 +233,7 @@ function New-UyPetWindow {
     })
     $petImage.Add_MouseLeave({
         $state = $script:UyPetRuntimeState
-        if (-not $state.PetController.IsDragging -and -not $state.PetController.TemporaryState) {
+        if (-not $state.PetController.IsDragging -and -not $state.PetController.TemporaryState -and -not $state.PetController.SleepLocked) {
             [void]$state.Animation.SetState("idle_blink", "normal", $true)
             $state.PetGlow.Opacity = 0
         }
@@ -241,13 +244,13 @@ function New-UyPetWindow {
         $state.MouseState.LeftDownAt = [DateTime]::UtcNow
         $state.MouseState.DragStarted = $false
         $state.MouseState.DoubleClick = $eventArgs.ClickCount -ge 2
+        $state.PetController.Touch()
         if ($state.MouseState.DoubleClick) {
             $state.MenuPopup.IsOpen = $false
             $state.PetController.SetState("celebrate", "normal", 4)
             $eventArgs.Handled = $true
             return
         }
-        $state.PetController.Touch()
         $state.PetController.IsDragging = $true
         [void]$state.Animation.SetState("working", "normal", $true)
         try {
@@ -267,6 +270,7 @@ function New-UyPetWindow {
             $state.MenuPopup.IsOpen = -not $state.MenuPopup.IsOpen
         }
     })
+    $petImage.Add_PreviewMouseRightButtonDown({ $script:UyPetRuntimeState.PetController.Touch() })
 
     $menu.FindName("BringForwardButton").Add_Click({ $state = $script:UyPetRuntimeState; $state.MenuPopup.IsOpen = $false; $state.Notification.InvokeAction("BringForwardAction") })
     $menu.FindName("ReturnToShelfButton").Add_Click({ $state = $script:UyPetRuntimeState; $state.MenuPopup.IsOpen = $false; $state.Notification.InvokeAction("ReturnToShelfAction") })

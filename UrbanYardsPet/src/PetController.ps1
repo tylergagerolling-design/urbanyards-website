@@ -56,16 +56,30 @@ function New-UyPetController {
         LastInteraction = [DateTime]::UtcNow
         IsDragging = $false
         TemporaryState = $false
+        SleepLocked = $false
         Random = [Random]::new()
     }
     $controller | Add-Member -MemberType ScriptMethod -Name Touch -Value {
         $this.LastInteraction = [DateTime]::UtcNow
-        if ($this.Animation.State -eq "sleep") { [void]$this.Animation.SetState("idle_blink", "normal", $true) }
+        if ($this.SleepLocked -or $this.Animation.State -eq "sleep") {
+            $this.SleepLocked = $false
+            $this.TemporaryState = $false
+            $this.ReturnTimer.Stop()
+            [void]$this.Animation.SetState("idle_blink", "normal", $true)
+        }
     }
     $controller | Add-Member -MemberType ScriptMethod -Name SetState -Value {
         param([string]$State, [string]$Severity = "normal", [int]$DurationSeconds = 0)
+        if ($this.SleepLocked -and $State -ne "sleep") { return $false }
         $this.ReturnTimer.Stop()
-        $this.TemporaryState = $DurationSeconds -gt 0
+        if ($State -eq "sleep") {
+            $this.SleepLocked = $true
+            $this.TemporaryState = $false
+            $DurationSeconds = 0
+        }
+        else {
+            $this.TemporaryState = $DurationSeconds -gt 0
+        }
         [void]$this.Animation.SetState($State, $Severity, $true)
         if ($DurationSeconds -gt 0) {
             $this.ReturnTimer.Interval = [TimeSpan]::FromSeconds($DurationSeconds)
@@ -74,6 +88,7 @@ function New-UyPetController {
     }
     $controller | Add-Member -MemberType ScriptMethod -Name ReturnToIdle -Value {
         $this.ReturnTimer.Stop()
+        if ($this.SleepLocked) { return }
         $this.TemporaryState = $false
         if (-not $this.IsDragging) { [void]$this.Animation.SetState("idle_blink", "normal", $true) }
     }
@@ -85,7 +100,7 @@ function New-UyPetController {
         if (-not [bool]$this.Config.animationsEnabled -or $this.Animation.IsPaused -or $this.IsDragging -or $this.TemporaryState -or -not $this.Window.IsVisible) { return }
         $now = [DateTime]::UtcNow
         if (($now - $this.LastInteraction).TotalMinutes -ge [double]$this.Config.idleBeforeSleepMinutes) {
-            if ($this.Animation.State -ne "sleep") { [void]$this.Animation.SetState("sleep", "normal", $true) }
+            if (-not $this.SleepLocked -or $this.Animation.State -ne "sleep") { [void]$this.SetState("sleep", "normal", 0) }
             return
         }
         if ($this.Animation.State -eq "sleep") { return }

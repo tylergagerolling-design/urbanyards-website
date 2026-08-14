@@ -80,6 +80,7 @@ foreach ($state in $expectedStates) {
     }
 }
 Assert-UyTest (@($manifest.animations.PSObject.Properties.Name).Count -eq 6) "no retired animations remain in runtime manifest"
+Assert-UyTest ([bool]$manifest.animations.sleep.loop) "sleep animation is an indefinite frame loop"
 
 $spriteFiles = Get-ChildItem -LiteralPath (Join-Path $root "assets\sprites") -Filter *.png -File
 $transparentCorners = $true
@@ -144,6 +145,23 @@ $movementRuntimeText = @(
 ) -join "`n"
 Assert-UyTest ($movementRuntimeText -notmatch '(?i)wanderingEnabled|BeginWander|StopWander|MoveTimer') "sprite has no autonomous desktop movement feature"
 Assert-UyTest ($allText -match 'DragMove\(\)' -and $allText -match 'Save-UyPetWindowState') "manual dragging and position persistence remain available"
+Assert-UyTest ($allText -match 'SleepLocked' -and $allText -match 'if \(\$this\.SleepLocked\) \{ return \}' -and $allText -match 'PreviewMouseRightButtonDown') "sleep remains locked until direct user interaction wakes Sprout"
+. (Join-Path $root "src\PetController.ps1")
+$sleepTestWindow = [System.Windows.Window]::new()
+$sleepTestAnimation = [pscustomobject]@{ State = "idle_blink"; IsPaused = $false }
+$sleepTestAnimation | Add-Member -MemberType ScriptMethod -Name SetState -Value { param($name,$severity,$restart); $this.State = $name; return $true }
+$sleepTestAnimation | Add-Member -MemberType ScriptMethod -Name SetPaused -Value { param($paused); $this.IsPaused = $paused }
+$sleepTestController = New-UyPetController -Window $sleepTestWindow -Animation $sleepTestAnimation -Config ([pscustomobject]@{ animationsEnabled = $true; idleBeforeSleepMinutes = 20 })
+[void]$sleepTestController.SetState("sleep", "normal", 0)
+$sleepTestController.ReturnToIdle()
+$automaticStateWasBlocked = -not [bool]$sleepTestController.SetState("thinking", "normal", 4)
+$stayedAsleep = $sleepTestController.SleepLocked -and $sleepTestAnimation.State -eq "sleep"
+$sleepTestController.Touch()
+$wokeOnTouch = -not $sleepTestController.SleepLocked -and $sleepTestAnimation.State -eq "idle_blink"
+$sleepTestController.BehaviorTimer.Stop()
+$sleepTestController.ReturnTimer.Stop()
+$sleepTestWindow.Close()
+Assert-UyTest ($automaticStateWasBlocked -and $stayedAsleep -and $wokeOnTouch) "sleep ignores automatic state changes and wakes on direct interaction"
 Assert-UyTest ($allText -match 'SetCurrentProcessExplicitAppUserModelID') "PowerShell host receives a branded app identity"
 Assert-UyTest ($allText -match 'TrayOnly' -and $allText -match 'wscript.exe') "shortcut starts PowerShell silently in tray-only mode"
 Assert-UyTest ($allText -match 'SetUnhandledExceptionMode' -and $allText -match 'CatchException') "tray UI errors are contained without a JIT crash"

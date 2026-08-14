@@ -122,6 +122,9 @@ Assert-UyTest ($allText -match 'SetUnhandledExceptionMode' -and $allText -match 
 Assert-UyTest ($allText -match 'DispatcherUnhandledException' -and $allText -match 'Handled = \$true') "WPF feature errors cannot terminate the pet"
 Assert-UyTest ($allText -match 'ActionFailures' -and $allText -match 'ReportFailure') "tray command failures remain observable in smoke tests"
 Assert-UyTest ($allText -match 'Items\[0\]\.PerformClick' -and $allText -match 'Items\[7\]\.PerformClick') "smoke test exercises alerts and pause tray commands"
+Assert-UyTest ($allText -match 'Items\[9\]\.PerformClick') "smoke test exercises the real tray exit command"
+Assert-UyTest ($allText -match 'trayStartupTimer' -and $allText -match 'Items\[1\]\.PerformClick') "smoke test covers first bring-forward from tray-only startup"
+Assert-UyTest ($allText -match 'ShowWindowAsync' -and $allText -match 'SetForegroundWindow') "bring forward restores and foregrounds the native pet window"
 
 Write-Host ""
 Write-Host "$($passes.Count) passed, $($failures.Count) failed."

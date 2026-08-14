@@ -43,6 +43,12 @@ public static class UrbanYardsDesktopLayer {
     [DllImport("user32.dll", SetLastError=true)]
     public static extern bool SetWindowPos(IntPtr hwnd, IntPtr insertAfter, int x, int y, int width, int height, uint flags);
 
+    [DllImport("user32.dll")]
+    public static extern bool ShowWindowAsync(IntPtr hwnd, int command);
+
+    [DllImport("user32.dll")]
+    public static extern bool SetForegroundWindow(IntPtr hwnd);
+
     [DllImport("user32.dll", SetLastError=true)]
     public static extern IntPtr SendMessageTimeout(IntPtr hwnd, uint message, IntPtr wParam, IntPtr lParam, uint flags, uint timeout, out IntPtr result);
 
@@ -166,16 +172,26 @@ function New-UyDesktopLayerController {
     }
     $controller | Add-Member -MemberType ScriptMethod -Name BringForward -Value {
         param([bool]$Persist = $true)
-        if ((Get-UyPetNativeHandle -Window $this.Window) -ne [IntPtr]::Zero -and [UrbanYardsDesktopLayer]::GetParent((Get-UyPetNativeHandle -Window $this.Window)) -ne [IntPtr]::Zero) {
+        $handle = Get-UyPetNativeHandle -Window $this.Window
+        if ($handle -ne [IntPtr]::Zero -and [UrbanYardsDesktopLayer]::GetParent($handle) -ne [IntPtr]::Zero) {
             [void](Set-UyDesktopShelfParent -Window $this.Window -Attach $false)
         }
+        $this.Window.Visibility = [System.Windows.Visibility]::Visible
         if (-not $this.Window.IsVisible) { $this.Window.Show() }
+        if ($this.Window.WindowState -eq [System.Windows.WindowState]::Minimized) { $this.Window.WindowState = [System.Windows.WindowState]::Normal }
         $this.Mode = "floating"
         $this.ShelfHost = [IntPtr]::Zero
         $this.IsReady = $true
-        $this.Window.Topmost = [bool]$this.Config.alwaysOnTop
         Set-UyWindowWithinScreens -Window $this.Window
+        $this.Window.Topmost = $false
+        $this.Window.Topmost = [bool]$this.Config.alwaysOnTop
         $this.Window.Activate()
+        $this.Window.Focus()
+        $handle = Get-UyPetNativeHandle -Window $this.Window
+        if ($handle -ne [IntPtr]::Zero) {
+            [void][UrbanYardsDesktopLayer]::ShowWindowAsync($handle, 9)
+            [void][UrbanYardsDesktopLayer]::SetForegroundWindow($handle)
+        }
         if ($Persist) { $this.PersistMode("floating") }
         Write-UyPetLog "The Lawnmower Man was brought forward."
     }

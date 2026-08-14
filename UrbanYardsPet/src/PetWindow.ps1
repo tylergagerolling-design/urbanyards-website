@@ -254,7 +254,7 @@ function New-UyPetWindow {
     $petController = New-UyPetController -Window $window -Animation $animation -Config $Config
     $manifest = $animation.Manifest
     $allowedStates = @($manifest.allowedStates)
-    $script:UyPetExitRequested = $false
+    $global:UyPetExitRequested = $false
     $script:UyChatWindow = $null
     $polling = $null
     $notification = $null
@@ -279,7 +279,11 @@ function New-UyPetWindow {
     }
     $togglePause = { param([bool]$paused); $state = $script:UyPetRuntimeState; $state.PetController.Pause($paused); if ($state.Polling) { $state.Polling.SetPaused($paused) } }
     $restore = { $state = $script:UyPetRuntimeState; if ($state.Polling) { $state.Polling.SetPaused($false) } }
-    $exit = { $script:UyPetExitRequested = $true; $script:UyPetRuntimeState.Window.Close() }
+    $exit = {
+        $global:UyPetExitRequested = $true
+        if ([System.Windows.Application]::Current) { [System.Windows.Application]::Current.Shutdown(0) }
+        [System.Windows.Forms.Application]::ExitThread()
+    }
     $bringForwardTimer.Add_Tick({
         $state = $script:UyPetRuntimeState
         if ($state.BringForwardEvent -and $state.BringForwardEvent.WaitOne(0)) {
@@ -441,7 +445,7 @@ function New-UyPetWindow {
     $window.Add_LocationChanged({ $state = $script:UyPetRuntimeState; if ($state.DesktopLayer.Mode -ne "shelf" -and -not $state.PetController.IsMoving -and -not $state.PetController.IsDragging) { Set-UyWindowWithinScreens -Window $state.Window } })
     $window.Add_Closing(({
         param($sender,$eventArgs)
-        if (-not $script:UyPetExitRequested -and -not $SmokeTest) {
+        if (-not $global:UyPetExitRequested -and -not $SmokeTest) {
             $eventArgs.Cancel = $true
             $polling.SetPaused($true)
             $notification.MinimizeToTray()
@@ -480,7 +484,8 @@ function New-UyPetWindow {
                     4 { $state.Notification.TrayMenu.Items[7].PerformClick() } # RESUME
                     5 { $state.Notification.TrayMenu.Items[3].PerformClick() } # HIDE
                     6 { $state.Notification.TrayMenu.Items[1].PerformClick() } # RECOVER
-                    default { $sender.Stop(); $script:UyPetExitRequested = $true; $state.Window.Close(); return }
+                    7 { $state.Notification.TrayMenu.Items[9].PerformClick(); $sender.Stop(); return } # EXIT
+                    default { $sender.Stop(); $global:UyPetExitRequested = $true; [System.Windows.Application]::Current.Shutdown(0); return }
                 }
                 $state.Step++
             })
@@ -504,8 +509,17 @@ function New-UyPetWindow {
     if ($SmokeTest) {
         $safetyTimer = [System.Windows.Threading.DispatcherTimer]::new()
         $safetyTimer.Interval = [TimeSpan]::FromSeconds(8)
-        $safetyTimer.Add_Tick({ param($sender,$eventArgs); $sender.Stop(); $script:UyPetExitRequested = $true; if ($window.IsVisible) { $window.Close() } })
+        $safetyTimer.Add_Tick({ param($sender,$eventArgs); $sender.Stop(); $global:UyPetExitRequested = $true; [System.Windows.Application]::Current.Shutdown(1) })
         $window.Add_Activated(({ if (-not $safetyTimer.IsEnabled) { $safetyTimer.Start() } }).GetNewClosure())
+        if ($TrayOnly) {
+            # Reproduce the installed launch path: the HWND has never been shown
+            # when BRING FORWARD is first selected from the notification area.
+            $trayStartupTimer = [System.Windows.Threading.DispatcherTimer]::new()
+            $trayStartupTimer.Interval = [TimeSpan]::FromMilliseconds(400)
+            $trayStartupTimer.Tag = $notification
+            $trayStartupTimer.Add_Tick({ param($sender,$eventArgs); $sender.Stop(); $sender.Tag.TrayMenu.Items[1].PerformClick() })
+            $trayStartupTimer.Start()
+        }
     }
 
     return [pscustomobject]@{ Window = $window; Animation = $animation; PetController = $petController; DesktopLayer = $desktopLayer; EventController = $eventController; Notification = $notification; Polling = $polling }

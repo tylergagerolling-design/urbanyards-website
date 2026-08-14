@@ -67,41 +67,46 @@ foreach ($file in $xamlFiles) {
 
 $manifestPath = Join-Path $root "config\sprite-manifest.json"
 $manifest = Get-Content -LiteralPath $manifestPath -Raw | ConvertFrom-Json
-$expectedStates = @("idle","walk","lookAround","sleep","hover","clicked","dragged","thinking","working","writing","foundSomething","newLead","overdue","route","busyDay","weather","payment","celebrate","plant","water")
-Assert-UyTest ($manifest.canvas.width -eq 128 -and $manifest.canvas.height -eq 128 -and $manifest.canvas.anchorX -eq 64 -and $manifest.canvas.anchorY -eq 112) "common sprite canvas and anchor"
+$expectedStates = @("idle_blink","thinking","working","attention","celebrate","sleep")
+Assert-UyTest ($manifest.packVersion -eq "6-state-production-v1") "approved six-state production pack version"
+Assert-UyTest ($manifest.canvas.width -eq 512 -and $manifest.canvas.height -eq 512 -and $manifest.canvas.anchorX -eq 256 -and $manifest.canvas.anchorY -eq 256) "approved sprite canvas and body anchor"
+Assert-UyTest ($manifest.display.width -eq 128 -and $manifest.display.height -eq 128 -and $manifest.display.scaling -eq "HighQuality") "painted artwork display contract"
 Assert-UyTest (@($manifest.allowedStates).Count -eq $expectedStates.Count) "manifest state count"
 foreach ($state in $expectedStates) {
     Assert-UyTest (@($manifest.allowedStates) -contains $state) "registered state: $state"
     $animation = $manifest.animations.$state
-    Assert-UyTest ($null -ne $animation -and @($animation.frames).Count -ge 2) "animation frames: $state"
+    Assert-UyTest ($null -ne $animation -and @($animation.frames).Count -eq 8) "eight production frames: $state"
     foreach ($frame in @($animation.frames)) {
         $path = Join-Path (Join-Path $root "assets\sprites") ([string]$frame)
         Assert-UyTest (Test-Path -LiteralPath $path) "sprite exists: $frame"
     }
 }
+Assert-UyTest (@($manifest.animations.PSObject.Properties.Name).Count -eq 6) "no retired animations remain in runtime manifest"
+Assert-UyTest ($manifest.eventStateMap.weather -eq "attention" -and $manifest.eventStateMap.overdue -eq "attention" -and $manifest.eventStateMap.newLead -eq "attention" -and $manifest.eventStateMap.busyDay -eq "attention" -and $manifest.eventStateMap.payment -eq "celebrate") "business events map into the approved animation vocabulary"
 
 $spriteFiles = Get-ChildItem -LiteralPath (Join-Path $root "assets\sprites") -Filter *.png -File
 $transparentCorners = $true
 $dimensionsCorrect = $true
-$hasContent = $true
-$alphaBounds = [System.Collections.Generic.List[object]]::new()
 foreach ($file in $spriteFiles) {
     $bitmap = [Drawing.Bitmap]::new($file.FullName)
     try {
-        if ($bitmap.Width -ne 128 -or $bitmap.Height -ne 128) { $dimensionsCorrect = $false }
-        if ($bitmap.GetPixel(0,0).A -ne 0 -or $bitmap.GetPixel(127,127).A -ne 0) { $transparentCorners = $false }
-        $minX=128; $maxX=-1; $minY=128; $maxY=-1; $pixels=0
-        for($y=0;$y -lt 128;$y++) { for($x=0;$x -lt 128;$x++) { if($bitmap.GetPixel($x,$y).A -gt 8) { $pixels++; if($x -lt $minX){$minX=$x}; if($x -gt $maxX){$maxX=$x}; if($y -lt $minY){$minY=$y}; if($y -gt $maxY){$maxY=$y} } } }
-        if ($pixels -lt 200) { $hasContent = $false }
-        $alphaBounds.Add([pscustomobject]@{ Name=$file.Name; MinX=$minX; MaxX=$maxX; MinY=$minY; MaxY=$maxY; Pixels=$pixels })
+        if ($bitmap.Width -ne 512 -or $bitmap.Height -ne 512) { $dimensionsCorrect = $false }
+        if ($bitmap.GetPixel(0,0).A -ne 0 -or $bitmap.GetPixel(511,511).A -ne 0) { $transparentCorners = $false }
     }
     finally { $bitmap.Dispose() }
 }
-Assert-UyTest ($spriteFiles.Count -ge 100) "extracted sprite frame count"
-Assert-UyTest $dimensionsCorrect "all sprites use 128x128"
+Assert-UyTest ($spriteFiles.Count -eq 48) "runtime contains exactly the approved 48 frames"
+Assert-UyTest $dimensionsCorrect "all production sprites use 512x512"
 Assert-UyTest $transparentCorners "all sprite corners are transparent"
-Assert-UyTest $hasContent "all sprites contain character pixels"
-Assert-UyTest (($alphaBounds | Measure-Object MaxY -Maximum).Maximum -le 112) "sprite feet remain at or above shared baseline"
+
+$sourcePack = Join-Path $root "assets\source\sprout-6-animation-pack"
+$sourceManifest = Get-Content -LiteralPath (Join-Path $sourcePack "sprite-manifest.source.json") -Raw | ConvertFrom-Json
+$validationResult = Get-Content -LiteralPath (Join-Path $sourcePack "validation.json") -Raw | ConvertFrom-Json
+$validation = @($validationResult | ForEach-Object { $_ })
+Assert-UyTest ($sourceManifest.animation_count -eq 6 -and $sourceManifest.total_png_frames -eq 48 -and $sourceManifest.alignment.global_scale -eq 2.8) "source-of-truth pack metadata is preserved"
+Assert-UyTest ($validation.Count -eq 48 -and @($validation | Where-Object { -not $_.no_clip }).Count -eq 0) "all supplied validation records pass clipping QA"
+Assert-UyTest (($validation | Measure-Object minimum_clear_margin_px -Minimum).Minimum -ge 32) "all frames retain the required safe margin"
+Assert-UyTest ((Test-Path -LiteralPath (Join-Path $sourcePack "ALL_6_ANIMATIONS_PREVIEW.gif")) -and (Test-Path -LiteralPath (Join-Path $sourcePack "ALL_6_ANIMATIONS_PREVIEW.png"))) "approved six-animation previews are preserved"
 
 $configText = Get-Content -LiteralPath (Join-Path $root "config.example.json") -Raw
 Assert-UyTest ($configText -notmatch '(?i)service[_-]?role|sk_live|eyJ[a-zA-Z0-9_-]{20,}') "example config contains no privileged secrets"
@@ -113,6 +118,7 @@ Assert-UyTest ($allText -match 'dashboard-records') "reuses existing records end
 Assert-UyTest ($allText -match 'DataProtectionScope]::CurrentUser') "encrypts saved desktop session for current Windows user"
 Assert-UyTest ($allText -match 'Connect to Urban Yards') "settings expose an explicit connection workflow"
 Assert-UyTest ($allText -match 'BringForwardEvent') "second launch brings the existing pet forward"
+Assert-UyTest ($allText -match 'BitmapScalingMode="HighQuality"' -and $allText -match 'HighQualityBicubic') "WPF and shelf modes use high-quality painted-art scaling"
 Assert-UyTest ($allText -match 'New-UyDesktopShelfMirror' -and $allText -match 'System\.Drawing\.Region' -and $allText -match 'SetWindowPos\(\$form\.Handle, \$shelfHost') "desktop shelf uses a renderable region-shaped window at the native desktop layer"
 Assert-UyTest ($allText -notmatch 'SetParent\(\$handle|SetParent\(\$form\.Handle') "transparent pet windows are never reparented as Explorer children"
 Assert-UyTest ($allText -match 'SEND TO SHELF' -and $allText -match 'BRING FORWARD' -and $allText -match 'SHOW ALERTS') "tray exposes alert, shelf, and foreground controls"

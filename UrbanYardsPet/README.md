@@ -1,6 +1,6 @@
 # The Lawnmower Man — Urban Yards Windows Desktop Pet
 
-The Lawnmower Man desktop pet is a lightweight PowerShell/WPF companion for the existing Urban Yards dashboard. It uses the supplied pixel-art character, stays useful offline, and connects to the same authenticated Urban Yards backend when a signed-in user token is provided.
+The Lawnmower Man desktop pet is a lightweight PowerShell/WPF companion for the existing Urban Yards dashboard. It uses the approved painted/chibi Sprout character, stays useful offline, and connects to the same authenticated Urban Yards backend when a signed-in user token is provided.
 
 It is not a second assistant and it is not a Tamagotchi. The visual pet is an interface for the existing Lawnmower Man AI and deterministic Urban Yards operational events.
 
@@ -26,14 +26,7 @@ Add `-Launch` to start it after installation, or `-EnableStartup` to opt in to l
 
 If a portable PowerShell 7 zip is supplied with `-RuntimeArchive`, it is installed privately inside the application. Otherwise the app prefers system PowerShell 7 and safely falls back to Windows PowerShell 5.1.
 
-The supplied source sheet is saved at `assets/source/urban-yards-lawnmower-man-sprite-sheet.png`. The checked-in frames are already extracted. To regenerate them:
-
-```powershell
-pwsh -NoProfile -File .\tools\Extract-Sprites.ps1 `
-  -Source .\assets\source\urban-yards-lawnmower-man-sprite-sheet.png
-```
-
-The extraction is deterministic. It copies the original alpha-enabled sprite pixels, removes all sheet labels/numbers by selecting only character cells, and normalizes every frame onto a transparent 128×128 canvas anchored at `(64,112)`.
+The approved source-of-truth pack is preserved at `assets/source/sprout-6-animation-pack/`. It contains the supplied README, source manifest, validation results, QA contact sheet, and six-animation previews. The active runtime uses the 48 individual alpha-enabled production frames copied into `assets/sprites/`.
 
 The Desktop shortcut, Start Menu shortcut, system tray, and native app windows use the dedicated transparent Lawnmower Man logo at `assets/icons/lawnmower-man-app.ico`. It includes Windows-ready sizes from 16×16 through 256×256. To rebuild it after intentionally replacing `assets/icons/lawnmower-man-app-icon.png`, run:
 
@@ -123,29 +116,24 @@ The pet uses the existing hash routes discovered in `dashboard.js`: `overview`, 
 
 ## Sprite architecture
 
-`config/sprite-manifest.json` is the rendering contract. The animation controller reads frame names, FPS, loop behavior, and return state from the manifest. Rendering code does not contain source-sheet coordinates.
+`config/sprite-manifest.json` is the rendering contract. The animation controller reads the frame names, supplied timing, and loop behavior from the manifest. The original pack metadata remains unchanged in `assets/source/sprout-6-animation-pack/sprite-manifest.source.json`.
 
 All final sprite PNGs:
 
-- are 128×128 with alpha;
-- share a fixed center and foot baseline;
-- use nearest-neighbor rendering to preserve pixel art;
-- exclude sheet headings, frame numbers, UI examples, palette swatches, and background.
-
-`tools/Extract-Sprites.ps1` is the only place where source-sheet cell coordinates live.
+- are 512×512 transparent RGBA PNGs;
+- use the common Sprout body anchor at `(256,256)` and one global scale across all frames;
+- retain at least the supplied 32-pixel safe margin;
+- use high-quality interpolation because the artwork is painted/chibi rather than hard-edged pixel art.
 
 ## Animation states
 
 Registered and validated states are:
 
 ```text
-idle, walk, lookAround, sleep, hover, clicked, dragged,
-thinking, working, writing, foundSomething,
-newLead, overdue, route, busyDay, weather, payment,
-celebrate, plant, water
+idle_blink, thinking, working, attention, celebrate, sleep
 ```
 
-Severity is separately constrained to `normal`, `attention`, or `urgent`. Unknown AI/event state names are rejected and arbitrary AI-returned commands are never executed.
+Severity is separately constrained to `normal`, `attention`, or `urgent`. Business events such as weather, overdue work, new leads, busy days, and payments map into `attention` or `celebrate`; they do not add animations. Unknown AI state names are rejected and arbitrary AI-returned commands are never executed.
 
 ## Event architecture and a future dashboard pet
 
@@ -170,7 +158,7 @@ That dashboard controller would subscribe to the existing application state/even
 Open **Settings → Developer animation QA**, choose any registered state, and run it. Or launch a state directly:
 
 ```powershell
-.\Start-UrbanYardsPet.ps1 -TestState weather
+.\Start-UrbanYardsPet.ps1 -TestState attention
 ```
 
 Run the structural, sprite, parser, XAML, route, and security tests:
@@ -237,4 +225,4 @@ Open Settings from the tray/context menu and choose **Reset pet position**. Ever
 
 ### DPI/scaling
 
-WPF uses device-independent pixels and the sprites use a common fixed canvas. `UseLayoutRounding`, pixel snapping, and nearest-neighbor scaling keep the source crisp at Windows scaling levels.
+WPF uses device-independent pixels and the sprites use a common fixed canvas. `UseLayoutRounding`, pixel snapping, and high-quality interpolation preserve the painted Sprout artwork at Windows scaling levels.

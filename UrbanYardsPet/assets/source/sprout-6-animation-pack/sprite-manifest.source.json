@@ -1,0 +1,107 @@
+{
+  "project": "Urban Yards",
+  "character": "Sprout / Lawnmower Man visual avatar",
+  "pack_version": "6-state-production-v1",
+  "source_design": "Approved original Sprout design",
+  "animation_count": 6,
+  "frames_per_animation": 8,
+  "total_png_frames": 48,
+  "canvas": {
+    "width": 512,
+    "height": 512,
+    "format": "RGBA PNG",
+    "transparent_background": true
+  },
+  "alignment": {
+    "body_anchor_x": 256,
+    "body_anchor_y": 256,
+    "anchor_method": "green mascot body center; props/effects excluded from centering",
+    "global_scale": 2.8,
+    "per_frame_resizing": false,
+    "per_animation_scale_changes": false
+  },
+  "clipping": {
+    "required_safe_margin_px": 32,
+    "all_frames_pass": true,
+    "smallest_actual_margin_px": 34
+  },
+  "rendering": {
+    "recommended_primary_format": "APNG / individual PNG frames",
+    "gif_note": "GIF uses 1-bit transparency and is intended as preview/fallback; APNG preserves full alpha.",
+    "desktop_scaling": "Use high-quality interpolation; this Sprout design is painted/chibi artwork, not a nearest-neighbor pixel sprite."
+  },
+  "animations": {
+    "idle_blink": {
+      "frames": 8,
+      "loop_seconds": 1.2,
+      "frame_duration_ms": 150,
+      "loop": true,
+      "png_frames": "animations/idle_blink/frames/",
+      "animated_png": "animations/idle_blink/idle_blink.png",
+      "apng": "animations/idle_blink/idle_blink.apng",
+      "gif": "animations/idle_blink/idle_blink.gif",
+      "dashboard_use": "Default / nothing urgent",
+      "suggested_trigger": "Normal desktop state"
+    },
+    "thinking": {
+      "frames": 8,
+      "loop_seconds": 1.4,
+      "frame_duration_ms": 175,
+      "loop": true,
+      "png_frames": "animations/thinking/frames/",
+      "animated_png": "animations/thinking/thinking.png",
+      "apng": "animations/thinking/thinking.apng",
+      "gif": "animations/thinking/thinking.gif",
+      "dashboard_use": "The Lawnmower Man is reasoning or processing",
+      "suggested_trigger": "AI request submitted / analysis in progress"
+    },
+    "working": {
+      "frames": 8,
+      "loop_seconds": 1.4,
+      "frame_duration_ms": 175,
+      "loop": true,
+      "png_frames": "animations/working/frames/",
+      "animated_png": "animations/working/working.png",
+      "apng": "animations/working/working.apng",
+      "gif": "animations/working/working.gif",
+      "dashboard_use": "The Lawnmower Man is actively performing a task",
+      "suggested_trigger": "Tool/API/dashboard action running"
+    },
+    "attention": {
+      "frames": 8,
+      "loop_seconds": 1.2,
+      "frame_duration_ms": 150,
+      "loop": true,
+      "png_frames": "animations/attention/frames/",
+      "animated_png": "animations/attention/attention.png",
+      "apng": "animations/attention/attention.apng",
+      "gif": "animations/attention/attention.gif",
+      "dashboard_use": "Something needs Tyler's attention",
+      "suggested_trigger": "Overdue follow-up, new lead, weather concern, ticket issue"
+    },
+    "celebrate": {
+      "frames": 8,
+      "loop_seconds": 2.0,
+      "frame_duration_ms": 250,
+      "loop": true,
+      "png_frames": "animations/celebrate/frames/",
+      "animated_png": "animations/celebrate/celebrate.png",
+      "apng": "animations/celebrate/celebrate.apng",
+      "gif": "animations/celebrate/celebrate.gif",
+      "dashboard_use": "Positive business event",
+      "suggested_trigger": "Payment received, task completed, route finished"
+    },
+    "sleep": {
+      "frames": 8,
+      "loop_seconds": 2.0,
+      "frame_duration_ms": 250,
+      "loop": true,
+      "png_frames": "animations/sleep/frames/",
+      "animated_png": "animations/sleep/sleep.png",
+      "apng": "animations/sleep/sleep.apng",
+      "gif": "animations/sleep/sleep.gif",
+      "dashboard_use": "Long idle period",
+      "suggested_trigger": "No interaction or actionable events for configured timeout"
+    }
+  }
+}

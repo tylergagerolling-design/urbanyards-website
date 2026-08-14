@@ -89,7 +89,7 @@ function Show-UyChatWindow {
             if ($response.pet) {
                 [void](Send-PetEvent -Controller $this.EventController -Type $response.pet.state -Severity $response.pet.severity -Message $response.pet.speech -ActionLabel $(if ($response.action) { $response.action.label } else { "OPEN URBAN YARDS" }) -Route $(if ($response.action) { $response.action.route } else { "overview" }) -Force)
             }
-            else { $this.PetController.SetState("foundSomething", "normal", 5) }
+            else { $this.PetController.SetState("celebrate", "normal", 5) }
         }
         catch {
             [void]$this.Messages.Children.Remove($status)
@@ -195,7 +195,7 @@ function Show-UySettingsWindow {
         $Notification.ShowSpeech("Urban Yards disconnected. Local mode is still available.", "", "", 6)
     }).GetNewClosure())
     foreach ($state in $AllowedStates) { [void]$debug.Items.Add($state) }
-    $debug.SelectedItem = "idle"
+    $debug.SelectedItem = "idle_blink"
     (& $get "ResetPosition").Add_Click(({ Reset-UyPetPosition; Set-UyDefaultWindowPosition -Window $Window; $Notification.ShowSpeech("Position reset.", "", "", 4) }).GetNewClosure())
     (& $get "TestNotification").Add_Click(({ $Notification.ShowSpeech("Three follow-ups need attention.", "VIEW LEADS", "leads", 8) }).GetNewClosure())
     (& $get "TestAnimation").Add_Click(({ if ($debug.SelectedItem) { $PetController.SetState([string]$debug.SelectedItem, "normal", 7) } }).GetNewClosure())
@@ -254,6 +254,7 @@ function New-UyPetWindow {
     $petController = New-UyPetController -Window $window -Animation $animation -Config $Config
     $manifest = $animation.Manifest
     $allowedStates = @($manifest.allowedStates)
+    $allowedEventTypes = @($allowedStates + @($manifest.eventStateMap.PSObject.Properties.Name) | Select-Object -Unique)
     $global:UyPetExitRequested = $false
     $script:UyChatWindow = $null
     $polling = $null
@@ -305,18 +306,17 @@ function New-UyPetWindow {
     }
     $notification = New-UyNotificationController -Window $window -SpeechPopup $speechPopup -SpeechText $speechText -SpeechAction $speechAction -Config $Config -TrayIconPath $trayIconPath -OpenRoute $openRoute -Restore $restore -Ask $ask -ShowAlerts $showAlerts -BringForward $bringForward -ReturnToShelf $returnToShelf -TogglePause $togglePause -Exit $exit
     $runtimeContext.Notification = $notification
-    $eventController = New-UyEventController -AllowedStates $allowedStates -CooldownMinutes ([int]$Config.notificationCooldownMinutes) -OnEvent {
+    $eventController = New-UyEventController -AllowedStates $allowedEventTypes -CooldownMinutes ([int]$Config.notificationCooldownMinutes) -OnEvent {
         param($event)
         $state = $script:UyPetRuntimeState
         $duration = if ($event.type -in @("overdue", "weather", "busyDay")) { 12 } else { 8 }
-        $state.PetController.SetState([string]$event.type, [string]$event.severity, $duration)
-        if ($event.message) { $state.Notification.ShowSpeech([string]$event.message, [string]$event.action.label, [string]$event.action.route, $duration) }
-        if ($event.type -eq "payment") {
-            $celebrateTimer = [System.Windows.Threading.DispatcherTimer]::new()
-            $celebrateTimer.Interval = [TimeSpan]::FromSeconds(5)
-            $celebrateTimer.Add_Tick({ param($sender,$eventArgs); $sender.Stop(); $script:UyPetRuntimeState.PetController.SetState("celebrate", "normal", 7) })
-            $celebrateTimer.Start()
+        $visualState = [string]$event.type
+        if ($state.AllowedStates -notcontains $visualState) {
+            $mapping = $state.Animation.Manifest.eventStateMap.PSObject.Properties[$visualState]
+            $visualState = if ($null -ne $mapping) { [string]$mapping.Value } else { "attention" }
         }
+        $state.PetController.SetState($visualState, [string]$event.severity, $duration)
+        if ($event.message) { $state.Notification.ShowSpeech([string]$event.message, [string]$event.action.label, [string]$event.action.route, $duration) }
     }
     $runtimeContext.EventController = $eventController
 
@@ -344,11 +344,11 @@ function New-UyPetWindow {
     $runtimeContext.MouseState = $mouseState
     $petImage.Add_MouseEnter({
         $state = $script:UyPetRuntimeState
-        if (-not $state.PetController.IsDragging) { [void]$state.Animation.SetState("hover", "normal", $false); $state.PetGlow.Opacity = 0.9 }
+        if (-not $state.PetController.IsDragging) { $state.PetGlow.Opacity = 0.9 }
     })
     $petImage.Add_MouseLeave({
         $state = $script:UyPetRuntimeState
-        if (-not $state.PetController.IsDragging -and -not $state.PetController.TemporaryState) { [void]$state.Animation.SetState("idle", "normal", $true); $state.PetGlow.Opacity = 0 }
+        if (-not $state.PetController.IsDragging -and -not $state.PetController.TemporaryState) { [void]$state.Animation.SetState("idle_blink", "normal", $true); $state.PetGlow.Opacity = 0 }
     })
     $petImage.Add_MouseLeftButtonDown({
         param($sender,$eventArgs)
@@ -364,18 +364,18 @@ function New-UyPetWindow {
         }
         $state.PetController.Touch()
         $state.PetController.IsDragging = $true
-        [void]$state.Animation.SetState("dragged", "normal", $true)
+        [void]$state.Animation.SetState("working", "normal", $true)
         try { $state.Window.DragMove(); $state.MouseState.DragStarted = ([DateTime]::UtcNow - $state.MouseState.LeftDownAt).TotalMilliseconds -gt 180 } catch {}
         $state.PetController.IsDragging = $false
         Set-UyWindowWithinScreens -Window $state.Window
         Save-UyPetWindowState -Left $state.Window.Left -Top $state.Window.Top
-        if ($state.MouseState.DragStarted) { [void]$state.Animation.SetState("idle", "normal", $true) }
+        if ($state.MouseState.DragStarted) { [void]$state.Animation.SetState("idle_blink", "normal", $true) }
     })
     $petImage.Add_MouseLeftButtonUp({
         param($sender,$eventArgs)
         $state = $script:UyPetRuntimeState
         if (-not $state.MouseState.DoubleClick -and -not $state.MouseState.DragStarted -and ([DateTime]::UtcNow - $state.MouseState.LeftDownAt).TotalMilliseconds -lt 550) {
-            $state.PetController.SetState("clicked", "normal", 2)
+            $state.PetController.SetState("attention", "normal", 2)
             $state.MenuPopup.IsOpen = -not $state.MenuPopup.IsOpen
         }
     })

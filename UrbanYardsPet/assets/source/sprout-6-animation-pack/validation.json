@@ -1,0 +1,578 @@
+[
+  {
+    "animation": "idle_blink",
+    "frame": 1,
+    "bbox": [
+      113,
+      74,
+      394,
+      387
+    ],
+    "minimum_clear_margin_px": 74,
+    "no_clip": true
+  },
+  {
+    "animation": "idle_blink",
+    "frame": 2,
+    "bbox": [
+      113,
+      74,
+      394,
+      387
+    ],
+    "minimum_clear_margin_px": 74,
+    "no_clip": true
+  },
+  {
+    "animation": "idle_blink",
+    "frame": 3,
+    "bbox": [
+      113,
+      74,
+      394,
+      390
+    ],
+    "minimum_clear_margin_px": 74,
+    "no_clip": true
+  },
+  {
+    "animation": "idle_blink",
+    "frame": 4,
+    "bbox": [
+      114,
+      72,
+      393,
+      390
+    ],
+    "minimum_clear_margin_px": 72,
+    "no_clip": true
+  },
+  {
+    "animation": "idle_blink",
+    "frame": 5,
+    "bbox": [
+      115,
+      73,
+      394,
+      389
+    ],
+    "minimum_clear_margin_px": 73,
+    "no_clip": true
+  },
+  {
+    "animation": "idle_blink",
+    "frame": 6,
+    "bbox": [
+      114,
+      75,
+      395,
+      391
+    ],
+    "minimum_clear_margin_px": 75,
+    "no_clip": true
+  },
+  {
+    "animation": "idle_blink",
+    "frame": 7,
+    "bbox": [
+      114,
+      76,
+      395,
+      392
+    ],
+    "minimum_clear_margin_px": 76,
+    "no_clip": true
+  },
+  {
+    "animation": "idle_blink",
+    "frame": 8,
+    "bbox": [
+      112,
+      74,
+      393,
+      387
+    ],
+    "minimum_clear_margin_px": 74,
+    "no_clip": true
+  },
+  {
+    "animation": "thinking",
+    "frame": 1,
+    "bbox": [
+      100,
+      69,
+      416,
+      406
+    ],
+    "minimum_clear_margin_px": 69,
+    "no_clip": true
+  },
+  {
+    "animation": "thinking",
+    "frame": 2,
+    "bbox": [
+      98,
+      69,
+      414,
+      411
+    ],
+    "minimum_clear_margin_px": 69,
+    "no_clip": true
+  },
+  {
+    "animation": "thinking",
+    "frame": 3,
+    "bbox": [
+      101,
+      71,
+      417,
+      408
+    ],
+    "minimum_clear_margin_px": 71,
+    "no_clip": true
+  },
+  {
+    "animation": "thinking",
+    "frame": 4,
+    "bbox": [
+      98,
+      68,
+      414,
+      408
+    ],
+    "minimum_clear_margin_px": 68,
+    "no_clip": true
+  },
+  {
+    "animation": "thinking",
+    "frame": 5,
+    "bbox": [
+      102,
+      70,
+      418,
+      407
+    ],
+    "minimum_clear_margin_px": 70,
+    "no_clip": true
+  },
+  {
+    "animation": "thinking",
+    "frame": 6,
+    "bbox": [
+      99,
+      72,
+      415,
+      409
+    ],
+    "minimum_clear_margin_px": 72,
+    "no_clip": true
+  },
+  {
+    "animation": "thinking",
+    "frame": 7,
+    "bbox": [
+      98,
+      68,
+      414,
+      408
+    ],
+    "minimum_clear_margin_px": 68,
+    "no_clip": true
+  },
+  {
+    "animation": "thinking",
+    "frame": 8,
+    "bbox": [
+      100,
+      67,
+      416,
+      407
+    ],
+    "minimum_clear_margin_px": 67,
+    "no_clip": true
+  },
+  {
+    "animation": "working",
+    "frame": 1,
+    "bbox": [
+      115,
+      83,
+      431,
+      420
+    ],
+    "minimum_clear_margin_px": 81,
+    "no_clip": true
+  },
+  {
+    "animation": "working",
+    "frame": 2,
+    "bbox": [
+      107,
+      84,
+      423,
+      418
+    ],
+    "minimum_clear_margin_px": 84,
+    "no_clip": true
+  },
+  {
+    "animation": "working",
+    "frame": 3,
+    "bbox": [
+      112,
+      87,
+      428,
+      421
+    ],
+    "minimum_clear_margin_px": 84,
+    "no_clip": true
+  },
+  {
+    "animation": "working",
+    "frame": 4,
+    "bbox": [
+      108,
+      82,
+      424,
+      419
+    ],
+    "minimum_clear_margin_px": 82,
+    "no_clip": true
+  },
+  {
+    "animation": "working",
+    "frame": 5,
+    "bbox": [
+      105,
+      85,
+      421,
+      419
+    ],
+    "minimum_clear_margin_px": 85,
+    "no_clip": true
+  },
+  {
+    "animation": "working",
+    "frame": 6,
+    "bbox": [
+      108,
+      86,
+      424,
+      420
+    ],
+    "minimum_clear_margin_px": 86,
+    "no_clip": true
+  },
+  {
+    "animation": "working",
+    "frame": 7,
+    "bbox": [
+      119,
+      84,
+      435,
+      423
+    ],
+    "minimum_clear_margin_px": 77,
+    "no_clip": true
+  },
+  {
+    "animation": "working",
+    "frame": 8,
+    "bbox": [
+      107,
+      82,
+      423,
+      421
+    ],
+    "minimum_clear_margin_px": 82,
+    "no_clip": true
+  },
+  {
+    "animation": "attention",
+    "frame": 1,
+    "bbox": [
+      95,
+      59,
+      411,
+      409
+    ],
+    "minimum_clear_margin_px": 59,
+    "no_clip": true
+  },
+  {
+    "animation": "attention",
+    "frame": 2,
+    "bbox": [
+      102,
+      59,
+      418,
+      409
+    ],
+    "minimum_clear_margin_px": 59,
+    "no_clip": true
+  },
+  {
+    "animation": "attention",
+    "frame": 3,
+    "bbox": [
+      102,
+      50,
+      418,
+      400
+    ],
+    "minimum_clear_margin_px": 50,
+    "no_clip": true
+  },
+  {
+    "animation": "attention",
+    "frame": 4,
+    "bbox": [
+      103,
+      51,
+      419,
+      401
+    ],
+    "minimum_clear_margin_px": 51,
+    "no_clip": true
+  },
+  {
+    "animation": "attention",
+    "frame": 5,
+    "bbox": [
+      102,
+      59,
+      418,
+      409
+    ],
+    "minimum_clear_margin_px": 59,
+    "no_clip": true
+  },
+  {
+    "animation": "attention",
+    "frame": 6,
+    "bbox": [
+      101,
+      62,
+      417,
+      412
+    ],
+    "minimum_clear_margin_px": 62,
+    "no_clip": true
+  },
+  {
+    "animation": "attention",
+    "frame": 7,
+    "bbox": [
+      98,
+      52,
+      414,
+      402
+    ],
+    "minimum_clear_margin_px": 52,
+    "no_clip": true
+  },
+  {
+    "animation": "attention",
+    "frame": 8,
+    "bbox": [
+      102,
+      61,
+      418,
+      411
+    ],
+    "minimum_clear_margin_px": 61,
+    "no_clip": true
+  },
+  {
+    "animation": "celebrate",
+    "frame": 1,
+    "bbox": [
+      116,
+      69,
+      390,
+      391
+    ],
+    "minimum_clear_margin_px": 69,
+    "no_clip": true
+  },
+  {
+    "animation": "celebrate",
+    "frame": 2,
+    "bbox": [
+      115,
+      77,
+      394,
+      397
+    ],
+    "minimum_clear_margin_px": 77,
+    "no_clip": true
+  },
+  {
+    "animation": "celebrate",
+    "frame": 3,
+    "bbox": [
+      117,
+      80,
+      395,
+      398
+    ],
+    "minimum_clear_margin_px": 80,
+    "no_clip": true
+  },
+  {
+    "animation": "celebrate",
+    "frame": 4,
+    "bbox": [
+      98,
+      63,
+      394,
+      398
+    ],
+    "minimum_clear_margin_px": 63,
+    "no_clip": true
+  },
+  {
+    "animation": "celebrate",
+    "frame": 5,
+    "bbox": [
+      111,
+      65,
+      393,
+      389
+    ],
+    "minimum_clear_margin_px": 65,
+    "no_clip": true
+  },
+  {
+    "animation": "celebrate",
+    "frame": 6,
+    "bbox": [
+      116,
+      77,
+      389,
+      397
+    ],
+    "minimum_clear_margin_px": 77,
+    "no_clip": true
+  },
+  {
+    "animation": "celebrate",
+    "frame": 7,
+    "bbox": [
+      111,
+      68,
+      393,
+      395
+    ],
+    "minimum_clear_margin_px": 68,
+    "no_clip": true
+  },
+  {
+    "animation": "celebrate",
+    "frame": 8,
+    "bbox": [
+      114,
+      69,
+      404,
+      394
+    ],
+    "minimum_clear_margin_px": 69,
+    "no_clip": true
+  },
+  {
+    "animation": "sleep",
+    "frame": 1,
+    "bbox": [
+      114,
+      65,
+      393,
+      388
+    ],
+    "minimum_clear_margin_px": 65,
+    "no_clip": true
+  },
+  {
+    "animation": "sleep",
+    "frame": 2,
+    "bbox": [
+      110,
+      51,
+      395,
+      374
+    ],
+    "minimum_clear_margin_px": 51,
+    "no_clip": true
+  },
+  {
+    "animation": "sleep",
+    "frame": 3,
+    "bbox": [
+      108,
+      38,
+      396,
+      364
+    ],
+    "minimum_clear_margin_px": 38,
+    "no_clip": true
+  },
+  {
+    "animation": "sleep",
+    "frame": 4,
+    "bbox": [
+      110,
+      36,
+      395,
+      362
+    ],
+    "minimum_clear_margin_px": 36,
+    "no_clip": true
+  },
+  {
+    "animation": "sleep",
+    "frame": 5,
+    "bbox": [
+      109,
+      39,
+      394,
+      362
+    ],
+    "minimum_clear_margin_px": 39,
+    "no_clip": true
+  },
+  {
+    "animation": "sleep",
+    "frame": 6,
+    "bbox": [
+      109,
+      34,
+      396,
+      363
+    ],
+    "minimum_clear_margin_px": 34,
+    "no_clip": true
+  },
+  {
+    "animation": "sleep",
+    "frame": 7,
+    "bbox": [
+      107,
+      39,
+      395,
+      365
+    ],
+    "minimum_clear_margin_px": 39,
+    "no_clip": true
+  },
+  {
+    "animation": "sleep",
+    "frame": 8,
+    "bbox": [
+      112,
+      56,
+      397,
+      393
+    ],
+    "minimum_clear_margin_px": 56,
+    "no_clip": true
+  }
+]

@@ -113,7 +113,28 @@ function Set-UyShelfMirrorFrame {
     if ($Mirror.LastPath -eq $Path -or -not (Test-Path -LiteralPath $Path -PathType Leaf)) { return }
 
     $source = [System.Drawing.Image]::FromFile($Path)
-    try { $frame = [System.Drawing.Bitmap]::new($source) }
+    try {
+        $frame = [System.Drawing.Bitmap]::new($Mirror.TargetWidth, $Mirror.TargetHeight, [System.Drawing.Imaging.PixelFormat]::Format32bppPArgb)
+        $graphics = [System.Drawing.Graphics]::FromImage($frame)
+        try {
+            $graphics.CompositingMode = [System.Drawing.Drawing2D.CompositingMode]::SourceCopy
+            $graphics.CompositingQuality = [System.Drawing.Drawing2D.CompositingQuality]::HighQuality
+            $graphics.InterpolationMode = [System.Drawing.Drawing2D.InterpolationMode]::HighQualityBicubic
+            $graphics.PixelOffsetMode = [System.Drawing.Drawing2D.PixelOffsetMode]::HighQuality
+            $graphics.SmoothingMode = [System.Drawing.Drawing2D.SmoothingMode]::HighQuality
+            $graphics.Clear([System.Drawing.Color]::Transparent)
+            $graphics.DrawImage(
+                $source,
+                [System.Drawing.Rectangle]::new(0, 0, $Mirror.TargetWidth, $Mirror.TargetHeight),
+                0,
+                0,
+                $source.Width,
+                $source.Height,
+                [System.Drawing.GraphicsUnit]::Pixel
+            )
+        }
+        finally { $graphics.Dispose() }
+    }
     finally { $source.Dispose() }
 
     $offsetX = [Math]::Max(0, [Math]::Floor(($Mirror.Form.ClientSize.Width - $frame.Width) / 2))
@@ -196,6 +217,8 @@ function New-UyDesktopShelfMirror {
         Host = $shelfHost
         Timer = $null
         LastPath = ""
+        TargetWidth = [Math]::Max(1, [int][Math]::Round($width * 0.8))
+        TargetHeight = [Math]::Max(1, [int][Math]::Round($height * 0.8))
     }
     Set-UyShelfMirrorFrame -Mirror $mirror -Path (Get-UyShelfSpritePath -Window $Window)
     $mirrorRect = [UrbanYardsDesktopLayer+RECT]::new()

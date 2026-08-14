@@ -18,9 +18,9 @@
                 <DropShadowEffect x:Name="PetShadow" BlurRadius="12" ShadowDepth="3" Opacity="0.35" Color="#173B28"/>
             </Border.Effect>
         </Border>
-        <Image x:Name="PetImage" Width="128" Height="128" Stretch="None"
+        <Image x:Name="PetImage" Width="128" Height="128" Stretch="Uniform"
                HorizontalAlignment="Center" VerticalAlignment="Bottom"
-               SnapsToDevicePixels="True" Cursor="Hand"
+               SnapsToDevicePixels="True" RenderOptions.BitmapScalingMode="HighQuality" Cursor="Hand"
                ToolTip="The Lawnmower Man"/>
         <Popup x:Name="MenuPopup" AllowsTransparency="True" Placement="Top" StaysOpen="False"
                PlacementTarget="{Binding ElementName=PetImage}" PopupAnimation="Fade"/>

@@ -36,7 +36,7 @@ function New-UyAnimationController {
         Manifest = $manifest
         Cache = $cache
         Timer = $timer
-        State = "idle"
+        State = "idle_blink"
         Severity = "normal"
         FrameIndex = 0
         IsPaused = $false
@@ -120,6 +120,6 @@ function New-UyAnimationController {
         }
     })
 
-    [void]$controller.SetState("idle", "normal", $true)
+    [void]$controller.SetState("idle_blink", "normal", $true)
     return $controller
 }

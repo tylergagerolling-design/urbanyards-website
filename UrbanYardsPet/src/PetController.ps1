@@ -66,7 +66,7 @@ function New-UyPetController {
     }
     $controller | Add-Member -MemberType ScriptMethod -Name Touch -Value {
         $this.LastInteraction = [DateTime]::UtcNow
-        if ($this.Animation.State -eq "sleep") { [void]$this.Animation.SetState("idle", "normal", $true) }
+        if ($this.Animation.State -eq "sleep") { [void]$this.Animation.SetState("idle_blink", "normal", $true) }
     }
     $controller | Add-Member -MemberType ScriptMethod -Name SetState -Value {
         param([string]$State, [string]$Severity = "normal", [int]$DurationSeconds = 0)
@@ -81,7 +81,7 @@ function New-UyPetController {
     $controller | Add-Member -MemberType ScriptMethod -Name ReturnToIdle -Value {
         $this.ReturnTimer.Stop()
         $this.TemporaryState = $false
-        if (-not $this.IsMoving -and -not $this.IsDragging) { [void]$this.Animation.SetState("idle", "normal", $true) }
+        if (-not $this.IsMoving -and -not $this.IsDragging) { [void]$this.Animation.SetState("idle_blink", "normal", $true) }
     }
     $controller | Add-Member -MemberType ScriptMethod -Name BeginWander -Value {
         if (-not [bool]$this.Config.wanderingEnabled -or $this.IsMoving -or $this.IsDragging -or $this.TemporaryState -or -not $this.Window.IsVisible) { return }
@@ -93,7 +93,7 @@ function New-UyPetController {
         $this.MoveStep = $(if ($target -lt $this.Window.Left) { -2.0 } else { 2.0 })
         $this.IsMoving = $true
         $this.LastWander = [DateTime]::UtcNow
-        [void]$this.Animation.SetState("walk", "normal", $true)
+        [void]$this.Animation.SetState("working", "normal", $true)
         $this.MoveTimer.Start()
     }
     $controller | Add-Member -MemberType ScriptMethod -Name StopWander -Value {
@@ -102,7 +102,7 @@ function New-UyPetController {
             $this.IsMoving = $false
             Set-UyWindowWithinScreens -Window $this.Window
             Save-UyPetWindowState -Left $this.Window.Left -Top $this.Window.Top
-            if (-not $this.TemporaryState -and -not $this.IsDragging) { [void]$this.Animation.SetState("idle", "normal", $true) }
+            if (-not $this.TemporaryState -and -not $this.IsDragging) { [void]$this.Animation.SetState("idle_blink", "normal", $true) }
         }
         catch {
             $this.MoveTimer.Stop()
@@ -125,7 +125,7 @@ function New-UyPetController {
         if ($this.Animation.State -eq "sleep") { return }
         $roll = $this.Random.Next(0, 100)
         if ($roll -lt 22 -and ($now - $this.LastWander).TotalSeconds -gt 45) { $this.BeginWander(); return }
-        if ($roll -ge 22 -and $roll -lt 40) { $this.SetState("lookAround", "normal", 6) }
+        if ($roll -ge 22 -and $roll -lt 40) { $this.SetState("thinking", "normal", 6) }
     }
 
     $behaviorTimer.Interval = [TimeSpan]::FromSeconds(14)

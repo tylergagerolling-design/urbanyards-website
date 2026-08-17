@@ -221,6 +221,9 @@ body:not(.is-login-screen) :is(.empty-state,.clean-empty-state,.ttl-no-results){
 #call-queue .cq-filter-control span{padding-left:12px;font-size:.75rem;color:#60736b}
 #call-queue .cq-filter-control select{min-width:130px;border:0!important;background:transparent!important}
 #call-queue .cq-entry-tools>button{background:#123f31!important;color:#fff!important}
+#call-queue .cq-entry-tools>.cq-bulk-delete{border-color:#b42318!important;background:#fff5f4!important;color:#b42318!important}
+#call-queue .cq-entry-tools>.cq-bulk-delete:hover:not(:disabled){background:#b42318!important;color:#fff!important}
+#call-queue .cq-entry-tools>.cq-bulk-delete:disabled{opacity:.48;cursor:not-allowed}
 #call-queue .cq-table-wrap{overflow-x:auto}
 #call-queue .cq-table-wrap table{table-layout:fixed}
 #call-queue .cq-table-wrap th:nth-child(1){width:16%}#call-queue .cq-table-wrap th:nth-child(2){width:12%}#call-queue .cq-table-wrap th:nth-child(3){width:14%}#call-queue .cq-table-wrap th:nth-child(4){width:20%}#call-queue .cq-table-wrap th:nth-child(5){width:10%}#call-queue .cq-table-wrap th:nth-child(6){width:11%}#call-queue .cq-table-wrap th:nth-child(7){width:9%}#call-queue .cq-table-wrap th:nth-child(8){width:120px}
@@ -228,6 +231,9 @@ body:not(.is-login-screen) :is(.empty-state,.clean-empty-state,.ttl-no-results){
 #call-queue .cq-table-wrap tbody tr.is-selected{background:#f7f1e3!important;box-shadow:inset 3px 0 #78956f}
 #call-queue .cq-table-wrap td{vertical-align:middle;overflow-wrap:anywhere}
 #call-queue .cq-table-wrap td strong{color:#0a3027}
+#call-queue .cq-select-all,#call-queue .cq-select-row{display:inline-flex;align-items:center;gap:9px;margin:0;cursor:pointer}
+#call-queue .cq-select-row{margin-right:9px;vertical-align:middle}
+#call-queue .cq-select-all input,#call-queue .cq-select-row input{width:17px;height:17px;margin:0;accent-color:#123f31;cursor:pointer}
 #call-queue .cq-website-link{display:block;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:#123f31;text-decoration:none}
 #call-queue .cq-website-link:hover{text-decoration:underline}
 #call-queue .cq-row-actions{display:flex;align-items:center;gap:6px;white-space:nowrap}

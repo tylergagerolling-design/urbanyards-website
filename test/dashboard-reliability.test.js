@@ -1709,18 +1709,24 @@ test("ticket trash is recoverable and permanent clearing is owner guarded", () =
 test("Call Queue omits the retired Google Voice panel and preserves the entry-table workspace", () => {
   const js = read("dashboard.js");
   const css = read("dashboard.css");
+  const unifiedCss = read("dashboard-unified.css");
 
   assert.match(js, /Manage your inbound call queue and caller data/);
   assert.doesNotMatch(js, /Google Voice opens in a secure window/);
   assert.doesNotMatch(js, /class="cq-voice-card"/);
   assert.match(js, /function openGoogleVoiceWindow\(phoneNumber\)/);
   assert.match(js, /Call Queue Entries/);
-  assert.match(js, /<th>Name<\/th><th>Phone Number<\/th><th>Address<\/th><th>Website<\/th><th>Status<\/th><th>Last Contact<\/th><th>Added On<\/th><th>Actions<\/th>/);
+  assert.match(js, /data-action="call-queue-select-visible"[\s\S]{0,300}<span>Name<\/span>[\s\S]{0,300}<th>Phone Number<\/th><th>Address<\/th><th>Website<\/th><th>Status<\/th><th>Last Contact<\/th><th>Added On<\/th><th>Actions<\/th>/);
   assert.doesNotMatch(js, /<aside class="cq-import-card">/);
   assert.match(js, /data-action="lead-intake-import">Import CSV/);
   assert.match(js, /Download CSV Template/);
   assert.match(js, /data-action="call-queue-settings"/);
   assert.match(js, /data-action="call-queue-mark-contacted"/);
+  assert.match(js, /data-action="call-queue-toggle-selection"/);
+  assert.match(js, /data-action="call-queue-delete-selected"/);
+  assert.match(js, /Permanently delete \$\{ids\.length\} selected lead/);
+  assert.match(js, /Only Owner, Admin, or Manager users can delete leads/);
+  assert.match(unifiedCss, /\.cq-select-all/);
   assert.match(js, /const pageSize = 1000/);
   assert.match(js, /order=next_follow_up_at\.asc\.nullslast,updated_at\.desc/);
   assert.match(js, /rows\.push\(\.\.\.page\)/);

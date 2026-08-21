@@ -9,7 +9,7 @@ module.exports = async function handler(req, res) {
     service: "urban-yards-website",
     timestamp: new Date().toISOString(),
     integrations: {
-      assistant: Boolean(process.env.OPENAI_API_KEY),
+      assistant: Boolean(process.env.GEMINI_API_KEY),
       email: Boolean(process.env.RESEND_API_KEY),
       leadArchive: Boolean(process.env.AIRTABLE_TOKEN && process.env.AIRTABLE_BASE_ID && process.env.AIRTABLE_TABLE_NAME),
       photoStorage: Boolean(process.env.CLOUDINARY_CLOUD_NAME && process.env.CLOUDINARY_API_KEY && process.env.CLOUDINARY_API_SECRET),

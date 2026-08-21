@@ -162,13 +162,13 @@ test("valid quote fails honestly when no delivery integration is configured", as
   });
 });
 
-test("The Groundskeeper uses approved static knowledge when OpenAI is unavailable", async () => {
+test("The Groundskeeper uses approved static knowledge when Gemini is unavailable", async () => {
   const original = {
-    OPENAI_API_KEY: process.env.OPENAI_API_KEY,
+    GEMINI_API_KEY: process.env.GEMINI_API_KEY,
     SUPABASE_SERVICE_KEY: process.env.SUPABASE_SERVICE_KEY,
     SUPABASE_SERVICE_ROLE_KEY: process.env.SUPABASE_SERVICE_ROLE_KEY
   };
-  delete process.env.OPENAI_API_KEY;
+  delete process.env.GEMINI_API_KEY;
   delete process.env.SUPABASE_SERVICE_KEY;
   delete process.env.SUPABASE_SERVICE_ROLE_KEY;
   try {
@@ -177,7 +177,7 @@ test("The Groundskeeper uses approved static knowledge when OpenAI is unavailabl
     assert.equal(res.statusCode, 200);
     assert.match(res.payload.reply, /lawn|Urban Yards|quote/i);
     assert.equal(res.payload.assistantType, "groundskeeper");
-    assert.equal("OPENAI_API_KEY" in res.payload, false);
+    assert.equal("GEMINI_API_KEY" in res.payload, false);
   } finally {
     Object.entries(original).forEach(([key, value]) => {
       value === undefined ? delete process.env[key] : process.env[key] = value;
@@ -275,18 +275,19 @@ test("The Groundskeeper falls back to approved knowledge if the model request fa
 });
 
 test("assistant sends relevant site knowledge to the model", async () => {
-  const originalKey = process.env.OPENAI_API_KEY;
+  const originalKey = process.env.GEMINI_API_KEY;
   const originalFetch = global.fetch;
   let capturedBody;
-  process.env.OPENAI_API_KEY = "test-key";
+  process.env.GEMINI_API_KEY = "test-key";
   global.fetch = async (url, options) => {
     if (isFeatureFlagRequest(url)) return featureFlagResponse(true);
-    assert.equal(url, "https://api.openai.com/v1/chat/completions");
+    assert.match(url, /^https:\/\/generativelanguage\.googleapis\.com\/v1beta\/models\//);
+    assert.equal(options.headers["x-goog-api-key"], "test-key");
     capturedBody = JSON.parse(options.body);
     return {
       ok: true,
       async json() {
-        return { choices: [{ message: { content: "Yes. Pressure Washing is listed on the site." } }] };
+        return { candidates: [{ content: { parts: [{ text: "Yes. Pressure Washing is listed on the site." }] } }] };
       }
     };
   };
@@ -295,19 +296,16 @@ test("assistant sends relevant site knowledge to the model", async () => {
     await assistantHandler(request("POST", { message: "Do you do pressure washing?", page: "Home" }), res);
     assert.equal(res.statusCode, 200);
     assert.match(res.payload.reply, /Pressure Washing/i);
-    const siteMessage = capturedBody.messages.find((message) => message.content.startsWith("Urban Yards website knowledge source"));
-    const businessMessage = capturedBody.messages.find((message) => message.content.includes("You are The Groundskeeper"));
-    assert.ok(siteMessage);
-    assert.ok(businessMessage);
-    assert.match(siteMessage.content, /Pressure Washing/i);
-    assert.match(siteMessage.content, /request a quote/i);
-    assert.match(businessMessage.content, /public website guide/i);
-    assert.match(businessMessage.content, /cannot search the web/i);
-    assert.match(businessMessage.content, /do not have access to Urban Yards' dashboard/i);
-    assert.equal(capturedBody.store, false);
+    const systemText = capturedBody.systemInstruction.parts[0].text;
+    assert.match(systemText, /Pressure Washing/i);
+    assert.match(systemText, /request a quote/i);
+    assert.match(systemText, /public website guide/i);
+    assert.match(systemText, /cannot search the web/i);
+    assert.match(systemText, /do not have access to Urban Yards' dashboard/i);
+    assert.deepEqual(capturedBody.contents.at(-1), { role: "user", parts: [{ text: "Do you do pressure washing?" }] });
   } finally {
     global.fetch = originalFetch;
-    originalKey === undefined ? delete process.env.OPENAI_API_KEY : process.env.OPENAI_API_KEY = originalKey;
+    originalKey === undefined ? delete process.env.GEMINI_API_KEY : process.env.GEMINI_API_KEY = originalKey;
   }
 });
 

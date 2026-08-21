@@ -74,10 +74,7 @@ const WORKSPACES = Object.freeze([
       { key: "dashboard-health", label: "Dashboard Health", permission: PERMISSIONS.SETTINGS_MANAGE },
       { key: "users-access", label: "Users & Access", permission: PERMISSIONS.USERS_MANAGE },
       { key: "documentation", label: "Documentation", permission: PERMISSIONS.DOCUMENTATION_MANAGE_TEMPLATES },
-      { key: "import-export", label: "Import & Export", permission: PERMISSIONS.INTEGRATIONS_MANAGE },
-      { key: "equipment", label: "Equipment", permission: PERMISSIONS.EQUIPMENT_MANAGE },
-      { key: "groundskeeper-ai", label: "The Lawnmower Man", permission: PERMISSIONS.SETTINGS_MANAGE },
-      { key: "ai-memory", label: "AI Memory", permission: PERMISSIONS.SETTINGS_MANAGE }
+      { key: "import-export", label: "Import & Export", permission: PERMISSIONS.INTEGRATIONS_MANAGE }
     ]
   }
 ]);

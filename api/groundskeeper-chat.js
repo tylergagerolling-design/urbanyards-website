@@ -72,33 +72,37 @@ function approvedKnowledgeReply(message, lead, history) {
   return /^I don['’]t see that listed on the site/i.test(reply) ? UNKNOWN_REPLY : reply;
 }
 
-async function openAiPublicReply({ message, page, history, lead }) {
-  if (!process.env.OPENAI_API_KEY) return "";
+async function geminiPublicReply({ message, page, history, lead }) {
+  if (!process.env.GEMINI_API_KEY) return "";
   const fallback = approvedKnowledgeReply(message, lead, history);
-  const response = await fetch("https://api.openai.com/v1/chat/completions", {
+  const model = process.env.GEMINI_PUBLIC_MODEL || process.env.GEMINI_MODEL || "gemini-flash-latest";
+  const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent`, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
-      Authorization: `Bearer ${process.env.OPENAI_API_KEY}`
+      "x-goog-api-key": process.env.GEMINI_API_KEY
     },
     body: JSON.stringify({
-      model: process.env.OPENAI_MODEL || "gpt-4.1-mini",
-      messages: [
-        { role: "system", content: GROUNDSKEEPER_SYSTEM_PROMPT },
-        { role: "system", content: buildSiteContext(message, page) },
-        { role: "system", content: `Approved lead-form context only: ${JSON.stringify(cleanLead(lead))}` },
-        ...cleanHistory(history),
-        { role: "user", content: message }
+      systemInstruction: {
+        parts: [{ text: `${GROUNDSKEEPER_SYSTEM_PROMPT}\n\n${buildSiteContext(message, page)}\n\nApproved lead-form context only: ${JSON.stringify(cleanLead(lead))}` }]
+      },
+      contents: [
+        ...cleanHistory(history).map((entry) => ({
+          role: entry.role === "assistant" ? "model" : "user",
+          parts: [{ text: entry.content }]
+        })),
+        { role: "user", parts: [{ text: message }] }
       ],
-      temperature: 0.25,
-      max_tokens: 360,
-      store: false
+      generationConfig: {
+        temperature: 0.25,
+        maxOutputTokens: 360
+      }
     }),
     signal: AbortSignal.timeout(12000)
   });
   if (!response.ok) return fallback;
   const payload = await response.json().catch(() => ({}));
-  return text(payload?.choices?.[0]?.message?.content, 2400) || fallback;
+  return text(payload?.candidates?.[0]?.content?.parts?.map((part) => part?.text || "").join("\n"), 2400) || fallback;
 }
 
 async function handler(req, res) {
@@ -142,7 +146,7 @@ async function handler(req, res) {
 
   if (!boundaryReply) {
     try {
-      reply = await openAiPublicReply({ message, page: text(body.page, 120), history, lead }) || reply;
+      reply = await geminiPublicReply({ message, page: text(body.page, 120), history, lead }) || reply;
     } catch (_) {
       reply = approvedReply || UNKNOWN_REPLY;
     }

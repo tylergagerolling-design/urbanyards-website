@@ -136,7 +136,7 @@ test("memory persistence migration is private, indexed, and typed", () => {
   assert.match(sql, /using gin \(scope\)/);
 });
 
-test("dashboard uses a controlled action bus and inspectable memory page", () => {
+test("dashboard keeps the controlled action bus while retiring the memory page", () => {
   const dashboard = fs.readFileSync(path.join(__dirname, "../dashboard.js"), "utf8");
   const html = fs.readFileSync(path.join(__dirname, "../dashboard.html"), "utf8");
   const archivedHtml = fs.readFileSync(path.join(__dirname, "../src/archive/pre-reset-dashboard/dashboard.pre-reset.html"), "utf8");
@@ -146,8 +146,8 @@ test("dashboard uses a controlled action bus and inspectable memory page", () =>
   assert.doesNotMatch(dashboard, /dashboardSectionLabel\(/);
   assert.match(dashboard, /data-ai-memory-form/);
   assert.doesNotMatch(dashboard, /copilot-rate-outcome|Was this useful\?/);
-  assert.match(html, /data-dashboard-link="ai-memory"/);
-  assert.match(html, /id="ai-memory" data-section="ai-memory"><div data-ai-memory-workspace><\/div>/);
-  assert.match(html, /data-ai-memory-workspace/);
+  assert.doesNotMatch(html, /data-dashboard-link="ai-memory"/);
+  assert.doesNotMatch(html, /id="ai-memory" data-section="ai-memory"/);
+  assert.doesNotMatch(html, /data-ai-memory-workspace/);
   assert.match(archivedHtml, /data-ai-memory-workspace/);
 });

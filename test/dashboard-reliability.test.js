@@ -717,7 +717,8 @@ test("dashboard sidebar exposes a secondary drawer for multi-workspace sections"
 
   assert.match(html, /data-sidebar-nav-group="calendar"[\s\S]*Route Planner/);
   assert.match(html, /data-sidebar-nav-group="outreach"[\s\S]*Clients/);
-  assert.match(html, /data-sidebar-nav-group="settings"[\s\S]*Equipment[\s\S]*Documentation[\s\S]*Import &amp; Export[\s\S]*The Lawnmower Man/);
+  assert.match(html, /data-sidebar-nav-group="settings"[\s\S]*Documentation[\s\S]*Import &amp; Export/);
+  assert.doesNotMatch(html, /data-dashboard-link="(?:equipment|groundskeeper-ai|ai-memory)"/);
   assert.doesNotMatch(html, /data-sidebar-subnav-toggle/);
   assert.match(js, /function setSidebarSubnavOpen[\s\S]*data-sidebar-nav-group[\s\S]*classList\.toggle\("is-open"/);
   assert.match(js, /function setSidebarOpen[\s\S]*if \(shouldOpen\)[\s\S]*setSidebarSubnavOpen\(activeGroup, true\)[\s\S]*else \{[\s\S]*setSidebarSubnavOpen\("", false\)/);
@@ -1509,7 +1510,7 @@ test("The Lawnmower Man exposes the selected owner operations suite with review 
   assert.match(css, /\.groundskeeper-operation-grid[\s\S]*repeat\(3, minmax\(0, 1fr\)\)/);
 });
 
-test("the persistent dashboard copilot replaces duplicate page-level AI tool strips", () => {
+test("the retired dashboard AI is disconnected while its implementation remains recoverable", () => {
   const js = read("dashboard.js");
   const css = read("dashboard.css");
 
@@ -1523,8 +1524,8 @@ test("the persistent dashboard copilot replaces duplicate page-level AI tool str
   const renderer = js.slice(js.indexOf("function renderDashboardCopilot"), js.indexOf("function copilotTicketRows"));
   assert.doesNotMatch(renderer, /raccoon|data-copilot-section|copilot-shortcuts/);
   assert.match(js, /event\.key !== "Escape"/);
-  assert.match(js, /safeRender\("The Lawnmower Man dashboard"/);
-  assert.match(js, /safeRender\("The Lawnmower Man contextual tools"/);
+  assert.doesNotMatch(js, /safeRender\("The Lawnmower Man dashboard"/);
+  assert.doesNotMatch(js, /safeRender\("The Lawnmower Man contextual tools"/);
   assert.match(css, /\.dashboard-copilot[\s\S]*top: 18px/);
   assert.match(css, /\.dashboard-copilot-panel/);
   assert.match(css, /The Lawnmower Man — monochrome Keaton Mask popup/);

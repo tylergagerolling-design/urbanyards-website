@@ -602,11 +602,11 @@
     documentation: "documentation",
     "import-export": "import-export",
     data: "import-export",
-    equipment: "equipment",
-    "groundskeeper-ai": "groundskeeper-ai",
-    ai: "groundskeeper-ai",
-    "ai-memory": "ai-memory",
-    memory: "ai-memory",
+    equipment: "settings",
+    "groundskeeper-ai": "settings",
+    ai: "settings",
+    "ai-memory": "settings",
+    memory: "settings",
     tools: "settings",
     "route-planner": "route-planner",
     route: "route-planner",
@@ -629,10 +629,7 @@
     "call-queue": "outreach",
     documentation: "settings",
     "import-export": "settings",
-    "route-planner": "calendar",
-    equipment: "settings",
-    "groundskeeper-ai": "settings",
-    "ai-memory": "settings"
+    "route-planner": "calendar"
   };
   const DASHBOARD_VISUAL_RESET_TITLES = Object.freeze({
     overview: "Home",
@@ -6205,9 +6202,6 @@
       { key: "outreachProperties", name: "outreach properties", loader: loadOutreachProperties, fallback: [] },
       { key: "routeStops", name: "route planner", loader: loadRouteStops, fallback: [] },
       { key: "equipmentItems", name: "equipment", loader: loadEquipmentItems, fallback: [] },
-      { key: "equipmentMaintenance", name: "equipment maintenance", loader: loadEquipmentMaintenance, fallback: [] },
-      { key: "hardwareGuide", name: "hardware guide", loader: loadHardwareGuide, fallback: [] },
-      { key: "groundskeeperAi", name: "The Lawnmower Man", loader: loadGroundskeeperAi, fallback: emptyGroundskeeperAiBundle },
       { key: "documentation", name: "documentation", loader: loadDocumentation, fallback: () => normalizeDocumentationBundle() },
       {
         key: "importExport",
@@ -18641,28 +18635,26 @@ Requirements:
         <div>
           <p class="eyebrow">Support Map</p>
           <h3>Where each utility lives</h3>
-          <p>Use Tools when the workflow needs routes, equipment, forms, AI knowledge, imports, users, or diagnostics.</p>
+          <p>Use Tools when the workflow needs routes, forms, imports, users, or diagnostics.</p>
         </div>
       </div>
       <div class="tools-systems-grid">
         ${renderToolsSystemCard({
           label: "Field Utilities",
-          value: routeStopsToday + equipmentCount,
-          detail: "Route planning and equipment records that support Work without cluttering the Work queue.",
+          value: routeStopsToday,
+          detail: "Route planning that supports Work without cluttering the Work queue.",
           rows: [
-            { label: "Route stops today", value: routeStopsToday },
-            { label: "Equipment records", value: equipmentCount }
+            { label: "Route stops today", value: routeStopsToday }
           ],
           action: "go-route-planner",
           actionLabel: "Open Route"
         })}
         ${renderToolsSystemCard({
-          label: "Records + AI",
+          label: "Records",
           value: documentationCount,
-          detail: "Documentation, templates, submissions, and The Lawnmower Man training stay in one admin lane.",
+          detail: "Documentation, templates, and submissions stay in one admin lane.",
           rows: [
-            { label: "Forms and files", value: documentationCount },
-            { label: "AI live version", value: aiLiveVersion || "Not published" }
+            { label: "Forms and files", value: documentationCount }
           ],
           action: "go-documentation",
           actionLabel: "Open Documentation"
@@ -18711,16 +18703,11 @@ Requirements:
     const supportWarnings = dashboardHealthWarnings({ scope: "support" });
     const documents = data.documents || [];
     const documentation = data.documentation || {};
-    const ai = data.groundskeeperAi || {};
-    const aiLiveVersion = ai.liveVersion?.publishedAt
-      ? formatDateTime(ai.liveVersion.publishedAt)
-      : "Not published";
     const documentationCount = Number(documentation.templates?.length || 0) + Number(documentation.submissions?.length || 0);
-    const equipmentCount = Number(data.equipmentItems?.length || 0);
     const routeStopsToday = dashboardRouteStopsForDate(data, todayKey()).length;
     const usersCount = Number(data.userProfiles?.length || 0);
     target.innerHTML = `
-      <div class="ticket-workspace uy-page-prototype tools-workspace" data-uy-page-contract="tools" data-data-source="equipment,documentation,route_tools,ai,imports,settings">
+      <div class="ticket-workspace uy-page-prototype tools-workspace" data-uy-page-contract="tools" data-data-source="documentation,route_tools,imports,settings">
         ${renderWorkspaceDataState("settings")}
         <header class="ticket-hero">
           <div>
@@ -18737,7 +18724,6 @@ Requirements:
             detail: "Utilities that support scheduled work.",
             items: [
               { label: "Route Planner", detail: `${routeStopsToday} stops today`, action: "go-route-planner" },
-              { label: "Equipment", detail: `${equipmentCount} inventory records`, action: "go-equipment" },
               { label: "Documentation", detail: "Field templates and submissions", action: "go-documentation" }
             ]
           })}
@@ -18748,15 +18734,6 @@ Requirements:
               { label: "Documentation Archive", detail: `${documentationCount} forms and files`, action: "go-documentation" },
               { label: "Import & Export", detail: "Spreadsheets, backups, and history", action: "go-import-export" },
               { label: "Recently Deleted", detail: "Recover Money records", action: "go-money-deleted" }
-            ]
-          })}
-          ${renderToolsLaunchGroup({
-            title: "AI",
-            detail: "Operate The Lawnmower Man and train The Groundskeeper.",
-            items: [
-              { label: "The Groundskeeper Training", detail: aiLiveVersion === "Not published" ? "Training not published" : `Published ${aiLiveVersion}`, action: "go-groundskeeper-ai" },
-              { label: "AI Memory", detail: "Approved persistent context", href: "#ai-memory" },
-              { label: "AI Website Preview", detail: "Review the visitor experience", action: "focus-helper-preview" }
             ]
           })}
           ${renderToolsLaunchGroup({
@@ -25373,15 +25350,10 @@ Requirements:
     if (active === "call-queue") safeRender("call queue", () => renderCallQueueWorkspace());
     if (active === "documents") safeRender("money workspace", () => renderMoneyWorkspace(data));
     if (active === "settings") safeRender("tools workspace", () => renderToolsWorkspace(data));
-    if (active === "ai-memory") safeRender("AI memory workspace", () => renderAiMemoryWorkspace());
-    if (active === "equipment") safeRender("equipment workspace", () => renderEquipment(data));
     if (active === "documentation") safeRender("documentation workspace", () => renderDocumentation(data));
     if (active === "contacts") safeRender("contacts workspace", () => renderContacts(data));
-    if (active === "groundskeeper-ai") safeRender("The Lawnmower Man workspace", () => renderGroundskeeperAi(data));
     if (active === "import-export") safeRender("import and export workspace", () => renderImportExport(data));
     safeRender("active route heading", () => normalizeActiveRouteHeading(active));
-    safeRender("The Lawnmower Man contextual tools", () => renderContextualGroundskeeperTools(active));
-    safeRender("The Lawnmower Man dashboard", () => renderDashboardCopilot());
     safeRender("avatar fallbacks", () => bindAvatarFallbacks());
     if (els.todayChip) els.todayChip.textContent = new Date().toLocaleDateString("en-US", { weekday: "long", month: "short", day: "numeric" });
     setActiveSection(state.activeSection, { hydrate: false });

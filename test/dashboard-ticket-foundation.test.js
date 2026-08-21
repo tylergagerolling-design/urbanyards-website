@@ -354,6 +354,9 @@ test("workspace registry matches the rebuilt ticket-centered dashboard shell", (
   assert.equal(normalizeWorkspaceKey("command-center"), "tickets");
   assert.equal(normalizeWorkspaceKey("job-tickets"), "tickets");
   assert.equal(getWorkspace("field-worker").key, "calendar");
+  assert.deepEqual(getWorkspace("settings").nav.map((item) => item.key), [
+    "dashboard-health", "users-access", "documentation", "import-export"
+  ]);
 
   const permissionService = { hasPermission };
   const owner = { role: ROLES.OWNER, userId: "owner-1" };

@@ -35,34 +35,28 @@ function request(body = {}, headers = {}) {
 
 async function publicChat(message, body = {}) {
   const res = response();
-  const previous = process.env.OPENAI_API_KEY;
-  delete process.env.OPENAI_API_KEY;
+  const previous = process.env.GEMINI_API_KEY;
+  delete process.env.GEMINI_API_KEY;
   try {
     await groundskeeperHandler(request({ message, ...body }), res);
   } finally {
-    previous === undefined ? delete process.env.OPENAI_API_KEY : process.env.OPENAI_API_KEY = previous;
+    previous === undefined ? delete process.env.GEMINI_API_KEY : process.env.GEMINI_API_KEY = previous;
   }
   return res;
 }
 
 test("The Groundskeeper answers approved services, service areas, quotes, and unpublished pricing", async () => {
-  const previous = process.env.OPENAI_API_KEY;
-  delete process.env.OPENAI_API_KEY;
-  try {
-    assert.match((await publicChat("Do you mow lawns?")).payload.reply, /lawn|mow/i);
-    assert.match((await publicChat("Do you work in Beaverton?")).payload.reply, /Beaverton/i);
-    assert.match((await publicChat("How do I request a quote?")).payload.reply, /quote/i);
-    assert.match((await publicChat("How much does mowing cost?")).payload.reply, /depends on property size|request a free quote/i);
-  } finally {
-    previous === undefined ? delete process.env.OPENAI_API_KEY : process.env.OPENAI_API_KEY = previous;
-  }
+  assert.match((await publicChat("Do you mow lawns?")).payload.reply, /lawn|mow/i);
+  assert.match((await publicChat("Do you work in Beaverton?")).payload.reply, /Beaverton/i);
+  assert.match((await publicChat("How do I request a quote?")).payload.reply, /quote/i);
+  assert.match((await publicChat("How much does mowing cost?")).payload.reply, /depends on property size|request a free quote/i);
 });
 
 test("The Groundskeeper refuses web search without invoking a provider", async () => {
-  const previousKey = process.env.OPENAI_API_KEY;
+  const previousKey = process.env.GEMINI_API_KEY;
   const previousFetch = global.fetch;
   let fetchCalls = 0;
-  process.env.OPENAI_API_KEY = "must-not-be-used";
+  process.env.GEMINI_API_KEY = "must-not-be-used";
   global.fetch = async () => { fetchCalls += 1; throw new Error("Public web/provider call was not allowed"); };
   try {
     const res = response();
@@ -73,7 +67,7 @@ test("The Groundskeeper refuses web search without invoking a provider", async (
     assert.equal(fetchCalls, 0);
   } finally {
     global.fetch = previousFetch;
-    previousKey === undefined ? delete process.env.OPENAI_API_KEY : process.env.OPENAI_API_KEY = previousKey;
+    previousKey === undefined ? delete process.env.GEMINI_API_KEY : process.env.GEMINI_API_KEY = previousKey;
   }
 });
 

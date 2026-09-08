@@ -70,7 +70,7 @@ test("archived workspace polish remains available with current dashboard assets"
   assert.match(css, /\.groundskeeper-operation-card[\s\S]*white-space: normal !important/);
   assert.match(css, /\.dashboard-health-item strong[\s\S]*word-break: break-all/);
   assert.match(html, /dashboard\.css\?v=20260811-ticket-trash-1/);
-  assert.match(html, /dashboard\.js\?v=20260811-ticket-trash-1/);
+  assert.match(html, /dashboard\.js\?v=20260908-public-ai-only-1/);
 });
 
 test("Tickets Leads and Money use the same flat white page canvas as Home and Work", () => {
@@ -1691,7 +1691,7 @@ test("ticket trash is recoverable and permanent clearing is owner guarded", () =
 
   assert.match(js, /function ticketIsTrashed[\s\S]*statusText\(ticket\.status\) === "archived"/);
   assert.match(html, /dashboard\.css\?v=20260811-ticket-trash-1/);
-  assert.match(html, /dashboard\.js\?v=20260811-ticket-trash-1/);
+  assert.match(html, /dashboard\.js\?v=20260908-public-ai-only-1/);
   assert.match(js, /data-action="show-ticket-trash"/);
   assert.match(js, /data-action="trash-ticket"/);
   assert.match(js, /class="ut-quick-danger danger" data-action="trash-ticket"[\s\S]*<strong>Move to Trash<\/strong>/);

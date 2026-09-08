@@ -2100,6 +2100,34 @@ input:focus, select:focus, textarea:focus { outline: 0; }
   letter-spacing: .12em;
   text-transform: uppercase;
 }
+.feral-construction {
+  position: relative;
+  padding: clamp(36px, 6vw, 76px) 0;
+  border-block: 8px solid #b88030;
+  background: #f3d58b;
+  color: #20291f;
+  text-align: center;
+}
+.feral-construction .feral-construction-label {
+  margin: 0 0 14px;
+  font-weight: 700;
+  letter-spacing: .12em;
+  text-transform: uppercase;
+}
+.feral-page .feral-construction h2 {
+  margin: 0 0 20px;
+  color: #20291f;
+  font-size: clamp(2.5rem, 7vw, 6rem);
+  line-height: 1.05;
+  overflow-wrap: anywhere;
+}
+.feral-construction p:last-child {
+  max-width: 620px;
+  margin: 0 auto;
+  color: #20291f;
+  font-size: 1.1rem;
+  line-height: 1.6;
+}
 .feral-hero {
   position: relative;
   overflow: hidden;

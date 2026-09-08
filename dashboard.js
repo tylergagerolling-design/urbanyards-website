@@ -1,6 +1,9 @@
 (function () {
   "use strict";
 
+  // Keep the assistant available on the public website only for now.
+  const DASHBOARD_AI_ENABLED = false;
+
   const STATUSES = ["New", "Contacted", "Scheduled", "Completed", "Invoiced"];
   const ROUTE_STATUSES = ["Planned", "In Progress", "Complete"];
   const OUTREACH_STATUSES = ["Prospect", "Researched", "Contacted", "Follow-Up Needed", "Interested", "Quote Needed", "Quoted", "Won", "Lost / No Fit"];
@@ -3227,6 +3230,11 @@
   }
 
   function renderDashboardCopilot() {
+    if (!DASHBOARD_AI_ENABLED) {
+      state.copilotOpen = false;
+      qs("[data-dashboard-copilot]")?.remove();
+      return;
+    }
     let shell = qs("[data-dashboard-copilot]");
     if (!shell) {
       shell = document.createElement("aside");

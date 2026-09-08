@@ -1449,30 +1449,6 @@
     return `<button class="inline-action" ${attrs.join(" ")}>${buttonContent(item.actionLabel || "Open", item.action)}</button>`;
   }
 
-  function renderTodayActions(data) {
-    if (!els.todayActions) return;
-    const items = todayActionItems(data);
-    if (!items.length) {
-      els.todayActions.innerHTML = `
-        <div class="home-empty-state compact today-caught-up">
-          <img src="${homeDashboardIcon("activity-check.svg")}" alt="" aria-hidden="true">
-          <strong>You're caught up.</strong>
-          <p>Nothing needs immediate attention today.</p>
-        </div>
-      `;
-      return;
-    }
-    els.todayActions.innerHTML = items.map((item) => `
-      <article class="today-action-item urgency-${escapeHtml(slug(item.status))}">
-        <span class="today-action-status">${escapeHtml(item.status)}</span>
-        <div>
-          <strong>${escapeHtml(item.title)}</strong>
-          <small>${escapeHtml(item.detail || "Review this item.")}</small>
-        </div>
-        ${renderTodayActionButton(item)}
-      </article>
-    `).join("");
-  }
 
   function safeEmail(value) {
     const email = String(value || "").trim();
@@ -3839,27 +3815,6 @@
       .sort((a, b) => String(b.createdAtRaw).localeCompare(String(a.createdAtRaw)));
   }
 
-  function renderCallHistory(leadId) {
-    const history = callHistoryFor(leadId);
-    if (!history.length) {
-      return `<section class="call-history"><h4>Call History</h4>${emptyState(state.leadActivityReady ? "No call attempts logged yet." : "Call history is unavailable right now. Refresh the dashboard or check Supabase access.")}</section>`;
-    }
-    return `
-      <section class="call-history">
-        <h4>Call History</h4>
-        <div class="call-history-list">
-          ${history.map((activity) => `
-            <article class="call-history-item">
-              <strong>${escapeHtml(activity.createdAt || formatDate(activity.createdAtRaw))}</strong>
-              <span>${escapeHtml(activity.phoneDisplay)} / ${escapeHtml(activity.outcomeLabel)}</span>
-              ${activity.notes ? `<p>${escapeHtml(activity.notes)}</p>` : ""}
-              ${activity.followUpDateRaw ? `<small>Follow-up: ${escapeHtml(activity.followUpDate)}</small>` : ""}
-            </article>
-          `).join("")}
-        </div>
-      </section>
-    `;
-  }
 
   function callPanelContext(leadType, leadId) {
     if (leadType === "quote_submission") {
@@ -5381,6 +5336,7 @@
 
   function demoQaTicketSuite(today, now) {
     const scheduledStages = new Set(["scheduled", "in_progress", "paused", "field_work_complete", "completion_review", "invoice_review", "invoice_sent", "partially_paid", "paid", "closed"]);
+    const time = (hour, minutes) => `${hour % 12 || 12}:${minutes} ${hour >= 12 ? "PM" : "AM"}`;
     return QA_SHOWCASE_TICKET_STAGES.map((stage, index) => normalizeCanonicalTicket({
       id: `state-ticket-${String(index + 1).padStart(2, "0")}`,
       ticket_number: `STATE-${String(index + 1).padStart(3, "0")}`,
@@ -5398,7 +5354,7 @@
       assigned_user_id: "demo-user",
       scheduled_date: scheduledStages.has(stage) ? addDaysKey(today, index % 7) : null,
       due_date: scheduledStages.has(stage) ? addDaysKey(today, (index % 7) + 2) : addDaysKey(today, index % 6),
-      work_window: `${8 + (index % 8)}:00 AM - ${9 + (index % 8)}:30 AM`,
+      work_window: `${time(8 + (index % 8), "00")} - ${time(9 + (index % 8), "30")}`,
       next_action: ticketNextAction(stage),
       created_at: daysFromToday(-(index + 1)),
       updated_at: now
@@ -6952,6 +6908,11 @@
       if (index < 0) return null;
       const updated = normalizeCanonicalTicket({
         ...state.data.tickets[index],
+        ...canonicalTicketUpdatePayload(state.data.tickets[index]),
+        customer_name: state.data.tickets[index].customer,
+        property_name: state.data.tickets[index].property,
+        contact_email: state.data.tickets[index].contactEmail,
+        contact_phone: state.data.tickets[index].contactPhone,
         ...payload,
         updated_at: new Date().toISOString()
       });
@@ -8847,6 +8808,37 @@
     const data = await response.json();
     if (!response.ok) throw new Error(data.error || "Unable to sync Square invoice.");
     return data.document ? normalizeDocument(data.document) : null;
+  }
+
+  async function approveSalesDocument(id) {
+    const existing = state.data.documents.find((document) => document.id === id);
+    if (!existing || existing.type !== "estimate") throw new Error("The quote could not be found.");
+    let updated;
+    if (isDemoMode()) updated = { ...existing, status: "approved" };
+    else {
+      const rows = await supabaseRestRequest(`sales_documents?id=eq.${encodeURIComponent(id)}`, {
+        method: "PATCH",
+        headers: { Prefer: "return=representation" },
+        body: JSON.stringify({ status: "approved" })
+      });
+      if (!rows?.[0]) throw new Error("Quote approval was not saved. Refresh and try again.");
+      updated = normalizeDocument(rows[0]);
+    }
+    state.data.documents = state.data.documents.map((document) => document.id === id ? updated : document);
+    return updated;
+  }
+
+  function renderKeepingInputFocus(input, selector, renderContent) {
+    if (!input?.isConnected) return;
+    const focused = document.activeElement === input;
+    const start = input.selectionStart;
+    const end = input.selectionEnd;
+    renderContent();
+    if (focused) {
+      const replacement = qs(selector);
+      replacement?.focus({ preventScroll: true });
+      replacement?.setSelectionRange(start, end);
+    }
   }
 
   async function updateSalesDocument(id, input) {
@@ -11372,10 +11364,6 @@
     googleRouteLine = view?.line || null;
   }
 
-  function renderRouteMap(stops) {
-    if (!els.routeMapStatus) return;
-    renderGoogleRouteMap(stops);
-  }
 
   function dashboardRouteStopsForDate(data = state.data, routeDate = todayKey()) {
     return visibleOperationalRecords(data.routeStops || [])
@@ -11595,105 +11583,6 @@
     `).join("");
   }
 
-  function renderMetrics(data) {
-    const today = todayKey();
-    const todayJobs = data.jobs.filter((item) => item.dateRaw === today && matchesSearch(item));
-    const activeProperties = data.contacts.filter(matchesSearch).length + data.outreachProperties.filter((item) => matchesSearchValues([item.propertyName, item.address, item.city, item.company, item.neighborhood])).length;
-    const unpaidInvoices = data.documents.filter((doc) => doc.type === "invoice" && doc.status !== "paid" && matchesSearchValues([doc.clientName, doc.number, doc.status, doc.notes]));
-    const equipmentAlerts = data.operations.filter((item) => item.type === "equipment" && isOperationOpen(item) && matchesSearchValues([item.title, item.description, item.notes, item.status, item.priority])).length;
-    const metrics = [
-      {
-        label: "Jobs Today",
-        value: todayJobs.length,
-        detail: todayJobs[0] ? `${todayJobs[0].site} / ${todayJobs[0].window}` : "No visits scheduled",
-        icon: "jobs-calendar.svg",
-        action: "go-work",
-        link: "View all jobs"
-      },
-      {
-        label: "Active Properties",
-        value: activeProperties,
-        detail: "Clients and managed properties",
-        icon: "properties-building.svg",
-        action: "go-leads",
-        link: "Review leads"
-      },
-      {
-        label: "Waiting on Payment",
-        value: unpaidInvoices.length,
-        detail: unpaidInvoices[0] ? `${unpaidInvoices[0].clientName || "Client"} / ${unpaidInvoices[0].number || "Invoice"}` : "No open unpaid invoices",
-        icon: "waiting-payment.svg",
-        action: "go-money",
-        link: "Open invoices"
-      },
-      {
-        label: "Equipment Alerts",
-        value: equipmentAlerts,
-        detail: equipmentAlerts ? "Review mower, tools, or supply checks" : "No equipment reminders",
-        icon: "equipment-alert.svg",
-        action: "go-tools",
-        link: "Open Tools"
-      }
-    ];
-
-    els.metrics.innerHTML = metrics
-      .map((metric) => `
-        <article class="metric-card overview-summary-card home-snapshot-metric">
-          <div class="overview-summary-icon" aria-hidden="true"><img src="${homeDashboardIcon(metric.icon)}" alt=""></div>
-          <div class="overview-summary-body">
-            <span>${escapeHtml(metric.label)}</span>
-            <strong>${escapeHtml(metric.value)}</strong>
-            <p>${escapeHtml(metric.detail)}</p>
-            <button type="button" data-action="${escapeHtml(metric.action)}">${escapeHtml(metric.link)}</button>
-          </div>
-        </article>
-      `)
-      .join("");
-  }
-
-  function renderSubmissions(data) {
-    const activities = [
-      ...data.jobs.filter((job) => job.dateRaw >= todayKey()).slice(0, 3).map((job) => ({
-        title: job.site,
-        detail: `${job.service} / ${job.window}`,
-        context: job.city || "Work",
-        action: "edit-job",
-        id: job.id,
-        icon: "calendar.svg"
-      })),
-      ...filteredSubmissions().slice(0, 3).map((item) => ({
-        title: `${item.name} requested ${item.service}`,
-        detail: `${item.city} / ${item.propertyType}`,
-        context: "Quote",
-        action: "open-submission",
-        id: item.id,
-        icon: "new-lead-user.svg"
-      })),
-      ...data.contacts.filter(matchesSearch).slice(0, 2).map((contact) => ({
-        title: contact.name,
-        detail: contact.propertyType || contact.address || "Client profile",
-        context: "Property",
-        action: "open-contact",
-        id: contact.id,
-        icon: "properties-building.svg"
-      }))
-    ].slice(0, 5);
-    if (!activities.length) {
-      els.submissions.innerHTML = emptyState("No recent activity matches this view yet.");
-      return;
-    }
-    els.submissions.innerHTML = activities.map((item) => `
-      <button class="overview-activity-row" type="button" data-action="${escapeHtml(item.action)}" data-id="${escapeHtml(item.id)}">
-        <span class="overview-row-icon" aria-hidden="true"><img src="${dashboardIcon(item.icon)}" alt=""></span>
-        <span class="overview-row-main">
-          <strong>${escapeHtml(item.title)}</strong>
-          <small>${escapeHtml(item.detail)}</small>
-        </span>
-        <span class="overview-row-context">${escapeHtml(item.context)}</span>
-        <img class="overview-row-chevron" src="${dashboardIcon("chevron-right.svg")}" alt="" aria-hidden="true">
-      </button>
-    `).join("");
-  }
 
   function taskDashboardCounts(data) {
     const completed = data.operations.filter((item) => item.status === "Done").length + data.reminders.filter((item) => item.status === "Completed").length;
@@ -11725,154 +11614,6 @@
     `;
   }
 
-  function renderUpcoming(data) {
-    const todayJobs = data.jobs.filter((job) => job.dateRaw === todayKey() && matchesSearch(job));
-    if (!todayJobs.length) {
-      els.upcoming.innerHTML = `
-        <div class="home-empty-state home-schedule-empty">
-          <img src="${homeDashboardIcon("empty-schedule.svg")}" alt="" aria-hidden="true">
-          <strong>No jobs scheduled for today.</strong>
-          <p>Use Add Job when a visit needs to land on the calendar.</p>
-          <button class="inline-action" type="button" data-action="quick-add-job">Add Job</button>
-        </div>
-      `;
-      return;
-    }
-    els.upcoming.innerHTML = todayJobs.slice(0, 5).map((job) => `
-      <article class="job-card home-schedule-row ${isOverdueJob(job) ? "job-card-overdue" : ""}">
-        <div class="item-topline">
-          <div>
-            <h4>${escapeHtml(job.site)}</h4>
-            <div class="meta">${escapeHtml(job.date)} / ${escapeHtml(job.window)}</div>
-          </div>
-          ${statusBadge(job.status)}
-        </div>
-        <p class="item-body">${escapeHtml(job.service)} in ${escapeHtml(job.city)}</p>
-        ${isOverdueJob(job) ? `<p class="job-overdue-note">Overdue: reschedule or mark complete.</p>` : ""}
-      </article>
-    `).join("");
-  }
-
-  function renderHomeReminders(data) {
-    if (!els.homeReminders) return;
-    const counts = taskDashboardCounts(data);
-    els.homeReminders.innerHTML = `
-      ${renderTaskDonut(counts)}
-      ${renderTaskLegend(counts)}
-    `;
-  }
-
-  function renderHomeNotes(data) {
-    if (!els.homeNotes) return;
-    const notes = data.notes.filter(matchesSearch).slice(0, 4);
-    if (!notes.length) {
-      els.homeNotes.innerHTML = emptyState("No job notes yet.");
-      return;
-    }
-    els.homeNotes.innerHTML = notes.map((note) => `
-      <article class="note-card">
-        <div class="item-topline">
-          <h4>${escapeHtml(note.title)}</h4>
-          <span class="meta">${escapeHtml(note.date)}</span>
-        </div>
-        <p class="item-body">${escapeHtml(note.body)}</p>
-      </article>
-    `).join("");
-  }
-
-  function renderTodayRouteSnapshot(data) {
-    if (!els.todayRouteSnapshot) return;
-    const stops = dashboardRouteStopsForDate(data, todayKey());
-    if (!stops.length) {
-      els.todayRouteSnapshot.innerHTML = `
-        ${routePreviewMapShell("home")}
-        <div class="home-empty-state compact">
-          <strong>No route stops planned for today.</strong>
-          <p>Add stops from a client, lead, or property when the route needs attention.</p>
-        </div>
-      `;
-      setRoutePreviewState("home", {
-        section: "overview",
-        stops,
-        emptyText: "No route stops planned for today."
-      });
-      return;
-    }
-    const openStops = stops.filter((stop) => stop.status !== "Complete");
-    els.todayRouteSnapshot.innerHTML = `
-      <article class="route-snapshot-card">
-        ${routePreviewMapShell("home")}
-        <strong>${openStops.length} open / ${stops.length} total</strong>
-        <p>${escapeHtml(stops.slice(0, 3).map((stop) => stop.clientName).join(" / "))}${stops.length > 3 ? " / ..." : ""}</p>
-        <button class="inline-action" type="button" data-action="go-route-planner">${buttonContent("Open Route Planner", "go-route-planner")}</button>
-      </article>
-    `;
-    setRoutePreviewState("home", {
-      section: "overview",
-      stops,
-      emptyText: "No route stops planned for today."
-    });
-  }
-
-  function renderDashboardAlerts(data) {
-    if (!els.dashboardAlerts) return;
-    const today = todayKey();
-    const soon = daysFromToday(7);
-    const overdueVisits = overdueJobs(data);
-    const overdueReminders = data.reminders.filter((item) => item.dueRaw && item.dueRaw < today && item.status !== "Completed");
-    const overdueInvoices = data.documents.filter((item) => item.type === "invoice" && item.dueDateRaw && item.dueDateRaw < today && item.status !== "paid");
-    const dueInvoices = data.documents.filter((item) => item.type === "invoice" && item.dueDateRaw && item.dueDateRaw <= soon && item.status !== "paid");
-    const unsentQuotes = data.documents.filter((item) => item.type === "quote" && ["draft", "Draft", "New"].includes(item.status));
-    const newQuotes = data.submissions.filter((item) => item.status === "New");
-    const alerts = [
-      overdueVisits.length ? `${overdueVisits.length} incomplete visit${overdueVisits.length === 1 ? "" : "s"} overdue` : "",
-      overdueReminders.length ? `${overdueReminders.length} incomplete follow-up${overdueReminders.length === 1 ? "" : "s"} overdue` : "",
-      overdueInvoices.length ? `${overdueInvoices.length} overdue invoice${overdueInvoices.length === 1 ? "" : "s"}` : "",
-      !overdueInvoices.length && dueInvoices.length ? `${dueInvoices.length} invoice${dueInvoices.length === 1 ? "" : "s"} due soon` : "",
-      unsentQuotes.length ? `${unsentQuotes.length} unsent quote${unsentQuotes.length === 1 ? "" : "s"}` : "",
-      newQuotes.length ? `${newQuotes.length} new quote request${newQuotes.length === 1 ? "" : "s"}` : ""
-    ].filter(Boolean);
-    if (!alerts.length) {
-      els.dashboardAlerts.innerHTML = "";
-      return;
-    }
-    els.dashboardAlerts.innerHTML = alerts.map((alert) => `<button type="button" data-action="quick-add-follow-up">${buttonContent(alert, "quick-add-quote")}</button>`).join("");
-  }
-
-  function renderOverdueJobAlerts(data) {
-    const jobs = overdueJobs(data);
-    const targets = [els.overdueJobs, els.calendarOverdueJobs].filter(Boolean);
-    if (!targets.length) return;
-    const html = jobs.length ? `
-      <article class="overdue-jobs-card">
-        <div class="overdue-jobs-heading">
-          <div>
-            <strong>${jobs.length} overdue visit${jobs.length === 1 ? "" : "s"}</strong>
-            <span>Past scheduled date and not marked complete.</span>
-          </div>
-        </div>
-        <div class="overdue-jobs-list">
-          ${jobs.slice(0, 6).map((job) => `
-            <div class="overdue-job-item">
-              <div>
-                <strong>${escapeHtml(job.site)}</strong>
-                <span>${escapeHtml(job.date)} / ${escapeHtml(job.window)} / ${escapeHtml(job.service)}</span>
-              </div>
-              <div class="overdue-job-actions">
-                <button class="inline-action" type="button" data-action="reschedule-job" data-id="${escapeHtml(job.id)}">${buttonContent("Reschedule", "reschedule-job")}</button>
-                <button class="inline-action" type="button" data-action="complete-job" data-id="${escapeHtml(job.id)}">${buttonContent("Complete", "complete-reminder")}</button>
-              </div>
-            </div>
-          `).join("")}
-        </div>
-        ${jobs.length > 6 ? `<p class="small">Showing 6 of ${escapeHtml(jobs.length)} overdue visits.</p>` : ""}
-      </article>
-    ` : "";
-    targets.forEach((target) => {
-      target.innerHTML = html;
-      target.hidden = !jobs.length;
-    });
-  }
 
   function operationTypeLabel(value) {
     return String(value || "")
@@ -11992,158 +11733,6 @@
     return commands;
   }
 
-  function renderOperations(data) {
-    if (!els.operationsHealth || !els.commandToday) return;
-    const today = todayKey();
-    const next30 = daysFromToday(30);
-    const unpaidInvoices = data.documents.filter((doc) => doc.type === "invoice" && doc.status !== "paid");
-    const pendingQuotes = data.submissions.filter((item) => ["New", "Contacted"].includes(item.status));
-    const openOperations = data.operations.filter(isOperationOpen);
-    const commandItems = operationCommandItems(data).map((item) => ({
-      ...item,
-      id: item.id || `system-${slug(item.title)}`,
-      status: item.status || "Open",
-      source: "system"
-    }));
-    const savedItems = openOperations.map((item) => ({
-      id: item.id,
-      label: item.type,
-      title: item.title,
-      detail: item.description || item.notes || "Review and decide the next step.",
-      dueDateRaw: item.dueDateRaw,
-      dueDate: item.dueDate,
-      priority: item.priority || "Normal",
-      status: item.status || "Open",
-      type: item.type,
-      source: "operation"
-    }));
-    const paymentItems = unpaidInvoices.map((doc) => ({
-      id: doc.id,
-      label: "payment",
-      title: `${doc.clientName || "Client"} payment`,
-      detail: `${doc.number || "Invoice"}${doc.dueDateRaw ? ` due ${doc.dueDate}` : ""}`,
-      dueDateRaw: doc.dueDateRaw,
-      dueDate: doc.dueDate,
-      priority: doc.dueDateRaw && doc.dueDateRaw < today ? "High" : "Normal",
-      status: "Waiting",
-      type: "payment",
-      action: "open-document",
-      actionLabel: "Open Money",
-      source: "payment"
-    }));
-    const waitingQuoteItems = pendingQuotes.map((item) => ({
-      id: item.id,
-      label: "client",
-      title: `${item.name} quote follow-up`,
-      detail: item.followUp || item.service,
-      dueDateRaw: "",
-      dueDate: "",
-      priority: item.status === "New" ? "High" : "Normal",
-      status: "Waiting",
-      type: "client",
-      action: "open-submission",
-      actionLabel: "Open Lead",
-      source: "quote"
-    }));
-    const reminderDeadlineItems = data.reminders
-      .filter((item) => item.status !== "Completed")
-      .map((item) => ({
-        id: item.id,
-        label: "deadline",
-        title: item.task,
-        detail: `Follow-up due ${item.due || "soon"}`,
-        dueDateRaw: item.dueRaw,
-        dueDate: item.due,
-        priority: item.dueRaw && item.dueRaw <= today ? "High" : "Normal",
-        status: "Open",
-        type: "deadline",
-        action: "complete-reminder",
-        actionLabel: "Done",
-        source: "reminder"
-      }));
-
-    const commandMatchesSearch = (item) => matchesSearchValues([item.label, item.title, item.detail, item.dueDate, item.priority, item.status, item.type]);
-    const todayItems = [
-      ...savedItems.filter((item) => (item.dueDateRaw && item.dueDateRaw <= today) || item.priority === "High"),
-      ...commandItems.filter((item) => item.priority === "High")
-    ]
-      .filter(commandMatchesSearch)
-      .sort((a, b) => {
-        const dateSort = String(a.dueDateRaw || "9999").localeCompare(String(b.dueDateRaw || "9999"));
-        if (dateSort) return dateSort;
-        return String(a.priority === "High" ? "0" : "1").localeCompare(String(b.priority === "High" ? "0" : "1"));
-      })
-      .slice(0, 10);
-    const waitingItems = [
-      ...savedItems.filter((item) => item.status === "Waiting" || ["client", "payment"].includes(item.type)),
-      ...waitingQuoteItems,
-      ...paymentItems
-    ].filter(commandMatchesSearch).slice(0, 10);
-    const deadlineItems = [
-      ...savedItems.filter((item) => item.dueDateRaw && item.dueDateRaw >= today && item.dueDateRaw <= next30),
-      ...reminderDeadlineItems.filter((item) => item.dueDateRaw && item.dueDateRaw >= today && item.dueDateRaw <= next30),
-      ...paymentItems.filter((item) => item.dueDateRaw && item.dueDateRaw >= today && item.dueDateRaw <= next30)
-    ].filter(commandMatchesSearch).sort((a, b) => String(a.dueDateRaw || "9999").localeCompare(String(b.dueDateRaw || "9999"))).slice(0, 12);
-    const equipmentItems = savedItems.filter((item) => item.type === "equipment").filter(commandMatchesSearch).slice(0, 10);
-
-    const healthCards = [
-      ["Tasks Due Today", todayItems.length, "Priority items for today"],
-      ["Waiting On Clients", waitingQuoteItems.length + savedItems.filter((item) => item.type === "client" && item.status === "Waiting").length, "Responses, approvals, info"],
-      ["Waiting On Payment", paymentItems.length, "Open unpaid invoices"],
-      ["Upcoming Deadlines", deadlineItems.length, "Due in the next 30 days"],
-      ["Equipment Alerts", equipmentItems.length, "Tools, mower, vehicle"]
-    ];
-
-    els.operationsHealth.innerHTML = healthCards.map(([label, value, detail]) => `
-      <article class="operations-health-card">
-        <strong>${escapeHtml(value)}</strong>
-        <span>${escapeHtml(label)}</span>
-        <small>${escapeHtml(detail)}</small>
-      </article>
-    `).join("");
-
-    if (!state.operationsReady) {
-      els.commandToday.innerHTML = emptyState("Saved tasks need the operations_records table. The dashboard can still summarize quotes, jobs, invoices, and reminders.");
-      if (els.commandWaiting) els.commandWaiting.innerHTML = renderCommandList(waitingItems, "Nothing waiting right now.");
-      if (els.commandDeadlines) els.commandDeadlines.innerHTML = renderCommandList(deadlineItems, "No upcoming deadlines.");
-      if (els.commandEquipment) els.commandEquipment.innerHTML = emptyState("No equipment reminders.");
-      return;
-    }
-
-    els.commandToday.innerHTML = renderCommandList(todayItems, "No priority tasks for today.", 4);
-    if (els.commandWaiting) els.commandWaiting.innerHTML = renderCommandList(waitingItems, "Nothing waiting right now.", 4);
-    if (els.commandDeadlines) els.commandDeadlines.innerHTML = renderCommandList(deadlineItems, "No upcoming deadlines.", 4);
-    if (els.commandEquipment) els.commandEquipment.innerHTML = renderCommandList(equipmentItems, "No equipment reminders.", 4);
-  }
-
-  function renderCommandList(items, emptyMessage, limit = 5) {
-    if (!items.length) return `
-      <div class="home-empty-state compact">
-        <img src="${homeDashboardIcon("activity-check.svg")}" alt="" aria-hidden="true">
-        <strong>${escapeHtml(emptyMessage)}</strong>
-      </div>
-    `;
-    const visibleItems = items.slice(0, limit);
-    const hiddenCount = Math.max(0, items.length - visibleItems.length);
-    return `
-      ${visibleItems.map((item) => `
-      <article class="operations-command-item priority-${slug(item.priority || "Normal")}">
-        <div>
-          <p class="eyebrow">${escapeHtml(operationTypeLabel(item.label || item.type || "task"))}</p>
-          <h4>${escapeHtml(item.title)}</h4>
-          <p>${escapeHtml(item.detail || "Review and decide the next step.")}</p>
-          <p class="small">${escapeHtml(item.priority || "Normal")} priority${item.dueDate ? ` / Due ${escapeHtml(item.dueDate)}` : ""} / ${escapeHtml(item.status || "Open")}</p>
-        </div>
-        <div class="operations-command-item-actions">
-          ${item.source === "operation" ? actionButton("Done", "complete-operation", item.id) : ""}
-          ${item.action ? `<button class="inline-action" type="button" data-action="${escapeHtml(item.action)}" data-id="${escapeHtml(item.id)}">${buttonContent(item.actionLabel || "Open", item.action)}</button>` : ""}
-          ${item.source === "operation" ? actionButton("Delete", "delete-operation", item.id).replace("inline-action", "inline-action danger-action") : ""}
-        </div>
-      </article>
-      `).join("")}
-      ${hiddenCount ? `<p class="dashboard-preview-note">${escapeHtml(hiddenCount)} more item${hiddenCount === 1 ? "" : "s"} in the full dashboard view.</p>` : ""}
-    `;
-  }
 
   const ticketStageMeta = {
     draft: { label: "Draft", lane: "sales", tone: "muted", owner: "Leads" },
@@ -12434,23 +12023,23 @@
       targetMargin: row.target_margin ?? row.targetMargin ?? "",
       paymentStatus: row.payment_status || row.paymentStatus || "",
       internalNotes: row.internal_notes || row.internalNotes || "",
-      customerApprovalRecorded: Boolean(row.customer_approval_recorded || row.customerApprovalRecorded),
-      invoiceSentToCustomer: Boolean(row.invoice_sent_to_customer || row.invoiceSentToCustomer),
-      finalCustomerApprovalRecorded: Boolean(row.final_customer_approval_recorded || row.finalCustomerApprovalRecorded),
-      costReviewComplete: Boolean(row.cost_review_complete || row.costReviewComplete),
-      budgetComplete: Boolean(row.budget_complete || row.budgetComplete),
-      scopeComplete: Boolean(row.scope_complete || row.scopeComplete),
-      ownerApprovalRecorded: Boolean(row.owner_approval_recorded || row.ownerApprovalRecorded),
-      draftInvoiceExists: Boolean(row.draft_invoice_exists || row.draftInvoiceExists),
-      depositRequired: Boolean(row.deposit_required || row.depositRequired),
-      depositPaid: Boolean(row.deposit_paid || row.depositPaid),
+      customerApprovalRecorded: Boolean(row.customer_approval_recorded ?? row.customerApprovalRecorded),
+      invoiceSentToCustomer: Boolean(row.invoice_sent_to_customer ?? row.invoiceSentToCustomer),
+      finalCustomerApprovalRecorded: Boolean(row.final_customer_approval_recorded ?? row.finalCustomerApprovalRecorded),
+      costReviewComplete: Boolean(row.cost_review_complete ?? row.costReviewComplete),
+      budgetComplete: Boolean(row.budget_complete ?? row.budgetComplete),
+      scopeComplete: Boolean(row.scope_complete ?? row.scopeComplete),
+      ownerApprovalRecorded: Boolean(row.owner_approval_recorded ?? row.ownerApprovalRecorded),
+      draftInvoiceExists: Boolean(row.draft_invoice_exists ?? row.draftInvoiceExists),
+      depositRequired: Boolean(row.deposit_required ?? row.depositRequired),
+      depositPaid: Boolean(row.deposit_paid ?? row.depositPaid),
       requiredDocumentsPresent: row.required_documents_present === null || row.requiredDocumentsPresent === null
         ? null
         : Boolean(row.required_documents_present ?? row.requiredDocumentsPresent),
       beforePhotosUploaded: Boolean(row.before_photos_uploaded || row.beforePhotosUploaded || row.arrival_photos_uploaded || row.arrivalPhotosUploaded),
       afterPhotosUploaded: Boolean(row.after_photos_uploaded || row.afterPhotosUploaded || row.completion_photos_uploaded || row.completionPhotosUploaded),
       fieldCompletionNotes: row.field_completion_notes || row.fieldCompletionNotes || "",
-      invoiceFinalized: Boolean(row.invoice_finalized || row.invoiceFinalized),
+      invoiceFinalized: Boolean(row.invoice_finalized ?? row.invoiceFinalized),
       createdBy: row.created_by || row.createdBy || "",
       updatedBy: row.updated_by || row.updatedBy || "",
       createdAtRaw: row.created_at || "",
@@ -12689,77 +12278,6 @@
     </div>`;
   }
 
-  function renderTicketDrawerProgress(ticket = {}) {
-    const stage = ticketStage(ticket);
-    const activeIndex = ticketCardMilestoneIndex(stage);
-    const completeCount = ticketCardMilestones.reduce((count, item, index) => {
-      return count + (index < activeIndex || ticketCardMilestoneOverride(ticket, item.key) ? 1 : 0);
-    }, 0);
-    const denominator = Math.max(ticketCardMilestones.length - 1, 1);
-    const progress = Math.max(0, Math.min(100, Math.round((activeIndex / denominator) * 100)));
-    const missing = ticketMissingRequirementsForStage(ticket, stage);
-    return `<section class="ticket-drawer-progress" aria-label="Ticket workflow progress">
-      <div class="ticket-drawer-progress-head">
-        <div>
-          <span>Workflow progress</span>
-          <strong>${escapeHtml(String(completeCount))}/${escapeHtml(String(ticketCardMilestones.length))} checkpoints ready</strong>
-        </div>
-        <b>${escapeHtml(ticketStageLabel(stage))}</b>
-      </div>
-      <div class="ticket-drawer-progress-bar" aria-hidden="true"><i style="width:${escapeHtml(String(progress))}%"></i></div>
-      ${renderTicketCardChecklist(ticket)}
-      <p>${escapeHtml(missing.length ? `Current stage needs: ${missing.join(", ")}` : "Current stage has the required basics. Use the command center below for the next move.")}</p>
-    </section>`;
-  }
-
-  function renderTicketDrawerCockpit(ticket = {}) {
-    const stage = ticketStage(ticket);
-    const meta = ticketStageMeta[stage] || {};
-    const transitions = ticketTransitionOptions(ticket);
-    const command = ticketCommandStatus(ticket, transitions);
-    const workspace = ticketWorkspaceTarget(ticket);
-    const blockers = command.blockers || [];
-    const nextMove = command.move ? ticketStageLabel(command.move.to) : command.title || ticketNextAction(stage);
-    const activeIndex = ticketCardMilestoneIndex(stage);
-    const completeCount = ticketCardMilestones.reduce((count, item, index) => {
-      return count + (index < activeIndex || ticketCardMilestoneOverride(ticket, item.key) ? 1 : 0);
-    }, 0);
-    const cockpitTone = command.state === "blocked"
-      ? "Blocked"
-      : command.state === "ready"
-        ? "Ready"
-        : command.state === "complete"
-          ? "Complete"
-          : "Review";
-    return `<section class="ticket-drawer-cockpit is-${escapeHtml(command.state || "review")}" aria-label="Ticket workflow cockpit">
-      <div class="ticket-cockpit-main">
-        <div>
-          <p class="eyebrow">Ticket Cockpit</p>
-          <h4>${escapeHtml(workspace.label)} owns this step</h4>
-          <p>${escapeHtml(workspace.detail)}</p>
-        </div>
-        <span>${escapeHtml(cockpitTone)}</span>
-      </div>
-      <dl class="ticket-cockpit-stats">
-        <div><dt>Current</dt><dd>${escapeHtml(ticketStageLabel(stage))}</dd></div>
-        <div><dt>Next move</dt><dd>${escapeHtml(nextMove)}</dd></div>
-        <div><dt>Ready checks</dt><dd>${escapeHtml(`${completeCount}/${ticketCardMilestones.length}`)}</dd></div>
-        <div><dt>Lane</dt><dd>${escapeHtml(titleCase(meta.lane || "workflow"))}</dd></div>
-      </dl>
-      <div class="ticket-cockpit-track" aria-label="Ticket lifecycle checkpoints">
-        ${ticketCardMilestones.map((item, index) => {
-          const isComplete = index < activeIndex || ticketCardMilestoneOverride(ticket, item.key);
-          const isActive = index === activeIndex;
-          const stateClass = isActive ? "is-active" : isComplete ? "is-complete" : "is-upcoming";
-          return `<span class="${stateClass}">
-            <i aria-hidden="true"></i>
-            <strong>${escapeHtml(item.label)}</strong>
-          </span>`;
-        }).join("")}
-      </div>
-      <p class="ticket-cockpit-note">${escapeHtml(blockers.length ? `Before the next move: ${blockers.join(", ")}.` : command.detail || "This ticket has enough information for its current workflow step.")}</p>
-    </section>`;
-  }
 
   function renderTicketCard(ticket, compact = false) {
     const blockers = ticket.blockers?.length ? `<div class="ticket-blockers">${ticket.blockers.map((item) => `<span>${escapeHtml(item)}</span>`).join("")}</div>` : "";
@@ -12786,20 +12304,6 @@
     </article>`;
   }
 
-  function renderTicketColumn(title, detail, tickets, emptyMessage) {
-    return `<section class="ticket-lane">
-      <div class="ticket-lane-heading">
-        <div>
-          <h3>${escapeHtml(title)}</h3>
-          <p>${escapeHtml(detail)}</p>
-        </div>
-        <span>${escapeHtml(tickets.length)}</span>
-      </div>
-      <div class="ticket-lane-list">
-        ${tickets.length ? tickets.slice(0, 6).map((ticket) => renderTicketCard(ticket)).join("") : emptyState(emptyMessage)}
-      </div>
-    </section>`;
-  }
 
   const ticketWorkflowSteps = [
     { key: "sales", label: "Leads", detail: "Intake and scope", stages: ["draft", "sales_intake", "scope_in_progress", "quote_pending"] },
@@ -12815,69 +12319,6 @@
     return Math.max(0, ticketWorkflowSteps.findIndex((step) => step.stages.includes(stage)));
   }
 
-  function renderTicketWorkflowBoard(openTickets = [], filteredTickets = []) {
-    return `<section class="ticket-workflow-board" aria-label="Ticket workflow board">
-      <div class="ticket-workflow-board-heading">
-        <div>
-          <p class="eyebrow">Workflow Board</p>
-          <h3>Request to closeout</h3>
-          <p>See every open ticket by its next operating step, from lead intake through payment and closeout.</p>
-        </div>
-        <dl>
-          <div><dt>Shown</dt><dd>${escapeHtml(String(filteredTickets.length))}</dd></div>
-          <div><dt>Open</dt><dd>${escapeHtml(String(openTickets.length))}</dd></div>
-        </dl>
-      </div>
-      <div class="ticket-workflow-board-grid">
-        ${ticketWorkflowSteps.map((step, index) => {
-          const totalTickets = openTickets.filter((ticket) => ticketInStage(ticket, step.stages));
-          const shownTickets = filteredTickets.filter((ticket) => ticketInStage(ticket, step.stages));
-          return `<article class="ticket-workflow-board-column ${shownTickets.length ? "is-populated" : ""}" data-workflow-step="${escapeHtml(step.key)}">
-            <div class="ticket-workflow-board-column-head">
-              <span class="ticket-workflow-board-index">${escapeHtml(String(index + 1).padStart(2, "0"))}</span>
-              <div>
-                <strong>${escapeHtml(step.label)}</strong>
-                <small>${escapeHtml(step.detail)}</small>
-              </div>
-              <em title="${escapeHtml(String(totalTickets.length))} open tickets">${escapeHtml(String(shownTickets.length))}</em>
-            </div>
-            <div class="ticket-workflow-board-list">
-              ${shownTickets.length
-                ? shownTickets.slice(0, 3).map((ticket) => renderTicketCard(ticket, true)).join("")
-                : `<p class="ticket-workflow-empty">Clear</p>`}
-              ${shownTickets.length > 3 ? `<p class="ticket-workflow-more">${escapeHtml(String(shownTickets.length - 3))} more tickets match this step.</p>` : ""}
-            </div>
-          </article>`;
-        }).join("")}
-      </div>
-    </section>`;
-  }
-
-  function renderTicketWorkflowTracker(stage) {
-    const activeIndex = ticketWorkflowIndex(stage);
-    return `<section class="ticket-drawer-tracker" aria-label="Job ticket workflow">
-      ${ticketWorkflowSteps.map((step, index) => `<div class="ticket-drawer-step ${index < activeIndex ? "is-complete" : ""} ${index === activeIndex ? "is-active" : ""}">
-        <span>${escapeHtml(index + 1)}</span>
-        <strong>${escapeHtml(step.label)}</strong>
-        <small>${escapeHtml(step.detail)}</small>
-      </div>`).join("")}
-    </section>`;
-  }
-
-  function renderTicketRequirements(ticket) {
-    const transitionBlockers = ticketTransitionOptions(ticket || {})
-      .flatMap((item) => item.missing || []);
-    const blockers = ticket.blockers?.length ? ticket.blockers : [...new Set(transitionBlockers)];
-    return `<section class="ticket-drawer-card" id="ticket-next-requirements">
-      <div class="ticket-drawer-card-heading">
-        <h4>Next requirements</h4>
-        <span>${escapeHtml(ticket.nextAction || "Open ticket")}</span>
-      </div>
-      ${blockers.length ? `<ul class="ticket-requirement-list">
-        ${blockers.map((item) => `<li><span aria-hidden="true"></span>${escapeHtml(item)}</li>`).join("")}
-      </ul>` : `<p class="ticket-drawer-note">No blockers are known for this stage. This ticket can move to the next owner when the working details are saved.</p>`}
-    </section>`;
-  }
 
   const ticketCompletionChecklistItems = [
     { key: "scopeComplete", label: "Request and scope", detail: "Customer, property, service, and complete scope are in this ticket." },
@@ -12917,55 +12358,6 @@
     return ticketHasRequirementValue(ticket, key);
   }
 
-  function renderTicketCompletionChecklist(ticket) {
-    if (ticket?.source !== "ticket") return "";
-    const stage = ticketStage(ticket);
-    const canClose = currentSessionRole() === "owner" && ["field_work_complete", "completion_review", "invoice_review", "invoice_sent", "partially_paid", "paid"].includes(stage);
-    const { completed, notApplicable, notes } = ticketCompletionChecklistState(ticket);
-    const resolved = ticketCompletionChecklistItems.filter((item) => ticketCompletionItemComplete(ticket, item.key, completed) || notApplicable[item.key]).length;
-    return `<section class="ticket-drawer-card ticket-completion-checklist" id="ticket-closeout" aria-label="Unified completion checklist">
-      <div class="ticket-drawer-card-heading">
-        <div>
-          <p class="eyebrow">Beginning-to-end checklist</p>
-          <h4>One ticket. One checklist.</h4>
-          <span>Keep the complete job in this box from intake through payment. The invoice connection cannot be skipped.</span>
-        </div>
-        <strong>${escapeHtml(`${resolved}/${ticketCompletionChecklistItems.length}`)}</strong>
-      </div>
-      <form data-ticket-completion-form data-ticket-id="${escapeHtml(ticket.id)}">
-        <div class="ticket-completion-list">
-          ${ticketCompletionChecklistItems.map((item) => {
-            const isComplete = ticketCompletionItemComplete(ticket, item.key, completed);
-            const naReason = notApplicable[item.key] || "";
-            return `<article class="ticket-completion-item ${isComplete || naReason ? "is-resolved" : ""}" data-completion-item="${escapeHtml(item.key)}">
-              <div>
-                <strong>${escapeHtml(item.label)}</strong>
-                <small>${escapeHtml(item.detail)}</small>
-              </div>
-              <label><input type="checkbox" value="${escapeHtml(item.key)}" data-completion-complete${isComplete ? " checked" : ""}${naReason || item.requiredConnection ? " disabled" : ""}> ${item.requiredConnection ? "Connected automatically" : "Complete"}</label>
-              <label><input type="checkbox" value="${escapeHtml(item.key)}" data-completion-na${naReason ? " checked" : ""}${item.requiredConnection ? " disabled" : ""}> ${item.requiredConnection ? "Required" : "N/A"}</label>
-              ${item.key === "fieldCompletionNotes" ? `<textarea data-completion-notes rows="2" placeholder="Completion notes...">${escapeHtml(ticket.fieldCompletionNotes || "")}</textarea>` : ""}
-              ${item.key === "paymentStatus" ? `<select data-completion-payment aria-label="Payment status">
-                <option value="">Choose payment status</option>
-                <option value="unpaid"${statusText(ticket.paymentStatus) === "unpaid" ? " selected" : ""}>Unpaid</option>
-                <option value="partially_paid"${statusText(ticket.paymentStatus) === "partially_paid" ? " selected" : ""}>Partially paid</option>
-                <option value="paid"${statusText(ticket.paymentStatus) === "paid" ? " selected" : ""}>Paid</option>
-              </select>` : ""}
-            </article>`;
-          }).join("")}
-        </div>
-        <label class="ticket-completion-closeout-note">Closeout note
-          <textarea data-completion-closeout-note rows="3" placeholder="Required when anything is marked N/A. Explain the exception once here.">${escapeHtml(notes)}</textarea>
-        </label>
-        <div class="drawer-actions ticket-completion-actions">
-          <button type="button" data-action="save-ticket-completion" data-id="${escapeHtml(ticket.id)}">${buttonContent("Save Checklist", "save")}</button>
-          ${canManageMoneyWorkflow() ? `<button type="button" class="secondary-action" data-action="create-financial-invoice-from-ticket" data-id="${escapeHtml(ticket.id)}">${buttonContent("Create & Connect Invoice", "create-invoice")}</button>` : ""}
-          <button type="button" data-action="owner-finalize-ticket" data-id="${escapeHtml(ticket.id)}"${canClose ? "" : " disabled aria-disabled=\"true\""}>${buttonContent("Save & Close Ticket", "complete-reminder")}</button>
-        </div>
-        ${canClose ? `<p class="ticket-drawer-note">Closing is available when every line is Complete or N/A.</p>` : `<p class="ticket-drawer-note">You can fill this out now. Save & Close becomes available after the job is marked complete.</p>`}
-      </form>
-    </section>`;
-  }
 
   function ticketCompletionFormPayload(form) {
     const ticket = findTicketForDrawer("ticket", form?.dataset?.ticketId || "");
@@ -13244,16 +12636,19 @@
         ${canManageMoneyWorkflow() ? renderFinancialQuoteForm(ticket, { embedded: true }) : `<p class="ticket-drawer-note">Your role cannot create financial documents.</p>`}`;
     }
     const status = statusText(quote.status || quote.squareStatus || "draft");
-    const versionEvents = ticketHistoryFor(ticket).filter((event) => /quote|estimate|change_order/.test(event.eventType));
     return `<div class="ticket-connected-record">
-      <div><span>Quote</span><strong>${escapeHtml(quote.number || quote.title || "Connected quote")}</strong><small>Version ${escapeHtml(String(Math.max(1, versionEvents.length || 1)))} / ${escapeHtml(status || "draft")}</small></div>
+      <div><span>Quote</span><strong>${escapeHtml(quote.number || quote.title || "Connected quote")}</strong><small>Current quote · ${escapeHtml(status || "draft")}</small></div>
       <div><span>Total</span><strong>${escapeHtml(ticketMoneyText(quote.total))}</strong><small>${escapeHtml(quote.dueDate ? `Expires ${quote.dueDate}` : "No expiration date")}</small></div>
       <div><span>Approval</span><strong>${escapeHtml(ticket.customerApprovalRecorded ? "Approved" : status === "approved" ? "Approved" : "Pending")}</strong><small>${escapeHtml(ticket.customerApprovalRecorded ? "Recorded on ticket" : "Customer response required")}</small></div>
     </div>
+    <div class="ut-quote-lines"><table><thead><tr><th>Service</th><th>Qty</th><th>Rate</th><th>Amount</th></tr></thead><tbody>${(quote.lineItems || []).map((line) => `<tr><td data-label="Service">${escapeHtml(line.description)}</td><td data-label="Qty">${escapeHtml(String(line.quantity || 0))}</td><td data-label="Rate">${moneyCurrency(line.unitPrice ?? line.unit_price)}</td><td data-label="Amount">${moneyCurrency(line.amount ?? line.total ?? Number(line.quantity || 0) * Number(line.unitPrice ?? line.unit_price ?? 0))}</td></tr>`).join("")}</tbody><tfoot><tr><th colspan="3">Subtotal</th><td>${moneyCurrency(quote.subtotal)}</td></tr><tr><th colspan="3">Tax</th><td>${moneyCurrency(quote.tax)}</td></tr><tr><th colspan="3">Quote total</th><td>${moneyCurrency(quote.total)}</td></tr></tfoot></table></div>
+    ${quote.notes ? `<details class="ut-quote-terms"><summary>Terms & Customer Message</summary><p>${escapeHtml(quote.notes)}</p></details>` : ""}
     <div class="drawer-actions ticket-inline-actions">
       ${!ticket.customerApprovalRecorded ? `<button type="button" data-action="record-quote-approval" data-id="${escapeHtml(quote.id)}">Record Approval</button>` : ""}
       <button type="button" class="secondary-action" data-action="copy-ticket-link" data-id="${escapeHtml(ticket.id)}">Copy Ticket Link</button>
-      ${status === "approved" || ticket.customerApprovalRecorded ? `<button type="button" class="secondary-action" data-action="create-financial-quote-from-ticket" data-id="${escapeHtml(ticket.id)}">Create Revision</button>` : ""}
+      <button type="button" class="secondary-action" data-action="create-financial-quote-from-ticket" data-id="${escapeHtml(ticket.id)}">Create Revision</button>
+      <button type="button" class="secondary-action" data-action="create-quote-approval-link" data-id="${escapeHtml(quote.id)}" data-delivery="copy">Copy Approval Link</button>
+      <button type="button" class="secondary-action" data-action="print-document" data-id="${escapeHtml(quote.id)}">Print Quote</button>
     </div>`;
   }
 
@@ -13265,12 +12660,13 @@
       </div>`;
     }
     const financial = Boolean(invoice.invoice_number || Object.prototype.hasOwnProperty.call(invoice, "amount_paid"));
+    if (financial && state.moneyInvoiceDetail?.invoice?.id === invoice.id) return renderUnifiedFinancialInvoiceDrawer(state.moneyInvoiceDetail);
     const summary = financial ? financialCalculator().invoiceSummary(invoice) : {
       total: Number(invoice.total || 0),
       balance: Math.max(0, Number(invoice.total || 0) - Number(invoice.deposit || 0) - Number(invoice.amountPaid || 0))
     };
     const status = financial ? financialCalculator().effectiveInvoiceStatus(invoice) : (invoice.squareStatus || invoice.status || "Draft");
-    return `<div class="ticket-connected-record">
+    return `${financial ? `<button type="button" data-action="load-ticket-financial-invoice" data-id="${escapeHtml(invoice.id)}" data-ticket-id="${escapeHtml(ticket.id)}">View line items & payments</button>` : ""}<div class="ticket-connected-record">
       <div><span>Invoice</span><strong>${escapeHtml(invoice.invoice_number || invoice.number || "Connected invoice")}</strong><small>${escapeHtml(status)}</small></div>
       <div><span>Total</span><strong>${moneyCurrency(summary.total)}</strong><small>Deposit ${moneyCurrency(invoice.deposit || 0)}</small></div>
       <div><span>Balance</span><strong>${moneyCurrency(summary.balance)}</strong><small>${escapeHtml(invoice.due_date || invoice.dueDate || "No due date")}</small></div>
@@ -13328,6 +12724,13 @@
   }
 
   function renderUnifiedTicketCosts(ticket) {
+    const review = ticketCompletionChecklistState(ticket);
+    const closeout = ticketWorkbenchSection({
+      key: "closeout", number: "", title: "Completion review", owner: "Job team",
+      detail: "Review the recorded requirements before closing this job.",
+      open: true, showExceptionNote: true, exceptionNote: review.notes,
+      fields: [], checklistKeys: ticketCompletionChecklistItems.map((item) => item.key)
+    }, ticketStage(ticket), ticket, review.completed, review.notApplicable, review.overrides);
     const expenses = ticketLinkedExpenses(ticket);
     const actual = expenses.reduce((sum, item) => sum + Number(item.total || 0), 0);
     const estimate = Number(ticket.estimatedTotalCost || 0);
@@ -13342,7 +12745,7 @@
       <div><span>Gross margin</span><strong>${escapeHtml(`${margin.toFixed(1)}%`)}</strong></div>
     </div>
     <div class="ticket-linked-list">${expenses.length ? expenses.map((item) => `<article><div><strong>${escapeHtml(item.description || item.category || "Expense")}</strong><small>${escapeHtml(item.vendorName || item.category || "")}</small></div><span>${moneyCurrency(item.total)}</span></article>`).join("") : `<p>No expenses are connected to this ticket.</p>`}</div>
-    ${canManageMoneyWorkflow() ? `<button type="button" class="secondary-action" data-action="quick-add-expense" data-ticket-id="${escapeHtml(ticket.id)}">Add Connected Expense</button>` : ""}`;
+    ${canManageMoneyWorkflow() ? `<button type="button" class="secondary-action" data-action="quick-add-expense" data-ticket-id="${escapeHtml(ticket.id)}">Add Connected Expense</button>` : ""}${closeout}`;
   }
 
   function renderTicketCloseoutSnapshot(ticket, completed, notApplicable, overrides) {
@@ -13352,196 +12755,6 @@
     }).join("")}</div>`;
   }
 
-  function renderTicketWorkbench(ticket, options = {}) {
-    const stage = ticketStage(ticket);
-    const { completed, notApplicable, overrides, notes } = ticketCompletionChecklistState(ticket);
-    const openSection = options.openSection || "overview";
-    const quote = findQuoteForTicket(ticket);
-    const invoice = findInvoiceForTicket(ticket);
-    const job = ticketLinkedScheduledJob(ticket, options.sourceItem || null);
-    const tasks = ticketWorkComponents(ticket);
-    const arrivalPhotos = job ? documentationAttachmentsForJob(job, "arrival") : [];
-    const completionPhotos = job ? documentationAttachmentsForJob(job, "completion") : [];
-    const documents = ticketLinkedDocuments(ticket);
-    const expenses = ticketLinkedExpenses(ticket);
-    const expenseTotal = expenses.reduce((sum, item) => sum + Number(item.total || 0), 0);
-    const history = ticketHistoryFor(ticket);
-    const resolved = ticketCompletionChecklistItems.filter((item) => ticketCompletionItemComplete(ticket, item.key, completed) || notApplicable[item.key] || overrides[item.key]).length;
-    const invoiceSummary = invoice && (invoice.invoice_number || Object.prototype.hasOwnProperty.call(invoice, "amount_paid"))
-      ? financialCalculator().invoiceSummary(invoice)
-      : invoice ? { total: Number(invoice.total || 0), balance: Number(invoice.total || 0) } : null;
-    const ownerFields = [
-      { label: "Ticket owner", name: "owner_label", value: ticket.ownerLabel || "" },
-      { label: "Priority", name: "priority", value: ticket.priority || "Normal" }
-    ];
-    const sections = [
-      {
-        key: "overview", number: "1", title: "Overview and Scope", owner: "Ticket owner",
-        detail: "Customer, property, service, scope, priority, blocker, and next action.", open: openSection === "overview",
-        summary: ticket.scopeComplete ? "Scope complete" : "Scope needs review",
-        blocker: !ticket.scopeComplete ? "Confirm the customer, property, service, and complete scope." : "",
-        fields: [
-          { label: "Client", name: "customer_name", value: ticket.customer || "" },
-          { label: "Customer contact", name: "contact_name", value: ticket.primaryContact || "" },
-          { label: "Contact email", name: "contact_email", type: "email", value: ticket.contactEmail || "" },
-          { label: "Contact phone", name: "contact_phone", type: "tel", value: ticket.contactPhone || "" },
-          { label: "Property", name: "property_name", value: ticket.property || "" },
-          { label: "Service address", name: "property_address", value: ticket.propertyAddress || ticket.property || "" },
-          { label: "Service request", name: "requested_service", value: ticket.requestedService || ticket.title || "" },
-          { label: "Price expectation", name: "proposed_price", type: "number", step: "0.01", value: ticket.proposedPrice || "" },
-          ...ownerFields,
-          { label: "Requested timing", name: "requested_timing", value: ticket.requestedTiming || "" },
-          { label: "Source", type: "managed", value: ticket.sourceLabel || ticket.sourceType, detail: "The original source remains linked for historical context." },
-          { label: "Created", type: "managed", value: formatDate(ticket.createdAtRaw), detail: "The job snapshot is preserved on this ticket." },
-          { label: "Current stage", type: "managed", value: ticket.stageLabel, detail: "Use Owner Controls for controlled stage changes." },
-          { label: "Scope of work", name: "scope_of_work", type: "textarea", rows: 4, value: ticket.scopeOfWork || ticket.detail || "", placeholder: "Describe the complete work scope." },
-          { label: "Included work", name: "included_work", type: "textarea", rows: 3, value: ticket.includedWork || "" },
-          { label: "Excluded work", name: "excluded_work", type: "textarea", rows: 3, value: ticket.excludedWork || "" },
-          { label: "Access instructions", name: "access_instructions", type: "textarea", rows: 3, value: ticket.accessInstructions || "" },
-          { label: "Current blocker", name: "blockers", type: "textarea", rows: 2, value: (ticket.blockers || []).join("\n") },
-          { label: "Next action", name: "next_action", value: ticket.nextAction || "" }
-        ],
-        checklistKeys: ["scopeComplete"], stages: []
-      },
-      {
-        key: "quote", number: "2", title: "Quote", owner: "Leads & Money", detail: "Create, send, approve, and revise the connected quote.", open: openSection === "quote",
-        summary: quote ? `${quote.number || "Quote"} / ${quote.status || "draft"}` : "Not created",
-        blocker: !quote ? "Create and connect the customer quote." : !ticket.customerApprovalRecorded ? "Record the customer's quote approval." : "",
-        count: quote ? 1 : 0, content: canManageMoneyWorkflow() ? renderUnifiedTicketQuotePanel(ticket) : `<p class="ticket-drawer-note">Quote financial details are restricted for your dashboard role.</p>`, fields: [], checklistKeys: ["customerApprovalRecorded"], stages: []
-      },
-      {
-        key: "invoice", number: "3", title: "Invoice", owner: "Money", detail: "Invoice, deposit, payment, balance, and finalization stay distinct.", open: openSection === "invoice",
-        summary: invoice ? (canManageMoneyWorkflow() ? `${invoice.invoice_number || invoice.number || "Invoice"} / ${invoiceSummary ? moneyCurrency(invoiceSummary.balance) : "Connected"} due` : "Connected / restricted") : "Not created",
-        blocker: !invoice ? "Create and connect an invoice before normal closeout." : "", count: invoice ? 1 : 0,
-        content: canManageMoneyWorkflow() ? renderUnifiedTicketInvoicePanel(ticket) : `<p class="ticket-drawer-note">Invoice and payment details are restricted for your dashboard role.</p>`, fields: [], checklistKeys: ["draftInvoiceExists", "invoiceSentToCustomer"], stages: []
-      },
-      {
-        key: "approval", number: "4", title: "Customer Approval and Deposit", owner: "Customer & Owner", detail: "Review quote approval, authorization, deposit, and owner agreement together.", open: openSection === "approval",
-        summary: ticket.depositRequired ? (ticket.depositPaid ? "Deposit paid" : "Deposit pending") : (ticket.finalCustomerApprovalRecorded ? "Authorized" : "Approval pending"),
-        blocker: ticket.depositRequired && !ticket.depositPaid ? "Required deposit has not been recorded as received." : !ticket.finalCustomerApprovalRecorded ? "Final customer authorization is still required." : "",
-        fields: [
-          { label: "Deposit required", name: "deposit_required", type: "checkbox", value: ticket.depositRequired },
-          { label: "Deposit received", name: "deposit_paid", type: "checkbox", value: ticket.depositPaid },
-          { label: "Pre-work gate", type: "managed", value: ticket.ownerApprovalRecorded ? "Owner authorized" : "Waiting", detail: "Work cannot be confirmed until required approvals are complete or owner-overridden." }
-        ],
-        checklistKeys: ["finalCustomerApprovalRecorded", "ownerApprovalRecorded"], stages: []
-      },
-      {
-        key: "scheduling", number: "5", title: "Scheduling and Assignment", owner: "Work", detail: "Work date, window, confirmation, owner, and crew assignment.", open: openSection === "scheduling",
-        summary: job || ticket.dateRaw ? `${formatDate(job?.dateRaw || ticket.dateRaw)} / ${ticket.assignedUserId ? "Assigned" : "Unassigned"}` : "Not scheduled",
-        blocker: !(job?.dateRaw || ticket.dateRaw) ? "Select a work date." : !ticket.assignedUserId ? "Assign the responsible employee or crew." : "",
-        count: job ? 1 : 0,
-        fields: [
-          { label: "Work date", name: "scheduled_date", type: "date", value: toDateInputValue(job?.dateRaw || ticket.scheduledDate || ticket.dateRaw || "") },
-          { label: "Work window", name: "work_window", value: job?.window || ticket.workWindow || "" },
-          { label: "Schedule status", name: "schedule_status", value: ticket.scheduleStatus || "Tentative" },
-          { label: "Assigned team", name: "assigned_user_id", type: "assignee", value: ticket.assignedUserId || "" }
-        ],
-        checklistKeys: ["scheduledDate"], stages: []
-      },
-      {
-        key: "tasks", number: "6", title: "Tasks", owner: "Assigned team", detail: "Assign and track every ticket requirement without leaving this drawer.", open: openSection === "tasks",
-        summary: `${tasks.filter((item) => item.status === "done").length} of ${tasks.length} complete`, blocker: tasks.some((item) => item.status === "blocked") ? "One or more tasks are blocked." : tasks.some((item) => item.status !== "done") ? "Complete or explicitly resolve the remaining assigned work." : "",
-        count: tasks.length, content: renderUnifiedTicketTasks(ticket), fields: [], checklistKeys: [], stages: []
-      },
-      {
-        key: "arrival-photos", number: "7", title: "Arrival Photos", owner: "Work", detail: "Before-work proof with uploader and timestamp.", open: openSection === "arrival-photos",
-        summary: arrivalPhotos.length ? `${arrivalPhotos.length} uploaded` : "Missing", blocker: arrivalPhotos.length || ticket.beforePhotosUploaded ? "" : "Upload arrival proof before work begins.", count: arrivalPhotos.length,
-        content: renderUnifiedTicketPhotoPanel(ticket, options.sourceItem, "arrival"), fields: [], checklistKeys: ["beforePhotosUploaded"], stages: []
-      },
-      {
-        key: "completion-photos", number: "8", title: "Completion Photos", owner: "Work", detail: "Finished-work evidence tied to this ticket.", open: openSection === "completion-photos",
-        summary: completionPhotos.length ? `${completionPhotos.length} uploaded` : "Missing", blocker: completionPhotos.length || ticket.afterPhotosUploaded ? "" : "Completion photos are required for normal closeout.", count: completionPhotos.length,
-        content: renderUnifiedTicketPhotoPanel(ticket, options.sourceItem, "completion"), fields: [], checklistKeys: ["afterPhotosUploaded"], stages: []
-      },
-      {
-        key: "documents", number: "9", title: "Notes and Documents", owner: "Ticket team", detail: "Internal notes, customer notes, forms, agreements, and supporting files.", open: openSection === "documents",
-        summary: `${documents.length} file${documents.length === 1 ? "" : "s"}`, blocker: !ticket.requiredDocumentsPresent ? "Confirm required forms and documents are present." : "", count: documents.length,
-        content: renderUnifiedTicketDocuments(ticket),
-        fields: [
-          { label: "Internal notes", name: "internal_notes", type: "textarea", rows: 3, value: ticket.internalNotes || "" },
-          { label: "Customer-visible notes", name: "customer_notes", type: "textarea", rows: 3, value: ticket.customerNotes || "" }
-        ], checklistKeys: ["requiredDocumentsPresent"], stages: []
-      },
-      {
-        key: "costs", number: "10", title: "Expenses and Actual Costs", owner: "Money", detail: "One connected cost record with estimate, actuals, profit, and variance.", open: openSection === "costs",
-        summary: canManageMoneyWorkflow() ? moneyCurrency(expenseTotal) : "Restricted", blocker: canManageMoneyWorkflow() && !completed.includes("actualsRecorded") ? "Review final labor, material, and other costs." : "", count: canManageMoneyWorkflow() ? expenses.length : undefined,
-        content: canManageMoneyWorkflow() ? renderUnifiedTicketCosts(ticket) : `<p class="ticket-drawer-note">Expenses and labor cost details are restricted for your dashboard role.</p>`,
-        fields: canManageMoneyWorkflow() ? [
-          { label: "Expected revenue", name: "expected_revenue", type: "number", step: "0.01", value: ticket.expectedRevenue || ticket.proposedPrice || "" },
-          { label: "Estimated cost", name: "estimated_total_cost", type: "number", step: "0.01", value: ticket.estimatedTotalCost || "" },
-          { label: "Estimated profit", name: "estimated_profit", type: "number", step: "0.01", value: ticket.estimatedProfit || "" },
-          { label: "Target margin %", name: "target_margin", type: "number", step: "0.1", value: ticket.targetMargin || "" }
-        ] : [], checklistKeys: canManageMoneyWorkflow() ? ["costReviewComplete", "actualsRecorded"] : [], stages: []
-      },
-      {
-        key: "closeout", number: "11", title: "Completion and Closeout", owner: "Owner & Money", detail: "Final review keeps Complete, N/A, and Owner Override distinct.", open: openSection === "closeout",
-        summary: stage === "closed" ? "Closed" : `${resolved} of ${ticketCompletionChecklistItems.length} resolved`, blocker: resolved < ticketCompletionChecklistItems.length ? "Resolve every applicable requirement before closing." : "",
-        content: renderTicketCloseoutSnapshot(ticket, completed, notApplicable, overrides),
-        fields: [{ label: "Ticket close", type: "managed", value: stage === "closed" ? "Closed" : "Open", detail: "Finalized is not Paid; overrides never manufacture evidence." }],
-        checklistKeys: ["fieldCompletionNotes", "invoiceFinalized", "paymentStatus"], showExceptionNote: true, exceptionNote: notes, stages: []
-      },
-      {
-        key: "activity", number: "12", title: "Activity and Audit Log", owner: "System", detail: "Permanent chronological record of changes and decisions.", open: openSection === "activity",
-        summary: `${history.length} event${history.length === 1 ? "" : "s"}`, count: history.length, content: renderTicketHistory(ticket), fields: [], checklistKeys: [], stages: []
-      },
-      {
-        key: "owner-controls", number: "13", title: "Owner Controls", owner: "Owner only", detail: "Controlled status moves, exceptions, cancellation, reopening, and rent-credit closeout.", open: openSection === "owner-controls",
-        summary: currentSessionRole() === "owner" ? "Owner access" : "Restricted", content: currentSessionRole() === "owner" ? renderTicketDetailCommandCenter(ticket) : `<p class="ticket-drawer-note">Only the Owner can use overrides or final closeout controls.</p>`, fields: [], checklistKeys: [], stages: []
-      }
-    ];
-
-    const lifecycleGroups = [
-      {
-        key: "intake", number: "1", title: "Intake", owner: "Ticket owner",
-        detail: "Customer, property, scope, access, priority, blocker, and next action.",
-        sectionKeys: ["overview"],
-        summary: ticket.scopeComplete ? "Complete" : "Needs scope review",
-        complete: Boolean(ticket.scopeComplete)
-      },
-      {
-        key: "quote-approval", number: "2", title: "Quote & Approval", owner: "Leads, Money & Owner",
-        detail: "Quote, connected invoice, deposit, customer authorization, and owner agreement.",
-        sectionKeys: ["quote", "invoice", "approval"],
-        summary: ticket.ownerApprovalRecorded && ticket.finalCustomerApprovalRecorded ? "Authorized" : quote ? "Quote in progress" : "Quote needed",
-        complete: Boolean(quote && ticket.customerApprovalRecorded && ticket.finalCustomerApprovalRecorded && ticket.ownerApprovalRecorded)
-      },
-      {
-        key: "scheduled-work", number: "3", title: "Scheduled Work", owner: "Work",
-        detail: "Schedule, assignment, field tasks, and arrival proof for the active visit.",
-        sectionKeys: ["scheduling", "tasks", "arrival-photos"],
-        summary: job || ticket.dateRaw ? `${formatDate(job?.dateRaw || ticket.dateRaw)} / ${tasks.filter((item) => item.status === "done").length} of ${tasks.length} tasks` : "Not scheduled",
-        complete: Boolean((job?.dateRaw || ticket.dateRaw) && ticket.assignedUserId && tasks.length && tasks.every((item) => item.status === "done"))
-      },
-      {
-        key: "completion-payment", number: "4", title: "Completion & Payment", owner: "Work, Money & Owner",
-        detail: "Completion proof, documents, actual costs, final invoice, payment, closeout, and audit history.",
-        sectionKeys: ["completion-photos", "documents", "costs", "closeout", "activity", "owner-controls"],
-        summary: stage === "closed" ? "Closed" : `${resolved} of ${ticketCompletionChecklistItems.length} requirements resolved`,
-        complete: stage === "closed" || resolved === ticketCompletionChecklistItems.length
-      }
-    ];
-
-    return `<section class="ticket-workbench ticket-unified-workbench" id="ticket-workbench" data-ticket-workbench>
-      <div class="ticket-lifecycle-groups">
-        ${lifecycleGroups.map((group) => {
-          const groupSections = group.sectionKeys.map((key) => sections.find((section) => section.key === key)).filter(Boolean);
-          const open = group.sectionKeys.includes(openSection);
-          const attention = groupSections.some((section) => Boolean(section.blocker));
-          return `<details class="ticket-lifecycle-group${group.complete ? " is-complete" : ""}${attention ? " has-attention" : ""}" data-ticket-lifecycle-group="${escapeHtml(group.key)}"${open ? " open" : ""}>
-            <summary>
-              <span class="ticket-lifecycle-number">${escapeHtml(group.number)}</span>
-              <div><h4>${escapeHtml(group.title)}</h4><p>${escapeHtml(group.detail)}</p></div>
-              <span class="ticket-lifecycle-summary"><strong>${escapeHtml(group.summary)}</strong><small>${escapeHtml(group.owner)}</small></span>
-            </summary>
-            <div class="ticket-lifecycle-group-body">
-              ${groupSections.map((section) => ticketWorkbenchSection(section, stage, ticket, completed, notApplicable, overrides)).join("")}
-            </div>
-          </details>`;
-        }).join("")}
-      </div>
-    </section>`;
-  }
 
   function ticketWorkbenchUpdatePayload(form) {
     const data = new FormData(form);
@@ -13914,41 +13127,6 @@
     });
   }
 
-  function renderTicketWorkAssignmentBridge(ticket = {}, sourceItem = null) {
-    const stage = ticketStage(ticket);
-    if (!["ready_to_schedule", "scheduled", "in_progress", "paused"].includes(stage)) return "";
-    if (!canManageWorkWorkflow()) return "";
-    const linkedJob = ticket.sourceType === "job" ? sourceItem : null;
-    const visitDate = toDateInputValue(linkedJob?.dateRaw || ticket.dateRaw || "");
-    const visitWindow = linkedJob?.window && linkedJob.window !== "Window not set" ? linkedJob.window : "";
-    const assignedUserId = ticket.assignedUserId || "";
-    const conflicts = ticketSchedulingConflicts(ticket, visitDate, assignedUserId);
-    const buttonLabel = linkedJob?.id ? "Update Work Assignment" : "Create Work Assignment";
-    return `<section class="ticket-drawer-card ticket-work-assignment-bridge">
-      <div class="ticket-drawer-card-heading">
-        <div>
-          <h4>Work assignment</h4>
-          <span>${escapeHtml(linkedJob?.id ? "Linked to a scheduled visit." : "Create the scheduled visit and assign the work owner.")}</span>
-        </div>
-      </div>
-      ${conflicts.length ? `<div class="ticket-schedule-conflict" role="alert"><strong>${escapeHtml(String(conflicts.length))} possible scheduling conflict${conflicts.length === 1 ? "" : "s"}</strong><span>${escapeHtml(conflicts.slice(0, 3).map((item) => `${item.number} / ${item.customer}`).join(", "))}</span></div>` : `<div class="ticket-schedule-clear"><strong>No assignment conflict detected</strong><span>Travel time and customer confirmation still need human review.</span></div>`}
-      <form class="ticket-work-assignment-form" data-ticket-assignment-form data-ticket-id="${escapeHtml(ticket.id || "")}" data-ticket-source="${escapeHtml(ticket.source || ticket.sourceType || "ticket")}" data-job-id="${escapeHtml(linkedJob?.id || "")}">
-        <label>Visit date
-          <input name="visit_date" type="date" value="${escapeHtml(visitDate)}" required>
-        </label>
-        <label>Visit window
-          <input name="visit_window" value="${escapeHtml(visitWindow)}" placeholder="9 AM - 11 AM">
-        </label>
-        <label>Assigned team member
-          <select name="assigned_user_id" required>${workAssignmentOptions(assignedUserId)}</select>
-        </label>
-        <div class="drawer-actions span-full">
-          <button type="submit">${buttonContent(buttonLabel, "quick-add-job")}</button>
-          ${linkedJob?.id ? `<button type="button" data-action="edit-job" data-id="${escapeHtml(linkedJob.id)}">${buttonContent("Open Work Visit", "edit-job")}</button>` : ""}
-        </div>
-      </form>
-    </section>`;
-  }
 
   function ticketLinkedScheduledJob(ticket = {}, sourceItem = null) {
     if (sourceItem?.id && (ticket.sourceType === "job" || ticket.source === "job")) return sourceItem;
@@ -13986,145 +13164,6 @@
     </article>`;
   }
 
-  function renderTicketSiteProofBridge(ticket = {}, sourceItem = null) {
-    const stage = ticketStage(ticket);
-    const linkedJob = ticketLinkedScheduledJob(ticket, sourceItem);
-    const shouldShow = linkedJob || [
-      "ready_to_schedule",
-      "scheduled",
-      "in_progress",
-      "paused",
-      "field_work_complete",
-      "completion_review",
-      "invoice_review",
-      "invoice_sent",
-      "partially_paid",
-      "paid",
-      "closed"
-    ].includes(stage);
-    if (!shouldShow) return "";
-
-    if (!linkedJob) {
-      return `<section class="ticket-drawer-card ticket-site-proof-bridge">
-        <div class="ticket-drawer-card-heading">
-          <div>
-            <h4>Site proof and forms</h4>
-            <span>Schedule or link a Work visit before attaching required forms and photos.</span>
-          </div>
-        </div>
-        <div class="ticket-proof-status-grid">
-          ${renderTicketProofStatus("Work visit", "Not linked", "Create the visit from the Work assignment card.", false)}
-          ${renderTicketProofStatus("Forms", "Waiting", "Pick templates after the visit exists.", false)}
-          ${renderTicketProofStatus("Arrival photos", ticket.beforePhotosUploaded ? "Uploaded" : "Waiting", "Use the phone camera once the visit is linked.", Boolean(ticket.beforePhotosUploaded))}
-          ${renderTicketProofStatus("Completion photos", ticket.afterPhotosUploaded ? "Uploaded" : "Waiting", "Upload completion proof before closeout.", Boolean(ticket.afterPhotosUploaded))}
-        </div>
-      </section>`;
-    }
-
-    const assignments = documentationAssignmentsForJob(linkedJob);
-    const arrivalPhotos = documentationAttachmentsForJob(linkedJob, "arrival");
-    const completionPhotos = documentationAttachmentsForJob(linkedJob, "completion");
-    const submittedForms = assignments.filter((item) => ["Submitted", "Approved"].includes(item.status)).length;
-    const requiresPhotos = assignments.some((item) => item.requiresPhotos || item.metadata?.requiresPhotos);
-    return `<section class="ticket-drawer-card ticket-site-proof-bridge">
-      <div class="ticket-drawer-card-heading">
-        <div>
-          <h4>Site proof and forms</h4>
-          <span>${escapeHtml(linkedJob.site || ticket.customer || "Linked Work visit")} / ${escapeHtml(linkedJob.date || ticket.dateLabel || "No date")}</span>
-        </div>
-        <button type="button" class="inline-action" data-action="edit-job" data-id="${escapeHtml(linkedJob.id)}">${buttonContent("Open Visit", "edit-job")}</button>
-      </div>
-      <div class="ticket-proof-status-grid">
-        ${renderTicketProofStatus("Work visit", "Linked", [linkedJob.service, linkedJob.window].filter(Boolean).join(" / ") || "Visit details ready", true)}
-        ${renderTicketProofStatus("Forms", assignments.length ? `${submittedForms}/${assignments.length}` : "None", assignments.length ? "Submitted or approved forms." : "Pick from the Documentation library.", assignments.length ? submittedForms >= assignments.length : false)}
-        ${renderTicketProofStatus("Arrival photos", String(arrivalPhotos.length), "Upload up to 10 photos at a time.", Boolean(arrivalPhotos.length || ticket.beforePhotosUploaded))}
-        ${renderTicketProofStatus("Completion photos", String(completionPhotos.length), requiresPhotos ? "Required by a form template." : "Needed before closeout.", Boolean(completionPhotos.length || ticket.afterPhotosUploaded))}
-      </div>
-      <div class="job-support-sections ticket-support-sections">
-        ${renderJobDocumentationSection(linkedJob)}
-        ${renderJobPhotosSection(linkedJob)}
-      </div>
-    </section>`;
-  }
-
-  function renderTicketInvoiceBridge(ticket = {}) {
-    const stage = ticketStage(ticket);
-    if (!["invoice_preparation", "field_work_complete", "completion_review", "invoice_review", "invoice_sent", "partially_paid", "paid", "closed"].includes(stage)) return "";
-    if (!canManageMoneyWorkflow()) return "";
-    const invoice = findInvoiceForTicket(ticket);
-    const paymentStatus = ticketInvoicePaymentStatus(ticket, invoice);
-    const amount = invoice ? `$${Number(invoice.total || 0).toFixed(2)}` : budgetCurrency(ticketInvoiceAmount(ticket));
-    const helper = invoice
-      ? `${invoice.number || "Invoice"} / ${invoice.status || "draft"} / ${amount}`
-      : "Prepare or link the final invoice before closing this ticket.";
-    return `<section class="ticket-drawer-card ticket-invoice-bridge">
-      <div class="ticket-drawer-card-heading">
-        <div>
-          <h4>Invoice and payment</h4>
-          <span>${escapeHtml(helper)}</span>
-        </div>
-        ${invoice ? documentStatusBadge(invoice) : ""}
-      </div>
-      ${invoice ? `<form class="ticket-invoice-form" data-ticket-invoice-form data-ticket-id="${escapeHtml(ticket.id || "")}">
-        <input type="hidden" name="invoice_id" value="${escapeHtml(invoice.id)}">
-        <label>Payment status
-          <select name="payment_status">${ticketInvoicePaymentOptions(paymentStatus)}</select>
-        </label>
-        <label class="ticket-invoice-check">
-          <input type="checkbox" name="invoice_finalized"${ticket.invoiceFinalized ? " checked" : ""}>
-          <span>Final invoice reviewed</span>
-        </label>
-        <div class="drawer-actions span-full">
-          <button type="submit">${buttonContent("Save Invoice Status", "save")}</button>
-          <button type="button" data-action="open-document" data-id="${escapeHtml(invoice.id)}">${buttonContent("Open Invoice", "open-document")}</button>
-          <button type="button" data-action="sync-square-document" data-id="${escapeHtml(invoice.id)}">${buttonContent("Sync Square", "sync-square-document")}</button>
-        </div>
-      </form>` : `<div class="ticket-invoice-empty">
-        <p>${escapeHtml(state.documentsReady || isDemoMode() ? "No final invoice is linked yet." : "Sales documents are not connected yet.")}</p>
-        <button type="button" data-action="create-ticket-invoice" data-id="${escapeHtml(ticket.id || "")}"${state.documentsReady || isDemoMode() ? "" : " disabled aria-disabled=\"true\""}>
-          ${buttonContent("Prepare Final Invoice", "create-invoice")}
-        </button>
-      </div>`}
-    </section>`;
-  }
-
-  function renderTicketDetailCommandCenter(ticket) {
-    const isCanonical = ticket?.source === "ticket";
-    const transitions = ticketTransitionOptions(ticket || {});
-    const useUnifiedCloseout = isCanonical && ["field_work_complete", "completion_review", "invoice_review", "invoice_sent", "partially_paid", "paid"].includes(ticketStage(ticket));
-    const ownerCanUnifyAndOverride = !isCanonical && currentSessionRole() === "owner" && transitions.length;
-    return `<section class="ticket-drawer-card ticket-command-card" data-ticket-command-panel data-ticket-id="${escapeHtml(ticket?.id || "")}">
-      <div class="ticket-drawer-card-heading">
-        <div>
-          <h4>Ticket command center</h4>
-          <span>${escapeHtml(isCanonical ? "Move this ticket through the workflow." : "Create or open the unified ticket before moving stages.")}</span>
-        </div>
-      </div>
-      ${renderTicketNextMovePanel(ticket, transitions, isCanonical)}
-      <label class="ticket-command-field">Next action
-        <input data-ticket-next-action-input value="${escapeHtml(ticket?.nextAction || "")}" placeholder="What needs to happen next?">
-      </label>
-      <label class="ticket-command-field">Internal note
-        <textarea data-ticket-transition-notes rows="3" placeholder="Optional note for the ticket history...">${escapeHtml(ticket?.internalNotes || "")}</textarea>
-      </label>
-      ${isCanonical ? `${useUnifiedCloseout ? `<p class="ticket-drawer-note">Use the Completion checklist below to finish this ticket. No stage-by-stage closeout handoffs are required.</p>` : `<div class="ticket-transition-grid">
-        ${transitions.length ? transitions.map((item) => {
-          const missing = item.missing || [];
-          const ownerOverride = missing.length && currentSessionRole() === "owner";
-          const disabled = missing.length && !ownerOverride ? " disabled aria-disabled=\"true\"" : "";
-          return ownerOverride
-            ? `<button type="button" class="is-owner-override" data-action="owner-force-ticket-stage" data-id="${escapeHtml(ticket.id)}" data-stage="${escapeHtml(item.to)}" data-next-action="${escapeHtml(item.nextAction)}"><strong>${escapeHtml(`Owner Override: ${item.label}`)}</strong><small>${escapeHtml(`Bypass missing: ${missing.join(", ")}`)}</small></button>`
-            : `<button type="button" data-action="transition-ticket-stage" data-id="${escapeHtml(ticket.id)}" data-stage="${escapeHtml(item.to)}" data-next-action="${escapeHtml(item.nextAction)}"${disabled}><strong>${escapeHtml(item.label)}</strong><small>${escapeHtml(missing.length ? `Missing: ${missing.join(", ")}` : item.detail)}</small></button>`;
-        }).join("") : `<p class="ticket-drawer-note">No more workflow moves are available from ${escapeHtml(ticket.stageLabel || "this stage")}.</p>`}
-      </div>`}
-      ${renderTicketBudgetBridge(ticket)}
-      <div class="drawer-actions ticket-command-actions">
-        <button type="button" data-action="save-ticket-command" data-id="${escapeHtml(ticket.id)}">${buttonContent("Save Ticket Note", "save")}</button>
-      </div>` : `${ownerCanUnifyAndOverride ? `<div class="ticket-transition-grid">
-        ${transitions.map((item) => `<button type="button" class="is-owner-override" data-action="owner-force-source-ticket-stage" data-ticket-source="${escapeHtml(ticket.sourceType || ticket.source || "")}" data-id="${escapeHtml(ticket.sourceId || ticket.id || "")}" data-stage="${escapeHtml(item.to)}" data-next-action="${escapeHtml(item.nextAction)}"><strong>${escapeHtml(`Owner Override: ${item.label}`)}</strong><small>Create the unified ticket and bypass missing requirements.</small></button>`).join("")}
-      </div>` : ""}<p class="ticket-drawer-note">This is still a source record preview. Open or create the unified ticket to use lifecycle controls.</p>`}
-    </section>`;
-  }
 
   function ticketWorkspaceTarget(ticket) {
     const stage = ticketStage(ticket || {});
@@ -14181,41 +13220,6 @@
     return null;
   }
 
-  function renderTicketDrawerActionStrip(ticket) {
-    if (!ticket) return "";
-    const transitions = ticketTransitionOptions(ticket);
-    const command = ticketCommandStatus(ticket, transitions);
-    const workspace = ticketWorkspaceTarget(ticket);
-    const sourceAction = ticketSourceQuickAction(ticket);
-    const blockers = command.blockers || [];
-    const readinessTitle = blockers.length
-      ? `${blockers.length} blocker${blockers.length === 1 ? "" : "s"}`
-      : command.state === "ready"
-        ? "Ready to move"
-        : command.state === "complete"
-          ? "Complete"
-          : "Needs review";
-    const readinessDetail = blockers.length
-      ? `Missing ${blockers.slice(0, 2).join(", ")}${blockers.length > 2 ? ` and ${blockers.length - 2} more` : ""}.`
-      : command.detail || "No blocking requirements detected.";
-    const nextTitle = command.move
-      ? ticketStageLabel(command.move.to)
-      : ticket.nextAction || "Review next action";
-    const nextDetail = command.move
-      ? command.move.detail || command.nextAction || "Ready for the next workflow move."
-      : command.detail || ticket.detail || "Review the ticket details and choose the next step.";
-    return `<section class="ticket-drawer-action-strip ${blockers.length ? "is-blocked" : "is-ready"}" aria-label="Ticket action summary">
-      <div class="ticket-drawer-action-strip-copy">
-        <span>${escapeHtml(workspace.label)} / ${escapeHtml(readinessTitle)}</span>
-        <strong>${escapeHtml(nextTitle)}</strong>
-        <small>${escapeHtml(blockers.length ? readinessDetail : nextDetail)}</small>
-      </div>
-      <div class="ticket-drawer-action-strip-actions">
-        <button type="button" data-action="${escapeHtml(workspace.action)}">${buttonContent(`Open ${workspace.label}`, workspace.action)}</button>
-        ${sourceAction ? `<button type="button" data-action="${escapeHtml(sourceAction.action)}" data-id="${escapeHtml(sourceAction.id)}">${buttonContent(sourceAction.label, sourceAction.action)}</button>` : ""}
-      </div>
-    </section>`;
-  }
 
   function ticketHandoffActions(ticket) {
     if (!ticket) return [];
@@ -14275,34 +13279,6 @@
     return [];
   }
 
-  function renderTicketHandoffActions(ticket) {
-    const actions = ticketHandoffActions(ticket);
-    if (!actions.length) return "";
-    return `<section class="ticket-drawer-card ticket-handoff-card">
-      <div class="ticket-drawer-card-heading">
-        <h4>Workflow handoff</h4>
-        <span>${escapeHtml(ticket.ownerLabel || "Unassigned")}</span>
-      </div>
-      <div class="ticket-handoff-actions">
-        ${actions.map((item) => {
-          const action = item.action || ticket.action || "open-ticket";
-          const actionId = ticketActionTargetId(ticket, action);
-          const statusSource = ticket.sourceType || ticket.source;
-          const statusId = ticket.sourceId || ticket.id;
-          const canonicalTicketAttr = ticket.source === "ticket" ? ` data-ticket-id="${escapeHtml(ticket.id)}"` : "";
-          const attributes = item.status
-            ? ["quote", "job"].includes(statusSource)
-              ? `data-action="advance-ticket-status" data-ticket-source="${escapeHtml(statusSource)}"${canonicalTicketAttr} data-id="${escapeHtml(statusId)}" data-status="${escapeHtml(item.status)}"`
-              : "disabled"
-            : `data-action="${escapeHtml(action)}" data-id="${escapeHtml(actionId)}"`;
-          return `<button type="button" ${attributes}>
-            <strong>${escapeHtml(item.label)}</strong>
-            <small>${escapeHtml(item.detail || "")}</small>
-          </button>`;
-        }).join("")}
-      </div>
-    </section>`;
-  }
 
   function openTicketCreateDrawer(ticketType = "quote", prefill = {}) {
     if (!els.detailDrawer || !els.detailContent) return;
@@ -14452,52 +13428,6 @@
     if (stateLabel) stateLabel.textContent = "Draft saved";
   }
 
-  function renderTicketSourceActions(ticket) {
-    const sourceType = ticket.sourceType || ticket.source;
-    const sourceId = ticket.sourceId || ticket.id;
-    const actionHeading = `<div class="ticket-drawer-card-heading">
-      <div>
-        <h4>Source shortcuts</h4>
-        <span>Jump back to the original record when you need more context.</span>
-      </div>
-    </div>`;
-    if (sourceType === "quote") {
-      return `<section class="ticket-drawer-card ticket-source-actions-card">
-        ${actionHeading}
-        <div class="drawer-actions ticket-source-actions">
-        <button type="button" data-action="open-submission" data-id="${escapeHtml(sourceId)}">${buttonContent("Open Quote Details", "open-submission")}</button>
-        <button type="button" data-action="sync-contact" data-id="${escapeHtml(sourceId)}">${buttonContent("Sync Contact", "sync-contact")}</button>
-        <button type="button" data-action="create-estimate" data-id="${escapeHtml(sourceId)}">${buttonContent("Create Estimate", "create-estimate")}</button>
-        <button type="button" data-action="create-invoice" data-id="${escapeHtml(sourceId)}">${buttonContent("Draft Invoice", "create-invoice")}</button>
-      </div>
-      </section>`;
-    }
-    if (sourceType === "job") {
-      return `<section class="ticket-drawer-card ticket-source-actions-card">
-        ${actionHeading}
-        <div class="drawer-actions ticket-source-actions">
-        <button type="button" data-action="edit-job" data-id="${escapeHtml(sourceId)}">${buttonContent("Open Visit Details", "edit-job")}</button>
-        <button type="button" data-action="go-route-planner">${buttonContent("Open Route", "go-route-planner")}</button>
-        <button type="button" data-action="go-tools">${buttonContent("Open Tools", "go-tools")}</button>
-        ${ticket.stage !== "field_work_complete" && ticket.stage !== "completion_review" && ticket.stage !== "closed" ? `<button type="button" data-action="complete-job" data-id="${escapeHtml(sourceId)}">${buttonContent("Mark Work Complete", "complete-reminder")}</button>` : ""}
-      </div>
-      </section>`;
-    }
-    if (sourceType === "document") {
-      return `<section class="ticket-drawer-card ticket-source-actions-card">
-        ${actionHeading}
-        <div class="drawer-actions ticket-source-actions">
-        <button type="button" data-action="open-document" data-id="${escapeHtml(sourceId)}">${buttonContent("Open Document", "open-document")}</button>
-      </div>
-      </section>`;
-    }
-    return `<section class="ticket-drawer-card ticket-source-actions-card">
-      ${actionHeading}
-      <div class="drawer-actions ticket-source-actions">
-      <button type="button" disabled>${buttonContent("Source Record Pending", "open-document")}</button>
-    </div>
-    </section>`;
-  }
 
   function renderSourceTicketContext(ticket) {
     if (!ticket) return "";
@@ -14522,68 +13452,6 @@
       .sort((a, b) => String(b.createdAtRaw || "").localeCompare(String(a.createdAtRaw || "")));
   }
 
-  function renderTicketHistory(ticket) {
-    if (!ticket || ticket.source !== "ticket") return "";
-    const history = ticketHistoryFor(ticket).slice(0, 8);
-    return `<section class="ticket-drawer-card ticket-history-card" id="ticket-history">
-      <div class="ticket-drawer-card-heading">
-        <h4>Ticket history</h4>
-        <span>${history.length ? `${history.length} recent` : "No events yet"}</span>
-      </div>
-      ${history.length ? `<div class="ticket-history-list">
-        ${history.map((event) => {
-          const stageDetail = event.fromStageLabel || event.toStageLabel
-            ? [event.fromStageLabel, event.toStageLabel].filter(Boolean).join(" to ")
-            : "";
-          const oldValue = event.oldValue && typeof event.oldValue === "object"
-            ? Object.entries(event.oldValue).slice(0, 3).map(([key, value]) => `${titleCase(key)}: ${String(value)}`).join(", ")
-            : "";
-          const newValue = event.newValue && typeof event.newValue === "object"
-            ? Object.entries(event.newValue).slice(0, 3).map(([key, value]) => `${titleCase(key)}: ${Array.isArray(value) ? value.join(", ") : String(value)}`).join(", ")
-            : "";
-          return `<article class="ticket-history-row">
-            <span aria-hidden="true"></span>
-            <div>
-              <strong>${escapeHtml(event.title)}</strong>
-              <p>${escapeHtml(event.notes || "Ticket record updated.")}</p>
-              <dl>
-                <div><dt>Actor</dt><dd>${escapeHtml(event.actorEmail || "Dashboard")}</dd></div>
-                <div><dt>Time</dt><dd>${escapeHtml(event.createdAt || "Not recorded")}</dd></div>
-                ${stageDetail ? `<div><dt>Change</dt><dd>${escapeHtml(stageDetail)}</dd></div>` : ""}
-                ${oldValue ? `<div><dt>Before</dt><dd>${escapeHtml(oldValue)}</dd></div>` : ""}
-                ${newValue ? `<div><dt>After</dt><dd>${escapeHtml(newValue)}</dd></div>` : ""}
-              </dl>
-            </div>
-          </article>`;
-        }).join("")}
-      </div>` : `<p class="ticket-drawer-note">History will appear here after this ticket is created or moved through the workflow.</p>`}
-    </section>`;
-  }
-
-  function renderTicketDocumentSource(document) {
-    if (!document) return "";
-    const amountDue = document.squareAmountDueCents !== null
-      ? formatCurrency(document.squareAmountDueCents, document.squareCurrency)
-      : `$${Number(document.total || 0).toFixed(2)}`;
-    const documentType = document.type === "invoice" ? "Invoice" : "Estimate / Quote";
-    const notes = document.notes || document.lineItems?.[0]?.description || "No document notes.";
-    return `<section class="ticket-drawer-card ticket-document-source-card">
-      <div class="ticket-drawer-card-heading">
-        <div>
-          <p class="eyebrow">Source Document</p>
-          <h4>${escapeHtml(document.number || document.title || "Financial document")}</h4>
-        </div>
-        ${documentStatusBadge(document)}
-      </div>
-      <div class="drawer-grid ticket-drawer-grid">
-        <div class="drawer-field"><span>Type</span>${escapeHtml(documentType)}</div>
-        <div class="drawer-field"><span>Client</span>${escapeHtml(document.clientName || "No client")}</div>
-        <div class="drawer-field"><span>Amount</span>${escapeHtml(amountDue)}</div>
-        <div class="drawer-field"><span>Due</span>${escapeHtml(document.dueDate || "No due date")}</div>
-        <div class="drawer-field span-full"><span>Notes</span>${escapeHtml(notes)}</div>
-      </div>
-    </section>`;
-  }
 
   function findTicketForDrawer(source, id) {
     const sourceText = String(source || "").trim();
@@ -14618,95 +13486,6 @@
     return tickets.find((item) => item.id === idText) || null;
   }
 
-  function renderTicketDrawerFallback(source, id, message = "This ticket could not be opened.", detail = "The dashboard could not match this button to a ticket record.") {
-    return `<div class="drawer-content ticket-detail-drawer">
-      <p class="eyebrow">Unified Job Ticket</p>
-      <div class="ticket-drawer-heading">
-        <div>
-          <h3>Ticket unavailable</h3>
-          <p>${escapeHtml(message)}</p>
-        </div>
-      </div>
-      <section class="ticket-drawer-card">
-        <div class="ticket-drawer-card-heading">
-          <div>
-            <h4>What happened</h4>
-            <span>${escapeHtml(detail)}</span>
-          </div>
-        </div>
-        <div class="drawer-grid ticket-drawer-grid">
-          <div class="drawer-field"><span>Source</span>${escapeHtml(source || "Not provided")}</div>
-          <div class="drawer-field"><span>Record ID</span>${escapeHtml(id || "Not provided")}</div>
-        </div>
-        <div class="drawer-actions">
-          <button type="button" data-action="go-tickets">${buttonContent("Open Tickets", "open-ticket")}</button>
-          <button type="button" data-action="close-drawer">${buttonContent("Close", "close")}</button>
-        </div>
-      </section>
-    </div>`;
-  }
-
-  function renderUnifiedTicketHeader(ticket) {
-    const blocker = ticket.blockers?.[0] || "";
-    return `<header class="ticket-unified-header" data-drawer-breadcrumbs>
-      <div class="ticket-unified-header-top">
-        <button type="button" class="ticket-unified-back" data-action="close-drawer" aria-label="Close ticket"><span class="ticket-desktop-label">&#8592; Back to ${escapeHtml(detailDrawerSectionLabel())}</span><span class="ticket-mobile-label">&#8592; Tickets</span></button>
-        <div class="ticket-unified-header-actions">
-          <button type="button" class="secondary-action" data-action="focus-ticket-section" data-section="overview" data-id="${escapeHtml(ticket.id)}"><span class="ticket-desktop-label">Edit Ticket</span><span class="ticket-mobile-label">Edit</span></button>
-          <details class="ticket-more-actions">
-            <summary><span class="ticket-desktop-label">More actions</span><span class="ticket-mobile-label">More</span></summary>
-            <div>
-              <button type="button" data-action="copy-ticket-link" data-id="${escapeHtml(ticket.id)}">Copy ticket link</button>
-              <button type="button" data-action="focus-ticket-section" data-section="scheduling" data-id="${escapeHtml(ticket.id)}">Reassign owner</button>
-              <button type="button" data-action="focus-ticket-section" data-section="owner-controls" data-id="${escapeHtml(ticket.id)}">Change status</button>
-              ${["closed", "cancelled"].includes(ticketStage(ticket)) ? `<button type="button" data-action="focus-ticket-section" data-section="owner-controls" data-id="${escapeHtml(ticket.id)}">Reopen ticket</button>` : `<button type="button" class="danger" data-action="focus-ticket-section" data-section="owner-controls" data-id="${escapeHtml(ticket.id)}">Cancel ticket</button>`}
-              ${canManageTicketTrash() ? `<button type="button" class="danger" data-action="trash-ticket" data-id="${escapeHtml(ticket.id)}">Move to Trash</button>` : ""}
-            </div>
-          </details>
-          <button type="button" class="ticket-unified-close" data-action="close-drawer" aria-label="Close ticket">&#215;</button>
-        </div>
-      </div>
-      <div class="ticket-unified-title-row">
-        <div><span class="ticket-number">${escapeHtml(ticket.number)}</span><h3>${escapeHtml(ticket.title)}</h3><p>${escapeHtml(ticket.customer)}${ticket.property ? ` / ${escapeHtml(ticket.property)}` : ""}</p></div>
-        <span class="status-badge ticket-stage">${escapeHtml(ticket.stageLabel)}</span>
-      </div>
-      <dl class="ticket-unified-meta">
-        <div><dt>Priority</dt><dd>${escapeHtml(ticket.priority || "Normal")}</dd></div>
-        <div><dt>Scheduled</dt><dd>${escapeHtml(formatDate(ticket.scheduledDate || ticket.dateRaw) || "Not scheduled")}</dd></div>
-        <div><dt>Owner</dt><dd>${escapeHtml(ticket.ownerLabel || "Unassigned")}</dd></div>
-        <div><dt>Next action</dt><dd>${escapeHtml(ticket.nextAction || "Review ticket")}</dd></div>
-        <div class="${blocker ? "has-blocker" : ""}"><dt>Primary blocker</dt><dd>${escapeHtml(blocker || "None")}</dd></div>
-      </dl>
-    </header>`;
-  }
-
-  function renderUnifiedTicketSummaryRail(ticket) {
-    const { completed, notApplicable, overrides } = ticketCompletionChecklistState(ticket);
-    const resolved = ticketCompletionChecklistItems.filter((item) => ticketCompletionItemComplete(ticket, item.key, completed) || notApplicable[item.key] || overrides[item.key]).length;
-    const percent = Math.round((resolved / ticketCompletionChecklistItems.length) * 100);
-    const tasks = ticketWorkComponents(ticket);
-    const assignments = [...new Set(tasks.map((task) => task.assigneeLabel).filter((label) => label && label !== "Unassigned"))].slice(0, 5);
-    const invoice = findInvoiceForTicket(ticket);
-    const financialInvoice = invoice && (invoice.invoice_number || Object.prototype.hasOwnProperty.call(invoice, "amount_paid"));
-    const invoiceSummary = financialInvoice ? financialCalculator().invoiceSummary(invoice) : null;
-    const quote = findQuoteForTicket(ticket);
-    const history = ticketHistoryFor(ticket).slice(0, 4);
-    return `<aside class="ticket-unified-summary" aria-label="Ticket summary">
-      <section><h4>Overall Progress</h4><div class="ticket-progress-summary"><span class="ticket-progress-ring" style="--ticket-progress:${percent}%"><strong>${percent}%</strong></span><div><strong>${resolved} of ${ticketCompletionChecklistItems.length}</strong><small>requirements resolved</small></div></div></section>
-      <section><h4>Assignments</h4>${assignments.length ? `<ul>${assignments.map((label) => `<li><span>${escapeHtml(initialsForName(label, ""))}</span><strong>${escapeHtml(label)}</strong></li>`).join("")}</ul>` : `<p>No individual task assignments yet.</p>`}</section>
-      <section><h4>Key Dates</h4><dl><div><dt>Scheduled</dt><dd>${escapeHtml(formatDate(ticket.scheduledDate || ticket.dateRaw) || "Not set")}</dd></div><div><dt>Due</dt><dd>${escapeHtml(formatDate(ticket.dueDate) || "Not set")}</dd></div><div><dt>Created</dt><dd>${escapeHtml(formatDate(ticket.createdAtRaw) || "Not set")}</dd></div></dl></section>
-      ${canManageMoneyWorkflow() ? `<section><h4>Financial Summary</h4><dl><div><dt>Quote total</dt><dd>${quote ? ticketMoneyText(quote.total) : "Not quoted"}</dd></div><div><dt>Invoice total</dt><dd>${invoiceSummary ? moneyCurrency(invoiceSummary.total) : invoice ? ticketMoneyText(invoice.total) : "Not invoiced"}</dd></div><div><dt>Balance</dt><dd>${invoiceSummary ? moneyCurrency(invoiceSummary.balance) : "Not recorded"}</dd></div></dl></section>` : ""}
-      <section><h4>Recent Activity</h4>${history.length ? `<ol>${history.map((event) => `<li><strong>${escapeHtml(event.title)}</strong><small>${escapeHtml(event.createdAt || "")}</small></li>`).join("")}</ol>` : `<p>No audit events yet.</p>`}</section>
-    </aside>`;
-  }
-
-  function renderUnifiedTicketOwnerFooter(ticket) {
-    if (currentSessionRole() !== "owner") return "";
-    return `<footer class="ticket-owner-footer">
-      <span>Owner controls are audited. Overrides never create evidence or mark an unpaid invoice Paid.</span>
-      <button type="button" data-action="review-complete-all-parts" data-id="${escapeHtml(ticket.id)}">Complete All Parts</button>
-    </footer>`;
-  }
 
   function renderTicketOverrideReview(ticket) {
     const { completed, notApplicable, overrides } = ticketCompletionChecklistState(ticket);
@@ -14727,63 +13506,23 @@
   }
 
   function openTicketDrawer(source, id, options = {}) {
-    if (!els.detailDrawer || !els.detailContent) return;
     const ticket = findTicketForDrawer(source, id);
-    if (!ticket) {
-      openDetailDrawer();
-      els.detailContent.innerHTML = renderTicketDrawerFallback(source, id);
-      return;
-    }
-    const sourceType = ticket.sourceType || ticket.source;
-    const sourceId = ticket.sourceId || ticket.id;
-    const sourceItem = sourceType === "quote"
-      ? findSubmission(sourceId)
-      : sourceType === "job"
-        ? state.data.jobs.find((item) => item.id === sourceId)
-        : sourceType === "document"
-          ? state.data.documents.find((item) => item.id === sourceId)
-          : null;
-    const routeSection = options.section || ticketDrawerRouteState().section || "overview";
-    const panel = els.detailDrawer.querySelector(".drawer-panel");
-    const previousScroll = options.preserveScroll ? panel?.scrollTop || 0 : 0;
-    const openSections = options.preserveOpenSections
-      ? qsa("[data-ticket-section][open]", els.detailContent).map((item) => item.dataset.ticketSection)
-      : [];
-    try {
-      state.ticketDrawerRendering = true;
-      state.activeTicketDrawerId = ticket.id;
-      state.activeTicketDrawerSection = routeSection;
-      els.detailDrawer.classList.add("has-unified-ticket");
-      els.detailDrawer.querySelector(":scope > .drawer-panel > .drawer-close")?.style.setProperty("display", "none", "important");
-      els.detailContent.innerHTML = `<div class="drawer-content ticket-detail-drawer unified-ticket-drawer">
-        ${renderUnifiedTicketHeader(ticket)}
-        <div class="ticket-unified-layout">
-          <main class="ticket-unified-main">${renderTicketWorkbench(ticket, { openSection: routeSection, sourceItem })}</main>
-          ${renderUnifiedTicketSummaryRail(ticket)}
-        </div>
-        <div data-ticket-override-modal-slot></div>
-        ${renderUnifiedTicketOwnerFooter(ticket)}
-      </div>`;
-      qsa("[data-ticket-workbench-form]", els.detailContent).forEach(restoreTicketWorkbenchDraft);
-      qsa("[data-quote-builder]", els.detailContent).forEach(updateQuoteBuilderPreview);
-      openSections.forEach((key) => {
-        const section = els.detailContent.querySelector(`[data-ticket-section="${cssEscape(key)}"]`);
-        if (section) section.open = true;
-      });
-      openDetailDrawer();
-      requestAnimationFrame(() => {
-        if (panel && options.preserveScroll) panel.scrollTop = previousScroll;
-      });
-      window.setTimeout(() => {
-        state.ticketDrawerRendering = false;
-        if (!options.fromRoute) updateTicketDrawerRoute(ticket.id, routeSection, { replace: options.replaceRoute === true || Boolean(ticketDrawerRouteState().ticketId) });
-      }, 0);
-    } catch (error) {
-      state.ticketDrawerRendering = false;
-      console.error("Ticket drawer failed to render", error);
-      openDetailDrawer();
-      els.detailContent.innerHTML = renderTicketDrawerFallback(source, id, error.message || "The ticket matched, but the detail panel could not render it.", "The ticket matched, but the detail panel hit a rendering error.");
-    }
+    if (!ticket) { setDashboardState("This ticket could not be found. Refresh and try again.", "error"); return; }
+    const aliases = { intake:"details", scheduling:"schedule", "arrival-photos":"photos", "completion-photos":"photos", "customer-approval":"quote", "internal-costing":"costs", closeout:"costs" };
+    const requested = aliases[options.section] || options.section || "overview";
+    const section = UNIFIED_TICKET_NAV.some(([key]) => key === requested) ? requested : "overview";
+    if (state.activeSection !== "tickets") state.unifiedTicketReturnSection = state.activeSection === "documents" ? "documents" : state.activeSection === "calendar" ? "calendar" : "tickets";
+    closeSubmissionDrawer({ immediate: true });
+    state.unifiedTicketVisible = true;
+    state.unifiedTicketSelectedId = ticket.id;
+    state.unifiedTicketSection = section;
+    state.unifiedTicketEditing = false;
+    state.activeTicketDrawerId = ticket.id;
+    state.activeTicketDrawerSection = section;
+    setActiveSection("tickets");
+    renderUnifiedTicketOverview();
+    if (!options.fromRoute) updateTicketDrawerRoute(ticket.id, section, { replace: options.replaceRoute === true });
+    if (!options.preserveScroll) qs(".ut-back")?.scrollIntoView({ block: "start" });
   }
 
   function rerenderOpenTicketDrawer(ticketId = state.activeTicketDrawerId, options = {}) {
@@ -14957,13 +13696,6 @@
     return dashboardWorkspaceLinks.filter((item) => canAccessDashboardSection(item.id, role));
   }
 
-  function renderWorkspaceSwitcher(activeId) {
-    const activeSection = dashboardPrimarySection(activeId);
-    const links = visibleDashboardWorkspaceLinks();
-    return `<nav class="ticket-workspace-switcher" aria-label="Job ticket workspaces">
-      ${links.map((item) => `<a href="${escapeHtml(item.href)}" class="${item.id === activeSection ? "is-active" : ""}" data-dashboard-link="${escapeHtml(item.id)}">${escapeHtml(item.label)}</a>`).join("")}
-    </nav>`;
-  }
 
   function renderWorkspaceDataState(section = state.activeSection) {
     const normalized = normalizeDashboardSection(section);
@@ -15046,48 +13778,6 @@
       .sort((a, b) => ticketStageLabel(a).localeCompare(ticketStageLabel(b)));
   }
 
-  function renderTicketBoardControls(tickets = [], filteredTickets = []) {
-    const stages = uniqueTicketStages(tickets);
-    const owners = [
-      ["sales", "Leads"],
-      ["accounting", "Money"],
-      ["ready", "Ready"],
-      ["field", "Work"],
-      ["review", "Review"]
-    ].filter(([lane]) => tickets.some((ticket) => ticketInLane(ticket, [lane])));
-    const stageValue = stages.includes(state.ticketBoardStageFilter) ? state.ticketBoardStageFilter : "All";
-    const ownerValue = owners.some(([lane]) => lane === state.ticketBoardOwnerFilter) ? state.ticketBoardOwnerFilter : "All";
-
-    return `<section class="ticket-board-controls" aria-label="Ticket board controls">
-      <div class="ticket-board-controls-heading">
-        <div>
-          <p class="eyebrow">Board Filters</p>
-          <h4>Find the right ticket fast</h4>
-          <p>Search, narrow by stage, or isolate the owner lane before opening the detailed workflow board.</p>
-        </div>
-        <span class="ticket-board-result-count" data-ticket-board-result-count>${state.ticketBoardCloseoutOnly ? "Closeout review · " : ""}${escapeHtml(filteredTickets.length)} of ${escapeHtml(tickets.length)} shown</span>
-      </div>
-      <div class="ticket-board-search">
-        <label for="ticket-board-search">Search tickets</label>
-        <input id="ticket-board-search" type="search" placeholder="Search ticket, client, property, next action..." value="${escapeHtml(state.ticketBoardSearch || "")}" data-ticket-board-search>
-      </div>
-      <div class="ticket-board-filter-row">
-        <label>Stage
-          <select data-ticket-board-stage-filter>
-            <option value="All">All stages</option>
-            ${stages.map((stage) => `<option value="${escapeHtml(stage)}"${stage === stageValue ? " selected" : ""}>${escapeHtml(ticketStageLabel(stage))}</option>`).join("")}
-          </select>
-        </label>
-        <label>Owner
-          <select data-ticket-board-owner-filter>
-            <option value="All">All owners</option>
-            ${owners.map(([lane, label]) => `<option value="${escapeHtml(lane)}"${lane === ownerValue ? " selected" : ""}>${escapeHtml(label)}</option>`).join("")}
-          </select>
-        </label>
-        <button type="button" data-action="reset-ticket-board-filters">Reset Filters</button>
-      </div>
-    </section>`;
-  }
 
   const ownerKanbanColumns = [
     { key: "todo", label: "To Do", detail: "Unassigned and assigned work ready to start" },
@@ -15533,19 +14223,6 @@
     return "";
   }
 
-  function renderOwnerKanbanComponentList(components = []) {
-    if (state.ownerKanbanGroupBy === "none") return components.map(renderOwnerWorkComponentCard).join("");
-    const groups = new Map();
-    components.forEach((component) => {
-      const label = workComponentGroupLabel(component);
-      if (!groups.has(label)) groups.set(label, []);
-      groups.get(label).push(component);
-    });
-    return [...groups.entries()].map(([label, grouped]) => `<section class="component-kanban-swimlane">
-      <header><strong>${escapeHtml(label)}</strong><span>${escapeHtml(grouped.length)}</span></header>
-      ${grouped.map(renderOwnerWorkComponentCard).join("")}
-    </section>`).join("");
-  }
 
   function renderOwnerKanbanBoardLegacy(tickets = []) {
     const components = dashboardWorkComponents(tickets);
@@ -15656,60 +14333,6 @@
     }).join("");
   }
 
-  function renderOwnerKanbanTicketSwimlane(allComponents = [], visibleComponents = []) {
-    const first = allComponents[0] || visibleComponents[0] || {};
-    const ticketId = first.ticketId || "";
-    const collapsed = state.ownerKanbanCollapsedTicketIds.has(ticketId);
-    const doneExpanded = state.ownerKanbanExpandedDoneTicketIds.has(ticketId);
-    const completed = allComponents.filter((component) => component.status === "done").length;
-    const blocked = allComponents.filter((component) => component.status === "blocked");
-    const nextComponent = sortOwnerKanbanComponents(allComponents.filter((component) => component.status !== "done"))[0];
-    const nextAction = blocked[0]
-      ? `Blocked: ${blocked[0].blockerReason || blocked[0].label}`
-      : nextComponent
-        ? `Next: ${nextComponent.label}`
-        : "All work components complete";
-    const customerProperty = [first.customer, first.property].filter(Boolean).join(" / ") || "Customer or property not set";
-    const priority = String(first.priority || "Normal");
-    const teamCounts = ownerKanbanTeamCounts(allComponents);
-    return `<section class="component-ticket-swimlane${collapsed ? " is-collapsed" : ""}" data-ticket-swimlane data-ticket-id="${escapeHtml(ticketId)}" role="listitem">
-      <header class="component-ticket-swimlane-head">
-        <button type="button" class="component-ticket-collapse" data-action="toggle-work-ticket-swimlane" data-id="${escapeHtml(ticketId)}" aria-expanded="${!collapsed}" aria-label="${collapsed ? "Expand" : "Collapse"} ${escapeHtml(first.ticketNumber || "ticket")}">${collapsed ? "&#8250;" : "&#8964;"}</button>
-        <div class="component-ticket-identity">
-          <span>${escapeHtml(first.ticketNumber || "Ticket")}${priority.toLowerCase() !== "normal" ? ` / ${escapeHtml(priority)}` : ""}</span>
-          <strong>${escapeHtml(first.ticketTitle || "Untitled ticket")}</strong>
-          <small>${escapeHtml(customerProperty)}</small>
-          <div class="component-ticket-team-summary" aria-label="Ticket task teams">
-            ${ownerKanbanTeams.map((team) => `<span class="is-${escapeHtml(slug(team))}">${escapeHtml(team)} <b>${escapeHtml(teamCounts[team] || 0)}</b></span>`).join("")}
-          </div>
-        </div>
-        <div class="component-ticket-next${blocked.length ? " is-blocked" : ""}">
-          <span>${escapeHtml(nextAction)}</span>
-          ${blocked.length ? `<small>${escapeHtml(blocked.length)} blocked step${blocked.length === 1 ? "" : "s"}</small>` : ""}
-        </div>
-        <div class="component-ticket-progress" aria-label="${escapeHtml(`${completed} of ${allComponents.length} steps complete`)}">
-          <span><b>${escapeHtml(completed)}</b> / ${escapeHtml(allComponents.length)}</span>
-          <progress max="${escapeHtml(allComponents.length || 1)}" value="${escapeHtml(completed)}">${escapeHtml(completed)} of ${escapeHtml(allComponents.length)}</progress>
-        </div>
-        <button type="button" class="component-ticket-open" data-action="open-ticket" data-ticket-source="ticket" data-id="${escapeHtml(ticketId)}">Open Ticket</button>
-      </header>
-      ${collapsed ? "" : `<div class="component-ticket-swimlane-grid">
-        ${ownerKanbanColumns.map((column) => {
-          const columnComponents = visibleComponents.filter((component) => ownerKanbanColumnIncludes(column.key, component.status));
-          const shownComponents = column.key === "done" && !doneExpanded ? columnComponents.slice(0, 2) : columnComponents;
-          const hiddenDone = columnComponents.length - shownComponents.length;
-          return `<section class="component-ticket-status-cell owner-kanban-column--${escapeHtml(column.key)}" data-owner-kanban-column="${escapeHtml(column.key)}" data-column-label="${escapeHtml(column.label)}" aria-label="${escapeHtml(`${column.label} for ${first.ticketNumber || "ticket"}`)}">
-            <div class="component-ticket-status-list">
-              ${renderOwnerKanbanTeamGroups(shownComponents)}
-              ${columnComponents.length === 0 ? `<span class="component-ticket-empty" aria-hidden="true">-</span>` : ""}
-              ${hiddenDone > 0 ? `<button type="button" class="component-ticket-done-toggle" data-action="toggle-work-ticket-completed" data-id="${escapeHtml(ticketId)}">+${escapeHtml(hiddenDone)} more complete</button>` : ""}
-              ${column.key === "done" && doneExpanded && columnComponents.length > 2 ? `<button type="button" class="component-ticket-done-toggle" data-action="toggle-work-ticket-completed" data-id="${escapeHtml(ticketId)}">Show fewer</button>` : ""}
-            </div>
-          </section>`;
-        }).join("")}
-      </div>`}
-    </section>`;
-  }
 
   function renderOwnerKanbanBoard(tickets = []) {
     return renderOwnerKanbanBoardLegacy(tickets);
@@ -15819,19 +14442,6 @@
     </section>`;
   }
 
-  function renderHomeNextStepCard(item = {}) {
-    return `<article class="home-next-step-card">
-      <span class="home-next-step-kicker">${escapeHtml(item.kicker || "Next")}</span>
-      <div class="home-next-step-main">
-        <strong>${escapeHtml(item.value ?? 0)}</strong>
-        <div>
-          <h4>${escapeHtml(item.title || "")}</h4>
-          <p>${escapeHtml(item.detail || "")}</p>
-        </div>
-      </div>
-      ${item.action ? `<button type="button" data-action="${escapeHtml(item.action)}">${escapeHtml(item.actionLabel || "Open")}</button>` : ""}
-    </article>`;
-  }
 
   function homeFocusTitle(item = {}) {
     return item.title || item.customer || item.property || item.number || "Untitled item";
@@ -15857,58 +14467,6 @@
     </article>`;
   }
 
-  function renderHomeFocusPanel({ todayTickets = [], overdueTickets = [], leadTickets = [], workTickets = [], moneyTickets = [], reviewTickets = [], actions = [] }) {
-    const lateAndToday = [...overdueTickets, ...todayTickets];
-    const officeItems = [...leadTickets, ...actions.filter((item) => ["quote", "lead", "follow-up"].some((word) => String(item.type || item.title || "").toLowerCase().includes(word)))];
-    const closeoutItems = [...moneyTickets, ...reviewTickets];
-    return `<section class="home-focus-panel" aria-label="Daily handoff focus">
-      <div class="ticket-flow-heading">
-        <div>
-          <p class="eyebrow">Daily Focus</p>
-          <h3>Start with the next handoff</h3>
-          <p>Use this board to see what needs the first pass today before jumping into the full Tickets, Work, Leads, or Money pages.</p>
-        </div>
-        <dl>
-          <div><dt>Waiting</dt><dd>${escapeHtml(String(lateAndToday.length + officeItems.length + workTickets.length + closeoutItems.length))}</dd></div>
-        </dl>
-      </div>
-      <div class="home-focus-grid">
-        ${renderHomeFocusCard({
-          label: "Late / Today",
-          value: lateAndToday.length,
-          detail: "Dated tickets, scheduled work, and overdue items that should be checked first.",
-          items: lateAndToday,
-          action: "go-work",
-          actionLabel: "Open Work",
-          tone: overdueTickets.length ? "warning" : ""
-        })}
-        ${renderHomeFocusCard({
-          label: "Office Handoff",
-          value: officeItems.length,
-          detail: "Lead intake, follow-ups, quote approvals, and owner decisions that need movement.",
-          items: officeItems,
-          action: "go-leads",
-          actionLabel: "Open Leads"
-        })}
-        ${renderHomeFocusCard({
-          label: "Field Ready",
-          value: workTickets.length,
-          detail: "Tickets ready for scheduling, route access, site notes, forms, photos, or completion.",
-          items: workTickets,
-          action: "go-work",
-          actionLabel: "Open Work"
-        })}
-        ${renderHomeFocusCard({
-          label: "Money / Closeout",
-          value: closeoutItems.length,
-          detail: "Budget prep, cost review, invoice work, payment checks, and closeout review.",
-          items: closeoutItems,
-          action: "go-money",
-          actionLabel: "Open Money"
-        })}
-      </div>
-    </section>`;
-  }
 
   function renderHomeCommandCenter(details = {}) {
     const actions = details.actions || [];
@@ -15982,61 +14540,6 @@
     ];
   }
 
-  function renderDataQualityPanel(data = state.data, tickets = dashboardTickets(data)) {
-    const items = dashboardDataQualityItems(data, tickets);
-    const issueCount = items.reduce((total, item) => total + item.value, 0);
-    return `<section class="dashboard-data-quality" aria-label="Data quality">
-      <div class="ticket-lane-heading">
-        <div>
-          <p class="eyebrow">Data Quality</p>
-          <h3>${issueCount ? `${escapeHtml(String(issueCount))} records need cleanup` : "Records look complete"}</h3>
-          <p>Small fixes that make search, scheduling, communication, and closeout more reliable.</p>
-        </div>
-      </div>
-      <div class="dashboard-data-quality-grid">
-        ${items.map((item) => `<button type="button" data-action="${escapeHtml(item.action)}" class="${item.value ? "has-issues" : "is-clear"}">
-          <strong>${escapeHtml(String(item.value))}</strong>
-          <span>${escapeHtml(item.label)}</span>
-          <small>${escapeHtml(item.value ? item.detail : "Nothing to fix.")}</small>
-        </button>`).join("")}
-      </div>
-    </section>`;
-  }
-
-  function renderOwnerScorecard(data = state.data, tickets = dashboardTickets(data)) {
-    const openTickets = tickets.filter(ticketIsOpen);
-    const quotes = dashboardDocuments(data).filter((item) => item.type === "estimate");
-    const approvedQuotes = quotes.filter((item) => item.status === "approved" || findJobTicketForSalesDocument(item.id)?.customerApprovalRecorded);
-    const scheduledRevenue = openTickets
-      .filter((ticket) => ticketInStage(ticket, ["ready_to_schedule", "scheduled", "in_progress", "paused"]))
-      .reduce((sum, ticket) => sum + Number(ticket.expectedRevenue || ticket.proposedPrice || 0), 0);
-    const expectedProfit = openTickets.reduce((sum, ticket) => sum + Number(ticket.estimatedProfit || 0), 0);
-    const outstanding = dashboardDocuments(data)
-      .filter((item) => item.type === "invoice" && !["paid", "void"].includes(statusText(item.status)))
-      .reduce((sum, item) => sum + Number(item.squareAmountDueCents !== null ? item.squareAmountDueCents / 100 : item.total || 0), 0);
-    const completionBlockers = openTickets.filter((ticket) => ticketInStage(ticket, ["field_work_complete", "completion_review", "invoice_review"]) && !ticket.invoiceId).length;
-    const approvalRate = quotes.length ? Math.round((approvedQuotes.length / quotes.length) * 100) : 0;
-    const items = [
-      ["Open jobs", openTickets.length, "All current operational tickets"],
-      ["Quote approval", `${approvalRate}%`, `${approvedQuotes.length} of ${quotes.length} customer quotes`],
-      ["Scheduled revenue", moneyCurrency(scheduledRevenue), "Ready, scheduled, and active work"],
-      ["Expected profit", moneyCurrency(expectedProfit), "Current ticket cost estimates"],
-      ["Outstanding", moneyCurrency(outstanding), "Unpaid invoice value"],
-      ["Closeout blockers", completionBlockers, "Completed work without an invoice link"]
-    ];
-    return `<section class="owner-scorecard" aria-label="Owner scorecard">
-      <div class="ticket-flow-heading">
-        <div>
-          <p class="eyebrow">Owner Scorecard</p>
-          <h3>Pipeline, margin, and cash at a glance</h3>
-          <p>Operational figures use connected records only and exclude QA data unless testing records are turned on.</p>
-        </div>
-      </div>
-      <div class="owner-scorecard-grid">
-        ${items.map(([label, value, detail]) => `<article><span>${escapeHtml(label)}</span><strong>${escapeHtml(String(value))}</strong><small>${escapeHtml(detail)}</small></article>`).join("")}
-      </div>
-    </section>`;
-  }
 
   function homeRevenueThisMonth(data = state.data) {
     const month = todayKey().slice(0, 7);
@@ -16114,19 +14617,6 @@
       </div>`;
   }
 
-  function renderTicketNextStepCard({ kicker, value, title, detail, action, actionLabel }) {
-    return `<article class="ticket-next-step-card">
-      <span class="home-next-step-kicker">${escapeHtml(kicker)}</span>
-      <div class="home-next-step-main">
-        <strong>${escapeHtml(String(value))}</strong>
-        <div>
-          <h4>${escapeHtml(title)}</h4>
-          <p>${escapeHtml(detail)}</p>
-        </div>
-      </div>
-      <button type="button" data-action="${escapeHtml(action)}">${escapeHtml(actionLabel)}</button>
-    </article>`;
-  }
 
   function renderTicketHandoffCard({ label, value, detail, tickets = [], action, actionLabel }) {
     const preview = tickets.slice(0, 2).map((ticket) => {
@@ -16147,108 +14637,6 @@
     </article>`;
   }
 
-  function renderTicketHandoffPanel({ leadsTickets, moneyTickets, workTickets, closeoutTickets, blockedTickets }) {
-    return `<section class="ticket-handoff-panel" aria-label="Ticket handoff summary">
-      <div class="ticket-flow-heading">
-        <div>
-          <p class="eyebrow">Handoff Summary</p>
-          <h3>Who owns the next move?</h3>
-          <p>Use this row to decide whether the ticket should be worked by Leads, Money, Work, or owner review before moving forward.</p>
-        </div>
-        <dl>
-          <div><dt>Blocked</dt><dd>${escapeHtml(String(blockedTickets.length))}</dd></div>
-        </dl>
-      </div>
-      <div class="ticket-handoff-grid">
-        ${renderTicketHandoffCard({
-          label: "Leads",
-          value: leadsTickets.length,
-          detail: "Intake, scope, quote follow-up, and customer approval.",
-          tickets: leadsTickets,
-          action: "go-leads",
-          actionLabel: "Open Leads"
-        })}
-        ${renderTicketHandoffCard({
-          label: "Money",
-          value: moneyTickets.length,
-          detail: "Cost review, budget prep, invoice draft, and payment state.",
-          tickets: moneyTickets,
-          action: "go-money",
-          actionLabel: "Open Money"
-        })}
-        ${renderTicketHandoffCard({
-          label: "Work",
-          value: workTickets.length,
-          detail: "Scheduling, route access, field notes, forms, and photos.",
-          tickets: workTickets,
-          action: "go-work",
-          actionLabel: "Open Work"
-        })}
-        ${renderTicketHandoffCard({
-          label: "Closeout",
-          value: closeoutTickets.length,
-          detail: "Completion review, actuals, final invoice, and payment close.",
-          tickets: closeoutTickets,
-          action: "review-closeout-tickets",
-          actionLabel: "Review Tickets"
-        })}
-      </div>
-    </section>`;
-  }
-
-  function renderTicketCommandCenter({ filteredTickets, workTickets, officeTickets, readyTickets, reviewTickets }) {
-    const priorityTickets = [...new Map([
-      ...officeTickets,
-      ...readyTickets,
-      ...workTickets,
-      ...reviewTickets
-    ].map((ticket) => [`${ticket.source || ticket.sourceType}:${ticket.id}`, ticket])).values()].slice(0, 5);
-    return `<section class="ticket-lane ticket-priority-queue" aria-label="Ticket triage center">
-        <div class="ticket-lane-heading">
-          <div>
-            <p class="eyebrow">Triage</p>
-            <h3>Tickets to move next</h3>
-            <p>Start here when you need to move work from scope, approval, scheduling, or closeout into the next owner lane.</p>
-          </div>
-          <span>${escapeHtml(String(priorityTickets.length))}</span>
-        </div>
-        <div class="ticket-lane-list">
-          ${priorityTickets.length ? priorityTickets.map((ticket) => renderTicketCard(ticket, true)).join("") : emptyState("No open tickets match the current filters.")}
-        </div>
-    </section>`;
-  }
-
-  function renderCompletedTicketArchive(tickets = []) {
-    const ordered = [...tickets].sort((a, b) => String(b.closedAt || b.dateRaw || "").localeCompare(String(a.closedAt || a.dateRaw || "")));
-    return `<section class="completed-ticket-archive" aria-label="Completed tickets">
-      <div class="ticket-flow-heading">
-        <div>
-          <p class="eyebrow">Ticket History</p>
-          <h3>Completed Tickets</h3>
-          <p>Closed work stays here for reference and can be reopened by the Owner when more work is needed.</p>
-        </div>
-        <span>${escapeHtml(String(ordered.length))} completed</span>
-      </div>
-      <div class="completed-ticket-list">
-        ${ordered.length ? ordered.map((ticket) => `<article class="completed-ticket-card">
-          <div class="completed-ticket-card-main">
-            <span>${escapeHtml(ticket.number || "Completed")}</span>
-            <h4>${escapeHtml(ticket.title || ticket.service || "Completed ticket")}</h4>
-            <p>${escapeHtml([ticket.customerName, ticket.propertyName || ticket.site, ticket.dateLabel || ticket.dateRaw].filter(Boolean).join(" / ") || "Completed work")}</p>
-          </div>
-          <dl>
-            <div><dt>Closed as</dt><dd>${escapeHtml(ticket.rentDeductionAmount ? "Rent deduction" : "Completed")}</dd></div>
-            <div><dt>Amount</dt><dd>${ticket.rentDeductionAmount ? `$${escapeHtml(Number(ticket.rentDeductionAmount).toFixed(2))}` : "—"}</dd></div>
-            <div><dt>Closed</dt><dd>${escapeHtml(ticket.closedAt ? formatDate(ticket.closedAt) : ticket.dateLabel || ticket.dateRaw || "Recorded")}</dd></div>
-          </dl>
-          <div class="completed-ticket-actions">
-            <button type="button" data-action="open-ticket" data-ticket-source="${escapeHtml(ticket.source)}" data-id="${escapeHtml(ticket.id)}">View Ticket</button>
-            ${currentSessionRole() === "owner" ? `<button type="button" class="secondary-action" data-action="reopen-completed-ticket" data-ticket-source="${escapeHtml(ticket.source)}" data-id="${escapeHtml(ticket.id)}">Reopen Ticket</button>` : ""}
-          </div>
-        </article>`).join("") : emptyState("No completed tickets yet.")}
-      </div>
-    </section>`;
-  }
 
   function renderTicketDirectoryControls(tickets = [], filteredTickets = []) {
     const stages = uniqueTicketStages(tickets);
@@ -16355,14 +14743,6 @@
       </div>`;
   }
 
-  function renderWorkPlanTile({ label, value, detail, action, actionLabel }) {
-    return `<article class="work-plan-tile">
-      <span>${escapeHtml(label)}</span>
-      <strong>${escapeHtml(String(value))}</strong>
-      <p>${escapeHtml(detail)}</p>
-      ${action ? `<button type="button" data-action="${escapeHtml(action)}">${escapeHtml(actionLabel || "Open")}</button>` : ""}
-    </article>`;
-  }
 
   function renderWorkDayPlanPanel(stops = [], todayTickets = [], upcomingTickets = [], reviewTickets = []) {
     const openStops = stops.filter((stop) => stop.status !== "Complete");
@@ -16462,52 +14842,6 @@
     </article>`;
   }
 
-  function renderWorkReadinessPanel({ readyTickets = [], todayTickets = [], activeTickets = [], reviewTickets = [] }) {
-    return `<section class="work-readiness-panel" aria-label="Work readiness">
-      <div class="ticket-flow-heading">
-        <div>
-          <p class="eyebrow">Work Readiness</p>
-          <h3>What can move today</h3>
-          <p>Use this as the fast daily handoff before opening individual Job Tickets.</p>
-        </div>
-        <button type="button" data-action="go-tickets">Open Tickets</button>
-      </div>
-      <div class="work-readiness-grid">
-        ${renderWorkReadinessCard({
-          label: "Ready",
-          value: readyTickets.length,
-          detail: "Approved work that can be scheduled or assigned.",
-          tickets: readyTickets,
-          action: "go-tickets",
-          actionLabel: "Schedule"
-        })}
-        ${renderWorkReadinessCard({
-          label: "Today",
-          value: todayTickets.length,
-          detail: "Dated work and visits for the current day.",
-          tickets: todayTickets,
-          action: "focus-work-queue",
-          actionLabel: "Open Work"
-        })}
-        ${renderWorkReadinessCard({
-          label: "Active",
-          value: activeTickets.length,
-          detail: "Jobs already scheduled, started, or paused.",
-          tickets: activeTickets,
-          action: "focus-work-queue",
-          actionLabel: "View Queue"
-        })}
-        ${renderWorkReadinessCard({
-          label: "Proof",
-          value: reviewTickets.length,
-          detail: "Completed work waiting on photos, forms, actuals, or review.",
-          tickets: reviewTickets,
-          action: "go-tickets",
-          actionLabel: "Review"
-        })}
-      </div>
-    </section>`;
-  }
 
   function renderWorkFieldPacketStep({ step, label, value, detail, action, actionLabel }) {
     return `<article class="work-field-packet-step">
@@ -16521,90 +14855,6 @@
     </article>`;
   }
 
-  function renderWorkFieldPacketPanel({ routeStops = [], todayTickets = [], reviewTickets = [] }) {
-    const nextStop = routeStops.find((stop) => stop.status !== "Complete") || routeStops[0];
-    return `<section class="work-field-packet-panel" aria-label="Field packet">
-      <div class="ticket-flow-heading">
-        <div>
-          <p class="eyebrow">Field Packet</p>
-          <h3>What the crew needs on-site</h3>
-          <p>Keep the visit list, route, photos, forms, and closeout proof visible before opening a ticket detail.</p>
-        </div>
-        <button type="button" data-action="go-tickets">Open Tickets</button>
-      </div>
-      <div class="work-field-packet-grid">
-        ${renderWorkFieldPacketStep({
-          step: "01",
-          label: "Route and first stop",
-          value: routeStops.length,
-          detail: nextStop ? [nextStop.clientName, nextStop.city].filter(Boolean).join(" / ") || "Route stop ready." : "No route stops planned yet.",
-          action: "go-route-planner",
-          actionLabel: "Open Route"
-        })}
-        ${renderWorkFieldPacketStep({
-          step: "02",
-          label: "Today's visit list",
-          value: todayTickets.length,
-          detail: "Review assigned work, site notes, service scope, and visit status for today.",
-          action: "focus-work-queue",
-          actionLabel: "Open Work"
-        })}
-        ${renderWorkFieldPacketStep({
-          step: "03",
-          label: "Arrival and completion proof",
-          value: reviewTickets.length,
-          detail: "Capture photos, forms, actuals, and completion notes before closeout review.",
-          action: "go-tickets",
-          actionLabel: "Review Proof"
-        })}
-        ${renderWorkFieldPacketStep({
-          step: "04",
-          label: "Supporting documents",
-          value: "Docs",
-          detail: "Use templates, submitted records, and job paperwork from Tools when needed.",
-          action: "go-documentation",
-          actionLabel: "Open Docs"
-        })}
-      </div>
-    </section>`;
-  }
-
-  function renderWorkWorkspace(data = state.data) {
-    const target = qs("[data-work-workspace]");
-    if (!target) return;
-    const tickets = dashboardTickets(data);
-    const workTickets = tickets.filter((ticket) => ticketIsOpen(ticket) && ticketInLane(ticket, ["ready", "field", "review"]));
-    const today = todayKey();
-    const todayTickets = workTickets.filter((ticket) => dateKey(ticket.dateRaw) === today);
-    const upcomingTickets = workTickets.filter((ticket) => dateKey(ticket.dateRaw) >= today);
-    const readyTickets = workTickets.filter((ticket) => ticketInLane(ticket, ["ready"]));
-    const activeTickets = workTickets.filter((ticket) => ticketInStage(ticket, ["scheduled", "in_progress", "paused"]));
-    const reviewTickets = workTickets.filter((ticket) => ticketInLane(ticket, ["review"]));
-    const routeStopsToday = dashboardRouteStopsForDate(data, today);
-    const selectedTicket = todayTickets[0] || upcomingTickets[0] || reviewTickets[0] || null;
-    target.innerHTML = `
-      <div class="ticket-workspace uy-page-prototype work-workspace" data-uy-page-contract="work" data-data-source="jobs,job_tickets,route_stops,documentation">
-        ${renderWorkspaceDataState("calendar")}
-        <header class="ticket-hero work-hero">
-          <div>
-            <h3>Work Day</h3>
-            <p>${escapeHtml(formatDate(today) || "Today")} / Follow the route, complete assigned work, and capture the proof required by each ticket.</p>
-          </div>
-          <div class="ticket-hero-actions">
-            <button type="button" class="secondary-action" data-action="go-route-planner">Route Tools</button>
-            ${selectedTicket
-              ? `<button type="button" data-action="open-ticket" data-ticket-source="${escapeHtml(selectedTicket.source || "ticket")}" data-id="${escapeHtml(selectedTicket.id)}" data-ticket-section="tasks">${ticketInStage(selectedTicket, ["in_progress", "paused"]) ? "Continue Visit" : "Start Visit"}</button>`
-              : canCreateTicketType("field") ? `<button type="button" data-action="open-ticket-create" data-ticket-type="field">Add Visit</button>` : ""}
-          </div>
-        </header>
-        <div data-work-queue>${renderWorkDayPlanPanel(routeStopsToday, todayTickets, upcomingTickets, reviewTickets)}</div>
-      </div>`;
-    setRoutePreviewState("work", {
-      section: "calendar",
-      stops: routeStopsToday,
-      emptyText: "No route stops planned for today."
-    });
-  }
 
   function renderLeadQueueItem(item, tone = "") {
     const status = item.status || "Prospect";
@@ -17027,19 +15277,6 @@ Requirements:
     </div>`;
   }
 
-  function renderLeadNextStepCard({ kicker, value, title, detail, action, actionLabel, extraAttrs = "" }) {
-    return `<article class="lead-next-step-card">
-      <span class="home-next-step-kicker">${escapeHtml(kicker)}</span>
-      <div class="home-next-step-main">
-        <strong>${escapeHtml(String(value))}</strong>
-        <div>
-          <h4>${escapeHtml(title)}</h4>
-          <p>${escapeHtml(detail)}</p>
-        </div>
-      </div>
-      <button type="button" data-action="${escapeHtml(action)}"${extraAttrs}>${escapeHtml(actionLabel)}</button>
-    </article>`;
-  }
 
   function renderLeadsRunwayCard({ label, value, detail, action, actionLabel, extraAttrs = "", tone = "" }) {
     return `<article class="leads-runway-card ${tone ? `leads-runway-card--${escapeHtml(tone)}` : ""}">
@@ -17050,49 +15287,6 @@ Requirements:
     </article>`;
   }
 
-  function renderLeadsRunwayPanel({ due = [], hot = [], intakeTickets = [], approvalTickets = [], accountingTickets = [], companies = [], properties = [] }) {
-    return `<section class="leads-runway-panel" aria-label="Lead intake focus">
-      <div class="ticket-flow-heading">
-        <div>
-          <p class="eyebrow">Intake Focus</p>
-          <h3>Capture, follow up, quote, hand off</h3>
-          <p>Keep prospect outreach tied to the same Job Ticket workflow before work reaches scheduling.</p>
-        </div>
-        ${canCreateTicketType("quote") ? `<button type="button" data-action="open-ticket-create" data-ticket-type="quote">New Job Ticket</button>` : ""}
-      </div>
-      <div class="leads-runway-grid">
-        ${renderLeadsRunwayCard({
-          label: "Pipeline",
-          value: companies.length + properties.length,
-          detail: "Companies and property locations available for outreach.",
-          action: "import-outreach-csv",
-          actionLabel: "Import Leads"
-        })}
-        ${renderLeadsRunwayCard({
-          label: "Follow Up",
-          value: due.length,
-          detail: "Prospects due for a call, email, or next-touch note.",
-          action: "go-call-queue",
-          actionLabel: "Open Queue",
-          tone: due.length ? "warning" : ""
-        })}
-        ${renderLeadsRunwayCard({
-          label: "Quote Ready",
-          value: hot.length + approvalTickets.length,
-          detail: "Interested prospects and tickets waiting on quote action.",
-          action: "go-tickets",
-          actionLabel: "Review Quotes"
-        })}
-        ${renderLeadsRunwayCard({
-          label: "Money Handoff",
-          value: accountingTickets.length,
-          detail: "Approved work ready for cost review before scheduling.",
-          action: "go-money",
-          actionLabel: "Open Money"
-        })}
-      </div>
-    </section>`;
-  }
 
   function leadHandoffTitle(item = {}) {
     return item.propertyName || item.managementCompany || item.contactName || homeFocusTitle(item);
@@ -17118,81 +15312,6 @@ Requirements:
     </article>`;
   }
 
-  function renderLeadsHandoffPanel({ due = [], hot = [], intakeTickets = [], approvalTickets = [], accountingTickets = [] }) {
-    const readyToTicket = [...hot, ...intakeTickets];
-    const totalWaiting = due.length + readyToTicket.length + approvalTickets.length + accountingTickets.length;
-    return `<section class="leads-handoff-panel" aria-label="Lead handoff planner">
-      <div class="ticket-flow-heading">
-        <div>
-          <p class="eyebrow">Conversion Path</p>
-          <h3>From prospect to ticket</h3>
-          <p>Keep calls, scope, quote approvals, and Money handoffs in one readable sequence.</p>
-        </div>
-        <dl>
-          <div><dt>Waiting</dt><dd>${escapeHtml(String(totalWaiting))}</dd></div>
-        </dl>
-      </div>
-      <div class="leads-handoff-grid">
-        ${renderLeadHandoffCard({
-          label: "Call Today",
-          value: due.length,
-          detail: "Prospects with a follow-up date due now or missing the next touch.",
-          items: due,
-          action: "go-call-queue",
-          actionLabel: "Open Queue",
-          tone: due.length ? "warning" : ""
-        })}
-        ${renderLeadHandoffCard({
-          label: "Ready to Ticket",
-          value: readyToTicket.length,
-          detail: "Interested leads or intake tickets with enough scope to track as work.",
-          items: readyToTicket,
-          action: "open-ticket-create",
-          actionLabel: "New Job Ticket",
-          extraAttrs: ' data-ticket-type="quote"'
-        })}
-        ${renderLeadHandoffCard({
-          label: "Quote Approval",
-          value: approvalTickets.length,
-          detail: "Tickets waiting on quote prep, customer approval, or scope clarification.",
-          items: approvalTickets,
-          action: "go-tickets",
-          actionLabel: "Open Tickets"
-        })}
-        ${renderLeadHandoffCard({
-          label: "To Money",
-          value: accountingTickets.length,
-          detail: "Approved work that should move to cost review before scheduling.",
-          items: accountingTickets,
-          action: "go-money",
-          actionLabel: "Open Money",
-          tone: accountingTickets.length ? "warning" : ""
-        })}
-      </div>
-    </section>`;
-  }
-
-  function renderLeadsCommandCenter({ prospectQueue, due, hot, intakeTickets, approvalTickets, accountingTickets, companies, properties }) {
-    const visibleProspects = state.leadsContactQueueExpanded ? prospectQueue : prospectQueue.slice(0, 10);
-    return `<section class="leads-command-center" aria-label="Leads command center">
-      <section class="ticket-lane leads-contact-queue">
-        <div class="ticket-lane-heading">
-          <div>
-            <p class="eyebrow">Contact Queue</p>
-            <h3>All active Call Queue leads</h3>
-            <p>This mirrors the active lead list on the Call Queue page so every prospect is available from one queue.</p>
-          </div>
-          <div class="lead-contact-queue-heading-actions">
-            <span>${escapeHtml(String(prospectQueue.length))}</span>
-            ${prospectQueue.length > 10 ? `<button type="button" data-action="toggle-leads-contact-queue" aria-expanded="${state.leadsContactQueueExpanded}">${state.leadsContactQueueExpanded ? "Show First 10" : "View All Leads"}</button>` : ""}
-          </div>
-        </div>
-        <div class="lead-queue-list">
-          ${visibleProspects.length ? visibleProspects.map((item) => renderLeadQueueItem(item, hot.some((hotItem) => hotItem.id === item.id) ? "hot" : due.some((dueItem) => dueItem.id === item.id) ? "due" : "")).join("") : emptyState("No active leads are currently in the Call Queue.")}
-        </div>
-      </section>
-    </section>`;
-  }
 
   function leadPipelineLaneKey(item = {}) {
     if (item.status === "Lost / No Fit") return "lost";
@@ -17330,75 +15449,6 @@ Requirements:
     return 4;
   }
 
-  function renderMoneyBudgetPanel(data = state.data, tickets = dashboardTickets(data)) {
-    const bundle = data.budgets || emptyBudgetBundle();
-    const budgets = (bundle.budgets || []).filter((budget) => budget.status !== "Archived");
-    const summaries = budgets.map((budget) => ({ budget, summary: budgetSummary(budget) }));
-    const active = budgets.filter((budget) => !["Completed", "Archived"].includes(budget.status)).length;
-    const atRisk = summaries.filter((item) => ["Watch", "At Risk"].includes(item.summary.health) || item.budget.status === "At Risk").length;
-    const overBudget = summaries.filter((item) => item.summary.health === "Over Budget" || item.budget.status === "Over Budget").length;
-    const upcomingProfit = summaries
-      .filter((item) => !["Completed", "Archived"].includes(item.budget.status))
-      .reduce((sum, item) => sum + Number(item.summary.estimatedProfit || 0), 0);
-    const reviewItems = summaries
-      .sort((a, b) => budgetPanelSortValue(a) - budgetPanelSortValue(b) || String(b.budget.updatedAtRaw || "").localeCompare(String(a.budget.updatedAtRaw || "")))
-      .slice(0, 4);
-    const setupMessage = !state.budgetsReady && !isDemoMode()
-      ? `<p class="money-budget-note" title="${escapeHtml(state.budgetsError || "Budget setup details are available in Tools diagnostics.")}">Budget records are optional right now. Money still tracks cost review, invoice handoffs, and payment follow-up from Job Tickets.</p>`
-      : "";
-
-    return `<section class="money-budget-panel" data-money-budget-panel>
-      <div class="ticket-lane-heading">
-        <div>
-          <h3>Budget and Profitability</h3>
-          <p>Budget records stay inside Money and support the same Job Ticket flow, rather than becoming a separate primary tab.</p>
-        </div>
-        <span>${escapeHtml(String(budgets.length))}</span>
-      </div>
-      ${setupMessage}
-      <div class="money-budget-stats">
-        ${budgetMetricCard("Active Budgets", String(active), "Jobs being estimated or tracked")}
-        ${budgetMetricCard("At Risk", String(atRisk), "Below target margin", atRisk ? "warning" : "")}
-        ${budgetMetricCard("Over Budget", String(overBudget), "Needs review", overBudget ? "danger" : "")}
-        ${budgetMetricCard("Upcoming Profit", budgetCurrency(upcomingProfit), "Estimated")}
-      </div>
-      <div class="money-budget-list">
-        ${reviewItems.length ? reviewItems.map(({ budget, summary }) => {
-          const ticket = findTicketForBudget(budget, tickets);
-          return `<article class="money-budget-item">
-            <div>
-              <p class="eyebrow">${escapeHtml(budget.serviceType || "Budget")}</p>
-              <h4>${escapeHtml(budget.budgetName)}</h4>
-              <p>${escapeHtml([budget.clientName, budget.propertyName, budget.jobName].filter(Boolean).join(" / ") || "No linked record")}</p>
-            </div>
-            <dl>
-              <div><dt>Revenue</dt><dd>${budgetCurrency(summary.expectedRevenue)}</dd></div>
-              <div><dt>Profit</dt><dd>${budgetCurrency(summary.estimatedProfit)}</dd></div>
-              <div><dt>Margin</dt><dd>${budgetPercent(summary.estimatedMargin)}</dd></div>
-            </dl>
-            <div class="money-budget-actions">
-              ${budgetBadge(summary.health || "Healthy", "health")}
-              ${ticket ? `<button type="button" class="inline-action" data-action="open-ticket" data-ticket-source="${escapeHtml(ticket.source)}" data-id="${escapeHtml(ticket.id)}">Open Ticket</button>` : `<span>No linked ticket</span>`}
-            </div>
-          </article>`;
-        }).join("") : emptyState("No budget records are active yet. Approved tickets can still move through Money for cost review, invoicing, payment follow-up, and closeout.")}
-      </div>
-    </section>`;
-  }
-
-  function renderMoneyNextStepCard({ kicker, value, title, detail, action, actionLabel }) {
-    return `<article class="money-next-step-card">
-      <span class="home-next-step-kicker">${escapeHtml(kicker)}</span>
-      <div class="home-next-step-main">
-        <strong>${escapeHtml(String(value))}</strong>
-        <div>
-          <h4>${escapeHtml(title)}</h4>
-          <p>${escapeHtml(detail)}</p>
-        </div>
-      </div>
-      <button type="button" data-action="${escapeHtml(action)}">${escapeHtml(actionLabel)}</button>
-    </article>`;
-  }
 
   function renderMoneyRunwayCard({ label, value, detail, tone = "", action, actionLabel }) {
     return `<article class="money-runway-card ${tone ? `money-runway-card--${escapeHtml(tone)}` : ""}">
@@ -17409,74 +15459,6 @@ Requirements:
     </article>`;
   }
 
-  function renderMoneyRunwayPanel({ needsBudget = [], ownerApproval = [], invoiceTickets = [], overdueInvoices = [] }) {
-    return `<section class="money-runway-panel" aria-label="Financial workflow focus">
-      <div class="ticket-flow-heading">
-        <div>
-          <p class="eyebrow">Financial Focus</p>
-          <h3>Estimate, budget, invoice, collect</h3>
-          <p>Keep each financial step visible before tickets move into scheduling or closeout.</p>
-        </div>
-        <button type="button" data-action="go-tickets">Review Tickets</button>
-      </div>
-      <div class="money-runway-grid">
-        ${renderMoneyRunwayCard({
-          label: "Budget Prep",
-          value: needsBudget.length,
-          detail: "Approved tickets waiting on cost or margin review.",
-          action: "go-tickets",
-          actionLabel: "Open Review"
-        })}
-        ${renderMoneyRunwayCard({
-          label: "Approval",
-          value: ownerApproval.length,
-          detail: "Items needing owner approval or invoice preparation.",
-          action: "quick-add-quote",
-          actionLabel: "Create Estimate"
-        })}
-        ${renderMoneyRunwayCard({
-          label: "Invoices",
-          value: invoiceTickets.length,
-          detail: "Open estimate or invoice records to reconcile.",
-          action: "open-financial-records",
-          actionLabel: "Open Records"
-        })}
-        ${renderMoneyRunwayCard({
-          label: "Payment Risk",
-          value: overdueInvoices.length,
-          detail: "Overdue invoices that need a follow-up or Square sync.",
-          tone: overdueInvoices.length ? "warning" : "",
-          action: "quick-add-invoice-reminder",
-          actionLabel: "Follow Up"
-        })}
-      </div>
-    </section>`;
-  }
-
-  function renderMoneyCommandCenter({ needsBudget, ownerApproval, fieldComplete, invoiceTickets, unpaidInvoices, overdueInvoices }) {
-    const actionQueue = [
-      ...invoiceTickets.filter((ticket) => ticket.tone === "watch"),
-      ...needsBudget,
-      ...ownerApproval,
-      ...fieldComplete,
-      ...invoiceTickets.filter((ticket) => ticket.tone !== "watch")
-    ].slice(0, 5);
-    return `<section class="money-command-center" aria-label="Money command center">
-      <section class="ticket-lane money-action-queue">
-        <div class="ticket-lane-heading">
-          <div>
-            <p class="eyebrow">Financial Queue</p>
-            <h3>Budget, invoice, and payment items</h3>
-            <p>Start with overdue invoices, cost-review tickets, owner approvals, and closeout work.</p>
-          </div>
-          <span>${escapeHtml(String(actionQueue.length))}</span>
-        </div>
-        <div class="ticket-lane-list">
-          ${actionQueue.length ? actionQueue.map((ticket) => renderTicketCard(ticket, true)).join("") : emptyState("No financial review items require attention.")}
-        </div>
-      </section>
-    </section>`;
-  }
 
   function renderMoneyCloseoutStep({ label, value, detail, items = [], action, actionLabel, tone = "" }) {
     const previewItems = items.slice(0, 2).map((item) => `<li>
@@ -17494,64 +15476,12 @@ Requirements:
     </article>`;
   }
 
-  function renderMoneyCloseoutPanel({ needsBudget = [], fieldComplete = [], invoiceTickets = [], unpaidInvoices = [], overdueInvoices = [] }) {
-    const invoiceReady = [...fieldComplete, ...invoiceTickets.filter((ticket) => ticket.tone !== "watch")];
-    const paymentItems = invoiceTickets.filter((ticket) => ticket.tone === "watch");
-    const setupItems = needsBudget.slice(0, 4);
-    const totalWaiting = invoiceReady.length + paymentItems.length + unpaidInvoices.length + setupItems.length;
-    return `<section class="money-closeout-panel" aria-label="Money closeout checklist">
-      <div class="ticket-flow-heading">
-        <div>
-          <p class="eyebrow">Closeout Checklist</p>
-          <h3>Protect the final handoff</h3>
-          <p>Check costs, proof, invoice status, and payment before a ticket leaves Money.</p>
-        </div>
-        <dl>
-          <div><dt>Waiting</dt><dd>${escapeHtml(String(totalWaiting))}</dd></div>
-        </dl>
-      </div>
-      <div class="money-closeout-grid">
-        ${renderMoneyCloseoutStep({
-          label: "Cost Review",
-          value: setupItems.length,
-          detail: "Tickets that should have budget or margin review before scheduling.",
-          items: setupItems,
-          action: "go-tickets",
-          actionLabel: "Open Tickets",
-          tone: setupItems.length ? "warning" : ""
-        })}
-        ${renderMoneyCloseoutStep({
-          label: "Actuals + Proof",
-          value: fieldComplete.length,
-          detail: "Completed work waiting on actual costs, photos, forms, or review notes.",
-          items: fieldComplete,
-          action: "go-work",
-          actionLabel: "Open Work",
-          tone: fieldComplete.length ? "warning" : ""
-        })}
-        ${renderMoneyCloseoutStep({
-          label: "Invoice Ready",
-          value: invoiceReady.length,
-          detail: "Records that need an estimate, invoice draft, Square sync, or final review.",
-          items: invoiceReady,
-          action: "quick-add-quote",
-          actionLabel: "Create Estimate"
-        })}
-        ${renderMoneyCloseoutStep({
-          label: "Collect",
-          value: overdueInvoices.length || paymentItems.length,
-          detail: "Overdue or unpaid invoices that need a payment note or follow-up.",
-          items: paymentItems,
-          action: "quick-add-invoice-reminder",
-          actionLabel: "Payment Follow-Up",
-          tone: overdueInvoices.length ? "warning" : ""
-        })}
-      </div>
-    </section>`;
-  }
+
+  const moneyCurrencyFormatter = new Intl.NumberFormat("en-US", { style: "currency", currency: "USD" });
+  let moneyRenderNames = null;
 
   function moneyCurrency(value) {
-    return new Intl.NumberFormat("en-US", { style: "currency", currency: "USD" }).format(Number(value || 0));
+    return moneyCurrencyFormatter.format(Number(value || 0));
   }
 
   function moneyCents(value) {
@@ -17594,62 +15524,71 @@ Requirements:
     return { start: toDateInputValue(start), end: toDateInputValue(now) };
   }
 
+  const moneyViewRequests = new Map();
+
   async function loadMoneyView(view = state.moneyView, { force = false } = {}) {
-    if (state.moneyLoading || (!force && state.moneyLoadedViews.has(view))) return;
+    state.moneyLoading = moneyViewRequests.has(state.moneyView);
+    if (moneyViewRequests.has(view)) return moneyViewRequests.get(view);
+    if (!force && state.moneyLoadedViews.has(view)) return;
     state.data.financial = state.data.financial || {};
     if (isDemoMode()) {
       state.moneyLoadedViews.add(view);
       renderMoneyWorkspace();
       return;
     }
-    state.moneyLoading = true;
-    state.moneyError = "";
-    renderMoneyWorkspace();
-    try {
-      if (view === "overview") {
-        const range = financialDateRange();
-        state.data.financial.overview = await dashboardFinancialRequest("overview", range);
-      } else if (view === "expenses") {
-        const rows = await dashboardFinancialRequest("list-expenses", {
-          page: state.moneyExpensePage,
-          pageSize: state.moneyExpensePageSize,
-          search: state.moneySearch,
-          status: state.moneyExpenseStatus,
-          sort: state.moneyExpenseSort
-        });
-        state.data.financial.expenses = (rows || []).map(normalizeExpense);
-        if (!state.moneyLoadedViews.has("vendors")) {
-          const vendors = await dashboardFinancialRequest("list-vendors");
-          state.data.financial.vendors = vendors || [];
-          state.moneyLoadedViews.add("vendors");
-        }
-      } else if (view === "vendors") {
-        state.data.financial.vendors = await dashboardFinancialRequest("list-vendors") || [];
-      } else if (view === "invoicing") {
-        state.data.financial.invoices = await dashboardFinancialRequest("list-invoices") || [];
-      } else if (view === "payments") {
-        const [invoices, payments] = await Promise.all([
-          dashboardFinancialRequest("list-invoices"),
-          dashboardFinancialRequest("list-payments")
-        ]);
-        state.data.financial.invoices = invoices || [];
-        state.data.financial.payments = payments || [];
-      } else if (view === "documents") {
-        state.data.financial.documents = await dashboardFinancialRequest("list-documents") || [];
-      } else if (view === "reports") {
-        const range = financialDateRange();
-        state.data.financial.overview = await dashboardFinancialRequest("overview", range);
-        state.data.financial.invoices = await dashboardFinancialRequest("list-invoices") || [];
-      } else if (view === "deleted") {
-        state.data.financial.deleted = await dashboardFinancialRequest("list-deleted") || [];
-      }
-      state.moneyLoadedViews.add(view);
-    } catch (error) {
-      state.moneyError = error.message || "Financial records could not be loaded.";
-    } finally {
-      state.moneyLoading = false;
+    const request = Promise.resolve().then(async () => {
+      state.moneyLoading = moneyViewRequests.has(state.moneyView);
+      state.moneyError = "";
       renderMoneyWorkspace();
-    }
+      try {
+        if (view === "overview") {
+          const range = financialDateRange();
+          state.data.financial.overview = await dashboardFinancialRequest("overview", range);
+        } else if (view === "expenses") {
+          const [rows, vendors] = await Promise.all([dashboardFinancialRequest("list-expenses", {
+            page: state.moneyExpensePage,
+            pageSize: state.moneyExpensePageSize,
+            search: state.moneySearch,
+            status: state.moneyExpenseStatus,
+            sort: state.moneyExpenseSort
+          }), state.moneyLoadedViews.has("vendors") ? Promise.resolve(null) : dashboardFinancialRequest("list-vendors")]);
+          state.data.financial.expenses = (rows || []).map(normalizeExpense);
+          if (vendors) {
+            state.data.financial.vendors = vendors;
+            state.moneyLoadedViews.add("vendors");
+          }
+        } else if (view === "vendors") {
+          state.data.financial.vendors = await dashboardFinancialRequest("list-vendors") || [];
+        } else if (view === "invoicing") {
+          state.data.financial.invoices = await dashboardFinancialRequest("list-invoices") || [];
+        } else if (view === "payments") {
+          const [invoices, payments] = await Promise.all([
+            dashboardFinancialRequest("list-invoices"),
+            dashboardFinancialRequest("list-payments")
+          ]);
+          state.data.financial.invoices = invoices || [];
+          state.data.financial.payments = payments || [];
+        } else if (view === "documents") {
+          state.data.financial.documents = await dashboardFinancialRequest("list-documents") || [];
+        } else if (view === "reports") {
+          const range = financialDateRange();
+          const [overview, invoices] = await Promise.all([dashboardFinancialRequest("overview", range), dashboardFinancialRequest("list-invoices")]);
+          state.data.financial.overview = overview;
+          state.data.financial.invoices = invoices || [];
+        } else if (view === "deleted") {
+          state.data.financial.deleted = await dashboardFinancialRequest("list-deleted") || [];
+        }
+        state.moneyLoadedViews.add(view);
+      } catch (error) {
+        if (view === state.moneyView) state.moneyError = error.message || "Financial records could not be loaded.";
+      } finally {
+        moneyViewRequests.delete(view);
+        state.moneyLoading = moneyViewRequests.has(state.moneyView);
+        renderMoneyWorkspace();
+      }
+    });
+    moneyViewRequests.set(view, request);
+    return request;
   }
 
   function renderMoneyTabs() {
@@ -17775,6 +15714,19 @@ Requirements:
 
   function financialRecordName(type, id) {
     if (!id) return "";
+    if (moneyRenderNames) {
+      if (!moneyRenderNames.has(type)) {
+        const records = type === "client" ? state.data.contacts || [] : type === "property" ? state.data.outreachProperties || [] : dashboardTickets(state.data);
+        const names = new Map();
+        records.forEach((item) => {
+          const name = type === "client" ? item.name || item.company : type === "property" ? item.propertyName || item.address : item.number || item.title;
+          if (!names.has(item.id)) names.set(item.id, name || item.id);
+          if (type === "ticket" && item.sourceId && !names.has(item.sourceId)) names.set(item.sourceId, name || item.id);
+        });
+        moneyRenderNames.set(type, names);
+      }
+      return moneyRenderNames.get(type).get(id) || id;
+    }
     if (type === "client") {
       const contact = (state.data.contacts || []).find((item) => item.id === id);
       return contact?.name || contact?.company || id;
@@ -17810,25 +15762,11 @@ Requirements:
         <label><select data-money-expense-method aria-label="Expense payment method">${["All",...EXPENSE_PAYMENT_METHODS].map((value)=>`<option value="${escapeHtml(value)}"${state.moneyExpensePaymentMethod===value?" selected":""}>Method: ${escapeHtml(value)}</option>`).join("")}</select></label>
         <button type="button" data-action="open-money-expense-create">＋ Add Expense</button>
       </div>
-      <div class="money-table-wrap"><table class="money-record-table money-expense-table"><thead><tr><th>Date</th><th>Vendor</th><th>Category</th><th>Description</th><th>Ticket / Job</th><th>Payment Method</th><th>Amount</th><th>Receipt</th><th></th></tr></thead><tbody>${rows.length?rows.map((expense)=>`<tr data-action="open-money-expense-editor" data-id="${escapeHtml(expense.id)}" tabindex="0"><td>${escapeHtml(formatDate(expense.expenseDate))}</td><td>${escapeHtml(expense.vendorName||"—")}</td><td>${escapeHtml(expense.category)}</td><td>${escapeHtml(expense.description||"—")}</td><td>${escapeHtml(financialRecordName("ticket",expense.ticketId)||"Not linked")}</td><td>${escapeHtml(expense.paymentMethod||"—")}</td><td>${moneyCurrency(expense.total)}</td><td><span class="money-status ${expense.status==="Pending Receipt"?"is-overdue":"is-paid"}">${escapeHtml(expense.status==="Pending Receipt"?"Missing":"Filed")}</span></td><td><button type="button" data-action="open-money-expense-editor" data-id="${escapeHtml(expense.id)}" aria-label="Open expense">⋮</button></td></tr>`).join(""):`<tr><td colspan="9">${emptyState("No expenses match these filters.")}</td></tr>`}</tbody></table></div>
+      <div class="money-table-wrap"><table class="money-record-table money-expense-table"><thead><tr><th>Date</th><th>Vendor</th><th>Category</th><th>Description</th><th>Ticket / Job</th><th>Payment Method</th><th>Amount</th><th>Receipt</th><th></th></tr></thead><tbody>${rows.length?rows.map((expense)=>`<tr data-action="open-money-expense-editor" data-id="${escapeHtml(expense.id)}" tabindex="0"><td data-label="Date">${escapeHtml(formatDate(expense.expenseDate))}</td><td data-label="Vendor">${escapeHtml(expense.vendorName||"—")}</td><td data-label="Category">${escapeHtml(expense.category)}</td><td data-label="Description">${escapeHtml(expense.description||"—")}</td><td data-label="Ticket / Job">${escapeHtml(financialRecordName("ticket",expense.ticketId)||"Not linked")}</td><td data-label="Method">${escapeHtml(expense.paymentMethod||"—")}</td><td data-label="Amount">${moneyCurrency(expense.total)}</td><td data-label="Receipt"><span class="money-status ${expense.status==="Pending Receipt"?"is-overdue":"is-paid"}">${escapeHtml(expense.status==="Pending Receipt"?"Missing":"Filed")}</span></td><td data-label="Actions"><button type="button" data-action="open-money-expense-editor" data-id="${escapeHtml(expense.id)}" aria-label="Open expense">⋮</button></td></tr>`).join(""):`<tr><td colspan="9">${emptyState("No expenses match these filters.")}</td></tr>`}</tbody></table></div>
       <footer class="money-pagination"><span>Showing ${rows.length} expense${rows.length===1?"":"s"}</span></footer>
     </section>`;
   }
 
-  function renderExpenseWorkspace() {
-    if (state.moneyDisplay === "spreadsheet") return `${renderMoneyDisplayToggle()}${renderExpenseSpreadsheet()}`;
-    const rows = state.data.financial.expenses || [];
-    return `<section class="financial-directory money-simple-workspace" aria-label="Expenses">
-      <div class="ticket-lane-heading"><div><p class="eyebrow">Expenses</p><h3>Recorded costs</h3><p>Scan the essentials here. Open Spreadsheet view only when you need bulk editing.</p></div><div class="money-heading-actions"><button type="button" data-action="submit-field-expense">Submit Field Expense</button><button type="button" data-action="add-expense-row">+ New Expense</button>${renderMoneyDisplayToggle()}</div></div>
-      <input class="sr-only" type="file" accept="image/jpeg,image/png,image/webp,application/pdf" data-field-expense-receipt-input>
-      <div class="financial-card-list">${rows.length ? rows.map((expense) => `<article>
-        <div><strong>${escapeHtml(expense.description || expense.vendorName || "Untitled expense")}</strong><span>${escapeHtml([expense.expenseDate, expense.category].filter(Boolean).join(" · "))}</span></div>
-        <p>${escapeHtml(expense.vendorName || "No vendor")} · ${moneyCurrency(expense.total)}</p>
-        <small>${escapeHtml([financialRecordName("client", expense.clientId), financialRecordName("property", expense.propertyId), financialRecordName("ticket", expense.ticketId)].filter(Boolean).join(" / ") || "Not linked to a client, property, or ticket")}</small>
-        <div class="money-card-actions"><span class="status-badge">${escapeHtml(expense.status || "Draft")}</span><button type="button" data-action="money-display" data-display="spreadsheet">Edit</button><button type="button" class="inline-action danger" data-action="archive-money-record" data-entity-type="expense" data-id="${escapeHtml(expense.id)}">Delete</button></div>
-      </article>`).join("") : emptyState("No expenses are filed yet.")}</div>
-    </section>`;
-  }
 
   function expenseRowPayload(row) {
     const value = (field) => row.querySelector(`[data-expense-field="${field}"]`);
@@ -18084,9 +16022,9 @@ Requirements:
     const overdue = rows.filter((row) => row.status === "Overdue");
     const statusOptions = ["All", "Draft", "Ready", "Sent", "Viewed", "Partially Paid", "Paid", "Overdue", "Voided", "Uncollectible"];
     const cards = [
-      ["Total Billed", totalBilled, "↑ 18% vs last month", "green"],
-      ["Total Paid", totalPaid, "↑ 12% vs last month", "green"],
-      ["Outstanding", outstanding, "↓ 5% vs last month", "amber"],
+      ["Total Billed", totalBilled, `${rows.length} invoices`, "green"],
+      ["Total Paid", totalPaid, "Payments recorded", "green"],
+      ["Outstanding", outstanding, "Open invoice balances", "amber"],
       ["Overdue", overdue.reduce((sum, row) => sum + Number(row.summary.balance || 0), 0), `${overdue.length} invoice${overdue.length === 1 ? "" : "s"}`, "red"]
     ];
     return `<section class="money-invoices-view" aria-label="Invoices">
@@ -18098,29 +16036,12 @@ Requirements:
         <button type="button" data-action="money-more-filters">▽ More Filters</button>
       </div>
       <div class="money-table-wrap"><table class="money-record-table"><thead><tr><th>Invoice #</th><th>Customer</th><th>Issue Date ↓</th><th>Due Date</th><th>Amount</th><th>Status</th><th>Balance</th><th></th></tr></thead><tbody>
-        ${visible.length ? visible.map((row) => `<tr data-action="open-financial-invoice" data-id="${escapeHtml(row.invoice.id)}" tabindex="0"${state.moneyInvoiceDetail?.invoice?.id === row.invoice.id ? ' class="is-selected"' : ""}><td><strong>${escapeHtml(String(row.invoice.invoice_number || "Draft").replace(/^INV-/, ""))}</strong></td><td>${escapeHtml(row.customer)}</td><td>${escapeHtml(row.invoice.issue_date ? formatDate(row.invoice.issue_date) : "—")}</td><td>${escapeHtml(row.invoice.due_date ? formatDate(row.invoice.due_date) : "—")}</td><td>${moneyCurrency(row.summary.total)}</td><td><span class="money-status is-${slug(row.status)}">${escapeHtml(row.status)}</span></td><td>${moneyCurrency(row.summary.balance)}</td><td><button type="button" data-action="open-financial-invoice" data-id="${escapeHtml(row.invoice.id)}" aria-label="Open invoice ${escapeHtml(row.invoice.invoice_number || row.invoice.id)}">⋮</button></td></tr>`).join("") : `<tr><td colspan="8">${emptyState("No invoices match these filters.")}</td></tr>`}
+        ${visible.length ? visible.map((row) => `<tr data-action="open-financial-invoice" data-id="${escapeHtml(row.invoice.id)}" tabindex="0"${state.moneyInvoiceDetail?.invoice?.id === row.invoice.id ? ' class="is-selected"' : ""}><td data-label="Invoice"><strong>${escapeHtml(String(row.invoice.invoice_number || "Draft").replace(/^INV-/, ""))}</strong></td><td data-label="Customer">${escapeHtml(row.customer)}</td><td data-label="Issued">${escapeHtml(row.invoice.issue_date ? formatDate(row.invoice.issue_date) : "—")}</td><td data-label="Due">${escapeHtml(row.invoice.due_date ? formatDate(row.invoice.due_date) : "—")}</td><td data-label="Amount">${moneyCurrency(row.summary.total)}</td><td data-label="Status"><span class="money-status is-${slug(row.status)}">${escapeHtml(row.status)}</span></td><td data-label="Balance">${moneyCurrency(row.summary.balance)}</td><td data-label="Actions"><button type="button" data-action="open-financial-invoice" data-id="${escapeHtml(row.invoice.id)}" aria-label="Open invoice ${escapeHtml(row.invoice.invoice_number || row.invoice.id)}">⋮</button></td></tr>`).join("") : `<tr><td colspan="8">${emptyState("No invoices match these filters.")}</td></tr>`}
       </tbody></table></div>
       <footer class="money-pagination"><span>Showing ${filtered.length ? start + 1 : 0} to ${Math.min(start + state.moneyInvoicePageSize, filtered.length)} of ${filtered.length} invoices</span><nav aria-label="Invoice pages">${Array.from({ length: Math.min(pageCount, 6) }, (_, index) => `<button type="button" data-action="money-invoice-page" data-page="${index + 1}"${state.moneyInvoicePage === index + 1 ? ' class="is-active"' : ""}>${index + 1}</button>`).join("")}<button type="button" data-action="money-invoice-page" data-page="${Math.min(pageCount, state.moneyInvoicePage + 1)}" aria-label="Next invoice page">›</button></nav></footer>
     </section>`;
   }
 
-  function renderInvoiceWorkspace() {
-    if (state.moneyDisplay === "spreadsheet") return `${renderMoneyDisplayToggle()}${renderInvoiceSpreadsheet()}`;
-    const invoices = dashboardFinancialInvoices();
-    return `<section class="financial-directory money-simple-workspace" aria-label="Invoices">
-      <div class="ticket-lane-heading"><div><p class="eyebrow">Invoices</p><h3>Billing records</h3><p>Open a card to edit details, lines, payments, and Square links.</p></div><div class="money-heading-actions"><button type="button" data-action="create-financial-invoice">+ New Invoice</button>${renderMoneyDisplayToggle()}</div></div>
-      <div class="financial-card-list">${invoices.length ? invoices.map((invoice) => {
-        const summary = financialCalculator().invoiceSummary(invoice);
-        const status = financialCalculator().effectiveInvoiceStatus(invoice);
-        return `<article class="is-clickable" data-action="open-financial-invoice" data-id="${escapeHtml(invoice.id)}" tabindex="0">
-          <div><strong>${escapeHtml(invoice.invoice_number || "Draft invoice")}</strong><span>${escapeHtml([invoice.issue_date, invoice.due_date ? `Due ${invoice.due_date}` : ""].filter(Boolean).join(" · "))}</span></div>
-          <p>${escapeHtml(financialRecordName("client", invoice.client_id) || invoice.client_name || "Client not linked")} · ${moneyCurrency(summary.total)}</p>
-          <small>${escapeHtml([financialRecordName("property", invoice.property_id), financialRecordName("ticket", invoice.ticket_id)].filter(Boolean).join(" / ") || "No property or ticket linked")}</small>
-          <div class="money-card-actions"><span class="status-badge">${escapeHtml(status)}</span><strong>${moneyCurrency(summary.balance)} due</strong></div>
-        </article>`;
-      }).join("") : emptyState("No invoices are filed yet. Create one manually or from a completed ticket.")}</div>
-    </section>`;
-  }
 
   function renderUnifiedMoneyPaymentWorkspace() {
     const payments = state.data.financial.payments || [];
@@ -18142,31 +16063,11 @@ Requirements:
     return `<section class="money-payments-view" aria-label="Payments">
       <section class="money-kpi-grid" aria-label="Payment summary">${[["Total Received",total],["This Month",thisMonth],["Last Month",lastMonth],["Average Payment",completedRows.length?total/completedRows.length:0]].map(([label,value])=>`<article class="money-kpi is-green"><span>$</span><small>${label}</small><strong>${moneyCurrency(value)}</strong><em>Recorded payments</em></article>`).join("")}</section>
       <div class="money-record-toolbar"><label class="money-search-control"><span>⌕</span><input type="search" data-money-payment-search value="${escapeHtml(state.moneyPaymentSearch)}" placeholder="Search payments..." aria-label="Search payments"></label><label><select data-money-payment-method aria-label="Payment method">${["All","ACH","Card","Check","Cash","Bank Transfer","Square Checking","Other"].map((value)=>`<option${state.moneyPaymentMethod===value?" selected":""}>${escapeHtml(value)}</option>`).join("")}</select></label><label><select data-money-payment-status aria-label="Payment status">${["All","Completed","Voided"].map((value)=>`<option${state.moneyPaymentStatus===value?" selected":""}>${escapeHtml(value)}</option>`).join("")}</select></label><button type="button" data-action="open-money-payment-create">Record Payment</button></div>
-      <div class="money-table-wrap"><table class="money-record-table"><thead><tr><th>Date</th><th>Customer</th><th>Invoice</th><th>Ticket</th><th>Method</th><th>Amount</th><th>Status</th><th>Reference</th><th></th></tr></thead><tbody>${rows.length?rows.map((payment)=>{const invoice=payment.invoices||{};const paymentStatus=payment.voided_at?"Voided":"Completed";return `<tr data-action="open-financial-invoice" data-id="${escapeHtml(payment.invoice_id)}" tabindex="0"><td>${escapeHtml(formatDate(payment.payment_date))}</td><td>${escapeHtml(financialRecordName("client",invoice.client_id)||"Client not linked")}</td><td>${escapeHtml(invoice.invoice_number||payment.invoice_id)}</td><td>${escapeHtml(financialRecordName("ticket",invoice.ticket_id)||"Not linked")}</td><td>${escapeHtml(payment.payment_method||"Other")}</td><td>${moneyCurrency(payment.amount)}</td><td><span class="money-status ${paymentStatus==="Voided"?"is-voided":"is-paid"}">${paymentStatus}</span></td><td>${escapeHtml(payment.external_reference||"—")}</td><td><button type="button" data-action="open-financial-invoice" data-id="${escapeHtml(payment.invoice_id)}" aria-label="Open linked invoice">⋮</button></td></tr>`;}).join(""):`<tr><td colspan="9">${emptyState("No payments match these filters.")}</td></tr>`}</tbody></table></div>
+      <div class="money-table-wrap"><table class="money-record-table"><thead><tr><th>Date</th><th>Customer</th><th>Invoice</th><th>Ticket</th><th>Method</th><th>Amount</th><th>Status</th><th>Reference</th><th></th></tr></thead><tbody>${rows.length?rows.map((payment)=>{const invoice=payment.invoices||{};const paymentStatus=payment.voided_at?"Voided":"Completed";return `<tr data-action="open-financial-invoice" data-id="${escapeHtml(payment.invoice_id)}" tabindex="0"><td data-label="Date">${escapeHtml(formatDate(payment.payment_date))}</td><td data-label="Customer">${escapeHtml(financialRecordName("client",invoice.client_id)||"Client not linked")}</td><td data-label="Invoice">${escapeHtml(invoice.invoice_number||payment.invoice_id)}</td><td data-label="Ticket">${escapeHtml(financialRecordName("ticket",invoice.ticket_id)||"Not linked")}</td><td data-label="Method">${escapeHtml(payment.payment_method||"Other")}</td><td data-label="Amount">${moneyCurrency(payment.amount)}</td><td data-label="Status"><span class="money-status ${paymentStatus==="Voided"?"is-voided":"is-paid"}">${paymentStatus}</span></td><td data-label="Reference">${escapeHtml(payment.external_reference||"—")}</td><td data-label="Actions"><button type="button" data-action="open-financial-invoice" data-id="${escapeHtml(payment.invoice_id)}" aria-label="Open linked invoice">⋮</button></td></tr>`;}).join(""):`<tr><td colspan="9">${emptyState("No payments match these filters.")}</td></tr>`}</tbody></table></div>
       <footer class="money-pagination"><span>Showing ${rows.length} payment${rows.length===1?"":"s"}</span></footer>
     </section>`;
   }
 
-  function renderPaymentWorkspace() {
-    const invoices = dashboardFinancialInvoices();
-    const payments = invoices.filter((invoice) => {
-      const status = financialCalculator().effectiveInvoiceStatus(invoice);
-      return Number(invoice.amount_paid || 0) > 0 || ["Paid", "Partially Paid"].includes(status);
-    });
-    return `<section class="financial-directory money-simple-workspace" aria-label="Payments">
-      <div class="ticket-lane-heading"><div><h3>Payments</h3><p>Recorded deposits and payments remain connected to their invoice and unified ticket.</p></div></div>
-      <div class="financial-card-list">${payments.length ? payments.map((invoice) => {
-        const summary = financialCalculator().invoiceSummary(invoice);
-        const status = financialCalculator().effectiveInvoiceStatus(invoice);
-        return `<article class="is-clickable" data-action="open-financial-invoice" data-id="${escapeHtml(invoice.id)}" tabindex="0">
-          <div><strong>${escapeHtml(invoice.invoice_number || "Invoice")}</strong><span>${escapeHtml(invoice.last_sent_at ? formatDate(invoice.last_sent_at) : invoice.issue_date || "Recorded")}</span></div>
-          <p>${escapeHtml(financialRecordName("client", invoice.client_id) || invoice.client_name || "Client not linked")} / ${moneyCurrency(invoice.amount_paid || 0)} paid</p>
-          <small>${escapeHtml(financialRecordName("ticket", invoice.ticket_id) || "No ticket linked")}</small>
-          <div class="money-card-actions"><span class="status-badge">${escapeHtml(status)}</span><strong>${moneyCurrency(summary.balance)} due</strong></div>
-        </article>`;
-      }).join("") : emptyState("No payments have been recorded yet. Payments appear here after they are connected to an invoice.")}</div>
-    </section>`;
-  }
 
   function renderQuoteWorkspace() {
     const quotes = dashboardDocuments().filter((document) => document.type === "estimate");
@@ -18188,29 +16089,53 @@ Requirements:
     </section>`;
   }
 
+  function renderQuoteLineInput(line = {}) {
+    return `<div class="quote-line-editor" data-quote-line><label>Service<input data-quote-description value="${escapeHtml(line.description || "")}" maxlength="240" required></label><label>Quantity<input data-quote-quantity type="number" min="0.01" step="0.01" value="${escapeHtml(String(line.quantity || 1))}" required></label><label>Unit price<input data-quote-price type="number" min="0" step="0.01" value="${escapeHtml(String(line.unit_price ?? line.unitPrice ?? 0))}" required></label><button type="button" data-action="remove-quote-line" aria-label="Remove line item">Remove</button></div>`;
+  }
+
+  function quoteFormLineItems(form) {
+    const rows = qsa("[data-quote-line]", form);
+    return rows.length ? rows.map((row) => ({ description: row.querySelector("[data-quote-description]").value, quantity: Number(row.querySelector("[data-quote-quantity]").value), unit_price: Number(row.querySelector("[data-quote-price]").value) })) : undefined;
+  }
+
   function renderFinancialQuoteForm(ticket = null, options = {}) {
+    const previous = ticket ? findQuoteForTicket(ticket) : null;
+    const lines = previous?.lineItems?.filter((line) => Number(line.unit_price || 0) >= 0) || [{ description: ticket?.scopeOfWork || ticket?.detail || ticket?.requestedService || "Landscape service", quantity: 1, unit_price: ticket?.proposedPrice || 0 }];
+    const discount = (previous?.lineItems || []).reduce((sum, line) => sum + Math.max(0, -Number(line.amount ?? Number(line.quantity || 0) * Number(line.unit_price || 0))), 0);
+    const taxRate = previous?.subtotal > 0 ? Math.round(Number(previous.tax || 0) / previous.subtotal * 10000) / 100 : 0;
+    const notes = String(previous?.notes || "");
+    const deposit = notes.match(/^Deposit requested: ([\d.]+)%\./m)?.[1] || "0";
+    const terms = notes.match(/^Terms: ([\s\S]*)/m)?.[1].split("\nCustomer message: ")[0] || (previous ? notes.replace(/^Deposit requested: [\d.]+%\.\s*/m, "").split("\nCustomer message: ")[0] : "Quote valid for 14 days. Changes outside the listed scope require written approval.");
+    const customerMessage = notes.match(/^Customer message: ([\s\S]*)/m)?.[1] || "";
     return `<form class="drawer-form document-edit-form quote-builder-form ${options.embedded ? "is-embedded" : ""}" data-document-form data-quote-builder data-ticket-id="${escapeHtml(ticket?.id || "")}">
         <input type="hidden" name="document_type" value="estimate">
         <label>Client name<input name="client_name" value="${escapeHtml(ticket?.customer || "")}" required></label>
         <label>Client email<input name="client_email" type="email" value="${escapeHtml(ticket?.contactEmail || ticket?.email || "")}"></label>
-        <label class="span-full">Property / project<input name="property_name" value="${escapeHtml(ticket?.property || "")}" placeholder="Service property or project name"></label>
-        <label class="span-full">Line items
-          <textarea name="line_items_text" rows="6" placeholder="Description | quantity | unit price" required>${escapeHtml(`${ticket?.scopeOfWork || ticket?.detail || ticket?.requestedService || "Landscape service"} | 1 | ${ticket?.proposedPrice || 0}`)}</textarea>
-          <small>One item per line. Example: Weekly landscape service | 4 | 175</small>
-        </label>
-        <label>Discount<input name="discount" type="number" min="0" step="0.01" value="0"></label>
+        <label class="span-full">Property / project<input name="property_name" value="${escapeHtml(ticket?.property || ticket?.address || "")}" placeholder="Service property or project name"></label>
+        <section class="span-full quote-line-items" aria-label="Quote line items"><h4>Services & Pricing</h4><div data-quote-lines>${lines.map(renderQuoteLineInput).join("")}</div><button type="button" data-action="add-quote-line">+ Add Service</button></section>
+        <label>Discount<input name="discount" type="number" min="0" step="0.01" value="${escapeHtml(String(discount))}"></label>
         <label>Discount type<select name="discount_type"><option value="amount">Dollar amount</option><option value="percent">Percent</option></select></label>
-        <label>Tax rate %<input name="tax_rate" type="number" min="0" step="0.01" value="0"></label>
-        <label>Deposit request %<input name="deposit_percent" type="number" min="0" max="100" step="1" value="0"></label>
+        <label>Tax rate %<input name="tax_rate" type="number" min="0" step="0.01" value="${escapeHtml(String(taxRate))}"></label>
+        <label>Deposit request %<input name="deposit_percent" type="number" min="0" max="100" step="1" value="${escapeHtml(deposit)}"></label>
         <label>Approval due<input name="due_date" type="date" value="${escapeHtml(addDaysKey(todayKey(), 14))}"></label>
-        <label class="span-full">Customer message<textarea name="customer_message" rows="3" placeholder="A short note shown with the quote."></textarea></label>
-        <label class="span-full">Terms<textarea name="terms" rows="3" placeholder="Scope assumptions, expiration, payment, and change-order terms.">Quote valid for 14 days. Changes outside the listed scope require written approval.</textarea></label>
+        <label class="span-full">Customer message<textarea name="customer_message" rows="3" placeholder="A short note shown with the quote.">${escapeHtml(customerMessage)}</textarea></label>
+        <label class="span-full">Terms<textarea name="terms" rows="3" placeholder="Scope assumptions, expiration, payment, and change-order terms.">${escapeHtml(terms)}</textarea></label>
         <section class="quote-builder-preview span-full" data-quote-builder-preview aria-live="polite"></section>
         <div class="drawer-actions"><button type="submit">${buttonContent("Create Quote", "save")}</button></div>
       </form>`;
   }
 
   function openFinancialQuoteCreateDrawer(ticket = null) {
+    if (ticket?.id && state.unifiedTicketVisible && state.unifiedTicketSelectedId === ticket.id) {
+      state.unifiedTicketSection = "quote";
+      renderUnifiedTicketOverview();
+      const section = qs(".ut-quote-card");
+      if (!section.querySelector("[data-quote-builder]")) section.insertAdjacentHTML("beforeend", renderFinancialQuoteForm(ticket, { embedded: true }));
+      const builder = section.querySelector("[data-quote-builder]");
+      updateQuoteBuilderPreview(builder);
+      builder?.querySelector("input:not([type=hidden]), textarea")?.focus();
+      return;
+    }
     if (!els.detailDrawer || !els.detailContent) return;
     if (ticket?.id && state.activeTicketDrawerId === ticket.id) {
       const section = els.detailContent.querySelector('[data-ticket-section="quote"]');
@@ -18245,6 +16170,7 @@ Requirements:
     if (!form) return;
     const data = new FormData(form);
     const pricing = quotePricingSummary({
+      line_items: quoteFormLineItems(form),
       line_items_text: data.get("line_items_text"),
       discount: data.get("discount"),
       discount_type: data.get("discount_type"),
@@ -18307,62 +16233,32 @@ Requirements:
 
   async function openFinancialInvoiceDrawer(id) {
     if (!els.detailDrawer || !els.detailContent) return;
+    const ticket = state.unifiedTicketVisible && state.unifiedTicketSection === "invoice" ? findTicketForDrawer("ticket", state.unifiedTicketSelectedId) : null;
+    const embedded = ticket && String(findInvoiceForTicket(ticket)?.id || "") === String(id);
     if (String(state.moneyInvoiceDetail?.invoice?.id || "") !== String(id)) state.moneyInvoiceDrawerTab = "details";
-    openDetailDrawer();
-    els.detailContent.innerHTML = `<section class="money-module-state" role="status"><strong>Loading invoice…</strong></section>`;
+    if (!embedded) {
+      openDetailDrawer();
+      els.detailContent.innerHTML = `<section class="money-module-state" role="status"><strong>Loading invoice…</strong></section>`;
+    }
     try {
       const detail = await dashboardFinancialRequest("invoice-detail", { invoiceId: id });
       state.moneyInvoiceDetail = detail;
-      els.detailContent.innerHTML = renderUnifiedFinancialInvoiceDrawer(detail);
-      renderDetailDrawerBreadcrumbs();
+      if (embedded) renderUnifiedTicketOverview();
+      else {
+        els.detailContent.innerHTML = renderUnifiedFinancialInvoiceDrawer(detail);
+        renderDetailDrawerBreadcrumbs();
+      }
       renderMoneyWorkspace();
-      return;
-      const invoice = detail.invoice || {};
-      const summary = financialCalculator().invoiceSummary(invoice, detail.lineItems || []);
-      els.detailContent.innerHTML = `<div class="financial-invoice-drawer">
-        <header><p class="eyebrow">Invoice Detail</p><h3>${escapeHtml(invoice.invoice_number || "Draft Invoice")}</h3><p>${escapeHtml(financialCalculator().effectiveInvoiceStatus(invoice))}</p></header>
-        <form data-financial-invoice-form data-id="${escapeHtml(invoice.id || id)}" class="drawer-form">
-          <div class="drawer-grid">
-            <label>Client<select name="client_id">${financialLinkOptions("client", invoice.client_id)}</select></label>
-            <label>Property<select name="property_id">${financialLinkOptions("property", invoice.property_id)}</select></label>
-            <label>Ticket<select name="ticket_id">${financialLinkOptions("ticket", invoice.ticket_id)}</select></label>
-            <label>Issue date<input name="issue_date" type="date" value="${escapeHtml(invoice.issue_date || "")}"></label>
-            <label>Due date<input name="due_date" type="date" value="${escapeHtml(invoice.due_date || "")}"></label>
-            <label>Tax<input name="tax" type="number" min="0" step="0.01" value="${escapeHtml(String(invoice.tax || 0))}"></label>
-            <label>Discount<input name="discount" type="number" min="0" step="0.01" value="${escapeHtml(String(invoice.discount || 0))}"></label>
-            <label>Deposit<input name="deposit" type="number" min="0" step="0.01" value="${escapeHtml(String(invoice.deposit || 0))}"></label>
-            <label>Amount paid<input name="amount_paid" type="number" min="0" step="0.01" value="${escapeHtml(String(invoice.amount_paid || 0))}"></label>
-            <label>Status<select name="status">${expenseSelectOptions(["Draft","Ready","Sent","Viewed","Partially Paid","Paid","Overdue","Voided","Uncollectible"], invoice.status || "Draft")}</select></label>
-            <label class="span-full">Square invoice URL<input name="square_invoice_url" type="url" value="${escapeHtml(invoice.square_invoice_url || "")}"></label>
-            <label class="span-full">Internal notes<textarea name="internal_notes" rows="3">${escapeHtml(invoice.internal_notes || "")}</textarea></label>
-            <label class="span-full">Client-facing notes<textarea name="client_notes" rows="3">${escapeHtml(invoice.client_notes || "")}</textarea></label>
-          </div>
-          <section class="invoice-totals"><div><span>Subtotal</span><strong>${moneyCurrency(summary.subtotal)}</strong></div><div><span>Total</span><strong>${moneyCurrency(summary.total)}</strong></div><div><span>Balance</span><strong>${moneyCurrency(summary.balance)}</strong></div></section>
-          <section><div class="ticket-lane-heading"><div><h4>Line Items</h4></div><button type="button" data-action="add-invoice-line" data-id="${escapeHtml(invoice.id || id)}">Add Line</button></div>
-            <div class="invoice-line-list">${(detail.lineItems || []).length ? detail.lineItems.map((line) => `<article><strong>${escapeHtml(line.description)}</strong><span>${escapeHtml(`${line.quantity} ${line.unit} × ${moneyCurrency(line.unit_price)}`)}</span><b>${moneyCurrency(financialCalculator().lineTotal?.(line) || line.quantity * line.unit_price)}</b></article>`).join("") : emptyState("No line items yet.")}</div>
-          </section>
-          <section><div class="ticket-lane-heading"><div><h4>Payment History</h4></div><button type="button" data-action="record-invoice-payment" data-id="${escapeHtml(invoice.id || id)}">Record Payment</button></div>
-            <div class="invoice-line-list">${(detail.payments || []).length ? detail.payments.map((payment) => `<article><strong>${moneyCurrency(payment.amount)}</strong><span>${escapeHtml(payment.payment_date || "")}</span><b>${escapeHtml(payment.payment_method || "")}</b></article>`).join("") : emptyState("No payments recorded.")}</div>
-          </section>
-          <div class="drawer-actions">
-            <button type="submit">${buttonContent("Save", "save")}</button>
-            <button type="button" data-action="duplicate-financial-invoice" data-id="${escapeHtml(invoice.id || id)}">Duplicate</button>
-            <button type="button" data-action="print-financial-invoice">Print / PDF</button>
-            <button type="button" class="danger" data-action="archive-money-record" data-entity-type="invoice" data-id="${escapeHtml(invoice.id || id)}">Delete</button>
-            ${invoice.square_invoice_url ? `<a class="button-link" href="${escapeHtml(invoice.square_invoice_url)}" target="_blank" rel="noopener">Open Square Invoice</a>` : ""}
-          </div>
-        </form>
-      </div>`;
-      renderDetailDrawerBreadcrumbs();
     } catch (error) {
-      els.detailContent.innerHTML = `<section class="money-module-state is-error"><strong>Invoice could not be opened</strong><p>${escapeHtml(error.message)}</p></section>`;
+      if (embedded) setDashboardState(error.message || "Invoice could not be opened.", "error");
+      else els.detailContent.innerHTML = `<section class="money-module-state is-error"><strong>Invoice could not be opened</strong><p>${escapeHtml(error.message)}</p></section>`;
     }
   }
 
-  function openMoneyExpenseDrawer(expense = null) {
+  function openMoneyExpenseDrawer(expense = null, { ticketId = "" } = {}) {
     if (!els.detailDrawer || !els.detailContent) return;
     openDetailDrawer();
-    const item = expense || {};
+    const item = expense || { ticketId };
     els.detailContent.innerHTML = `<div class="drawer-content money-create-drawer"><p class="eyebrow">Money · Expenses</p><h3>${expense ? "Edit Expense" : "Add Expense"}</h3><p>Record a business cost and connect it to the same unified ticket used by Work.</p><form class="drawer-form" data-money-expense-form data-id="${escapeHtml(item.id || "")}"><label>Date<input type="date" name="expense_date" value="${escapeHtml(item.expenseDate || todayKey())}" required></label><label>Vendor<input name="vendor_name" value="${escapeHtml(item.vendorName || "")}" placeholder="Vendor or payee"></label><label>Category<select name="category">${expenseSelectOptions(EXPENSE_CATEGORIES,item.category||"Other")}</select></label><label>Payment method<select name="payment_method">${expenseSelectOptions(EXPENSE_PAYMENT_METHODS,item.paymentMethod||"","Choose method")}</select></label><label class="span-full">Description<input name="description" value="${escapeHtml(item.description||"")}" required></label><label>Ticket<select name="ticket_id">${financialLinkOptions("ticket",item.ticketId)}</select></label><label>Amount<input type="number" min="0" step="0.01" name="total" value="${escapeHtml(String(item.total||""))}" required></label><label>Status<select name="status">${expenseSelectOptions(EXPENSE_STATUSES,item.status||"Recorded")}</select></label><label class="span-full">Notes<textarea name="notes" rows="4">${escapeHtml(item.notes||"")}</textarea></label><div class="drawer-actions span-full"><button type="submit">${expense?"Save Expense":"Add Expense"}</button><button type="button" class="secondary-action" data-action="close-drawer">Cancel</button>${expense?`<button type="button" data-action="expense-receipt" data-id="${escapeHtml(item.id)}">Upload Receipt</button><button type="button" class="danger" data-action="archive-money-record" data-entity-type="expense" data-id="${escapeHtml(item.id)}">Delete Test Expense</button>`:""}</div></form></div>`;
     renderDetailDrawerBreadcrumbs();
   }
@@ -18447,23 +16343,15 @@ Requirements:
   function renderMoneyWorkspace(data = state.data) {
     const target = qs("[data-money-workspace]");
     if (!target) return;
-    const documents = dashboardDocuments(data);
-    const quotes = documents.filter((doc) => doc.type === "estimate");
-    const draftQuotes = quotes.filter((doc) => ["draft", "new", "pending"].includes(statusText(doc.status)));
-    const awaitingApprovalQuotes = quotes.filter((doc) => ["sent", "awaiting approval", "pending approval"].includes(statusText(doc.status)) && !findJobTicketForSalesDocument(doc.id)?.customerApprovalRecorded);
-    const unpaidInvoices = documents.filter((doc) => doc.type === "invoice" && doc.status !== "paid");
-    const overdueInvoices = unpaidInvoices.filter((doc) => doc.dueDateRaw && doc.dueDateRaw < todayKey());
-    const financialInvoices = dashboardFinancialInvoices(data);
-    const openFinancialInvoices = financialInvoices.filter((invoice) => !["Paid", "Voided", "Uncollectible"].includes(financialCalculator().effectiveInvoiceStatus(invoice)));
-    const openBalance = financialInvoices.length
-      ? openFinancialInvoices.reduce((sum, invoice) => sum + Number(financialCalculator().invoiceSummary(invoice).balance || 0), 0)
-      : unpaidInvoices.reduce((sum, invoice) => sum + Number(invoice.squareAmountDueCents !== null && invoice.squareAmountDueCents !== undefined ? invoice.squareAmountDueCents / 100 : invoice.total || 0), 0);
-    target.innerHTML = `
+    state.moneyLoading = moneyViewRequests.has(state.moneyView);
+    moneyRenderNames = new Map();
+    try {
+      target.innerHTML = `
       <div class="ticket-workspace uy-page-prototype money-workspace" data-uy-page-contract="money" data-data-source="documents,invoices,quotes,job_tickets,budgets">
         ${renderWorkspaceDataState("documents")}
         <header class="money-page-header">
           <div>
-            <h3>Money</h3>
+            <h1>Money</h1>
             <p>Manage invoices, expenses, and payments</p>
           </div>
           <div class="money-page-actions">
@@ -18477,6 +16365,9 @@ Requirements:
           ${renderMoneyActiveView()}
         </section>
       </div>`;
+    } finally {
+      moneyRenderNames = null;
+    }
     if (!state.moneyLoadedViews.has(state.moneyView) && !state.moneyLoading && !state.moneyError) {
       queueMicrotask(() => void loadMoneyView(state.moneyView));
     }
@@ -18491,50 +16382,6 @@ Requirements:
     </article>`;
   }
 
-  function renderToolsRunwayPanel({ criticalWarnings = [], supportWarnings = [], documentationCount = 0, equipmentCount = 0, routeStopsToday = 0, aiLiveVersion = "", usersCount = 0 }) {
-    return `<section class="tools-runway-panel" aria-label="Support systems focus">
-      <div class="ticket-flow-heading">
-        <div>
-          <p class="eyebrow">Support Focus</p>
-          <h3>Keep support systems ready without blocking daily work</h3>
-          <p>Diagnostics, forms, AI, route tools, equipment, imports, and access stay grouped here as admin support for the Job Ticket workflow.</p>
-        </div>
-        <button type="button" data-action="copy-dashboard-diagnostics">Copy Diagnostics</button>
-      </div>
-      <div class="tools-runway-grid">
-        ${renderToolsRunwayCard({
-          label: "Dashboard Health",
-          value: criticalWarnings.length,
-          detail: criticalWarnings.length ? "Active workflow warnings need review." : "No active workflow warnings reported.",
-          tone: criticalWarnings.length ? "warning" : "",
-          action: "copy-dashboard-diagnostics",
-          actionLabel: "Diagnostics"
-        })}
-        ${renderToolsRunwayCard({
-          label: "Route & Equipment",
-          value: routeStopsToday + equipmentCount,
-          detail: `${routeStopsToday} route stops today and ${equipmentCount} equipment records.`,
-          action: "go-route-planner",
-          actionLabel: "Open Route"
-        })}
-        ${renderToolsRunwayCard({
-          label: "Forms & AI",
-          value: documentationCount,
-          detail: `Documentation records with AI live version ${aiLiveVersion || "not published"}.`,
-          action: "go-documentation",
-          actionLabel: "Open Forms"
-        })}
-        ${renderToolsRunwayCard({
-          label: "Data & Access",
-          value: usersCount,
-          detail: supportWarnings.length ? `${supportWarnings.length} setup items plus user access tools.` : "Imports, backups, and user access are ready for review.",
-          tone: supportWarnings.length ? "setup" : "",
-          action: "go-import-export",
-          actionLabel: "Open Data"
-        })}
-      </div>
-    </section>`;
-  }
 
   function renderToolsSystemCard({ label, value, detail, rows = [], action, actionLabel, tone = "" }) {
     const rowMarkup = rows.map((row) => `<li>
@@ -18582,31 +16429,6 @@ Requirements:
     return { checks, ready };
   }
 
-  function renderUrbanYardsLaunchCenter(data = state.data) {
-    const readiness = urbanYardsProductReadiness(data);
-    return `<section class="uy-launch-center" aria-label="Urban Yards product readiness">
-      <div class="ticket-flow-heading">
-        <div>
-          <p class="eyebrow">Finish Line</p>
-          <h3>Urban Yards Launch Center</h3>
-          <p>One operating checklist for the customer journey, staff workflow, data quality, recovery, QA, and production health.</p>
-        </div>
-        <div class="ticket-hero-actions">
-          <strong>${escapeHtml(`${readiness.ready}/19 ready`)}</strong>
-          <button type="button" data-action="setup-urban-yards-tools">Set Up Urban Yards Defaults</button>
-        </div>
-      </div>
-      <div class="uy-launch-progress" aria-label="${escapeHtml(`${readiness.ready} of 19 capabilities ready`)}"><span style="width:${escapeHtml(String(Math.round(readiness.ready / 19 * 100)))}%"></span></div>
-      <div class="uy-launch-grid">
-        ${readiness.checks.map(([label, complete, detail, action, actionLabel], index) => `<article class="${complete ? "is-ready" : "needs-setup"}">
-          <div><span>${escapeHtml(String(index + 1).padStart(2, "0"))}</span><b>${complete ? "Ready" : "Setup"}</b></div>
-          <h4>${escapeHtml(label)}</h4>
-          <p>${escapeHtml(detail)}</p>
-          <button type="button" data-action="${escapeHtml(action)}">${escapeHtml(actionLabel)}</button>
-        </article>`).join("")}
-      </div>
-    </section>`;
-  }
 
   function renderUrbanYardsOperationsCenter() {
     const ops = activeConnectedOpsBundle();
@@ -18637,62 +16459,6 @@ Requirements:
     </section>`;
   }
 
-  function renderToolsSystemsPanel({ criticalWarnings = [], supportWarnings = [], documentationCount = 0, equipmentCount = 0, routeStopsToday = 0, aiLiveVersion = "", usersCount = 0, documentsCount = 0 }) {
-    return `<section class="tools-systems-panel" aria-label="Tools operating groups">
-      <div class="ticket-flow-heading">
-        <div>
-          <p class="eyebrow">Support Map</p>
-          <h3>Where each utility lives</h3>
-          <p>Use Tools when the workflow needs routes, forms, imports, users, or diagnostics.</p>
-        </div>
-      </div>
-      <div class="tools-systems-grid">
-        ${renderToolsSystemCard({
-          label: "Field Utilities",
-          value: routeStopsToday,
-          detail: "Route planning that supports Work without cluttering the Work queue.",
-          rows: [
-            { label: "Route stops today", value: routeStopsToday }
-          ],
-          action: "go-route-planner",
-          actionLabel: "Open Route"
-        })}
-        ${renderToolsSystemCard({
-          label: "Records",
-          value: documentationCount,
-          detail: "Documentation, templates, and submissions stay in one admin lane.",
-          rows: [
-            { label: "Forms and files", value: documentationCount }
-          ],
-          action: "go-documentation",
-          actionLabel: "Open Documentation"
-        })}
-        ${renderToolsSystemCard({
-          label: "Data + Access",
-          value: usersCount,
-          detail: "Imports, exports, backups, profile avatars, and dashboard permissions stay together.",
-          rows: [
-            { label: "Dashboard users", value: usersCount },
-            { label: "Financial documents", value: documentsCount }
-          ],
-          action: "go-import-export",
-          actionLabel: "Open Data Tools"
-        })}
-        ${renderToolsSystemCard({
-          label: "Diagnostics",
-          value: criticalWarnings.length + supportWarnings.length,
-          detail: "Warnings are visible here without blocking Home, Tickets, Work, Leads, or Money.",
-          rows: [
-            { label: "Workflow warnings", value: criticalWarnings.length },
-            { label: "Support warnings", value: supportWarnings.length }
-          ],
-          action: "copy-dashboard-diagnostics",
-          actionLabel: "Copy Diagnostics",
-          tone: criticalWarnings.length ? "warning" : ""
-        })}
-      </div>
-    </section>`;
-  }
 
   function renderToolsLaunchGroup({ title, detail, items = [] }) {
     return `<article class="tools-launch-group">
@@ -18706,6 +16472,7 @@ Requirements:
   function renderToolsWorkspace(data = state.data) {
     const target = qs("[data-tools-workspace]");
     if (!target) return;
+    const advancedOpen = Boolean(target.querySelector(".tools-advanced-admin")?.open);
     const rows = dashboardHealthRows();
     const criticalWarnings = dashboardHealthWarnings({ scope: "critical" });
     const supportWarnings = dashboardHealthWarnings({ scope: "support" });
@@ -18754,7 +16521,7 @@ Requirements:
             ]
           })}
         </section>
-        <details class="tools-advanced-admin">
+        <details class="tools-advanced-admin"${advancedOpen ? " open" : ""}>
           <summary>Advanced administration and diagnostics</summary>
           <div class="tools-advanced-admin-body">
             <section class="tools-admin-grid" aria-label="Admin tools and diagnostics">
@@ -18792,23 +16559,6 @@ Requirements:
     bindAvatarFallbacks();
   }
 
-  function renderToolsCard({ label, detail, meta, status = "Support", tone = "", primary, primaryAction, secondary, secondaryAction }) {
-    return `
-      <article class="tools-control-card ${tone ? `tools-control-card--${escapeHtml(tone)}` : ""}">
-        <div class="tools-control-card-copy">
-          <div class="tools-control-card-topline">
-            <p class="eyebrow">${escapeHtml(meta || "Support")}</p>
-            <span>${escapeHtml(status)}</span>
-          </div>
-          <h3>${escapeHtml(label)}</h3>
-          <p>${escapeHtml(detail)}</p>
-        </div>
-        <div class="ticket-card-actions">
-          <button type="button" data-action="${escapeHtml(primaryAction)}">${escapeHtml(primary)}</button>
-          ${secondary && secondaryAction ? `<button type="button" data-action="${escapeHtml(secondaryAction)}">${escapeHtml(secondary)}</button>` : ""}
-        </div>
-      </article>`;
-  }
 
   function routePlannerMonday(dateKeyValue = todayKey()) {
     const date = new Date(`${dateKeyValue}T12:00:00`);
@@ -19180,40 +16930,6 @@ Requirements:
     return [];
   }
 
-  function renderCalendarGrid(events) {
-    const days = calendarGridDays();
-    const currentMonth = todayKey().slice(0, 7);
-    return `
-      <div class="calendar-grid" data-view="${escapeHtml(state.calendarView)}">
-        ${["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"].map((day) => `<div class="calendar-weekday">${day}</div>`).join("")}
-        ${days.map((day) => {
-          const dayEvents = events.filter((event) => event.date === day);
-          const dayClasses = [
-            "calendar-day",
-            day === todayKey() ? "is-today" : "",
-            day.slice(0, 7) !== currentMonth ? "is-muted" : "",
-            dayEvents.length ? "has-events" : ""
-          ].filter(Boolean).join(" ");
-          return `
-            <section class="${dayClasses}">
-              <div class="calendar-day-number">${new Date(`${day}T12:00:00`).getDate()}</div>
-              <div class="calendar-day-events">
-                ${dayEvents.slice(0, 3).map((event) => `
-                  <button type="button" class="calendar-pill calendar-${escapeHtml(event.type)}" ${event.action ? `data-action="${escapeHtml(event.action)}" data-id="${escapeHtml(event.sourceId)}"` : ""}>
-                    <span>${escapeHtml(event.title)}</span>
-                  </button>
-                `).join("")}
-                ${dayEvents.length > 3 ? `<span class="calendar-more">+${dayEvents.length - 3} more</span>` : ""}
-              </div>
-            </section>
-          `;
-        }).join("")}
-      </div>
-      <div class="calendar-agenda-after-grid">
-        ${events.length ? events.slice(0, 8).map(renderCalendarListCard).join("") : emptyState("No calendar items match this view.")}
-      </div>
-    `;
-  }
 
   function renderCalendarListCard(event) {
     return `
@@ -19445,70 +17161,6 @@ Requirements:
     renderWorkActivity(data);
   }
 
-  function renderCalendar(data) {
-    if (!els.calendarList) return;
-    renderWorkPage(data);
-    let events = buildCalendarEvents(data);
-    if (state.search.trim()) {
-      events = events.filter((event) => matchesSearchValues([event.title, event.client, event.property, event.time, event.status, event.type, event.date]));
-    }
-    if (state.calendarFilter !== "All") {
-      events = events.filter((event) => event.type === state.calendarFilter);
-    }
-    events = calendarWindow(events);
-    const isThirty = state.calendarView === "thirty";
-    if (els.calendarRangeControls) els.calendarRangeControls.hidden = !isThirty;
-    if (els.calendarRangeLabel) {
-      const start = addDaysKey(todayKey(), state.calendarRangeOffset * 30);
-      const end = addDaysKey(start, 30);
-      els.calendarRangeLabel.textContent = `${formatDate(start)} - ${formatDate(end)}`;
-    }
-    qsa("[data-calendar-view]").forEach((button) => {
-      button.classList.toggle("is-active", button.dataset.calendarView === state.calendarView);
-    });
-    if (!events.length) {
-      els.calendarList.innerHTML = emptyState("No calendar items match this view.");
-      return;
-    }
-    els.calendarList.innerHTML = renderCalendarGrouped(events);
-  }
-
-  function renderQuoteTable(data) {
-    const items = filteredSubmissions();
-    if (!items.length) {
-      els.quoteTable.innerHTML = `<tr><td colspan="6">${emptyState("No quote/contact submissions match this view yet.")}</td></tr>`;
-      return;
-    }
-    els.quoteTable.innerHTML = items.map((item) => `
-      <tr>
-        <td><strong>${escapeHtml(item.name)}</strong><br><span class="meta">${escapeHtml(item.email)}</span>${renderPhoneActions(item.phone, { leadId: item.id, leadType: "quote_submission", compact: true, helper: false })}</td>
-        <td>${escapeHtml(item.service)}<br><span class="meta">${escapeHtml(item.source)} / ${escapeHtml(item.receivedAt)}</span></td>
-        <td>${escapeHtml(item.propertyType)}<br><span class="meta">${escapeHtml(item.city)}</span></td>
-        <td>${statusSelect("quote_submissions", item.id, item.status)}</td>
-        <td>${escapeHtml(item.followUp)}</td>
-        <td>${actionButton("Open", "open-submission", item.id)}</td>
-      </tr>
-    `).join("");
-  }
-
-  function renderPipeline(data) {
-    if (!els.pipeline) return;
-    const items = filteredSubmissions();
-    els.pipeline.innerHTML = STATUSES.map((status) => {
-      const cards = items.filter((item) => item.status === status);
-      return `
-        <section class="pipeline-column">
-          <h4>${escapeHtml(status)} <span>${cards.length}</span></h4>
-          ${cards.length ? cards.map((item) => `
-            <button class="pipeline-card" type="button" data-action="open-submission" data-id="${escapeHtml(item.id)}">
-              <strong>${escapeHtml(item.name)}</strong>
-              <span class="meta">${escapeHtml(item.service)} / ${escapeHtml(item.city)}</span>
-            </button>
-          `).join("") : emptyState("No leads")}
-        </section>
-      `;
-    }).join("");
-  }
 
   function renderContacts(data) {
     const host = els.contacts.parentElement;
@@ -19796,104 +17448,6 @@ Requirements:
     }
   }
 
-  function renderOutreach(data) {
-    if (!els.outreachMetrics) return;
-    populateOutreachFilters(data);
-    setOutreachViewVisibility();
-    if (els.outreachSearch && els.outreachSearch.value !== state.outreachSearch) els.outreachSearch.value = state.outreachSearch;
-    if (els.outreachStatusFilter) els.outreachStatusFilter.value = state.outreachStatusFilter;
-    if (els.outreachPriorityFilter) els.outreachPriorityFilter.value = state.outreachPriorityFilter;
-    if (els.outreachCompanySearch && els.outreachCompanySearch.value !== state.outreachSearch) els.outreachCompanySearch.value = state.outreachSearch;
-    if (els.outreachCompanyStatusFilter) els.outreachCompanyStatusFilter.value = state.outreachStatusFilter;
-    if (els.outreachCompanyPriorityFilter) els.outreachCompanyPriorityFilter.value = state.outreachPriorityFilter;
-    if (els.outreachPropertySearch && els.outreachPropertySearch.value !== state.outreachSearch) els.outreachPropertySearch.value = state.outreachSearch;
-    if (els.outreachPropertyStatusFilter) els.outreachPropertyStatusFilter.value = state.outreachStatusFilter;
-    if (els.outreachPropertyPriorityFilter) els.outreachPropertyPriorityFilter.value = state.outreachPriorityFilter;
-    if (els.outreachPropertyNeedsFilter && els.outreachPropertyNeedsFilter.value !== state.outreachVisibleNeedsFilter) els.outreachPropertyNeedsFilter.value = state.outreachVisibleNeedsFilter;
-    if (els.outreachPropertyVerifiedFilter) els.outreachPropertyVerifiedFilter.value = state.outreachVerifiedFilter;
-
-    if (!state.outreachReady) {
-      const message = "Outreach could not load right now. Refresh the dashboard or check Supabase access.";
-      els.outreachMetrics.innerHTML = "";
-      if (els.outreachFollowups) els.outreachFollowups.innerHTML = emptyState(message);
-      if (els.outreachHot) els.outreachHot.innerHTML = emptyState("No quote-ready leads.");
-      if (els.outreachTable) els.outreachTable.innerHTML = `<tr><td colspan="6">${emptyState(message)}</td></tr>`;
-      if (els.outreachCards) els.outreachCards.innerHTML = "";
-      if (els.outreachArchive) els.outreachArchive.innerHTML = "";
-      return;
-    }
-
-    const validIds = new Set(data.outreachProspects.map((item) => item.id));
-    state.selectedOutreachIds.forEach((id) => {
-      if (!validIds.has(id)) state.selectedOutreachIds.delete(id);
-    });
-
-    const active = data.outreachProspects.filter((item) => !isClosedOutreach(item));
-    const due = outreachDueProspects();
-    const hot = outreachHotProspects();
-    const metrics = [
-      { label: "Companies", value: data.outreachCompanies.length, icon: "properties-building.svg", detail: "Owner groups" },
-      { label: "Properties", value: data.outreachProperties.length, icon: "add-property-building.svg", detail: "Managed locations" },
-      { label: "Total Prospects", value: data.outreachProspects.length, icon: "new-lead-user.svg", detail: "Lead records" },
-      { label: "Follow-ups Due", value: due.length, icon: "log-time-clock.svg", detail: "Needs contact" },
-      { label: "Interested", value: data.outreachProspects.filter((item) => item.status === "Interested").length + data.outreachCompanies.filter((item) => item.status === "Interested").length + data.outreachProperties.filter((item) => item.status === "Interested").length, icon: "outreach-send.svg", detail: "Warm opportunities" }
-    ];
-    els.outreachMetrics.innerHTML = metrics.map((metric) => `
-      <article class="outreach-metric-card">
-        <span class="outreach-metric-icon" aria-hidden="true"><img src="${dashboardIcon(metric.icon)}" alt=""></span>
-        <strong>${escapeHtml(metric.value)}</strong>
-        <span>${escapeHtml(metric.label)}</span>
-        <small>${escapeHtml(metric.detail)}</small>
-      </article>
-    `).join("");
-
-    renderOutreachCompanies();
-    renderOutreachProperties();
-
-    if (els.outreachFollowups) {
-      els.outreachFollowups.innerHTML = due.length ? due.slice(0, 6).map((item) => renderOutreachCard(item, "due")).join("") : emptyState("No follow-ups due.");
-    }
-    if (els.outreachHot) {
-      els.outreachHot.innerHTML = hot.length ? hot.slice(0, 6).map((item) => renderOutreachCard(item, "hot")).join("") : emptyState("No quote-ready leads.");
-    }
-
-    const prospects = filteredOutreachProspects({ activeOnly: true }).filter((item) => !isClosedOutreach(item));
-    const selectedVisibleCount = prospects.filter((item) => state.selectedOutreachIds.has(item.id)).length;
-    if (els.outreachBulkBar) els.outreachBulkBar.hidden = state.selectedOutreachIds.size === 0;
-    if (els.outreachSelectedCount) {
-      const count = state.selectedOutreachIds.size;
-      els.outreachSelectedCount.textContent = `${count} selected`;
-    }
-    if (els.outreachSelectAll) {
-      els.outreachSelectAll.checked = Boolean(prospects.length && selectedVisibleCount === prospects.length);
-      els.outreachSelectAll.indeterminate = Boolean(selectedVisibleCount && selectedVisibleCount < prospects.length);
-      els.outreachSelectAll.disabled = !prospects.length;
-    }
-    if (!prospects.length) {
-      if (els.outreachTable) els.outreachTable.innerHTML = `<tr><td colspan="6">${emptyState(active.length ? "No prospects match these filters." : "No prospects yet.")}</td></tr>`;
-      if (els.outreachCards) els.outreachCards.innerHTML = emptyState(active.length ? "No prospects match these filters." : "No prospects yet.");
-    } else {
-      if (els.outreachTable) {
-        els.outreachTable.innerHTML = prospects.map((item) => `
-          <tr>
-            <td><input data-outreach-select type="checkbox" value="${escapeHtml(item.id)}" aria-label="Select ${escapeHtml(outreachTitle(item))}"${state.selectedOutreachIds.has(item.id) ? " checked" : ""}></td>
-            <td><strong>${escapeHtml(outreachTitle(item))}</strong><br><span class="meta">${escapeHtml(outreachSubtitle(item))}</span></td>
-            <td>${escapeHtml(item.propertyType)}<br><span class="meta">${escapeHtml(item.serviceInterest)} / ${escapeHtml(item.priority)}</span></td>
-            <td>${outreachStatusSelect(item.id, item.status)}</td>
-            <td>${escapeHtml(item.nextFollowUpAt)}<br><span class="meta">Last: ${escapeHtml(item.lastContactedAt)}</span></td>
-            <td>${renderOutreachActions(item)}</td>
-          </tr>
-        `).join("");
-      }
-      if (els.outreachCards) els.outreachCards.innerHTML = prospects.map((item) => renderOutreachCard(item)).join("");
-    }
-
-    const archive = data.outreachProspects.filter(isClosedOutreach).filter(outreachMatchesSearch);
-    if (els.outreachArchiveCount) els.outreachArchiveCount.textContent = archive.length;
-    if (els.outreachArchive) {
-      els.outreachArchive.innerHTML = archive.length ? archive.map((item) => renderOutreachCard(item, "archive")).join("") : emptyState("No won or lost prospects yet.");
-    }
-  }
 
   function prospectLikelyTickets(item = {}) {
     if (!item) return [];
@@ -20200,66 +17754,6 @@ Requirements:
     `;
   }
 
-  function renderJobs(data) {
-    if (!els.jobs) return;
-    const jobs = filteredJobs();
-    if (!jobs.length) {
-      els.jobs.innerHTML = emptyState("No scheduled jobs/visits yet.");
-      return;
-    }
-    els.jobs.innerHTML = jobs.map((job) => `
-      <article class="job-card ${isOverdueJob(job) ? "job-card-overdue" : ""}">
-        <div class="item-topline">
-          <div>
-            <h4>${escapeHtml(job.site)}</h4>
-            <div class="meta">${escapeHtml(job.date)} / ${escapeHtml(job.window)}</div>
-          </div>
-          ${statusSelect("scheduled_jobs", job.id, job.status)}
-        </div>
-        <p class="item-body">${escapeHtml(job.service)}<br>${escapeHtml(job.city)}</p>
-        ${isOverdueJob(job) ? `<p class="job-overdue-note">Overdue: this visit passed its scheduled date and is not complete.</p>` : ""}
-        <div class="job-actions">
-          ${job.status !== "Completed" ? actionButton("Complete", "complete-job", job.id) : ""}
-          ${isOverdueJob(job) ? actionButton("Reschedule", "reschedule-job", job.id) : ""}
-          ${actionButton("Edit", "edit-job", job.id)}
-          ${actionButton("Delete", "cancel-job", job.id).replace("inline-action", "inline-action danger-action")}
-        </div>
-      </article>
-    `).join("");
-  }
-
-  function renderDocuments(data) {
-    if (!els.documents) return;
-    if (!state.documentsReady) {
-      els.documents.innerHTML = emptyState("Documents could not load right now. Refresh the dashboard or check Supabase access.");
-      return;
-    }
-    const docs = filteredDocuments();
-    if (!docs.length) {
-      els.documents.innerHTML = emptyState("No estimates or invoices yet.");
-      return;
-    }
-    els.documents.innerHTML = docs.map((doc) => `
-      <article class="document-card">
-        <div class="item-topline">
-          <div>
-            <h4>${escapeHtml(doc.number)}</h4>
-            <div class="meta">${escapeHtml(doc.type === "invoice" ? "Invoice" : "Estimate / Quote")} / ${escapeHtml(doc.status)}</div>
-            ${documentStatusBadge(doc)}
-            <div class="meta">Square invoice: ${escapeHtml(doc.squareInvoiceNumber || "Add invoice #, then sync")}</div>
-            ${doc.squareStatus ? `<div class="meta">Square: ${escapeHtml(doc.squareStatus)}${doc.squareSyncedAt ? ` / synced ${escapeHtml(doc.squareSyncedAt)}` : ""}</div>` : ""}
-          </div>
-          <div class="document-card-actions">
-            ${actionButton("Open", "open-document", doc.id)}
-            ${actionButton("Sync", "sync-square-document", doc.id)}
-            ${actionButton("Delete", "delete-document", doc.id).replace("inline-action", "inline-action danger-action")}
-          </div>
-        </div>
-        <p class="item-body">${escapeHtml(doc.clientName)}<br>${escapeHtml(doc.clientEmail || "No email")}</p>
-        <strong class="document-total">${doc.squareAmountDueCents !== null ? `${escapeHtml(formatCurrency(doc.squareAmountDueCents, doc.squareCurrency))} due` : `$${doc.total.toFixed(2)}`}</strong>
-      </article>
-    `).join("");
-  }
 
   function documentationStatusBadge(status) {
     const safeStatus = normalizeDocumentationStatus(status);
@@ -21067,47 +18561,6 @@ Requirements:
     els.budgetList.innerHTML = budgets.length ? budgets.map(renderBudgetRow).join("") : emptyState("No job budgets match this view.");
   }
 
-  function renderHomeBudgets(data = state.data) {
-    if (!els.homeBudgets) return;
-    const budgets = (data.budgets?.budgets || []).filter((budget) => budget.status !== "Archived");
-    const summaries = budgets.map((budget) => ({ budget, summary: budgetSummary(budget) }));
-    const active = budgets.filter((budget) => !["Completed", "Archived"].includes(budget.status)).length;
-    const atRisk = summaries.filter((item) => ["Watch", "At Risk"].includes(item.summary.health) || item.budget.status === "At Risk").length;
-    const over = summaries.filter((item) => item.summary.health === "Over Budget" || item.budget.status === "Over Budget").length;
-    const upcomingProfit = summaries
-      .filter((item) => !["Completed", "Archived"].includes(item.budget.status))
-      .reduce((total, item) => total + Number(item.summary.estimatedProfit || 0), 0);
-    const missingActuals = summaries.filter((item) => item.budget.status === "Completed" && !Number(item.summary.totalActualCost || 0)).length;
-    els.homeBudgets.innerHTML = `<div class="home-budget-stats">
-      ${budgetMetricCard("Active Budgets", String(active), "Jobs being estimated or tracked")}
-      ${budgetMetricCard("At Risk", String(atRisk), "Below target margin", atRisk ? "warning" : "")}
-      ${budgetMetricCard("Over Budget", String(over), "Needs review", over ? "danger" : "")}
-      ${budgetMetricCard("Upcoming Profit", budgetCurrency(upcomingProfit), "Estimated")}
-      ${budgetMetricCard("Missing Actuals", String(missingActuals), "Completed jobs")}
-    </div>`;
-  }
-
-  function renderBudgets(data = state.data) {
-    if (!els.budgetList && !els.budgetMetrics && !els.budgetDetail) return;
-    populateBudgetControls(data);
-    fillBudgetSettingsForm();
-    if (els.budgetSearch && els.budgetSearch.value !== state.budgetSearch) els.budgetSearch.value = state.budgetSearch;
-    if (els.budgetDateStart && els.budgetDateStart.value !== state.budgetDateStart) els.budgetDateStart.value = state.budgetDateStart;
-    if (els.budgetDateEnd && els.budgetDateEnd.value !== state.budgetDateEnd) els.budgetDateEnd.value = state.budgetDateEnd;
-    if (els.budgetStatus) {
-      els.budgetStatus.textContent = state.budgetsReady || isDemoMode()
-        ? "Budget tools live inside Job Tickets and Money."
-        : (state.budgetsError || "Budget tools live inside Job Tickets and Money.");
-    }
-    const selected = selectedBudget();
-    if (selected && !state.selectedBudgetId) state.selectedBudgetId = selected.id;
-    renderBudgetMetrics();
-    renderBudgetList();
-    renderBudgetDetail();
-    if (els.budgetLineForm?.elements.budget_id && !els.budgetLineForm.elements.budget_id.value) {
-      els.budgetLineForm.elements.budget_id.value = state.selectedBudgetId || "";
-    }
-  }
 
   function activeConnectedOpsBundle() {
     return normalizeConnectedOpsBundle(state.data.connectedOps || {});
@@ -21414,43 +18867,6 @@ Requirements:
     </div>`;
   }
 
-  function renderConnectedOperations(data = state.data) {
-    if (!els.connectedOpsMain && !els.connectedOpsMetrics) return;
-    const ops = activeConnectedOpsBundle();
-    const activeRecurring = ops.recurringServices.filter((item) => item.status === "Active").length;
-    const openApprovals = ops.approvals.filter((item) => ["Pending", "Needs More Info"].includes(item.status)).length;
-    const dueChecklists = ops.checklists.filter((item) => !["Completed", "Archived"].includes(item.status)).length;
-    const dueMaintenance = ops.maintenanceSchedules.filter((item) => item.nextDueDateRaw && item.nextDueDateRaw <= daysFromToday(7) && item.status === "Active").length;
-
-    if (els.connectedOpsStatus) {
-      els.connectedOpsStatus.textContent = state.connectedOpsReady || isDemoMode()
-        ? "Connected operations uses the shared dashboard records and protected Supabase tables."
-        : "Connected Operations is handled by Job Tickets now.";
-    }
-    if (els.connectedOpsMetrics) {
-      els.connectedOpsMetrics.innerHTML = [
-        connectedOpsMetric("Active Recurring", String(activeRecurring), "Recurring service plans"),
-        connectedOpsMetric("Work Checklists", String(dueChecklists), "Open job checklists"),
-        connectedOpsMetric("Approvals", String(openApprovals), "Need decisions", openApprovals ? "warning" : ""),
-        connectedOpsMetric("Maintenance Due", String(dueMaintenance), "Next 7 days", dueMaintenance ? "warning" : ""),
-        connectedOpsMetric("Communications", String(ops.communications.length), "Client timeline records")
-      ].join("");
-    }
-    renderConnectedOpsTabs();
-    if (!els.connectedOpsMain) return;
-    if (!state.connectedOpsReady && !isDemoMode()) {
-      els.connectedOpsMain.innerHTML = emptyState("Connected Operations is handled by Job Tickets now.");
-      return;
-    }
-    const view = state.connectedOpsView;
-    if (view === "field") els.connectedOpsMain.innerHTML = renderFieldOperations(ops);
-    else if (view === "approvals") els.connectedOpsMain.innerHTML = renderApprovalOperations(ops);
-    else if (view === "communications") els.connectedOpsMain.innerHTML = renderCommunicationOperations(ops);
-    else if (view === "shares") els.connectedOpsMain.innerHTML = renderShareOperations(ops);
-    else if (view === "automation") els.connectedOpsMain.innerHTML = renderAutomationOperations(ops);
-    else if (view === "reports") els.connectedOpsMain.innerHTML = renderReportOperations(ops);
-    else els.connectedOpsMain.innerHTML = renderRecurringOperations(ops);
-  }
 
   function renderNotes() {
     if (!els.notes) return;
@@ -21473,42 +18889,6 @@ Requirements:
     `).join("");
   }
 
-  function renderReminders(data) {
-    if (!els.reminders) return;
-    const reminders = filteredReminders();
-    if (!reminders.length) {
-      els.reminders.innerHTML = emptyState("No follow-up reminders yet.");
-      return;
-    }
-    els.reminders.innerHTML = reminders.map((reminder) => `
-      <article class="reminder-card">
-        <div class="item-topline">
-          <div>
-            <h4>${escapeHtml(reminder.task)}</h4>
-            <div class="meta">Due: ${escapeHtml(reminder.due)}</div>
-          </div>
-          <div class="card-actions">
-            ${statusSelect("follow_up_reminders", reminder.id, reminder.status)}
-            ${actionButton("Done", "complete-reminder", reminder.id)}
-            ${actionButton("Delete", "delete-reminder", reminder.id).replace("inline-action", "inline-action danger-action")}
-          </div>
-        </div>
-      </article>
-    `).join("");
-  }
-
-  function renderTimeline(item) {
-    const relatedJobs = state.data.jobs.filter((job) => job.site === item.name || job.site === item.propertyType);
-    const relatedReminders = state.data.reminders.filter((reminder) => reminder.task.toLowerCase().includes(item.name.toLowerCase()));
-    const entries = [
-      { label: "Quote received", detail: item.receivedAt },
-      { label: "Current status", detail: item.status },
-      { label: "Follow-up", detail: item.followUp },
-      ...relatedJobs.map((job) => ({ label: "Scheduled job", detail: `${job.date} / ${job.service}` })),
-      ...relatedReminders.map((reminder) => ({ label: "Reminder", detail: `${reminder.due} / ${reminder.task}` }))
-    ];
-    return `<div class="timeline">${entries.map((entry) => `<div class="timeline-item"><strong>${escapeHtml(entry.label)}</strong><br>${escapeHtml(entry.detail)}</div>`).join("")}</div>`;
-  }
 
   function openSubmissionDrawer(id) {
     const item = findSubmission(id);
@@ -22539,24 +19919,6 @@ Requirements:
     </article>`;
   }
 
-  function renderAiList(element, items, type, emptyMessage) {
-    if (!element) return;
-    if (!items.length) {
-      element.innerHTML = emptyState(emptyMessage);
-      return;
-    }
-    const limits = {
-      settings: 5,
-      knowledge: 5,
-      faqs: 4,
-      rules: 4,
-      savedAnswers: 4
-    };
-    const limit = limits[type] || 5;
-    const visibleItems = items.slice(0, limit);
-    const hiddenCount = items.length - visibleItems.length;
-    element.innerHTML = `${visibleItems.map((item) => renderAiRecord(item, type)).join("")}${hiddenCount > 0 ? `<div class="groundskeeper-ai-more">Showing ${visibleItems.length} of ${items.length} entries.</div>` : ""}`;
-  }
 
   function renderGroundskeeperChat() {
     if (!els.groundskeeperChat) return;
@@ -22570,29 +19932,6 @@ Requirements:
     els.groundskeeperChat.scrollTop = els.groundskeeperChat.scrollHeight;
   }
 
-  function renderAiLogs(logs) {
-    if (!els.aiLogsList) return;
-    if (!logs.length) {
-      els.aiLogsList.innerHTML = emptyState(state.groundskeeperAiReady ? "No questions for The Lawnmower Man have been logged yet." : (state.groundskeeperAiError || "The Lawnmower Man logs could not load."));
-      return;
-    }
-    const visibleLogs = logs.slice(0, 6);
-    const hiddenLogCount = logs.length - visibleLogs.length;
-    els.aiLogsList.innerHTML = `${visibleLogs.map((log) => `
-      <article class="groundskeeper-ai-record">
-        <div class="groundskeeper-ai-record-head">
-          <strong>${escapeHtml(log.question || "Question")}</strong>
-          <span>${aiBadge(log.mode || "public", "public")}</span>
-        </div>
-        <small>${escapeHtml([log.page, log.created_at ? formatDate(log.created_at) : ""].filter(Boolean).join(" · "))}</small>
-        <p>${escapeHtml(log.answer || "No answer saved.")}</p>
-        <div class="groundskeeper-ai-record-actions">
-          <button class="inline-action" type="button" data-action="save-ai-log-knowledge" data-id="${escapeHtml(log.id)}">Save as Knowledge</button>
-          <button class="inline-action" type="button" data-action="save-ai-log-rule" data-id="${escapeHtml(log.id)}">Save as Rule</button>
-        </div>
-      </article>
-    `).join("")}${hiddenLogCount > 0 ? `<div class="groundskeeper-ai-more">Showing ${visibleLogs.length} of ${logs.length} recent questions.</div>` : ""}`;
-  }
 
   const GROUNDSKEEPER_OPERATIONS = [
     { key: "daily-briefing", group: "Today", title: "Daily operations briefing", detail: "Calls, visits, approvals, proof, invoices, and urgent work.", prompt: "Create my concise daily operations briefing. Order the work by urgency, explain why each item matters, and finish with the best first three actions." },
@@ -22859,10 +20198,6 @@ Requirements:
       .filter(Boolean);
   }
 
-  function renderContextualGroundskeeperTools(section = state.activeSection) {
-    // The persistent conversational copilot is now the single AI entry point.
-    document.querySelectorAll("[data-contextual-ai-tools]").forEach((panel) => panel.remove());
-  }
 
   function renderContextualAiDrawer(operationKey = state.groundskeeperOperationKey) {
     const operation = GROUNDSKEEPER_OPERATIONS.find((item) => item.key === operationKey) || GROUNDSKEEPER_OPERATIONS[0];
@@ -24289,55 +21624,6 @@ Requirements:
     return `<article class="focus-schedule-stop"><strong class="focus-schedule-time">${escapeHtml(job.time)}</strong><div class="focus-schedule-visual"><span class="focus-schedule-thumb" aria-hidden="true"></span>${index < HOME_FOCUS_JOBS.length - 1 ? '<span class="focus-schedule-connector" aria-hidden="true"></span>' : ""}</div><strong>${escapeHtml(job.address)}</strong><span>Portland, OR</span><small>${escapeHtml(job.duration)}</small></article>`;
   }
 
-  function renderFocusOnWorkHome() {
-    const host = qs("[data-home-focus-work]");
-    if (!host) return;
-    const focusJobs = homeFocusRows();
-    const locationCounts = focusJobs.reduce((map, job) => map.set(job.address, (map.get(job.address) || 0) + 1), new Map());
-    const topLocations = [...locationCounts.entries()].sort((a, b) => b[1] - a[1]).slice(0, 4);
-    const homeTasks = focusJobs.flatMap((job) => (job.checklistItems || []).map((item) => ({ ...item, jobId: job.id, address: job.address, time: job.time }))).slice(0, 3);
-    const completedCount = focusJobs.filter((job) => job.status === "Completed").length;
-    const inProgressCount = focusJobs.filter((job) => job.status === "In Progress").length;
-    const scheduledCount = focusJobs.filter((job) => job.status === "Scheduled").length;
-    const attentionCount = focusJobs.filter((job) => job.attention).length;
-    const summaryPercent = (value) => focusJobs.length ? Math.round((value / focusJobs.length) * 100) : 0;
-    host.innerHTML = `<div class="focus-work-page">
-      <header class="focus-work-heading"><h2>Focus on Work</h2><p>List + Summary</p></header>
-      <section class="focus-metrics" aria-label="Work metrics">
-        ${renderFocusMetric("calendar", String(focusJobs.filter((job) => job.dateRaw === todayKey()).length), "Jobs Today", "", "today")}
-        ${renderFocusMetric("pin", String(locationCounts.size), "Locations", "", "locations")}
-        ${renderFocusMetric("clock", "Derived", "Est. Work Time", "This Week", "week")}
-        ${renderFocusMetric("check", String(completedCount), "Completed", "This Week", "completed")}
-        ${renderFocusMetric("warning", String(attentionCount), "Needs Attention", "View", "attention")}
-      </section>
-      <div class="focus-primary-grid">
-        <section class="focus-card focus-jobs-card">
-          <div class="focus-card-header"><h3>Jobs List</h3><div class="focus-job-controls">
-            <label><span class="focus-control-icon">${homeFocusIcon("calendar")}</span><select data-home-focus-filter="date" aria-label="Job date"><option${state.homeFocusDate==="Today"?" selected":""}>Today</option><option${state.homeFocusDate==="Tomorrow"?" selected":""}>Tomorrow</option><option${state.homeFocusDate==="This Week"?" selected":""}>This Week</option></select></label>
-            <label><span class="focus-control-icon">${homeFocusIcon("pin")}</span><select data-home-focus-filter="location" aria-label="Job location"><option>All Locations</option>${[...new Set(workOperationsRows().map((job)=>job.city).filter(Boolean))].map((value)=>`<option${state.homeFocusLocation===value?" selected":""}>${escapeHtml(value)}</option>`).join("")}</select></label>
-            <label><span class="focus-control-icon">${homeFocusIcon("briefcase")}</span><select data-home-focus-filter="status" aria-label="Job status"><option>All Status</option><option${state.homeFocusStatus==="In Progress"?" selected":""}>In Progress</option><option${state.homeFocusStatus==="Scheduled"?" selected":""}>Scheduled</option><option${state.homeFocusStatus==="Completed"?" selected":""}>Completed</option></select></label>
-            <button class="focus-new-job" type="button" data-action="open-ticket-create" data-ticket-type="field"><span>+</span> New Job</button>
-          </div></div>
-          <div class="focus-jobs-table-wrap"><table class="focus-jobs-table"><thead><tr><th>Time</th><th>Job / Customer</th><th>Location</th><th>Crew</th><th>Status</th><th>Est. Time</th><th><span class="sr-only">Menu</span></th></tr></thead><tbody>${focusJobs.length ? focusJobs.map(renderFocusJobRow).join("") : '<tr><td colspan="7">No scheduled work matches this period.</td></tr>'}</tbody></table></div>
-          <div class="focus-card-footer"><span>Showing ${focusJobs.length} of ${focusJobs.length} jobs</span><a href="#tickets">View full list <span aria-hidden="true">→</span></a></div>
-        </section>
-        <div class="focus-right-stack">
-          <section class="focus-card focus-summary-card"><div class="focus-card-header"><h3>Work Summary</h3><label class="focus-summary-select"><select data-home-summary-period aria-label="Summary period"><option>This Week</option><option>Today</option><option>This Month</option></select></label></div><div class="focus-summary-list">
-            <div class="focus-summary-row is-total"><span class="focus-inline-icon">${homeFocusIcon("calendar")}</span><span>Total Jobs</span><strong>${focusJobs.length}</strong></div>
-            <div class="focus-summary-row"><span class="focus-inline-icon">${homeFocusIcon("check")}</span><span>Completed</span><i><b style="width:${summaryPercent(completedCount)}%"></b></i><strong>${completedCount} (${summaryPercent(completedCount)}%)</strong></div>
-            <div class="focus-summary-row is-progress"><span class="focus-inline-icon">${homeFocusIcon("check")}</span><span>In Progress</span><i><b style="width:${summaryPercent(inProgressCount)}%"></b></i><strong>${inProgressCount} (${summaryPercent(inProgressCount)}%)</strong></div>
-            <div class="focus-summary-row"><span class="focus-inline-icon">${homeFocusIcon("calendar")}</span><span>Scheduled</span><i><b style="width:${summaryPercent(scheduledCount)}%"></b></i><strong>${scheduledCount} (${summaryPercent(scheduledCount)}%)</strong></div>
-            <div class="focus-summary-row is-attention"><span class="focus-inline-icon">${homeFocusIcon("warning")}</span><span>Needs Attention</span><i><b style="width:${summaryPercent(attentionCount)}%"></b></i><strong>${attentionCount} (${summaryPercent(attentionCount)}%)</strong></div>
-          </div></section>
-          <section class="focus-card focus-locations-card"><div class="focus-card-header"><h3>Top Locations</h3><a class="focus-small-button" href="#calendar">View all</a></div><div class="focus-location-list">${topLocations.map(([name,count])=>`<div><span class="focus-inline-icon">${homeFocusIcon("pin")}</span><span>${escapeHtml(name)}</span><small>${count} job${count===1?"":"s"}</small></div>`).join("") || '<small>No scheduled locations.</small>'}</div></section>
-        </div>
-      </div>
-      <div class="focus-bottom-grid">
-        <section class="focus-card focus-schedule-card"><div class="focus-card-header"><h3>Upcoming Schedule</h3><a href="#calendar">View full schedule <span aria-hidden="true">→</span></a></div><div class="focus-schedule-list">${focusJobs.map(renderFocusScheduleItem).join("")}</div></section>
-        <section class="focus-card focus-tasks-card"><div class="focus-card-header"><h3>My Tasks</h3><a class="focus-small-button" href="#calendar">View all</a></div>${homeTasks.map((item)=>`<label class="focus-task ${item.checked?"is-complete":""}"><input type="checkbox" data-work-checklist-item data-id="${escapeHtml(item.jobId)}" data-item-id="${escapeHtml(item.id || "")}" ${item.checked?"checked":""}><span><strong>${escapeHtml(item.label || "Task")}</strong><small>${escapeHtml(item.address)}</small></span><em>${item.checked?"Completed":`Due ${escapeHtml(item.time)}`}</em></label>`).join("") || '<small>No assigned tasks.</small>'}</section>
-      </div>
-    </div>`;
-  }
 
   function homeWeatherApi() {
     return window.UrbanYardsWeather || null;
@@ -24788,7 +22074,7 @@ Requirements:
   });
 
   const UNIFIED_TICKET_NAV = Object.freeze([
-    ["overview", "Overview", "home"], ["details", "Details", "info"], ["work", "Work", "work"],
+    ["overview", "Overview", "home"], ["details", "Details", "info"], ["quote", "Quote", "document"], ["invoice", "Invoice", "document"], ["costs", "Costs & Closeout", "check"], ["work", "Work", "work"],
     ["schedule", "Schedule", "calendar"], ["tasks", "Tasks", "check"], ["photos", "Photos", "photo"],
     ["documents", "Documents", "document"], ["notes", "Notes", "note"], ["history", "History", "clock"]
   ]);
@@ -24908,8 +22194,8 @@ Requirements:
       <span class="ttl-status ${ticket.status === "In Progress" ? "is-progress" : "is-scheduled"}">${escapeHtml(cleanDisplayValue(ticket.status, "Unscheduled"))}</span>
       <span class="ttl-crew">${unifiedTicketIcon("crew")}<span><strong>${escapeHtml(cleanDisplayValue(ticket.crew, "Unassigned"))}</strong>${extra ? `<small>${escapeHtml(extra)}</small>` : ""}</span></span>
       <span class="ttl-priority is-${escapeHtml(priority.toLowerCase())}"><i></i>${escapeHtml(priority)}</span>
-      <button type="button" class="ttl-menu" data-action="ticket-timeline-menu" data-id="${ticket.id}" aria-label="Actions for ticket ${ticket.id}">⋮</button>
-      <div class="ttl-row-menu" data-ticket-timeline-menu="${ticket.id}" hidden><button type="button" data-action="unified-ticket-open" data-id="${ticket.id}">Open ticket</button><button type="button" data-action="unified-ticket-schedule">View schedule</button>${canManageTicketTrash() ? `<button type="button" class="danger" data-action="trash-ticket" data-id="${ticket.id}">Move to Trash</button>` : ""}</div>
+      <button type="button" class="ttl-menu" data-action="ticket-timeline-menu" data-id="${escapeHtml(id)}" aria-label="Actions for ticket ${escapeHtml(id)}">⋮</button>
+      <div class="ttl-row-menu" data-ticket-timeline-menu="${escapeHtml(id)}" hidden><button type="button" data-action="unified-ticket-open" data-id="${escapeHtml(id)}">Open ticket</button><button type="button" data-action="unified-ticket-schedule">View schedule</button>${canManageTicketTrash() ? `<button type="button" class="danger" data-action="trash-ticket" data-id="${escapeHtml(id)}">Move to Trash</button>` : ""}</div>
     </article>`;
   }
 
@@ -24941,8 +22227,8 @@ Requirements:
     host.innerHTML = `<div class="tickets-timeline-page">
       <header class="ttl-header"><div><p class="clean-workspace-label">Tickets</p><h1>Tickets</h1><p>Upcoming tickets, visits, and work requiring attention.</p></div><div class="ttl-filters">
         <label>${unifiedTicketIcon("check")}<select data-ticket-timeline-filter="status" aria-label="Ticket status"><option value="All">Status</option><option${status==="In Progress"?" selected":""}>In Progress</option><option${status==="Scheduled"?" selected":""}>Scheduled</option></select></label>
-        <label>${unifiedTicketIcon("document")}<select data-ticket-timeline-filter="type" aria-label="Ticket type"><option value="All">Types</option>${[...new Set(allRows.map((item) => item.type).filter(Boolean))].map(v=>`<option${type===v?" selected":""}>${v}</option>`).join("")}</select></label>
-        <label>${unifiedTicketIcon("pin")}<select data-ticket-timeline-filter="location" aria-label="Ticket location"><option value="All">All Locations</option>${[...new Set(allRows.map((item) => item.city).filter(Boolean))].map(v=>`<option${location===v?" selected":""}>${v}</option>`).join("")}</select></label>
+        <label>${unifiedTicketIcon("document")}<select data-ticket-timeline-filter="type" aria-label="Ticket type"><option value="All">Types</option>${[...new Set(allRows.map((item) => item.type).filter(Boolean))].map(v=>`<option${type===v?" selected":""}>${escapeHtml(v)}</option>`).join("")}</select></label>
+        <label>${unifiedTicketIcon("pin")}<select data-ticket-timeline-filter="location" aria-label="Ticket location"><option value="All">All Locations</option>${[...new Set(allRows.map((item) => item.city).filter(Boolean))].map(v=>`<option${location===v?" selected":""}>${escapeHtml(v)}</option>`).join("")}</select></label>
         <label>${unifiedTicketIcon("calendar")}<select data-ticket-timeline-filter="range" aria-label="Ticket date range"><option value="week-plus"${range==="week-plus"?" selected":""}>This Week</option><option value="week"${range==="week"?" selected":""}>Through Sat</option></select></label>
         <button type="button" class="ttl-new-ticket" style="background:#343a45!important;color:#fff!important" data-action="open-ticket-create" data-ticket-type="field"><span>+</span> New Ticket</button>
         ${canManageTicketTrash() ? `<button type="button" class="secondary-action" data-action="show-ticket-trash">Trash <span>${escapeHtml(String(trashedTickets.length))}</span></button>` : ""}
@@ -25033,15 +22319,16 @@ Requirements:
       checklistItems:selectedChecklist.items || [], events:selectedEvents
     } : UNIFIED_TICKET_REFERENCE;
     const active = state.unifiedTicketSection || "overview";
-    const ticketReturnSection = state.unifiedTicketReturnSection === "calendar" ? "calendar" : "tickets";
-    const ticketBackLabel = ticketReturnSection === "calendar" ? "Back to Work" : "Back to Tickets";
+    const quoteTicket = sourceTicket ? findTicketForDrawer("ticket", sourceTicket.id) || sourceTicket : null;
+    const ticketReturnSection = ["calendar", "documents"].includes(state.unifiedTicketReturnSection) ? state.unifiedTicketReturnSection : "tickets";
+    const ticketBackLabel = ticketReturnSection === "calendar" ? "Back to Work" : ticketReturnSection === "documents" ? "Back to Money" : "Back to Tickets";
     const activeLabel = UNIFIED_TICKET_NAV.find(([key]) => key === active)?.[1] || "Overview";
     const nav = UNIFIED_TICKET_NAV.map(([key, label, icon]) => `<button type="button" class="ut-nav-item ${active === key ? "is-active" : ""}" data-action="unified-ticket-section" data-section="${key}" aria-pressed="${active === key}"><span>${unifiedTicketIcon(icon)}</span>${label}</button>`).join("");
     ticket.type = ticketTypeLabel(ticket);
     const summaryRows = [["Type",ticket.type],["Priority",ticket.priority],["Due Date",ticket.dueDate],["Status",ticket.status],["Lead",ticket.lead],["Crew",ticket.crew],["Est. Time",ticket.duration || "Not set"],["Created",ticket.created],["Customer",ticket.customer],["Phone",ticket.phone],["Email",ticket.email]].map(([a,b])=>`<div><span>${escapeHtml(a)}</span><strong>${escapeHtml(cleanDisplayValue(b, "Not set"))}</strong></div>`).join("");
     const ticketRecordId = ticket.recordId || state.unifiedTicketSelectedId;
     const quickActions = `<button type="button" data-action="unified-ticket-edit"><span>${unifiedTicketIcon("edit")}</span><strong>Edit Ticket</strong><b>›</b></button>`
-      + [["Add Task","plus","tasks"],["Upload Photo","upload","photos"],["Add Note","note","notes"],["Create Document","document","documents"]].map(([label,icon,section])=>`<button type="button" data-action="unified-ticket-quick" data-section="${section}"><span>${unifiedTicketIcon(icon)}</span><strong>${label}</strong><b>›</b></button>`).join("")
+      + [["View Quote","document","quote"],["Add Task","plus","tasks"],["Upload Photo","upload","photos"],["Add Note","note","notes"],["Create Document","document","documents"]].map(([label,icon,section])=>`<button type="button" data-action="unified-ticket-quick" data-section="${section}"><span>${unifiedTicketIcon(icon)}</span><strong>${label}</strong><b>›</b></button>`).join("")
       + (canManageTicketTrash() && ticketRecordId ? `<button type="button" class="ut-quick-danger danger" data-action="trash-ticket" data-id="${escapeHtml(ticketRecordId)}" aria-label="Move ticket to Trash"><span>${unifiedTicketIcon("trash")}</span><strong>Move to Trash</strong><b>›</b></button>` : "");
     const sectionActivity = selectedEvents.length ? selectedEvents.slice(0, 20).map((event) => `<article><strong>${escapeHtml(String(event.eventType || "Ticket updated").replaceAll("_", " "))}</strong><p>${escapeHtml(event.notes || "Ticket activity recorded.")}</p><small>${escapeHtml(event.createdAtRaw ? formatDateTime(event.createdAtRaw) : "")}</small></article>`).join("") : `<article><strong>No activity recorded</strong><p>Ticket history will appear here as work is completed.</p></article>`;
     const linkedJobId = selectedTimelineTicket?.sourceJob?.id || sourceTicket?.jobId || "";
@@ -25064,7 +22351,10 @@ Requirements:
         </header>
         <label class="ut-mobile-section-selector">Section<select data-unified-ticket-section-select aria-label="Ticket section">${UNIFIED_TICKET_NAV.map(([key,label])=>`<option value="${escapeHtml(key)}"${active === key ? " selected" : ""}>${escapeHtml(label)}</option>`).join("")}</select></label>
         ${state.unifiedTicketEditing ? renderUnifiedTicketEditForm(sourceTicket || {}, ticket) : ""}
-        ${active !== "overview" ? `<section class="ut-active-section-summary"><h3>${escapeHtml(activeLabel)}</h3><p>${escapeHtml(active === "details" ? "Customer, property, scope, and ticket details." : active === "work" ? "Scope, checklist, and field notes for this ticket." : active === "schedule" ? "Upcoming visit and scheduling details." : active === "tasks" ? "Checklist items connected to this ticket." : active === "photos" ? "Arrival, progress, and completion photos." : active === "documents" ? "Documents connected to this ticket." : active === "notes" ? "Operational notes connected to this ticket." : "Recorded ticket activity and lifecycle history.")}</p>${active === "history" ? `<div class="ut-section-activity">${sectionActivity}</div>` : ""}</section>` : ""}
+        ${active !== "overview" ? `<section class="ut-active-section-summary"><h3>${escapeHtml(activeLabel)}</h3><p>${escapeHtml(active === "details" ? "Customer, property, scope, and ticket details." : active === "invoice" ? "Invoices and payments connected to this job." : active === "costs" ? "Review costs and completion requirements for this job." : active === "quote" ? "Scope, pricing, and customer approval for this job. Quotes stay connected to this ticket." : active === "work" ? "Scope, checklist, and field notes for this ticket." : active === "schedule" ? "Upcoming visit and scheduling details." : active === "tasks" ? "Checklist items connected to this ticket." : active === "photos" ? "Arrival, progress, and completion photos." : active === "documents" ? "Documents connected to this ticket." : active === "notes" ? "Operational notes connected to this ticket." : "Recorded ticket activity and lifecycle history.")}</p>${active === "history" ? `<div class="ut-section-activity">${sectionActivity}</div>` : ""}</section>` : ""}
+        ${active === "quote" ? unifiedTicketCard("Customer Quote", quoteTicket && canManageMoneyWorkflow() ? renderUnifiedTicketQuotePanel(quoteTicket) : `<p>Quote details are unavailable for this ticket or your role.</p>`, "ut-quote-card") : ""}
+        ${active === "invoice" ? unifiedTicketCard("Invoice & Payments", quoteTicket && canManageMoneyWorkflow() ? renderUnifiedTicketInvoicePanel(quoteTicket) : `<p>Invoice details are unavailable for this ticket or your role.</p>`, "ut-billing-card") : ""}
+        ${active === "costs" ? unifiedTicketCard("Costs & Closeout", quoteTicket && canManageMoneyWorkflow() ? renderUnifiedTicketCosts(quoteTicket) : `<p>Cost details are unavailable for this ticket or your role.</p>`, "ut-billing-card") : ""}
         <div class="ut-main-top">
           <div class="ut-property-stack">
             ${unifiedTicketCard("Property", `${unifiedTicketCardEditAction("Edit Property & Contact", "property_name")}<div class="ut-property"><div class="ut-property-image ut-street-view" data-unified-ticket-street-view-shell="${escapeHtml(ticketRecordId)}"><div class="ut-street-view-canvas" data-unified-ticket-street-view="${escapeHtml(ticketRecordId)}"></div><span class="ut-street-view-status" data-unified-ticket-street-view-status="${escapeHtml(ticketRecordId)}">Loading Street View...</span><button type="button" class="ut-street-view-fullscreen" data-action="unified-ticket-street-view-fullscreen" data-id="${escapeHtml(ticketRecordId)}" aria-label="View Street View fullscreen" aria-pressed="false" title="View fullscreen"><span class="ut-street-view-expand-icon">${unifiedTicketIcon("expand")}</span><span class="ut-street-view-collapse-icon">${unifiedTicketIcon("collapse")}</span></button></div><div class="ut-property-copy"><strong>${escapeHtml(cleanDisplayValue(ticket.title, "Property not set"))}</strong><span>${escapeHtml(cleanDisplayValue(ticket.address, "Address not set"))}</span><span>${escapeHtml(cleanDisplayValue(ticket.city, "Location not set"))}</span><hr><b>Property Contact</b><span>${escapeHtml(cleanDisplayValue(ticket.contact, "Contact not set"))}</span><div class="ut-contact"><span>${unifiedTicketIcon("phone")}${escapeHtml(cleanDisplayValue(ticket.phone, "Not provided"))}</span><span>${unifiedTicketIcon("mail")}${escapeHtml(cleanDisplayValue(ticket.email, "Not provided"))}</span></div></div></div>`, "ut-property-card")}
@@ -25078,16 +22368,17 @@ Requirements:
           ${unifiedTicketCard(`Photos (${linkedAssets.photos.length})`, photoCard, "ut-photos-card")}
           ${unifiedTicketCard(`Documents (${linkedAssets.documents.length})`, documentCard, "ut-documents-card")}
         </div>
-        ${unifiedTicketCard("Notes", `<form class="ut-note-form" data-unified-ticket-note-form data-ticket-id="${ticket.recordId || state.unifiedTicketSelectedId}"><textarea placeholder="Type a note here..." aria-label="Ticket note"></textarea><button type="submit">Add Note</button></form><p class="ut-note-status" data-unified-ticket-note-status aria-live="polite"></p>`, "ut-notes-card")}
+        ${unifiedTicketCard("Notes", `${renderTicketNoteList(ticketRecordId)}<form class="ut-note-form" data-unified-ticket-note-form data-ticket-id="${escapeHtml(ticketRecordId)}"><textarea placeholder="Type a note here..." aria-label="Ticket note"></textarea><button type="submit">Add Note</button></form><p class="ut-note-status" data-unified-ticket-note-status aria-live="polite"></p>`, "ut-notes-card")}
       </main>
       <aside class="ut-sidebar">
         ${unifiedTicketCard("Progress", `<div class="ut-progress">${[["Created","check"],["Scheduled","calendar"],["On Site","pin"],["In Progress","clock"],["Complete","check"]].map(([label,icon],i)=>`<div class="${i===0?"is-done":i===1?"is-active":""}"><span>${unifiedTicketIcon(icon)}</span><small>${label}</small></div>`).join("")}</div>`, "ut-progress-card")}
         ${unifiedTicketCard("Schedule", `<div class="ut-schedule-rows"><div><span>${unifiedTicketIcon("calendar")}Scheduled</span><strong>${escapeHtml(ticket.nextVisit || "Not scheduled")}</strong></div><div><span>${unifiedTicketIcon("clock")}Estimated Duration</span><strong>${escapeHtml(ticket.duration || "Not set")}</strong></div><div><span>${unifiedTicketIcon("crew")}Crew</span><strong>${escapeHtml(ticket.crew)}</strong></div></div><button class="ut-small-btn" type="button" data-action="unified-ticket-schedule">View Full Schedule</button>`, "ut-schedule-card")}
-        ${unifiedTicketCard("Recent Activity", `<div class="ut-activity">${[["Job scheduled","by Tyler G.","Jul 21, 8:15 AM"],["Estimate approved by customer","by Sarah Johnson","Jul 20, 4:32 PM"],["Quote sent to customer","by Tyler G.","Jul 20, 2:10 PM"]].map(([title,by,date])=>`<div><i></i><span><strong>${title}</strong><small>${by}</small></span><time>${date}</time></div>`).join("")}</div><button class="ut-small-btn" type="button" data-action="unified-ticket-section" data-section="history">View all history</button>`, "ut-activity-card")}
+        ${unifiedTicketCard("Recent Activity", `<div class="ut-activity">${selectedEvents.length ? selectedEvents.slice(0, 3).map((event) => `<div><i></i><span><strong>${escapeHtml(String(event.eventType || "Ticket updated").replaceAll("_", " "))}</strong><small>${escapeHtml(event.notes || "Ticket activity recorded")}</small></span><time>${escapeHtml(event.createdAtRaw ? formatDateTime(event.createdAtRaw) : "")}</time></div>`).join("") : `<p>No activity recorded yet.</p>`}</div><button class="ut-small-btn" type="button" data-action="unified-ticket-section" data-section="history">View all history</button>`, "ut-activity-card")}
         ${unifiedTicketCard("Quick Actions", `<div class="ut-quick-actions">${quickActions}</div>`, "ut-quick-card")}
       </aside>
     </div>`;
-    if (!state.unifiedTicketEditing) void loadUnifiedTicketStreetView({ ...ticket, recordId: ticketRecordId });
+    qsa("[data-quote-builder]", host).forEach(updateQuoteBuilderPreview);
+    if (!state.unifiedTicketEditing && ["overview", "details"].includes(active)) void loadUnifiedTicketStreetView({ ...ticket, recordId: ticketRecordId });
   }
 
   const WORK_OPERATIONS_FIXTURE = Object.freeze([
@@ -25174,65 +22465,25 @@ Requirements:
   }
 
   function renderWorkOperationsRow(job) {
-    const done = workRowProgress(job);
-    const progress = Math.round((done / job.total) * 100);
-    return `<tr style="background:#fff!important" data-action="open-work-detail" data-id="${job.id}" tabindex="0">
-      <td><strong>${job.visit}</strong><small class="${job.id === "10024" ? "is-overdue" : ""}">${job.time}</small></td>
-      <td><strong>#${job.displayNumber || job.id}&nbsp;&nbsp; ${job.job}</strong><small>${job.customer}</small></td>
-      <td><strong>${job.address}</strong><small>${job.city}</small></td>
-      <td><span class="wol-crew-chips">${job.crew.map(initial=>`<i>${initial}</i>`).join("")}<i>${job.extra}</i></span></td>
-      <td><span class="wol-status is-${job.status.toLowerCase().replaceAll(" ","-")}">${job.status}</span></td>
-      <td><span class="wol-progress-copy">${done} / ${job.total} tasks</span><i class="wol-progress"><b style="width:${progress}%"></b></i></td>
-      <td>${job.estimate}</td>
-      <td><span class="wol-priority is-${job.priority.toLowerCase()}"><i></i>${job.priority}</span></td>
-      <td>${job.attention ? `<span class="wol-attention ${job.attention.includes("Overdue") ? "is-overdue" : ""}">${job.attention}</span>` : "—"}</td>
-      <td><button type="button" class="wol-row-menu" data-action="work-row-menu" data-id="${job.id}" aria-label="Actions for ${job.job}">⋮</button><div class="wol-menu" data-work-row-menu="${job.id}" hidden><button type="button" data-action="open-work-detail" data-id="${job.id}">Open work</button><button type="button" data-action="unified-ticket-open" data-id="${job.id}">Open ticket</button></div></td>
+    const total = Math.max(0, Number(job.total) || 0);
+    const done = Math.min(total, Math.max(0, Number(workRowProgress(job)) || 0));
+    const progress = total ? Math.round((done / total) * 100) : 0;
+    const status = String(job.status || "Unscheduled");
+    const priority = String(job.priority || "Normal");
+    return `<tr style="background:#fff!important" data-action="open-work-detail" data-id="${escapeHtml(job.id)}" tabindex="0">
+      <td><strong>${escapeHtml(job.visit)}</strong><small>${escapeHtml(job.time)}</small></td>
+      <td><strong>#${escapeHtml(job.displayNumber || job.id)}&nbsp;&nbsp; ${escapeHtml(job.job)}</strong><small>${escapeHtml(job.customer)}</small></td>
+      <td><strong>${escapeHtml(job.address)}</strong><small>${escapeHtml(job.city)}</small></td>
+      <td><span class="wol-crew-chips">${(Array.isArray(job.crew) ? job.crew : []).map(initial=>`<i>${escapeHtml(initial)}</i>`).join("")}${job.extra ? `<i>${escapeHtml(job.extra)}</i>` : ""}</span></td>
+      <td><span class="wol-status is-${escapeHtml(slug(status))}">${escapeHtml(status)}</span></td>
+      <td><span class="wol-progress-copy">${done} / ${total} tasks</span><i class="wol-progress"><b style="width:${progress}%"></b></i></td>
+      <td>${escapeHtml(job.estimate)}</td>
+      <td><span class="wol-priority is-${escapeHtml(slug(priority))}"><i></i>${escapeHtml(priority)}</span></td>
+      <td>${job.attention ? `<span class="wol-attention ${String(job.attention).includes("Overdue") ? "is-overdue" : ""}">${escapeHtml(job.attention)}</span>` : "—"}</td>
+      <td><button type="button" class="wol-row-menu" data-action="work-row-menu" data-id="${escapeHtml(job.id)}" aria-label="Actions for ${escapeHtml(job.job)}">⋮</button><div class="wol-menu" data-work-row-menu="${escapeHtml(job.id)}" hidden><button type="button" data-action="open-work-detail" data-id="${escapeHtml(job.id)}">Open work</button><button type="button" data-action="unified-ticket-open" data-id="${escapeHtml(job.id)}">Open ticket</button></div></td>
     </tr>`;
   }
 
-  function renderWorkDetailPanel(job) {
-    if (!job) return "";
-    const activeTab = state.workDetailTab || "work";
-    const done = workRowProgress(job);
-    const checklist = job.checklistItems?.length
-      ? job.checklistItems.map((item) => [item.label || "Task", item.completed_at ? formatDateTime(item.completed_at) : "", item.id, Boolean(item.checked)])
-      : [];
-    const crewAssignments = job.crewAssignments || [];
-    const equipmentAssignments = (state.data.ticketRelations?.equipment || []).filter((item) => String(item.ticket_id || item.ticketId) === String(job.id));
-    const ticketAttachments = (state.data.documentation?.attachments || []).filter((item) => String(item.metadata?.ticketId || item.targetId || "") === String(job.id));
-    const arrivalPhotos = ticketAttachments.filter((item) => item.metadata?.photoStage === "arrival");
-    const completionPhotos = ticketAttachments.filter((item) => item.metadata?.photoStage === "completion");
-    const ticketNotes = (state.data.notes || [])
-      .filter((item) => String(item.ticketId || "") === String(job.id))
-      .sort((a, b) => String(b.createdAtRaw || "").localeCompare(String(a.createdAtRaw || "")));
-    const workTabDescriptions = {
-      overview: "Crew, equipment, and core job details.",
-      work: "Checklist, crew, equipment, proof, documents, and field notes.",
-      schedule: "Timing, duration, priority, and service location.",
-      tasks: "Checklist items connected to this job.",
-      photos: "Arrival and completion proof connected to this job.",
-      documents: "Documentation connected to this job.",
-      notes: "Operational notes connected to this job.",
-      history: "Recorded job activity is available in the unified ticket history."
-    };
-    const tabButtons = ["Overview","Work","Schedule","Tasks","Photos","Documents","Notes","History"].map(label=>`<button type="button" style="background:transparent!important;box-shadow:none!important;border:0!important;border-bottom:2px solid ${activeTab===label.toLowerCase()?"#276fca":"transparent"}!important" class="${activeTab===label.toLowerCase()?"is-active":""}" data-work-detail-tab data-section="${label.toLowerCase()}">${label}</button>`).join("");
-    return `<div class="wod-overlay" data-work-detail-overlay><button type="button" style="background:transparent!important;box-shadow:none!important;border:0!important" class="wod-scrim" data-action="close-work-detail" aria-label="Close work details"></button><aside class="wod-panel" aria-label="Work details for ${job.job}">
-      <header><div><h2 style="color:#10141a!important">#${job.displayNumber || job.id}&nbsp;&nbsp; ${job.job}</h2><span class="wol-status is-${job.status.toLowerCase().replaceAll(" ","-")}">${job.status}</span></div><button type="button" style="background:transparent!important;box-shadow:none!important;border:0!important" class="wod-close" data-action="close-work-detail" aria-label="Close work detail">×</button></header>
-      <nav aria-label="Work detail sections">${tabButtons}</nav>
-      <div class="wod-content is-tab-${escapeHtml(activeTab)}">
-        ${activeTab !== "work" ? `<section class="wod-tab-summary"><h3>${escapeHtml(activeTab[0].toUpperCase() + activeTab.slice(1))}</h3><p>${escapeHtml(workTabDescriptions[activeTab] || "Connected work details.")}</p></section>` : ""}
-        <section class="wod-card wod-checklist"><h3>Work Checklist</h3><p><span>${done} of ${job.total} completed</span></p><i class="wod-progress"><b style="width:${job.total ? Math.round((done/job.total)*100) : 0}%"></b></i><div>${checklist.map(([label,time,itemId,checked])=>`<div class="wod-task-row"><label><input type="checkbox" data-work-checklist-item data-id="${job.id}" data-item-id="${itemId}" ${checked?"checked":""}><span>${escapeHtml(label)}</span><time>${escapeHtml(time)}</time></label>${canDeleteWorkTasks() ? `<button type="button" class="wod-task-delete" data-action="work-delete-task" data-id="${escapeHtml(itemId)}" data-ticket-id="${escapeHtml(job.id)}" aria-label="Delete task ${escapeHtml(label)}">&times;</button>` : ""}</div>`).join("") || '<small>No checklist tasks yet.</small>'}</div><button type="button" data-action="work-add-task">+ Add Task</button></section>
-        <div class="wod-middle-top">
-          <section class="wod-card"><h3>Crew</h3><ul>${crewAssignments.length ? crewAssignments.map((item)=>`<li>${unifiedTicketIcon("crew")}<span>${escapeHtml(item.employee_name || assignmentProfileForId(item.user_id)?.displayName || "Crew member")}${item.is_lead ? " (Lead)" : ""}</span><button type="button" data-action="work-remove-assignment" data-kind="crew" data-id="${item.id}" aria-label="Remove crew member">×</button></li>`).join("") : `<li>${unifiedTicketIcon("crew")}${escapeHtml(job.crewName || "Unassigned")}</li>`}</ul><button type="button" data-action="work-add-assignment" data-kind="crew" data-ticket-id="${job.id}">+&nbsp; Add Crew</button></section>
-          <section class="wod-card"><h3>Equipment</h3><ul>${equipmentAssignments.length ? equipmentAssignments.map((item)=>`<li>${unifiedTicketIcon("work")}<span>${escapeHtml(item.equipment_name || "Equipment")}</span><button type="button" data-action="work-remove-assignment" data-kind="equipment" data-id="${item.id}" aria-label="Remove equipment">×</button></li>`).join("") : `<li>${unifiedTicketIcon("work")}No equipment assigned</li>`}</ul><button type="button" data-action="work-add-assignment" data-kind="equipment" data-ticket-id="${job.id}">+&nbsp; Add Equipment</button></section>
-        </div>
-        <section class="wod-card wod-details"><h3>Work Details</h3><dl><dt>Type</dt><dd>Maintenance</dd><dt>Priority</dt><dd><span class="wol-priority is-${job.priority.toLowerCase()}"><i></i>${job.priority}</span></dd><dt>Est. Time</dt><dd>${job.estimate}</dd><dt>Start Time</dt><dd>${job.time}</dd><dt>Location</dt><dd>${job.address}<br>${job.city}</dd></dl><button type="button" data-work-detail-tab data-section="overview">Edit Details</button></section>
-        <section class="wod-card wod-photos"><h3>Photos</h3><label>Arrival Photos (${arrivalPhotos.length})</label><label class="wod-photo-upload">${unifiedTicketIcon("photo")}<span>Upload Arrival Photo</span><input type="file" accept="image/*" multiple data-work-photo-upload data-category="arrival" hidden></label><div class="wod-photo-heading"><label>Completion Photos (${completionPhotos.length})</label><span>${unifiedTicketIcon("upload")} ⋮</span></div><label class="wod-photo-upload">${unifiedTicketIcon("photo")}<span>Upload Completion Photo</span><input type="file" accept="image/*" multiple data-work-photo-upload data-category="completion" hidden></label><label class="wod-more-photos">+&nbsp; Upload Additional Photos<input type="file" accept="image/*" multiple data-work-photo-upload data-category="additional" hidden></label><p data-work-upload-status></p></section>
-        <section class="wod-card wod-docs"><h3>Documentation</h3><div>${ticketAttachments.length ? ticketAttachments.map((item)=>`<span>${unifiedTicketIcon("document")}<b>${escapeHtml(item.fileName || item.category || "Document")}<small>${escapeHtml(item.completedBy || "Dashboard user")}</small></b><time>${escapeHtml(item.createdAt || "")}</time></span>`).join("") : "<small>No documents attached.</small>"}</div><label class="wod-add-document">+&nbsp; Add Document<input type="file" data-work-document-upload hidden></label></section>
-        <section class="wod-card wod-notes"><h3>Notes</h3><div class="wod-note-list">${ticketNotes.length ? ticketNotes.map((item)=>`<article><strong>${escapeHtml(item.title)}</strong><p>${escapeHtml(item.body)}</p><small>${escapeHtml(item.date || "")}</small></article>`).join("") : "<small>No notes added.</small>"}</div><form data-work-note-form data-ticket-id="${job.id}"><textarea placeholder="Type a note..."></textarea><button type="submit">Add Note</button></form><p data-work-note-status></p></section>
-      </div><p class="wod-action-status" data-work-action-status aria-live="polite"></p>
-    </aside></div>`;
-  }
 
   function renderWorkFocusPanel(job) {
     if (!job) return "";
@@ -25275,6 +22526,13 @@ Requirements:
     </aside></div>`;
   }
 
+  function dashboardDateInWeek(dateKey, reference = todayKey()) {
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(String(dateKey || ""))) return false;
+    const day = new Date(`${reference}T12:00:00`).getDay();
+    const start = addDaysKey(reference, -((day + 6) % 7));
+    return dateKey >= start && dateKey <= addDaysKey(start, 6);
+  }
+
   function renderWorkOperationsWorkspace() {
     const host = qs("[data-work-operations-workspace]");
     if (!host) return;
@@ -25283,16 +22541,17 @@ Requirements:
     const location = state.workListLocation || "All";
     const range = state.workListRange || "week";
     const attentionOnly = Boolean(state.workAttentionOnly);
-    const allJobs = workOperationsRows();
+    const availableJobs = workOperationsRows();
+    const allJobs = availableJobs.filter((job) => range === "all" || dashboardDateInWeek(job.dateRaw));
     const jobs = allJobs.filter(job => (status==="All"||job.status===status)&&(priority==="All"||job.priority===priority)&&(location==="All"||job.city===location)&&(!attentionOnly||job.attention));
-    const selected = allJobs.find(job=>job.id===state.selectedWorkJobId);
+    const selected = availableJobs.find(job=>job.id===state.selectedWorkJobId);
     const countByStatus = (value) => allJobs.filter((job) => job.status === value).length;
     host.innerHTML = `<div class="work-operations-list ${selected?"has-detail-open":""}">
       <header class="wol-header"><div><p class="clean-workspace-label">Work</p><h1>Work</h1><p>Scheduled visits and active work across the operation.</p></div><div class="wol-filters">
         <label>${unifiedTicketIcon("document")}<select data-work-list-filter="status" aria-label="Work status"><option value="All">All Status</option>${["In Progress","Scheduled","Completed"].map(v=>`<option${status===v?" selected":""}>${v}</option>`).join("")}</select></label>
         <label>${unifiedTicketIcon("check")}<select data-work-list-filter="priority" aria-label="Work priority"><option value="All">All Priority</option>${["High","Medium","Low"].map(v=>`<option${priority===v?" selected":""}>${v}</option>`).join("")}</select></label>
-        <label>${unifiedTicketIcon("pin")}<select data-work-list-filter="location" aria-label="Work location"><option value="All">All Locations</option>${[...new Set(allJobs.map(j=>j.city))].map(v=>`<option${location===v?" selected":""}>${v}</option>`).join("")}</select></label>
-        <label>${unifiedTicketIcon("calendar")}<select data-work-list-filter="range" aria-label="Work date range"><option value="week"${range==="week"?" selected":""}>This Week</option><option value="all"${range==="all"?" selected":""}>All Upcoming</option></select></label>
+        <label>${unifiedTicketIcon("pin")}<select data-work-list-filter="location" aria-label="Work location"><option value="All">All Locations</option>${[...new Set(availableJobs.map(j=>j.city).filter(Boolean))].map(v=>`<option${location===v?" selected":""}>${escapeHtml(v)}</option>`).join("")}</select></label>
+        <label>${unifiedTicketIcon("calendar")}<select data-work-list-filter="range" aria-label="Work date range"><option value="week"${range==="week"?" selected":""}>This Week</option><option value="all"${range==="all"?" selected":""}>All Dates</option></select></label>
         <button type="button" class="wol-new-job" style="background:#343a45!important;color:#fff!important" data-action="open-ticket-create" data-ticket-type="field"><span>+</span> New Job</button>
       </div></header>
       <section class="wol-summary" aria-label="Work summary">
@@ -25302,23 +22561,52 @@ Requirements:
         <article class="is-completed"><span>${unifiedTicketIcon("check")}</span><strong>${countByStatus("Completed")}<small>Completed</small></strong></article>
         <article><strong>${allJobs.length}<small>Total Jobs</small></strong></article>
       </section>
-      <section class="wol-table-card"><div class="wol-table-wrap"><table><thead><tr><th>Next Visit</th><th>Job / Customer</th><th>Location</th><th>Crew</th><th>Status</th><th>Progress</th><th>Est. Time</th><th>Priority</th><th>Attention</th><th></th></tr></thead><tbody>${jobs.map(renderWorkOperationsRow).join("")}</tbody></table></div><footer><span>Showing ${jobs.length} of ${allJobs.length} matching jobs</span></footer></section>
+      <section class="wol-table-card"><div class="wol-table-wrap"><table><thead><tr><th>Next Visit</th><th>Job / Customer</th><th>Location</th><th>Crew</th><th>Status</th><th>Progress</th><th>Est. Time</th><th>Priority</th><th>Attention</th><th></th></tr></thead><tbody>${jobs.length ? jobs.map(renderWorkOperationsRow).join("") : `<tr><td colspan="10"><div class="empty-state">No jobs match these filters. Try All Dates or clear a filter.</div></td></tr>`}</tbody></table></div><footer><span>Showing ${jobs.length} of ${allJobs.length} jobs in this date range</span></footer></section>
       ${renderWorkFocusPanel(selected)}
     </div>`;
   }
 
   async function saveApprovedTicketNote(ticketId, body) {
     if (!ticketId || !body) throw new Error("A ticket and note are required.");
-    if (isDemoMode()) return { id: nextDemoId("note"), ticket_id: ticketId, body };
-    const rows = await supabaseRestRequest("job_notes", {
-      method: "POST",
-      headers: { Prefer: "return=representation" },
-      body: JSON.stringify({ ticket_id: ticketId, title: "Operational note", body })
-    });
+    const rows = isDemoMode() ? [{ id: nextDemoId("note"), ticket_id: ticketId, title: "Operational note", body, created_at: new Date().toISOString() }] : await supabaseRestRequest("job_notes", {
+        method: "POST",
+        headers: { Prefer: "return=representation" },
+        body: JSON.stringify({ ticket_id: ticketId, title: "Operational note", body })
+      });
     const note = rows?.[0];
-    if (note) state.data.notes.unshift(normalizeNote(note));
+    if (!note?.id) throw new Error("The note was not saved. Please try again.");
+    state.data.notes ||= [];
+    state.data.notes.unshift(normalizeNote(note));
     await insertJobTicketEvent(ticketId, { eventType: "ticket_note_added", notes: "Operational note added.", newValue: { noteId: note?.id || null } });
     return note;
+  }
+
+  function renderTicketNoteList(ticketId) {
+    const notes = (state.data.notes || []).filter((note) => String(note.ticketId) === String(ticketId))
+      .sort((a, b) => String(b.createdAtRaw || "").localeCompare(String(a.createdAtRaw || "")));
+    return `<div class="ut-note-list">${notes.length ? notes.map((note) => `<article><strong>${escapeHtml(note.title)}</strong><p>${escapeHtml(note.body)}</p><small>${escapeHtml(note.date || "")}</small></article>`).join("") : `<p>No notes recorded for this ticket.</p>`}</div>`;
+  }
+
+  async function submitTicketNoteForm(form, workspace) {
+    const input = form.querySelector("textarea");
+    const submit = form.querySelector("button[type='submit']");
+    const statusSelector = workspace === "work" ? "[data-work-note-status]" : "[data-unified-ticket-note-status]";
+    const showStatus = (message) => { const target = qs(statusSelector); if (target) target.textContent = message; };
+    if (submit?.disabled) return;
+    const note = input?.value.trim();
+    if (!note) { showStatus("Enter a note before saving."); return; }
+    try {
+      if (submit) submit.disabled = true;
+      await saveApprovedTicketNote(form.dataset.ticketId, note);
+      form.reset();
+      if (workspace === "work") renderWorkOperationsWorkspace();
+      else renderUnifiedTicketOverview();
+      showStatus("Note saved.");
+    } catch (error) {
+      showStatus(error.message || "Unable to save the note.");
+    } finally {
+      if (submit) submit.disabled = false;
+    }
   }
 
   function renderVisualResetWorkspaces() {
@@ -26942,7 +24230,21 @@ Requirements:
         else state.moneySearch = event.target.value || "";
         state.moneyInvoicePage = 1;
         window.clearTimeout(state._moneyUnifiedSearchTimer);
-        state._moneyUnifiedSearchTimer = window.setTimeout(() => renderMoneyWorkspace(), 220);
+        const input = event.target;
+        const view = state.moneyView;
+        state._moneyUnifiedSearchTimer = window.setTimeout(() => {
+          if (state.moneyView !== view || !input.isConnected) return;
+          const focused = document.activeElement === input;
+          const start = input.selectionStart;
+          const end = input.selectionEnd;
+          const attribute = input.matches("[data-money-payment-search]") ? "data-money-payment-search" : input.matches("[data-money-record-search]") ? "data-money-record-search" : "data-money-invoice-search";
+          renderMoneyWorkspace();
+          if (focused) {
+            const replacement = qs(`[${attribute}]`);
+            replacement?.focus({ preventScroll: true });
+            replacement?.setSelectionRange(start, end);
+          }
+        }, 150);
         return;
       }
       const quoteBuilder = event.target?.closest?.("[data-quote-builder]");
@@ -26991,47 +24293,53 @@ Requirements:
       }
 
       if (event.target?.matches?.("[data-call-queue-search]")) {
+        const input = event.target;
         state.callQueueSearch = event.target.value || "";
         state.callQueueVisibleCount = 25;
         window.clearTimeout(state._callQueueSearchTimer);
-        state._callQueueSearchTimer = window.setTimeout(() => renderCallQueueWorkspace(), 120);
+        state._callQueueSearchTimer = window.setTimeout(() => renderKeepingInputFocus(input, "[data-call-queue-search]", renderCallQueueWorkspace), 120);
         return;
       }
       if (event.target?.matches?.("[data-online-quote-search]")) {
+        const input = event.target;
         state.onlineQuoteSearch = event.target.value || "";
         window.clearTimeout(state._onlineQuoteSearchTimer);
-        state._onlineQuoteSearchTimer = window.setTimeout(() => renderOnlineQuoteRequestsWorkspace(state.data), 120);
+        state._onlineQuoteSearchTimer = window.setTimeout(() => renderKeepingInputFocus(input, "[data-online-quote-search]", () => renderOnlineQuoteRequestsWorkspace(state.data)), 120);
         return;
       }
       if (event.target?.matches?.("[data-lead-intake-search]")) {
+        const input = event.target;
         state.leadIntakeSearch = event.target.value || "";
         state.leadIntakePage = 1;
         window.clearTimeout(state._leadIntakeSearchTimer);
-        state._leadIntakeSearchTimer = window.setTimeout(() => renderLeadIntakeReviewDrawer(), 120);
+        state._leadIntakeSearchTimer = window.setTimeout(() => renderKeepingInputFocus(input, "[data-lead-intake-search]", renderLeadIntakeReviewDrawer), 120);
         return;
       }
 
       if (event.target?.matches?.("[data-ticket-board-search]")) {
+        const input = event.target;
         state.ticketBoardCloseoutOnly = false;
         state.ticketBoardSearch = event.target.value || "";
         window.clearTimeout(state._ticketBoardSearchTimer);
-        state._ticketBoardSearchTimer = window.setTimeout(() => renderJobTicketWorkspace(state.data), 120);
+        state._ticketBoardSearchTimer = window.setTimeout(() => renderKeepingInputFocus(input, "[data-ticket-board-search]", () => renderJobTicketWorkspace(state.data)), 120);
         return;
       }
 
       if (event.target?.matches?.("[data-owner-kanban-search]")) {
+        const input = event.target;
         state.ownerKanbanSearch = event.target.value || "";
         persistOwnerKanbanFilters();
         window.clearTimeout(state._ownerKanbanSearchTimer);
-        state._ownerKanbanSearchTimer = window.setTimeout(renderWorkComponentBoardWorkspaces, 120);
+        state._ownerKanbanSearchTimer = window.setTimeout(() => renderKeepingInputFocus(input, "[data-owner-kanban-search]", renderWorkComponentBoardWorkspaces), 120);
         return;
       }
 
       if (event.target?.matches?.("[data-owner-kanban-client]")) {
+        const input = event.target;
         state.ownerKanbanClientFilter = event.target.value || "";
         persistOwnerKanbanFilters();
         window.clearTimeout(state._ownerKanbanClientTimer);
-        state._ownerKanbanClientTimer = window.setTimeout(renderWorkComponentBoardWorkspaces, 120);
+        state._ownerKanbanClientTimer = window.setTimeout(() => renderKeepingInputFocus(input, "[data-owner-kanban-client]", renderWorkComponentBoardWorkspaces), 120);
         return;
       }
 
@@ -27398,7 +24706,13 @@ Requirements:
         state.unifiedTicketVisible = false;
         state.unifiedTicketEditing = false;
         state.unifiedTicketReturnSection = "tickets";
-        if (returnSection === "calendar") {
+        clearTicketDrawerRoute();
+        state.activeTicketDrawerId = "";
+        if (returnSection === "documents") {
+          setActiveSection("documents");
+          replaceDashboardHash("documents");
+          renderMoneyWorkspace();
+        } else if (returnSection === "calendar") {
           setActiveSection("calendar");
           replaceDashboardHash("calendar");
           renderWorkOperationsWorkspace();
@@ -27527,6 +24841,8 @@ Requirements:
           target.disabled = true;
           setDashboardState("Loading connected invoice...");
           const detail = await dashboardFinancialRequest("invoice-detail", { invoiceId: id });
+          if (state.moneyInvoiceDetail?.invoice?.id !== id) state.moneyInvoiceDrawerTab = "details";
+          state.moneyInvoiceDetail = detail;
           if (detail?.invoice) {
             state.data.financial.invoices = [detail.invoice, ...(state.data.financial?.invoices || []).filter((item) => item.id !== detail.invoice.id)];
           }
@@ -27624,17 +24940,22 @@ Requirements:
       }
 
       if (action === "quick-add-expense" || action === "quick-add-vendor") {
+        if (action === "quick-add-expense" && target.dataset.ticketId) {
+          openMoneyExpenseDrawer(null, { ticketId: target.dataset.ticketId });
+          return;
+        }
         state.moneyView = action === "quick-add-expense" ? "expenses" : "vendors";
         setActiveSection("documents");
         replaceDashboardHash("documents");
         await render();
-        if (action === "quick-add-expense") qs('[data-action="add-expense-row"]')?.click();
+        if (action === "quick-add-expense") openMoneyExpenseDrawer();
         else qs('[data-action="add-vendor"]')?.click();
         return;
       }
 
       if (action === "money-tab") {
         state.moneyView = target.dataset.moneyView || "overview";
+        state.moneyError = "";
         state.moneySearch = "";
         state.moneyInvoicePage = 1;
         updateMoneyViewRoute(state.moneyView);
@@ -27656,7 +24977,8 @@ Requirements:
 
       if (action === "money-invoice-drawer-tab") {
         state.moneyInvoiceDrawerTab = target.dataset.tab || "details";
-        if (state.moneyInvoiceDetail) els.detailContent.innerHTML = renderUnifiedFinancialInvoiceDrawer(state.moneyInvoiceDetail);
+        if (state.unifiedTicketVisible && state.unifiedTicketSection === "invoice") renderUnifiedTicketOverview();
+        else if (state.moneyInvoiceDetail) els.detailContent.innerHTML = renderUnifiedFinancialInvoiceDrawer(state.moneyInvoiceDetail);
         return;
       }
 
@@ -27877,6 +25199,14 @@ Requirements:
         return;
       }
 
+      if (action === "add-quote-line" || action === "remove-quote-line") {
+        const form = target.closest("[data-quote-builder]");
+        if (!form) return;
+        if (action === "add-quote-line") form.querySelector("[data-quote-lines]").insertAdjacentHTML("beforeend", renderQuoteLineInput());
+        else if (form.querySelectorAll("[data-quote-line]").length > 1) target.closest("[data-quote-line]").remove();
+        updateQuoteBuilderPreview(form);
+        return;
+      }
       if (action === "create-financial-quote") {
         openFinancialQuoteCreateDrawer();
         return;
@@ -31135,6 +28465,8 @@ Requirements:
           setDashboardState("");
         } catch (error) {
           setDashboardState(error.message || "Unable to create document.", "error");
+        } finally {
+          if (submitButton?.isConnected) submitButton.disabled = false;
         }
       } else if (action === "edit-job") {
         const linkedTicket = findTicketForDrawer("job", id);
@@ -31197,16 +28529,7 @@ Requirements:
         if (!window.confirm(`Record customer approval for ${document.number}?`)) return;
         try {
           setDashboardState("Recording customer quote approval...");
-          await updateSalesDocument(id, {
-            document_type: "estimate",
-            client_name: document.clientName,
-            client_email: document.clientEmail,
-            description: document.lineItems[0]?.description || "Landscape service",
-            amount: document.total,
-            due_date: document.dueDateRaw,
-            status: "approved",
-            notes: document.notes
-          });
+          await approveSalesDocument(id);
           const ticket = findJobTicketForSalesDocument(id);
           if (ticket?.id) {
             await updateJobTicket(ticket.id, {
@@ -31220,7 +28543,8 @@ Requirements:
               });
             }
           }
-          if (ticket?.id && state.activeTicketDrawerId === ticket.id) rerenderOpenTicketDrawer(ticket.id, { section: "quote" });
+          if (ticket?.id && state.unifiedTicketVisible && state.unifiedTicketSelectedId === ticket.id) renderUnifiedTicketOverview();
+          else if (ticket?.id && state.activeTicketDrawerId === ticket.id) rerenderOpenTicketDrawer(ticket.id, { section: "quote" });
           else {
             await refreshDashboard();
             openDocumentDrawer(id);
@@ -31260,7 +28584,9 @@ Requirements:
             setDashboardState("Secure customer approval link copied.");
           }
           await refreshDashboard();
-          openDocumentDrawer(id);
+          const ticket = findJobTicketForSalesDocument(id);
+          if (ticket?.id && state.unifiedTicketVisible && state.unifiedTicketSelectedId === ticket.id) renderUnifiedTicketOverview();
+          else openDocumentDrawer(id);
         } catch (error) {
           setDashboardState(error.message || "Secure approval link could not be created.", "error");
         }
@@ -31569,41 +28895,12 @@ Requirements:
       }
       if (event.target?.matches?.("[data-work-note-form]")) {
         event.preventDefault();
-        const note = event.target.querySelector("textarea")?.value.trim();
-        const status = qs("[data-work-note-status]");
-        if (!note) { if (status) status.textContent = "Enter a note before saving."; return; }
-        try {
-          const submit = event.target.querySelector("button[type='submit']");
-          if (submit) submit.disabled = true;
-          await saveApprovedTicketNote(event.target.dataset.ticketId, note);
-          event.target.reset();
-          renderWorkOperationsWorkspace();
-          const refreshedStatus = qs("[data-work-note-status]");
-          if (refreshedStatus) refreshedStatus.textContent = "Note saved.";
-          if (submit) submit.disabled = false;
-        } catch (error) {
-          if (status) status.textContent = error.message || "Unable to save the note.";
-        }
+        await submitTicketNoteForm(event.target, "work");
         return;
       }
       if (event.target?.matches?.("[data-unified-ticket-note-form]")) {
         event.preventDefault();
-        const note = event.target.querySelector("textarea")?.value.trim();
-        const status = qs("[data-unified-ticket-note-status]");
-        if (!note) {
-          if (status) status.textContent = "Enter a note before saving.";
-          return;
-        }
-        try {
-          const submit = event.target.querySelector("button[type='submit']");
-          if (submit) submit.disabled = true;
-          await saveApprovedTicketNote(event.target.dataset.ticketId, note);
-          event.target.reset();
-          if (status) status.textContent = "Note saved.";
-          if (submit) submit.disabled = false;
-        } catch (error) {
-          if (status) status.textContent = error.message || "Unable to save the note.";
-        }
+        await submitTicketNoteForm(event.target, "ticket");
         return;
       }
       if (event.target.matches("[data-complete-all-parts-form]")) {
@@ -31751,6 +29048,7 @@ Requirements:
         const form = event.target;
         const data = new FormData(form);
         const id = form.dataset.id || "";
+        const returnTicketId = state.unifiedTicketVisible && state.unifiedTicketSection === "costs" ? state.unifiedTicketSelectedId : "";
         const total = Number(data.get("total") || 0);
         if (!String(data.get("description") || "").trim() || !Number.isFinite(total) || total < 0) {
           setDashboardState("Add a description and valid nonnegative amount.", "error");
@@ -31766,6 +29064,11 @@ Requirements:
             if (existingIndex >= 0) state.data.financial.expenses.splice(existingIndex, 1, saved);
             else state.data.financial.expenses.unshift(saved);
             closeSubmissionDrawer({ immediate: true });
+            if (returnTicketId) {
+              openTicketDrawer("ticket", returnTicketId, { section: "costs", preserveScroll: true });
+              setDashboardState("Demo expense saved to this ticket. No production data was changed.");
+              return;
+            }
             state.moneyView = "expenses";
             updateMoneyViewRoute("expenses");
             renderMoneyWorkspace();
@@ -31781,7 +29084,13 @@ Requirements:
             saved = normalizeExpense(rows?.[0] || payload);
           }
           state.moneyLoadedViews.delete("expenses");
-          closeSubmissionDrawer();
+          closeSubmissionDrawer({ immediate: true });
+          if (returnTicketId) {
+            await loadMoneyView("expenses", { force: true });
+            openTicketDrawer("ticket", returnTicketId, { section: "costs", preserveScroll: true });
+            setDashboardState("Expense saved to this ticket.");
+            return;
+          }
           state.moneyView = "expenses";
           updateMoneyViewRoute("expenses");
           await loadMoneyView("expenses", { force:true });
@@ -31795,6 +29104,7 @@ Requirements:
         const form = event.target;
         const data = new FormData(form);
         const invoiceId = String(data.get("invoice_id")||"");
+        const returnTicketId = state.unifiedTicketVisible && state.unifiedTicketSection === "invoice" ? state.unifiedTicketSelectedId : "";
         const amount = Number(data.get("amount")||0);
         const invoice = dashboardFinancialInvoices().find((item)=>String(item.id)===invoiceId);
         if (!invoice || !Number.isFinite(amount) || amount <= 0) {
@@ -31818,6 +29128,12 @@ Requirements:
             state.data.financial.payments ||= [];
             state.data.financial.payments.unshift({ id: nextDemoId("payment"), invoice_id: invoiceId, payment_date: String(data.get("payment_date")||todayKey()), amount: Math.round(amount*100)/100, payment_method: invoice.payment_method, external_reference: String(data.get("external_reference")||"").trim()||null, notes: String(data.get("notes")||"").trim()||null, invoices: invoice });
             closeSubmissionDrawer({ immediate: true });
+            if (returnTicketId) {
+              openTicketDrawer("ticket", returnTicketId, { section: "invoice", preserveScroll: true });
+              await openFinancialInvoiceDrawer(invoiceId);
+              setDashboardState("Demo payment recorded. No production data was changed.");
+              return;
+            }
             state.moneyView = "payments";
             updateMoneyViewRoute("payments");
             renderMoneyWorkspace();
@@ -31835,7 +29151,13 @@ Requirements:
             await insertJobTicketEvent(invoice.ticket_id, { eventType:"ticket_payment_recorded", notes:`${moneyCurrency(amount)} payment recorded in Money.`, newValue:{ invoiceId, amount, status:nextStatus } });
           }
           state.moneyLoadedViews.delete("invoicing"); state.moneyLoadedViews.delete("payments");
-          closeSubmissionDrawer();
+          closeSubmissionDrawer({ immediate: true });
+          if (returnTicketId) {
+            openTicketDrawer("ticket", returnTicketId, { section: "invoice", preserveScroll: true });
+            await openFinancialInvoiceDrawer(invoiceId);
+            setDashboardState(`${moneyCurrency(amount)} payment recorded without processing a charge.`);
+            return;
+          }
           state.moneyView = "payments"; updateMoneyViewRoute("payments");
           await loadMoneyView("payments", { force:true });
           setDashboardState(`${moneyCurrency(amount)} payment recorded without processing a charge.`);
@@ -31873,8 +29195,11 @@ Requirements:
             Object.assign(invoice, payload, { updated_at: new Date().toISOString() });
             state.moneyInvoiceDetail = demoFinancialInvoiceDetail(id);
             renderMoneyWorkspace();
-            els.detailContent.innerHTML = renderUnifiedFinancialInvoiceDrawer(state.moneyInvoiceDetail);
-            renderDetailDrawerBreadcrumbs();
+            if (state.unifiedTicketVisible && state.unifiedTicketSection === "invoice") renderUnifiedTicketOverview();
+            else {
+              els.detailContent.innerHTML = renderUnifiedFinancialInvoiceDrawer(state.moneyInvoiceDetail);
+              renderDetailDrawerBreadcrumbs();
+            }
             setDashboardState("Demo invoice saved. No production data was changed.");
             return;
           }
@@ -32415,6 +29740,9 @@ Requirements:
         }
       } else if (event.target.matches("[data-document-form]")) {
         event.preventDefault();
+        const submitButton = event.target.querySelector("button[type=submit]");
+        if (submitButton?.disabled) return;
+        if (submitButton) submitButton.disabled = true;
         const formData = new FormData(event.target);
         try {
           setDashboardState("Creating document...");
@@ -32425,6 +29753,7 @@ Requirements:
             square_invoice_number: String(formData.get("square_invoice_number") || ""),
             description: String(formData.get("description") || ""),
             amount: Number(formData.get("amount") || 0),
+            line_items: quoteFormLineItems(event.target),
             line_items_text: String(formData.get("line_items_text") || ""),
             discount: Number(formData.get("discount") || 0),
             discount_type: String(formData.get("discount_type") || "amount"),
@@ -32450,7 +29779,11 @@ Requirements:
           } else {
             await ensureJobTicketForSalesDocument(document);
           }
-          if (ticketId && state.activeTicketDrawerId === ticketId) {
+          if (ticketId && state.unifiedTicketVisible && state.unifiedTicketSelectedId === ticketId) {
+            state.unifiedTicketSection = "quote";
+            renderUnifiedTicketOverview();
+            setDashboardState("Quote saved to this job ticket.");
+          } else if (ticketId && state.activeTicketDrawerId === ticketId) {
             rerenderOpenTicketDrawer(ticketId, { section: "quote" });
             setDashboardState("Quote created and connected without leaving the ticket.");
           } else {

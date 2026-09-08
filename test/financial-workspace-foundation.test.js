@@ -179,6 +179,6 @@ test("field expense submission and receipt upload are scoped by server-side owne
   assert.match(financialApiJs, /requestedAction === "submit-expense"[\s\S]*operations:write/);
   assert.match(financialApiJs, /assigned_user_id !== actor\.userId/);
   assert.match(financialStorageJs, /expense\.created_by !== actor\.userId && !assigned/);
-  assert.match(dashboardJs, /data-action="submit-field-expense"/);
+  assert.match(dashboardJs, /action === "submit-field-expense"/);
   assert.match(dashboardJs, /data-field-expense-receipt-input/);
 });

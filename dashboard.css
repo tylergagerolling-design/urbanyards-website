@@ -15396,7 +15396,7 @@ body:not(.is-login-screen) .app-view :is(.dashboard-main, .detail-drawer) :is(
   }
 }
 
-/* Home and Work inherit the shared button system, even over older page-specific rules. */
+/* Action buttons use the shared system; record cards retain their content layouts. */
 body:not(.is-login-screen) .app-view .dashboard-main :is(#overview, #calendar) :is(
   button:not(.overview-activity-row):not(.work-list-row):not(.work-route-summary):not(.work-pipeline-row):not(.work-activity-item):not(.pipeline-card):not(.profile-mini-item):not(.calendar-pill):not(.global-search-result),
   a.inline-action,
@@ -15404,7 +15404,7 @@ body:not(.is-login-screen) .app-view .dashboard-main :is(#overview, #calendar) :
   .overview-primary-action,
   .work-primary-action,
   .quick-action-link
-):not([data-action="open-ticket-create"]) {
+):not([data-action="open-ticket-create"]):not(:where(.focus-metric,.clean-schedule-row,.clean-attention-list>button,.clean-recent-list>button)) {
   display: inline-flex !important;
   align-items: center !important;
   justify-content: center !important;
@@ -15437,7 +15437,7 @@ body:not(.is-login-screen) .app-view .dashboard-main :is(#overview, #calendar) :
   .overview-primary-action,
   .work-primary-action,
   .quick-action-link
-):not([data-action="open-ticket-create"]):hover:not(:disabled):not([aria-disabled="true"]) {
+):not([data-action="open-ticket-create"]):not(:where(.focus-metric,.clean-schedule-row,.clean-attention-list>button,.clean-recent-list>button)):hover:not(:disabled):not([aria-disabled="true"]) {
   border-color: var(--button-neutral-400) !important;
   background: var(--button-neutral-200) !important;
   color: var(--button-neutral-900) !important;

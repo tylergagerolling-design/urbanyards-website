@@ -69,8 +69,8 @@ test("archived workspace polish remains available with current dashboard assets"
   assert.match(css, /\.call-queue-row > span:first-child :is\(strong, small\)[\s\S]*overflow-wrap: anywhere/);
   assert.match(css, /\.groundskeeper-operation-card[\s\S]*white-space: normal !important/);
   assert.match(css, /\.dashboard-health-item strong[\s\S]*word-break: break-all/);
-  assert.match(html, /dashboard\.css\?v=20260811-ticket-trash-1/);
-  assert.match(html, /dashboard\.js\?v=20260908-public-ai-only-1/);
+  assert.match(html, /dashboard\.css\?v=20260908-dashboard-qa-1/);
+  assert.match(html, /dashboard\.js\?v=20260908-dashboard-qa-1/);
 });
 
 test("Tickets Leads and Money use the same flat white page canvas as Home and Work", () => {
@@ -78,7 +78,7 @@ test("Tickets Leads and Money use the same flat white page canvas as Home and Wo
   const html = read("dashboard.html");
   assert.match(css, /:is\(#tickets,#outreach,#documents\)\.dashboard-section\.is-active\{\s*padding:0!important;\s*background:#fff!important/);
   assert.match(css, /:is\(#tickets \.tickets-timeline-page,#outreach \.online-quote-workspace,#documents \.money-workspace\)\{\s*background:#fff!important/);
-  assert.match(html, /dashboard-unified\.css\?v=20260807-popup-shadows-2/);
+  assert.match(html, /dashboard-unified\.css\?v=20260908-dashboard-qa-1/);
   assert.match(css, /#outreach > \[data-leads-workspace\][\s\S]*width:100%!important;[\s\S]*max-width:none!important/);
   assert.match(css, /#outreach \.online-quote-workspace \{\s*padding:0!important;/);
 });
@@ -94,7 +94,7 @@ test("Tickets and Work filter text clears the embedded icons", () => {
   const html = read("dashboard.html");
   assert.match(css, /\.ttl-filters label > select\{\s*padding:0 34px 0 43px!important/);
   assert.match(css, /\.wol-filters label > select\{\s*padding:0 34px 0 39px!important/);
-  assert.match(html, /dashboard-unified\.css\?v=20260807-popup-shadows-2/);
+  assert.match(html, /dashboard-unified\.css\?v=20260908-dashboard-qa-1/);
 });
 
 test("Unified Ticket, Work detail, and Call Notes use one elevated popup shadow without a dim overlay", () => {
@@ -133,8 +133,8 @@ test("separate AI products keep the dashboard Keaton Mask launcher and distinct 
   assert.deepEqual([...maskPng.subarray(0, 8)], [137, 80, 78, 71, 13, 10, 26, 10]);
   assert.equal(maskPng.readUInt32BE(16), 512);
   assert.equal(maskPng.readUInt32BE(20), 512);
-  assert.match(html, /<h1>The Lawnmower Man<\/h1>/);
-  assert.match(html, /Private operations intelligence for Urban Yards\./);
+  assert.doesNotMatch(html, /data-retired-workspace/);
+  assert.match(js, /const DASHBOARD_AI_ENABLED = false/);
   assert.match(publicAssistant, /<h2 id="uy-assistant-title">The Groundskeeper<\/h2>/);
   assert.match(publicAssistant, /Urban Yards[’'] website guide\./);
   assert.match(js, /dashboard-copilot-launcher[\s\S]{0,500}aria-label="Open The Lawnmower Man"/);
@@ -388,7 +388,7 @@ test("dashboard route aliases and new reliability diagnostics are wired", () => 
   assert.match(html, /<section class="dashboard-section unified-ticket-page" id="tickets" data-section="tickets"><div data-unified-ticket-workspace><\/div><\/section>/);
   assert.match(html, /<section class="dashboard-section work-operations-page" id="calendar" data-section="calendar"><div data-work-operations-workspace><\/div><\/section>/);
   assert.doesNotMatch(html, /data-home-workspace|data-global-search|dashboard-topbar/);
-  assert.match(js, /function renderFocusOnWorkHome/);
+  assert.doesNotMatch(js, /function renderFocusOnWorkHome\(/);
   assert.match(js, /function renderUnifiedTicketOverview/);
   assert.match(js, /function renderTicketsTimeline/);
   assert.match(js, /function renderWorkOperationsWorkspace/);
@@ -456,7 +456,7 @@ test("dashboard route aliases and new reliability diagnostics are wired", () => 
   assert.match(js, /const dashboardWorkspaceLinks = \[/);
   assert.match(js, /function visibleDashboardWorkspaceLinks/);
   assert.match(js, /dashboardWorkspaceLinks\.filter\(\(item\) => canAccessDashboardSection\(item\.id, role\)\)/);
-  assert.match(js, /const links = visibleDashboardWorkspaceLinks\(\)/);
+  assert.doesNotMatch(js, /function renderWorkspaceSwitcher\(/);
   assert.doesNotMatch(js, /\$\{renderWorkspaceSwitcher\(/);
   assert.match(js, /function canCreateTicketType/);
   assert.match(js, /function canManageLeadWorkflow/);
@@ -482,7 +482,7 @@ test("dashboard route aliases and new reliability diagnostics are wired", () => 
   assert.doesNotMatch(moneySection, /data-quote-table|data-pipeline|data-document-form/);
   const moneyWorkspace = js.match(/function renderMoneyWorkspace[\s\S]*?function renderToolsRunwayCard/)?.[0] || "";
   assert.doesNotMatch(moneyWorkspace, /Money workspace signals/);
-  const toolsWorkspace = js.match(/function renderToolsWorkspace[\s\S]*?function renderToolsCard/)?.[0] || "";
+  const toolsWorkspace = js.match(/function renderToolsWorkspace[\s\S]*?\n  }/)?.[0] || "";
   assert.match(toolsWorkspace, /data-users-access-list/);
   assert.match(toolsWorkspace, /data-dashboard-health/);
   assert.match(toolsWorkspace, /data-activity-log-list/);
@@ -506,7 +506,7 @@ test("dashboard route aliases and new reliability diagnostics are wired", () => 
   assert.doesNotMatch(ticketWorkspace, /renderTicketOwnerStrip/);
   assert.doesNotMatch(js, /function renderTicketOwnerStrip/);
   assert.doesNotMatch(css, /ticket-owner-strip/);
-  assert.match(js, /function renderMoneyBudgetPanel/);
+  assert.doesNotMatch(js, /function renderMoneyBudgetPanel\(/);
   assert.match(js, /function findTicketForBudget/);
   assert.match(js, /function findBudgetForTicket/);
   assert.doesNotMatch(js, /Cost Review Queue/);
@@ -515,7 +515,7 @@ test("dashboard route aliases and new reliability diagnostics are wired", () => 
   assert.match(js, /async function ensureBudgetForTicket/);
   assert.match(js, /async function syncBudgetToTicket/);
   assert.match(js, /function openMoneyBudgetDrawer/);
-  assert.match(js, /data-money-budget-panel/);
+  assert.match(js, /function renderUnifiedTicketCosts/);
   assert.match(js, /data-action="\$\{budget \? "open-budget" : "prepare-ticket-budget"\}"/);
   assert.match(js, /data-action="sync-budget-to-ticket"/);
   assert.match(js, /data-money-budget-form/);
@@ -523,15 +523,15 @@ test("dashboard route aliases and new reliability diagnostics are wired", () => 
   assert.match(js, /await syncBudgetToTicket\(budget\)/);
   assert.match(js, /function canManageWorkWorkflow/);
   assert.doesNotMatch(js, /<h3>Support Tools<\/h3>[\s\S]*data-action="go-route-planner"[\s\S]*data-action="go-documentation"/);
-  assert.match(js, /function renderTicketWorkAssignmentBridge/);
+  assert.doesNotMatch(js, /function renderTicketWorkAssignmentBridge\(/);
   assert.match(js, /async function saveTicketWorkAssignment/);
   assert.match(js, /data-ticket-assignment-form/);
   assert.match(js, /assigned_user_id/);
   assert.match(js, /await saveTicketWorkAssignment\(event\.target\)/);
   assert.match(css, /\.ticket-work-assignment-bridge/);
   assert.match(css, /\.ticket-work-assignment-form/);
-  assert.match(js, /Budget and Profitability/);
-  assert.match(js, /Budget records stay inside Money/);
+  assert.match(js, /function renderUnifiedTicketCosts/);
+  assert.match(js, /unifiedTicketCard\("Costs & Closeout"/);
   assert.match(js, /budgetsReady: false/);
   assert.match(js, /budgets: emptyBudgetBundle\(\)/);
   assert.match(js, /state\.budgetsReady = true/);
@@ -550,14 +550,14 @@ test("dashboard route aliases and new reliability diagnostics are wired", () => 
   ["Leads", "Approval", "Cost Review", "Invoice Prep", "Work", "Review", "Close"].forEach((label) => {
     assert.match(js, new RegExp(`label: "${label}"`));
   });
-  ["home", "tickets", "work", "leads", "money", "tools"].forEach((page) => {
+  ["home", "tickets", "leads", "money", "tools"].forEach((page) => {
     assert.match(js, new RegExp(`data-uy-page-contract="${page}"`));
   });
+  assert.match(js, /host\.innerHTML = `<div class="work-operations-list/);
   assert.doesNotMatch(js, /Tickets workspace signals|Work workspace signals|Leads workspace signals|Money workspace signals/);
   assert.doesNotMatch(css, /workspace-focus-strip|workspace-focus-card/);
   assert.match(css, /ticket-metrics[\s\S]*grid-template-columns: repeat\(auto-fit, minmax\(min\(100%, 190px\), 1fr\)\)/);
-  assert.match(js, /function renderHomeFocusPanel/);
-  assert.match(js, /Start with the next handoff/);
+  assert.doesNotMatch(js, /function renderHomeFocusPanel\(/);
   assert.match(css, /home-focus-grid[\s\S]*grid-template-columns: repeat\(auto-fit, minmax\(min\(100%, 240px\), 1fr\)\)/);
   assert.match(css, /home-focus-card-head[\s\S]*grid-template-columns: minmax\(0, 1fr\) auto/);
   assert.match(css, /home-focus-card-head strong[\s\S]*border-radius: 999px/);
@@ -566,29 +566,21 @@ test("dashboard route aliases and new reliability diagnostics are wired", () => 
   assert.match(css, /work-readiness-grid[\s\S]*repeat\(auto-fit, minmax\(min\(100%, 220px\), 1fr\)\)/);
   assert.match(css, /leads-runway-card,[\s\S]*money-runway-card,[\s\S]*tools-runway-card[\s\S]*grid-template-areas:[\s\S]*"label value"[\s\S]*"detail detail"[\s\S]*"action action"/);
   assert.match(css, /tools-runway-card > strong[\s\S]*border-radius: 999px/);
-  assert.match(js, /Intake Focus/);
-  assert.match(js, /Financial Focus/);
-  assert.match(js, /Support Focus/);
   assert.doesNotMatch(js, />Lead Runway</);
   assert.doesNotMatch(js, />Money Runway</);
   assert.doesNotMatch(js, />Tools Runway</);
   assert.match(css, /work-readiness-card-main[\s\S]*grid-template-areas:[\s\S]*"label value"[\s\S]*"detail detail"/);
   assert.match(css, /work-readiness-card-main strong[\s\S]*border-radius: 999px/);
-  assert.match(js, /function renderWorkFieldPacketPanel/);
-  assert.match(js, /What the crew needs on-site/);
+  assert.doesNotMatch(js, /function renderWorkFieldPacketPanel\(/);
   assert.match(css, /work-field-packet-grid[\s\S]*grid-template-columns: repeat\(auto-fit, minmax\(min\(100%, 260px\), 1fr\)\)/);
   assert.match(css, /work-field-packet-step[\s\S]*grid-template-areas:[\s\S]*"step copy value"[\s\S]*"step copy action"/);
   assert.match(css, /work-field-packet-step em[\s\S]*border-radius: 999px/);
-  assert.match(js, /function renderLeadsHandoffPanel/);
-  assert.match(js, /From prospect to ticket/);
+  assert.doesNotMatch(js, /function renderLeadsHandoffPanel\(/);
   assert.match(css, /leads-handoff-grid[\s\S]*grid-template-columns: repeat\(auto-fit, minmax\(min\(100%, 240px\), 1fr\)\)/);
   assert.match(css, /lead-handoff-card[\s\S]*grid-template-rows: auto auto minmax\(0, 1fr\) auto/);
   assert.match(css, /lead-handoff-card-head[\s\S]*grid-template-columns: minmax\(0, 1fr\) auto/);
   assert.match(css, /lead-handoff-card li strong,[\s\S]*lead-handoff-card li span[\s\S]*text-overflow: ellipsis/);
-  assert.match(js, /ticket-workflow-board-index/);
-  assert.match(js, /function renderTicketHandoffPanel/);
-  assert.match(js, /ticket-handoff-panel/);
-  assert.match(js, /Who owns the next move\?/);
+  assert.doesNotMatch(js, /function renderTicketHandoffPanel\(/);
   assert.match(css, /ticket-workflow-board-grid[\s\S]*grid-template-columns: repeat\(auto-fit, minmax\(min\(100%, 196px\), 1fr\)\)/);
   assert.match(css, /ticket-handoff-grid[\s\S]*grid-template-columns: repeat\(auto-fit, minmax\(min\(100%, 230px\), 1fr\)\)/);
   assert.match(css, /ticket-handoff-card-main[\s\S]*grid-template-areas:[\s\S]*"label value"[\s\S]*"detail detail"/);
@@ -623,12 +615,12 @@ test("dashboard route aliases and new reliability diagnostics are wired", () => 
   assert.match(css, /work-day-map-card \.dashboard-map-preview-shell[\s\S]*height: clamp\(184px, 16vw, 246px\)/);
   assert.match(css, /work-day-map-card \.dashboard-map-preview-shell[\s\S]*margin-bottom: 0/);
   assert.match(css, /work-day-map-card \.dashboard-map-preview \.gm-style[\s\S]*height: 100% !important/);
-  assert.match(js, /ticket-unified-layout/);
+  assert.match(js, /unified-ticket-shell/);
   assert.doesNotMatch(js, /renderTicketEndToEndFlow\(dashboardTickets\(\), ticket\.stage, "Current ticket lifecycle"\)/);
   assert.match(css, /ticket-unified-layout[\s\S]*grid-template-columns: minmax\(0, 1fr\) 270px/);
-  assert.match(js, /function renderMoneyCloseoutPanel/);
-  assert.match(js, /Closeout Checklist/);
-  assert.match(js, /Protect the final handoff/);
+  assert.doesNotMatch(js, /function renderMoneyCloseoutPanel\(/);
+  assert.match(js, /Costs & Closeout/);
+  assert.match(js, /renderUnifiedTicketCosts\(quoteTicket\)/);
   assert.match(css, /money-closeout-grid[\s\S]*grid-template-columns: repeat\(auto-fit, minmax\(min\(100%, 240px\), 1fr\)\)/);
   assert.match(css, /money-closeout-step[\s\S]*grid-template-rows: auto auto minmax\(0, 1fr\) auto/);
   assert.match(css, /money-closeout-step-head[\s\S]*grid-template-columns: minmax\(0, 1fr\) auto/);
@@ -640,8 +632,7 @@ test("dashboard route aliases and new reliability diagnostics are wired", () => 
   assert.match(css, /money-budget-actions[\s\S]*flex-wrap: wrap/);
   assert.match(css, /money-budget-actions \.inline-action[\s\S]*flex: 1 1 128px/);
   assert.match(css, /tools-control-card[\s\S]*grid-template-rows: auto minmax\(0, 1fr\) auto/);
-  assert.match(js, /function renderToolsSystemsPanel/);
-  assert.match(js, /Where each utility lives/);
+  assert.doesNotMatch(js, /function renderToolsSystemsPanel\(/);
   assert.match(css, /tools-systems-grid[\s\S]*grid-template-columns: repeat\(auto-fit, minmax\(min\(100%, 240px\), 1fr\)\)/);
   assert.match(css, /tools-system-card[\s\S]*grid-template-rows: auto auto minmax\(0, 1fr\) auto/);
   assert.match(css, /tools-system-card-head[\s\S]*grid-template-columns: minmax\(0, 1fr\) auto/);
@@ -659,7 +650,6 @@ test("dashboard route aliases and new reliability diagnostics are wired", () => 
   assert.match(js, /function ticketActionItems\(data = state\.data\)/);
   assert.match(js, /ticketActionItems\(data\)\.forEach\(push\)/);
   assert.match(js, /data-ticket-source="\$\{escapeHtml\(item\.ticketSource\)\}"/);
-  assert.match(js, /ticketInLane\(ticket, \["ready", "field", "review"\]\)/);
   assert.match(js, /ticketInLane\(ticket, \["sales"\]\)/);
   assert.match(js, /dashboardTickets\(data\)\.filter\(ticketIsOpen\)/);
   assert.doesNotMatch(js, /ticket\.source === "job" && ticket\.stage !== "cancelled"/);
@@ -669,8 +659,6 @@ test("dashboard route aliases and new reliability diagnostics are wired", () => 
   assert.doesNotMatch(js, /qsa\("\[data-dashboard-link\]"\)\.forEach\(\(link\) => \{\s*link\.addEventListener\("click"/);
   assert.match(js, /label: "Leads"/);
   assert.match(workspaceRegistry, /Lead Dashboard/);
-  assert.match(js, /Intake Focus/);
-  assert.match(js, /data-action="\$\{escapeHtml\(secondaryAction\)\}">/);
   assert.match(js, /action === "refresh-documentation"/);
   assert.doesNotMatch(html, /data-action="go-documents">Open Money<\/button>\s*<\/article>/);
   assert.match(css, /#overview\.home-ticket-page > :not\(\[data-home-workspace\]\)/);
@@ -685,20 +673,18 @@ test("dashboard route aliases and new reliability diagnostics are wired", () => 
   assert.match(css, /\.ticket-workbench \{/);
   assert.match(css, /\.ticket-workbench-grid \{/);
   assert.match(css, /\.ticket-workbench-section\.is-active/);
-  assert.match(js, /function renderTicketBoardControls/);
+  assert.doesNotMatch(js, /function renderTicketBoardControls\(/);
   assert.match(js, /function ticketMatchesBoardFilters/);
   assert.match(js, /function titleCase\(value\)/);
   assert.match(js, /function findTicketForDrawer\(source, id\)/);
   assert.match(js, /item\.sourceId === idText/);
-  assert.match(js, /renderTicketDrawerFallback\(source, id/);
-  assert.match(js, /The ticket matched, but the detail panel hit a rendering error/);
+  assert.doesNotMatch(js, /function renderTicketDrawerFallback\(/);
+  assert.match(js, /state\.unifiedTicketSelectedId = ticket\.id/);
   assert.match(js, /Ticket Command Center/);
-  assert.match(js, /Board Filters/);
-  assert.match(js, /Find the right ticket fast/);
+  assert.doesNotMatch(js, /function renderTicketBoardControls\(/);
   assert.match(js, /data-ticket-board-search/);
   assert.match(js, /data-ticket-board-stage-filter/);
   assert.match(js, /data-ticket-board-owner-filter/);
-  assert.match(js, /data-ticket-board-result-count/);
   assert.match(js, /reset-ticket-board-filters/);
   assert.match(css, /\.ticket-board-controls/);
   assert.match(css, /ticket-board-controls[\s\S]*grid-template-columns: minmax\(0, 1fr\)/);
@@ -886,7 +872,7 @@ test("component Work Board assigns, tracks, completes, and audits ticket require
   assert.match(js, /function renderOwnerKanbanTeamGroups[\s\S]*component-kanban-team-group/);
   assert.match(js, /function renderOwnerKanbanBoard\(tickets = \[\]\) \{[\s\S]*return renderOwnerKanbanBoardLegacy\(tickets\)/);
   assert.match(js, /function renderOwnerKanbanBoardLegacy[\s\S]*renderOwnerKanbanTeamGroups\(shownComponents\)/);
-  assert.match(js, /component-ticket-team-summary[\s\S]*ownerKanbanTeams\.map/);
+  assert.doesNotMatch(js, /function renderOwnerKanbanTicketSwimlane\(/);
   assert.match(js, /function ticketWorkComponents[\s\S]*ticketCompletionChecklistItems\.map/);
   assert.match(js, /function latestWorkComponentSnapshots[\s\S]*ticket_work_component_updated/);
   assert.match(js, /data-work-component-assignee/);
@@ -928,15 +914,15 @@ test("component Work Board assigns, tracks, completes, and audits ticket require
   assert.match(js, /data-owner-kanban-filter="status"/);
   assert.match(js, /data-owner-kanban-filter="sort"/);
   assert.doesNotMatch(js, /data-owner-kanban-filter="group"/);
-  assert.match(js, /function renderOwnerKanbanTicketSwimlane/);
-  assert.match(js, /class="component-ticket-swimlane/);
-  assert.match(js, /class="component-ticket-swimlane-grid"/);
-  assert.match(js, /class="component-ticket-swimlane-head"/);
-  assert.match(js, /data-action="toggle-work-ticket-swimlane"/);
+  assert.doesNotMatch(js, /function renderOwnerKanbanTicketSwimlane\(/);
+  assert.doesNotMatch(js, /class="component-ticket-swimlane/);
+  assert.doesNotMatch(js, /class="component-ticket-swimlane-grid"/);
+  assert.doesNotMatch(js, /class="component-ticket-swimlane-head"/);
+  assert.doesNotMatch(js, /data-action="toggle-work-ticket-swimlane"/);
   assert.match(js, /data-action="toggle-work-component-editor"/);
-  assert.match(js, /data-action="toggle-work-ticket-completed"/);
-  assert.match(js, /component-ticket-progress[\s\S]*<progress/);
-  assert.match(js, /column\.key === "done" && !doneExpanded \? columnComponents\.slice\(0, 2\)/);
+  assert.doesNotMatch(js, /data-action="toggle-work-ticket-completed"/);
+  assert.doesNotMatch(js, /component-ticket-progress[\s\S]*<progress/);
+  assert.match(js, /shownComponents\.length \? renderOwnerKanbanTeamGroups\(shownComponents\)/);
   assert.match(js, /WIP\$\{overLimit \? " \/ reduce load" : ""\}/);
   assert.match(js, /owner-kanban-empty[\s\S]*No matching ticket work/);
   assert.match(css, /Ticket swimlane Work Board/);
@@ -977,7 +963,7 @@ test("unified Ticket and Work detail tabs render distinct visible bodies", () =>
   assert.match(js, /unified-ticket-shell is-section-\$\{escapeHtml\(active\)\}/);
   assert.match(js, /ut-active-section-summary/);
   assert.match(css, /unified-ticket-shell\.is-section-work[\s\S]*ut-property-card/);
-  assert.match(js, /wod-content is-tab-\$\{escapeHtml\(activeTab\)\}/);
+  assert.doesNotMatch(js, /function renderWorkDetailPanel\(/);
   assert.match(css, /wod-content\.is-tab-schedule[\s\S]*wod-checklist/);
   assert.match(css, /wod-content\.is-tab-history/);
 });
@@ -998,42 +984,29 @@ test("dashboard creates canonical job tickets without removing source fallbacks"
   assert.match(js, /async function syncJobTicketPhotoProof/);
   assert.match(js, /async function dashboardTicketRequest/);
   assert.match(js, /async function loadCanonicalTicketEvents/);
-  assert.match(js, /function renderTicketHistory/);
-  assert.match(js, /function renderTicketDocumentSource/);
-  assert.match(js, /function renderTicketWorkbench/);
+  assert.doesNotMatch(js, /function renderTicketHistory\(/);
+  assert.doesNotMatch(js, /function renderTicketDocumentSource\(/);
+  assert.doesNotMatch(js, /function renderTicketWorkbench\(/);
   assert.match(js, /function ticketWorkbenchUpdatePayload/);
   assert.match(js, /data-ticket-workbench-form data-ticket-completion-form/);
   assert.match(js, /Save Section/);
   assert.match(js, /ticketWorkbenchChecklistItem/);
-  assert.match(js, /checklistKeys: \["scopeComplete"\]/);
+  assert.match(js, /checklistKeys: ticketCompletionChecklistItems\.map/);
   assert.match(js, /payload\.ticket = \{ \.\.\.workbenchUpdate, \.\.\.payload\.ticket \}/);
-  assert.match(js, /function renderTicketInvoiceBridge/);
+  assert.doesNotMatch(js, /function renderTicketInvoiceBridge\(/);
   assert.match(js, /function findInvoiceForTicket/);
   assert.match(js, /async function ensureInvoiceForTicket/);
   assert.match(js, /async function saveTicketInvoiceStatus/);
-  assert.match(js, /data-ticket-workbench/);
-  assert.match(js, /data-ticket-invoice-form/);
-  assert.match(js, /data-action="create-ticket-invoice"/);
-  [
-    "Overview and Scope",
-    "Quote",
-    "Invoice",
-    "Customer Approval and Deposit",
-    "Scheduling and Assignment",
-    "Tasks",
-    "Arrival Photos",
-    "Completion Photos",
-    "Notes and Documents",
-    "Expenses and Actual Costs",
-    "Completion and Closeout",
-    "Activity and Audit Log",
-    "Owner Controls"
-  ].forEach((section) => assert.match(js, new RegExp(section)));
-  assert.match(js, /renderTicketWorkbench\(ticket, \{ openSection: routeSection, sourceItem \}\)/);
+  assert.match(js, /data-unified-ticket-workspace/);
+  assert.match(js, /data-ticket-inline-invoice-form/);
+  assert.match(js, /data-action="create-financial-invoice-from-ticket"/);
+  assert.match(js, /renderUnifiedTicketQuotePanel\(quoteTicket\)/);
+  assert.match(js, /renderUnifiedTicketInvoicePanel\(quoteTicket\)/);
+  assert.match(js, /function openTicketDrawer[\s\S]*state\.unifiedTicketSelectedId = ticket\.id/);
   assert.match(js, /const ticketLifecycleTransitions = \{/);
-  assert.match(js, /function renderTicketCommandCenter/);
+  assert.doesNotMatch(js, /function renderTicketCommandCenter\(/);
   assert.match(js, /data-action="transition-ticket-stage"/);
-  assert.match(js, /data-action="save-ticket-command"/);
+  assert.match(js, /data-unified-ticket-edit-form/);
   assert.match(js, /ticketMissingRequirementsForStage/);
   assert.match(js, /ticketRequirementLabel/);
   assert.match(js, /fetch\("\/\.netlify\/functions\/dashboard-tickets"/);
@@ -1056,9 +1029,9 @@ test("dashboard creates canonical job tickets without removing source fallbacks"
   assert.match(js, /await ensureInvoiceForTicket\(ticket\)/);
   assert.match(js, /await saveTicketInvoiceStatus\(event\.target\)/);
   assert.match(js, /const ticket = findJobTicketForSalesDocument\(id\)/);
-  assert.match(js, /state\.data\.documents\.find\(\(item\) => item\.id === sourceId\)/);
+  assert.match(js, /findTicketForDrawer\(source, id\)/);
   assert.match(js, /function renderUnifiedTicketDocuments/);
-  assert.match(js, /content: renderUnifiedTicketDocuments\(ticket\)/);
+  assert.match(js, /unifiedTicketCard\(`Documents \(\$\{linkedAssets\.documents\.length\}\)`, documentCard, "ut-documents-card"\)/);
   assert.match(js, /await syncJobTicketPhotoProof\(jobId, photoStage\)/);
   assert.match(js, /field_completion_notes/);
   assert.match(js, /arrival_photos_uploaded/);
@@ -1113,10 +1086,10 @@ test("dashboard navigation and workspace calls to action have working destinatio
 
   assert.match(js, /window\.addEventListener\("hashchange", async \(\) => \{/);
   assert.match(js, /setActiveSection\(dashboardSectionForRole\(hashSection\)\)/);
-  assert.match(js, /action: "go-call-queue",\s*actionLabel: "Open Queue"/);
+  assert.match(js, /action === "go-call-queue"/);
   assert.match(js, /action === "go-call-queue"[\s\S]*?setActiveSection\("call-queue"\)/);
   assert.match(js, /data-action="quick-add-job">Add Visit/);
-  assert.match(js, /action: "focus-work-queue",\s*actionLabel: "View Queue"/);
+  assert.doesNotMatch(js, /function renderWorkPlanTile\(/);
   assert.match(js, /data-work-queue/);
   assert.match(js, /action === "focus-work-queue"[\s\S]*?\[data-work-queue\][\s\S]*?scrollIntoView/);
   assert.doesNotMatch(js, /action: "go-leads",\s*actionLabel: "Open Queue"/);
@@ -1243,57 +1216,13 @@ test("Owner can close completed non-landscaping tickets as audited monthly rent 
   assert.match(backend, /monthlyRemaining/);
 });
 
-test("Tickets includes a completed archive with owner reopen controls", () => {
-  const js = read("dashboard.js");
-  const css = read("dashboard.css");
 
-  assert.match(js, /data-action="show-completed-tickets"/);
-  assert.match(js, /function renderCompletedTicketArchive/);
-  assert.match(js, /data-action="reopen-completed-ticket"/);
-  assert.match(js, /Rent deduction reopened:/);
-  assert.match(js, /stage: "completion_review"/);
-  assert.match(css, /\.completed-ticket-card/);
-});
 
-test("Leads contact queue mirrors active Call Queue leads and opens the selected lead", () => {
-  const js = read("dashboard.js");
 
-  assert.match(js, /All active Call Queue leads/);
-  assert.match(js, /\.filter\(\(item\) => !callQueueIsCompleted\(item\)\)/);
-  assert.match(js, /data-action="open-call-queue-lead"/);
-  assert.match(js, /state\.callQueueSelectedId = id[\s\S]*setActiveSection\("call-queue"\)/);
-  assert.match(js, /data-action="toggle-leads-contact-queue"[\s\S]*View All Leads/);
-});
 
-test("Leads Contact Queue shows ten records until View All Leads is expanded", () => {
-  const js = read("dashboard.js");
 
-  assert.match(js, /leadsContactQueueExpanded: false/);
-  assert.match(js, /visibleProspects = state\.leadsContactQueueExpanded \? prospectQueue : prospectQueue\.slice\(0, 10\)/);
-  assert.match(js, /data-action="toggle-leads-contact-queue"[\s\S]*Show First 10[\s\S]*View All Leads/);
-  assert.match(js, /action === "toggle-leads-contact-queue"[\s\S]*leadsContactQueueExpanded = !state\.leadsContactQueueExpanded[\s\S]*renderLeadsWorkspace/);
-});
 
-test("retired daily workflow stays archived and disconnected from blank canvases", () => {
-  const html = read("dashboard.html");
-  const archivedHtml = read("src/archive/pre-reset-dashboard/dashboard.pre-reset.html");
-  const js = read("dashboard.js");
-  const css = read("dashboard.css");
 
-  assert.doesNotMatch(html, /data-global-search|data-action="toggle-global-add"/);
-  assert.match(archivedHtml, /data-global-search[\s\S]*Search everything/);
-  assert.match(archivedHtml, /data-action="toggle-global-add"/);
-  assert.match(js, /function dashboardActionMetrics/);
-  assert.match(js, /Open Tickets[\s\S]*In Progress[\s\S]*Due Today[\s\S]*Completed This Week[\s\S]*Revenue This Month/);
-  assert.match(js, /OWNER_KANBAN_SAVED_VIEWS[\s\S]*Due Today[\s\S]*Overdue[\s\S]*Blocked[\s\S]*Needs Review/);
-  assert.match(js, /action === "apply-owner-kanban-view"/);
-  assert.match(js, /function renderDataQualityPanel/);
-  assert.match(js, /Contacts missing phone or email[\s\S]*Possible duplicate contacts[\s\S]*Tickets missing a property[\s\S]*Jobs missing a date[\s\S]*Closed tickets without documents/);
-  assert.match(js, /function renderActivityTimeline/);
-  assert.match(css, /\.dashboard-data-quality-grid/);
-  assert.match(css, /dashboard-data-quality-grid > button[\s\S]*display: grid !important[\s\S]*grid-template-areas:[\s\S]*"value label"[\s\S]*"detail detail"/);
-  assert.match(css, /dashboard-data-quality-grid > button > span[\s\S]*overflow-wrap: anywhere[\s\S]*white-space: normal/);
-});
 
 test("unified tickets provide one validated completion checklist with N/A exceptions", () => {
   const js = read("dashboard.js");
@@ -1350,7 +1279,7 @@ test("canonical ticket drawer is route-aware, reusable, auditable, and does not 
   assert.match(js, /"open-financial-invoice": \["invoice", "invoice"\]/);
   assert.match(js, /"open-money-expense": \["expense", "costs"\]/);
   assert.match(js, /data-completion-override/);
-  assert.match(js, /data-action="review-complete-all-parts"/);
+  assert.match(js, /action === "review-complete-all-parts"/);
   assert.match(js, /data-complete-all-parts-form/);
   assert.match(js, /Owner Override, not Complete/);
   assert.match(js, /An invoice cannot be marked Paid while a balance remains/);
@@ -1372,19 +1301,7 @@ test("dashboard tabs use browser history before Back leaves the dashboard", () =
   assert.match(js, /window\.addEventListener\("hashchange"/);
 });
 
-test("Urban Yards launch center exposes all nineteen product-readiness controls", () => {
-  const js = read("dashboard.js");
-  const css = read("dashboard.css");
-  assert.match(js, /function urbanYardsProductReadiness/);
-  assert.match(js, /function renderUrbanYardsLaunchCenter/);
-  assert.match(js, /Urban Yards Launch Center/);
-  assert.match(js, /readiness\.ready}\/19 ready/);
-  assert.match(js, /function renderUrbanYardsOperationsCenter/);
-  assert.match(js, /Record Customer Approval/);
-  assert.match(js, /customer_approval_recorded: true/);
-  assert.match(css, /\.uy-launch-grid/);
-  assert.match(css, /\.uy-operations-center/);
-});
+
 
 test("ticket creation is guided, searchable, templated, and safely autosaved", () => {
   const js = read("dashboard.js");
@@ -1400,7 +1317,7 @@ test("ticket creation is guided, searchable, templated, and safely autosaved", (
   assert.match(js, /data-action="ticket-wizard-next"[\s\S]*Save &amp; Continue/);
   assert.match(js, /localStorage\.setItem\(TICKET_DRAFT_KEY/);
   assert.match(js, /localStorage\.removeItem\(TICKET_DRAFT_KEY\)/);
-  assert.match(js, /ticket-drawer-action-strip-copy[\s\S]*nextTitle/);
+  assert.match(js, /class="ut-back"/);
   assert.match(css, /\.ticket-wizard-actions[\s\S]*position: sticky/);
   assert.match(css, /\.ticket-create-wizard \[aria-invalid="true"\]/);
 });
@@ -1514,8 +1431,8 @@ test("the retired dashboard AI is disconnected while its implementation remains 
   const js = read("dashboard.js");
   const css = read("dashboard.css");
 
-  assert.match(js, /function renderContextualGroundskeeperTools/);
-  assert.match(js, /document\.querySelectorAll\("\[data-contextual-ai-tools\]"\)/);
+  assert.doesNotMatch(js, /function renderContextualGroundskeeperTools\(/);
+  assert.doesNotMatch(js, /function renderContextualGroundskeeperTools\(/);
   assert.doesNotMatch(js, /host\.prepend\(panel\)/);
   assert.match(js, /function renderDashboardCopilot/);
   assert.match(js, /groundskeeper-ai-keaton-mask\.png/);
@@ -1537,8 +1454,9 @@ test("approved operational views share canonical ticket and visit data", () => {
   const js = read("dashboard.js");
   assert.match(js, /function approvedOperationalRows\(\)/);
   assert.match(js, /const allRows = ticketTimelineRows\(\)/);
-  assert.match(js, /const allJobs = workOperationsRows\(\)/);
-  assert.match(js, /const focusJobs = homeFocusRows\(\)/);
+  assert.match(js, /const availableJobs = workOperationsRows\(\)/);
+  assert.match(js, /availableJobs\.filter\(\(job\) => range === "all" \|\| dashboardDateInWeek\(job\.dateRaw\)\)/);
+  assert.match(js, /function homeFocusRows/);
   assert.match(js, /selectedTimelineTicket\?\.ticket/);
   assert.match(js, /loader: loadTicketOperationalRelations/);
 });
@@ -1690,8 +1608,8 @@ test("ticket trash is recoverable and permanent clearing is owner guarded", () =
   const backend = read("netlify/functions/dashboard-tickets.js");
 
   assert.match(js, /function ticketIsTrashed[\s\S]*statusText\(ticket\.status\) === "archived"/);
-  assert.match(html, /dashboard\.css\?v=20260811-ticket-trash-1/);
-  assert.match(html, /dashboard\.js\?v=20260908-public-ai-only-1/);
+  assert.match(html, /dashboard\.css\?v=20260908-dashboard-qa-1/);
+  assert.match(html, /dashboard\.js\?v=20260908-dashboard-qa-1/);
   assert.match(js, /data-action="show-ticket-trash"/);
   assert.match(js, /data-action="trash-ticket"/);
   assert.match(js, /class="ut-quick-danger danger" data-action="trash-ticket"[\s\S]*<strong>Move to Trash<\/strong>/);

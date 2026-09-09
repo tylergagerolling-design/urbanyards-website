@@ -15608,12 +15608,6 @@ Requirements:
     history.replaceState({ ...(history.state || {}), dashboardSection: "documents", moneyView: view }, "", `${url.pathname}${url.search}${url.hash}`);
   }
 
-  function moneyPeriodLabel() {
-    const range = financialDateRange();
-    const format = (value) => new Date(`${value}T12:00:00`).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
-    return `This Month (${format(range.start)} – ${format(range.end)})`;
-  }
-
   function renderMoneyOverview() {
     const overview = state.data.financial.overview || {};
     const revenue = Number(overview.revenue || 0);
@@ -15755,7 +15749,7 @@ Requirements:
     const categoryTotal = (category) => rows.filter((expense) => expense.category === category).reduce((sum, expense) => sum + Number(expense.total || 0), 0);
     const total = rows.reduce((sum, expense) => sum + Number(expense.total || 0), 0);
     return `<section class="money-expenses-view" aria-label="Expenses">
-      <section class="money-kpi-grid money-kpi-grid--five" aria-label="Expense summary">${[["Total Expenses", total],["Equipment", categoryTotal("Equipment")],["Fuel", categoryTotal("Fuel")],["Materials", categoryTotal("Materials")],["Other", rows.filter((expense)=>!["Equipment","Fuel","Materials"].includes(expense.category)).reduce((sum,expense)=>sum+Number(expense.total||0),0)]].map(([label,value])=>`<article class="money-kpi is-green"><span>$</span><small>${label}</small><strong>${moneyCurrency(value)}</strong><em>Selected period</em></article>`).join("")}</section>
+      <section class="money-kpi-grid money-kpi-grid--five" aria-label="Expense summary">${[["Total Expenses", total],["Equipment", categoryTotal("Equipment")],["Fuel", categoryTotal("Fuel")],["Materials", categoryTotal("Materials")],["Other", rows.filter((expense)=>!["Equipment","Fuel","Materials"].includes(expense.category)).reduce((sum,expense)=>sum+Number(expense.total||0),0)]].map(([label,value])=>`<article class="money-kpi is-green"><span>$</span><small>${label}</small><strong>${moneyCurrency(value)}</strong><em>Matching expenses</em></article>`).join("")}</section>
       <div class="money-record-toolbar">
         <label class="money-search-control"><span>⌕</span><input type="search" data-money-record-search value="${escapeHtml(state.moneySearch)}" placeholder="Search expenses..." aria-label="Search expenses"></label>
         <label><select data-money-expense-category aria-label="Expense category">${["All",...EXPENSE_CATEGORIES].map((value)=>`<option value="${escapeHtml(value)}"${state.moneyExpenseCategory===value?" selected":""}>Category: ${escapeHtml(value)}</option>`).join("")}</select></label>
@@ -16289,9 +16283,21 @@ Requirements:
     URL.revokeObjectURL(url);
   }
 
+  function renderMoneyLoadingView() {
+    const label = state.moneyView === "invoicing" ? "Invoices" : MONEY_TABS.find((item) => item.key === state.moneyView)?.label || "financial records";
+    const metricCount = state.moneyView === "expenses" ? 5 : 4;
+    return `<section class="money-loading-view" aria-busy="true" aria-label="Loading ${escapeHtml(label.toLowerCase())}">
+      <div class="money-kpi-grid${metricCount === 5 ? " money-kpi-grid--five" : ""}" aria-hidden="true">
+        ${Array.from({ length: metricCount }, () => `<div class="money-kpi money-skeleton-card"><i class="money-skeleton money-skeleton-icon"></i><i class="money-skeleton"></i><i class="money-skeleton money-skeleton-value"></i><i class="money-skeleton money-skeleton-detail"></i></div>`).join("")}
+      </div>
+      <div class="money-loading-records"><p class="money-loading-status" role="status">Loading ${escapeHtml(label.toLowerCase())}…</p><div aria-hidden="true">${Array.from({ length: 4 }, () => `<div class="money-skeleton-row"><i class="money-skeleton"></i><i class="money-skeleton"></i><i class="money-skeleton"></i></div>`).join("")}</div></div>
+    </section>`;
+  }
+
   function renderMoneyActiveView() {
-    if (state.moneyLoading) return `<section class="money-module-state" role="status"><strong>Loading ${escapeHtml(state.moneyView)}…</strong><p>The rest of the dashboard remains available.</p></section>`;
+    if (state.moneyLoading) return renderMoneyLoadingView();
     if (state.moneyError) return `<section class="money-module-state is-error" role="alert"><strong>Could not load financial records</strong><p>${escapeHtml(state.moneyError)}</p><button type="button" data-action="retry-money-view">Retry</button></section>`;
+    if (!state.moneyLoadedViews.has(state.moneyView)) return renderMoneyLoadingView();
     if (state.moneyView === "overview") return renderMoneyOverview();
     if (state.moneyView === "expenses") return renderUnifiedMoneyExpenseWorkspace();
     if (state.moneyView === "quoting") return renderQuoteWorkspace();
@@ -16344,24 +16350,25 @@ Requirements:
     const target = qs("[data-money-workspace]");
     if (!target) return;
     state.moneyLoading = moneyViewRequests.has(state.moneyView);
+    const loadStatus = dashboardSectionLoadInfo("documents").status;
+    const notice = isDemoMode() || ["failed", "partial"].includes(loadStatus) ? renderWorkspaceDataState("documents") : "";
     moneyRenderNames = new Map();
     try {
       target.innerHTML = `
       <div class="ticket-workspace uy-page-prototype money-workspace" data-uy-page-contract="money" data-data-source="documents,invoices,quotes,job_tickets,budgets">
-        ${renderWorkspaceDataState("documents")}
         <header class="money-page-header">
           <div>
             <h1>Money</h1>
             <p>Manage invoices, expenses, and payments</p>
           </div>
           <div class="money-page-actions">
-            <button type="button" class="money-period-button" data-action="money-period" data-period="month">${escapeHtml(moneyPeriodLabel())}<span>⌄</span></button>
             ${canManageMoneyWorkflow() ? `<div class="money-new-split"><button type="button" data-action="create-financial-invoice"><span>＋</span> New</button><details><summary aria-label="Open New menu">⌄</summary><div><button type="button" data-action="create-financial-invoice">New Invoice</button><button type="button" data-action="open-money-expense-create">Add Expense</button><button type="button" data-action="open-money-payment-create">Record Payment</button></div></details></div>` : ""}
           </div>
         </header>
         ${renderQaShowcasePanel("money")}
         <section class="money-unified-shell">
           ${renderMoneyTabs()}
+          ${notice}
           ${renderMoneyActiveView()}
         </section>
       </div>`;

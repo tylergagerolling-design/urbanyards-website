@@ -69,8 +69,8 @@ test("archived workspace polish remains available with current dashboard assets"
   assert.match(css, /\.call-queue-row > span:first-child :is\(strong, small\)[\s\S]*overflow-wrap: anywhere/);
   assert.match(css, /\.groundskeeper-operation-card[\s\S]*white-space: normal !important/);
   assert.match(css, /\.dashboard-health-item strong[\s\S]*word-break: break-all/);
-  assert.match(html, /dashboard\.css\?v=20260908-dashboard-qa-1/);
-  assert.match(html, /dashboard\.js\?v=20260908-dashboard-qa-1/);
+  assert.match(html, /dashboard\.css\?v=20260908-money-loading-1/);
+  assert.match(html, /dashboard\.js\?v=20260908-money-loading-1/);
 });
 
 test("Tickets Leads and Money use the same flat white page canvas as Home and Work", () => {
@@ -78,7 +78,7 @@ test("Tickets Leads and Money use the same flat white page canvas as Home and Wo
   const html = read("dashboard.html");
   assert.match(css, /:is\(#tickets,#outreach,#documents\)\.dashboard-section\.is-active\{\s*padding:0!important;\s*background:#fff!important/);
   assert.match(css, /:is\(#tickets \.tickets-timeline-page,#outreach \.online-quote-workspace,#documents \.money-workspace\)\{\s*background:#fff!important/);
-  assert.match(html, /dashboard-unified\.css\?v=20260908-dashboard-qa-1/);
+  assert.match(html, /dashboard-unified\.css\?v=20260908-money-loading-1/);
   assert.match(css, /#outreach > \[data-leads-workspace\][\s\S]*width:100%!important;[\s\S]*max-width:none!important/);
   assert.match(css, /#outreach \.online-quote-workspace \{\s*padding:0!important;/);
 });
@@ -94,7 +94,7 @@ test("Tickets and Work filter text clears the embedded icons", () => {
   const html = read("dashboard.html");
   assert.match(css, /\.ttl-filters label > select\{\s*padding:0 34px 0 43px!important/);
   assert.match(css, /\.wol-filters label > select\{\s*padding:0 34px 0 39px!important/);
-  assert.match(html, /dashboard-unified\.css\?v=20260908-dashboard-qa-1/);
+  assert.match(html, /dashboard-unified\.css\?v=20260908-money-loading-1/);
 });
 
 test("Unified Ticket, Work detail, and Call Notes use one elevated popup shadow without a dim overlay", () => {
@@ -1608,8 +1608,8 @@ test("ticket trash is recoverable and permanent clearing is owner guarded", () =
   const backend = read("netlify/functions/dashboard-tickets.js");
 
   assert.match(js, /function ticketIsTrashed[\s\S]*statusText\(ticket\.status\) === "archived"/);
-  assert.match(html, /dashboard\.css\?v=20260908-dashboard-qa-1/);
-  assert.match(html, /dashboard\.js\?v=20260908-dashboard-qa-1/);
+  assert.match(html, /dashboard\.css\?v=20260908-money-loading-1/);
+  assert.match(html, /dashboard\.js\?v=20260908-money-loading-1/);
   assert.match(js, /data-action="show-ticket-trash"/);
   assert.match(js, /data-action="trash-ticket"/);
   assert.match(js, /class="ut-quick-danger danger" data-action="trash-ticket"[\s\S]*<strong>Move to Trash<\/strong>/);

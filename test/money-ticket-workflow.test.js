@@ -75,6 +75,37 @@ test('Returning to a cached Money tab clears the loading indicator for another v
   await expenses;
 });
 
+test('Money renders placeholders on its first frame and keeps failures retryable', () => {
+  const state = { moneyView:'invoicing', moneyLoading:false, moneyError:'', moneyLoadedViews:new Set() };
+  const context = vm.createContext({state, escapeHtml:String, MONEY_TABS:[{key:'invoicing',label:'Invoicing'}], renderUnifiedMoneyInvoiceWorkspace:()=>'<section>Loaded invoices</section>'});
+  vm.runInContext(functionSource('renderMoneyLoadingView')+functionSource('renderMoneyActiveView'),context);
+  assert.match(context.renderMoneyActiveView(),/Loading invoices/);
+  assert.doesNotMatch(context.renderMoneyActiveView(),/\$0\.00|No invoices/);
+  state.moneyError='Request failed';
+  assert.match(context.renderMoneyActiveView(),/role="alert"[\s\S]*retry-money-view/);
+  state.moneyLoading=true;
+  assert.match(context.renderMoneyActiveView(),/Loading invoices/);
+  state.moneyLoading=false;
+  state.moneyError='';
+  state.moneyLoadedViews.add('invoicing');
+  assert.match(context.renderMoneyActiveView(),/Loaded invoices/);
+});
+
+test('Money keeps its header and tabs while loading without the retired banner or date selector', () => {
+  const state = { moneyView:'invoicing', moneyLoadedViews:new Set(['invoicing']) };
+  const info = {status:'loading'};
+  const target = {};
+  const context = vm.createContext({state, moneyViewRequests:new Map(), qs:()=>target, dashboardSectionLoadInfo:()=>info, isDemoMode:()=>false, renderWorkspaceDataState:()=>'<aside class="workspace-data-state is-warning">Retry</aside>', canManageMoneyWorkflow:()=>true, renderQaShowcasePanel:()=>'', renderMoneyTabs:()=>'<nav class="money-tabs">Invoices</nav>', renderMoneyActiveView:()=>'<section>Records</section>'});
+  vm.runInContext(functionSource('renderMoneyWorkspace'),context);
+  context.renderMoneyWorkspace();
+  assert.match(target.innerHTML,/<h1>Money<\/h1>/);
+  assert.match(target.innerHTML,/class="money-tabs"/);
+  assert.doesNotMatch(target.innerHTML,/workspace-data-state|money-period/);
+  info.status='partial';
+  context.renderMoneyWorkspace();
+  assert.match(target.innerHTML,/money-tabs[\s\S]*is-warning/);
+});
+
 test('Quote revisions retain discounted pricing, tax, deposit and multiline terms', () => {
   const previous={lineItems:[{description:'Mow',quantity:2,unit_price:175,amount:350},{description:'Discount',quantity:1,unit_price:-50,amount:-50}],subtotal:300,tax:30,notes:'Deposit requested: 25%.\nTerms: First condition\nSecond condition\nCustomer message: Thank you\nSee you soon'};
   const context=vm.createContext({findQuoteForTicket:()=>previous,escapeHtml:String,addDaysKey:()=>'',todayKey:()=>'',buttonContent:String});

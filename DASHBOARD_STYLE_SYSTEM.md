@@ -68,7 +68,7 @@ On phones, Money's three tabs must fit together, Work's summary cards must form 
 
 Every major page must follow the same structural rhythm:
 
-1. page header with eyebrow, title, short purpose copy, search/filter where useful, and one primary action
+1. page header with one title, short purpose copy, and the page actions; put search and filters in the working area below
 2. summary row with the few metrics that matter for that page
 3. primary working area
 4. secondary/reference area
@@ -77,6 +77,7 @@ Every major page must follow the same structural rhythm:
 Use these shared page classes where practical:
 
 - `.uy-standard-page`
+- `.uy-workspace-header` and `.uy-header-actions` for the eleven main destinations: the same 36px desktop / 28px mobile title, 44px action height, subtitle spacing, border accent, and page gutters. Avoid repeating the page name in an eyebrow. Supporting card headings remain smaller than page titles. Use the shared SVG icon family instead of letter abbreviations as icons.
 - `.uy-page-header`
 - `.uy-section-header`
 - `.uy-card`

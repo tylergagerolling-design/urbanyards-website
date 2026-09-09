@@ -837,7 +837,9 @@
       "sync-contact": "↻",
       "sync-square-document": "↻"
     };
-    const icon = ["call-lead", "import-outreach-csv"].includes(action) ? unifiedTicketIcon(icons[action]) : icons[action] || "";
+    const glyphs = { "+":"plus", "×":"close", "✓":"check", "↓":"download", "↑":"upload", "✎":"edit", "JSON":"download", "DB":"download", "M":"pin", "Open":"chevronRight", "PDF":"document", "IN":"upload", "R":"calendar", "↻":"refresh", "$":"money", "!":"warning" };
+    const iconName = glyphs[icons[action]] || icons[action];
+    const icon = iconName ? unifiedTicketIcon(iconName) : "";
     return `${icon ? `<span class="button-icon" aria-hidden="true">${icon}</span>` : ""}<span>${escapeHtml(label)}</span>`;
   }
 
@@ -15134,7 +15136,7 @@ Requirements:
     const allVisibleSelected = Boolean(rows.length) && visibleSelectedCount === rows.length;
     if (!state.leadIntakeLoaded && !state.leadIntakeLoading) queueMicrotask(() => loadLeadIntakeBatches());
     target.innerHTML = `<div class="call-queue-reference" data-call-queue-root>
-      <header class="cq-page-header"><div><h1>Call Queue</h1><p>Manage your inbound call queue and caller data</p></div><div><button type="button" class="secondary-action" data-action="call-queue-settings">Queue Settings</button><button type="button" data-action="lead-intake-import">Import CSV</button></div></header>
+      <header class="cq-page-header uy-workspace-header"><div><h1>Call Queue</h1><p>Manage callers, follow-ups, and qualified leads.</p></div><div class="uy-header-actions"><button type="button" class="secondary-action" data-action="call-queue-settings">${unifiedTicketIcon("settings")} Queue Settings</button><button type="button" class="clean-primary-action" data-action="lead-intake-import">${unifiedTicketIcon("upload")} Import CSV</button></div></header>
       <section class="cq-entries-card"><header><div><h3>Call Queue Entries</h3><p>View, classify, and manage callers before adding qualified prospects to Leads.</p></div><div class="cq-entry-tools"><input type="search" data-call-queue-search placeholder="Search entries..." value="${escapeHtml(state.callQueueSearch)}" aria-label="Search entries"><label class="cq-filter-control"><span>Filter</span><select data-call-queue-filter="status" aria-label="Filter entries by status">${["Active", "All", "Completed", ...OUTREACH_STATUSES].map((status) => `<option${state.callQueueStatusFilter === status ? " selected" : ""}>${escapeHtml(status)}</option>`).join("")}</select></label>${canDeleteLeadRecords() ? `<button type="button" class="danger-action cq-bulk-delete" data-action="call-queue-delete-selected"${selectedCount ? "" : " disabled"}>Delete selected${selectedCount ? ` (${selectedCount})` : ""}</button>` : ""}<button type="button" data-action="new-outreach-prospect">+ Add Entry</button></div></header>
       <div class="cq-table-wrap"><table><thead><tr><th><label class="cq-select-all"><input type="checkbox" data-action="call-queue-select-visible" aria-label="Select all visible Call Queue leads"${allVisibleSelected ? " checked" : ""}><span>Name</span></label></th><th>Phone Number</th><th>Address</th><th>Website</th><th>Status</th><th>Last Contact</th><th>Added On</th><th>Actions</th></tr></thead><tbody>${rows.length ? rows.map((item) => renderCallQueueReferenceRow(item, selected)) .join("") : `<tr><td colspan="8">${emptyState("No call queue entries match these filters.")}</td></tr>`}</tbody></table></div><footer><span>Showing ${rows.length ? 1 : 0} to ${rows.length} of ${queue.length} entries${selectedCount ? ` · ${selectedCount} selected` : ""}</span><div><button type="button" class="is-active" aria-label="Page 1">1</button>${rows.length < queue.length ? `<button type="button" data-action="load-more-call-queue">Next ›</button>` : ""}</div></footer></section>
       <input type="file" accept=".csv,text/csv" data-lead-intake-file hidden>
@@ -15174,7 +15176,7 @@ Requirements:
     const status = item.status || "New";
     const website = callQueueWebsite(item);
     const name = outreachTitle(item);
-    return `<tr class="${item.id === selected?.id ? "is-selected" : ""}" data-action="select-call-queue-lead" data-id="${escapeHtml(item.id)}" tabindex="0" aria-label="Open ${escapeHtml(name)} details"><td data-label="Name"><strong>${escapeHtml(name)}</strong></td><td data-label="Phone">${escapeHtml(phone.display || "—")}</td><td data-label="Address">${escapeHtml([item.address, item.city].filter(Boolean).join(", ") || "—")}</td><td data-label="Website">${website ? `<a class="cq-website-link" href="${escapeHtml(website)}" target="_blank" rel="noopener noreferrer" data-action="call-queue-website" data-id="${escapeHtml(item.id)}" aria-label="Open ${escapeHtml(name)} website in a new tab">${escapeHtml(callQueueWebsiteLabel(website))}<span aria-hidden="true"> ↗</span></a>` : "—"}</td><td data-label="Status"><span class="cq-status is-${escapeHtml(slug(status))}">${escapeHtml(status)}</span></td><td data-label="Last Contact">${escapeHtml(item.lastContactedAt || "Not contacted")}</td><td data-label="Added On">${escapeHtml(item.createdAtRaw ? formatDate(item.createdAtRaw) : "—")}</td><td data-label="Actions"><div class="cq-row-actions"><button type="button" data-action="call-queue-call" data-id="${escapeHtml(item.id)}" data-phone="${escapeHtml(phone.e164)}" aria-label="Call ${escapeHtml(name)}" title="Call"${phone.valid ? "" : " disabled"}>☎</button>${website ? `<a href="${escapeHtml(website)}" target="_blank" rel="noopener noreferrer" data-action="call-queue-website" data-id="${escapeHtml(item.id)}" aria-label="Open ${escapeHtml(name)} website" title="Website">◎</a>` : `<button type="button" disabled aria-label="No website available">◎</button>`}<details><summary aria-label="More actions for ${escapeHtml(name)}" title="More actions">⋯</summary><div><button type="button" data-action="select-call-queue-lead" data-id="${escapeHtml(item.id)}">Open Details</button><button type="button" data-action="open-outreach-prospect" data-id="${escapeHtml(item.id)}">Edit Entry</button><button type="button" data-action="call-queue-mark-contacted" data-id="${escapeHtml(item.id)}">Mark Contacted</button><button type="button" data-action="call-queue-set-priority" data-id="${escapeHtml(item.id)}">Mark High Priority</button>${canDeleteLeadRecords() ? `<button type="button" class="danger-action" data-action="call-queue-delete-confirm" data-id="${escapeHtml(item.id)}">Delete</button>` : ""}</div></details></div></td></tr>`;
+    return `<tr class="${item.id === selected?.id ? "is-selected" : ""}" data-action="select-call-queue-lead" data-id="${escapeHtml(item.id)}" tabindex="0" aria-label="Open ${escapeHtml(name)} details"><td data-label="Name"><strong>${escapeHtml(name)}</strong></td><td data-label="Phone">${escapeHtml(phone.display || "—")}</td><td data-label="Address">${escapeHtml([item.address, item.city].filter(Boolean).join(", ") || "—")}</td><td data-label="Website">${website ? `<a class="cq-website-link" href="${escapeHtml(website)}" target="_blank" rel="noopener noreferrer" data-action="call-queue-website" data-id="${escapeHtml(item.id)}" aria-label="Open ${escapeHtml(name)} website in a new tab">${escapeHtml(callQueueWebsiteLabel(website))}<span aria-hidden="true"> ↗</span></a>` : "—"}</td><td data-label="Status"><span class="cq-status is-${escapeHtml(slug(status))}">${escapeHtml(status)}</span></td><td data-label="Last Contact">${escapeHtml(item.lastContactedAt || "Not contacted")}</td><td data-label="Added On">${escapeHtml(item.createdAtRaw ? formatDate(item.createdAtRaw) : "—")}</td><td data-label="Actions"><div class="cq-row-actions"><button type="button" data-action="call-queue-call" data-id="${escapeHtml(item.id)}" data-phone="${escapeHtml(phone.e164)}" aria-label="Call ${escapeHtml(name)}" title="Call"${phone.valid ? "" : " disabled"}>${unifiedTicketIcon("phone")}</button>${website ? `<a href="${escapeHtml(website)}" target="_blank" rel="noopener noreferrer" data-action="call-queue-website" data-id="${escapeHtml(item.id)}" aria-label="Open ${escapeHtml(name)} website" title="Website">${unifiedTicketIcon("globe")}</a>` : `<button type="button" disabled aria-label="No website available">${unifiedTicketIcon("globe")}</button>`}<details><summary aria-label="More actions for ${escapeHtml(name)}" title="More actions">${unifiedTicketIcon("more")}</summary><div><button type="button" data-action="select-call-queue-lead" data-id="${escapeHtml(item.id)}">Open Details</button><button type="button" data-action="open-outreach-prospect" data-id="${escapeHtml(item.id)}">Edit Entry</button><button type="button" data-action="call-queue-mark-contacted" data-id="${escapeHtml(item.id)}">Mark Contacted</button><button type="button" data-action="call-queue-set-priority" data-id="${escapeHtml(item.id)}">Mark High Priority</button>${canDeleteLeadRecords() ? `<button type="button" class="danger-action" data-action="call-queue-delete-confirm" data-id="${escapeHtml(item.id)}">Delete</button>` : ""}</div></details></div></td></tr>`;
   }
 
   function renderCallQueueReferenceRow(item, selected) {
@@ -15426,20 +15428,11 @@ Requirements:
     const leads = (data.outreachProspects || []).filter(callQueueIsLead)
       .sort((a, b) => String(b.updatedAtRaw || b.createdAtRaw || "").localeCompare(String(a.updatedAtRaw || a.createdAtRaw || "")));
     target.innerHTML = `<div class="online-quote-workspace" data-online-quote-workspace>
-      <header class="online-quote-header"><div><p class="eyebrow">Website inquiries</p><h2>Online Quote Requests</h2><p>Requests submitted through “Request a Free Quote” on the Urban Yards website.</p></div><button type="button" class="secondary-action" data-action="refresh-dashboard">Refresh</button></header>
+      <header class="online-quote-header uy-workspace-header"><div><h1>Leads</h1><p>Review website quote requests and qualified callers from the Call Queue.</p></div><button type="button" class="secondary-action" data-action="refresh-dashboard">${unifiedTicketIcon("refresh")} Refresh</button></header>
       <section class="online-quote-metrics" aria-label="Online quote request summary"><article><span>All Requests</span><strong>${data.submissions.length}</strong></article><article><span>New</span><strong>${countStatus("New")}</strong></article><article><span>Contacted</span><strong>${countStatus("Contacted")}</strong></article><article><span>Scheduled</span><strong>${countStatus("Scheduled")}</strong></article></section>
       <section class="online-quote-card"><header><div><h3>Quote Requests</h3><p>Open a request to review contact details, notes, follow-up, estimates, invoices, and scheduling.</p></div><div class="online-quote-filters"><input type="search" data-online-quote-search value="${escapeHtml(state.onlineQuoteSearch)}" placeholder="Search requests…" aria-label="Search online quote requests"><select data-online-quote-status aria-label="Filter online quote requests by status"><option>All</option>${STATUSES.map((status) => `<option${state.onlineQuoteStatus === status ? " selected" : ""}>${status}</option>`).join("")}</select></div></header>
       <div class="online-quote-table-wrap"><table><thead><tr><th>Received</th><th>Customer</th><th>Contact</th><th>Property</th><th>Requested Service</th><th>Status</th><th>Source</th><th></th></tr></thead><tbody>${requests.length ? requests.map((item) => `<tr data-action="open-submission" data-id="${escapeHtml(item.id)}" tabindex="0"><td>${escapeHtml(item.receivedAt || item.createdAt || "—")}</td><td><strong>${escapeHtml(item.name)}</strong><small>${escapeHtml(item.city)}</small></td><td><span>${escapeHtml(item.email)}</span><small>${escapeHtml(phoneInfo(item.phone).display)}</small></td><td>${escapeHtml(item.propertyType)}</td><td>${escapeHtml(item.service)}</td><td>${statusBadge(item.status)}</td><td>${escapeHtml(item.source || "Quote form")}</td><td><button type="button" data-action="open-submission" data-id="${escapeHtml(item.id)}" aria-label="Open quote request from ${escapeHtml(item.name)}">›</button></td></tr>`).join("") : `<tr><td colspan="8">${emptyState(search || state.onlineQuoteStatus !== "All" ? "No online quote requests match these filters." : "No online quote requests have arrived yet.")}</td></tr>`}</tbody></table></div><footer>Showing ${requests.length} of ${data.submissions.length} online quote requests</footer></section>
     </div>`;
-    const header = target.querySelector(".online-quote-header");
-    if (header) {
-      const eyebrow = header.querySelector(".eyebrow");
-      const title = header.querySelector("h2");
-      const copy = header.querySelector("p:not(.eyebrow)");
-      if (eyebrow) eyebrow.textContent = "Website inquiries and qualified callers";
-      if (title) title.textContent = "Online Quote Requests & Leads";
-      if (copy) copy.textContent = "Review website quote requests and callers classified as leads from the Call Queue.";
-    }
     const metrics = target.querySelector(".online-quote-metrics");
     if (metrics) {
       metrics.setAttribute("aria-label", "Online quote request and lead summary");
@@ -16377,13 +16370,13 @@ Requirements:
     try {
       target.innerHTML = `
       <div class="ticket-workspace uy-page-prototype money-workspace" data-uy-page-contract="money" data-data-source="documents,invoices,quotes,job_tickets,budgets">
-        <header class="money-page-header">
+        <header class="money-page-header uy-workspace-header">
           <div>
             <h1>Money</h1>
             <p>Manage invoices, expenses, and payments</p>
           </div>
-          <div class="money-page-actions">
-            ${canManageMoneyWorkflow() ? `<div class="money-new-split"><button type="button" class="money-new-main" data-action="create-financial-invoice"><span>＋</span> New</button><details><summary aria-label="Open New menu">⌄</summary><div><button type="button" data-action="create-financial-invoice">New Invoice</button><button type="button" data-action="open-money-expense-create">Add Expense</button><button type="button" data-action="open-money-payment-create">Record Payment</button></div></details></div>` : ""}
+          <div class="money-page-actions uy-header-actions">
+            ${canManageMoneyWorkflow() ? `<div class="money-new-split"><button type="button" class="money-new-main" data-action="create-financial-invoice">${unifiedTicketIcon("plus")} New</button><details><summary aria-label="Open New menu">${unifiedTicketIcon("chevronDown")}</summary><div><button type="button" data-action="create-financial-invoice">New Invoice</button><button type="button" data-action="open-money-expense-create">Add Expense</button><button type="button" data-action="open-money-payment-create">Record Payment</button></div></details></div>` : ""}
           </div>
         </header>
         ${renderQaShowcasePanel("money")}
@@ -16511,16 +16504,16 @@ Requirements:
     const usersCount = Number(data.userProfiles?.length || 0);
     target.innerHTML = `
       <div class="ticket-workspace uy-page-prototype tools-workspace" data-uy-page-contract="tools" data-data-source="documentation,route_tools,imports,settings">
-        ${renderWorkspaceDataState("settings")}
-        <header class="uy-page-header tools-page-header">
+        <header class="uy-page-header tools-page-header uy-workspace-header">
           <div>
             <h1>Tools</h1>
             <p>Routes, records, and settings for your team.</p>
           </div>
-          <div class="ticket-hero-actions">
-            <button type="button" class="secondary-action" data-action="refresh-dashboard">Refresh</button>
+          <div class="ticket-hero-actions uy-header-actions">
+            <button type="button" class="secondary-action" data-action="refresh-dashboard">${unifiedTicketIcon("refresh")} Refresh</button>
           </div>
         </header>
+        ${renderWorkspaceDataState("settings")}
         <section class="tools-launch-grid" aria-label="Tools groups">
           ${renderToolsLaunchGroup({
             title: "Field Tools",
@@ -16787,13 +16780,13 @@ Requirements:
     routePreviewState.clear();
     els.routeWeekPlanner.innerHTML = `
       <div class="route-week-shell">
-        <header class="route-week-header">
+        <header class="route-week-header uy-workspace-header">
           <div><h1>Route Planner</h1><p>Plan your week, optimize each day</p></div>
-          <div class="route-week-controls">
-            <div class="route-week-arrows"><button type="button" data-action="route-previous-week" aria-label="Previous week">‹</button><button type="button" data-action="route-next-week" aria-label="Next week">›</button></div>
-            <label class="route-week-selector"><span aria-hidden="true">▣</span><input type="date" value="${escapeHtml(days[0])}" data-route-week-input aria-label="Choose route week"><strong>${escapeHtml(routePlannerWeekLabel(days))}</strong><span aria-hidden="true">⌄</span></label>
+          <div class="route-week-controls uy-header-actions">
+            <div class="route-week-arrows"><button type="button" data-action="route-previous-week" aria-label="Previous week">${unifiedTicketIcon("chevronLeft")}</button><button type="button" data-action="route-next-week" aria-label="Next week">${unifiedTicketIcon("chevronRight")}</button></div>
+            <label class="route-week-selector">${unifiedTicketIcon("calendar")}<input type="date" value="${escapeHtml(days[0])}" data-route-week-input aria-label="Choose route week"><strong>${escapeHtml(routePlannerWeekLabel(days))}</strong>${unifiedTicketIcon("chevronDown")}</label>
             <button class="route-optimize-button" type="button" data-action="route-optimize-week">Optimize All Routes</button>
-            <button class="route-new-button" type="button" data-action="route-new-stop"><span>＋</span> New Route</button>
+            <button class="route-new-button clean-primary-action" type="button" data-action="route-new-stop">${unifiedTicketIcon("plus")} New Route</button>
           </div>
         </header>
         ${state.routeStopsReady ? "" : `<p class="route-week-notice">Route data is temporarily unavailable. Scheduled visits are still shown.</p>`}
@@ -16807,9 +16800,9 @@ Requirements:
             if (stops.length) setRoutePreviewState(mapKey, { section: "route-planner", stops, emptyText: "No mapped stops yet." });
             return `<article class="route-day-card${selected ? " is-selected" : ""}" data-action="route-select-day" data-date="${escapeHtml(day)}" role="listitem" tabindex="0" aria-current="${selected ? "date" : "false"}">
               <header><h2>${escapeHtml(dateLabel)}</h2><p><span>${stops.length} stop${stops.length === 1 ? "" : "s"}</span><span>${routePlannerDistance(stops)} mi</span></p></header>
-              ${stops.length ? `${routePreviewMapShell(mapKey)}<ol class="route-day-stops">${stops.map(renderRoutePlannerStop).join("")}</ol>` : `<div class="route-empty-day"><span aria-hidden="true">▣</span><strong>No stops scheduled</strong><p>Enjoy your day!</p></div>`}
-              <button type="button" class="route-add-stop" data-action="route-add-stop" data-date="${escapeHtml(day)}"><span>＋</span> Add Stop</button>
-              <footer><span aria-hidden="true">◷</span><strong>Est.</strong> ${escapeHtml(routePlannerDuration(stops))}</footer>
+              ${stops.length ? `${routePreviewMapShell(mapKey)}<ol class="route-day-stops">${stops.map(renderRoutePlannerStop).join("")}</ol>` : `<div class="route-empty-day">${unifiedTicketIcon("calendar")}<strong>No stops scheduled</strong><p>Enjoy your day!</p></div>`}
+              <button type="button" class="route-add-stop" data-action="route-add-stop" data-date="${escapeHtml(day)}">${unifiedTicketIcon("plus")} Add Stop</button>
+              <footer>${unifiedTicketIcon("clock")}<strong>Est.</strong> ${escapeHtml(routePlannerDuration(stops))}</footer>
             </article>`;
           }).join("")}
         </div>
@@ -21667,6 +21660,8 @@ Requirements:
     const paths = {
       previous: '<path d="m15 18-6-6 6-6"></path>',
       next: '<path d="m9 18 6-6-6-6"></path>',
+      globe: '<circle cx="12" cy="12" r="9"></circle><ellipse cx="12" cy="12" rx="4" ry="9"></ellipse><path d="M3 12h18"></path>',
+      more: '<circle cx="5" cy="12" r="1"></circle><circle cx="12" cy="12" r="1"></circle><circle cx="19" cy="12" r="1"></circle>',
       refresh: '<path d="M20 11a8 8 0 1 0 2 5"></path><path d="M20 4v7h-7"></path>',
       cloud: '<path d="M7 18h10a4 4 0 0 0 .5-8 6 6 0 0 0-11.4-1.5A4.8 4.8 0 0 0 7 18Z"></path>'
     };
@@ -22073,9 +22068,9 @@ Requirements:
       .slice(0, 4);
     const identity = (ticket) => ticket.customer || ticket.customerName || ticket.property || ticket.propertyName || ticket.title || "Untitled ticket";
     host.innerHTML = `<div class="focus-work-page clean-home-page">
-      <header class="clean-page-header">
-        <div><p class="clean-workspace-label">Home</p><h1>Home</h1><p>Today&rsquo;s scheduled work and items that need attention.</p></div>
-        <div class="clean-page-actions"><a class="clean-secondary-action" href="#calendar">Open Work</a><button class="clean-primary-action" type="button" data-action="open-ticket-create" data-ticket-type="field"><span>+</span> New Ticket</button></div>
+      <header class="clean-page-header uy-workspace-header">
+        <div><h1>Home</h1><p>Today&rsquo;s scheduled work and items that need attention.</p></div>
+        <div class="clean-page-actions uy-header-actions"><a class="clean-secondary-action" href="#calendar">Open Work</a><button class="clean-primary-action" type="button" data-action="open-ticket-create" data-ticket-type="field">${unifiedTicketIcon("plus")} New Ticket</button></div>
       </header>
       <section class="clean-summary-strip" aria-label="Home summary">
         ${renderFocusMetric("calendar", String(visibleSchedule.length), "Visits Today", "", "today")}
@@ -22131,6 +22126,14 @@ Requirements:
 
   function unifiedTicketIcon(name) {
     const paths = {
+      refresh: '<path d="M20 7v5h-5M4 17v-5h5"></path><path d="M6 6a8 8 0 0 1 13 2l1 4M4 12l1 4a8 8 0 0 0 13 2"></path>',
+      download: '<path d="M12 3v12M7 10l5 5 5-5M4 17v4h16v-4"></path>',
+      close: '<path d="m6 6 12 12M6 18 18 6"></path>',
+      chevronLeft: '<path d="m15 5-7 7 7 7"></path>',
+      chevronRight: '<path d="m9 5 7 7-7 7"></path>',
+      chevronDown: '<path d="m5 9 7 7 7-7"></path>',
+      money: '<circle cx="12" cy="12" r="9"></circle><path d="M12 6v12M15 8H10a2 2 0 0 0 0 4h4a2 2 0 0 1 0 4H9"></path>',
+      settings: '<path d="M4 7h16M4 17h16"></path><circle cx="9" cy="7" r="3" fill="currentColor" stroke="none"></circle><circle cx="15" cy="17" r="3" fill="currentColor" stroke="none"></circle>',
       home: '<path d="M3 11.5 12 4l9 7.5"></path><path d="M5.5 10v10h13V10M9.5 20v-6h5v6"></path>',
       info: '<circle cx="12" cy="12" r="9"></circle><path d="M12 11v6M12 7h.01"></path>',
       work: '<path d="m14.5 6.5 3-3 3 3-3 3"></path><path d="M14.5 6.5 5 16l-1 4 4-1 9.5-9.5"></path>',
@@ -22244,7 +22247,7 @@ Requirements:
     if (!host) return;
     const trashedTickets = dashboardTickets().filter(ticketIsTrashed);
     if (state.ticketBoardMode === "trash") {
-      host.innerHTML = `<div class="tickets-timeline-page"><header class="ttl-header"><div><h2 style="color:#0e1116!important">Ticket Trash</h2><p>Restore tickets or permanently clear the trash.</p></div><button type="button" class="secondary-action" data-action="show-open-tickets">Back to Tickets</button></header>${renderTicketTrash(trashedTickets)}</div>`;
+      host.innerHTML = `<div class="tickets-timeline-page"><header class="ttl-header uy-workspace-header"><div><h2 style="color:#0e1116!important">Ticket Trash</h2><p>Restore tickets or permanently clear the trash.</p></div><button type="button" class="secondary-action" data-action="show-open-tickets">Back to Tickets</button></header>${renderTicketTrash(trashedTickets)}</div>`;
       return;
     }
     const status = state.ticketTimelineStatus || "All";
@@ -22265,14 +22268,12 @@ Requirements:
       return `<section class="ttl-group"><div class="ttl-date"><strong>${label}</strong><span>${tickets[0].date}</span></div><div class="ttl-group-rows">${tickets.map(renderTicketTimelineRow).join("")}</div></section>`;
     }).join("");
     host.innerHTML = `<div class="tickets-timeline-page">
-      <header class="ttl-header"><div><p class="clean-workspace-label">Tickets</p><h1>Tickets</h1><p>Upcoming tickets, visits, and work requiring attention.</p></div><div class="ttl-filters">
+      <header class="ttl-header uy-workspace-header"><div><h1>Tickets</h1><p>Upcoming tickets, visits, and work requiring attention.</p></div><div class="uy-header-actions"><button type="button" class="ttl-new-ticket" data-action="open-ticket-create" data-ticket-type="field">${unifiedTicketIcon("plus")} New Ticket</button>${canManageTicketTrash() ? `<button type="button" class="secondary-action" data-action="show-ticket-trash">${unifiedTicketIcon("trash")} Trash <span>${escapeHtml(String(trashedTickets.length))}</span></button>` : ""}</div></header><div class="ttl-filters">
         <label>${unifiedTicketIcon("check")}<select data-ticket-timeline-filter="status" aria-label="Ticket status"><option value="All">Status</option><option${status==="In Progress"?" selected":""}>In Progress</option><option${status==="Scheduled"?" selected":""}>Scheduled</option></select></label>
         <label>${unifiedTicketIcon("document")}<select data-ticket-timeline-filter="type" aria-label="Ticket type"><option value="All">Types</option>${[...new Set(allRows.map((item) => item.type).filter(Boolean))].map(v=>`<option${type===v?" selected":""}>${escapeHtml(v)}</option>`).join("")}</select></label>
         <label>${unifiedTicketIcon("pin")}<select data-ticket-timeline-filter="location" aria-label="Ticket location"><option value="All">All Locations</option>${[...new Set(allRows.map((item) => item.city).filter(Boolean))].map(v=>`<option${location===v?" selected":""}>${escapeHtml(v)}</option>`).join("")}</select></label>
         <label>${unifiedTicketIcon("calendar")}<select data-ticket-timeline-filter="range" aria-label="Ticket date range"><option value="week-plus"${range==="week-plus"?" selected":""}>This Week</option><option value="week"${range==="week"?" selected":""}>Through Sat</option></select></label>
-        <button type="button" class="ttl-new-ticket" data-action="open-ticket-create" data-ticket-type="field"><span>+</span> New Ticket</button>
-        ${canManageTicketTrash() ? `<button type="button" class="secondary-action" data-action="show-ticket-trash">Trash <span>${escapeHtml(String(trashedTickets.length))}</span></button>` : ""}
-      </div></header>
+      </div>
       ${renderQaShowcasePanel("tickets")}
       <div class="ttl-groups">${groups || '<p class="ttl-no-results">No upcoming tickets match these filters.</p>'}</div>
       <footer class="ttl-footer">${unifiedTicketIcon("calendar")}<span>Showing upcoming tickets for this week and beyond</span><button type="button" data-action="unified-ticket-schedule">View full schedule&nbsp; →</button></footer>
@@ -22587,13 +22588,12 @@ Requirements:
     const selected = availableJobs.find(job=>job.id===state.selectedWorkJobId);
     const countByStatus = (value) => allJobs.filter((job) => job.status === value).length;
     host.innerHTML = `<div class="work-operations-list ${selected?"has-detail-open":""}">
-      <header class="wol-header"><div><p class="clean-workspace-label">Work</p><h1>Work</h1><p>Scheduled visits and active work across the operation.</p></div><div class="wol-filters">
+      <header class="wol-header uy-workspace-header"><div><h1>Work</h1><p>Scheduled visits and active work across the operation.</p></div><div class="uy-header-actions"><button type="button" class="wol-new-job" data-action="open-ticket-create" data-ticket-type="field">${unifiedTicketIcon("plus")} New Job</button></div></header><div class="wol-filters">
         <label>${unifiedTicketIcon("document")}<select data-work-list-filter="status" aria-label="Work status"><option value="All">All Status</option>${["In Progress","Scheduled","Completed"].map(v=>`<option${status===v?" selected":""}>${v}</option>`).join("")}</select></label>
         <label>${unifiedTicketIcon("check")}<select data-work-list-filter="priority" aria-label="Work priority"><option value="All">All Priority</option>${["High","Medium","Low"].map(v=>`<option${priority===v?" selected":""}>${v}</option>`).join("")}</select></label>
         <label>${unifiedTicketIcon("pin")}<select data-work-list-filter="location" aria-label="Work location"><option value="All">All Locations</option>${[...new Set(availableJobs.map(j=>j.city).filter(Boolean))].map(v=>`<option${location===v?" selected":""}>${escapeHtml(v)}</option>`).join("")}</select></label>
         <label>${unifiedTicketIcon("calendar")}<select data-work-list-filter="range" aria-label="Work date range"><option value="week"${range==="week"?" selected":""}>This Week</option><option value="all"${range==="all"?" selected":""}>All Dates</option></select></label>
-        <button type="button" class="wol-new-job" data-action="open-ticket-create" data-ticket-type="field"><span>+</span> New Job</button>
-      </div></header>
+      </div>
       <section class="wol-summary" aria-label="Work summary">
         <button type="button" class="is-attention ${attentionOnly?"is-active":""}" data-action="work-toggle-attention"><span>${unifiedTicketIcon("warning")}</span><strong>${allJobs.filter((job) => job.attention).length}<small>Needs Attention</small></strong><em>View</em></button>
         <article class="is-progress"><span>${unifiedTicketIcon("clock")}</span><strong>${countByStatus("In Progress")}<small>In Progress</small></strong></article>

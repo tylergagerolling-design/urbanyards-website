@@ -12,14 +12,14 @@
     <link rel="icon" href="/favicon.ico" sizes="any">
     <link rel="apple-touch-icon" href="/apple-touch-icon.png">
     <link rel="manifest" href="/dashboard.webmanifest">
-  <link rel="stylesheet" href="dashboard.css?v=20260908-functional-triage-1">
-    <link rel="stylesheet" href="dashboard-unified.css?v=20260908-functional-triage-1">
+  <link rel="stylesheet" href="dashboard.css?v=20260908-visual-consistency-1">
+    <link rel="stylesheet" href="dashboard-unified.css?v=20260908-visual-consistency-1">
     <script src="dashboard-config.js?v=20260716-loader-1" defer></script>
     <script src="scripts/budget-calculations.js?v=20260716-loader-1" defer></script>
     <script src="scripts/financial-calculations.js?v=20260723-invoice-status-1" defer></script>
     <script src="scripts/weather-forecast.js?v=20260806-weather-alerts-1" defer></script>
     <script src="scripts/weather-alerts.js?v=20260806-weather-alerts-1" defer></script>
-  <script src="dashboard.js?v=20260908-functional-triage-1" defer></script>
+  <script src="dashboard.js?v=20260908-visual-consistency-1" defer></script>
   </head>
   <body>
     <main class="dashboard-shell" aria-labelledby="dashboard-title">
@@ -120,15 +120,14 @@
           <section class="dashboard-section route-planner-page" id="route-planner" data-section="route-planner"><div data-route-week-planner></div></section>
 <section class="dashboard-section uy-standard-page money-page" id="documents" data-section="documents"><div data-money-workspace></div></section>
           <section class="dashboard-section documentation-center uy-standard-page" id="documentation" data-section="documentation">
-            <div class="documentation-hero uy-page-header">
+            <div class="documentation-hero uy-page-header uy-workspace-header">
               <div>
-                <p class="eyebrow">Tools / Documentation</p>
                 <h1>Documentation</h1>
                 <p>Manage operational forms, assignments, submissions, templates, and audit history.</p>
               </div>
-              <div class="documentation-actions">
-                <button type="button" data-action="refresh-documentation"><span class="button-icon" aria-hidden="true">R</span><span>Refresh</span></button>
-                <button type="button" data-action="manage-documentation-templates" data-documentation-template-admin><span class="button-icon" aria-hidden="true">+</span><span>Upload Form</span></button>
+              <div class="documentation-actions uy-header-actions">
+                <button type="button" data-action="refresh-documentation"><svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M20 7v5h-5M4 17v-5h5"></path><path d="M6 6a8 8 0 0 1 13 2l1 4M4 12l1 4a8 8 0 0 0 13 2"></path></svg><span>Refresh</span></button>
+                <button type="button" class="clean-primary-action" data-action="manage-documentation-templates" data-documentation-template-admin><svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12h14"></path></svg><span>Upload Form</span></button>
               </div>
             </div>
             <div class="documentation-status" data-documentation-status></div>
@@ -179,17 +178,16 @@
 
           <section class="dashboard-section uy-standard-page" id="contacts" data-section="contacts">
             <div class="panel uy-page-intro-panel">
-              <div class="panel-heading">
+              <div class="panel-heading uy-workspace-header">
                 <div>
-                  <p class="eyebrow">Leads / Clients</p>
                   <h1>Clients</h1>
                   <p>Manage confirmed client relationships, contacts, properties, and service history.</p>
                 </div>
-                <button class="clean-primary-action" type="button" data-action="quick-add-client">Add Client</button>
+                <button class="clean-primary-action" type="button" data-action="quick-add-client"><svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"><path d="M12 5v14M5 12h14"></path></svg> Add Client</button>
               </div>
               <div class="toolbar">
                 <input data-client-search type="search" aria-label="Search client profiles" placeholder="Search clients, properties, email, phone...">
-                <button type="button" data-export="contacts"><span class="button-icon" aria-hidden="true">CSV</span><span>Export Contacts</span></button>
+                <button type="button" data-export="contacts"><svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12M7 10l5 5 5-5M4 17v4h16v-4"></path></svg><span>Export Contacts</span></button>
               </div>
               <form class="client-form" data-client-form data-duplicate-scope="contact">
                 <div class="duplicate-warning span-full" data-duplicate-warning data-duplicate-scope="contact" hidden></div>
@@ -198,7 +196,7 @@
                 <label>Phone<input name="phone" type="tel" placeholder="(503) 555-0123"></label>
                 <label>Property address / area<input name="city" placeholder="Street address or area" autocomplete="street-address" data-address-autocomplete></label>
                 <label>Client type<input name="contact_type" placeholder="Homeowner, business, HOA…"></label>
-                <button type="submit"><span class="button-icon" aria-hidden="true">+</span><span>Add Client</span></button>
+                <button type="submit"><svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12h14"></path></svg><span>Add Client</span></button>
                 <button class="inline-action mobile-form-cancel" type="button" data-action="close-mobile-client-form">Cancel</button>
               </form>
               <div class="contact-grid" data-contacts></div>
@@ -206,15 +204,14 @@
           </section>
 
 <section class="dashboard-section import-export-center uy-standard-page" id="import-export" data-section="import-export">
-            <div class="import-export-hero uy-page-header">
+            <div class="import-export-hero uy-page-header uy-workspace-header">
               <div>
-                <p class="eyebrow">Tools / Records &amp; Data</p>
                 <h1>Import &amp; Export</h1>
                 <p>Move dashboard records through verified imports, exports, reports, and backups.</p>
               </div>
-              <div class="import-export-actions">
-                <button type="button" data-action="refresh-import-export"><span class="button-icon" aria-hidden="true">R</span><span>Refresh</span></button>
-                <button type="button" data-action="download-json-backup"><span class="button-icon" aria-hidden="true">JSON</span><span>Full Backup</span></button>
+              <div class="import-export-actions uy-header-actions">
+                <button type="button" data-action="refresh-import-export"><svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M20 7v5h-5M4 17v-5h5"></path><path d="M6 6a8 8 0 0 1 13 2l1 4M4 12l1 4a8 8 0 0 0 13 2"></path></svg><span>Refresh</span></button>
+                <button type="button" class="clean-primary-action" data-action="download-json-backup"><svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12M7 10l5 5 5-5M4 17v4h16v-4"></path></svg><span>Full Backup</span></button>
               </div>
             </div>
             <div class="import-export-status" data-import-export-status></div>

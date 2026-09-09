@@ -96,7 +96,7 @@ test('Money keeps its header and tabs while loading without the retired banner o
   const info = {status:'loading'};
   const target = {};
   const context = vm.createContext({state, moneyViewRequests:new Map(), qs:()=>target, dashboardSectionLoadInfo:()=>info, isDemoMode:()=>false, renderWorkspaceDataState:()=>'<aside class="workspace-data-state is-warning">Retry</aside>', canManageMoneyWorkflow:()=>true, renderQaShowcasePanel:()=>'', renderMoneyTabs:()=>'<nav class="money-tabs">Invoices</nav>', renderMoneyActiveView:()=>'<section>Records</section>'});
-  vm.runInContext(functionSource('renderMoneyWorkspace'),context);
+  vm.runInContext(functionSource('unifiedTicketIcon')+functionSource('renderMoneyWorkspace'),context);
   context.renderMoneyWorkspace();
   assert.match(target.innerHTML,/<h1>Money<\/h1>/);
   assert.match(target.innerHTML,/class="money-tabs"/);

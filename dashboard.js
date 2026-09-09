@@ -3566,13 +3566,11 @@
   }
 
   function todayKey() {
-    return new Date().toISOString().slice(0, 10);
+    return new Intl.DateTimeFormat("en-CA", { timeZone: "America/Los_Angeles", year: "numeric", month: "2-digit", day: "2-digit" }).format(new Date());
   }
 
   function daysFromToday(count) {
-    const date = new Date();
-    date.setDate(date.getDate() + count);
-    return date.toISOString().slice(0, 10);
+    return addDaysKey(todayKey(), count);
   }
 
   function addDaysKey(value, count) {
@@ -10378,6 +10376,7 @@
     const activeGroup = dashboardPrimarySection(state.activeSection);
     if (els.appView?.classList.contains("is-sidebar-open") && qs(`[data-sidebar-nav-group="${cssEscape(activeGroup)}"]`)) setSidebarSubnavOpen(activeGroup, true);
     else setSidebarSubnavOpen("", false);
+    if (previousSection !== state.activeSection && state.activeSection === "route-planner") renderRoutePlanner();
     if (state.activeSection === "route-planner" && googleRouteMap && window.google?.maps) {
       setTimeout(() => {
         window.google.maps.event.trigger(googleRouteMap, "resize");
@@ -14908,6 +14907,28 @@
     return callHistoryFor(item.id).filter((activity) => activity.leadType === "outreach_prospect");
   }
 
+  function readCallQueueSettings() {
+    let saved = {};
+    try { saved = JSON.parse(localStorage.getItem("urban-yards-call-queue-settings") || "{}") || {}; } catch (_) {}
+    return {
+      default_status: OUTREACH_STATUSES.includes(saved.default_status) ? saved.default_status : "Prospect",
+      source_label: typeof saved.source_label === "string" ? saved.source_label.trim().slice(0, 240) : "Manual entry",
+      phone_format: saved.phone_format === "e164" ? "e164" : "national"
+    };
+  }
+
+  function callQueuePhoneInfo(value) {
+    const phone = phoneInfo(value);
+    return { ...phone, display: phone.valid && readCallQueueSettings().phone_format === "e164" ? phone.e164 : phone.display };
+  }
+
+  function openCallQueueSettingsDrawer() {
+    const settings = readCallQueueSettings();
+    openDetailDrawer();
+    els.detailContent.innerHTML = `<div class="drawer-content"><p class="eyebrow">Call Queue</p><h3>Queue Settings</h3><p>Defaults for entries you add manually in this browser. CSV records and duplicates are reviewed during import.</p><form class="drawer-form" data-call-queue-settings-form><label>Default entry status<select name="default_status">${optionList(OUTREACH_STATUSES, settings.default_status)}</select></label><label>Default source for new entries<input name="source_label" maxlength="240" value="${escapeHtml(settings.source_label)}"></label><label>Phone-number display<select name="phone_format"><option value="national"${settings.phone_format === "national" ? " selected" : ""}>(503) 555-0100</option><option value="e164"${settings.phone_format === "e164" ? " selected" : ""}>+15035550100</option></select></label><div class="drawer-actions span-full"><button type="submit">Save Settings</button><button type="button" class="secondary-action" data-action="close-drawer">Cancel</button><a class="button secondary-action" href="https://voice.google.com/settings" target="_blank" rel="noopener noreferrer">Open Google Voice Settings</a></div></form></div>`;
+    renderDetailDrawerBreadcrumbs();
+  }
+
   function callQueueIsCompleted(item = {}) {
     if (["Won", "Lost / No Fit"].includes(item.status)) return true;
     return ["not_interested", "wrong_number"].includes(callQueueHistory(item)[0]?.queueOutcome || "");
@@ -15114,7 +15135,7 @@ Requirements:
     if (!state.leadIntakeLoaded && !state.leadIntakeLoading) queueMicrotask(() => loadLeadIntakeBatches());
     target.innerHTML = `<div class="call-queue-reference" data-call-queue-root>
       <header class="cq-page-header"><div><h1>Call Queue</h1><p>Manage your inbound call queue and caller data</p></div><div><button type="button" class="secondary-action" data-action="call-queue-settings">Queue Settings</button><button type="button" data-action="lead-intake-import">Import CSV</button></div></header>
-      <section class="cq-entries-card"><header><div><h3>Call Queue Entries</h3><p>View, classify, and manage callers before adding qualified prospects to Leads.</p></div><div class="cq-entry-tools"><input type="search" data-call-queue-search placeholder="Search entries..." value="${escapeHtml(state.callQueueSearch)}" aria-label="Search entries"><label class="cq-filter-control"><span>Filter</span><select data-call-queue-filter="status" aria-label="Filter entries by status"><option>Active</option><option>All</option><option>Completed</option>${OUTREACH_STATUSES.map((status) => `<option${state.callQueueStatusFilter === status ? " selected" : ""}>${escapeHtml(status)}</option>`).join("")}</select></label>${canDeleteLeadRecords() ? `<button type="button" class="danger-action cq-bulk-delete" data-action="call-queue-delete-selected"${selectedCount ? "" : " disabled"}>Delete selected${selectedCount ? ` (${selectedCount})` : ""}</button>` : ""}<button type="button" data-action="new-outreach-prospect">+ Add Entry</button></div></header>
+      <section class="cq-entries-card"><header><div><h3>Call Queue Entries</h3><p>View, classify, and manage callers before adding qualified prospects to Leads.</p></div><div class="cq-entry-tools"><input type="search" data-call-queue-search placeholder="Search entries..." value="${escapeHtml(state.callQueueSearch)}" aria-label="Search entries"><label class="cq-filter-control"><span>Filter</span><select data-call-queue-filter="status" aria-label="Filter entries by status">${["Active", "All", "Completed", ...OUTREACH_STATUSES].map((status) => `<option${state.callQueueStatusFilter === status ? " selected" : ""}>${escapeHtml(status)}</option>`).join("")}</select></label>${canDeleteLeadRecords() ? `<button type="button" class="danger-action cq-bulk-delete" data-action="call-queue-delete-selected"${selectedCount ? "" : " disabled"}>Delete selected${selectedCount ? ` (${selectedCount})` : ""}</button>` : ""}<button type="button" data-action="new-outreach-prospect">+ Add Entry</button></div></header>
       <div class="cq-table-wrap"><table><thead><tr><th><label class="cq-select-all"><input type="checkbox" data-action="call-queue-select-visible" aria-label="Select all visible Call Queue leads"${allVisibleSelected ? " checked" : ""}><span>Name</span></label></th><th>Phone Number</th><th>Address</th><th>Website</th><th>Status</th><th>Last Contact</th><th>Added On</th><th>Actions</th></tr></thead><tbody>${rows.length ? rows.map((item) => renderCallQueueReferenceRow(item, selected)) .join("") : `<tr><td colspan="8">${emptyState("No call queue entries match these filters.")}</td></tr>`}</tbody></table></div><footer><span>Showing ${rows.length ? 1 : 0} to ${rows.length} of ${queue.length} entries${selectedCount ? ` · ${selectedCount} selected` : ""}</span><div><button type="button" class="is-active" aria-label="Page 1">1</button>${rows.length < queue.length ? `<button type="button" data-action="load-more-call-queue">Next ›</button>` : ""}</div></footer></section>
       <input type="file" accept=".csv,text/csv" data-lead-intake-file hidden>
       ${selected ? renderCallQueueReferenceDrawer(selected) : ""}
@@ -15149,7 +15170,7 @@ Requirements:
   }
 
   function renderCallQueueReferenceRowBase(item, selected) {
-    const phone = phoneInfo(item.phone || "");
+    const phone = callQueuePhoneInfo(item.phone || "");
     const status = item.status || "New";
     const website = callQueueWebsite(item);
     const name = outreachTitle(item);
@@ -15164,7 +15185,7 @@ Requirements:
   }
 
   function renderCallQueueReferenceDrawer(item) {
-    const phone = phoneInfo(item.phone || "");
+    const phone = callQueuePhoneInfo(item.phone || "");
     const website = callQueueWebsite(item);
     const history = callQueueHistory(item);
     const tab = state.callQueueDrawerTab || "details";
@@ -15172,7 +15193,7 @@ Requirements:
     const tabButton = (key, label) => `<button type="button" class="${tab === key ? "is-active" : ""}" data-action="call-queue-tab" data-tab="${key}" aria-selected="${tab === key}">${label}</button>`;
     const detailRows = [["Phone Number", phone.display], ["Website", website ? `<a href="${escapeHtml(website)}" target="_blank" rel="noopener noreferrer">${escapeHtml(callQueueWebsiteLabel(website))} ↗</a>` : ""], ["Address", [item.address, item.city].filter(Boolean).join(", ")], ["Source", item.source], ["Added On", item.createdAtRaw ? formatDate(item.createdAtRaw) : ""], ["Last Contact", item.lastContactedAt || "Not contacted yet"]].filter(([, value]) => value);
     return `<aside class="cq-lead-drawer" aria-label="${escapeHtml(outreachTitle(item))} details"><header><div><h2>${escapeHtml(outreachTitle(item))}</h2><span class="cq-status is-${escapeHtml(slug(item.status || "New"))}">${escapeHtml(item.status || "New")}</span></div><button type="button" data-action="close-call-queue-drawer" aria-label="Close lead details">×</button></header><div class="cq-drawer-actions"><button type="button" data-action="call-queue-call" data-id="${escapeHtml(item.id)}" data-phone="${escapeHtml(phone.e164)}"${phone.valid ? "" : " disabled"}>☎ Call Now</button>${website ? `<a href="${escapeHtml(website)}" target="_blank" rel="noopener noreferrer" data-action="call-queue-website" data-id="${escapeHtml(item.id)}">◎ Website</a>` : `<button type="button" class="secondary-action" disabled>◎ Website</button>`}<button type="button" class="secondary-action" data-action="open-outreach-prospect" data-id="${escapeHtml(item.id)}" aria-label="Edit lead">⋯</button></div><nav class="cq-drawer-tabs" aria-label="Lead detail sections">${tabButton("details", "Details")}${tabButton("follow-up", "Follow Up")}${tabButton("notes", "Notes")}${tabButton("activity", "Activity")}</nav><div class="cq-drawer-scroll"><div class="cq-call-outcome-slot" data-call-outcome-slot></div>
-      ${tab === "details" ? `<section class="cq-drawer-section"><div class="cq-section-heading"><h3>Contact Information</h3><button type="button" data-action="open-outreach-prospect" data-id="${escapeHtml(item.id)}">Edit</button></div><dl>${detailRows.map(([label, value]) => `<div><dt>${label}</dt><dd>${value}</dd></div>`).join("")}</dl></section>` : ""}
+      ${tab === "details" ? `<section class="cq-drawer-section"><div class="cq-section-heading"><h3>Contact Information</h3><button type="button" data-action="open-outreach-prospect" data-id="${escapeHtml(item.id)}">Edit</button></div><dl>${detailRows.map(([label, value]) => `<div><dt>${label}</dt><dd>${label === "Website" ? value : escapeHtml(value)}</dd></div>`).join("")}</dl></section>` : ""}
       ${tab === "follow-up" ? `<section class="cq-drawer-section"><h3>Follow Up</h3><form data-call-queue-follow-up-form data-id="${escapeHtml(item.id)}"><label>Status<select name="status">${OUTREACH_STATUSES.map((status) => `<option${item.status === status ? " selected" : ""}>${escapeHtml(status)}</option>`).join("")}</select></label><label>Next Follow Up<input type="date" name="next_follow_up_at" value="${escapeHtml(item.nextFollowUpAtRaw || "")}"></label><p class="cq-attempt-count"><span>Attempt Count</span><strong>${history.length} call${history.length === 1 ? "" : "s"}</strong></p><label class="cq-priority-toggle"><input type="checkbox" name="high_priority"${item.priority === "High" ? " checked" : ""}> Set as high priority</label><button type="submit">Save Follow Up</button></form></section>` : ""}
       ${tab === "notes" ? `<section class="cq-drawer-section"><h3>Notes</h3><form data-call-queue-note-form data-id="${escapeHtml(item.id)}"><label><span class="sr-only">New note</span><textarea name="note" rows="4" placeholder="Add a note about this lead..." required></textarea></label><button type="submit">Add Note</button></form><div class="cq-note-list">${notes.length ? notes.map((note) => `<article><p>${escapeHtml(note)}</p></article>`).join("") : `<p class="cq-empty-copy">No notes have been added.</p>`}</div></section>` : ""}
       ${tab === "activity" ? `<section class="cq-drawer-section"><h3>Activity</h3>${history.length ? renderCallQueueTimeline(item) : `<p class="cq-empty-copy">No stored call activity yet.</p>`}</section>` : ""}
@@ -15221,7 +15242,7 @@ Requirements:
           <div class="call-queue-panel-head"><div><span>Queue</span><strong>${escapeHtml(String(queue.length))}</strong></div><small>${state.callQueueStatusFilter === "Active" ? "Needs outreach" : "Filtered leads"}</small></div>
           <div class="call-queue-filters">
             <input type="search" data-call-queue-search placeholder="Search leads…" value="${escapeHtml(state.callQueueSearch)}" aria-label="Search Call Queue">
-            <select data-call-queue-filter="status" aria-label="Filter call queue by status"><option>Active</option><option>All</option><option>Completed</option>${OUTREACH_STATUSES.map((status) => `<option${state.callQueueStatusFilter === status ? " selected" : ""}>${escapeHtml(status)}</option>`).join("")}</select>
+            <select data-call-queue-filter="status" aria-label="Filter call queue by status">${["Active", "All", "Completed", ...OUTREACH_STATUSES].map((status) => `<option${state.callQueueStatusFilter === status ? " selected" : ""}>${escapeHtml(status)}</option>`).join("")}</select>
             <select data-call-queue-filter="priority" aria-label="Filter call queue by priority"><option>All</option>${OUTREACH_PRIORITIES.map((priority) => `<option${state.callQueuePriorityFilter === priority ? " selected" : ""}>${escapeHtml(priority)}</option>`).join("")}</select>
             <select data-call-queue-filter="sort" aria-label="Sort call queue"><option value="queue"${state.callQueueSort === "queue" ? " selected" : ""}>Queue order</option><option value="priority"${state.callQueueSort === "priority" ? " selected" : ""}>Priority</option><option value="oldest"${state.callQueueSort === "oldest" ? " selected" : ""}>Oldest contact</option><option value="name"${state.callQueueSort === "name" ? " selected" : ""}>Name</option></select>
           </div>
@@ -16032,7 +16053,7 @@ Requirements:
       <div class="money-table-wrap"><table class="money-record-table"><thead><tr><th>Invoice #</th><th>Customer</th><th>Issue Date ↓</th><th>Due Date</th><th>Amount</th><th>Status</th><th>Balance</th><th></th></tr></thead><tbody>
         ${visible.length ? visible.map((row) => `<tr data-action="open-financial-invoice" data-id="${escapeHtml(row.invoice.id)}" tabindex="0"${state.moneyInvoiceDetail?.invoice?.id === row.invoice.id ? ' class="is-selected"' : ""}><td data-label="Invoice"><strong>${escapeHtml(String(row.invoice.invoice_number || "Draft").replace(/^INV-/, ""))}</strong></td><td data-label="Customer">${escapeHtml(row.customer)}</td><td data-label="Issued">${escapeHtml(row.invoice.issue_date ? formatDate(row.invoice.issue_date) : "—")}</td><td data-label="Due">${escapeHtml(row.invoice.due_date ? formatDate(row.invoice.due_date) : "—")}</td><td data-label="Amount">${moneyCurrency(row.summary.total)}</td><td data-label="Status"><span class="money-status is-${slug(row.status)}">${escapeHtml(row.status)}</span></td><td data-label="Balance">${moneyCurrency(row.summary.balance)}</td><td data-label="Actions"><button type="button" data-action="open-financial-invoice" data-id="${escapeHtml(row.invoice.id)}" aria-label="Open invoice ${escapeHtml(row.invoice.invoice_number || row.invoice.id)}">⋮</button></td></tr>`).join("") : `<tr><td colspan="8">${emptyState("No invoices match these filters.")}</td></tr>`}
       </tbody></table></div>
-      <footer class="money-pagination"><span>Showing ${filtered.length ? start + 1 : 0} to ${Math.min(start + state.moneyInvoicePageSize, filtered.length)} of ${filtered.length} invoices</span><nav aria-label="Invoice pages">${Array.from({ length: Math.min(pageCount, 6) }, (_, index) => `<button type="button" data-action="money-invoice-page" data-page="${index + 1}"${state.moneyInvoicePage === index + 1 ? ' class="is-active"' : ""}>${index + 1}</button>`).join("")}<button type="button" data-action="money-invoice-page" data-page="${Math.min(pageCount, state.moneyInvoicePage + 1)}" aria-label="Next invoice page">›</button></nav></footer>
+      <footer class="money-pagination"><span>Showing ${filtered.length ? start + 1 : 0} to ${Math.min(start + state.moneyInvoicePageSize, filtered.length)} of ${filtered.length} invoices</span><nav aria-label="Invoice pages">${Array.from({ length: Math.min(pageCount, 6) }, (_, index) => `<button type="button" data-action="money-invoice-page" data-page="${index + 1}"${state.moneyInvoicePage === index + 1 ? ' class="is-active"' : ""}>${index + 1}</button>`).join("")}<button type="button" data-action="money-invoice-page" data-page="${Math.min(pageCount, state.moneyInvoicePage + 1)}" aria-label="Next invoice page"${state.moneyInvoicePage >= pageCount ? " disabled" : ""}>›</button></nav></footer>
     </section>`;
   }
 
@@ -16695,7 +16716,7 @@ Requirements:
           <label>Property or customer<input name="client_name" required autocomplete="off"></label>
           <label>Address<input name="address" data-route-address-input required autocomplete="street-address"></label>
           <label>Service<input name="service_type" required value="Groundskeeping"></label>
-          <label>Estimated service time<input name="estimated_minutes" type="number" min="1" step="5" value="60"></label>
+          <label>Estimated service time<input name="estimated_minutes" type="number" min="1" step="1" value="60"></label>
           <label>Status<select name="status">${ROUTE_STATUSES.map((status) => `<option>${escapeHtml(status)}</option>`).join("")}</select></label>
           <label>Notes<textarea name="notes" rows="4"></textarea></label>
           <div class="route-form-actions"><button type="submit" data-route-submit>Save Stop</button><button class="secondary-action" type="button" data-action="close-drawer">Cancel</button></div>
@@ -17520,6 +17541,7 @@ Requirements:
   function openOutreachDrawer(id = "") {
     if (!els.detailDrawer || !els.detailContent) return;
     const item = id ? findOutreachProspect(id) : null;
+    const defaults = !item && state.activeSection === "call-queue" ? readCallQueueSettings() : {};
     const title = item ? "Edit Prospect" : "Add Prospect";
     openDetailDrawer();
     els.detailContent.innerHTML = `
@@ -17546,8 +17568,8 @@ Requirements:
           <label>City<input name="city" value="${escapeHtml(item?.city || "")}"></label>
           <label>Property type<select name="property_type">${optionList(OUTREACH_PROPERTY_TYPES, item?.propertyType || "Apartment")}</select></label>
           <label>Service interest<select name="service_interest">${optionList(OUTREACH_SERVICE_INTERESTS, item?.serviceInterest || "General Property Care")}</select></label>
-          <label>Source<input name="source" value="${escapeHtml(item?.source || "")}" placeholder="Drive-by, referral, web search..."></label>
-          <label>Status<select name="status">${optionList(OUTREACH_STATUSES, item?.status || "Prospect")}</select></label>
+          <label>Source<input name="source" value="${escapeHtml(item?.source || defaults.source_label || "")}" placeholder="Drive-by, referral, web search..."></label>
+          <label>Status<select name="status">${optionList(OUTREACH_STATUSES, item?.status || defaults.default_status || "Prospect")}</select></label>
           <label>Priority<select name="priority">${optionList(OUTREACH_PRIORITIES, item?.priority || "Normal")}</select></label>
           <label>Last contacted<input name="last_contacted_at" type="date" value="${escapeHtml(item?.lastContactedAtRaw || "")}"></label>
           <label>Next follow-up<input name="next_follow_up_at" type="date" value="${escapeHtml(item?.nextFollowUpAtRaw || "")}"></label>
@@ -18107,7 +18129,9 @@ Requirements:
     if (els.documentationStatus) {
       els.documentationStatus.innerHTML = state.documentationReady
         ? `<span>Forms, templates, and submissions in one place.</span><span>${escapeHtml(documentation.assignments.length)} assigned · ${escapeHtml(documentation.submissions.length)} submitted · ${escapeHtml(documentation.templates.length)} templates</span>`
-        : `<span>Documentation could not load right now. Refresh the dashboard, then check Supabase/RLS if it stays down.</span><span>${escapeHtml(state.documentationError || "Demo mode still shows the intended workflow.")}</span>`;
+        : !state.documentationError && ["idle", "loading"].includes(dashboardSectionLoadInfo("documentation").status)
+          ? `<span>Loading documentation…</span>`
+          : `<span>Documentation could not load right now. Refresh to try again.</span><span>${escapeHtml(state.documentationError || "Check Dashboard Health if the problem continues.")}</span>`;
     }
     if (els.documentationSearch && els.documentationSearch.value !== state.documentationSearch) els.documentationSearch.value = state.documentationSearch;
     if (els.documentationTypeFilter && els.documentationTypeFilter.value !== state.documentationTypeFilter) els.documentationTypeFilter.value = state.documentationTypeFilter;
@@ -20890,16 +20914,19 @@ Requirements:
     if (!els.importExportMain) return;
     const snapshot = importExportSnapshot(data);
     const modules = snapshot.modules || [];
+    const loading = !modules.length && !state.importExportReady && !state.importExportError && ["idle", "loading"].includes(dashboardSectionLoadInfo("import-export").status);
     if (els.importExportStatus) {
-      els.importExportStatus.innerHTML = snapshot.fallback
-        ? `<span>${escapeHtml(snapshot.fallback)}</span>`
-        : `<span>Protected backend: <code>/.netlify/functions/dashboard-import-export</code></span><span>${escapeHtml(modules.length)} modules / ${escapeHtml(snapshot.limits?.maxImportRows || 0)} row import limit</span>`;
+      els.importExportStatus.innerHTML = loading
+        ? `<span>Loading import and export tools…</span>`
+        : snapshot.fallback
+          ? `<span>${escapeHtml(snapshot.fallback)}</span>`
+          : `<span>Import, export, and back up dashboard records.</span><span>${escapeHtml(modules.length)} record types · ${escapeHtml(snapshot.limits?.maxImportRows || 0)} row import limit</span>`;
     }
     qsa("[data-import-export-view]").forEach((button) => {
       button.classList.toggle("is-active", button.dataset.importExportView === state.importExportView);
     });
     if (!modules.length) {
-      els.importExportMain.innerHTML = emptyState(snapshot.fallback || "Import & Export Center needs the Supabase SQL tables before it can load.");
+      els.importExportMain.innerHTML = loading ? loadingState("Loading import and export tools…") : emptyState(snapshot.fallback || "Import & Export could not load. Refresh to try again.");
       return;
     }
     if (state.importExportView === "export") {
@@ -21656,8 +21683,13 @@ Requirements:
     }
   }
 
+  function homeWeatherNumber(value) {
+    return value === null || value === undefined || String(value).trim() === "" ? NaN : Number(value);
+  }
+
   function homeWeatherTemperature(value, unit) {
-    return Number.isFinite(Number(value)) ? `${Math.round(Number(value))}°${escapeHtml(unit || "F")}` : "—";
+    const number = homeWeatherNumber(value);
+    return Number.isFinite(number) ? `${Math.round(number)}°${escapeHtml(unit || "F")}` : "—";
   }
 
   function homeWeatherIconSource(day = {}) {
@@ -21670,8 +21702,9 @@ Requirements:
   }
 
   function renderHomeWeatherDay(day = {}) {
-    const precipitation = Number.isFinite(Number(day.probabilityOfPrecipitation))
-      ? `${Math.round(Number(day.probabilityOfPrecipitation))}%`
+    const precipitationValue = homeWeatherNumber(day.probabilityOfPrecipitation);
+    const precipitation = Number.isFinite(precipitationValue)
+      ? `${Math.round(precipitationValue)}%`
       : "—";
     const wind = [day.windDirection, day.windSpeed].filter(Boolean).join(" ") || "—";
     const iconAlt = `${day.shortForecast || "Cloudy"} weather icon`;
@@ -27649,9 +27682,7 @@ Requirements:
         state.callQueueConfirmAction = "";
         renderCallQueueWorkspace();
       } else if (action === "call-queue-settings") {
-        openDetailDrawer();
-        els.detailContent.innerHTML = `<div class="drawer-content"><p class="eyebrow">Call Queue</p><h3>Queue Settings</h3><p>These settings control Urban Yards queue behavior only. Google Voice account settings remain in Google Voice.</p><form class="drawer-form" data-call-queue-settings-form><label>Default queue status<select name="default_status"><option>New</option><option>Contacted</option><option>Callback</option></select></label><label>Duplicate import behavior<select name="duplicate_behavior"><option value="skip">Skip duplicates</option><option value="update">Update existing</option><option value="warn">Import with warning</option></select></label><label>Default CSV source label<input name="source_label" value="Imported CSV"></label><label>Phone-number formatting<select name="phone_format"><option value="national">(503) 555-0100</option><option value="e164">+15035550100</option></select></label><label class="span-full"><input type="checkbox" name="archive_on_convert"> Archive queue entry after converting to a lead</label><div class="drawer-actions span-full"><button type="submit">Save Settings</button><a class="button secondary-action" href="https://voice.google.com/settings" target="_blank" rel="noopener noreferrer">Open Google Voice Settings</a></div></form></div>`;
-        renderDetailDrawerBreadcrumbs();
+        openCallQueueSettingsDrawer();
       } else if (action === "call-queue-mark-contacted") {
         try {
           setDashboardState("Updating queue entry...");
@@ -29271,11 +29302,20 @@ Requirements:
         }
       } else if (event.target.matches("[data-call-queue-settings-form]")) {
         event.preventDefault();
-        const settings = Object.fromEntries(new FormData(event.target).entries());
-        settings.archive_on_convert = Boolean(event.target.elements.archive_on_convert?.checked);
-        localStorage.setItem("urban-yards-call-queue-settings", JSON.stringify(settings));
-        closeSubmissionDrawer({ immediate: true });
-        setDashboardState("Call Queue settings saved in this browser.");
+        const data = new FormData(event.target);
+        const settings = {
+          default_status: OUTREACH_STATUSES.includes(data.get("default_status")) ? data.get("default_status") : "Prospect",
+          source_label: String(data.get("source_label") || "").trim().slice(0, 240),
+          phone_format: data.get("phone_format") === "e164" ? "e164" : "national"
+        };
+        try {
+          localStorage.setItem("urban-yards-call-queue-settings", JSON.stringify(settings));
+          closeSubmissionDrawer({ immediate: true });
+          renderCallQueueWorkspace();
+          setDashboardState("Call Queue settings saved in this browser.");
+        } catch (_) {
+          setDashboardState("Settings could not be saved in this browser. Your changes are still in the form.", "error");
+        }
       } else if (event.target.matches("[data-call-queue-outcome-form]")) {
         event.preventDefault();
         const id = event.target.dataset.id || "";

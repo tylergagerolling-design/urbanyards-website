@@ -773,11 +773,11 @@
   function buttonContent(label, action) {
     const icons = {
       "cancel-job": "×",
-      "call-lead": "GV",
+      "call-lead": "phone",
       "clear-demo-data": "×",
       "complete-operation": "✓",
       "complete-reminder": "✓",
-      "copy-phone": "Copy",
+      "copy-phone": "",
       "create-estimate": "+",
       "create-invoice": "$",
       "create-outreach-quote": "+",
@@ -808,8 +808,8 @@
       "go-tickets": "Open",
       "go-tools": "Open",
       "go-work": "+",
-      "refresh-documentation": "R",
-      "import-outreach-csv": "CSV",
+      "refresh-documentation": "↻",
+      "import-outreach-csv": "upload",
       "mark-route-complete": "✓",
       "mark-outreach-contacted": "✓",
       "move-route-down": "↓",
@@ -837,7 +837,7 @@
       "sync-contact": "↻",
       "sync-square-document": "↻"
     };
-    const icon = icons[action] || "";
+    const icon = ["call-lead", "import-outreach-csv"].includes(action) ? unifiedTicketIcon(icons[action]) : icons[action] || "";
     return `${icon ? `<span class="button-icon" aria-hidden="true">${icon}</span>` : ""}<span>${escapeHtml(label)}</span>`;
   }
 
@@ -858,7 +858,7 @@
   }
 
   function emptyState(message) {
-    return `<div class="empty-state"><strong>${escapeHtml(message)}</strong><span>Use the closest create or connect action to add the first record. If data should already be here, refresh and review Dashboard Health.</span></div>`;
+    return `<div class="empty-state"><strong>${escapeHtml(message)}</strong></div>`;
   }
 
   function loadingState(message) {
@@ -16084,7 +16084,7 @@ Requirements:
   }
 
   function renderQuoteLineInput(line = {}) {
-    return `<div class="quote-line-editor" data-quote-line><label>Service<input data-quote-description value="${escapeHtml(line.description || "")}" maxlength="240" required></label><label>Quantity<input data-quote-quantity type="number" min="0.01" step="0.01" value="${escapeHtml(String(line.quantity || 1))}" required></label><label>Unit price<input data-quote-price type="number" min="0" step="0.01" value="${escapeHtml(String(line.unit_price ?? line.unitPrice ?? 0))}" required></label><button type="button" data-action="remove-quote-line" aria-label="Remove line item">Remove</button></div>`;
+    return `<div class="quote-line-editor" data-quote-line><label>Service<textarea data-quote-description rows="3" maxlength="240" required>${escapeHtml(line.description || "")}</textarea></label><label>Quantity<input data-quote-quantity type="number" min="0.01" step="0.01" value="${escapeHtml(String(line.quantity || 1))}" required></label><label>Unit price<input data-quote-price type="number" min="0" step="0.01" value="${escapeHtml(String(line.unit_price ?? line.unitPrice ?? 0))}" required></label><button type="button" data-action="remove-quote-line" aria-label="Remove line item">Remove</button></div>`;
   }
 
   function quoteFormLineItems(form) {
@@ -16362,7 +16362,7 @@ Requirements:
             <p>Manage invoices, expenses, and payments</p>
           </div>
           <div class="money-page-actions">
-            ${canManageMoneyWorkflow() ? `<div class="money-new-split"><button type="button" data-action="create-financial-invoice"><span>＋</span> New</button><details><summary aria-label="Open New menu">⌄</summary><div><button type="button" data-action="create-financial-invoice">New Invoice</button><button type="button" data-action="open-money-expense-create">Add Expense</button><button type="button" data-action="open-money-payment-create">Record Payment</button></div></details></div>` : ""}
+            ${canManageMoneyWorkflow() ? `<div class="money-new-split"><button type="button" class="money-new-main" data-action="create-financial-invoice"><span>＋</span> New</button><details><summary aria-label="Open New menu">⌄</summary><div><button type="button" data-action="create-financial-invoice">New Invoice</button><button type="button" data-action="open-money-expense-create">Add Expense</button><button type="button" data-action="open-money-payment-create">Record Payment</button></div></details></div>` : ""}
           </div>
         </header>
         ${renderQaShowcasePanel("money")}
@@ -16491,10 +16491,10 @@ Requirements:
     target.innerHTML = `
       <div class="ticket-workspace uy-page-prototype tools-workspace" data-uy-page-contract="tools" data-data-source="documentation,route_tools,imports,settings">
         ${renderWorkspaceDataState("settings")}
-        <header class="ticket-hero">
+        <header class="uy-page-header tools-page-header">
           <div>
-            <h3>Tools</h3>
-            <p>Open secondary utilities and administration without mixing them into daily ticket, lead, money, or field-work queues.</p>
+            <h1>Tools</h1>
+            <p>Routes, records, and settings for your team.</p>
           </div>
           <div class="ticket-hero-actions">
             <button type="button" class="secondary-action" data-action="refresh-dashboard">Refresh</button>
@@ -18106,7 +18106,7 @@ Requirements:
 
     if (els.documentationStatus) {
       els.documentationStatus.innerHTML = state.documentationReady
-        ? `<span>Private documentation tables connected. Use Supabase Storage buckets for templates and submissions.</span><span>${escapeHtml(documentation.assignments.length)} assigned / ${escapeHtml(documentation.submissions.length)} submitted / ${escapeHtml(documentation.templates.length)} templates</span>`
+        ? `<span>Forms, templates, and submissions in one place.</span><span>${escapeHtml(documentation.assignments.length)} assigned · ${escapeHtml(documentation.submissions.length)} submitted · ${escapeHtml(documentation.templates.length)} templates</span>`
         : `<span>Documentation could not load right now. Refresh the dashboard, then check Supabase/RLS if it stays down.</span><span>${escapeHtml(state.documentationError || "Demo mode still shows the intended workflow.")}</span>`;
     }
     if (els.documentationSearch && els.documentationSearch.value !== state.documentationSearch) els.documentationSearch.value = state.documentationSearch;
@@ -22237,7 +22237,7 @@ Requirements:
         <label>${unifiedTicketIcon("document")}<select data-ticket-timeline-filter="type" aria-label="Ticket type"><option value="All">Types</option>${[...new Set(allRows.map((item) => item.type).filter(Boolean))].map(v=>`<option${type===v?" selected":""}>${escapeHtml(v)}</option>`).join("")}</select></label>
         <label>${unifiedTicketIcon("pin")}<select data-ticket-timeline-filter="location" aria-label="Ticket location"><option value="All">All Locations</option>${[...new Set(allRows.map((item) => item.city).filter(Boolean))].map(v=>`<option${location===v?" selected":""}>${escapeHtml(v)}</option>`).join("")}</select></label>
         <label>${unifiedTicketIcon("calendar")}<select data-ticket-timeline-filter="range" aria-label="Ticket date range"><option value="week-plus"${range==="week-plus"?" selected":""}>This Week</option><option value="week"${range==="week"?" selected":""}>Through Sat</option></select></label>
-        <button type="button" class="ttl-new-ticket" style="background:#343a45!important;color:#fff!important" data-action="open-ticket-create" data-ticket-type="field"><span>+</span> New Ticket</button>
+        <button type="button" class="ttl-new-ticket" data-action="open-ticket-create" data-ticket-type="field"><span>+</span> New Ticket</button>
         ${canManageTicketTrash() ? `<button type="button" class="secondary-action" data-action="show-ticket-trash">Trash <span>${escapeHtml(String(trashedTickets.length))}</span></button>` : ""}
       </div></header>
       ${renderQaShowcasePanel("tickets")}
@@ -22478,16 +22478,16 @@ Requirements:
     const status = String(job.status || "Unscheduled");
     const priority = String(job.priority || "Normal");
     return `<tr style="background:#fff!important" data-action="open-work-detail" data-id="${escapeHtml(job.id)}" tabindex="0">
-      <td><strong>${escapeHtml(job.visit)}</strong><small>${escapeHtml(job.time)}</small></td>
-      <td><strong>#${escapeHtml(job.displayNumber || job.id)}&nbsp;&nbsp; ${escapeHtml(job.job)}</strong><small>${escapeHtml(job.customer)}</small></td>
-      <td><strong>${escapeHtml(job.address)}</strong><small>${escapeHtml(job.city)}</small></td>
-      <td><span class="wol-crew-chips">${(Array.isArray(job.crew) ? job.crew : []).map(initial=>`<i>${escapeHtml(initial)}</i>`).join("")}${job.extra ? `<i>${escapeHtml(job.extra)}</i>` : ""}</span></td>
-      <td><span class="wol-status is-${escapeHtml(slug(status))}">${escapeHtml(status)}</span></td>
-      <td><span class="wol-progress-copy">${done} / ${total} tasks</span><i class="wol-progress"><b style="width:${progress}%"></b></i></td>
-      <td>${escapeHtml(job.estimate)}</td>
-      <td><span class="wol-priority is-${escapeHtml(slug(priority))}"><i></i>${escapeHtml(priority)}</span></td>
-      <td>${job.attention ? `<span class="wol-attention ${String(job.attention).includes("Overdue") ? "is-overdue" : ""}">${escapeHtml(job.attention)}</span>` : "—"}</td>
-      <td><button type="button" class="wol-row-menu" data-action="work-row-menu" data-id="${escapeHtml(job.id)}" aria-label="Actions for ${escapeHtml(job.job)}">⋮</button><div class="wol-menu" data-work-row-menu="${escapeHtml(job.id)}" hidden><button type="button" data-action="open-work-detail" data-id="${escapeHtml(job.id)}">Open work</button><button type="button" data-action="unified-ticket-open" data-id="${escapeHtml(job.id)}">Open ticket</button></div></td>
+      <td data-label="Visit"><strong>${escapeHtml(job.visit)}</strong><small>${escapeHtml(job.time)}</small></td>
+      <td data-label="Job"><strong>#${escapeHtml(job.displayNumber || job.id)}&nbsp;&nbsp; ${escapeHtml(job.job)}</strong><small>${escapeHtml(job.customer)}</small></td>
+      <td data-label="Location"><strong>${escapeHtml(job.address)}</strong><small>${escapeHtml(job.city)}</small></td>
+      <td data-label="Crew"><span class="wol-crew-chips">${(Array.isArray(job.crew) ? job.crew : []).map(initial=>`<i>${escapeHtml(initial)}</i>`).join("")}${job.extra ? `<i>${escapeHtml(job.extra)}</i>` : ""}</span></td>
+      <td data-label="Status"><span class="wol-status is-${escapeHtml(slug(status))}">${escapeHtml(status)}</span></td>
+      <td data-label="Progress"><span class="wol-progress-copy">${done} / ${total} tasks</span><i class="wol-progress"><b style="width:${progress}%"></b></i></td>
+      <td data-label="Est. time">${escapeHtml(job.estimate)}</td>
+      <td data-label="Priority"><span class="wol-priority is-${escapeHtml(slug(priority))}"><i></i>${escapeHtml(priority)}</span></td>
+      <td data-label="Attention">${job.attention ? `<span class="wol-attention ${String(job.attention).includes("Overdue") ? "is-overdue" : ""}">${escapeHtml(job.attention)}</span>` : "—"}</td>
+      <td data-label="Actions"><button type="button" class="wol-row-menu" data-action="work-row-menu" data-id="${escapeHtml(job.id)}" aria-label="Actions for ${escapeHtml(job.job)}">⋮</button><div class="wol-menu" data-work-row-menu="${escapeHtml(job.id)}" hidden><button type="button" data-action="open-work-detail" data-id="${escapeHtml(job.id)}">Open work</button><button type="button" data-action="unified-ticket-open" data-id="${escapeHtml(job.id)}">Open ticket</button></div></td>
     </tr>`;
   }
 
@@ -22559,7 +22559,7 @@ Requirements:
         <label>${unifiedTicketIcon("check")}<select data-work-list-filter="priority" aria-label="Work priority"><option value="All">All Priority</option>${["High","Medium","Low"].map(v=>`<option${priority===v?" selected":""}>${v}</option>`).join("")}</select></label>
         <label>${unifiedTicketIcon("pin")}<select data-work-list-filter="location" aria-label="Work location"><option value="All">All Locations</option>${[...new Set(availableJobs.map(j=>j.city).filter(Boolean))].map(v=>`<option${location===v?" selected":""}>${escapeHtml(v)}</option>`).join("")}</select></label>
         <label>${unifiedTicketIcon("calendar")}<select data-work-list-filter="range" aria-label="Work date range"><option value="week"${range==="week"?" selected":""}>This Week</option><option value="all"${range==="all"?" selected":""}>All Dates</option></select></label>
-        <button type="button" class="wol-new-job" style="background:#343a45!important;color:#fff!important" data-action="open-ticket-create" data-ticket-type="field"><span>+</span> New Job</button>
+        <button type="button" class="wol-new-job" data-action="open-ticket-create" data-ticket-type="field"><span>+</span> New Job</button>
       </div></header>
       <section class="wol-summary" aria-label="Work summary">
         <button type="button" class="is-attention ${attentionOnly?"is-active":""}" data-action="work-toggle-attention"><span>${unifiedTicketIcon("warning")}</span><strong>${allJobs.filter((job) => job.attention).length}<small>Needs Attention</small></strong><em>View</em></button>

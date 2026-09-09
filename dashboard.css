@@ -14697,7 +14697,7 @@ body:not(.is-login-screen) {
     transform 80ms ease;
 }
 
-body:not(.is-login-screen) .app-view :is(.dashboard-main, .detail-drawer) :is(
+body:not(.is-login-screen) .app-view :is(.dashboard-main, .detail-drawer) :where(
   button:not(.overview-activity-row):not(.work-list-row):not(.work-route-summary):not(.work-pipeline-row):not(.work-activity-item):not(.pipeline-card):not(.profile-mini-item):not(.calendar-pill):not(.global-search-result),
   a.button,
   a.inline-action,
@@ -14707,33 +14707,33 @@ body:not(.is-login-screen) .app-view :is(.dashboard-main, .detail-drawer) :is(
   .quick-action-link,
   .uy-button
 ) {
-  display: inline-flex !important;
-  align-items: center !important;
-  justify-content: center !important;
-  gap: var(--dashboard-button-gap) !important;
-  min-height: var(--dashboard-button-height) !important;
-  min-width: 0 !important;
-  max-width: 100% !important;
-  padding: 0 var(--dashboard-button-pad-x) !important;
-  border: 1px solid var(--button-neutral-300) !important;
-  border-radius: var(--dashboard-button-radius) !important;
-  background: var(--button-neutral-100) !important;
-  color: var(--button-neutral-900) !important;
-  box-shadow: 0 5px 14px rgba(32, 38, 34, .05) !important;
-  font: inherit !important;
-  font-size: 14px !important;
-  font-weight: 650 !important;
-  line-height: 1 !important;
-  letter-spacing: 0 !important;
-  text-align: center !important;
-  text-decoration: none !important;
-  white-space: nowrap !important;
-  cursor: pointer !important;
-  transition: var(--dashboard-button-transition) !important;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--dashboard-button-gap);
+  min-height: var(--dashboard-button-height);
+  min-width: 0;
+  max-width: 100%;
+  padding: 0 var(--dashboard-button-pad-x);
+  border: 1px solid var(--button-neutral-300);
+  border-radius: var(--dashboard-button-radius);
+  background: var(--button-neutral-100);
+  color: var(--button-neutral-900);
+  box-shadow: 0 5px 14px rgba(32, 38, 34, .05);
+  font: inherit;
+  font-size: 14px;
+  font-weight: 650;
+  line-height: 1;
+  letter-spacing: 0;
+  text-align: center;
+  text-decoration: none;
+  white-space: nowrap;
+  cursor: pointer;
+  transition: var(--dashboard-button-transition);
   -webkit-tap-highlight-color: transparent;
 }
 
-body:not(.is-login-screen) .app-view :is(.dashboard-main, .detail-drawer) :is(
+body:not(.is-login-screen) .app-view :is(.dashboard-main, .detail-drawer) :where(
   button:not(.overview-activity-row):not(.work-list-row):not(.work-route-summary):not(.work-pipeline-row):not(.work-activity-item):not(.pipeline-card):not(.profile-mini-item):not(.calendar-pill):not(.global-search-result),
   a.button,
   a.inline-action,
@@ -14743,14 +14743,14 @@ body:not(.is-login-screen) .app-view :is(.dashboard-main, .detail-drawer) :is(
   .quick-action-link,
   .uy-button
 ):hover:not(:disabled):not([aria-disabled="true"]) {
-  border-color: var(--button-neutral-400) !important;
-  background: var(--button-neutral-200) !important;
-  color: var(--button-neutral-900) !important;
-  box-shadow: 0 8px 18px rgba(32, 61, 44, .08) !important;
-  transform: translateY(-1px) !important;
+  border-color: var(--button-neutral-400);
+  background: var(--button-neutral-200);
+  color: var(--button-neutral-900);
+  box-shadow: 0 8px 18px rgba(32, 61, 44, .08);
+  transform: translateY(-1px);
 }
 
-body:not(.is-login-screen) .app-view :is(.dashboard-main, .detail-drawer) :is(
+body:not(.is-login-screen) .app-view :is(.dashboard-main, .detail-drawer) :where(
   button:not(.overview-activity-row):not(.work-list-row):not(.work-route-summary):not(.work-pipeline-row):not(.work-activity-item):not(.pipeline-card):not(.profile-mini-item):not(.calendar-pill):not(.global-search-result),
   a.button,
   a.inline-action,
@@ -14760,11 +14760,11 @@ body:not(.is-login-screen) .app-view :is(.dashboard-main, .detail-drawer) :is(
   .quick-action-link,
   .uy-button
 ):active:not(:disabled):not([aria-disabled="true"]) {
-  transform: translateY(0) !important;
-  box-shadow: inset 0 1px 2px rgba(32, 38, 34, .12) !important;
+  transform: translateY(0);
+  box-shadow: inset 0 1px 2px rgba(32, 38, 34, .12);
 }
 
-body:not(.is-login-screen) .app-view :is(.dashboard-main, .detail-drawer) :is(
+body:not(.is-login-screen) .app-view :is(.dashboard-main, .detail-drawer) :where(
   button:not(.overview-activity-row):not(.work-list-row):not(.work-route-summary):not(.work-pipeline-row):not(.work-activity-item):not(.pipeline-card):not(.profile-mini-item):not(.calendar-pill):not(.global-search-result),
   a.button,
   a.inline-action,
@@ -14774,9 +14774,9 @@ body:not(.is-login-screen) .app-view :is(.dashboard-main, .detail-drawer) :is(
   .quick-action-link,
   .uy-button
 ):focus-visible {
-  outline: 3px solid rgba(95, 125, 98, .28) !important;
-  outline-offset: 2px !important;
-  box-shadow: var(--dashboard-button-focus) !important;
+  outline: 3px solid rgba(95, 125, 98, .28);
+  outline-offset: 2px;
+  box-shadow: var(--dashboard-button-focus);
 }
 
 body:not(.is-login-screen) .app-view :is(.dashboard-main, .detail-drawer) :is(
@@ -14802,7 +14802,7 @@ body:not(.is-login-screen) .app-view :is(.dashboard-main, .detail-drawer) :is(
   transform: none !important;
 }
 
-body:not(.is-login-screen) .app-view :is(.dashboard-main, .detail-drawer) :is(
+body:not(.is-login-screen) .app-view :is(.dashboard-main, .detail-drawer) :where(
   .uy-button--primary,
   .overview-primary-action,
   .work-primary-action,
@@ -14861,7 +14861,7 @@ body:not(.is-login-screen) .app-view :is(.dashboard-main, .detail-drawer) :is(
   box-shadow: 0 8px 18px rgba(38, 61, 44, .16) !important;
 }
 
-body:not(.is-login-screen) .app-view :is(.dashboard-main, .detail-drawer) :is(
+body:not(.is-login-screen) .app-view :is(.dashboard-main, .detail-drawer) :where(
   .uy-button--primary,
   .overview-primary-action,
   .work-primary-action,
@@ -14920,7 +14920,7 @@ body:not(.is-login-screen) .app-view :is(.dashboard-main, .detail-drawer) :is(
   box-shadow: 0 10px 22px rgba(38, 61, 44, .18) !important;
 }
 
-body:not(.is-login-screen) .app-view :is(.dashboard-main, .detail-drawer) :is(
+body:not(.is-login-screen) .app-view :is(.dashboard-main, .detail-drawer) :where(
   .uy-button--primary,
   .overview-primary-action,
   .work-primary-action,
@@ -14953,7 +14953,7 @@ body:not(.is-login-screen) .app-view :is(.dashboard-main, .detail-drawer) :is(
   background: var(--button-forest-900) !important;
 }
 
-body:not(.is-login-screen) .app-view :is(.dashboard-main, .detail-drawer) :is(
+body:not(.is-login-screen) .app-view :is(.dashboard-main, .detail-drawer) :where(
   .uy-button--outline,
   .toolbar button,
   .outreach-toolbar button,
@@ -14983,7 +14983,7 @@ body:not(.is-login-screen) .app-view :is(.dashboard-main, .detail-drawer) :is(
   box-shadow: 0 4px 12px rgba(32, 38, 34, .04) !important;
 }
 
-body:not(.is-login-screen) .app-view :is(.dashboard-main, .detail-drawer) :is(
+body:not(.is-login-screen) .app-view :is(.dashboard-main, .detail-drawer) :where(
   .uy-button--outline,
   .toolbar button,
   .outreach-toolbar button,
@@ -15011,7 +15011,7 @@ body:not(.is-login-screen) .app-view :is(.dashboard-main, .detail-drawer) :is(
   background: var(--button-neutral-100) !important;
 }
 
-body:not(.is-login-screen) .app-view :is(.dashboard-main, .detail-drawer) :is(
+body:not(.is-login-screen) .app-view :is(.dashboard-main, .detail-drawer) :where(
   .uy-button--ghost,
   .drawer-close,
   [data-close-detail],
@@ -15033,7 +15033,7 @@ body:not(.is-login-screen) .app-view :is(.dashboard-main, .detail-drawer) :is(
   box-shadow: none !important;
 }
 
-body:not(.is-login-screen) .app-view :is(.dashboard-main, .detail-drawer) :is(
+body:not(.is-login-screen) .app-view :is(.dashboard-main, .detail-drawer) :where(
   .uy-button--ghost,
   .drawer-close,
   [data-close-detail],
@@ -15055,7 +15055,7 @@ body:not(.is-login-screen) .app-view :is(.dashboard-main, .detail-drawer) :is(
   box-shadow: none !important;
 }
 
-body:not(.is-login-screen) .app-view :is(.dashboard-main, .detail-drawer) :is(
+body:not(.is-login-screen) .app-view :is(.dashboard-main, .detail-drawer) :where(
   .uy-button--positive,
   [data-action*="complete"],
   [data-action*="approve"],
@@ -15072,7 +15072,7 @@ body:not(.is-login-screen) .app-view :is(.dashboard-main, .detail-drawer) :is(
   box-shadow: 0 8px 18px rgba(38, 61, 44, .16) !important;
 }
 
-body:not(.is-login-screen) .app-view :is(.dashboard-main, .detail-drawer) :is(
+body:not(.is-login-screen) .app-view :is(.dashboard-main, .detail-drawer) :where(
   .uy-button--positive,
   [data-action*="complete"],
   [data-action*="approve"],
@@ -15085,7 +15085,7 @@ body:not(.is-login-screen) .app-view :is(.dashboard-main, .detail-drawer) :is(
   background: var(--button-forest-800) !important;
 }
 
-body:not(.is-login-screen) .app-view :is(.dashboard-main, .detail-drawer) :is(
+body:not(.is-login-screen) .app-view :is(.dashboard-main, .detail-drawer) :where(
   .uy-button--warning,
   [data-action*="correction"],
   [data-action*="recheck"],
@@ -15100,7 +15100,7 @@ body:not(.is-login-screen) .app-view :is(.dashboard-main, .detail-drawer) :is(
   box-shadow: 0 4px 12px rgba(154, 103, 0, .06) !important;
 }
 
-body:not(.is-login-screen) .app-view :is(.dashboard-main, .detail-drawer) :is(
+body:not(.is-login-screen) .app-view :is(.dashboard-main, .detail-drawer) :where(
   .uy-button--warning,
   [data-action*="correction"],
   [data-action*="recheck"],
@@ -15113,7 +15113,7 @@ body:not(.is-login-screen) .app-view :is(.dashboard-main, .detail-drawer) :is(
   background: var(--button-warning-100) !important;
 }
 
-body:not(.is-login-screen) .app-view :is(.dashboard-main, .detail-drawer) :is(
+body:not(.is-login-screen) .app-view :is(.dashboard-main, .detail-drawer) :where(
   .uy-button--danger,
   .danger-action,
   [data-action*="delete"],
@@ -15130,7 +15130,7 @@ body:not(.is-login-screen) .app-view :is(.dashboard-main, .detail-drawer) :is(
   box-shadow: 0 8px 18px rgba(180, 35, 24, .16) !important;
 }
 
-body:not(.is-login-screen) .app-view :is(.dashboard-main, .detail-drawer) :is(
+body:not(.is-login-screen) .app-view :is(.dashboard-main, .detail-drawer) :where(
   .uy-button--danger,
   .danger-action,
   [data-action*="delete"],
@@ -15146,7 +15146,7 @@ body:not(.is-login-screen) .app-view :is(.dashboard-main, .detail-drawer) :is(
   color: var(--button-white) !important;
 }
 
-body:not(.is-login-screen) .app-view :is(.dashboard-main, .detail-drawer) :is(
+body:not(.is-login-screen) .app-view :is(.dashboard-main, .detail-drawer) :where(
   .uy-button--info,
   .outreach-saved-views button,
   [data-action="set-follow-up-suggestion"],
@@ -15160,7 +15160,7 @@ body:not(.is-login-screen) .app-view :is(.dashboard-main, .detail-drawer) :is(
   box-shadow: none !important;
 }
 
-body:not(.is-login-screen) .app-view :is(.dashboard-main, .detail-drawer) :is(
+body:not(.is-login-screen) .app-view :is(.dashboard-main, .detail-drawer) :where(
   .uy-button--compact,
   .inline-action,
   .toolbar button,
@@ -15177,7 +15177,7 @@ body:not(.is-login-screen) .app-view :is(.dashboard-main, .detail-drawer) :is(
   font-size: 13px !important;
 }
 
-body:not(.is-login-screen) .app-view :is(.dashboard-main, .detail-drawer) :is(
+body:not(.is-login-screen) .app-view :is(.dashboard-main, .detail-drawer) :where(
   .uy-button--large,
   .overview-primary-action,
   .work-primary-action,
@@ -15397,7 +15397,7 @@ body:not(.is-login-screen) .app-view :is(.dashboard-main, .detail-drawer) :is(
 }
 
 /* Action buttons use the shared system; record cards retain their content layouts. */
-body:not(.is-login-screen) .app-view .dashboard-main :is(#overview, #calendar) :is(
+body:not(.is-login-screen) .app-view .dashboard-main :is(#overview, #calendar) :where(
   button:not(.overview-activity-row):not(.work-list-row):not(.work-route-summary):not(.work-pipeline-row):not(.work-activity-item):not(.pipeline-card):not(.profile-mini-item):not(.calendar-pill):not(.global-search-result),
   a.inline-action,
   .inline-action,
@@ -15405,32 +15405,32 @@ body:not(.is-login-screen) .app-view .dashboard-main :is(#overview, #calendar) :
   .work-primary-action,
   .quick-action-link
 ):not([data-action="open-ticket-create"]):not(:where(.focus-metric,.clean-schedule-row,.clean-attention-list>button,.clean-recent-list>button)) {
-  display: inline-flex !important;
-  align-items: center !important;
-  justify-content: center !important;
-  gap: var(--dashboard-button-gap) !important;
-  min-height: var(--dashboard-button-height) !important;
-  min-width: 0 !important;
-  max-width: 100% !important;
-  padding: 0 var(--dashboard-button-pad-x) !important;
-  border: 1px solid var(--button-neutral-300) !important;
-  border-radius: var(--dashboard-button-radius) !important;
-  background: var(--button-neutral-100) !important;
-  color: var(--button-neutral-900) !important;
-  box-shadow: 0 5px 14px rgba(32, 38, 34, .05) !important;
-  font: inherit !important;
-  font-size: 14px !important;
-  font-weight: 650 !important;
-  line-height: 1 !important;
-  letter-spacing: 0 !important;
-  text-align: center !important;
-  text-decoration: none !important;
-  white-space: nowrap !important;
-  cursor: pointer !important;
-  transition: var(--dashboard-button-transition) !important;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--dashboard-button-gap);
+  min-height: var(--dashboard-button-height);
+  min-width: 0;
+  max-width: 100%;
+  padding: 0 var(--dashboard-button-pad-x);
+  border: 1px solid var(--button-neutral-300);
+  border-radius: var(--dashboard-button-radius);
+  background: var(--button-neutral-100);
+  color: var(--button-neutral-900);
+  box-shadow: 0 5px 14px rgba(32, 38, 34, .05);
+  font: inherit;
+  font-size: 14px;
+  font-weight: 650;
+  line-height: 1;
+  letter-spacing: 0;
+  text-align: center;
+  text-decoration: none;
+  white-space: nowrap;
+  cursor: pointer;
+  transition: var(--dashboard-button-transition);
 }
 
-body:not(.is-login-screen) .app-view .dashboard-main :is(#overview, #calendar) :is(
+body:not(.is-login-screen) .app-view .dashboard-main :is(#overview, #calendar) :where(
   button:not(.overview-activity-row):not(.work-list-row):not(.work-route-summary):not(.work-pipeline-row):not(.work-activity-item):not(.pipeline-card):not(.profile-mini-item):not(.calendar-pill):not(.global-search-result),
   a.inline-action,
   .inline-action,
@@ -15438,11 +15438,11 @@ body:not(.is-login-screen) .app-view .dashboard-main :is(#overview, #calendar) :
   .work-primary-action,
   .quick-action-link
 ):not([data-action="open-ticket-create"]):not(:where(.focus-metric,.clean-schedule-row,.clean-attention-list>button,.clean-recent-list>button)):hover:not(:disabled):not([aria-disabled="true"]) {
-  border-color: var(--button-neutral-400) !important;
-  background: var(--button-neutral-200) !important;
-  color: var(--button-neutral-900) !important;
-  box-shadow: 0 8px 18px rgba(32, 61, 44, .08) !important;
-  transform: translateY(-1px) !important;
+  border-color: var(--button-neutral-400);
+  background: var(--button-neutral-200);
+  color: var(--button-neutral-900);
+  box-shadow: 0 8px 18px rgba(32, 61, 44, .08);
+  transform: translateY(-1px);
 }
 
 body:not(.is-login-screen) .app-view .dashboard-main :is(#overview, #calendar) :is(
@@ -31048,7 +31048,7 @@ body:not(.is-login-screen) .dashboard-main .unified-ticket-page { min-height: ca
 .ut-overflow-menu { position: absolute; top: 49px; left: 320px; z-index: 3; width: 130px; padding: 5px; border: 1px solid #dfe3e8; border-radius: 6px; background: #fff; box-shadow: 0 8px 20px rgba(17,24,39,.12); }
 .ut-overflow-menu button { width: 100%; display: block; padding: 8px; border: 0; background: transparent; color: #20252d; text-align: left; }
 .ut-card { position: relative; overflow: hidden; border: 1px solid #dfe3e7; border-radius: 7px; background: #fff; box-shadow: 0 1px 1px rgba(17,24,39,.01); }
-.ut-card>h3 { margin: 0; padding: 17px 150px 10px 18px; color: #12151a !important; font-size: .78rem; font-weight: 750; }
+.ut-card>h3 { margin: 0; padding: 17px 18px 10px; color: #12151a !important; font-size: .78rem; font-weight: 750; }
 .ut-card-edit { position: absolute; top: 10px; right: 12px; z-index: 2; min-height: 30px; padding: 0 10px; border: 1px solid #cfd7d2 !important; border-radius: 6px; background: #fff !important; box-shadow: none !important; color: #0f5138 !important; font-size: .64rem; font-weight: 700; cursor: pointer; }
 .ut-card-edit:hover { border-color: #2d7659 !important; background: #f3f8f5 !important; }
 .ut-card-edit:focus-visible { outline: 3px solid rgba(45,118,89,.24); outline-offset: 2px; }
@@ -31135,24 +31135,24 @@ html body:not(.is-login-screen) .dashboard-main .unified-ticket-page button.ut-n
 html body:not(.is-login-screen) .dashboard-main .unified-ticket-page button.ut-nav-item.is-active { background-color:#e9eaed !important; }
 html body:not(.is-login-screen) .dashboard-main .unified-ticket-page button.ut-back,
 html body:not(.is-login-screen) .dashboard-main .unified-ticket-page .ut-title-line > button[type="button"] { border-width:0 !important;border-style:none !important;background-color:transparent !important; }
-.unified-ticket-page.unified-ticket-page.unified-ticket-page.unified-ticket-page.unified-ticket-page.unified-ticket-page.unified-ticket-page.unified-ticket-page.unified-ticket-page.unified-ticket-page.unified-ticket-page.unified-ticket-page :is(button.ut-back,button.ut-nav-item,.ut-title-line>button[type="button"]) { border:0 !important;background:transparent !important;box-shadow:none !important;color:#20252d !important; }
-.unified-ticket-page.unified-ticket-page.unified-ticket-page.unified-ticket-page.unified-ticket-page.unified-ticket-page.unified-ticket-page.unified-ticket-page.unified-ticket-page.unified-ticket-page.unified-ticket-page.unified-ticket-page button.ut-nav-item.is-active { background:#e9eaed !important; }
-.unified-ticket-page.unified-ticket-page.unified-ticket-page.unified-ticket-page.unified-ticket-page.unified-ticket-page.unified-ticket-page.unified-ticket-page.unified-ticket-page.unified-ticket-page.unified-ticket-page.unified-ticket-page :is(.ut-small-btn,.ut-next-visit button,.ut-quick-actions>button,.ut-documents>button) { border:1px solid #d6dbe1 !important;background:#fff !important;box-shadow:none !important;color:#161b22 !important; }
-.unified-ticket-page.unified-ticket-page.unified-ticket-page.unified-ticket-page.unified-ticket-page.unified-ticket-page.unified-ticket-page.unified-ticket-page.unified-ticket-page.unified-ticket-page.unified-ticket-page.unified-ticket-page.unified-ticket-page .ut-quick-actions > button.ut-quick-danger {
+.unified-ticket-page :is(button.ut-back,button.ut-nav-item,.ut-title-line>button[type="button"]) { border:0 !important;background:transparent !important;box-shadow:none !important;color:#20252d !important; }
+.unified-ticket-page button.ut-nav-item.is-active { background:#e9eaed !important; }
+.unified-ticket-page :is(.ut-small-btn,.ut-next-visit button,.ut-quick-actions>button,.ut-documents>button) { border:1px solid #d6dbe1 !important;background:#fff !important;box-shadow:none !important;color:#161b22 !important; }
+.unified-ticket-page.unified-ticket-page .ut-quick-actions > button.ut-quick-danger {
   margin-top: 7px;
   border-color: #d8a49a !important;
   background: #fff5f3 !important;
   color: var(--uy-danger) !important;
 }
-.unified-ticket-page.unified-ticket-page.unified-ticket-page.unified-ticket-page.unified-ticket-page.unified-ticket-page.unified-ticket-page.unified-ticket-page.unified-ticket-page.unified-ticket-page.unified-ticket-page.unified-ticket-page.unified-ticket-page .ut-quick-actions > button.ut-quick-danger:hover {
+.unified-ticket-page.unified-ticket-page .ut-quick-actions > button.ut-quick-danger:hover {
   border-color: #bd7568 !important;
   background: #fce9e5 !important;
 }
-.unified-ticket-page.unified-ticket-page.unified-ticket-page.unified-ticket-page.unified-ticket-page.unified-ticket-page.unified-ticket-page.unified-ticket-page.unified-ticket-page.unified-ticket-page.unified-ticket-page.unified-ticket-page.unified-ticket-page .ut-quick-actions > button.ut-quick-danger:focus-visible {
+.unified-ticket-page.unified-ticket-page .ut-quick-actions > button.ut-quick-danger:focus-visible {
   outline: 3px solid color-mix(in srgb, var(--uy-danger) 24%, transparent);
   outline-offset: 2px;
 }
-.unified-ticket-page.unified-ticket-page.unified-ticket-page.unified-ticket-page.unified-ticket-page.unified-ticket-page.unified-ticket-page.unified-ticket-page.unified-ticket-page.unified-ticket-page.unified-ticket-page.unified-ticket-page.unified-ticket-page .ut-quick-actions > button.ut-quick-danger strong { color: inherit; }
+.unified-ticket-page.unified-ticket-page .ut-quick-actions > button.ut-quick-danger strong { color: inherit; }
 
 /* Tickets: next-visit timeline ------------------------------------------- */
 .tickets-timeline-page { min-height:calc(100vh - 48px); padding:28px 30px 48px; background:#f7f8fa; color:#151922; font-family:Inter,ui-sans-serif,system-ui,-apple-system,"Segoe UI",sans-serif; }
@@ -31181,10 +31181,10 @@ html body:not(.is-login-screen) .dashboard-main .unified-ticket-page .ut-title-l
 .ttl-menu { width:28px;height:36px;padding:0;border:0 !important;background:transparent !important;box-shadow:none !important;color:#273140 !important;font-size:1.35rem; }.ttl-row-menu{position:absolute;right:18px;top:60px;z-index:4;width:130px;padding:5px;border:1px solid #dce1e6;border-radius:6px;background:#fff;box-shadow:0 8px 20px rgba(17,24,39,.14)}.ttl-row-menu button{width:100%;padding:8px;border:0;background:transparent;color:#242b35;text-align:left;font-size:.7rem}
 .ttl-footer { min-height:120px;display:flex;align-items:flex-end;justify-content:center;gap:13px;padding-bottom:4px;color:#4e596b;font-size:.8rem}.ttl-footer>svg{width:19px;height:19px}.ttl-footer button{padding:0;border:0 !important;background:transparent !important;box-shadow:none !important;color:#075dbf !important;font-size:.8rem}.ttl-no-results{padding:70px 20px;text-align:center;color:#606a78}
 
-.unified-ticket-page.unified-ticket-page.unified-ticket-page.unified-ticket-page.unified-ticket-page.unified-ticket-page.unified-ticket-page.unified-ticket-page.unified-ticket-page.unified-ticket-page.unified-ticket-page.unified-ticket-page :is(.ttl-number,.ttl-menu,.ttl-footer button) { border:0 !important;background:transparent !important;box-shadow:none !important; }
+.unified-ticket-page :is(.ttl-number,.ttl-menu,.ttl-footer button) { border:0 !important;background:transparent !important;box-shadow:none !important; }
 .ut-active-section-summary{margin:0 0 14px;padding:16px 18px;border:1px solid #dfe3e8;border-radius:7px;background:#fff}.ut-active-section-summary h3{margin:0;color:#11151b!important;font-size:.86rem}.ut-active-section-summary>p{margin:5px 0 0;color:#566170;font-size:.68rem}.ut-section-activity{display:grid;gap:8px;margin-top:14px}.ut-section-activity article{padding:10px 12px;border:1px solid #e3e7eb;border-radius:6px}.ut-section-activity strong{font-size:.67rem;text-transform:capitalize}.ut-section-activity p{margin:4px 0;color:#4f5a69;font-size:.61rem}.ut-section-activity small{color:#687281;font-size:.56rem}
 .unified-ticket-shell:not(.is-section-overview) .ut-sidebar{display:none}.unified-ticket-shell:not(.is-section-overview){grid-template-columns:170px minmax(0,1fr)}.unified-ticket-shell:not(.is-section-overview) .ut-main{border-right:0}.unified-ticket-shell.is-section-details :is(.ut-next-card,.ut-lower-grid,.ut-notes-card),.unified-ticket-shell.is-section-work :is(.ut-property-card,.ut-summary-card,.ut-next-card,.ut-photos-card,.ut-documents-card),.unified-ticket-shell.is-section-schedule :is(.ut-main-top,.ut-lower-grid,.ut-notes-card),.unified-ticket-shell.is-section-tasks :is(.ut-main-top,.ut-next-card,.ut-photos-card,.ut-documents-card,.ut-notes-card),.unified-ticket-shell.is-section-photos :is(.ut-main-top,.ut-next-card,.ut-tasks-card,.ut-documents-card,.ut-notes-card),.unified-ticket-shell.is-section-documents :is(.ut-main-top,.ut-next-card,.ut-tasks-card,.ut-photos-card,.ut-notes-card),.unified-ticket-shell.is-section-notes :is(.ut-main-top,.ut-next-card,.ut-lower-grid),.unified-ticket-shell.is-section-history :is(.ut-main-top,.ut-next-card,.ut-lower-grid,.ut-notes-card){display:none}.unified-ticket-shell.is-section-work .ut-main-top{grid-template-columns:1fr}.unified-ticket-shell.is-section-work .ut-property-stack{display:block}.unified-ticket-shell.is-section-tasks .ut-lower-grid,.unified-ticket-shell.is-section-photos .ut-lower-grid,.unified-ticket-shell.is-section-documents .ut-lower-grid{grid-template-columns:1fr}
-.unified-ticket-page.unified-ticket-page.unified-ticket-page.unified-ticket-page.unified-ticket-page.unified-ticket-page.unified-ticket-page.unified-ticket-page.unified-ticket-page.unified-ticket-page.unified-ticket-page.unified-ticket-page .ttl-new-ticket { border:0 !important;background:#343a45 !important;box-shadow:0 4px 10px rgba(17,24,39,.14) !important;color:#fff !important; }
+.unified-ticket-page .ttl-new-ticket { border:0 !important;background:#343a45 !important;box-shadow:0 4px 10px rgba(17,24,39,.14) !important;color:#fff !important; }
 
 @media(max-width:1280px){.tickets-timeline-page{padding-inline:20px}.ttl-header{flex-direction:column}.ttl-filters{width:100%;justify-content:flex-start;flex-wrap:wrap}.ttl-row{grid-template-columns:30px 85px 90px minmax(150px,1fr) minmax(150px,1fr) 120px 125px 90px 24px;gap:9px;padding-right:10px}}
 @media(max-width:820px){.tickets-timeline-page{padding:20px 14px 88px}.ttl-header{margin:0 2px 22px}.ttl-header h2{font-size:1.65rem}.ttl-filters{display:grid;grid-template-columns:1fr 1fr;gap:9px}.ttl-filters label,.ttl-filters select{width:100%;min-width:0 !important}.ttl-new-ticket{width:100%;grid-column:1/-1}.ttl-group{grid-template-columns:88px 1fr}.ttl-date{padding:20px 12px}.ttl-row{min-height:178px;grid-template-columns:24px 1fr auto;grid-template-areas:"mark time menu" "mark number status" "mark name name" "mark location location" "mark crew priority";align-content:center;gap:8px 12px;padding:15px 13px 15px 0}.ttl-marker{grid-area:mark}.ttl-time{grid-area:time}.ttl-number{grid-area:number}.ttl-name{grid-area:name}.ttl-location{grid-area:location}.ttl-status{grid-area:status;justify-self:end}.ttl-crew{grid-area:crew}.ttl-priority{grid-area:priority;justify-self:end}.ttl-menu{grid-area:menu}.ttl-marker:before{top:-81px;bottom:-81px}.ttl-row-menu{top:44px;right:12px}.ttl-footer{min-height:100px;align-items:center;flex-wrap:wrap;text-align:center}.ttl-footer button{width:100%}}

@@ -12,14 +12,14 @@
     <link rel="icon" href="/favicon.ico" sizes="any">
     <link rel="apple-touch-icon" href="/apple-touch-icon.png">
     <link rel="manifest" href="/dashboard.webmanifest">
-  <link rel="stylesheet" href="dashboard.css?v=20260908-money-loading-1">
-    <link rel="stylesheet" href="dashboard-unified.css?v=20260908-money-loading-1">
+  <link rel="stylesheet" href="dashboard.css?v=20260908-design-polish-1">
+    <link rel="stylesheet" href="dashboard-unified.css?v=20260908-design-polish-1">
     <script src="dashboard-config.js?v=20260716-loader-1" defer></script>
     <script src="scripts/budget-calculations.js?v=20260716-loader-1" defer></script>
     <script src="scripts/financial-calculations.js?v=20260723-invoice-status-1" defer></script>
     <script src="scripts/weather-forecast.js?v=20260806-weather-alerts-1" defer></script>
     <script src="scripts/weather-alerts.js?v=20260806-weather-alerts-1" defer></script>
-  <script src="dashboard.js?v=20260908-money-loading-1" defer></script>
+  <script src="dashboard.js?v=20260908-design-polish-1" defer></script>
   </head>
   <body>
     <main class="dashboard-shell" aria-labelledby="dashboard-title">
@@ -185,7 +185,7 @@
                   <h1>Clients</h1>
                   <p>Manage confirmed client relationships, contacts, properties, and service history.</p>
                 </div>
-                <button class="inline-action" type="button" data-action="quick-add-client">Add Client</button>
+                <button class="clean-primary-action" type="button" data-action="quick-add-client">Add Client</button>
               </div>
               <div class="toolbar">
                 <input data-client-search type="search" aria-label="Search client profiles" placeholder="Search clients, properties, email, phone...">
@@ -193,11 +193,11 @@
               </div>
               <form class="client-form" data-client-form data-duplicate-scope="contact">
                 <div class="duplicate-warning span-full" data-duplicate-warning data-duplicate-scope="contact" hidden></div>
-                <input name="name" placeholder="Client name" required>
-                <input name="email" type="email" placeholder="Email">
-                <input name="phone" placeholder="Phone">
-                <input name="city" placeholder="Property address / area" autocomplete="street-address" data-address-autocomplete>
-                <input name="contact_type" placeholder="Client type">
+                <label>Client name<input name="name" placeholder="Full name or business" required></label>
+                <label>Email<input name="email" type="email" placeholder="name@example.com"></label>
+                <label>Phone<input name="phone" type="tel" placeholder="(503) 555-0123"></label>
+                <label>Property address / area<input name="city" placeholder="Street address or area" autocomplete="street-address" data-address-autocomplete></label>
+                <label>Client type<input name="contact_type" placeholder="Homeowner, business, HOA…"></label>
                 <button type="submit"><span class="button-icon" aria-hidden="true">+</span><span>Add Client</span></button>
                 <button class="inline-action mobile-form-cancel" type="button" data-action="close-mobile-client-form">Cancel</button>
               </form>

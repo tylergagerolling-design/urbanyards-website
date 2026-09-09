@@ -40,7 +40,7 @@ Mobile behavior:
 
 ## 3. Shared Tokens
 
-`dashboard.css` is the loaded source of truth for the current static app. New dashboard UI must use existing tokens before adding page-specific values.
+`dashboard.css` contains the component styles; `dashboard-unified.css` contains the loaded shared presentation layer. New dashboard UI must use these existing files and tokens before adding page-specific values.
 
 Required token groups:
 
@@ -59,6 +59,10 @@ Rules:
 - do not create private spacing scales for individual pages
 - do not add new hotfix stylesheets
 - do not solve one screen size by breaking another
+
+The shared presentation uses restrained serif headings, forest-green primary actions, white secondary controls, and a muted gold accent for selection. Controls use an 8px corner radius; pills are reserved for statuses and compact metadata. Keep body and form values at normal weight, with stronger labels and headings. General button resets must have low specificity so navigation, metric cards, and component controls can retain their layouts. Do not repeat a class selector to overpower the cascade.
+
+On phones, Money's three tabs must fit together, Work's summary cards must form a grid, and job records must present labeled fields. Filters must expand to full width when their labels would be truncated. Quote service descriptions use a multiline field so the scope stays readable while editing.
 
 ## 4. Page Layout Contract
 
